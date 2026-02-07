@@ -1,0 +1,136 @@
+---
+services:
+  app_dev_prepopulate:
+    image: creshu-app-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    env_file:
+      - path: ./.env.docker        
+        required: false
+    volumes:
+      - .:/var/www/html
+    command: touch .devcontainer/.bash_history
+  app:
+    image: creshu-app-dev
+    env_file:
+      - path: ./.env.docker
+        required: false
+    volumes:
+      - .:/var/www/html
+      - .devcontainer/.bash_history:/home/laravel/.bash_history
+      - .devcontainer/.ssh:/home/laravel/.ssh
+    networks:
+      - creshu-network
+    ports:
+      - "${APP_EXTERNAL_PORT:-8080}:80"
+      - "${XDEBUG_EXTERNAL_PORT:-9003}:9003"
+      - "5173:5173" # This is for vite, it is not configurable, only together with vite.config.js
+    depends_on:
+      app_dev_prepopulate:
+        condition: service_completed_successfully
+      database:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully        
+  database:
+    image: pgvector/pgvector:pg17
+    env_file:
+      - ./.env # for the database credentials    
+      - path: ./.env.docker
+        required: false
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    networks:
+      - creshu-network
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homestead -d bible"]
+      start_period: 1m
+      interval: 10s
+      timeout: 5s
+      retries: 3      
+  # database_testing:
+  #   image: pgvector/pgvector:pg17
+  #   env_file:
+  #     - ./.env.testing # for the database credentials    
+  #     - path: ./.env.docker
+  #       required: false
+  #   environment:
+  #     POSTGRES_USER: ${DB_USERNAME}
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
+  #     POSTGRES_DB: ${DB_DATABASE}
+  #   networks:
+  #     - creshu-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U homestead -d bible"]
+  #     start_period: 1m
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3      
+  composer:
+    image: creshu-app-dev
+    env_file:
+      - path: ./.env.docker
+        required: false
+    environment:
+      - XDEBUG_CONFIG="mode=off"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      database:
+        condition: service_healthy
+    command: bash -c "source $$NVM_DIR/nvm.sh && npm install && npm run build && php composer.phar install --no-interaction"
+  migrator:
+    image: creshu-app-dev
+    env_file:
+      - path: ./.env.docker
+        required: false
+    environment:
+      - XDEBUG_CONFIG="mode=off"
+    volumes:
+      - .:/var/www/html
+    command: php artisan migrate -n
+    depends_on:
+      database:
+        condition: service_healthy
+      composer:
+        condition: service_completed_successfully
+    networks:
+      - creshu-network
+  #migrator_testing:
+  #   image: creshu-app-dev
+  #   env_file:
+  #     - path: ./.env.docker
+  #       required: false
+  #   environment:
+  #     - XDEBUG_CONFIG="mode=off"
+  #   volumes:
+  #     - .:/var/www/html
+  #   depends_on:
+  #     database_testing:
+  #       condition: service_healthy
+  #     composer:
+  #       condition: service_completed_successfully
+  #   networks:
+  #     - creshu-network      
+  #   command: php artisan migrate:refresh --seed --seeder="Database\\Seeders\\DatabaseSeeder" --env=testing
+  memcached:
+    image: memcached:1.6
+    command:
+      - --memory-limit=32
+    networks:
+      - creshu-network    
+  
+volumes:
+  db-data:
+networks:
+  creshu-network:
