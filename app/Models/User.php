@@ -23,6 +23,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'nickname',
     ];
 
     /**
@@ -61,4 +62,14 @@ class User extends Authenticatable implements MustVerifyEmail
             ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
+
+        /**
+     * Determine if the user is the admin.
+     */
+    public function getIsAdminAttribute(): bool
+    {
+        $adminEmail = config('admin.email', env('ADMIN_EMAIL'));
+        return $this->email === $adminEmail;
+    }
+
 }

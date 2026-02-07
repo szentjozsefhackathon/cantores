@@ -28,6 +28,12 @@
                 <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
                     {{ __('Documentation') }}
                 </flux:sidebar.item>
+
+                @if(auth()->check() && auth()->user()->is_admin)
+                    <flux:sidebar.item icon="shield-check" :href="route('admin.master-data')" :current="request()->routeIs('admin.master-data')" wire:navigate>
+                        {{ __('Admin') }}
+                    </flux:sidebar.item>
+                @endif
             </flux:sidebar.nav>
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />

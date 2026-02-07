@@ -14,14 +14,17 @@ new class extends Component {
 
     public string $name = '';
     public string $email = '';
+    public string $nickname = '';
 
     /**
      * Mount the component.
      */
     public function mount(): void
     {
-        $this->name = Auth::user()->name;
-        $this->email = Auth::user()->email;
+        $user = Auth::user();
+        $this->name = $user->name;
+        $this->email = $user->email;
+        $this->nickname = $user->nickname;
     }
 
     /**
@@ -31,8 +34,8 @@ new class extends Component {
     {
         $user = Auth::user();
 
-        $validated = $this->validate($this->profileRules($user->id));
 
+        $validated = $this->validate($this->profileRules($user->id));
         $user->fill($validated);
 
         if ($user->isDirty('email')) {
@@ -83,7 +86,10 @@ new class extends Component {
 
     <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your name and email address')">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
+
             <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
+
+            <flux:input wire:model="nickname" :label="__('Nickname')" type="text" readonly autocomplete="nickname" />
 
             <div>
                 <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />

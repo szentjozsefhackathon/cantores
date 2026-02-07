@@ -123,6 +123,12 @@ services:
   #   networks:
   #     - creshu-network      
   #   command: php artisan migrate:refresh --seed --seeder="Database\\Seeders\\DatabaseSeeder" --env=testing
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "${MAILPIT_EXTERNAL_PORT:-8025}:8025" # Web UI (optional, defaults to 8025)
+    networks:
+      - creshu-network
   memcached:
     image: memcached:1.6
     command:
