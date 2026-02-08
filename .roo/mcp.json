@@ -1,0 +1,17 @@
+{
+	"mcpServers": {
+		"boost": {
+			"command": "php",
+			"args": [
+				"artisan",
+				"boost:mcp"
+			],
+			"disabled": false,
+			"alwaysAllow": [
+				"list-artisan-commands",
+				"database-schema",
+				"search-docs"
+			]
+		}
+	}
+}

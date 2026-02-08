@@ -63,13 +63,13 @@ class User extends Authenticatable implements MustVerifyEmail
             ->implode('');
     }
 
-        /**
+    /**
      * Determine if the user is the admin.
      */
     public function getIsAdminAttribute(): bool
     {
         $adminEmail = config('admin.email', env('ADMIN_EMAIL'));
+
         return $this->email === $adminEmail;
     }
-
 }

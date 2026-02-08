@@ -4,6 +4,9 @@
             <flux:navlist.item :href="route('admin.master-data')" wire:navigate :current="request()->routeIs('admin.master-data')">
                 {{ __('Master Data') }}
             </flux:navlist.item>
+            <flux:navlist.item :href="route('admin.users')" wire:navigate :current="request()->routeIs('admin.users')">
+                {{ __('Users') }}
+            </flux:navlist.item>
         </flux:navlist>
     </div>
 
