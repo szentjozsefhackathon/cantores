@@ -206,8 +206,34 @@ new class extends Component
                                         @foreach ($celebration['parts'] as $part)
                                             @if (isset($part['short_title']) && isset($part['ref']))
                                                 <div class="flex justify-between items-center text-sm p-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
-                                                    <flux:text class="font-medium">{{ $part['short_title'] }}</flux:text>
-                                                    <flux:text class="text-neutral-700 dark:text-neutral-300 font-mono text-xs">{{ $part['ref'] }}</flux:text>
+                                                    <flux:text class="font-medium mr-1">{{ $part['short_title'] }}</flux:text>
+                                                    <flux:text class="text-neutral-700 dark:text-neutral-300 text-xs">{{ $part['ref'] }}</flux:text>
+                                                </div>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- parts2 section -->
+                            @if (isset($celebration['parts2']) && is_array($celebration['parts2']) && count($celebration['parts2']) > 0)
+                                <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
+                                    <div class="flex items-center gap-2">
+                                        <flux:icon name="book-open" class="h-4 w-4 text-neutral-500 dark:text-neutral-400" variant="mini" />
+                                        <flux:heading size="sm">
+                                            @if (!empty($celebration['parts2cause']))
+                                                {{ $celebration['parts2cause'] }}
+                                            @else
+                                                Olvasmányok
+                                            @endif
+                                        </flux:heading>
+                                    </div>
+                                    <div class="space-y-2">
+                                        @foreach ($celebration['parts2'] as $part)
+                                            @if (isset($part['short_title']) && isset($part['ref']))
+                                                <div class="flex justify-between items-center text-sm p-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
+                                                    <flux:text class="font-medium mr-1">{{ $part['short_title'] }}</flux:text>
+                                                    <flux:text class="text-neutral-700 dark:text-neutral-300 text-xs">{{ $part['ref'] }}</flux:text>
                                                 </div>
                                             @endif
                                         @endforeach
