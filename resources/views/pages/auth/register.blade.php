@@ -18,12 +18,9 @@
                 autofocus
                 autocomplete="name"
                 :placeholder="__('Full name')"
+                description="{{ __('This name will not be shown on the site, unless you want to publish it for other registered users. You don\'t have to tell your real name.') }}"
+
             />
-
-            <p class="text-xs text-gray-500 mt-1">
-                {{ __("This name will not be shown on the site, unless you want to publish it for other registered users. You don't have to tell your real name.") }}
-            </p>
-
 
                         <!-- Nickname Group: City + First Name -->
             <div x-data="{
@@ -82,6 +79,7 @@
 
 
             <!-- Email Address -->
+             <flux:field>
             <flux:input
                 name="email"
                 :label="__('Email address')"
@@ -91,6 +89,11 @@
                 autocomplete="email"
                 placeholder="email@example.com"
             />
+             <flux:description>
+                {{ __("Az email-címedet soha nem osztjuk meg másokkal, nem jelenítjük meg az oldalon. Csak te láthatod, és jelszóemlékeztető és egyéb biztonsági értesítésekhez használjuk.") }}
+            </flux:description>
+             </flux:field>
+
 
             <!-- Password -->
             <flux:input
