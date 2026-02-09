@@ -52,7 +52,7 @@ new class extends Component
 
 <flux:card class="liturgical-info p-0 overflow-hidden border-0 shadow-xl dark:shadow-neutral-900/30">
     <!-- Header with gradient -->
-    <div class="bg-sky-50">
+    <div style="background: linear-gradient(90deg, rgba(59,130,246,1) 0%, rgba(147,197,253,1) 100%);" class="p-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
                 <flux:icon name="book-open-text" class="h-10 w-10 text-white/90" variant="outline" />
@@ -73,15 +73,6 @@ new class extends Component
                         min="{{ Carbon::now()->subYears(10)->format('Y-m-d') }}"
                     />
                 </flux:field>
-                <flux:button
-                    wire:click="refresh"
-                    variant="filled"
-                    class="bg-white text-blue-700 hover:bg-blue-50 border-white/30 mt-6 sm:mt-8"
-                    icon="arrow-path"
-                    icon:variant="mini"
-                >
-                    Refresh
-                </flux:button>
             </div>
         </div>
     </div>
