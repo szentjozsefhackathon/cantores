@@ -27,13 +27,13 @@ class UserFactory extends Factory
     {
         // Get random city or create a default one
         $city = City::inRandomOrder()->first();
-        if (!$city) {
+        if (! $city) {
             $city = City::firstOrCreate(['name' => 'Unknown']);
         }
 
         // Get random first name or create a default one
         $firstName = FirstName::inRandomOrder()->first();
-        if (!$firstName) {
+        if (! $firstName) {
             $firstName = FirstName::firstOrCreate(['name' => 'Unknown'], ['gender' => 'male']);
         }
 

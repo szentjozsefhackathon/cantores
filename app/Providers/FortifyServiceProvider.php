@@ -56,7 +56,7 @@ class FortifyServiceProvider extends ServiceProvider
             // Get used combinations
             $usedCombinations = \App\Models\User::select('city_id', 'first_name_id')
                 ->get()
-                ->map(fn ($user) => $user->city_id . '_' . $user->first_name_id)
+                ->map(fn ($user) => $user->city_id.'_'.$user->first_name_id)
                 ->toArray();
 
             // Find a random available combination
@@ -66,14 +66,14 @@ class FortifyServiceProvider extends ServiceProvider
 
             foreach ($cities as $city) {
                 foreach ($firstNames as $firstName) {
-                    $key = $city->id . '_' . $firstName->id;
-                    if (!in_array($key, $usedCombinations)) {
+                    $key = $city->id.'_'.$firstName->id;
+                    if (! in_array($key, $usedCombinations)) {
                         $availableCombinations[] = ['city_id' => $city->id, 'first_name_id' => $firstName->id];
                     }
                 }
             }
 
-            if (!empty($availableCombinations)) {
+            if (! empty($availableCombinations)) {
                 $random = $availableCombinations[array_rand($availableCombinations)];
                 $selectedCityId = $random['city_id'];
                 $selectedFirstNameId = $random['first_name_id'];

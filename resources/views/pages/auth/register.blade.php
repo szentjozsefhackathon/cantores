@@ -26,7 +26,20 @@
 
 
                         <!-- Nickname Group: City + First Name -->
-            <div>
+            <div x-data="{
+                cityId: {{ json_encode(old('city_id', $selectedCityId)) }},
+                firstNameId: {{ json_encode(old('first_name_id', $selectedFirstNameId)) }},
+                async randomize() {
+                    try {
+                        const response = await fetch('{{ route('random-nickname') }}');
+                        const data = await response.json();
+                        this.cityId = data.city_id;
+                        this.firstNameId = data.first_name_id;
+                    } catch (error) {
+                        console.error('Failed to fetch random nickname', error);
+                    }
+                }
+            }">
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Nickname') }}</label>
                 <div class="flex gap-2">
                     <flux:select
@@ -34,11 +47,11 @@
                         :label="null"
                         required
                         class="flex-1"
-                        :value="old('city_id', $selectedCityId ?? null)"
+                        x-model="cityId"
                     >
                         <option value="">{{ __('Select a city') }}</option>
                         @foreach ($cities as $city)
-                            <option value="{{ $city->id }}" @selected(old('city_id', $selectedCityId ?? null) == $city->id)>
+                            <option value="{{ $city->id }}">
                                 {{ $city->name }}
                             </option>
                         @endforeach
@@ -48,21 +61,23 @@
                         :label="null"
                         required
                         class="flex-1"
-                        :value="old('first_name_id', $selectedFirstNameId ?? null)"
+                        x-model="firstNameId"
                     >
                         <option value="">{{ __('Select a first name') }}</option>
                         @foreach ($firstNames as $firstName)
-                            <option value="{{ $firstName->id }}" @selected(old('first_name_id', $selectedFirstNameId ?? null) == $firstName->id)>
+                            <option value="{{ $firstName->id }}">
                                 {{ $firstName->name }}
                             </option>
                         @endforeach
                     </flux:select>
+                    <flux:button type="button" @click="randomize" class="whitespace-nowrap">
+                        {{ __('Random nickname') }}
+                    </flux:button>
                 </div>
+                <p class="text-xs text-gray-500 mt-1">
+                    {{ __("The nickname is used throughout the site to identify the work you shared with others. By default you don't have to share anything, and you can keep everything private.") }}
+                </p>
             </div>
-
-                        <p class="text-xs text-gray-500 mt-1">
-                {{ __("The nickname is used throughout the site to identify the work you shared with others. By default you don't have to share anything, and you can keep everything private.") }}
-            </p>
 
 
 

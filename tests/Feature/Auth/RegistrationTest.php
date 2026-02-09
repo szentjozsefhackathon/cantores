@@ -57,7 +57,6 @@ test('city and first name combination must be unique', function () {
     $city = City::firstOrCreate(['name' => 'Paris']);
     $firstName = FirstName::firstOrCreate(['name' => 'Marie'], ['gender' => 'female']);
 
-
     // Create first user with this combination
     $this->post(route('register.store'), [
         'name' => 'Alice',
