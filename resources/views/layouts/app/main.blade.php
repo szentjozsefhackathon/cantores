@@ -4,9 +4,14 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white antialiased dark:bg-linear-to-b dark:from-neutral-950 dark:to-neutral-900">
-        <header class="w-full lg:max-w-4xl max-w-[335px] text-sm mb-6 not-has-[nav]:hidden">
+        <header class="w-full lg:max-w-4xl mx-auto flex items-center justify-between text-sm mb-6">
+    <flux:brand name="Cantores.hu" {{ $attributes }}>
+        <x-slot name="logo" class="flex aspect-square size-8 items-center justify-center rounded-md text-accent-foreground">
+            <x-app-logo-icon class="fill-current text-white dark:text-black" />
+        </x-slot>
+    </flux:brand>
             @if (Route::has('login'))
-                <nav class="flex items-center justify-end gap-4">
+                <nav class="flex items-center gap-4">
                     @auth
                         <a
                             href="{{ url('/dashboard') }}"

@@ -67,10 +67,11 @@
                             </option>
                         @endforeach
                     </flux:select>
+                </div>
                     <flux:button type="button" @click="randomize" class="whitespace-nowrap">
                         {{ __('Random nickname') }}
                     </flux:button>
-                </div>
+
                 <p class="text-xs text-gray-500 mt-1">
                     {{ __("The nickname is used throughout the site to identify the work you shared with others. By default you don't have to share anything, and you can keep everything private.") }}
                 </p>

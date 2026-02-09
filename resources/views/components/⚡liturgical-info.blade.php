@@ -222,7 +222,7 @@ new class extends Component
             <!-- Footer note -->
             <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800 text-center">
                 <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">
-                    Adatforrás: Magyar Katolikus Liturgikus Naptár
+                    Adatforrás: <a href="https://szentjozsefhackathon.github.io/napi-lelki-batyu/" class="text-blue-600 dark:text-blue-400 hover:underline">Szt. József Hackathon Napi Lelki Batyu</a>
                 </flux:text>
             </div>
         @endif
