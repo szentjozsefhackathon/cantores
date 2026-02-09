@@ -10,7 +10,10 @@
 			"alwaysAllow": [
 				"list-artisan-commands",
 				"database-schema",
-				"search-docs"
+				"search-docs",
+				"database-query",
+				"application-info",
+				"get-absolute-url"
 			]
 		}
 	}

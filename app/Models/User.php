@@ -23,7 +23,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
-        'nickname',
+        'city_id',
+        'first_name_id',
     ];
 
     /**
@@ -49,6 +50,33 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get the user's city.
+     */
+    public function city(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(City::class);
+    }
+
+    /**
+     * Get the user's first name.
+     */
+    public function firstName(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(FirstName::class, 'first_name_id');
+    }
+
+    /**
+     * Get the user's display name (FirstName City).
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        $firstName = $this->firstName?->name ?? '';
+        $city = $this->city?->name ?? '';
+
+        return trim("{$firstName} {$city}");
     }
 
     /**

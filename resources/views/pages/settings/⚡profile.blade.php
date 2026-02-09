@@ -14,7 +14,6 @@ new class extends Component {
 
     public string $name = '';
     public string $email = '';
-    public string $nickname = '';
 
     /**
      * Mount the component.
@@ -24,7 +23,6 @@ new class extends Component {
         $user = Auth::user();
         $this->name = $user->name;
         $this->email = $user->email;
-        $this->nickname = $user->nickname;
     }
 
     /**
@@ -77,6 +75,13 @@ new class extends Component {
         return ! Auth::user() instanceof MustVerifyEmail
             || (Auth::user() instanceof MustVerifyEmail && Auth::user()->hasVerifiedEmail());
     }
+
+    #[Computed]
+    public function displayName(): string
+    {
+        $user = Auth::user();
+        return $user->display_name;
+    }
 }; ?>
 
 <section class="w-full">
@@ -89,7 +94,10 @@ new class extends Component {
 
             <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
 
-            <flux:input wire:model="nickname" :label="__('Nickname')" type="text" readonly autocomplete="nickname" />
+            <div>
+                <flux:text class="font-medium">{{ __('Display Name') }}</flux:text>
+                <flux:text class="mt-1">{{ $this->displayName }}</flux:text>
+            </div>
 
             <div>
                 <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />

@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\City;
+use App\Models\FirstName;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -23,6 +25,9 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $city = City::firstOrCreate(['name' => 'Unknown']);
+        $firstName = FirstName::firstOrCreate(['name' => 'Unknown'], ['gender' => 'male']);
+
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
@@ -32,6 +37,8 @@ class UserFactory extends Factory
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
+            'city_id' => $city->id,
+            'first_name_id' => $firstName->id,
         ];
     }
 
