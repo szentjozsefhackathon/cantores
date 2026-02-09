@@ -6,9 +6,12 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
+
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+Route::view('/about', 'pages.about')->name('about');
 
 Route::get('/random-nickname', function () {
     $cities = \App\Models\City::orderBy('name')->get();
