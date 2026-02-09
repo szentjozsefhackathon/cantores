@@ -52,27 +52,37 @@ new class extends Component
 
 <flux:card class="liturgical-info p-0 overflow-hidden border-0 shadow-xl dark:shadow-neutral-900/30">
     <!-- Header with gradient -->
-    <div style="background: linear-gradient(90deg, rgba(59,130,246,1) 0%, rgba(147,197,253,1) 100%);" class="p-6">
+    <div class="bg-gradient-to-r from-blue-600 to-purple-700 dark:from-blue-800 dark:to-purple-900 p-6 text-white">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
                 <flux:icon name="book-open-text" class="h-10 w-10 text-white/90" variant="outline" />
                 <div>
-                    <flux:heading size="xl" class="">Liturgical Calendar</flux:heading>
-                    <flux:text class="text-blue-100">Explore daily celebrations, readings, and liturgical seasons</flux:text>
+                    <flux:heading size="xl" class="text-white">Liturgikus naptár és énekrendek</flux:heading>
+                    <flux:text class="text-blue-100">Napi ünnepek, olvasmányok és ajánlott énekrendek felfedezése</flux:text>
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 <flux:field class="mb-0">
-                    <flux:label class="text-white/90 text-sm font-medium">Select Date</flux:label>
+                    <flux:label class="text-white/90 text-sm font-medium">Dátum kiválasztása</flux:label>
                     <flux:input
                         type="date"
                         wire:model.live="date"
-                        variant="filled"
+                        variant="outline"
                         class="bg-white/20 border-white/30 text-white placeholder-white/70"
                         max="{{ Carbon::now()->addYears(1)->format('Y-m-d') }}"
                         min="{{ Carbon::now()->subYears(10)->format('Y-m-d') }}"
                     />
                 </flux:field>
+                <flux:button
+                    wire:click="refresh"
+                    variant="outline"
+                    class="bg-white hover:bg-blue-50 border-white/30 mt-6 sm:mt-8"
+                    icon="arrow-path"
+                    icon:variant="mini"
+                >
+                    Újratöltés
+                </flux:button>
+
             </div>
         </div>
     </div>
@@ -83,12 +93,12 @@ new class extends Component
             <div class="flex items-center gap-3">
                 <flux:icon name="calendar-days" class="h-5 w-5 text-blue-600 dark:text-blue-400" variant="mini" />
                 <flux:heading size="lg">
-                    {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('l, F j, Y') }}
+                    {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('Y. F j., l') }}
                 </flux:heading>
             </div>
             <flux:badge color="blue" variant="solid" size="lg" class="px-4 py-2 rounded-full">
                 <flux:icon name="star" class="h-4 w-4 mr-2" variant="mini" />
-                {{ count($celebrations) }} celebration{{ count($celebrations) !== 1 ? 's' : '' }}
+                {{ count($celebrations) }} ünnep
             </flux:badge>
         </div>
 
@@ -150,7 +160,6 @@ new class extends Component
                                     <div class="flex items-center gap-2">
                                         <flux:icon name="document-text" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
                                         <div>
-                                            <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">Year Letter</flux:text>
                                             <flux:badge color="blue" size="sm" class="mt-1">
                                                 {{ $celebration['yearLetter'] }}
                                             </flux:badge>
@@ -162,7 +171,6 @@ new class extends Component
                                     <div class="flex items-center gap-2">
                                         <flux:icon name="clock" class="h-4 w-4 text-emerald-600 dark:text-emerald-400" variant="mini" />
                                         <div>
-                                            <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">Season</flux:text>
                                             <flux:text class="text-sm font-medium">{{ $celebration['seasonText'] }}</flux:text>
                                         </div>
                                     </div>
@@ -172,7 +180,6 @@ new class extends Component
                                     <div class="flex items-center gap-2">
                                         <flux:icon name="swatch" class="h-4 w-4 text-rose-600 dark:text-rose-400" variant="mini" />
                                         <div>
-                                            <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">Liturgical Color</flux:text>
                                             <flux:text class="text-sm font-medium">{{ $celebration['colorText'] }}</flux:text>
                                         </div>
                                     </div>
@@ -182,7 +189,6 @@ new class extends Component
                                     <div class="flex items-center gap-2">
                                         <flux:icon name="tag" class="h-4 w-4 text-amber-600 dark:text-amber-400" variant="mini" />
                                         <div>
-                                            <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">Type</flux:text>
                                             <flux:text class="text-sm font-medium">{{ $celebration['celebrationType'] }}</flux:text>
                                         </div>
                                     </div>
@@ -194,7 +200,7 @@ new class extends Component
                                 <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
                                     <div class="flex items-center gap-2">
                                         <flux:icon name="book-open" class="h-4 w-4 text-neutral-500 dark:text-neutral-400" variant="mini" />
-                                        <flux:heading size="sm">Readings</flux:heading>
+                                        <flux:heading size="sm">Olvasmányok</flux:heading>
                                     </div>
                                     <div class="space-y-2">
                                         @foreach ($celebration['parts'] as $part)
@@ -216,7 +222,7 @@ new class extends Component
             <!-- Footer note -->
             <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800 text-center">
                 <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">
-                    Data provided by the Hungarian Catholic Liturgical Calendar
+                    Adatforrás: Magyar Katolikus Liturgikus Naptár
                 </flux:text>
             </div>
         @endif
