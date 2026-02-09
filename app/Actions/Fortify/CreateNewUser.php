@@ -24,17 +24,28 @@ class CreateNewUser implements CreatesNewUsers
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
-        ])->validate();
-
-        $city = City::firstOrCreate(['name' => 'Unknown']);
-        $firstName = FirstName::firstOrCreate(['name' => 'Unknown'], ['gender' => 'male']);
+            'city_id' => ['required', 'integer', 'exists:cities,id'],
+            'first_name_id' => ['required', 'integer', 'exists:first_names,id'],
+        ])->after(function ($validator) use ($input) {
+            \Illuminate\Support\Facades\Log::debug('Checking duplicate city/first name combination', ['city_id' => $input['city_id'] ?? null, 'first_name_id' => $input['first_name_id'] ?? null]);
+            if (isset($input['city_id'], $input['first_name_id'])) {
+                $exists = User::where('city_id', $input['city_id'])
+                    ->where('first_name_id', $input['first_name_id'])
+                    ->exists();
+                \Illuminate\Support\Facades\Log::debug('Duplicate check result', ['exists' => $exists]);
+                if ($exists) {
+                    $validator->errors()->add('city_id', __('This city and first name combination is already taken.'));
+                    $validator->errors()->add('first_name_id', __('This city and first name combination is already taken.'));
+                }
+            }
+        })->validate();
 
         return User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => $input['password'],
-            'city_id' => $city->id,
-            'first_name_id' => $firstName->id,
+            'city_id' => $input['city_id'],
+            'first_name_id' => $input['first_name_id'],
         ]);
     }
 }

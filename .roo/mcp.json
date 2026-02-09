@@ -13,7 +13,8 @@
 				"search-docs",
 				"database-query",
 				"application-info",
-				"get-absolute-url"
+				"get-absolute-url",
+				"list-routes"
 			]
 		}
 	}
