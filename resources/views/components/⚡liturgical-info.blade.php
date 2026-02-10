@@ -116,7 +116,7 @@ new class extends Component
                     <flux:heading size="xl" class="text-white">Liturgikus naptár és énekrendek</flux:heading>
                     <flux:text class="text-blue-100">Napi ünnepek, olvasmányok és ajánlott énekrendek felfedezése</flux:text>
                     <div class="pt-1 dark:border-neutral-800">
-                        <flux:text class="text-xs text-neutral-600 dark:text-neutral-400 text-white">
+                        <flux:text class="text-xs text-neutral-600 dark:text-neutral-400 text-white/80">
                             Adatforrás: <a href="https://szentjozsefhackathon.github.io/napi-lelki-batyu/" class="hover:underline">Szt. József Hackathon Napi Lelki Batyu</a>
                         </flux:text>
                     </div>
@@ -188,23 +188,30 @@ new class extends Component
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
             @foreach ($celebrations as $celebration)
             @php
-            // Determine border color based on season
-            $season = strtolower($celebration['seasonText'] ?? '');
-            if ($season === 'advent') {
-            $seasonColor = 'border-blue-500 dark:border-blue-400';
-            } elseif ($season === 'christmas') {
-            $seasonColor = 'border-green-500 dark:border-green-400';
-            } elseif ($season === 'lent') {
-            $seasonColor = 'border-purple-500 dark:border-purple-400';
-            } elseif ($season === 'easter') {
-            $seasonColor = 'border-yellow-500 dark:border-yellow-400';
-            } elseif ($season === 'ordinary time') {
-            $seasonColor = 'border-emerald-500 dark:border-emerald-400';
-            } else {
-            $seasonColor = 'border-neutral-300 dark:border-neutral-600';
+            // Determine border color based on colorText
+            $colorText = strtolower($celebration['colorText'] ?? '');
+            if ($colorText === 'lila') {
+            $colorTextColor = 'border-purple-500! dark:border-purple-400!';
+            } elseif ($colorText === 'zöld') {
+            $colorTextColor = 'border-green-500! dark:border-green-400!';
+            } elseif ($colorText === 'fehér') {
+            $colorTextColor = 'border-white-500! dark:border-white-400!';
+            } elseif ($colorText === 'rózsaszín|lila') {
+            $colorTextColor = 'border-pink-500! dark:border-pink-400!';
+            } elseif ($colorText === 'rózsaszín') {
+            $colorTextColor = 'border-pink-500! dark:border-pink-400!';
+            } elseif ($colorText === 'piros') {
+            $colorTextColor = 'border-red-500! dark:border-red-400!';
+            } elseif ($colorText === 'lila' or $colorText === 'lila|fehér') {
+            $colorTextColor = 'border-purple-500! dark:border-purple-400!';
+            }  elseif ($colorText === 'lila|fekete') {
+            $colorTextColor = 'border-black-500! dark:border-black-400!';
+            }
+            else {
+            $colorTextColor = 'border-neutral-300! dark:border-neutral-600!';
             }
             @endphp
-            <flux:card class="celebration-card p-0 overflow-hidden border-l-4 {{ $seasonColor }} hover:shadow-lg transition-shadow duration-300">
+            <flux:card class="celebration-card p-0 overflow-hidden border-l-4 {{ $colorTextColor }} hover:shadow-lg transition-shadow duration-300">
                 <div class="p-5 space-y-4">
                     <!-- Title with icon -->
                     <div class="flex items-start justify-between">
