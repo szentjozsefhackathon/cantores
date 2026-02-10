@@ -69,14 +69,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Get the user's display name (FirstName City).
+     * Get the user's display name (City FirstName).
      */
     public function getDisplayNameAttribute(): string
     {
         $firstName = $this->firstName?->name ?? '';
         $city = $this->city?->name ?? '';
 
-        return trim("{$firstName} {$city}");
+        return trim("{$city} {$firstName}");
     }
 
     /**
