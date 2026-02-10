@@ -7,6 +7,15 @@
             <flux:navlist.item :href="route('admin.users')" wire:navigate :current="request()->routeIs('admin.users')">
                 {{ __('Users') }}
             </flux:navlist.item>
+            
+            <flux:navlist.group :label="__('Music Plans')">
+                <flux:navlist.item :href="route('admin.music-plan-slots')" wire:navigate :current="request()->routeIs('admin.music-plan-slots')">
+                    {{ __('Music Plan Slots') }}
+                </flux:navlist.item>
+                <flux:navlist.item :href="route('admin.music-plan-templates')" wire:navigate :current="request()->routeIs('admin.music-plan-templates')">
+                    {{ __('Music Plan Templates') }}
+                </flux:navlist.item>
+            </flux:navlist.group>
         </flux:navlist>
     </div>
 
