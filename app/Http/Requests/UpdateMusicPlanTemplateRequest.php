@@ -20,7 +20,7 @@ class UpdateMusicPlanTemplateRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    public function rules(): array
+    public function rules(?int $templateId = null): array
     {
         return [
             'name' => [
@@ -29,7 +29,7 @@ class UpdateMusicPlanTemplateRequest extends FormRequest
                 'max:255',
                 Rule::unique('music_plan_templates', 'name')
                     ->whereNull('deleted_at')
-                    ->ignore($this->route('music_plan_template')),
+                    ->ignore($templateId),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
             'is_active' => ['boolean'],

@@ -48,12 +48,6 @@
                         
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
-                                <flux:switch 
-                                    wire:model.live="is_active" 
-                                    wire:click="toggleActive({{ $template->id }})"
-                                    :checked="$template->is_active"
-                                    size="sm"
-                                />
                                 <span class="text-sm {{ $template->is_active ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400' }}">
                                     {{ $template->is_active ? __('Active') : __('Inactive') }}
                                 </span>
@@ -208,9 +202,7 @@
                     wire:model="name" 
                     required
                 />
-                @error('name')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+                    <flux:error name="name" />
             </flux:field>
             
             <flux:field>
@@ -224,19 +216,13 @@
                     <flux:error>{{ $message }}</flux:error>
                 @enderror
             </flux:field>
-            
-            <flux:field>
-                <flux:checkbox 
-                    id="edit-is-active" 
-                    wire:model="is_active"
-                >
-                    {{ __('Active (available for use)') }}
-                </flux:checkbox>
-                @error('is_active')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+
+            <flux:field variant="inline">
+                <flux:checkbox wire:model="is_active" />
+                <flux:label>Aktív</flux:label>
+                <flux:error name="is_active" />
             </flux:field>
-            
+
             <div class="flex justify-end gap-3 pt-4">
                 <flux:button 
                     variant="ghost" 

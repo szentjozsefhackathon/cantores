@@ -100,7 +100,7 @@ class MusicPlanTemplates extends Component
     {
         $this->authorize('update', $this->editingTemplate);
 
-        $validated = $this->validate((new UpdateMusicPlanTemplateRequest)->rules());
+        $validated = $this->validate((new UpdateMusicPlanTemplateRequest)->rules($this->editingTemplate->id));
 
         $this->editingTemplate->update($validated);
 
