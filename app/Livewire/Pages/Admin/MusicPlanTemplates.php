@@ -43,9 +43,9 @@ class MusicPlanTemplates extends Component
     public function render(): View
     {
         $templates = MusicPlanTemplate::when($this->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            })
+            $query->where('name', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+        })
             ->orderBy('name')
             ->paginate(20);
 

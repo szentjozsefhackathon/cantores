@@ -41,9 +41,9 @@ class MusicPlanSlots extends Component
     public function render(): View
     {
         $slots = MusicPlanSlot::when($this->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            })
+            $query->where('name', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+        })
             ->orderBy('name')
             ->paginate(20);
 

@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\City;
+use App\Models\FirstName;
 use App\Models\MusicPlanSlot;
 use App\Models\User;
 use Livewire\Livewire;
@@ -12,15 +14,15 @@ beforeEach(function () {
 
     $this->admin = User::factory()->create([
         'city_id' => $this->city1->id,
-        'first_name_id' => $this->firstName1->id,,
-        'email' => 'admin@example.com'
+        'first_name_id' => $this->firstName1->id,
+        'email' => 'admin@example.com',
     ]);
 
-    $this->user = User::factory()->create(
-            'city_id' => $this->city2->id,
-        'first_name_id' => $this->firstName2->id,,
-    
-    ['email' => 'user@example.com']);
+    $this->user = User::factory()->create([
+        'city_id' => $this->city2->id,
+        'first_name_id' => $this->firstName2->id,
+        'email' => 'user@example.com',
+    ]);
 });
 
 test('guests cannot access music plan slots admin page', function () {
@@ -91,20 +93,20 @@ test('admin can delete a music plan slot', function () {
 });
 
 test('slot name must be unique', function () {
-    $existingSlot = MusicPlanSlot::factory()->create(['name' => 'Kyrie']);
+    $existingSlot = MusicPlanSlot::factory()->create(['name' => 'KyrieTest']);
 
     Livewire::actingAs($this->admin)
         ->test(\App\Livewire\Pages\Admin\MusicPlanSlots::class)
         ->call('showCreate')
-        ->set('name', 'Kyrie') // Same name
+        ->set('name', 'KyrieTest') // Same name
         ->set('description', 'Different description')
         ->call('create')
         ->assertHasErrors(['name']);
 });
 
 test('soft deleted slots are not shown in active list', function () {
-    $activeSlot = MusicPlanSlot::factory()->create();
-    $deletedSlot = MusicPlanSlot::factory()->create();
+    $activeSlot = MusicPlanSlot::factory()->create(['name' => 'ActiveSlotUnique']);
+    $deletedSlot = MusicPlanSlot::factory()->create(['name' => 'DeletedSlotUnique']);
     $deletedSlot->delete();
 
     $this->actingAs($this->admin);
@@ -115,7 +117,7 @@ test('soft deleted slots are not shown in active list', function () {
 
 test('search functionality works', function () {
     $slot1 = MusicPlanSlot::factory()->create(['name' => 'Entrance Procession']);
-    $slot2 = MusicPlanSlot::factory()->create(['name' => 'Kyrie']);
+    $slot2 = MusicPlanSlot::factory()->create(['name' => 'KyrieTest']);
 
     Livewire::actingAs($this->admin)
         ->test(\App\Livewire\Pages\Admin\MusicPlanSlots::class)
