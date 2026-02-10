@@ -40,8 +40,7 @@ class MusicPlanSlots extends Component
      */
     public function render(): View
     {
-        $slots = MusicPlanSlot::active()
-            ->when($this->search, function ($query, $search) {
+        $slots = MusicPlanSlot::when($this->search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%");
             })
@@ -49,7 +48,7 @@ class MusicPlanSlots extends Component
             ->paginate(20);
 
         return view('livewire.pages.admin.music-plan-slots', [
-            'slots' => $slots,
+            'musicPlanSlots' => $slots,
         ]);
     }
 

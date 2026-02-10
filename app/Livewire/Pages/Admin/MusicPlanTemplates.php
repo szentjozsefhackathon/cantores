@@ -42,8 +42,7 @@ class MusicPlanTemplates extends Component
      */
     public function render(): View
     {
-        $templates = MusicPlanTemplate::active()
-            ->when($this->search, function ($query, $search) {
+        $templates = MusicPlanTemplate::when($this->search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%");
             })

@@ -29,16 +29,16 @@
             </flux:table.columns>
             
             <flux:table.rows>
-                @forelse ($slots as $slot)
+                @forelse ($musicPlanSlots as $musicPlanSlot)
                     <flux:table.row>
                         <flux:table.cell>
-                            <div class="font-medium">{{ $slot->name }}</div>
+                            <div class="font-medium">{{ $musicPlanSlot->name }}</div>
                         </flux:table.cell>
                         
                         <flux:table.cell>
-                            @if ($slot->description)
+                            @if ($musicPlanSlot->description)
                                 <div class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                                    {{ $slot->description }}
+                                    {{ $musicPlanSlot->description }}
                                 </div>
                             @else
                                 <span class="text-sm text-gray-400 dark:text-gray-500">{{ __('No description') }}</span>
@@ -47,7 +47,7 @@
                         
                         <flux:table.cell>
                             <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-300">
-                                {{ $slot->templates_count ?? 0 }}
+                                {{ $musicPlanSlot->templates_count ?? 0 }}
                             </span>
                         </flux:table.cell>
                         
@@ -57,7 +57,7 @@
                                     variant="ghost" 
                                     size="sm" 
                                     icon="pencil" 
-                                    wire:click="showEdit({{ $slot->id }})"
+                                    wire:click="showEdit({{ $musicPlanSlot->id }})"
                                     :title="__('Edit')"
                                 />
                                 
@@ -65,7 +65,7 @@
                                     variant="ghost" 
                                     size="sm" 
                                     icon="trash" 
-                                    wire:click="delete({{ $slot->id }})"
+                                    wire:click="delete({{ $musicPlanSlot->id }})"
                                     wire:confirm="{{ __('Are you sure you want to delete this slot? This will remove it from all templates.') }}"
                                     :title="__('Delete')"
                                 />
@@ -76,7 +76,7 @@
                     <flux:table.row>
                         <flux:table.cell colspan="4" class="text-center py-8">
                             <div class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-                                <flux:icon name="music" class="h-12 w-12 mb-2 opacity-50" />
+                                <flux:icon name="musical-note" class="h-12 w-12 mb-2 opacity-50" />
                                 <p class="text-lg font-medium">{{ __('No slots found') }}</p>
                                 <p class="text-sm mt-1">
                                     @if ($search)
@@ -93,9 +93,9 @@
         </flux:table>
 
         <!-- Pagination -->
-        @if ($slots->hasPages())
+        @if ($musicPlanSlots->hasPages())
             <div class="mt-4">
-                {{ $slots->links() }}
+                {{ $musicPlanSlots->links() }}
             </div>
         @endif
     </div>
