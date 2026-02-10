@@ -115,6 +115,12 @@ new class extends Component
                 <div>
                     <flux:heading size="xl" class="text-white">Liturgikus naptár és énekrendek</flux:heading>
                     <flux:text class="text-blue-100">Napi ünnepek, olvasmányok és ajánlott énekrendek felfedezése</flux:text>
+                    <div class="pt-1 dark:border-neutral-800">
+                        <flux:text class="text-xs text-neutral-600 dark:text-neutral-400 text-white">
+                            Adatforrás: <a href="https://szentjozsefhackathon.github.io/napi-lelki-batyu/" class="hover:underline">Szt. József Hackathon Napi Lelki Batyu</a>
+                        </flux:text>
+                    </div>
+
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -126,16 +132,14 @@ new class extends Component
                         variant="outline"
                         class="bg-white/20 border-white/30 text-white placeholder-white/70"
                         max="{{ Carbon::now()->addYears(1)->format('Y-m-d') }}"
-                        min="{{ Carbon::now()->subYears(10)->format('Y-m-d') }}"
-                    />
+                        min="{{ Carbon::now()->subYears(10)->format('Y-m-d') }}" />
                 </flux:field>
                 <flux:button
                     wire:click="refresh"
                     variant="outline"
                     class="bg-white hover:bg-blue-50 border-white/30 mt-6 sm:mt-8"
                     icon="arrow-path"
-                    icon:variant="mini"
-                >
+                    icon:variant="mini">
                     Újratöltés
                 </flux:button>
 
@@ -159,201 +163,192 @@ new class extends Component
         </div>
 
         @if ($loading)
-            <div class="text-center py-12 space-y-4">
-                <flux:icon.loading class="h-12 w-12 mx-auto text-blue-600" />
-                <flux:heading size="md">Loading liturgical information...</flux:heading>
-                <flux:text class="text-neutral-600 dark:text-neutral-400">Fetching data from the liturgical calendar</flux:text>
-            </div>
+        <div class="text-center py-12 space-y-4">
+            <flux:icon.loading class="h-12 w-12 mx-auto text-blue-600" />
+            <flux:heading size="md">Loading liturgical information...</flux:heading>
+            <flux:text class="text-neutral-600 dark:text-neutral-400">Fetching data from the liturgical calendar</flux:text>
+        </div>
         @elseif ($error)
-            <flux:callout color="red" icon="exclamation-circle" class="border-red-200 dark:border-red-800">
-                <flux:callout.heading>Unable to Load Data</flux:callout.heading>
-                <flux:callout.text>{{ $error }}</flux:callout.text>
-                <x-slot name="actions">
-                    <flux:button wire:click="refresh" variant="ghost" size="sm">Try Again</flux:button>
-                </x-slot>
-            </flux:callout>
+        <flux:callout color="red" icon="exclamation-circle" class="border-red-200 dark:border-red-800">
+            <flux:callout.heading>Unable to Load Data</flux:callout.heading>
+            <flux:callout.text>{{ $error }}</flux:callout.text>
+            <x-slot name="actions">
+                <flux:button wire:click="refresh" variant="ghost" size="sm">Try Again</flux:button>
+            </x-slot>
+        </flux:callout>
         @elseif (empty($celebrations))
-            <flux:callout color="zinc" icon="calendar-x-mark" class="border-zinc-200 dark:border-zinc-800">
-                <flux:callout.heading>No Celebrations Found</flux:callout.heading>
-                <flux:callout.text>There are no liturgical celebrations recorded for the selected date.</flux:callout.text>
-                <x-slot name="actions">
-                    <flux:button wire:click="refresh" variant="ghost" size="sm">Check Another Date</flux:button>
-                </x-slot>
-            </flux:callout>
+        <flux:callout color="zinc" icon="calendar-x-mark" class="border-zinc-200 dark:border-zinc-800">
+            <flux:callout.heading>No Celebrations Found</flux:callout.heading>
+            <flux:callout.text>There are no liturgical celebrations recorded for the selected date.</flux:callout.text>
+            <x-slot name="actions">
+                <flux:button wire:click="refresh" variant="ghost" size="sm">Check Another Date</flux:button>
+            </x-slot>
+        </flux:callout>
         @else
-            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
-                @foreach ($celebrations as $celebration)
-                    @php
-                        // Determine border color based on season
-                        $season = strtolower($celebration['seasonText'] ?? '');
-                        if ($season === 'advent') {
-                            $seasonColor = 'border-blue-500 dark:border-blue-400';
-                        } elseif ($season === 'christmas') {
-                            $seasonColor = 'border-green-500 dark:border-green-400';
-                        } elseif ($season === 'lent') {
-                            $seasonColor = 'border-purple-500 dark:border-purple-400';
-                        } elseif ($season === 'easter') {
-                            $seasonColor = 'border-yellow-500 dark:border-yellow-400';
-                        } elseif ($season === 'ordinary time') {
-                            $seasonColor = 'border-emerald-500 dark:border-emerald-400';
-                        } else {
-                            $seasonColor = 'border-neutral-300 dark:border-neutral-600';
-                        }
-                    @endphp
-                    <flux:card class="celebration-card p-0 overflow-hidden border-l-4 {{ $seasonColor }} hover:shadow-lg transition-shadow duration-300">
-                        <div class="p-5 space-y-4">
-                            <!-- Title with icon -->
-                            <div class="flex items-start justify-between">
-                                <flux:heading size="md" class="flex-1">
-                                    {{ $celebration['title'] ?? 'No title' }}
-                                </flux:heading>
-                                <flux:icon name="bookmark" class="h-5 w-5 text-neutral-400 dark:text-neutral-500 ml-2" variant="mini" />
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
+            @foreach ($celebrations as $celebration)
+            @php
+            // Determine border color based on season
+            $season = strtolower($celebration['seasonText'] ?? '');
+            if ($season === 'advent') {
+            $seasonColor = 'border-blue-500 dark:border-blue-400';
+            } elseif ($season === 'christmas') {
+            $seasonColor = 'border-green-500 dark:border-green-400';
+            } elseif ($season === 'lent') {
+            $seasonColor = 'border-purple-500 dark:border-purple-400';
+            } elseif ($season === 'easter') {
+            $seasonColor = 'border-yellow-500 dark:border-yellow-400';
+            } elseif ($season === 'ordinary time') {
+            $seasonColor = 'border-emerald-500 dark:border-emerald-400';
+            } else {
+            $seasonColor = 'border-neutral-300 dark:border-neutral-600';
+            }
+            @endphp
+            <flux:card class="celebration-card p-0 overflow-hidden border-l-4 {{ $seasonColor }} hover:shadow-lg transition-shadow duration-300">
+                <div class="p-5 space-y-4">
+                    <!-- Title with icon -->
+                    <div class="flex items-start justify-between">
+                        <flux:heading size="md" class="flex-1">
+                            {{ $celebration['title'] ?? 'No title' }}
+                        </flux:heading>
+                        <flux:icon name="bookmark" class="h-5 w-5 text-neutral-400 dark:text-neutral-500 ml-2" variant="mini" />
+                    </div>
+
+                    <!-- Celebration details grid -->
+                    <div class="grid grid-cols-2 gap-3">
+                        @if (isset($celebration['yearLetter']))
+                        <div class="flex items-center gap-2">
+                            <flux:icon name="document-text" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
+                            <div>
+                                <flux:badge color="blue" size="sm" class="mt-1">
+                                    {{ $celebration['yearLetter'] }}
+                                </flux:badge>
                             </div>
-
-                            <!-- Celebration details grid -->
-                            <div class="grid grid-cols-2 gap-3">
-                                @if (isset($celebration['yearLetter']))
-                                    <div class="flex items-center gap-2">
-                                        <flux:icon name="document-text" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
-                                        <div>
-                                            <flux:badge color="blue" size="sm" class="mt-1">
-                                                {{ $celebration['yearLetter'] }}
-                                            </flux:badge>
-                                        </div>
-                                    </div>
-                                @endif
-
-                                @if (isset($celebration['seasonText']))
-                                    <div class="flex items-center gap-2">
-                                        <flux:icon name="clock" class="h-4 w-4 text-emerald-600 dark:text-emerald-400" variant="mini" />
-                                        <div>
-                                            <flux:text class="text-sm font-medium">{{ $celebration['seasonText'] }}</flux:text>
-                                        </div>
-                                    </div>
-                                @endif
-
-                                @if (isset($celebration['colorText']))
-                                    <div class="flex items-center gap-2">
-                                        <flux:icon name="swatch" class="h-4 w-4 text-rose-600 dark:text-rose-400" variant="mini" />
-                                        <div>
-                                            <flux:text class="text-sm font-medium">{{ $celebration['colorText'] }}</flux:text>
-                                        </div>
-                                    </div>
-                                @endif
-
-                                @if (isset($celebration['celebrationType']))
-                                    <div class="flex items-center gap-2">
-                                        <flux:icon name="tag" class="h-4 w-4 text-amber-600 dark:text-amber-400" variant="mini" />
-                                        <div>
-                                            <flux:text class="text-sm font-medium">{{ $celebration['celebrationType'] }}</flux:text>
-                                        </div>
-                                    </div>
-                                @endif
-                            </div>
-
-                            <!-- Readings section -->
-                            @if (isset($celebration['parts']) && is_array($celebration['parts']) && count($celebration['parts']) > 0)
-                                <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
-                                    <div class="flex items-center gap-2">
-                                        <flux:icon name="book-open" class="h-4 w-4 text-neutral-500 dark:text-neutral-400" variant="mini" />
-                                        <flux:heading size="sm">Olvasmányok</flux:heading>
-                                    </div>
-                                    <div class="space-y-2">
-                                        @foreach ($celebration['parts'] as $part)
-                                            @if (isset($part['short_title']) && isset($part['ref']))
-                                                <div class="flex justify-between items-center text-sm p-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
-                                                    <flux:text class="font-medium mr-1">{{ $part['short_title'] }}</flux:text>
-                                                    <flux:text class="text-neutral-700 dark:text-neutral-300 text-xs">{{ $part['ref'] }}</flux:text>
-                                                </div>
-                                            @endif
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
-
-                            <!-- parts2 section -->
-                            @if (isset($celebration['parts2']) && is_array($celebration['parts2']) && count($celebration['parts2']) > 0)
-                                <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
-                                    <div class="flex items-center gap-2">
-                                        <flux:icon name="book-open" class="h-4 w-4 text-neutral-500 dark:text-neutral-400" variant="mini" />
-                                        <flux:heading size="sm">
-                                            @if (!empty($celebration['parts2cause']))
-                                                {{ $celebration['parts2cause'] }}
-                                            @else
-                                                Olvasmányok
-                                            @endif
-                                        </flux:heading>
-                                    </div>
-                                    <div class="space-y-2">
-                                        @foreach ($celebration['parts2'] as $part)
-                                            @if (isset($part['short_title']) && isset($part['ref']))
-                                                <div class="flex justify-between items-center text-sm p-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
-                                                    <flux:text class="font-medium mr-1">{{ $part['short_title'] }}</flux:text>
-                                                    <flux:text class="text-neutral-700 dark:text-neutral-300 text-xs">{{ $part['ref'] }}</flux:text>
-                                                </div>
-                                            @endif
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
-
-                            @auth
-                                @php
-                                    $existingPlans = $this->getExistingMusicPlans($celebration);
-                                @endphp
-                                @if($existingPlans->isNotEmpty())
-                                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
-                                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
-                                            Már létező énekrendjeid ehhez az ünnephez:
-                                        </flux:heading>
-                                        <div class="space-y-2">
-                                            @foreach($existingPlans as $plan)
-                                                <a
-                                                    href="{{ route('music-plan-editor', ['musicPlan' => $plan->id]) }}"
-                                                    class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group"
-                                                >
-                                                    <div class="flex items-center gap-3">
-                                                        <flux:icon name="musical-note" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
-                                                        <div>
-                                                            <flux:text class="font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                                                                {{ $plan->celebration_name }}
-                                                            </flux:text>
-                                                            <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
-                                                                {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
-                                                                • {{ \App\MusicPlanSetting::tryFrom($plan->setting)?->label() ?? $plan->setting }}
-                                                                {{ $plan->is_published ? '• Közzétéve' : '• Privát' }}
-                                                            </flux:text>
-                                                        </div>
-                                                    </div>
-                                                    <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600" variant="mini" />
-                                                </a>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
-                                <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800">
-                                    <flux:button
-                                        wire:click="createMusicPlan({{ $loop->index }})"
-                                        variant="outline"
-                                        size="sm"
-                                        icon="musical-note"
-                                        class="w-full"
-                                    >
-                                        Énekrend létrehozása
-                                    </flux:button>
-                                </div>
-                            @endauth
                         </div>
-                    </flux:card>
-                @endforeach
-            </div>
+                        @endif
 
-            <!-- Footer note -->
-            <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800 text-center">
-                <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">
-                    Adatforrás: <a href="https://szentjozsefhackathon.github.io/napi-lelki-batyu/" class="text-blue-600 dark:text-blue-400 hover:underline">Szt. József Hackathon Napi Lelki Batyu</a>
-                </flux:text>
-            </div>
+                        @if (isset($celebration['seasonText']))
+                        <div class="flex items-center gap-2">
+                            <flux:icon name="clock" class="h-4 w-4 text-emerald-600 dark:text-emerald-400" variant="mini" />
+                            <div>
+                                <flux:text class="text-sm font-medium">{{ $celebration['seasonText'] }}</flux:text>
+                            </div>
+                        </div>
+                        @endif
+
+                        @if (isset($celebration['colorText']))
+                        <div class="flex items-center gap-2">
+                            <flux:icon name="swatch" class="h-4 w-4 text-rose-600 dark:text-rose-400" variant="mini" />
+                            <div>
+                                <flux:text class="text-sm font-medium">{{ $celebration['colorText'] }}</flux:text>
+                            </div>
+                        </div>
+                        @endif
+
+                        @if (isset($celebration['celebrationType']))
+                        <div class="flex items-center gap-2">
+                            <flux:icon name="tag" class="h-4 w-4 text-amber-600 dark:text-amber-400" variant="mini" />
+                            <div>
+                                <flux:text class="text-sm font-medium">{{ $celebration['celebrationType'] }}</flux:text>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+
+                    <!-- Readings section -->
+                    @if (isset($celebration['parts']) && is_array($celebration['parts']) && count($celebration['parts']) > 0)
+                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <flux:icon name="book-open" class="h-4 w-4 text-neutral-500 dark:text-neutral-400" variant="mini" />
+                            <flux:heading size="sm">Olvasmányok</flux:heading>
+                        </div>
+                        <div class="space-y-2">
+                            @foreach ($celebration['parts'] as $part)
+                            @if (isset($part['short_title']) && isset($part['ref']))
+                            <div class="flex justify-between items-center text-sm p-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
+                                <flux:text class="font-medium mr-1">{{ $part['short_title'] }}</flux:text>
+                                <flux:text class="text-neutral-700 dark:text-neutral-300 text-xs">{{ $part['ref'] }}</flux:text>
+                            </div>
+                            @endif
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- parts2 section -->
+                    @if (isset($celebration['parts2']) && is_array($celebration['parts2']) && count($celebration['parts2']) > 0)
+                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <flux:icon name="book-open" class="h-4 w-4 text-neutral-500 dark:text-neutral-400" variant="mini" />
+                            <flux:heading size="sm">
+                                @if (!empty($celebration['parts2cause']))
+                                {{ $celebration['parts2cause'] }}
+                                @else
+                                Olvasmányok
+                                @endif
+                            </flux:heading>
+                        </div>
+                        <div class="space-y-2">
+                            @foreach ($celebration['parts2'] as $part)
+                            @if (isset($part['short_title']) && isset($part['ref']))
+                            <div class="flex justify-between items-center text-sm p-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
+                                <flux:text class="font-medium mr-1">{{ $part['short_title'] }}</flux:text>
+                                <flux:text class="text-neutral-700 dark:text-neutral-300 text-xs">{{ $part['ref'] }}</flux:text>
+                            </div>
+                            @endif
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    @auth
+                    @php
+                    $existingPlans = $this->getExistingMusicPlans($celebration);
+                    @endphp
+                    @if($existingPlans->isNotEmpty())
+                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
+                            Már létező énekrendjeid ehhez az ünnephez:
+                        </flux:heading>
+                        <div class="space-y-2">
+                            @foreach($existingPlans as $plan)
+                            <a
+                                href="{{ route('music-plan-editor', ['musicPlan' => $plan->id]) }}"
+                                class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
+                                <div class="flex items-center gap-3">
+                                    <flux:icon name="musical-note" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
+                                    <div>
+                                        <flux:text class="font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                            {{ $plan->celebration_name }}
+                                        </flux:text>
+                                        <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
+                                            {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
+                                            • {{ \App\MusicPlanSetting::tryFrom($plan->setting)?->label() ?? $plan->setting }}
+                                            {{ $plan->is_published ? '• Közzétéve' : '• Privát' }}
+                                        </flux:text>
+                                    </div>
+                                </div>
+                                <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600" variant="mini" />
+                            </a>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                        <flux:button
+                            wire:click="createMusicPlan({{ $loop->index }})"
+                            variant="outline"
+                            size="sm"
+                            icon="musical-note"
+                            class="w-full">
+                            Énekrend létrehozása
+                        </flux:button>
+                    </div>
+                    @endauth
+                </div>
+            </flux:card>
+            @endforeach
+        </div>
         @endif
     </div>
 </flux:card>
