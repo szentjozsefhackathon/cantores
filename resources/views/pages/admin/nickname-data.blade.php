@@ -186,11 +186,8 @@ new class extends Component
 };
 ?>
 
-<x-pages::admin.layout :heading="__('Master Data')">
+<x-pages::admin.layout :heading="__('Nickname and city master data')">
     <div class="mt-5 space-y-8">
-        <x-action-message class="mb-4" on="master-data-saved">
-            {{ __('Saved.') }}
-        </x-action-message>
 
         <!-- Cities Section -->
         <div>

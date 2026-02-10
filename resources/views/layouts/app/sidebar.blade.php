@@ -23,7 +23,7 @@
             <flux:sidebar.nav>
 
                 @if(auth()->check() && auth()->user()->is_admin)
-                    <flux:sidebar.item icon="shield-check" :href="route('admin.master-data')" :current="request()->routeIs('admin.master-data')" wire:navigate>
+                    <flux:sidebar.item icon="shield-check" :href="route('admin.nickname-data')" :current="request()->routeIs('admin.nickname-data')" wire:navigate>
                         {{ __('Admin') }}
                     </flux:sidebar.item>
                 @endif
