@@ -56,6 +56,7 @@
     "Saved.": "Mentve.",
     "Are you sure you want to delete your account?": "Biztosan törölni szeretnéd a fiókodat?",
     "Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Miután a fiókod törlésre került, minden erőforrása és adata véglegesen törlésre kerül. Kérjük, add meg a jelszavad a fiók végleges törlésének megerősítéséhez.",
-    "Cancel": "Mégse"
+    "Cancel": "Mégse",
+    "Dashboard": "Irányítópult"
 
 }

@@ -6,7 +6,6 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
@@ -52,3 +51,7 @@ Route::get('/random-nickname', function () {
 
 require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';
+
+Route::livewire('/music-plan/{musicPlan}', 'pages::music-plan.music-plan-editor')
+    ->middleware(['auth', 'verified'])
+    ->name('music-plan-editor');

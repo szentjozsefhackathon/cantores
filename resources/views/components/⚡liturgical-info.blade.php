@@ -2,7 +2,9 @@
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Models\MusicPlan;
 
 new class extends Component
 {
@@ -46,6 +48,59 @@ new class extends Component
     public function updatedDate(): void
     {
         $this->fetchLiturgicalInfo();
+    }
+
+    public function createMusicPlan(int $celebrationIndex): void
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return;
+        }
+
+        if (!isset($this->celebrations[$celebrationIndex])) {
+            return;
+        }
+
+        $celebration = $this->celebrations[$celebrationIndex];
+
+        $musicPlan = MusicPlan::create([
+            'user_id' => $user->id,
+            'celebration_name' => $celebration['name'] ?? $celebration['title'] ?? 'Unknown',
+            'actual_date' => $celebration['dateISO'] ?? $this->date,
+            'setting' => 'organist', // default
+            'season' => (int) ($celebration['season'] ?? 0),
+            'week' => (int) ($celebration['week'] ?? 0),
+            'day' => (int) ($celebration['dayofWeek'] ?? 0),
+            'readings_code' => $celebration['readingsId'] ?? null,
+            'year_letter' => $celebration['yearLetter'] ?? null,
+            'year_parity' => $celebration['yearParity'] ?? null,
+            'is_published' => false,
+        ]);
+
+        // Redirect to MusicPlanEditor page with the created plan
+        $this->redirectRoute('music-plan-editor', ['musicPlan' => $musicPlan->id]);
+    }
+
+    public function getExistingMusicPlans(array $celebration): \Illuminate\Database\Eloquent\Collection
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return new \Illuminate\Database\Eloquent\Collection();
+        }
+
+        $celebrationName = $celebration['name'] ?? $celebration['title'] ?? null;
+        $dateISO = $celebration['dateISO'] ?? $this->date;
+
+        if (!$celebrationName) {
+            return new \Illuminate\Database\Eloquent\Collection();
+        }
+
+        return MusicPlan::query()
+            ->where('user_id', $user->id)
+            ->where('celebration_name', $celebrationName)
+            ->where('actual_date', $dateISO)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 };
 ?>
@@ -125,7 +180,7 @@ new class extends Component
                 </x-slot>
             </flux:callout>
         @else
-            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
                 @foreach ($celebrations as $celebration)
                     @php
                         // Determine border color based on season
@@ -240,6 +295,53 @@ new class extends Component
                                     </div>
                                 </div>
                             @endif
+
+                            @auth
+                                @php
+                                    $existingPlans = $this->getExistingMusicPlans($celebration);
+                                @endphp
+                                @if($existingPlans->isNotEmpty())
+                                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
+                                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
+                                            Már létező énekrendjeid ehhez az ünnephez:
+                                        </flux:heading>
+                                        <div class="space-y-2">
+                                            @foreach($existingPlans as $plan)
+                                                <a
+                                                    href="{{ route('music-plan-editor', ['musicPlan' => $plan->id]) }}"
+                                                    class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group"
+                                                >
+                                                    <div class="flex items-center gap-3">
+                                                        <flux:icon name="musical-note" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
+                                                        <div>
+                                                            <flux:text class="font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                                                {{ $plan->celebration_name }}
+                                                            </flux:text>
+                                                            <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
+                                                                {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
+                                                                • {{ \App\MusicPlanSetting::tryFrom($plan->setting)?->label() ?? $plan->setting }}
+                                                                {{ $plan->is_published ? '• Közzétéve' : '• Privát' }}
+                                                            </flux:text>
+                                                        </div>
+                                                    </div>
+                                                    <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600" variant="mini" />
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+                                <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                                    <flux:button
+                                        wire:click="createMusicPlan({{ $loop->index }})"
+                                        variant="outline"
+                                        size="sm"
+                                        icon="musical-note"
+                                        class="w-full"
+                                    >
+                                        Énekrend létrehozása
+                                    </flux:button>
+                                </div>
+                            @endauth
                         </div>
                     </flux:card>
                 @endforeach
