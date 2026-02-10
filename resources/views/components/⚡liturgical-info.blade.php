@@ -69,6 +69,7 @@ new class extends Component
             'actual_date' => $celebration['dateISO'] ?? $this->date,
             'setting' => 'organist', // default
             'season' => (int) ($celebration['season'] ?? 0),
+            'season_text' => $celebration['seasonText'] ?? null,
             'week' => (int) ($celebration['week'] ?? 0),
             'day' => (int) ($celebration['dayofWeek'] ?? 0),
             'readings_code' => $celebration['readingsId'] ?? null,

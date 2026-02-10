@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MusicPlan extends Model
 {
     use HasFactory;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -20,6 +21,7 @@ class MusicPlan extends Model
         'actual_date',
         'setting',
         'season',
+        'season_text',
         'week',
         'day',
         'readings_code',
@@ -39,6 +41,7 @@ class MusicPlan extends Model
             'actual_date' => 'date',
             'is_published' => 'boolean',
             'season' => 'integer',
+            'season_text' => 'string',
             'week' => 'integer',
             'day' => 'integer',
         ];
@@ -109,5 +112,23 @@ class MusicPlan extends Model
             'I' => __('I'),
             'II' => __('II'),
         ];
+    }
+
+    /**
+     * Get the day name for the liturgical day number.
+     */
+    public function getDayNameAttribute(): string
+    {
+        $days = [
+            0 => 'vasárnap',
+            1 => 'hétfő',
+            2 => 'kedd',
+            3 => 'szerda',
+            4 => 'csütörtök',
+            5 => 'péntek',
+            6 => 'szombat',
+        ];
+
+        return $days[$this->day] ?? 'ismeretlen';
     }
 }
