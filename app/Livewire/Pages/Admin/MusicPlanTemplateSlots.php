@@ -61,10 +61,13 @@ class MusicPlanTemplateSlots extends Component
     /**
      * Show the add slot modal.
      */
-    public function showAddSlot(): void
+    public function showAddSlot(?int $slotId = null): void
     {
         $this->authorize('update', $this->template);
         $this->resetAddSlotForm();
+        if ($slotId !== null) {
+            $this->slot_id = $slotId;
+        }
         $this->showAddSlotModal = true;
     }
 

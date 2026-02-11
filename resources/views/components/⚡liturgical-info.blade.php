@@ -152,9 +152,15 @@ new class extends Component
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div class="flex items-center gap-3">
                 <flux:icon name="calendar-days" class="h-5 w-5 text-blue-600 dark:text-blue-400" variant="mini" />
-                <flux:heading size="lg">
+                <flux:text size="lg">
                     {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('Y. F j., l') }}
-                </flux:heading>
+                </flux:text>
+                <div class="flex items-center">
+                    <flux:icon name="external-link" class="h-3 w-3 mr-1" variant="mini" />
+                    <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $date }}" target="_blank" class="text-xs">
+                        Igenaptár
+                    </flux:link>
+                </div>
             </div>
             <flux:badge color="blue" variant="solid" size="lg" class="px-4 py-2 rounded-full">
                 <flux:icon name="star" class="h-4 w-4 mr-2" variant="mini" />

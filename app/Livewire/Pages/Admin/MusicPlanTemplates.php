@@ -46,6 +46,7 @@ class MusicPlanTemplates extends Component
             $query->where('name', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%");
         })
+            ->withCount('slots')
             ->orderBy('name')
             ->paginate(20);
 

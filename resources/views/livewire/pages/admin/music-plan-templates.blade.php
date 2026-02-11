@@ -162,12 +162,10 @@
             </flux:field>
             
             <flux:field>
-                <flux:checkbox 
-                    id="create-is-active" 
+                <flux:checkbox
+                    id="create-is-active"
                     wire:model="is_active"
-                >
-                    {{ __('Active (available for use)') }}
-                </flux:checkbox>
+                    label="{{ __('Active (available for use)') }}" />
                 @error('is_active')
                     <flux:error>{{ $message }}</flux:error>
                 @enderror
