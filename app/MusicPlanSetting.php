@@ -20,9 +20,9 @@ enum MusicPlanSetting: string
     public function icon(): string
     {
         return match ($this) {
-            self::ORGANIST => 'music',
-            self::GUITARIST => 'guitar',
-            self::OTHER => 'settings',
+            self::ORGANIST => 'organist',
+            self::GUITARIST => 'guitarist',
+            self::OTHER => 'other',
         };
     }
 

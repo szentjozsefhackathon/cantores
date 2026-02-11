@@ -148,6 +148,34 @@ new class extends Component
         $this->reorderSlot($pivotId, 'down');
     }
 
+    public function deleteSlot(int $pivotId): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $pivot = DB::table('music_plan_slot_plan')->where('id', $pivotId)->first();
+
+        if (!$pivot) {
+            return;
+        }
+
+        $deletedSequence = $pivot->sequence;
+
+        DB::transaction(function () use ($pivotId, $deletedSequence) {
+            DB::table('music_plan_slot_plan')->where('id', $pivotId)->delete();
+
+            // Decrement sequence for all later slots in the same plan
+            DB::table('music_plan_slot_plan')
+                ->where('music_plan_id', $this->musicPlan->id)
+                ->where('sequence', '>', $deletedSequence)
+                ->decrement('sequence');
+        });
+
+        $this->loadExistingSlotIds();
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated');
+        $this->dispatch('notify', message: 'Elem eltávolítva.', type: 'success');
+    }
+
     private function reorderSlot(int $pivotId, string $direction): void
     {
         $slots = $this->musicPlan->slots()
@@ -213,8 +241,8 @@ new class extends Component
                     </div>
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Hangszerek</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ \App\MusicPlanSetting::tryFrom($musicPlan->setting)?->label() ?? $musicPlan->setting }}</flux:text>
-                    </div>
+                        <x-music-plan-setting-icon :setting="$musicPlan->setting" />
+                     </div>
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Időszak, hét, nap</flux:heading>
                         <div class="flex flex-row gap-2">
@@ -254,22 +282,33 @@ new class extends Component
                                             <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
                                         @endif
                                     </div>
-                                    <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex flex-col gap-1">
+                                            <flux:button
+                                                wire:click="moveSlotUp({{ $slot['pivot_id'] }})"
+                                                wire:loading.attr="disabled"
+                                                wire:loading.class="opacity-50 cursor-not-allowed"
+                                                :disabled="$loop->first"
+                                                icon="chevron-up"
+                                                variant="outline"
+                                                size="xs"/>
+                                            <flux:button
+                                                wire:click="moveSlotDown({{ $slot['pivot_id'] }})"
+                                                wire:loading.attr="disabled"
+                                                wire:loading.class="opacity-50 cursor-not-allowed"
+                                                :disabled="$loop->last"
+                                                icon="chevron-down"
+                                                variant="outline"
+                                                size="xs"/>
+                                        </div>
+                                        <div class="border-l border-neutral-300 dark:border-neutral-700 h-6"></div>
                                         <flux:button
-                                            wire:click="moveSlotUp({{ $slot['pivot_id'] }})"
+                                            wire:click="deleteSlot({{ $slot['pivot_id'] }})"
+                                            wire:confirm="Biztosan eltávolítod ezt az elemet az énekrendből?"
                                             wire:loading.attr="disabled"
                                             wire:loading.class="opacity-50 cursor-not-allowed"
-                                            :disabled="$loop->first"
-                                            icon="chevron-up"
-                                            variant="outline"
-                                            size="xs"/>
-                                        <flux:button
-                                            wire:click="moveSlotDown({{ $slot['pivot_id'] }})"
-                                            wire:loading.attr="disabled"
-                                            wire:loading.class="opacity-50 cursor-not-allowed"
-                                            :disabled="$loop->last"
-                                            icon="chevron-down"
-                                            variant="outline"
+                                            icon="trash"
+                                            variant="danger"
                                             size="xs"/>
                                     </div>
                                 </flux:card>
@@ -313,8 +352,7 @@ new class extends Component
                                                             variant="primary"
                                                             size="sm"
                                                         >
-                                                            <span wire:loading.remove>Összes</span>
-                                                            <span wire:loading>Feldolgozás...</span>
+                                                            <span>Összes</span>
                                                         </flux:button>
                                                     </div>
                                                 </div>
@@ -348,8 +386,8 @@ new class extends Component
                                                                     size="sm"
                                                                     class="ml-4"
                                                                 >
-                                                                    <span wire:loading.remove>Hozzáadás</span>
-                                                                    <span wire:loading>...</span>
+                                                                    <span wire:target="addSlotFromTemplate({{ $template['id'] }}, {{ $slot['id'] }})">Hozzáadás</span>
+                                                                    
                                                                 </flux:button>
                                                             </div>
                                                         @endforeach
