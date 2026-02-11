@@ -18,6 +18,12 @@
                 placeholder="email@example.com"
             />
 
+            <!-- Cloudflare Turnstile -->
+            <x-turnstile />
+            @error('cf-turnstile-response')
+            <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+            @enderror
+
             <flux:button variant="primary" type="submit" class="w-full" data-test="email-password-reset-link-button">
                 {{ __('Email password reset link') }}
             </flux:button>

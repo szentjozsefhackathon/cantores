@@ -42,6 +42,12 @@
                 viewable
             />
 
+            <!-- Cloudflare Turnstile -->
+            <x-turnstile />
+            @error('cf-turnstile-response')
+            <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+            @enderror
+
             <div class="flex items-center justify-end">
                 <flux:button type="submit" variant="primary" class="w-full" data-test="reset-password-button">
                     {{ __('Reset password') }}
