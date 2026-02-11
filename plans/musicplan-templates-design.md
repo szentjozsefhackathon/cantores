@@ -732,7 +732,7 @@ class MusicPlanSlots extends Component
             ->orderBy('name')
             ->paginate(20);
 
-        return view('livewire.pages.admin.music-plan-slots', [
+        return view('pages.admin.music-plan-slots', [
             'slots' => $slots,
         ]);
     }
@@ -866,7 +866,7 @@ class MusicPlanTemplates extends Component
             ->orderBy('name')
             ->paginate(20);
 
-        return view('livewire.pages.admin.music-plan-templates', [
+        return view('pages.admin.music-plan-templates', [
             'templates' => $templates,
         ]);
     }
@@ -1015,7 +1015,7 @@ class MusicPlanTemplateSlots extends Component
             ->orderBy('name')
             ->get();
 
-        return view('livewire.pages.admin.music-plan-template-slots', [
+        return view('pages.admin.music-plan-template-slots', [
             'template' => $this->template,
             'availableSlots' => $availableSlots,
         ]);

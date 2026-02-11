@@ -52,7 +52,7 @@ class MusicPlanTemplateSlots extends Component
             ->orderBy('name')
             ->get();
 
-        return view('livewire.pages.admin.music-plan-template-slots', [
+        return view('pages.admin.music-plan-template-slots', [
             'template' => $this->template,
             'availableSlots' => $availableSlots,
         ]);

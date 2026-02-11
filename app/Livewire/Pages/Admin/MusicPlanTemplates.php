@@ -50,7 +50,7 @@ class MusicPlanTemplates extends Component
             ->orderBy('name')
             ->paginate(20);
 
-        return view('livewire.pages.admin.music-plan-templates', [
+        return view('pages.admin.music-plan-templates', [
             'templates' => $templates,
         ]);
     }

@@ -57,6 +57,13 @@
     "Are you sure you want to delete your account?": "Biztosan törölni szeretnéd a fiókodat?",
     "Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Miután a fiókod törlésre került, minden erőforrása és adata véglegesen törlésre kerül. Kérjük, add meg a jelszavad a fiók végleges törlésének megerősítéséhez.",
     "Cancel": "Mégse",
-    "Dashboard": "Irányítópult"
+    "Dashboard": "Irányítópult",
+    "Forgot password": "Elfelejtett jelszó",
+    "Email password reset link": "Jelszó visszaállító link küldése",
+    "Enter your email to receive a password reset link": "Add meg az email címed, hogy jelszó visszaállító linket kapj",
+    "Email Address": "Email cím",
+    "Or, return to": "Vagy térj vissza a",
+    "log in": "bejelentkezéshez",
+    "We have emailed your password reset link.": "Elküldtük a jelszó visszaállító linket az email címedre."
 
 }

@@ -48,7 +48,7 @@ class MusicPlanSlots extends Component
             ->orderBy('name')
             ->paginate(20);
 
-        return view('livewire.pages.admin.music-plan-slots', [
+        return view('pages.admin.music-plan-slots', [
             'musicPlanSlots' => $slots,
         ]);
     }
