@@ -13,7 +13,7 @@ RUN apt-get update && \
 
 # Add extensions not included in the base image
 ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.7.24/install-php-extensions /usr/local/bin/
-RUN install-php-extensions gd gmp memcached pdo_pgsql pdo_mysql xdebug zip pcntl
+RUN install-php-extensions gd gmp memcached pdo_pgsql pdo_mysql xdebug zip pcntl bcmath
 COPY docker/sites-available/000-default.conf.dev /etc/apache2/sites-available/000-default.conf
 
 RUN echo "xdebug.mode=debug,develop" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \

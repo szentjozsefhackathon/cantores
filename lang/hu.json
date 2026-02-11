@@ -64,6 +64,15 @@
     "Email Address": "Email cím",
     "Or, return to": "Vagy térj vissza a",
     "log in": "bejelentkezéshez",
-    "We have emailed your password reset link.": "Elküldtük a jelszó visszaállító linket az email címedre."
+    "We have emailed your password reset link.": "Elküldtük a jelszó visszaállító linket az email címedre.",
+    "Reset Password Notification": "Jelszó visszaállító értesítés",
+    "You are receiving this email because we received a password reset request for your account.": "Ezt az emailt azért kapod, mert jelszó visszaállítási kérés érkezett a fiókodhoz.",
+    "This password reset link will expire in :count minutes.": "Ez a jelszó visszaállító link :count perc múlva lejár.",
+    "If you did not request a password reset, no further action is required.": "Ha nem te kértél jelszó visszaállítást, nincs további teendőd.",
+    "Regards": "Üdvözlettel:",    
+    "Hello!": "Üdv!",
+    "Reset Password": "Jelszó visszaállítása",
+    "If you're having trouble clicking the \":actionText\" button, copy and paste the URL below\ninto your web browser:": "Ha problémád van a \":actionText\" gombra kattintással, másold és illeszd be az alábbi URL-t\nwebböngésződbe:",
+    "Whoops!": "Hoppá!"
 
 }
