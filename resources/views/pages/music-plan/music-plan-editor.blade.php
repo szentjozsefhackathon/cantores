@@ -18,6 +18,7 @@ new class extends Component
     public bool $showAllSlotsModal = false;
     public array $allSlots = [];
     public ?string $recentlyAddedSlotName = null;
+    public bool $filterExcludeExisting = true;
 
     public function mount(MusicPlan $musicPlan): void
     {
@@ -260,11 +261,17 @@ new class extends Component
             return;
         }
 
-        $this->searchResults = \App\Models\MusicPlanSlot::query()
+        $query = \App\Models\MusicPlanSlot::query()
             ->where(function ($query) use ($value) {
                 $query->where('name', 'ilike', "%{$value}%")
                     ->orWhere('description', 'ilike', "%{$value}%");
-            })
+            });
+
+        if ($this->filterExcludeExisting && !empty($this->existingSlotIds)) {
+            $query->whereNotIn('id', $this->existingSlotIds);
+        }
+
+        $this->searchResults = $query
             ->orderBy('name')
             ->limit(10)
             ->get()
@@ -282,6 +289,14 @@ new class extends Component
             $this->selectedSlotId = $this->searchResults[0]['id'];
         } else {
             $this->selectedSlotId = null;
+        }
+    }
+
+    public function updatedFilterExcludeExisting(): void
+    {
+        // If there's an active search, refresh the results
+        if (strlen($this->slotSearch) >= 2) {
+            $this->updatedSlotSearch($this->slotSearch);
         }
     }
 
@@ -313,7 +328,13 @@ new class extends Component
 
     public function showAllSlots(): void
     {
-        $this->allSlots = \App\Models\MusicPlanSlot::query()
+        $query = \App\Models\MusicPlanSlot::query();
+
+        if ($this->filterExcludeExisting && !empty($this->existingSlotIds)) {
+            $query->whereNotIn('id', $this->existingSlotIds);
+        }
+
+        $this->allSlots = $query
             ->orderBy('name')
             ->get()
             ->map(function ($slot) {
@@ -396,8 +417,15 @@ new class extends Component
                             <div x-data="{ open: false }" x-on:keydown.escape="open = false" class="relative">
                                 <div class="flex gap-2 items-end">
                                     <div class="flex-1 relative">
+                                        <flux:heading size="sm">Elem hozzáadása</flux:heading>
+                                        <flux:field variant="inline" class="mt-2 mb-2">
+                                            <flux:checkbox
+                                                wire:model.live="filterExcludeExisting"
+                                                id="filter-exclude-existing"
+                                            />
+                                            <flux:label for="filter-exclude-existing">Csak még nem szereplő elemek</flux:label>
+                                        </flux:field>
                                         <flux:field>
-                                            <flux:label>Elem hozzáadása</flux:label>
                                             <flux:input
                                                 type="text"
                                                 wire:model.live="slotSearch"
@@ -406,6 +434,7 @@ new class extends Component
                                                 placeholder="Írd be az elem nevét (pl. Gloria, Bevonulás)..."
                                             />
                                         </flux:field>
+
                                         
                                         <!-- Dropdown results -->
                                         <div x-show="open && count($searchResults) > 0"
