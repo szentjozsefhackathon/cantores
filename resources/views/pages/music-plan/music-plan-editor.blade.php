@@ -15,6 +15,9 @@ new class extends Component
     public string $slotSearch = '';
     public array $searchResults = [];
     public ?int $selectedSlotId = null;
+    public bool $showAllSlotsModal = false;
+    public array $allSlots = [];
+    public ?string $recentlyAddedSlotName = null;
 
     public function mount(MusicPlan $musicPlan): void
     {
@@ -286,11 +289,7 @@ new class extends Component
     {
         $this->authorize('update', $this->musicPlan);
 
-        // Check if slot already exists in plan
-        if (in_array($slotId, $this->existingSlotIds)) {
-            $this->dispatch('notify', message: 'Ez az elem már szerepel az énekrendben.', type: 'warning');
-            return;
-        }
+        $slot = \App\Models\MusicPlanSlot::findOrFail($slotId);
 
         // Get existing slots for this plan to determine next sequence
         $existingSlots = $this->musicPlan->slots()->count();
@@ -304,11 +303,40 @@ new class extends Component
         $this->slotSearch = '';
         $this->searchResults = [];
         $this->selectedSlotId = null;
+        $this->recentlyAddedSlotName = $slot->name;
 
         $this->loadExistingSlotIds();
         $this->loadPlanSlots();
         $this->dispatch('slots-updated');
         $this->dispatch('notify', message: 'Elem hozzáadva.', type: 'success');
+    }
+
+    public function showAllSlots(): void
+    {
+        $this->allSlots = \App\Models\MusicPlanSlot::query()
+            ->orderBy('name')
+            ->get()
+            ->map(function ($slot) {
+                return [
+                    'id' => $slot->id,
+                    'name' => $slot->name,
+                    'description' => $slot->description,
+                ];
+            })
+            ->toArray();
+        
+        $this->showAllSlotsModal = true;
+    }
+
+    public function closeAllSlotsModal(): void
+    {
+        $this->showAllSlotsModal = false;
+        $this->allSlots = [];
+    }
+
+    public function clearRecentlyAddedSlot(): void
+    {
+        $this->recentlyAddedSlotName = null;
     }
 };
 ?>
@@ -366,7 +394,7 @@ new class extends Component
 
                             <!-- Autocomplete search for slots -->
                             <div x-data="{ open: false }" x-on:keydown.escape="open = false" class="relative">
-                                <div class="flex gap-2">
+                                <div class="flex gap-2 items-end">
                                     <div class="flex-1 relative">
                                         <flux:field>
                                             <flux:label>Elem hozzáadása</flux:label>
@@ -400,8 +428,102 @@ new class extends Component
                                             </div>
                                         </div>
                                     </div>
+                                    <flux:button
+                                        wire:click="showAllSlots"
+                                        wire:loading.attr="disabled"
+                                        wire:loading.class="opacity-50 cursor-not-allowed"
+                                        icon="list-bullet"
+                                        variant="outline"
+                                        class="self-end whitespace-nowrap">
+                                        Összes elem
+                                    </flux:button>
                                 </div>
                             </div>
+
+                            <!-- Success message when slot added directly (only when modal is closed) -->
+                            @if($recentlyAddedSlotName && !$showAllSlotsModal)
+                                <div x-data="{
+                                    show: true,
+                                    init() {
+                                        setTimeout(() => {
+                                            this.show = false;
+                                            @this.clearRecentlyAddedSlot();
+                                        }, 2000);
+                                    }
+                                }" x-show="show" x-transition>
+                                    <flux:callout variant="success" icon="check-circle">
+                                        <flux:callout.heading>Elem hozzáadva</flux:callout.heading>
+                                        <flux:callout.text>
+                                            A(z) "<strong>{{ $recentlyAddedSlotName }}</strong>" elem sikeresen hozzáadva az énekrendhez.
+                                        </flux:callout.text>
+                                    </flux:callout>
+                                </div>
+                            @endif
+
+                            <!-- All Slots Modal -->
+                            <flux:modal wire:model="showAllSlotsModal" size="lg">
+                                <flux:heading size="lg">Összes elérhető elem</flux:heading>
+
+                                <!-- Success message when slot added from this modal -->
+                                @if($recentlyAddedSlotName && $showAllSlotsModal)
+                                    <div x-data="{
+                                        show: true,
+                                        init() {
+                                            setTimeout(() => {
+                                                this.show = false;
+                                                @this.clearRecentlyAddedSlot();
+                                            }, 2000);
+                                        }
+                                    }" x-show="show" x-transition class="mb-4">
+                                        <flux:callout variant="success" icon="check-circle">
+                                            <flux:callout.heading>Elem hozzáadva</flux:callout.heading>
+                                            <flux:callout.text>
+                                                A(z) "<strong>{{ $recentlyAddedSlotName }}</strong>" elem sikeresen hozzáadva az énekrendhez.
+                                            </flux:callout.text>
+                                        </flux:callout>
+                                    </div>
+                                @endif
+                                
+                                <div class="mt-4 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
+                                    @if(count($allSlots) > 0)
+                                        <div class="divide-y divide-neutral-200 dark:divide-neutral-700">
+                                            @foreach($allSlots as $slot)
+                                                <button
+                                                    type="button"
+                                                    wire:click="addSlotDirectly({{ $slot['id'] }})"
+                                                    wire:loading.attr="disabled"
+                                                    class="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-between">
+                                                    <div class="flex-1">
+                                                        <div class="font-medium">{{ $slot['name'] }}</div>
+                                                        @if($slot['description'])
+                                                            <div class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">{{ $slot['description'] }}</div>
+                                                        @else
+                                                            <div class="text-sm text-neutral-400 dark:text-neutral-500 mt-1">Nincs leírás</div>
+                                                        @endif
+                                                    </div>
+                                                    <flux:icon name="plus" class="h-5 w-5 text-neutral-900 dark:text-neutral-100 ml-4" />
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="p-8 text-center">
+                                            <flux:icon name="inbox" class="h-12 w-12 text-neutral-400 mx-auto" />
+                                            <flux:heading size="md" class="mt-4">Nincs elérhető elem</flux:heading>
+                                            <flux:text class="mt-2 text-neutral-600 dark:text-neutral-400">
+                                                Minden elem már hozzá van adva az énekrendhez.
+                                            </flux:text>
+                                        </div>
+                                    @endif
+                                </div>
+                                
+                                <div class="mt-6 flex justify-end">
+                                    <flux:button
+                                        wire:click="closeAllSlotsModal"
+                                        variant="outline">
+                                        Bezárás
+                                    </flux:button>
+                                </div>
+                            </flux:modal>
 
                             @forelse($planSlots as $slot)
                                 <flux:card class="p-2 flex items-start gap-4">
