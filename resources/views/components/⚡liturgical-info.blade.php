@@ -201,7 +201,7 @@ new class extends Component
             } elseif ($colorText === 'zöld') {
             $colorTextColor = 'border-green-500! dark:border-green-400!';
             } elseif ($colorText === 'fehér') {
-            $colorTextColor = 'border-white-500! dark:border-white-400!';
+            $colorTextColor = 'border-zinc-100! dark:border-zinc-100!';
             } elseif ($colorText === 'rózsaszín|lila') {
             $colorTextColor = 'border-pink-500! dark:border-pink-400!';
             } elseif ($colorText === 'rózsaszín') {
@@ -209,9 +209,9 @@ new class extends Component
             } elseif ($colorText === 'piros') {
             $colorTextColor = 'border-red-500! dark:border-red-400!';
             } elseif ($colorText === 'lila' or $colorText === 'lila|fehér') {
-            $colorTextColor = 'border-purple-500! dark:border-purple-400!';
+            $colorTextColor = 'border-purple-800! dark:border-purple-700!';
             }  elseif ($colorText === 'lila|fekete') {
-            $colorTextColor = 'border-black-500! dark:border-black-400!';
+            $colorTextColor = 'border-zinc-900! dark:border-zinc-400!';
             }
             else {
             $colorTextColor = 'border-neutral-300! dark:border-neutral-600!';
@@ -221,20 +221,25 @@ new class extends Component
                 <div class="p-5 space-y-4">
                     <!-- Title with icon -->
                     <div class="flex items-start justify-between">
-                        <flux:heading size="md" class="flex-1">
-                            {{ $celebration['title'] ?? 'No title' }}
+                        <flux:heading size="md" class="flex-1" >
+                            {{ $celebration['name'] ?? 'No title' }}
                         </flux:heading>
-                        <flux:icon name="bookmark" class="h-5 w-5 text-neutral-400 dark:text-neutral-500 ml-2" variant="mini" />
+                        @if (isset($celebration['celebrationType']))
+                            <flux:icon name="tag" class="h-4 w-4 text-amber-600 dark:text-amber-400 mr-1" variant="mini" />
+                            <flux:text class="text-sm font-medium">{{ $celebration['celebrationType'] }}</flux:text>
+                        @endif
+
                     </div>
 
                     <!-- Celebration details grid -->
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-3 gap-2">
                         @if (isset($celebration['yearLetter']))
                         <div class="flex items-center gap-2">
                             <flux:icon name="document-text" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
                             <div>
                                 <flux:badge color="blue" size="sm" class="mt-1">
                                     {{ $celebration['yearLetter'] }}
+                                    {{ $celebration['yearParity'] }}
                                 </flux:badge>
                             </div>
                         </div>
@@ -257,15 +262,6 @@ new class extends Component
                             </div>
                         </div>
                         @endif
-
-                        @if (isset($celebration['celebrationType']))
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="tag" class="h-4 w-4 text-amber-600 dark:text-amber-400" variant="mini" />
-                            <div>
-                                <flux:text class="text-sm font-medium">{{ $celebration['celebrationType'] }}</flux:text>
-                            </div>
-                        </div>
-                        @endif
                     </div>
 
                     <!-- Readings section -->
@@ -275,7 +271,7 @@ new class extends Component
                             <flux:icon name="book-open" class="h-4 w-4 text-neutral-500 dark:text-neutral-400" variant="mini" />
                             <flux:heading size="sm">Olvasmányok</flux:heading>
                         </div>
-                        <div class="space-y-2">
+                        <div class="space-y-0">
                             @foreach ($celebration['parts'] as $part)
                             @if (isset($part['short_title']) && isset($part['ref']))
                             <div class="flex justify-between items-center text-sm p-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50">
@@ -301,7 +297,7 @@ new class extends Component
                                 @endif
                             </flux:heading>
                         </div>
-                        <div class="space-y-2">
+                        <div class="space-y-0">
                             @foreach ($celebration['parts2'] as $part)
                             @if (isset($part['short_title']) && isset($part['ref']))
                             <div class="flex justify-between items-center text-sm p-2 rounded-md bg-neutral-50 dark:bg-neutral-800/50">

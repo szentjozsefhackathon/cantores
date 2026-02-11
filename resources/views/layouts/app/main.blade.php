@@ -43,7 +43,7 @@
         </header>
         {{ $slot }}
         <footer class="w-full lg:max-w-4xl mx-auto mt-2 flex flex-col items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-            <div>&copy; {{ date('Y') }} Cantores.hu. A fejlesztést a Szent József Hackathon keretében végezzük.</div>
+            <div>&copy; {{ date('Y') }} Cantores.hu. A fejlesztést a <a href="https://github.com/szentjozsefhackathon/cantores" target="_blank" class="hover:text-blue-500 underline">Szent József Hackathon</a> keretében végezzük.</div>
             <div class="flex items-center gap-1">
                 <span class="font-bold text-lg tracking-widest text-accent">U.I.O.G.D.</span>
             </div>
