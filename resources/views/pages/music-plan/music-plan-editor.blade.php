@@ -12,6 +12,9 @@ new class extends Component
     public array $planSlots = [];
     public array $expandedTemplates = [];
     public array $existingSlotIds = [];
+    public string $slotSearch = '';
+    public array $searchResults = [];
+    public ?int $selectedSlotId = null;
 
     public function mount(MusicPlan $musicPlan): void
     {
@@ -245,6 +248,68 @@ new class extends Component
             ->where('id', $pivotId)
             ->update(['sequence' => $sequence]);
     }
+
+    public function updatedSlotSearch(string $value): void
+    {
+        if (strlen($value) < 2) {
+            $this->searchResults = [];
+            $this->selectedSlotId = null;
+            return;
+        }
+
+        $this->searchResults = \App\Models\MusicPlanSlot::query()
+            ->where(function ($query) use ($value) {
+                $query->where('name', 'ilike', "%{$value}%")
+                    ->orWhere('description', 'ilike', "%{$value}%");
+            })
+            ->orderBy('name')
+            ->limit(10)
+            ->get()
+            ->map(function ($slot) {
+                return [
+                    'id' => $slot->id,
+                    'name' => $slot->name,
+                    'description' => $slot->description,
+                ];
+            })
+            ->toArray();
+
+        // Auto-select first result if available
+        if (count($this->searchResults) > 0) {
+            $this->selectedSlotId = $this->searchResults[0]['id'];
+        } else {
+            $this->selectedSlotId = null;
+        }
+    }
+
+    public function addSlotDirectly(int $slotId): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        // Check if slot already exists in plan
+        if (in_array($slotId, $this->existingSlotIds)) {
+            $this->dispatch('notify', message: 'Ez az elem már szerepel az énekrendben.', type: 'warning');
+            return;
+        }
+
+        // Get existing slots for this plan to determine next sequence
+        $existingSlots = $this->musicPlan->slots()->count();
+        $sequence = $existingSlots + 1;
+
+        $this->musicPlan->slots()->attach($slotId, [
+            'sequence' => $sequence,
+        ]);
+
+        // Clear search
+        $this->slotSearch = '';
+        $this->searchResults = [];
+        $this->selectedSlotId = null;
+
+        $this->loadExistingSlotIds();
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated');
+        $this->dispatch('notify', message: 'Elem hozzáadva.', type: 'success');
+    }
 };
 ?>
 
@@ -297,6 +362,45 @@ new class extends Component
                             <div class="flex items-center justify-between">
                                 <flux:heading size="lg">Énekrend elemei</flux:heading>
                                 <flux:badge color="zinc" size="sm">{{ count($planSlots) }} elem</flux:badge>
+                            </div>
+
+                            <!-- Autocomplete search for slots -->
+                            <div x-data="{ open: false }" x-on:keydown.escape="open = false" class="relative">
+                                <div class="flex gap-2">
+                                    <div class="flex-1 relative">
+                                        <flux:field>
+                                            <flux:label>Elem hozzáadása</flux:label>
+                                            <flux:input
+                                                type="text"
+                                                wire:model.live="slotSearch"
+                                                x-on:focus="open = true"
+                                                x-on:click.outside="open = false"
+                                                placeholder="Írd be az elem nevét (pl. Gloria, Bevonulás)..."
+                                            />
+                                        </flux:field>
+                                        
+                                        <!-- Dropdown results -->
+                                        <div x-show="open && count($searchResults) > 0"
+                                             x-transition
+                                             class="absolute z-10 mt-1 w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                            <div class="py-1">
+                                                @foreach($searchResults as $result)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="addSlotDirectly({{ $result['id'] }})"
+                                                        wire:loading.attr="disabled"
+                                                        class="w-full text-left px-4 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-between">
+                                                        <div>
+                                                            <div class="font-medium">{{ $result['name'] }}</div>
+                                                            <div class="text-sm text-neutral-600 dark:text-neutral-400">{{ $result['description'] ?: 'Nincs leírás' }}</div>
+                                                        </div>
+                                                        <flux:icon name="plus" class="h-4 w-4 text-neutral-900 dark:text-neutral-100" />
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             @forelse($planSlots as $slot)
