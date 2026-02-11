@@ -138,6 +138,38 @@ new class extends Component
         $this->dispatch('notify', message: $addedCount . ' elem hozzáadva a sablonból.', type: 'success');
     }
 
+    public function addDefaultSlotsFromTemplate(int $templateId): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $template = \App\Models\MusicPlanTemplate::with(['slots' => function ($query) {
+            $query->orderByPivot('sequence');
+        }])->findOrFail($templateId);
+
+        // Get existing slots for this plan to determine next sequence
+        $existingSlots = $this->musicPlan->slots()->count();
+        $sequence = $existingSlots + 1;
+
+        $addedCount = 0;
+        foreach ($template->slots as $slot) {
+            if ($slot->pivot->is_included_by_default) {
+                $this->musicPlan->slots()->attach($slot->id, [
+                    'sequence' => $sequence,
+                ]);
+                $sequence++;
+                $addedCount++;
+            }
+        }
+
+        if ($addedCount > 0) {
+            $this->loadExistingSlotIds();
+            $this->loadPlanSlots();
+        }
+
+        $this->dispatch('slots-updated');
+        $this->dispatch('notify', message: $addedCount . ' szokásos elem hozzáadva a sablonból.', type: 'success');
+    }
+
     public function moveSlotUp(int $pivotId): void
     {
         $this->reorderSlot($pivotId, 'up');
@@ -353,6 +385,16 @@ new class extends Component
                                                             size="sm"
                                                         >
                                                             <span>Összes</span>
+                                                        </flux:button>
+                                                        <flux:button
+                                                            wire:click.stop="addDefaultSlotsFromTemplate({{ $template['id'] }})"
+                                                            wire:loading.attr="disabled"
+                                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                                            icon="plus"
+                                                            variant="outline"
+                                                            size="sm"
+                                                        >
+                                                            <span>Szokásos</span>
                                                         </flux:button>
                                                     </div>
                                                 </div>
