@@ -252,7 +252,7 @@ new class extends Component
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <flux:card class="p-5">
             <div class="flex items-center gap-4 mb-4">
-                <flux:icon name="musical-note" class="h-7 w-7 text-blue-600" variant="outline" />
+                <x-music-plan-setting-icon :setting="$musicPlan->setting" />
                 <flux:heading size="xl">Énekrend szerkesztése</flux:heading>
             </div>
 
@@ -271,10 +271,6 @@ new class extends Component
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
                         <flux:text class="text-base font-semibold">{{ $musicPlan->year_letter ?? '–' }} {{ $musicPlan->year_parity ? '(' . $musicPlan->year_parity . ')' : '' }}</flux:text>
                     </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Hangszerek</flux:heading>
-                        <x-music-plan-setting-icon :setting="$musicPlan->setting" />
-                     </div>
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Időszak, hét, nap</flux:heading>
                         <div class="flex flex-row gap-2">

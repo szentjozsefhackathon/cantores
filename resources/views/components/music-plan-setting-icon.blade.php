@@ -3,7 +3,9 @@
 @endphp
 
 @if($iconOrSetting === 'organist')
-    <x-gameicon-pipe-organ class="inline-block h-10 w-10 mr-1 align-text-bottom" />
+    <x-gameicon-pipe-organ class="h-10 w-10" />
+@elseif($iconOrSetting === 'guitar')
+    <flux:icon name="guitar" class="h-10 w-10" />
 @else
-    {{ $iconOrSetting }}
+    <flux:icon name="musical-note" class="h-10 w-10" variant="outline" />
 @endif
