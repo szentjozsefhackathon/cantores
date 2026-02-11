@@ -2,11 +2,15 @@
 
 use App\Models\City;
 use App\Models\FirstName;
+use RyanChandler\LaravelCloudflareTurnstile\Facades\Turnstile;
 
 beforeEach(function () {
     // Ensure at least one city and first name exist
     City::firstOrCreate(['name' => 'Test City']);
     FirstName::firstOrCreate(['name' => 'Test First Name'], ['gender' => 'male']);
+    
+    // Fake Turnstile responses for testing
+    Turnstile::fake();
 });
 
 test('registration screen can be rendered', function () {
@@ -28,6 +32,7 @@ test('new users can register', function () {
         'password_confirmation' => 'password',
         'city_id' => $city->id,
         'first_name_id' => $firstName->id,
+        'cf-turnstile-response' => Turnstile::dummy(),
     ]);
 
     $response->assertSessionHasNoErrors()
@@ -47,6 +52,7 @@ test('registration requires city and first name', function () {
         'email' => 'test2@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
+        'cf-turnstile-response' => Turnstile::dummy(),
         // missing city_id and first_name_id
     ]);
 
@@ -65,6 +71,7 @@ test('city and first name combination must be unique', function () {
         'password_confirmation' => 'password',
         'city_id' => $city->id,
         'first_name_id' => $firstName->id,
+        'cf-turnstile-response' => Turnstile::dummy(),
     ]);
 
     // Log out the first user to simulate a new registration attempt
@@ -78,6 +85,7 @@ test('city and first name combination must be unique', function () {
         'password_confirmation' => 'password',
         'city_id' => $city->id,
         'first_name_id' => $firstName->id,
+        'cf-turnstile-response' => Turnstile::dummy(),
     ]);
 
     // Check if the second request succeeded (should not)
