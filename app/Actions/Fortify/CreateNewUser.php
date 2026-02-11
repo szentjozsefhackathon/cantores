@@ -5,9 +5,9 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
+use App\Rules\TurnstileWithDummy;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
-use RyanChandler\LaravelCloudflareTurnstile\Rules\Turnstile;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -25,7 +25,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
             'city_id' => ['required', 'integer', 'exists:cities,id'],
             'first_name_id' => ['required', 'integer', 'exists:first_names,id'],
-            'cf-turnstile-response' => ['required', new Turnstile],
+            'cf-turnstile-response' => ['required', new TurnstileWithDummy],
         ])->after(function ($validator) use ($input) {
             \Illuminate\Support\Facades\Log::debug('Checking duplicate city/first name combination', ['city_id' => $input['city_id'] ?? null, 'first_name_id' => $input['first_name_id'] ?? null]);
             if (isset($input['city_id'], $input['first_name_id'])) {
