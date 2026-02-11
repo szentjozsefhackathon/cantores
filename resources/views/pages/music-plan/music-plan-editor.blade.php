@@ -151,6 +151,7 @@ new class extends Component
     private function reorderSlot(int $pivotId, string $direction): void
     {
         $slots = $this->musicPlan->slots()
+            ->withPivot('id', 'sequence')
             ->orderBy('music_plan_slot_plan.sequence')
             ->get();
 
@@ -262,9 +263,6 @@ new class extends Component
                                             icon="chevron-up"
                                             variant="outline"
                                             size="xs"/>
-                                            <pre class="text-xs text-neutral-500 bg-neutral-100 dark:bg-neutral-900 rounded p-2 overflow-x-auto">
-                                                {{ var_export($slot, true) }}
-                                            </pre>
                                         <flux:button
                                             wire:click="moveSlotDown({{ $slot['pivot_id'] }})"
                                             wire:loading.attr="disabled"
