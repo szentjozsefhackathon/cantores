@@ -160,9 +160,7 @@
                     wire:model="name" 
                     required
                 />
-                @error('name')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+                    <flux:error name="name" />
             </flux:field>
             
             <flux:field>
@@ -172,9 +170,7 @@
                     wire:model="description" 
                     rows="3"
                 />
-                @error('description')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+                    <flux:error name="description" />
             </flux:field>
             
             <div class="flex justify-end gap-3 pt-4">

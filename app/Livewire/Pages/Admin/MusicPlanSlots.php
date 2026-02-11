@@ -98,7 +98,7 @@ class MusicPlanSlots extends Component
     {
         $this->authorize('update', $this->editingSlot);
 
-        $validated = $this->validate((new UpdateMusicPlanSlotRequest)->rules());
+        $validated = $this->validate((new UpdateMusicPlanSlotRequest)->rules($this->editingSlot->id));
 
         $this->editingSlot->update($validated);
 

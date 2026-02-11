@@ -8,7 +8,7 @@ beforeEach(function () {
     // Ensure at least one city and first name exist
     City::firstOrCreate(['name' => 'Test City']);
     FirstName::firstOrCreate(['name' => 'Test First Name'], ['gender' => 'male']);
-    
+
     // Fake Turnstile responses for testing
     Turnstile::fake();
 });

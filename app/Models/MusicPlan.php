@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class MusicPlan extends Model
 {
@@ -53,6 +54,16 @@ class MusicPlan extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the slots for this music plan.
+     */
+    public function slots(): BelongsToMany
+    {
+        return $this->belongsToMany(MusicPlanSlot::class, 'music_plan_slot_plan')
+            ->withPivot('sequence')
+            ->orderByPivot('sequence');
     }
 
     /**
