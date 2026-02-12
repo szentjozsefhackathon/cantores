@@ -60,3 +60,7 @@ Route::livewire('/music-plan/{musicPlan}', 'pages::music-plan.music-plan-editor'
 Route::livewire('/collections', \App\Livewire\Pages\Editor\Collections::class)
     ->middleware(['auth', 'verified'])
     ->name('collections');
+
+Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
+    ->middleware(['auth', 'verified'])
+    ->name('musics');
