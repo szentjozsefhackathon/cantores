@@ -222,7 +222,7 @@ new class extends Component
             ->orderBy('music_plan_slot_plan.sequence')
             ->get();
 
-        $currentIndex = $slots->search(fn ($slot) => $slot->pivot->id === $pivotId);
+        $currentIndex = $slots->search(fn($slot) => $slot->pivot->id === $pivotId);
 
         if ($currentIndex === false) {
             return;
@@ -345,7 +345,7 @@ new class extends Component
                 ];
             })
             ->toArray();
-        
+
         $this->showAllSlotsModal = true;
     }
 
@@ -401,6 +401,13 @@ new class extends Component
                     <div class="flex items-center gap-3">
                         <flux:icon name="{{ $musicPlan->is_published ? 'eye' : 'eye-slash' }}" class="h-5 w-5 text-neutral-500" variant="mini" />
                         <flux:text class="font-medium">{{ $musicPlan->is_published ? 'Közzétéve' : 'Privát' }}</flux:text>
+                        <div class="flex items-center">
+                            <flux:icon name="external-link" class="mr-1"/>
+                            <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->translatedFormat('Y-m-d') }}" target="_blank">
+                                Igenaptár
+                            </flux:link>
+                        </div>
+
                     </div>
                 </div>
 
@@ -421,8 +428,7 @@ new class extends Component
                                         <flux:field variant="inline" class="mt-2 mb-2">
                                             <flux:checkbox
                                                 wire:model.live="filterExcludeExisting"
-                                                id="filter-exclude-existing"
-                                            />
+                                                id="filter-exclude-existing" />
                                             <flux:label for="filter-exclude-existing">Csak még nem szereplő elemek</flux:label>
                                         </flux:field>
                                         <flux:field>
@@ -431,28 +437,27 @@ new class extends Component
                                                 wire:model.live="slotSearch"
                                                 x-on:focus="open = true"
                                                 x-on:click.outside="open = false"
-                                                placeholder="Írd be az elem nevét (pl. Gloria, Bevonulás)..."
-                                            />
+                                                placeholder="Írd be az elem nevét (pl. Gloria, Bevonulás)..." />
                                         </flux:field>
 
-                                        
+
                                         <!-- Dropdown results -->
                                         <div x-show="open && count($searchResults) > 0"
-                                             x-transition
-                                             class="absolute z-10 mt-1 w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                            x-transition
+                                            class="absolute z-10 mt-1 w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                                             <div class="py-1">
                                                 @foreach($searchResults as $result)
-                                                    <button
-                                                        type="button"
-                                                        wire:click="addSlotDirectly({{ $result['id'] }})"
-                                                        wire:loading.attr="disabled"
-                                                        class="w-full text-left px-4 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-between">
-                                                        <div>
-                                                            <div class="font-medium">{{ $result['name'] }}</div>
-                                                            <div class="text-sm text-neutral-600 dark:text-neutral-400">{{ $result['description'] ?: 'Nincs leírás' }}</div>
-                                                        </div>
-                                                        <flux:icon name="plus" class="h-4 w-4 text-neutral-900 dark:text-neutral-100" />
-                                                    </button>
+                                                <button
+                                                    type="button"
+                                                    wire:click="addSlotDirectly({{ $result['id'] }})"
+                                                    wire:loading.attr="disabled"
+                                                    class="w-full text-left px-4 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-between">
+                                                    <div>
+                                                        <div class="font-medium">{{ $result['name'] }}</div>
+                                                        <div class="text-sm text-neutral-600 dark:text-neutral-400">{{ $result['description'] ?: 'Nincs leírás' }}</div>
+                                                    </div>
+                                                    <flux:icon name="plus" class="h-4 w-4 text-neutral-900 dark:text-neutral-100" />
+                                                </button>
                                                 @endforeach
                                             </div>
                                         </div>
@@ -471,7 +476,7 @@ new class extends Component
 
                             <!-- Success message when slot added directly (only when modal is closed) -->
                             @if($recentlyAddedSlotName && !$showAllSlotsModal)
-                                <div x-data="{
+                            <div x-data="{
                                     show: true,
                                     init() {
                                         setTimeout(() => {
@@ -480,13 +485,13 @@ new class extends Component
                                         }, 2000);
                                     }
                                 }" x-show="show" x-transition>
-                                    <flux:callout variant="success" icon="check-circle">
-                                        <flux:callout.heading>Elem hozzáadva</flux:callout.heading>
-                                        <flux:callout.text>
-                                            A(z) "<strong>{{ $recentlyAddedSlotName }}</strong>" elem sikeresen hozzáadva az énekrendhez.
-                                        </flux:callout.text>
-                                    </flux:callout>
-                                </div>
+                                <flux:callout variant="success" icon="check-circle">
+                                    <flux:callout.heading>Elem hozzáadva</flux:callout.heading>
+                                    <flux:callout.text>
+                                        A(z) "<strong>{{ $recentlyAddedSlotName }}</strong>" elem sikeresen hozzáadva az énekrendhez.
+                                    </flux:callout.text>
+                                </flux:callout>
+                            </div>
                             @endif
 
                             <!-- All Slots Modal -->
@@ -495,7 +500,7 @@ new class extends Component
 
                                 <!-- Success message when slot added from this modal -->
                                 @if($recentlyAddedSlotName && $showAllSlotsModal)
-                                    <div x-data="{
+                                <div x-data="{
                                         show: true,
                                         init() {
                                             setTimeout(() => {
@@ -504,47 +509,47 @@ new class extends Component
                                             }, 2000);
                                         }
                                     }" x-show="show" x-transition class="mb-4">
-                                        <flux:callout variant="success" icon="check-circle">
-                                            <flux:callout.heading>Elem hozzáadva</flux:callout.heading>
-                                            <flux:callout.text>
-                                                A(z) "<strong>{{ $recentlyAddedSlotName }}</strong>" elem sikeresen hozzáadva az énekrendhez.
-                                            </flux:callout.text>
-                                        </flux:callout>
-                                    </div>
+                                    <flux:callout variant="success" icon="check-circle">
+                                        <flux:callout.heading>Elem hozzáadva</flux:callout.heading>
+                                        <flux:callout.text>
+                                            A(z) "<strong>{{ $recentlyAddedSlotName }}</strong>" elem sikeresen hozzáadva az énekrendhez.
+                                        </flux:callout.text>
+                                    </flux:callout>
+                                </div>
                                 @endif
-                                
+
                                 <div class="mt-4 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
                                     @if(count($allSlots) > 0)
-                                        <div class="divide-y divide-neutral-200 dark:divide-neutral-700">
-                                            @foreach($allSlots as $slot)
-                                                <button
-                                                    type="button"
-                                                    wire:click="addSlotDirectly({{ $slot['id'] }})"
-                                                    wire:loading.attr="disabled"
-                                                    class="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-between">
-                                                    <div class="flex-1">
-                                                        <div class="font-medium">{{ $slot['name'] }}</div>
-                                                        @if($slot['description'])
-                                                            <div class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">{{ $slot['description'] }}</div>
-                                                        @else
-                                                            <div class="text-sm text-neutral-400 dark:text-neutral-500 mt-1">Nincs leírás</div>
-                                                        @endif
-                                                    </div>
-                                                    <flux:icon name="plus" class="h-5 w-5 text-neutral-900 dark:text-neutral-100 ml-4" />
-                                                </button>
-                                            @endforeach
-                                        </div>
+                                    <div class="divide-y divide-neutral-200 dark:divide-neutral-700">
+                                        @foreach($allSlots as $slot)
+                                        <button
+                                            type="button"
+                                            wire:click="addSlotDirectly({{ $slot['id'] }})"
+                                            wire:loading.attr="disabled"
+                                            class="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-between">
+                                            <div class="flex-1">
+                                                <div class="font-medium">{{ $slot['name'] }}</div>
+                                                @if($slot['description'])
+                                                <div class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">{{ $slot['description'] }}</div>
+                                                @else
+                                                <div class="text-sm text-neutral-400 dark:text-neutral-500 mt-1">Nincs leírás</div>
+                                                @endif
+                                            </div>
+                                            <flux:icon name="plus" class="h-5 w-5 text-neutral-900 dark:text-neutral-100 ml-4" />
+                                        </button>
+                                        @endforeach
+                                    </div>
                                     @else
-                                        <div class="p-8 text-center">
-                                            <flux:icon name="inbox" class="h-12 w-12 text-neutral-400 mx-auto" />
-                                            <flux:heading size="md" class="mt-4">Nincs elérhető elem</flux:heading>
-                                            <flux:text class="mt-2 text-neutral-600 dark:text-neutral-400">
-                                                Minden elem már hozzá van adva az énekrendhez.
-                                            </flux:text>
-                                        </div>
+                                    <div class="p-8 text-center">
+                                        <flux:icon name="inbox" class="h-12 w-12 text-neutral-400 mx-auto" />
+                                        <flux:heading size="md" class="mt-4">Nincs elérhető elem</flux:heading>
+                                        <flux:text class="mt-2 text-neutral-600 dark:text-neutral-400">
+                                            Minden elem már hozzá van adva az énekrendhez.
+                                        </flux:text>
+                                    </div>
                                     @endif
                                 </div>
-                                
+
                                 <div class="mt-6 flex justify-end">
                                     <flux:button
                                         wire:click="closeAllSlotsModal"
@@ -555,50 +560,50 @@ new class extends Component
                             </flux:modal>
 
                             @forelse($planSlots as $slot)
-                                <flux:card class="p-2 flex items-start gap-4">
-                                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
-                                        {{ $slot['sequence'] }}
-                                    </div>
-                                    <div class="flex-1 space-y-1">
-                                        <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
-                                        @if($slot['description'])
-                                            <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
-                                        @endif
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <div class="flex flex-col gap-1">
-                                            <flux:button
-                                                wire:click="moveSlotUp({{ $slot['pivot_id'] }})"
-                                                wire:loading.attr="disabled"
-                                                wire:loading.class="opacity-50 cursor-not-allowed"
-                                                :disabled="$loop->first"
-                                                icon="chevron-up"
-                                                variant="outline"
-                                                size="xs"/>
-                                            <flux:button
-                                                wire:click="moveSlotDown({{ $slot['pivot_id'] }})"
-                                                wire:loading.attr="disabled"
-                                                wire:loading.class="opacity-50 cursor-not-allowed"
-                                                :disabled="$loop->last"
-                                                icon="chevron-down"
-                                                variant="outline"
-                                                size="xs"/>
-                                        </div>
-                                        <div class="border-l border-neutral-300 dark:border-neutral-700 h-6"></div>
+                            <flux:card class="p-2 flex items-start gap-4">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
+                                    {{ $slot['sequence'] }}
+                                </div>
+                                <div class="flex-1 space-y-1">
+                                    <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
+                                    @if($slot['description'])
+                                    <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
+                                    @endif
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex flex-col gap-1">
                                         <flux:button
-                                            wire:click="deleteSlot({{ $slot['pivot_id'] }})"
-                                            wire:confirm="Biztosan eltávolítod ezt az elemet az énekrendből?"
+                                            wire:click="moveSlotUp({{ $slot['pivot_id'] }})"
                                             wire:loading.attr="disabled"
                                             wire:loading.class="opacity-50 cursor-not-allowed"
-                                            icon="trash"
-                                            variant="danger"
-                                            size="xs"/>
+                                            :disabled="$loop->first"
+                                            icon="chevron-up"
+                                            variant="outline"
+                                            size="xs" />
+                                        <flux:button
+                                            wire:click="moveSlotDown({{ $slot['pivot_id'] }})"
+                                            wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                            :disabled="$loop->last"
+                                            icon="chevron-down"
+                                            variant="outline"
+                                            size="xs" />
                                     </div>
-                                </flux:card>
+                                    <div class="border-l border-neutral-300 dark:border-neutral-700 h-6"></div>
+                                    <flux:button
+                                        wire:click="deleteSlot({{ $slot['pivot_id'] }})"
+                                        wire:confirm="Biztosan eltávolítod ezt az elemet az énekrendből?"
+                                        wire:loading.attr="disabled"
+                                        wire:loading.class="opacity-50 cursor-not-allowed"
+                                        icon="trash"
+                                        variant="danger"
+                                        size="xs" />
+                                </div>
+                            </flux:card>
                             @empty
-                                <flux:callout variant="secondary" icon="musical-note">
-                                    Ehhez az énekrendhez még nem adtál elemeket.
-                                </flux:callout>
+                            <flux:callout variant="secondary" icon="musical-note">
+                                Ehhez az énekrendhez még nem adtál elemeket.
+                            </flux:callout>
                             @endforelse
                         </div>
 
@@ -606,94 +611,89 @@ new class extends Component
                             <flux:heading size="lg">Elemek hozzáadása sablonból</flux:heading>
 
                             @if(count($availableTemplates) > 0)
-                                <div class="space-y-4">
-                                    @foreach($availableTemplates as $template)
-                                        <flux:card class="overflow-hidden" size="sm">
-                                            <div class="p-1 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                                                 wire:click="toggleTemplate({{ $template['id'] }})">
-                                                <div class="flex justify-between items-center">
-                                                    <div class="flex items-center gap-2">
-                                                        <flux:icon
-                                                            name="chevron-right"
-                                                            class="h-4 w-4 transition-transform duration-200 {{ in_array($template['id'], $expandedTemplates) ? 'rotate-90' : '' }}"
-                                                            variant="mini"
-                                                        />
-                                                        <div>
-                                                            <flux:heading size="sm" class="mb-1">{{ $template['name'] }}</flux:heading>
-                                                            @if($template['description'])
-                                                                <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($template['description'], 80) }}</flux:text>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                    <div class="flex items-center gap-3">
-                                                        <flux:badge color="blue" size="sm">{{ $template['slot_count'] }} elem</flux:badge>
-                                                        <flux:button
-                                                            wire:click.stop="addSlotsFromTemplate({{ $template['id'] }})"
-                                                            wire:loading.attr="disabled"
-                                                            wire:loading.class="opacity-50 cursor-not-allowed"
-                                                            icon="plus"
-                                                            variant="primary"
-                                                            size="sm"
-                                                        >
-                                                            <span>Összes</span>
-                                                        </flux:button>
-                                                        <flux:button
-                                                            wire:click.stop="addDefaultSlotsFromTemplate({{ $template['id'] }})"
-                                                            wire:loading.attr="disabled"
-                                                            wire:loading.class="opacity-50 cursor-not-allowed"
-                                                            icon="plus"
-                                                            variant="outline"
-                                                            size="sm"
-                                                        >
-                                                            <span>Szokásos</span>
-                                                        </flux:button>
-                                                    </div>
+                            <div class="space-y-4">
+                                @foreach($availableTemplates as $template)
+                                <flux:card class="overflow-hidden" size="sm">
+                                    <div class="p-1 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                                        wire:click="toggleTemplate({{ $template['id'] }})">
+                                        <div class="flex justify-between items-center">
+                                            <div class="flex items-center gap-2">
+                                                <flux:icon
+                                                    name="chevron-right"
+                                                    class="h-4 w-4 transition-transform duration-200 {{ in_array($template['id'], $expandedTemplates) ? 'rotate-90' : '' }}"
+                                                    variant="mini" />
+                                                <div>
+                                                    <flux:heading size="sm" class="mb-1">{{ $template['name'] }}</flux:heading>
+                                                    @if($template['description'])
+                                                    <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($template['description'], 80) }}</flux:text>
+                                                    @endif
                                                 </div>
                                             </div>
+                                            <div class="flex items-center gap-3">
+                                                <flux:badge color="blue" size="sm">{{ $template['slot_count'] }} elem</flux:badge>
+                                                <flux:button
+                                                    wire:click.stop="addSlotsFromTemplate({{ $template['id'] }})"
+                                                    wire:loading.attr="disabled"
+                                                    wire:loading.class="opacity-50 cursor-not-allowed"
+                                                    icon="plus"
+                                                    variant="primary"
+                                                    size="sm">
+                                                    <span>Összes</span>
+                                                </flux:button>
+                                                <flux:button
+                                                    wire:click.stop="addDefaultSlotsFromTemplate({{ $template['id'] }})"
+                                                    wire:loading.attr="disabled"
+                                                    wire:loading.class="opacity-50 cursor-not-allowed"
+                                                    icon="plus"
+                                                    variant="outline"
+                                                    size="sm">
+                                                    <span>Szokásos</span>
+                                                </flux:button>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                            @if(in_array($template['id'], $expandedTemplates))
-                                                <div class="border-t border-neutral-200 dark:border-neutral-800">
-                                                    <div class="p-4 space-y-3">
-                                                        @foreach($template['slots'] as $slot)
-                                                            <div class="flex items-center justify-between py-2 px-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-                                                                <div class="flex-1">
-                                                                    <div class="flex items-center gap-2">
-                                                                        <flux:badge color="zinc" size="xs">{{ $slot['sequence'] }}</flux:badge>
-                                                                        <flux:heading size="xs" class="font-medium">{{ $slot['name'] }}</flux:heading>
-                                                                        <flux:icon
-                                                                            name="star"
-                                                                            variant="{{ $slot['is_included_by_default'] ? 'solid' : 'outline' }}"
-                                                                            class="h-4 w-4 {{ $slot['is_included_by_default'] ? 'text-amber-500' : 'text-neutral-400' }}"
-                                                                        />
-                                                                    </div>
-                                                                    @if($slot['description'])
-                                                                        <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 60) }}</flux:text>
-                                                                    @endif
-                                                                </div>
-                                                                <flux:button
-                                                                    wire:click.stop="addSlotFromTemplate({{ $template['id'] }}, {{ $slot['id'] }})"
-                                                                    wire:loading.attr="disabled"
-                                                                    wire:loading.class="opacity-50 cursor-not-allowed"
-                                                                    icon="plus"
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    class="ml-4"
-                                                                >
-                                                                    <span wire:target="addSlotFromTemplate({{ $template['id'] }}, {{ $slot['id'] }})">Hozzáadás</span>
-                                                                    
-                                                                </flux:button>
-                                                            </div>
-                                                        @endforeach
+                                    @if(in_array($template['id'], $expandedTemplates))
+                                    <div class="border-t border-neutral-200 dark:border-neutral-800">
+                                        <div class="p-4 space-y-3">
+                                            @foreach($template['slots'] as $slot)
+                                            <div class="flex items-center justify-between py-2 px-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+                                                <div class="flex-1">
+                                                    <div class="flex items-center gap-2">
+                                                        <flux:badge color="zinc" size="xs">{{ $slot['sequence'] }}</flux:badge>
+                                                        <flux:heading size="xs" class="font-medium">{{ $slot['name'] }}</flux:heading>
+                                                        <flux:icon
+                                                            name="star"
+                                                            variant="{{ $slot['is_included_by_default'] ? 'solid' : 'outline' }}"
+                                                            class="h-4 w-4 {{ $slot['is_included_by_default'] ? 'text-amber-500' : 'text-neutral-400' }}" />
                                                     </div>
+                                                    @if($slot['description'])
+                                                    <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 60) }}</flux:text>
+                                                    @endif
                                                 </div>
-                                            @endif
-                                        </flux:card>
-                                    @endforeach
-                                </div>
+                                                <flux:button
+                                                    wire:click.stop="addSlotFromTemplate({{ $template['id'] }}, {{ $slot['id'] }})"
+                                                    wire:loading.attr="disabled"
+                                                    wire:loading.class="opacity-50 cursor-not-allowed"
+                                                    icon="plus"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    class="ml-4">
+                                                    <span wire:target="addSlotFromTemplate({{ $template['id'] }}, {{ $slot['id'] }})">Hozzáadás</span>
+
+                                                </flux:button>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    @endif
+                                </flux:card>
+                                @endforeach
+                            </div>
                             @else
-                                <flux:callout variant="secondary" icon="information-circle">
-                                    Nincsenek elérhető sablonok. Először hozz létre sablonokat az admin felületen.
-                                </flux:callout>
+                            <flux:callout variant="secondary" icon="information-circle">
+                                Nincsenek elérhető sablonok. Először hozz létre sablonokat az admin felületen.
+                            </flux:callout>
                             @endif
                         </div>
                     </div>
@@ -708,8 +708,7 @@ new class extends Component
                         variant="danger"
                         icon="trash"
                         wire:click="delete"
-                        wire:confirm="Biztosan törölni szeretnéd ezt az énekrendet? A művelet nem visszavonható."
-                    >
+                        wire:confirm="Biztosan törölni szeretnéd ezt az énekrendet? A művelet nem visszavonható.">
                         Énekrend törlése
                     </flux:button>
                 </div>

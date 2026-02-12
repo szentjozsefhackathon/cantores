@@ -64,3 +64,7 @@ Route::livewire('/collections', \App\Livewire\Pages\Editor\Collections::class)
 Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
     ->middleware(['auth', 'verified'])
     ->name('musics');
+
+Route::livewire('/music/{music}', 'pages::editor.music-editor')
+    ->middleware(['auth', 'verified'])
+    ->name('music-editor');

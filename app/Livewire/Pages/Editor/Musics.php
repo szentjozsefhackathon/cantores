@@ -82,16 +82,12 @@ class Musics extends Component
     }
 
     /**
-     * Show the edit modal.
+     * Redirect to the music editor page.
      */
     public function edit(Music $music): void
     {
         $this->authorize('update', $music);
-        $music->load('collections');
-        $this->editingMusic = $music;
-        $this->title = $music->title;
-        $this->customId = $music->custom_id;
-        $this->showEditModal = true;
+        $this->redirectRoute('music-editor', ['music' => $music->id]);
     }
 
     /**
@@ -119,9 +115,6 @@ class Musics extends Component
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'customId' => ['nullable', 'string', 'max:255'],
-            'selectedCollectionId' => ['nullable', 'integer', 'exists:collections,id'],
-            'pageNumber' => ['nullable', 'integer', 'min:1'],
-            'orderNumber' => ['nullable', 'string', 'max:255'],
         ]);
 
         // Create music
@@ -130,17 +123,9 @@ class Musics extends Component
             'custom_id' => $validated['customId'],
         ]);
 
-        // Attach collection if selected
-        if ($validated['selectedCollectionId']) {
-            $music->collections()->attach($validated['selectedCollectionId'], [
-                'page_number' => $validated['pageNumber'],
-                'order_number' => $validated['orderNumber'],
-            ]);
-        }
-
         $this->showCreateModal = false;
         $this->resetForm();
-        $this->dispatch('music-created');
+        $this->redirectRoute('music-editor', ['music' => $music->id]);
     }
 
     /**
@@ -164,6 +149,55 @@ class Musics extends Component
         $this->resetForm();
         $this->editingMusic = null;
         $this->dispatch('music-updated');
+    }
+
+    /**
+     * Add a collection to the editing music piece.
+     */
+    public function addCollection(): void
+    {
+        $this->authorize('update', $this->editingMusic);
+
+        $validated = $this->validate([
+            'selectedCollectionId' => ['required', 'integer', 'exists:collections,id'],
+            'pageNumber' => ['nullable', 'integer', 'min:1'],
+            'orderNumber' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        // Check if already attached
+        if ($this->editingMusic->collections()->where('collection_id', $validated['selectedCollectionId'])->exists()) {
+            $this->dispatch('error', __('This collection is already attached to this music piece.'));
+
+            return;
+        }
+
+        $this->editingMusic->collections()->attach($validated['selectedCollectionId'], [
+            'page_number' => $validated['pageNumber'],
+            'order_number' => $validated['orderNumber'],
+        ]);
+
+        // Refresh the collections relationship
+        $this->editingMusic->load('collections');
+
+        // Reset the form fields
+        $this->selectedCollectionId = null;
+        $this->pageNumber = null;
+        $this->orderNumber = null;
+
+        $this->dispatch('collection-added');
+    }
+
+    /**
+     * Remove a collection from the editing music piece.
+     */
+    public function removeCollection(int $collectionId): void
+    {
+        $this->authorize('update', $this->editingMusic);
+
+        $this->editingMusic->collections()->detach($collectionId);
+        $this->editingMusic->load('collections');
+
+        $this->dispatch('collection-removed');
     }
 
     /**

@@ -47,7 +47,7 @@ it('creates music without custom id', function () {
     ]);
 });
 
-it('allows updating music with same title', function () {
+it('redirects to music editor page when editing', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -55,16 +55,7 @@ it('allows updating music with same title', function () {
 
     Livewire::test(\App\Livewire\Pages\Editor\Musics::class)
         ->call('edit', $music)
-        ->set('title', 'Original Title')
-        ->set('customId', 'Updated ID')
-        ->call('update')
-        ->assertHasNoErrors();
-
-    $this->assertDatabaseHas('musics', [
-        'id' => $music->id,
-        'title' => 'Original Title',
-        'custom_id' => 'Updated ID',
-    ]);
+        ->assertRedirectToRoute('music-editor', ['music' => $music->id]);
 });
 
 it('prevents deleting music with collections assigned', function () {
