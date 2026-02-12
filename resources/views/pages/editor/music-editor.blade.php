@@ -29,6 +29,12 @@ new class extends Component
 
     public $audits = [];
 
+    // Edit collection modal
+    public bool $showEditModal = false;
+    public ?int $editingCollectionId = null;
+    public ?int $editingPageNumber = null;
+    public ?string $editingOrderNumber = null;
+
     /**
      * Mount the component.
      */
@@ -119,6 +125,52 @@ new class extends Component
         $this->music->load('collections');
 
         $this->dispatch('collection-removed');
+    }
+
+    /**
+     * Edit a collection's pivot data.
+     */
+    public function editCollection(int $collectionId): void
+    {
+        $this->authorize('update', $this->music);
+        
+        $collection = $this->music->collections()->where('collection_id', $collectionId)->first();
+        
+        if (!$collection) {
+            return;
+        }
+        
+        $this->editingCollectionId = $collectionId;
+        $this->editingPageNumber = $collection->pivot->page_number;
+        $this->editingOrderNumber = $collection->pivot->order_number;
+        $this->showEditModal = true;
+    }
+
+    /**
+     * Update the collection's pivot data.
+     */
+    public function updateCollection(): void
+    {
+        $this->authorize('update', $this->music);
+
+        $validated = $this->validate([
+            'editingPageNumber' => ['nullable', 'integer', 'min:1'],
+            'editingOrderNumber' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $this->music->collections()->updateExistingPivot($this->editingCollectionId, [
+            'page_number' => $validated['editingPageNumber'],
+            'order_number' => $validated['editingOrderNumber'],
+        ]);
+
+        $this->music->load('collections');
+        
+        $this->showEditModal = false;
+        $this->editingCollectionId = null;
+        $this->editingPageNumber = null;
+        $this->editingOrderNumber = null;
+
+        $this->dispatch('collection-updated');
     }
 
     /**
@@ -267,14 +319,23 @@ new class extends Component
                                         {{ $collection->pivot->order_number ?? '-' }}
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap text-sm">
-                                        <flux:button
-                                            variant="ghost"
-                                            size="sm"
-                                            icon="trash"
-                                            wire:click="removeCollection({{ $collection->id }})"
-                                            wire:confirm="{{ __('Are you sure you want to remove this collection from the music piece?') }}"
-                                            :title="__('Remove')"
-                                        />
+                                        <div class="flex items-center gap-2">
+                                            <flux:button
+                                                variant="ghost"
+                                                size="sm"
+                                                icon="pencil"
+                                                wire:click="editCollection({{ $collection->id }})"
+                                                :title="__('Edit')"
+                                            />
+                                            <flux:button
+                                                variant="ghost"
+                                                size="sm"
+                                                icon="trash"
+                                                wire:click="removeCollection({{ $collection->id }})"
+                                                wire:confirm="{{ __('Are you sure you want to remove this collection from the music piece?') }}"
+                                                :title="__('Remove')"
+                                            />
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
@@ -293,6 +354,9 @@ new class extends Component
             <div class="flex justify-end mb-2">
                 <x-action-message on="collection-removed">
                     {{ __('Collection removed.') }}
+                </x-action-message>
+                <x-action-message on="collection-updated">
+                    {{ __('Collection updated.') }}
                 </x-action-message>
             </div>
 
@@ -448,6 +512,50 @@ new class extends Component
                 wire:click="$set('showAuditModal', false)"
             >
                 {{ __('Close') }}
+            </flux:button>
+        </div>
+    </flux:modal>
+
+    <!-- Edit Collection Modal -->
+    <flux:modal wire:model="showEditModal" max-width="lg">
+        <flux:heading size="lg">{{ __('Edit Collection Connection') }}</flux:heading>
+        <flux:subheading>
+            {{ __('Update page and order numbers for this collection.') }}
+        </flux:subheading>
+
+        <div class="mt-6 space-y-4">
+            <flux:field :label="__('Page Number')">
+                <flux:input
+                    type="number"
+                    wire:model="editingPageNumber"
+                    :placeholder="__('Page number')"
+                    min="1"
+                />
+                <flux:error name="editingPageNumber" />
+            </flux:field>
+
+            <flux:field :label="__('Order Number')">
+                <flux:input
+                    wire:model="editingOrderNumber"
+                    :placeholder="__('Order number')"
+                />
+                <flux:error name="editingOrderNumber" />
+            </flux:field>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3">
+            <flux:button
+                variant="ghost"
+                wire:click="$set('showEditModal', false)"
+            >
+                {{ __('Cancel') }}
+            </flux:button>
+            <flux:button
+                variant="primary"
+                wire:click="updateCollection"
+                wire:loading.attr="disabled"
+            >
+                {{ __('Save Changes') }}
             </flux:button>
         </div>
     </flux:modal>
