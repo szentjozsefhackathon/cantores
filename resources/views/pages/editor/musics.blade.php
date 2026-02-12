@@ -110,7 +110,7 @@
     </div>
 
     <!-- Modals outside main content for single root -->
-    <flux:modal wire:model="showCreateModal" max-width="md">
+    <flux:modal wire:model="showCreateModal" max-width="lg">
         <flux:heading size="lg">{{ __('Create Music Piece') }}</flux:heading>
 
         <div class="mt-6 space-y-4">
@@ -129,6 +129,41 @@
                 />
                 <flux:error name="customId" />
             </flux:field>
+
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <flux:heading size="sm">{{ __('Collection Assignment') }}</flux:heading>
+                <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Optionally assign this music piece to a collection with page and order numbers.') }}</flux:text>
+            </div>
+
+                        <flux:field :label="__('Collection')" :helper="__('Search by title, abbreviation, or author')">
+                <flux:select
+                    wire:model.live="selectedCollectionId"
+                    searchable
+                    :placeholder="__('Type to search collections...')"
+                    clearable
+                >
+                    <option value="">{{ __('No collection selected') }}</option>
+                    @foreach ($collections as $collection)
+                        <option value="{{ $collection->id }}">{{ $collection->title }}@if($collection->abbreviation) ({{ $collection->abbreviation }})@endif</option>
+                    @endforeach
+                </flux:select>
+                <flux:error name="selectedCollectionId" />
+            </flux:field>
+
+            <div class="grid grid-cols-2 gap-4">
+                <flux:field>
+                    <flux:input :label="__('Page Number')" type="number" wire:model="pageNumber" :placeholder="__('Oldalszám')" min="1" />
+                    <flux:error name="pageNumber" />
+                </flux:field>
+                <flux:field>
+                                <flux:input :label="__('Order Number')" wire:model="orderNumber" :placeholder="__('Order Number')"
+                    />
+                    <flux:error name="orderNumber" />                
+                </flux:field>
+
+            </div>
+
+
         </div>
 
         <div class="mt-6 flex justify-end gap-3">

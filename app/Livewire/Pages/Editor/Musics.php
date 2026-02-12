@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages\Editor;
 
+use App\Models\Collection;
 use App\Models\Music;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -33,6 +34,15 @@ class Musics extends Component
 
     public ?string $customId = null;
 
+    // Collection assignment
+    public string $collectionSearch = '';
+
+    public ?int $selectedCollectionId = null;
+
+    public ?int $pageNumber = null;
+
+    public ?string $orderNumber = null;
+
     /**
      * Mount the component.
      */
@@ -54,8 +64,11 @@ class Musics extends Component
             ->orderBy('title')
             ->paginate(10);
 
+        $collections = Collection::orderBy('title')->limit(100)->get();
+
         return view('pages.editor.musics', [
             'musics' => $musics,
+            'collections' => $collections,
         ]);
     }
 
@@ -106,13 +119,24 @@ class Musics extends Component
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'customId' => ['nullable', 'string', 'max:255'],
+            'selectedCollectionId' => ['nullable', 'integer', 'exists:collections,id'],
+            'pageNumber' => ['nullable', 'integer', 'min:1'],
+            'orderNumber' => ['nullable', 'string', 'max:255'],
         ]);
 
-        // Map customId to custom_id
-        Music::create([
+        // Create music
+        $music = Music::create([
             'title' => $validated['title'],
             'custom_id' => $validated['customId'],
         ]);
+
+        // Attach collection if selected
+        if ($validated['selectedCollectionId']) {
+            $music->collections()->attach($validated['selectedCollectionId'], [
+                'page_number' => $validated['pageNumber'],
+                'order_number' => $validated['orderNumber'],
+            ]);
+        }
 
         $this->showCreateModal = false;
         $this->resetForm();
@@ -167,5 +191,9 @@ class Musics extends Component
     {
         $this->title = '';
         $this->customId = null;
+        $this->collectionSearch = '';
+        $this->selectedCollectionId = null;
+        $this->pageNumber = null;
+        $this->orderNumber = null;
     }
 }
