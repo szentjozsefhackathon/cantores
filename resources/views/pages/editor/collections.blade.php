@@ -15,6 +15,7 @@
             <x-action-message on="collection-deleted">
                 {{ __('Collection deleted.') }}
             </x-action-message>
+            <x-action-message on="error" />
         </div>
 
         <div class="space-y-6">

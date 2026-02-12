@@ -9,6 +9,7 @@
             <x-action-message on="music-deleted">
                 {{ __('Music piece deleted.') }}
             </x-action-message>
+            <x-action-message on="error" />
         </div>
 
         <div class="space-y-6">

@@ -150,7 +150,7 @@ class Collections extends Component
 
         // Check if collection has any music assigned
         if ($collection->music()->count() > 0) {
-            $this->dispatch('error', __('Cannot delete collection that has music assigned to it.'));
+            $this->dispatch('error', message: __('Cannot delete collection that has music assigned to it.'));
 
             return;
         }

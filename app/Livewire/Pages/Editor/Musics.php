@@ -152,55 +152,6 @@ class Musics extends Component
     }
 
     /**
-     * Add a collection to the editing music piece.
-     */
-    public function addCollection(): void
-    {
-        $this->authorize('update', $this->editingMusic);
-
-        $validated = $this->validate([
-            'selectedCollectionId' => ['required', 'integer', 'exists:collections,id'],
-            'pageNumber' => ['nullable', 'integer', 'min:1'],
-            'orderNumber' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        // Check if already attached
-        if ($this->editingMusic->collections()->where('collection_id', $validated['selectedCollectionId'])->exists()) {
-            $this->dispatch('error', __('This collection is already attached to this music piece.'));
-
-            return;
-        }
-
-        $this->editingMusic->collections()->attach($validated['selectedCollectionId'], [
-            'page_number' => $validated['pageNumber'],
-            'order_number' => $validated['orderNumber'],
-        ]);
-
-        // Refresh the collections relationship
-        $this->editingMusic->load('collections');
-
-        // Reset the form fields
-        $this->selectedCollectionId = null;
-        $this->pageNumber = null;
-        $this->orderNumber = null;
-
-        $this->dispatch('collection-added');
-    }
-
-    /**
-     * Remove a collection from the editing music piece.
-     */
-    public function removeCollection(int $collectionId): void
-    {
-        $this->authorize('update', $this->editingMusic);
-
-        $this->editingMusic->collections()->detach($collectionId);
-        $this->editingMusic->load('collections');
-
-        $this->dispatch('collection-removed');
-    }
-
-    /**
      * Delete a music piece.
      */
     public function delete(Music $music): void
@@ -209,7 +160,7 @@ class Musics extends Component
 
         // Check if music has any collections or plan slots assigned
         if ($music->collections()->count() > 0 || $music->musicPlanSlotAssignments()->count() > 0) {
-            $this->dispatch('error', __('Cannot delete music piece that has collections or plan slots assigned to it.'));
+            $this->dispatch('error', message: __('Cannot delete music piece that has collections or plan slots assigned to it.'));
 
             return;
         }
