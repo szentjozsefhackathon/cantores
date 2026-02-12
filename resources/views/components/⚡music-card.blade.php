@@ -2,6 +2,7 @@
 
 use App\Models\Music;
 use Livewire\Component;
+use Livewire\Attributes\On;
 
 new class extends Component
 {
@@ -10,6 +11,14 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->music = $music->load('collections');
+    }
+
+    #[On('music-updated')]
+    #[On('collection-added')]
+    #[On('collection-removed')]
+    public function refreshMusic(): void
+    {
+        $this->music->refresh()->load('collections');
     }
 }
 ?>
