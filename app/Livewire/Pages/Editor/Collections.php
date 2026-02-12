@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
+use OwenIt\Auditing\Models\Audit;
 
 class Collections extends Component
 {
@@ -19,7 +20,13 @@ class Collections extends Component
 
     public bool $showEditModal = false;
 
+    public bool $showAuditModal = false;
+
     public ?Collection $editingCollection = null;
+
+    public ?Collection $auditingCollection = null;
+
+    public $audits = [];
 
     // Form fields
     public string $title = '';
@@ -76,6 +83,21 @@ class Collections extends Component
         $this->abbreviation = $collection->abbreviation;
         $this->author = $collection->author;
         $this->showEditModal = true;
+    }
+
+    /**
+     * Show the audit log modal.
+     */
+    public function showAuditLog(Collection $collection): void
+    {
+        // Any logged-in user can view audit logs
+        $this->authorize('view', $collection);
+        $this->auditingCollection = $collection;
+        $this->audits = $collection->audits()
+            ->with(['user.city', 'user.firstName'])
+            ->latest()
+            ->get();
+        $this->showAuditModal = true;
     }
 
     /**
