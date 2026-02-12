@@ -71,7 +71,7 @@ class Music extends Model implements Auditable
      */
     public function scopeSearch($query, string $search): void
     {
-        $query->where('title', 'like', "%{$search}%")
-            ->orWhere('custom_id', 'like', "%{$search}%");
+        $query->where('title', 'ilike', "%{$search}%")
+            ->orWhere('custom_id', 'ilike', "%{$search}%");
     }
 }

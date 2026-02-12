@@ -39,8 +39,8 @@ class Collection extends Model implements Auditable
      */
     public function scopeSearch($query, string $search): void
     {
-        $query->where('title', 'like', "%{$search}%")
-            ->orWhere('abbreviation', 'like', "%{$search}%")
-            ->orWhere('author', 'like', "%{$search}%");
+        $query->where('title', 'ilike', "%{$search}%")
+            ->orWhere('abbreviation', 'ilike', "%{$search}%")
+            ->orWhere('author', 'ilike', "%{$search}%");
     }
 }

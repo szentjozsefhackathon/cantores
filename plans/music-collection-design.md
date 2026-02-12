@@ -281,8 +281,8 @@ class Music extends Model
      */
     public function scopeSearch($query, string $search): void
     {
-        $query->where('title', 'like', "%{$search}%")
-            ->orWhere('custom_id', 'like', "%{$search}%");
+        $query->where('title', 'ilike', "%{$search}%")
+            ->orWhere('custom_id', 'ilike', "%{$search}%");
     }
 }
 ```
@@ -330,9 +330,9 @@ class Collection extends Model
      */
     public function scopeSearch($query, string $search): void
     {
-        $query->where('title', 'like', "%{$search}%")
-            ->orWhere('abbreviation', 'like', "%{$search}%")
-            ->orWhere('author', 'like', "%{$search}%");
+        $query->where('title', 'ilike', "%{$search}%")
+            ->orWhere('abbreviation', 'ilike', "%{$search}%")
+            ->orWhere('author', 'ilike', "%{$search}%");
     }
 }
 ```

@@ -726,8 +726,8 @@ class MusicPlanSlots extends Component
     {
         $slots = MusicPlanSlot::active()
             ->when($this->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+                $query->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('description', 'ilike', "%{$search}%");
             })
             ->orderBy('name')
             ->paginate(20);
@@ -860,8 +860,8 @@ class MusicPlanTemplates extends Component
     {
         $templates = MusicPlanTemplate::active()
             ->when($this->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+                $query->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('description', 'ilike', "%{$search}%");
             })
             ->orderBy('name')
             ->paginate(20);

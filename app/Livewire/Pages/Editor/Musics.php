@@ -56,8 +56,8 @@ class Musics extends Component
     public function render(): View
     {
         $musics = Music::when($this->search, function ($query, $search) {
-            $query->where('title', 'like', "%{$search}%")
-                ->orWhere('custom_id', 'like', "%{$search}%");
+            $query->where('title', 'ilike', "%{$search}%")
+                ->orWhere('custom_id', 'ilike', "%{$search}%");
         })
             ->withCount('collections')
             ->orderBy('title')

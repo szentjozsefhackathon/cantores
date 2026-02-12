@@ -49,9 +49,9 @@ class Collections extends Component
     public function render(): View
     {
         $collections = Collection::when($this->search, function ($query, $search) {
-            $query->where('title', 'like', "%{$search}%")
-                ->orWhere('abbreviation', 'like', "%{$search}%")
-                ->orWhere('author', 'like', "%{$search}%");
+            $query->where('title', 'ilike', "%{$search}%")
+                ->orWhere('abbreviation', 'ilike', "%{$search}%")
+                ->orWhere('author', 'ilike', "%{$search}%");
         })
             ->withCount('music')
             ->orderBy('title')
