@@ -111,8 +111,7 @@ new class extends Component
 
         $this->loadExistingSlotIds();
         $this->loadPlanSlots();
-        $this->dispatch('slots-updated');
-        $this->dispatch('notify', message: 'Elem hozzáadva.', type: 'success');
+        $this->dispatch('slots-updated', message: 'Elem hozzáadva.');
     }
 
     public function addSlotsFromTemplate(int $templateId): void
@@ -141,8 +140,8 @@ new class extends Component
             $this->loadPlanSlots();
         }
 
-        $this->dispatch('slots-updated');
-        $this->dispatch('notify', message: $addedCount . ' elem hozzáadva a sablonból.', type: 'success');
+        $this->dispatch('slots-updated', message: $addedCount . ' elem hozzáadva a sablonból.');
+
     }
 
     public function addDefaultSlotsFromTemplate(int $templateId): void
@@ -173,8 +172,7 @@ new class extends Component
             $this->loadPlanSlots();
         }
 
-        $this->dispatch('slots-updated');
-        $this->dispatch('notify', message: $addedCount . ' szokásos elem hozzáadva a sablonból.', type: 'success');
+        $this->dispatch('slots-updated', message: $addedCount . ' elem hozzáadva a sablonból.');
     }
 
     public function moveSlotUp(int $pivotId): void
@@ -211,8 +209,7 @@ new class extends Component
 
         $this->loadExistingSlotIds();
         $this->loadPlanSlots();
-        $this->dispatch('slots-updated');
-        $this->dispatch('notify', message: 'Elem eltávolítva.', type: 'success');
+        $this->dispatch('slots-updated', message: 'Elem eltávolítva.');
     }
 
     private function reorderSlot(int $pivotId, string $direction): void
@@ -322,8 +319,7 @@ new class extends Component
 
         $this->loadExistingSlotIds();
         $this->loadPlanSlots();
-        $this->dispatch('slots-updated');
-        $this->dispatch('notify', message: 'Elem hozzáadva.', type: 'success');
+        $this->dispatch('slots-updated', message: $slot->name . ' hozzáadva.');
     }
 
     public function showAllSlots(): void
@@ -371,6 +367,13 @@ new class extends Component
             </div>
 
             <div class="space-y-4">
+                <!-- Notification message -->
+                <div class="flex justify-end">
+                    <x-action-message on="slots-updated">
+                        {{ __('Művelet sikeres.') }} 
+                    </x-action-message>
+                </div>
+
                 <!-- Combined info grid -->
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <div>
@@ -442,7 +445,7 @@ new class extends Component
 
 
                                         <!-- Dropdown results -->
-                                        <div x-show="open && count($searchResults) > 0"
+                                        <div x-show="open && $wire.searchResults.length > 0"
                                             x-transition
                                             class="absolute z-10 mt-1 w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                                             <div class="py-1">
@@ -474,49 +477,9 @@ new class extends Component
                                 </div>
                             </div>
 
-                            <!-- Success message when slot added directly (only when modal is closed) -->
-                            @if($recentlyAddedSlotName && !$showAllSlotsModal)
-                            <div x-data="{
-                                    show: true,
-                                    init() {
-                                        setTimeout(() => {
-                                            this.show = false;
-                                            @this.clearRecentlyAddedSlot();
-                                        }, 2000);
-                                    }
-                                }" x-show="show" x-transition>
-                                <flux:callout variant="success" icon="check-circle">
-                                    <flux:callout.heading>Elem hozzáadva</flux:callout.heading>
-                                    <flux:callout.text>
-                                        A(z) "<strong>{{ $recentlyAddedSlotName }}</strong>" elem sikeresen hozzáadva az énekrendhez.
-                                    </flux:callout.text>
-                                </flux:callout>
-                            </div>
-                            @endif
-
                             <!-- All Slots Modal -->
                             <flux:modal wire:model="showAllSlotsModal" size="lg">
                                 <flux:heading size="lg">Összes elérhető elem</flux:heading>
-
-                                <!-- Success message when slot added from this modal -->
-                                @if($recentlyAddedSlotName && $showAllSlotsModal)
-                                <div x-data="{
-                                        show: true,
-                                        init() {
-                                            setTimeout(() => {
-                                                this.show = false;
-                                                @this.clearRecentlyAddedSlot();
-                                            }, 2000);
-                                        }
-                                    }" x-show="show" x-transition class="mb-4">
-                                    <flux:callout variant="success" icon="check-circle">
-                                        <flux:callout.heading>Elem hozzáadva</flux:callout.heading>
-                                        <flux:callout.text>
-                                            A(z) "<strong>{{ $recentlyAddedSlotName }}</strong>" elem sikeresen hozzáadva az énekrendhez.
-                                        </flux:callout.text>
-                                    </flux:callout>
-                                </div>
-                                @endif
 
                                 <div class="mt-4 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
                                     @if(count($allSlots) > 0)

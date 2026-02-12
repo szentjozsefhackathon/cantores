@@ -2,8 +2,24 @@
 
 @if (trim($slot) !== '')
     <div
-        x-data="{ shown: false, timeout: null }"
-        x-init="@this.on('{{ $on }}', () => { clearTimeout(timeout); shown = true; timeout = setTimeout(() => { shown = false }, 3000); })"
+        x-data="{ shown: false, timeout: null, message: event.message || '{{ $slot->isEmpty() ? __('Saved.') : $slot }}' }"
+        x-init="
+            @if($on === 'notify')
+                @this.on('{{ $on }}', (event) => {
+                    clearTimeout(timeout);
+                    message = event.message || '{{ $slot->isEmpty() ? __('Saved.') : $slot }}';
+                    shown = true;
+                    timeout = setTimeout(() => { shown = false }, 3000);
+                })
+            @else
+                @this.on('{{ $on }}', (event) => {
+                    clearTimeout(timeout);
+                    message = event.message || '{{ $slot->isEmpty() ? __('Saved.') : $slot }}';
+                    shown = true;
+                    timeout = setTimeout(() => { shown = false }, 3000);
+                })
+            @endif
+        "
         x-show="shown"
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 -translate-y-4"
@@ -15,6 +31,6 @@
         style="min-width: 300px; max-width: 90vw;"
         x-cloak
     >
-        {{ $slot->isEmpty() ? __('Saved.') : $slot }}
+        <span x-text="message"></span>
     </div>
 @endif
