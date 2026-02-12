@@ -1,5 +1,18 @@
 <x-pages::admin.layout :heading="__('Music Plan Slots')" :subheading="__('Manage global music plan slots that can be used across templates')">
     <div class="space-y-6">
+        <!-- Action messages -->
+        <div class="flex justify-end">
+            <x-action-message on="slot-created">
+                {{ __('Slot created.') }}
+            </x-action-message>
+            <x-action-message on="slot-updated">
+                {{ __('Slot updated.') }}
+            </x-action-message>
+            <x-action-message on="slot-deleted">
+                {{ __('Slot deleted.') }}
+            </x-action-message>
+        </div>
+
         <!-- Search and Actions -->
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <flux:field class="w-full sm:w-auto sm:flex-1">

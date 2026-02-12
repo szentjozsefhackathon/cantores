@@ -215,7 +215,10 @@ new class extends Component
                 </div>
 
                 <!-- Save Button -->
-                <div class="flex justify-end">
+                <div class="flex justify-end items-center gap-4">
+                    <x-action-message on="music-updated">
+                        {{ __('Saved.') }}
+                    </x-action-message>                    
                     <flux:button
                         variant="primary"
                         wire:click="update"
@@ -281,6 +284,13 @@ new class extends Component
                 </div>
             @endif
 
+            <!-- Collection removal message -->
+            <div class="flex justify-end mb-2">
+                <x-action-message on="collection-removed">
+                    {{ __('Collection removed.') }}
+                </x-action-message>
+            </div>
+
             <!-- Add Collection Form -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <flux:heading size="sm">{{ __('Add Collection') }}</flux:heading>
@@ -313,7 +323,7 @@ new class extends Component
                         </flux:field>
                     </div>
 
-                    <div class="flex justify-end">
+                    <div class="flex justify-end items-center gap-4">
                         <flux:button
                             variant="primary"
                             wire:click="addCollection"
@@ -321,6 +331,9 @@ new class extends Component
                         >
                             {{ __('Add Collection') }}
                         </flux:button>
+                        <x-action-message on="collection-added">
+                            {{ __('Collection added.') }}
+                        </x-action-message>
                     </div>
                 </div>
             </div>

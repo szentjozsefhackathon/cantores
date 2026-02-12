@@ -4,6 +4,19 @@
             <flux:subheading>{{ __('Manage music collections') }}</flux:subheading>
         </div>
 
+        <!-- Action messages -->
+        <div class="mb-4 flex justify-end">
+            <x-action-message on="collection-created">
+                {{ __('Collection created.') }}
+            </x-action-message>
+            <x-action-message on="collection-updated">
+                {{ __('Collection updated.') }}
+            </x-action-message>
+            <x-action-message on="collection-deleted">
+                {{ __('Collection deleted.') }}
+            </x-action-message>
+        </div>
+
         <div class="space-y-6">
             <!-- Search and Actions -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -1,5 +1,21 @@
 <x-pages::admin.layout :heading="__('Music Plan Templates')" :subheading="__('Manage templates for organizing music plans')">
     <div class="space-y-6">
+        <!-- Action messages -->
+        <div class="flex justify-end">
+            <x-action-message on="template-created">
+                {{ __('Template created.') }}
+            </x-action-message>
+            <x-action-message on="template-updated">
+                {{ __('Template updated.') }}
+            </x-action-message>
+            <x-action-message on="template-deleted">
+                {{ __('Template deleted.') }}
+            </x-action-message>
+            <x-action-message on="template-status-updated">
+                {{ __('Template status updated.') }}
+            </x-action-message>
+        </div>
+
         <!-- Search and Actions -->
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <flux:field class="w-full sm:w-auto sm:flex-1">
