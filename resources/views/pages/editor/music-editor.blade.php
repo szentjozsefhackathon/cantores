@@ -169,6 +169,11 @@ new class extends Component
             </flux:button>
         </div>
 
+        <!-- Music summary card -->
+        <div class="mb-6">
+            <livewire:music-card :music="$music" />
+        </div>
+
         <flux:card class="p-5">
             <div class="flex items-center justify-between gap-4 mb-6">
                 <div>
