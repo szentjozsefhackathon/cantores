@@ -109,13 +109,13 @@ new class extends Component
 <flux:card class="liturgical-info p-0 overflow-hidden border-0 shadow-xl dark:shadow-neutral-900/30">
     <!-- Header with gradient -->
     <div class="bg-gradient-to-r from-blue-600 to-purple-700 dark:from-blue-800 dark:to-purple-900 p-6 text-white">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex flex-col md:flex-row justify-between gap-4">
             <div class="flex items-center gap-4">
                 <flux:icon name="book-open-text" class="h-10 w-10 text-white/90" variant="outline" />
                 <div>
                     <flux:heading size="xl" class="text-white">Liturgikus naptár és énekrendek</flux:heading>
-                    <flux:text class="text-blue-100">Napi ünnepek, olvasmányok és ajánlott énekrendek felfedezése</flux:text>
-                    <div class="pt-1 dark:border-neutral-800">
+                    <flux:text class="hidden md:block text-blue-100">Napi ünnepek, olvasmányok és ajánlott énekrendek felfedezése</flux:text>
+                    <div class="pt-1 dark:border-neutral-800 hidden md:block">
                         <flux:text class="text-xs text-neutral-600 dark:text-neutral-400 text-white/80">
                             Adatforrás: <a href="https://szentjozsefhackathon.github.io/napi-lelki-batyu/" class="hover:underline">Szt. József Hackathon Napi Lelki Batyu</a>
                         </flux:text>
@@ -134,14 +134,15 @@ new class extends Component
                         max="{{ Carbon::now()->addYears(1)->format('Y-m-d') }}"
                         min="{{ Carbon::now()->subYears(10)->format('Y-m-d') }}" />
                 </flux:field>
-                <flux:button
-                    wire:click="refresh"
-                    variant="outline"
-                    class="bg-white hover:bg-blue-50 border-white/30 mt-6 sm:mt-8"
-                    icon="arrow-path"
-                    icon:variant="mini">
-                    Újratöltés
-                </flux:button>
+                <div class="hidden sm:block">
+                    <flux:button
+                        wire:click="refresh"
+                        variant="outline"
+                        class="bg-white hover:bg-blue-50 border-white/30 mt-6 sm:mt-8"
+                        icon="arrow-path"
+                        icon:variant="mini">
+                    </flux:button>
+                </div>
 
             </div>
         </div>

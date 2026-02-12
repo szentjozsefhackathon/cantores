@@ -11,10 +11,10 @@
                         <x-app-logo-icon class="fill-current text-white dark:text-black" />
                     </x-slot>
                 </flux:brand>
-                <a href="{{ url('/about') }}" class="text-accent hover:underline font-medium text-sm">Bemutatkozás</a>
             </div>
             @if (Route::has('login'))
-                <nav class="flex items-center gap-4">
+                <!-- Desktop navigation (hidden on mobile) -->
+                <nav class="hidden lg:flex items-center gap-4">
                     @auth
                         <a
                             href="{{ url('/dashboard') }}"
@@ -23,27 +23,60 @@
                             Dashboard
                         </a>
                     @else
+                        <a href="{{ url('/about') }}" class="text-accent hover:underline font-medium text-sm">
+                        <flux:icon name="information-circle" class="inline" variant="mini"></flux:icon>
+                        Bemutatkozás</a>
+
                         <a
                             href="{{ route('login') }}"
-                            class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] text-[#1b1b18] border border-transparent hover:border-[#19140035] dark:hover:border-[#3E3E3A] rounded-sm text-sm leading-normal"
+                            class="text-accent hover:underline font-medium text-sm"
                         >
-                            {{ __('Log in') }} 
+                            <flux:icon name="log-in" class="inline" variant="mini"></flux:icon>
+                            {{ __('Log in') }}
                         </a>
-
+        
                         @if (Route::has('register'))
                             <a
                                 href="{{ route('register') }}"
                                 class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] border-[#19140035] hover:border-[#1915014a] border text-[#1b1b18] dark:border-[#3E3E3A] dark:hover:border-[#62605b] rounded-sm text-sm leading-normal">
+                                <flux:icon name="user-plus" class="inline" variant="mini"></flux:icon>
+
                                 {{ __('Register') }}
                             </a>
                         @endif
                     @endauth
                 </nav>
+        
+                <!-- Mobile hamburger menu (visible on mobile) -->
+                <div class="lg:hidden">
+                    <flux:dropdown align="end">
+                        <flux:button variant="ghost" square icon="bars-3" aria-label="Menu" />
+                        <flux:menu>
+                            <flux:menu.item href="{{ url('/about') }}" icon="information-circle">
+                                Bemutatkozás
+                            </flux:menu.item>
+                            @auth
+                                <flux:menu.item href="{{ url('/dashboard') }}" icon="home">
+                                    Dashboard
+                                </flux:menu.item>
+                            @else
+                                <flux:menu.item href="{{ route('login') }}" icon="log-in">
+                                    {{ __('Log in') }}
+                                </flux:menu.item>
+                                @if (Route::has('register'))
+                                    <flux:menu.item href="{{ route('register') }}" icon="user-plus">
+                                        {{ __('Register') }}
+                                    </flux:menu.item>
+                                @endif
+                            @endauth
+                        </flux:menu>
+                    </flux:dropdown>
+                </div>
             @endif
         </header>
         {{ $slot }}
         <footer class="w-full lg:max-w-4xl mx-auto mt-2 flex flex-col items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-            <div>&copy; {{ date('Y') }} Cantores.hu. A fejlesztést a <a href="https://github.com/szentjozsefhackathon/cantores" target="_blank" class="hover:text-blue-500 underline">Szent József Hackathon</a> keretében végezzük.</div>
+            <div class="items-center">&copy; {{ date('Y') }} Cantores.hu. A fejlesztést a <a href="https://github.com/szentjozsefhackathon/cantores" target="_blank" class="hover:text-blue-500 underline">Szent József Hackathon</a> keretében végezzük.</div>
             <div class="flex items-center gap-1">
                 <span class="font-bold text-lg tracking-widest text-accent">U.I.O.G.D.</span>
             </div>

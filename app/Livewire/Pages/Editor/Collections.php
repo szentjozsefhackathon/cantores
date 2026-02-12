@@ -5,6 +5,7 @@ namespace App\Livewire\Pages\Editor;
 use App\Models\Collection;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -85,8 +86,8 @@ class Collections extends Component
         $this->authorize('create', Collection::class);
 
         $validated = $this->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'abbreviation' => ['nullable', 'string', 'max:20'],
+            'title' => ['required', 'string', 'max:255', Rule::unique('collections', 'title')],
+            'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')],
             'author' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -105,8 +106,8 @@ class Collections extends Component
         $this->authorize('update', $this->editingCollection);
 
         $validated = $this->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'abbreviation' => ['nullable', 'string', 'max:20'],
+            'title' => ['required', 'string', 'max:255', Rule::unique('collections', 'title')->ignore($this->editingCollection->id)],
+            'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')->ignore($this->editingCollection->id)],
             'author' => ['nullable', 'string', 'max:255'],
         ]);
 
