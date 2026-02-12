@@ -55,3 +55,8 @@ require __DIR__.'/admin.php';
 Route::livewire('/music-plan/{musicPlan}', 'pages::music-plan.music-plan-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-plan-editor');
+
+// Music Library - Editor routes (accessible to all authenticated users)
+Route::livewire('/collections', \App\Livewire\Pages\Editor\Collections::class)
+    ->middleware(['auth', 'verified'])
+    ->name('collections');

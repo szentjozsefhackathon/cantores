@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MusicPlan extends Model
 {
@@ -64,6 +65,24 @@ class MusicPlan extends Model
         return $this->belongsToMany(MusicPlanSlot::class, 'music_plan_slot_plan')
             ->withPivot('sequence')
             ->orderByPivot('sequence');
+    }
+
+    /**
+     * Get the music assignments for this plan.
+     */
+    public function musicAssignments(): HasMany
+    {
+        return $this->hasMany(MusicPlanSlotAssignment::class);
+    }
+
+    /**
+     * Get the music items assigned to this plan (through assignments).
+     */
+    public function assignedMusic(): BelongsToMany
+    {
+        return $this->belongsToMany(Music::class, 'music_plan_slot_assignments')
+            ->withPivot(['music_plan_slot_id', 'sequence', 'notes'])
+            ->withTimestamps();
     }
 
     /**

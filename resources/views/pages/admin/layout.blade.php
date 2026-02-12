@@ -16,6 +16,7 @@
                     {{ __('Music Plan Templates') }}
                 </flux:navlist.item>
             </flux:navlist.group>
+
         </flux:navlist>
     </div>
 
