@@ -49,9 +49,6 @@ jobs:
       run: npm install vite
     - name: Build Application
       run: npm run build
-    - name: Set Environment Variables
-      run: |
-        echo "DB_HOST=127.0.0.1" >> .env.testing
     - name: Execute tests (Unit and Feature tests) via PHPUnit/Pest
       env:
         DB_CONNECTION: pgsql

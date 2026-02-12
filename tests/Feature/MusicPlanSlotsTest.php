@@ -38,9 +38,6 @@ test('non-admin users cannot access music plan slots admin page', function () {
 
 test('admin users can access music plan slots admin page', function () {
     $this->actingAs($this->admin);
-    dump('Admin email:', $this->admin->email);
-    dump('Config admin.email:', config('admin.email'));
-    dump('Is admin?', $this->admin->is_admin);
     $response = $this->get(route('admin.music-plan-slots'));
     $response->assertSuccessful();
 });
