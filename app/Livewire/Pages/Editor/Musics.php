@@ -6,7 +6,6 @@ use App\Models\Collection;
 use App\Models\Music;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
 use OwenIt\Auditing\Models\Audit;
@@ -88,6 +87,7 @@ class Musics extends Component
     public function edit(Music $music): void
     {
         $this->authorize('update', $music);
+        $music->load('collections');
         $this->editingMusic = $music;
         $this->title = $music->title;
         $this->customId = $music->custom_id;

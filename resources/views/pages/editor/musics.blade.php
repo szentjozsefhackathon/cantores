@@ -288,7 +288,7 @@
         </div>
     </flux:modal>
 
-    <flux:modal wire:model="showEditModal" max-width="md">
+    <flux:modal wire:model="showEditModal" max-width="lg">
         <flux:heading size="lg">{{ __('Edit Music Piece') }}</flux:heading>
 
         <div class="mt-6 space-y-4">
@@ -307,6 +307,50 @@
                 />
                 <flux:error name="customId" />
             </flux:field>
+
+            <!-- Collection Connections -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <flux:heading size="sm">{{ __('Collection Connections') }}</flux:heading>
+                <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('This music piece is attached to the following collections.') }}</flux:text>
+
+                @if($editingMusic && $editingMusic->collections->count())
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Collection') }}</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Page Number') }}</th>
+                                    <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Order Number') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                @foreach($editingMusic->collections as $collection)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            {{ $collection->title }}
+                                            @if($collection->abbreviation)
+                                                <span class="text-gray-500 dark:text-gray-400">({{ $collection->abbreviation }})</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                            {{ $collection->pivot->page_number ?? '-' }}
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                            {{ $collection->pivot->order_number ?? '-' }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                        <flux:icon name="folder-open" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
+                        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No collections attached') }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece is not attached to any collections yet.') }}</p>
+                    </div>
+                @endif
+            </div>
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
