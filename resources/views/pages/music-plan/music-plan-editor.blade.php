@@ -454,12 +454,16 @@ new class extends Component
                                                     type="button"
                                                     wire:click="addSlotDirectly({{ $result['id'] }})"
                                                     wire:loading.attr="disabled"
+                                                    wire:loading.class="opacity-50 cursor-not-allowed"
                                                     class="w-full text-left px-4 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-between">
                                                     <div>
                                                         <div class="font-medium">{{ $result['name'] }}</div>
                                                         <div class="text-sm text-neutral-600 dark:text-neutral-400">{{ $result['description'] ?: 'Nincs leírás' }}</div>
                                                     </div>
-                                                    <flux:icon name="plus" class="h-4 w-4 text-neutral-900 dark:text-neutral-100" />
+                                                    <div class="relative h-4 w-4">
+                                                        <flux:icon name="plus" class="h-4 w-4 text-neutral-900 dark:text-neutral-100" wire:loading.remove wire:target="addSlotDirectly" />
+                                                        <flux:icon.loading class="h-4 w-4 text-neutral-900 dark:text-neutral-100 absolute inset-0" wire:loading wire:target="addSlotDirectly" />
+                                                    </div>
                                                 </button>
                                                 @endforeach
                                             </div>
@@ -489,6 +493,7 @@ new class extends Component
                                             type="button"
                                             wire:click="addSlotDirectly({{ $slot['id'] }})"
                                             wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
                                             class="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-between">
                                             <div class="flex-1">
                                                 <div class="font-medium">{{ $slot['name'] }}</div>
@@ -498,7 +503,14 @@ new class extends Component
                                                 <div class="text-sm text-neutral-400 dark:text-neutral-500 mt-1">Nincs leírás</div>
                                                 @endif
                                             </div>
-                                            <flux:icon name="plus" class="h-5 w-5 text-neutral-900 dark:text-neutral-100 ml-4" />
+                                            <div class="relative h-5 w-5 ml-4">
+                                                <flux:icon name="plus" class="h-5 w-5 text-neutral-900 dark:text-neutral-100" wire:loading.remove wire:target="addSlotDirectly" />
+                                                <flux:icon.loading
+                                                    class="h-5 w-5 text-neutral-900 dark:text-neutral-100 absolute inset-0"
+                                                    wire:loading
+                                                    wire:target="addSlotDirectly({{ $slot['id'] }})"
+                                                />
+                                            </div>
                                         </button>
                                         @endforeach
                                     </div>
