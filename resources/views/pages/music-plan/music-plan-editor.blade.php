@@ -20,10 +20,38 @@ new class extends Component
     public ?string $recentlyAddedSlotName = null;
     public bool $filterExcludeExisting = true;
 
-    public function mount(MusicPlan $musicPlan): void
+    public function mount($musicPlan = null): void
     {
-        $this->authorize('view', $musicPlan);
-        $this->musicPlan = $musicPlan;
+        if (!$musicPlan) {
+            // Create a new music plan for the current user
+            $this->musicPlan = new MusicPlan([
+                'user_id' => Auth::id(),
+                'actual_date' => now(),
+                'season' => 0,
+                'week' => 0,
+                'day' => 0,
+                'is_published' => false,
+                'celebration_name' => 'Új énekrend',
+                'setting' => 'organist',
+                'season_text' => 'Általános idő',
+            ]);
+            
+            // Authorize creation instead of view
+            $this->authorize('create', MusicPlan::class);
+            
+            // Save the new plan to get an ID
+            $this->musicPlan->save();
+        } else {
+            // Load existing music plan
+            if (!$musicPlan instanceof MusicPlan) {
+                $musicPlan = MusicPlan::findOrFail($musicPlan);
+            }
+            
+            $this->authorize('view', $musicPlan);
+            $this->musicPlan = $musicPlan;
+        }
+        
+        // Load data for both new and existing plans
         $this->loadAvailableTemplates();
         $this->loadPlanSlots();
         $this->loadExistingSlotIds();

@@ -52,9 +52,15 @@ Route::get('/random-nickname', function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';
 
-Route::livewire('/music-plan/{musicPlan}', 'pages::music-plan.music-plan-editor')
+// Music plan editor - with optional parameter for existing plans
+Route::livewire('/music-plan/{musicPlan?}', 'pages::music-plan.music-plan-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-plan-editor');
+
+// Music plans list
+Route::livewire('/music-plans', \App\Livewire\Pages\MusicPlans::class)
+    ->middleware(['auth', 'verified'])
+    ->name('music-plans');
 
 // Music Library - Editor routes (accessible to all authenticated users)
 Route::livewire('/collections', \App\Livewire\Pages\Editor\Collections::class)
