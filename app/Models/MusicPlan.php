@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Auth;
 
 class MusicPlan extends Model
 {
@@ -114,6 +115,16 @@ class MusicPlan extends Model
         }
 
         return $query->where('realm_id', $realm);
+    }
+
+    /**
+     * Scope for plans belonging to the current user's realm.
+     */
+    public function scopeForCurrentRealm($query)
+    {
+        $realmId = Auth::user()?->current_realm_id;
+
+        return $query->where('realm_id', $realmId ?? 0);
     }
 
     /**

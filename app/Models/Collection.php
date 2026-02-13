@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Auth;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Collection extends Model implements Auditable
@@ -50,5 +51,21 @@ class Collection extends Model implements Auditable
         $query->where('title', 'ilike', "%{$search}%")
             ->orWhere('abbreviation', 'ilike', "%{$search}%")
             ->orWhere('author', 'ilike', "%{$search}%");
+    }
+
+    /**
+     * Scope for collections belonging to the current user's realm.
+     */
+    public function scopeForCurrentRealm($query)
+    {
+        $realmId = Auth::user()?->current_realm_id;
+        if ($realmId) {
+            $query->whereHas('realms', function ($q) use ($realmId) {
+                $q->where('realms.id', $realmId);
+            });
+        } else {
+            // If no realm ID, ensure no results
+            $query->whereRaw('1 = 0');
+        }
     }
 }
