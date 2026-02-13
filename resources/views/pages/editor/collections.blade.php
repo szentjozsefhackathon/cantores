@@ -163,6 +163,19 @@
                 />
                 <flux:error name="author" />
             </flux:field>
+
+            <flux:field :label="__('Realms')" :helper="__('Select which realms this collection belongs to.')">
+                <div class="space-y-2">
+                    @foreach($this->realms() as $realm)
+                        <flux:checkbox
+                            wire:model="selectedRealms"
+                            value="{{ $realm->id }}"
+                            :label="$realm->label()"
+                        />
+                    @endforeach
+                </div>
+                <flux:error name="selectedRealms" />
+            </flux:field>
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
@@ -315,6 +328,21 @@
                 />
                 <flux:error name="author" />
             </flux:field>
+
+            <div class="space-y-2">
+                
+                <flux:checkbox.group variant="cards" label="{{ __('Select which realms this collection belongs to.') }}">
+                @foreach($this->realms() as $realm)                    
+                <flux:checkbox
+                            variant="cards"
+                            wire:model="selectedRealms"
+                            value="{{ $realm->id }}"
+                            :label="$realm->label()"                            
+                        />
+                    @endforeach
+                </flux:checkbox.group>
+                </div>
+                <flux:error name="selectedRealms" />
         </div>
 
         <div class="mt-6 flex justify-end gap-3">

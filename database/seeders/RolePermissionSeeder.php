@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -151,7 +151,7 @@ class RolePermissionSeeder extends Seeder
 
         if ($adminEmail) {
             $adminUser = User::where('email', $adminEmail)->first();
-            if ($adminUser && !$adminUser->hasRole('admin')) {
+            if ($adminUser && ! $adminUser->hasRole('admin')) {
                 $adminUser->assignRole($adminRole);
                 $this->command->info("Assigned admin role to user: {$adminUser->email}");
             }
@@ -163,10 +163,11 @@ class RolePermissionSeeder extends Seeder
         })->get();
 
         foreach ($nonAdminUsers as $user) {
-            if (!$user->hasRole('contributor')) {
+            if (! $user->hasRole('contributor')) {
                 $user->assignRole($contributorRole);
             }
         }
 
         $this->command->info("Assigned contributor role to {$nonAdminUsers->count()} users.");
     }
+}

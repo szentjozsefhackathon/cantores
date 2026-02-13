@@ -140,3 +140,44 @@ it('loads audits for collection', function () {
         ->assertSet('auditingCollection.id', $collection->id)
         ->assertCount('audits', 1);
 });
+
+it('attaches selected realms when creating a collection', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $realm1 = \App\Models\Realm::factory()->create(['name' => 'organist']);
+    $realm2 = \App\Models\Realm::factory()->create(['name' => 'guitarist']);
+
+    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
+        ->set('title', 'New Collection')
+        ->set('selectedRealms', [$realm1->id, $realm2->id])
+        ->call('store')
+        ->assertHasNoErrors();
+
+    $collection = Collection::where('title', 'New Collection')->first();
+    expect($collection)->not->toBeNull()
+        ->and($collection->realms)->toHaveCount(2)
+        ->and($collection->realms->pluck('id')->toArray())->toMatchArray([$realm1->id, $realm2->id]);
+});
+
+it('syncs realms when updating a collection', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $collection = Collection::factory()->create(['user_id' => $user->id]);
+    $realm1 = \App\Models\Realm::factory()->create(['name' => 'organist']);
+    $realm2 = \App\Models\Realm::factory()->create(['name' => 'guitarist']);
+    $realm3 = \App\Models\Realm::factory()->create(['name' => 'other']);
+
+    // Attach initial realms
+    $collection->realms()->attach([$realm1->id, $realm2->id]);
+
+    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
+        ->call('edit', $collection)
+        ->assertSet('selectedRealms', [$realm1->id, $realm2->id])
+        ->set('selectedRealms', [$realm2->id, $realm3->id])
+        ->call('update')
+        ->assertHasNoErrors();
+
+    $collection->refresh();
+    expect($collection->realms)->toHaveCount(2)
+        ->and($collection->realms->pluck('id')->toArray())->toMatchArray([$realm2->id, $realm3->id]);
+});

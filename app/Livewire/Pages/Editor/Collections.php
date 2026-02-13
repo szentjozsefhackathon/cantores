@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Editor;
 
 use App\Models\Collection;
+use App\Models\Realm;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -36,12 +37,22 @@ class Collections extends Component
 
     public ?string $author = null;
 
+    public array $selectedRealms = [];
+
     /**
      * Mount the component.
      */
     public function mount(): void
     {
         $this->authorize('viewAny', Collection::class);
+    }
+
+    /**
+     * Get all realms for selection.
+     */
+    public function realms(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Realm::all();
     }
 
     /**
@@ -70,6 +81,11 @@ class Collections extends Component
     {
         $this->authorize('create', Collection::class);
         $this->resetForm();
+        // Pre-select the user's current realm
+        $realmId = Auth::user()->current_realm_id;
+        if ($realmId) {
+            $this->selectedRealms = [$realmId];
+        }
         $this->showCreateModal = true;
     }
 
@@ -83,6 +99,7 @@ class Collections extends Component
         $this->title = $collection->title;
         $this->abbreviation = $collection->abbreviation;
         $this->author = $collection->author;
+        $this->selectedRealms = $collection->realms->pluck('id')->toArray();
         $this->showEditModal = true;
     }
 
@@ -112,6 +129,8 @@ class Collections extends Component
             'title' => ['required', 'string', 'max:255', Rule::unique('collections', 'title')],
             'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')],
             'author' => ['nullable', 'string', 'max:255'],
+            'selectedRealms' => ['nullable', 'array'],
+            'selectedRealms.*' => ['integer', Rule::exists('realms', 'id')],
         ]);
 
         $collection = Collection::create([
@@ -119,11 +138,8 @@ class Collections extends Component
             'user_id' => Auth::id(),
         ]);
 
-        // Attach the current realm if set
-        $realmId = Auth::user()->current_realm_id;
-        if ($realmId) {
-            $collection->realms()->attach($realmId);
-        }
+        // Attach selected realms (empty array will detach all)
+        $collection->realms()->sync($validated['selectedRealms'] ?? []);
 
         $this->showCreateModal = false;
         $this->resetForm();
@@ -141,9 +157,14 @@ class Collections extends Component
             'title' => ['required', 'string', 'max:255', Rule::unique('collections', 'title')->ignore($this->editingCollection->id)],
             'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')->ignore($this->editingCollection->id)],
             'author' => ['nullable', 'string', 'max:255'],
+            'selectedRealms' => ['nullable', 'array'],
+            'selectedRealms.*' => ['integer', Rule::exists('realms', 'id')],
         ]);
 
         $this->editingCollection->update($validated);
+
+        // Sync selected realms (empty array will detach all)
+        $this->editingCollection->realms()->sync($validated['selectedRealms'] ?? []);
 
         $this->showEditModal = false;
         $this->resetForm();
@@ -177,5 +198,6 @@ class Collections extends Component
         $this->title = '';
         $this->abbreviation = null;
         $this->author = null;
+        $this->selectedRealms = [];
     }
 }
