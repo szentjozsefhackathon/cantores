@@ -24,14 +24,11 @@ new class extends Component
     public function mount($musicPlan = null): void
     {
         if (!$musicPlan) {
-            // Get default realm (organist)
-            $defaultRealm = Realm::where('name', 'organist')->first();
-            
             // Create a new music plan for the current user
             $this->musicPlan = new MusicPlan([
                 'user_id' => Auth::id(),
                 'is_published' => false,
-                'realm_id' => $defaultRealm?->id,
+                'realm_id' => null,
             ]);
             
             // Authorize creation instead of view

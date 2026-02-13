@@ -83,13 +83,10 @@ new class extends Component
             ]
         );
 
-        // Get default realm (organist)
-        $defaultRealm = Realm::where('name', 'organist')->first();
-
         // Create MusicPlan without celebration fields
         $musicPlan = MusicPlan::create([
             'user_id' => $user->id,
-            'realm_id' => $defaultRealm?->id,
+            'realm_id' => null,
             'is_published' => false,
         ]);
 

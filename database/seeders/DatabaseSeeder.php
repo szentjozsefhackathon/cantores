@@ -101,8 +101,6 @@ class DatabaseSeeder extends Seeder
         if (class_exists(MusicPlan::class) && class_exists(MusicPlanSlot::class)) {
             $musicPlan = MusicPlan::factory()->create([
                 'user_id' => $user->id,
-                'celebration_name' => 'Test Celebration',
-                'setting' => 'organist',
             ]);
 
             $slot = MusicPlanSlot::factory()->create([
