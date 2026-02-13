@@ -27,6 +27,7 @@ class CollectionFactory extends Factory
             'title' => $this->faker->words(4, true),
             'abbreviation' => $this->faker->optional()->regexify('[A-Z]{2,4}'),
             'author' => $this->faker->optional()->name(),
+            'user_id' => \App\Models\User::factory(),
         ];
     }
 }

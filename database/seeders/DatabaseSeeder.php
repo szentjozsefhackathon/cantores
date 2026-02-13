@@ -32,16 +32,23 @@ class DatabaseSeeder extends Seeder
         // Create or get music pieces
         $music1 = Music::firstOrCreate(
             ['custom_id' => 'BWV 846'],
-            ['title' => 'Ave Maria']
+            [
+                'title' => 'Ave Maria',
+                'user_id' => $user->id,
+            ]
         );
 
         $music2 = Music::firstOrCreate(
             ['custom_id' => 'ÉE 435'],
-            ['title' => 'Jézus neve szent']
+            [
+                'title' => 'Jézus neve szent',
+                'user_id' => $user->id,
+            ]
         );
 
         $music3 = Music::firstOrCreate(
-            ['title' => 'Kyrie eleison']
+            ['title' => 'Kyrie eleison'],
+            ['user_id' => $user->id]
         );
 
         // Create or get collections
@@ -50,12 +57,16 @@ class DatabaseSeeder extends Seeder
             [
                 'title' => 'Éneklő Egyház',
                 'author' => 'Magyar Katolikus Püspöki Konferencia',
+                'user_id' => $user->id,
             ]
         );
 
         $collection2 = Collection::firstOrCreate(
             ['abbreviation' => 'BWV'],
-            ['title' => 'Bach Werke Verzeichnis']
+            [
+                'title' => 'Bach Werke Verzeichnis',
+                'user_id' => $user->id,
+            ]
         );
 
         // Attach music to collections with page/order numbers (if not already attached)

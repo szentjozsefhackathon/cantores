@@ -26,6 +26,7 @@ class MusicFactory extends Factory
         return [
             'title' => $this->faker->words(3, true),
             'custom_id' => $this->faker->optional()->regexify('[A-Z]{3} \d{3}[a-z]?'),
+            'user_id' => \App\Models\User::factory(),
         ];
     }
 }

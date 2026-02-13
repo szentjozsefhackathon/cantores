@@ -29,7 +29,16 @@ class Music extends Model implements Auditable
     protected $fillable = [
         'title',
         'custom_id',
+        'user_id',
     ];
+
+    /**
+     * Get the user who owns this music.
+     */
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * Get the collections that include this music.

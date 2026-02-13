@@ -118,10 +118,11 @@ class Musics extends Component
             'customId' => ['nullable', 'string', 'max:255'],
         ]);
 
-        // Create music
+        // Create music with owner
         $music = Music::create([
             'title' => $validated['title'],
             'custom_id' => $validated['customId'],
+            'user_id' => Auth::id(),
         ]);
 
         // Attach current realm if user has one selected

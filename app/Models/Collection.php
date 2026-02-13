@@ -22,7 +22,16 @@ class Collection extends Model implements Auditable
         'title',
         'abbreviation',
         'author',
+        'user_id',
     ];
+
+    /**
+     * Get the user who owns this collection.
+     */
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * Get the music items in this collection.

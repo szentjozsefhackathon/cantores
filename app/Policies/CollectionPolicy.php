@@ -39,10 +39,8 @@ class CollectionPolicy
      */
     public function update(User $user, Collection $collection): bool
     {
-        // All authenticated users can update collections (community-maintained)
-        // But we might want to restrict this to admins or the creator
-        // For now, allow all authenticated users
-        return $user !== null;
+        // Only the owner or admin can update collections
+        return $user !== null && ($user->is_admin || $collection->user_id === $user->id);
     }
 
     /**
@@ -50,9 +48,9 @@ class CollectionPolicy
      */
     public function delete(User $user, Collection $collection): bool
     {
-        // Users can only delete collections if they have no music assigned
-        // This check is done in the controller/component
-        return $user !== null;
+        // Only the owner or admin can delete collections
+        // Additional checks for music assignments are done in the controller/component
+        return $user !== null && ($user->is_admin || $collection->user_id === $user->id);
     }
 
     /**

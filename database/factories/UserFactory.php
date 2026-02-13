@@ -25,17 +25,20 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
-        // Get random city or create a default one
-        $city = City::inRandomOrder()->first();
-        if (! $city) {
-            $city = City::firstOrCreate(['name' => 'Unknown']);
-        }
+        static $counter = 0;
+        $counter++;
 
-        // Get random first name or create a default one
-        $firstName = FirstName::inRandomOrder()->first();
-        if (! $firstName) {
-            $firstName = FirstName::firstOrCreate(['name' => 'Unknown'], ['gender' => 'male']);
-        }
+        // Create a unique city for each user to avoid unique constraint violations
+        $city = City::firstOrCreate(
+            ['name' => 'Test City '.$counter],
+            ['name' => 'Test City '.$counter]
+        );
+
+        // Create a unique first name for each user
+        $firstName = FirstName::firstOrCreate(
+            ['name' => 'TestFirstName'.$counter],
+            ['name' => 'TestFirstName'.$counter, 'gender' => 'male']
+        );
 
         return [
             'name' => fake()->name(),

@@ -114,7 +114,10 @@ class Collections extends Component
             'author' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $collection = Collection::create($validated);
+        $collection = Collection::create([
+            ...$validated,
+            'user_id' => Auth::id(),
+        ]);
 
         // Attach the current realm if set
         $realmId = Auth::user()->current_realm_id;

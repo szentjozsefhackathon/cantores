@@ -39,10 +39,8 @@ class MusicPolicy
      */
     public function update(User $user, Music $music): bool
     {
-        // All authenticated users can update music (community-maintained)
-        // But we might want to restrict this to admins or the creator
-        // For now, allow all authenticated users
-        return $user !== null;
+        // Only the owner or admin can update music
+        return $user !== null && ($user->is_admin || $music->user_id === $user->id);
     }
 
     /**
@@ -50,9 +48,9 @@ class MusicPolicy
      */
     public function delete(User $user, Music $music): bool
     {
-        // Users can only delete music if they have no assignments
-        // This check is done in the controller/component
-        return $user !== null;
+        // Only the owner or admin can delete music
+        // Additional checks for assignments are done in the controller/component
+        return $user !== null && ($user->is_admin || $music->user_id === $user->id);
     }
 
     /**

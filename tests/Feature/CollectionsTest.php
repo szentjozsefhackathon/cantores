@@ -47,7 +47,10 @@ it('allows updating collection with same title', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $collection = Collection::factory()->create(['title' => 'Original Title']);
+    $collection = Collection::factory()->create([
+        'title' => 'Original Title',
+        'user_id' => $user->id,
+    ]);
 
     Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
         ->call('edit', $collection)
@@ -60,8 +63,14 @@ it('prevents updating collection with duplicate title of another', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    Collection::factory()->create(['title' => 'Existing Title']);
-    $collection = Collection::factory()->create(['title' => 'Other Title']);
+    Collection::factory()->create([
+        'title' => 'Existing Title',
+        'user_id' => $user->id,
+    ]);
+    $collection = Collection::factory()->create([
+        'title' => 'Other Title',
+        'user_id' => $user->id,
+    ]);
 
     Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
         ->call('edit', $collection)
@@ -74,8 +83,14 @@ it('prevents updating collection with duplicate abbreviation of another', functi
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    Collection::factory()->create(['abbreviation' => 'ABC']);
-    $collection = Collection::factory()->create(['abbreviation' => 'DEF']);
+    Collection::factory()->create([
+        'abbreviation' => 'ABC',
+        'user_id' => $user->id,
+    ]);
+    $collection = Collection::factory()->create([
+        'abbreviation' => 'DEF',
+        'user_id' => $user->id,
+    ]);
 
     Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
         ->call('edit', $collection)
@@ -88,7 +103,7 @@ it('shows audit log modal for collection', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $collection = Collection::factory()->create();
+    $collection = Collection::factory()->create(['user_id' => $user->id]);
 
     Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
         ->call('showAuditLog', $collection)
@@ -101,7 +116,7 @@ it('loads audits for collection', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $collection = Collection::factory()->create();
+    $collection = Collection::factory()->create(['user_id' => $user->id]);
     // Manually create an audit entry since auditing may be disabled in tests
     \OwenIt\Auditing\Models\Audit::create([
         'auditable_type' => $collection->getMorphClass(),

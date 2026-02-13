@@ -51,7 +51,10 @@ it('redirects to music editor page when editing', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $music = Music::factory()->create(['title' => 'Original Title']);
+    $music = Music::factory()->create([
+        'title' => 'Original Title',
+        'user_id' => $user->id,
+    ]);
 
     Livewire::test(\App\Livewire\Pages\Editor\Musics::class)
         ->call('edit', $music)
@@ -62,8 +65,8 @@ it('prevents deleting music with collections assigned', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $music = Music::factory()->create();
-    $collection = \App\Models\Collection::factory()->create();
+    $music = Music::factory()->create(['user_id' => $user->id]);
+    $collection = \App\Models\Collection::factory()->create(['user_id' => $user->id]);
     $music->collections()->attach($collection->id);
 
     Livewire::test(\App\Livewire\Pages\Editor\Musics::class)
@@ -77,7 +80,7 @@ it('allows deleting music without assignments', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $music = Music::factory()->create();
+    $music = Music::factory()->create(['user_id' => $user->id]);
 
     Livewire::test(\App\Livewire\Pages\Editor\Musics::class)
         ->call('delete', $music)
@@ -90,7 +93,7 @@ it('shows audit log modal for music', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $music = Music::factory()->create();
+    $music = Music::factory()->create(['user_id' => $user->id]);
 
     Livewire::test(\App\Livewire\Pages\Editor\Musics::class)
         ->call('showAuditLog', $music)
@@ -103,7 +106,7 @@ it('loads audits for music', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $music = Music::factory()->create();
+    $music = Music::factory()->create(['user_id' => $user->id]);
     // Manually create an audit entry since auditing may be disabled in tests
     \OwenIt\Auditing\Models\Audit::create([
         'auditable_type' => $music->getMorphClass(),
