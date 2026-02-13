@@ -516,7 +516,7 @@ new class extends Component
                                     </flux:button>
                                     <flux:button
                                         wire:click="addSlotsFromTemplate({{ $template->id }})"
-                                        variant="solid"
+                                        variant="primary"
                                         size="sm"
                                         icon="plus">
                                         Összes
@@ -590,7 +590,7 @@ new class extends Component
                         
                         <flux:button
                             wire:click="$dispatch('saveMusicPlan', { musicPlan: {{ $musicPlan->id }} })"
-                            variant="solid"
+                            variant="primary"
                             icon="check">
                             Mentés
                         </flux:button>
@@ -603,47 +603,43 @@ new class extends Component
     <!-- All slots modal -->
     @if ($showAllSlotsModal)
     <flux:modal wire:model="showAllSlotsModal" size="xl">
-        <flux:modal.header>
-            <flux:heading size="lg">Összes elem</flux:heading>
-        </flux:modal.header>
+        <flux:heading size="lg">Összes elem</flux:heading>
         
-        <flux:modal.body>
-            <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <flux:field class="flex-1">
-                        <flux:checkbox
-                            wire:model.live="filterExcludeExisting"
-                            label="Csak még nem hozzáadott elemek" />
-                    </flux:field>
-                    
-                    <flux:text class="text-neutral-600 dark:text-neutral-400">
-                        {{ count($allSlots) }} elem
-                    </flux:text>
-                </div>
+        <div class="space-y-3">
+            <div class="flex items-center justify-between">
+                <flux:field class="flex-1">
+                    <flux:checkbox
+                        wire:model.live="filterExcludeExisting"
+                        label="Csak még nem hozzáadott elemek" />
+                </flux:field>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-96 overflow-y-auto">
-                    @foreach ($allSlots as $slot)
-                    <div class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                        <flux:text class="font-medium">{{ $slot->name }}</flux:text>
-                        <flux:button
-                            wire:click="addSlotDirectly({{ $slot->id }})"
-                            variant="ghost"
-                            size="sm"
-                            icon="plus">
-                        </flux:button>
-                    </div>
-                    @endforeach
-                </div>
+                <flux:text class="text-neutral-600 dark:text-neutral-400">
+                    {{ count($allSlots) }} elem
+                </flux:text>
             </div>
-        </flux:modal.body>
-        
-        <flux:modal.footer>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-96 overflow-y-auto">
+                @foreach ($allSlots as $slot)
+                <div class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                    <flux:text class="font-medium">{{ $slot->name }}</flux:text>
+                    <flux:button
+                        wire:click="addSlotDirectly({{ $slot->id }})"
+                        variant="ghost"
+                        size="sm"
+                        icon="plus">
+                    </flux:button>
+                </div>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
             <flux:button
                 wire:click="closeAllSlotsModal"
                 variant="outline">
                 Bezárás
             </flux:button>
-        </flux:modal.footer>
+        </div>
     </flux:modal>
     @endif
 </div>
