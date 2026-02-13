@@ -5,6 +5,7 @@ namespace App\Livewire\Pages\Editor;
 use App\Models\Collection;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -113,7 +114,13 @@ class Collections extends Component
             'author' => ['nullable', 'string', 'max:255'],
         ]);
 
-        Collection::create($validated);
+        $collection = Collection::create($validated);
+
+        // Attach the current realm if set
+        $realmId = Auth::user()->current_realm_id;
+        if ($realmId) {
+            $collection->realms()->attach($realmId);
+        }
 
         $this->showCreateModal = false;
         $this->resetForm();

@@ -1,6 +1,7 @@
 <?php
 
 use Livewire\Component;
+use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -52,6 +53,12 @@ new class extends Component
         $this->fetchLiturgicalInfo();
     }
 
+    #[On('realm-changed')]
+    public function onRealmChanged(): void
+    {
+        // No action needed, just trigger re-render to refresh existing plans list
+    }
+
     public function createMusicPlan(int $celebrationIndex): void
     {
         $user = Auth::user();
@@ -86,7 +93,7 @@ new class extends Component
         // Create MusicPlan without celebration fields
         $musicPlan = MusicPlan::create([
             'user_id' => $user->id,
-            'realm_id' => null,
+            'realm_id' => $user->current_realm_id,
             'is_published' => false,
         ]);
 
@@ -121,10 +128,21 @@ new class extends Component
         }
 
         // Get music plans through the relationship
-        return $celebration->musicPlans()
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = $celebration->musicPlans()
+            ->where('user_id', $user->id);
+
+        // Filter by current realm
+        $realmId = $user->current_realm_id;
+        if ($realmId !== null) {
+            // Show plans that belong to the current realm OR have no realm (belongs to all)
+            $query->where(function ($q) use ($realmId) {
+                $q->whereNull('realm_id')
+                  ->orWhere('realm_id', $realmId);
+            });
+        }
+        // If $realmId is null, no filtering applied (show all plans)
+
+        return $query->orderBy('created_at', 'desc')->get();
     }
 };
 ?>

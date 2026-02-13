@@ -6,6 +6,7 @@ use App\Models\Collection;
 use App\Models\Music;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
 use OwenIt\Auditing\Models\Audit;
@@ -122,6 +123,12 @@ class Musics extends Component
             'title' => $validated['title'],
             'custom_id' => $validated['customId'],
         ]);
+
+        // Attach current realm if user has one selected
+        $realmId = Auth::user()->current_realm_id;
+        if ($realmId) {
+            $music->realms()->attach($realmId);
+        }
 
         $this->showCreateModal = false;
         $this->resetForm();
