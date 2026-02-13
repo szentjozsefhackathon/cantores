@@ -168,10 +168,15 @@ class MusicPlan extends Model
      * Get the first celebration's actual date.
      * This is a convenience method to access actual date from the first associated celebration.
      */
-    public function getActualDateAttribute(): ?string
+    public function getActualDateAttribute(): ?\Illuminate\Support\Carbon
     {
         $firstCelebration = $this->celebrations->first();
 
-        return $firstCelebration?->actual_date;
+        $date = $firstCelebration?->actual_date;
+        if ($date === null) {
+            return null;
+        }
+
+        return \Illuminate\Support\Carbon::parse($date);
     }
 }

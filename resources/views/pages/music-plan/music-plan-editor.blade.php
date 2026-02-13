@@ -407,7 +407,7 @@ new class extends Component
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Dátum</flux:heading>
                         <flux:text class="text-base font-semibold">
                             @if($musicPlan->actual_date)
-                                {{ \Illuminate\Support\Carbon::parse($musicPlan->actual_date)->translatedFormat('Y. F j.') }}
+                                {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
                             @else
                                 –
                             @endif
@@ -439,7 +439,7 @@ new class extends Component
                         <div class="flex items-center">
                             <flux:icon name="external-link" class="mr-1"/>
                             @if($musicPlan->actual_date)
-                                <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ \Illuminate\Support\Carbon::parse($musicPlan->actual_date)->translatedFormat('Y-m-d') }}" target="_blank">
+                                <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
                                     Igenaptár
                                 </flux:link>
                             @else

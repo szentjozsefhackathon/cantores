@@ -354,7 +354,7 @@ new class extends Component
                                             {{ $plan->celebration_name }}
                                         </flux:text>
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
-                                            {{ \Illuminate\Support\Carbon::parse($plan->actual_date)->translatedFormat('Y. m. d.') }}
+                                            {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
                                             • {{ \App\MusicPlanSetting::tryFrom($plan->setting)?->label() ?? $plan->setting }}
                                             {{ $plan->is_published ? '• Közzétéve' : '• Privát' }}
                                         </flux:text>

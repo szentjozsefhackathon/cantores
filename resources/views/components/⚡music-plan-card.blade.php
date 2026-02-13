@@ -27,7 +27,7 @@ new class extends Component
                         </flux:heading>
                         <div class="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                             @if($musicPlan->actual_date)
-                                <span>{{ \Illuminate\Support\Carbon::parse($musicPlan->actual_date)->translatedFormat('Y. F j.') }}</span>
+                                <span>{{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}</span>
                                 <span>•</span>
                             @endif
                             <span>{{ \App\MusicPlanSetting::tryFrom($musicPlan->setting)?->label() ?? $musicPlan->setting }}</span>
@@ -101,7 +101,7 @@ new class extends Component
                     <flux:icon name="external-link" class="h-3 w-3" variant="mini" />
                     @if($musicPlan->actual_date)
                         <flux:link 
-                            href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ \Illuminate\Support\Carbon::parse($musicPlan->actual_date)->format('Y-m-d') }}" 
+                            href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}"
                             target="_blank" 
                             class="text-xs"
                             onclick="event.stopPropagation()">
