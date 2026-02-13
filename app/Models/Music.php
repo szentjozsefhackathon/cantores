@@ -41,6 +41,14 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Get the realms associated with this music.
+     */
+    public function realms(): BelongsToMany
+    {
+        return $this->belongsToMany(Realm::class, 'music_realm');
+    }
+
+    /**
      * Get the related music items (variations).
      */
     public function relatedMusic(): BelongsToMany

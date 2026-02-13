@@ -35,6 +35,14 @@ class Collection extends Model implements Auditable
     }
 
     /**
+     * Get the realms associated with this collection.
+     */
+    public function realms(): BelongsToMany
+    {
+        return $this->belongsToMany(Realm::class, 'collection_realm');
+    }
+
+    /**
      * Scope for searching by title or abbreviation.
      */
     public function scopeSearch($query, string $search): void

@@ -18,7 +18,7 @@ class MusicPlanFactory extends Factory
     {
         return [
             'user_id' => \App\Models\User::factory(),
-            'setting' => fake()->randomElement(['organist', 'guitarist', 'other']),
+            'realm_id' => \App\Models\Realm::factory(),
             'is_published' => fake()->boolean(),
         ];
     }

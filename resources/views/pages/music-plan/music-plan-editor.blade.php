@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\MusicPlan;
+use App\Models\Realm;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -23,11 +24,14 @@ new class extends Component
     public function mount($musicPlan = null): void
     {
         if (!$musicPlan) {
+            // Get default realm (organist)
+            $defaultRealm = Realm::where('name', 'organist')->first();
+            
             // Create a new music plan for the current user
             $this->musicPlan = new MusicPlan([
                 'user_id' => Auth::id(),
                 'is_published' => false,
-                'setting' => 'organist',
+                'realm_id' => $defaultRealm?->id,
             ]);
             
             // Authorize creation instead of view
@@ -55,15 +59,13 @@ new class extends Component
     private function loadPlanSlots(): void
     {
         $this->planSlots = $this->musicPlan->slots()
-            ->withPivot('id', 'sequence')
-            ->orderBy('music_plan_slot_plan.sequence')
+            ->orderByPivot('sequence')
             ->get()
             ->map(function ($slot) {
                 return [
                     'id' => $slot->id,
-                    'pivot_id' => $slot->pivot->id,
                     'name' => $slot->name,
-                    'description' => $slot->description,
+                    'pivot_id' => $slot->pivot->id,
                     'sequence' => $slot->pivot->sequence,
                 ];
             })
@@ -72,42 +74,24 @@ new class extends Component
 
     private function loadExistingSlotIds(): void
     {
-        $this->existingSlotIds = $this->musicPlan->slots()->pluck('music_plan_slot_id')->toArray();
+        $this->existingSlotIds = $this->musicPlan->slots()->pluck('music_plan_slots.id')->toArray();
     }
 
     public function delete(): void
     {
         $this->authorize('delete', $this->musicPlan);
-
+        
         $this->musicPlan->delete();
-
-        $this->redirectRoute('dashboard');
+        
+        $this->redirectRoute('music-plans');
     }
 
     public function loadAvailableTemplates(): void
     {
-        $this->availableTemplates = \App\Models\MusicPlanTemplate::active()
-            ->with(['slots' => function ($query) {
-                $query->orderByPivot('sequence');
-            }])
+        $this->availableTemplates = DB::table('music_plan_templates')
+            ->select('id', 'name', 'description')
+            ->orderBy('name')
             ->get()
-            ->map(function ($template) {
-                return [
-                    'id' => $template->id,
-                    'name' => $template->name,
-                    'description' => $template->description,
-                    'slot_count' => $template->slots->count(),
-                    'slots' => $template->slots->map(function ($slot) {
-                        return [
-                            'id' => $slot->id,
-                            'name' => $slot->name,
-                            'description' => $slot->description,
-                            'sequence' => $slot->pivot->sequence,
-                            'is_included_by_default' => $slot->pivot->is_included_by_default,
-                        ];
-                    })->toArray(),
-                ];
-            })
             ->toArray();
     }
 
@@ -122,80 +106,89 @@ new class extends Component
 
     public function addSlotFromTemplate(int $templateId, int $slotId): void
     {
-        $this->authorize('update', $this->musicPlan);
-
-        // Get existing slots for this plan to determine next sequence
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-
-        $this->musicPlan->slots()->attach($slotId, [
-            'sequence' => $sequence,
-        ]);
-
-        $this->loadExistingSlotIds();
+        // Check if slot already exists in plan
+        if (in_array($slotId, $this->existingSlotIds)) {
+            return;
+        }
+        
+        // Get the highest sequence number
+        $maxSequence = $this->musicPlan->slots()->max('sequence') ?? 0;
+        
+        // Attach slot with next sequence
+        $this->musicPlan->slots()->attach($slotId, ['sequence' => $maxSequence + 1]);
+        
+        // Update local state
         $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Elem hozzáadva.');
+        $this->loadExistingSlotIds();
+        
+        // Show feedback
+        $slotName = DB::table('music_plan_slots')->where('id', $slotId)->value('name');
+        $this->recentlyAddedSlotName = $slotName;
     }
 
     public function addSlotsFromTemplate(int $templateId): void
     {
-        $this->authorize('update', $this->musicPlan);
-
-        $template = \App\Models\MusicPlanTemplate::with(['slots' => function ($query) {
-            $query->orderByPivot('sequence');
-        }])->findOrFail($templateId);
-
-        // Get existing slots for this plan to determine next sequence
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-
-        $addedCount = 0;
-        foreach ($template->slots as $slot) {
-            $this->musicPlan->slots()->attach($slot->id, [
-                'sequence' => $sequence,
-            ]);
+        // Get all slots from template that aren't already in plan
+        $templateSlots = DB::table('music_plan_template_slots')
+            ->where('music_plan_template_id', $templateId)
+            ->pluck('music_plan_slot_id')
+            ->toArray();
+        
+        $newSlots = array_diff($templateSlots, $this->existingSlotIds);
+        
+        if (empty($newSlots)) {
+            return;
+        }
+        
+        // Get the highest sequence number
+        $maxSequence = $this->musicPlan->slots()->max('sequence') ?? 0;
+        
+        // Attach all new slots
+        $sequence = $maxSequence + 1;
+        foreach ($newSlots as $slotId) {
+            $this->musicPlan->slots()->attach($slotId, ['sequence' => $sequence]);
             $sequence++;
-            $addedCount++;
         }
-
-        if ($addedCount > 0) {
-            $this->loadExistingSlotIds();
-            $this->loadPlanSlots();
-        }
-
-        $this->dispatch('slots-updated', message: $addedCount . ' elem hozzáadva a sablonból.');
-
+        
+        // Update local state
+        $this->loadPlanSlots();
+        $this->loadExistingSlotIds();
+        
+        // Show feedback
+        $this->recentlyAddedSlotName = count($newSlots) . ' elem hozzáadva';
     }
 
     public function addDefaultSlotsFromTemplate(int $templateId): void
     {
-        $this->authorize('update', $this->musicPlan);
-
-        $template = \App\Models\MusicPlanTemplate::with(['slots' => function ($query) {
-            $query->orderByPivot('sequence');
-        }])->findOrFail($templateId);
-
-        // Get existing slots for this plan to determine next sequence
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-
-        $addedCount = 0;
-        foreach ($template->slots as $slot) {
-            if ($slot->pivot->is_included_by_default) {
-                $this->musicPlan->slots()->attach($slot->id, [
-                    'sequence' => $sequence,
-                ]);
-                $sequence++;
-                $addedCount++;
-            }
+        // Get default slots from template that aren't already in plan
+        $templateSlots = DB::table('music_plan_template_slots')
+            ->where('music_plan_template_id', $templateId)
+            ->where('is_default', true)
+            ->pluck('music_plan_slot_id')
+            ->toArray();
+        
+        $newSlots = array_diff($templateSlots, $this->existingSlotIds);
+        
+        if (empty($newSlots)) {
+            return;
         }
-
-        if ($addedCount > 0) {
-            $this->loadExistingSlotIds();
-            $this->loadPlanSlots();
+        
+        // Get the highest sequence number
+        $maxSequence = $this->musicPlan->slots()->max('sequence') ?? 0;
+        
+        // Attach all new slots
+        $sequence = $maxSequence + 1;
+        foreach ($newSlots as $slotId) {
+            $this->musicPlan->slots()->attach($slotId, ['sequence' => $sequence]);
+            $sequence++;
         }
-
-        $this->dispatch('slots-updated', message: $addedCount . ' elem hozzáadva a sablonból.');
+        
+        // Update local state
+        $this->loadPlanSlots();
+        $this->loadExistingSlotIds();
+        
+        // Show feedback
+        $this->recentlyAddedSlotName = count($newSlots) . ' alapértelmezett elem hozzáadva';
     }
 
     public function moveSlotUp(int $pivotId): void
@@ -210,161 +203,122 @@ new class extends Component
 
     public function deleteSlot(int $pivotId): void
     {
-        $this->authorize('update', $this->musicPlan);
-
-        $pivot = DB::table('music_plan_slot_plan')->where('id', $pivotId)->first();
-
-        if (!$pivot) {
+        // Find the slot in planSlots
+        $slotIndex = array_search($pivotId, array_column($this->planSlots, 'pivot_id'));
+        
+        if ($slotIndex === false) {
             return;
         }
-
-        $deletedSequence = $pivot->sequence;
-
-        DB::transaction(function () use ($pivotId, $deletedSequence) {
-            DB::table('music_plan_slot_plan')->where('id', $pivotId)->delete();
-
-            // Decrement sequence for all later slots in the same plan
-            DB::table('music_plan_slot_plan')
-                ->where('music_plan_id', $this->musicPlan->id)
-                ->where('sequence', '>', $deletedSequence)
-                ->decrement('sequence');
-        });
-
-        $this->loadExistingSlotIds();
+        
+        // Detach slot
+        $this->musicPlan->slots()->wherePivot('id', $pivotId)->detach();
+        
+        // Update local state
         $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Elem eltávolítva.');
+        $this->loadExistingSlotIds();
     }
 
     private function reorderSlot(int $pivotId, string $direction): void
     {
-        $slots = $this->musicPlan->slots()
-            ->withPivot('id', 'sequence')
-            ->orderBy('music_plan_slot_plan.sequence')
-            ->get();
-
-        $currentIndex = $slots->search(fn($slot) => $slot->pivot->id === $pivotId);
-
-        if ($currentIndex === false) {
+        // Find the slot in planSlots
+        $slotIndex = array_search($pivotId, array_column($this->planSlots, 'pivot_id'));
+        
+        if ($slotIndex === false) {
             return;
         }
-
-        $targetIndex = $direction === 'up' ? $currentIndex - 1 : $currentIndex + 1;
-
-        if ($targetIndex < 0 || $targetIndex >= $slots->count()) {
-            return;
+        
+        $currentSequence = $this->planSlots[$slotIndex]['sequence'];
+        
+        if ($direction === 'up' && $slotIndex > 0) {
+            $targetIndex = $slotIndex - 1;
+            $targetSequence = $this->planSlots[$targetIndex]['sequence'];
+            
+            // Swap sequences
+            $this->updatePivotSequence($pivotId, $targetSequence);
+            $this->updatePivotSequence($this->planSlots[$targetIndex]['pivot_id'], $currentSequence);
+            
+        } elseif ($direction === 'down' && $slotIndex < count($this->planSlots) - 1) {
+            $targetIndex = $slotIndex + 1;
+            $targetSequence = $this->planSlots[$targetIndex]['sequence'];
+            
+            // Swap sequences
+            $this->updatePivotSequence($pivotId, $targetSequence);
+            $this->updatePivotSequence($this->planSlots[$targetIndex]['pivot_id'], $currentSequence);
         }
-
-        $currentSlot = $slots[$currentIndex];
-        $targetSlot = $slots[$targetIndex];
-
-        DB::transaction(function () use ($currentSlot, $targetSlot) {
-            $this->updatePivotSequence($currentSlot->pivot->id, $targetSlot->pivot->sequence);
-            $this->updatePivotSequence($targetSlot->pivot->id, $currentSlot->pivot->sequence);
-        });
-
+        
+        // Reload slots to reflect new order
         $this->loadPlanSlots();
     }
 
     private function updatePivotSequence(int $pivotId, int $sequence): void
     {
-        $this->musicPlan->slots()
-            ->newPivotStatement()
+        DB::table('music_plan_music_plan_slot')
             ->where('id', $pivotId)
             ->update(['sequence' => $sequence]);
     }
 
     public function updatedSlotSearch(string $value): void
     {
-        if (strlen($value) < 2) {
+        if (empty($value)) {
             $this->searchResults = [];
-            $this->selectedSlotId = null;
             return;
         }
-
-        $query = \App\Models\MusicPlanSlot::query()
-            ->where(function ($query) use ($value) {
-                $query->where('name', 'ilike', "%{$value}%")
-                    ->orWhere('description', 'ilike', "%{$value}%");
-            });
-
+        
+        $query = DB::table('music_plan_slots')
+            ->select('id', 'name')
+            ->where('name', 'like', '%' . $value . '%')
+            ->orderBy('name')
+            ->limit(10);
+        
         if ($this->filterExcludeExisting && !empty($this->existingSlotIds)) {
             $query->whereNotIn('id', $this->existingSlotIds);
         }
-
-        $this->searchResults = $query
-            ->orderBy('name')
-            ->limit(10)
-            ->get()
-            ->map(function ($slot) {
-                return [
-                    'id' => $slot->id,
-                    'name' => $slot->name,
-                    'description' => $slot->description,
-                ];
-            })
-            ->toArray();
-
-        // Auto-select first result if available
-        if (count($this->searchResults) > 0) {
-            $this->selectedSlotId = $this->searchResults[0]['id'];
-        } else {
-            $this->selectedSlotId = null;
-        }
+        
+        $this->searchResults = $query->get()->toArray();
     }
 
     public function updatedFilterExcludeExisting(): void
     {
-        // If there's an active search, refresh the results
-        if (strlen($this->slotSearch) >= 2) {
-            $this->updatedSlotSearch($this->slotSearch);
-        }
+        $this->updatedSlotSearch($this->slotSearch);
     }
 
     public function addSlotDirectly(int $slotId): void
     {
-        $this->authorize('update', $this->musicPlan);
-
-        $slot = \App\Models\MusicPlanSlot::findOrFail($slotId);
-
-        // Get existing slots for this plan to determine next sequence
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-
-        $this->musicPlan->slots()->attach($slotId, [
-            'sequence' => $sequence,
-        ]);
-
+        // Check if slot already exists in plan
+        if (in_array($slotId, $this->existingSlotIds)) {
+            return;
+        }
+        
+        // Get the highest sequence number
+        $maxSequence = $this->musicPlan->slots()->max('sequence') ?? 0;
+        
+        // Attach slot with next sequence
+        $this->musicPlan->slots()->attach($slotId, ['sequence' => $maxSequence + 1]);
+        
+        // Update local state
+        $this->loadPlanSlots();
+        $this->loadExistingSlotIds();
+        
+        // Show feedback
+        $slotName = DB::table('music_plan_slots')->where('id', $slotId)->value('name');
+        $this->recentlyAddedSlotName = $slotName;
+        
         // Clear search
         $this->slotSearch = '';
         $this->searchResults = [];
-        $this->selectedSlotId = null;
-        $this->recentlyAddedSlotName = $slot->name;
-
-        $this->loadExistingSlotIds();
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: $slot->name . ' hozzáadva.');
     }
 
     public function showAllSlots(): void
     {
-        $query = \App\Models\MusicPlanSlot::query();
-
+        $query = DB::table('music_plan_slots')
+            ->select('id', 'name')
+            ->orderBy('name');
+        
         if ($this->filterExcludeExisting && !empty($this->existingSlotIds)) {
             $query->whereNotIn('id', $this->existingSlotIds);
         }
-
-        $this->allSlots = $query
-            ->orderBy('name')
-            ->get()
-            ->map(function ($slot) {
-                return [
-                    'id' => $slot->id,
-                    'name' => $slot->name,
-                    'description' => $slot->description,
-                ];
-            })
-            ->toArray();
-
+        
+        $this->allSlots = $query->get()->toArray();
         $this->showAllSlotsModal = true;
     }
 
@@ -381,349 +335,318 @@ new class extends Component
 };
 ?>
 
-<div class="py-8">
+<div>
+    <x-slot name="header">
+        <flux:heading size="xl">Énekrend szerkesztése</flux:heading>
+    </x-slot>
+
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <flux:card class="p-5">
             <div class="flex items-center gap-4 mb-4">
-                <x-music-plan-setting-icon :setting="$musicPlan->setting" />
+                <x-music-plan-setting-icon :setting="$musicPlan->realm" />
                 <flux:heading size="xl">Énekrend szerkesztése</flux:heading>
             </div>
 
             <div class="space-y-4">
                 <!-- Notification message -->
                 <div class="flex justify-end">
-                    <x-action-message on="slots-updated">
-                        {{ __('Művelet sikeres.') }} 
-                    </x-action-message>
+                    @if ($recentlyAddedSlotName)
+                    <flux:callout color="green" icon="check-circle" class="border-green-200 dark:border-green-800">
+                        <flux:callout.text>
+                            "{{ $recentlyAddedSlotName }}" hozzáadva az énekrendhez.
+                            <flux:button wire:click="clearRecentlyAddedSlot" variant="ghost" size="sm" class="ml-2">OK</flux:button>
+                        </flux:callout.text>
+                    </flux:callout>
+                    @endif
                 </div>
 
-                <!-- Combined info grid -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Ünnep neve</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
-                    </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Dátum</flux:heading>
-                        <flux:text class="text-base font-semibold">
-                            @if($musicPlan->actual_date)
-                                {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
-                            @else
-                                –
-                            @endif
-                        </flux:text>
-                    </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
-                        @php
-                            $firstCelebration = $musicPlan->celebrations->first();
-                        @endphp
-                        <flux:text class="text-base font-semibold">{{ $firstCelebration?->year_letter ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:text>
-                    </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Időszak, hét, nap</flux:heading>
-                        <div class="flex flex-row gap-2">
-                            <flux:badge color="blue" size="sm">{{ $firstCelebration?->season_text ?? '–' }}</flux:badge>
-                            <flux:badge color="green" size="sm">{{ $firstCelebration?->week ?? '–' }}.hét</flux:badge>
-                            <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
+                <!-- Celebration info -->
+                @if ($musicPlan->celebrations->isNotEmpty())
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <flux:icon name="calendar-days" class="h-5 w-5 text-blue-600 dark:text-blue-400" variant="mini" />
+                            <div>
+                                <flux:heading size="md" class="text-blue-800 dark:text-blue-300">
+                                    {{ $musicPlan->celebration_name ?? '–' }}
+                                </flux:heading>
+                                @if ($musicPlan->actual_date)
+                                <flux:text class="text-blue-700 dark:text-blue-400">
+                                    {{ $musicPlan->actual_date->translatedFormat('Y. F j., l') }}
+                                </flux:text>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <flux:badge color="blue" size="sm">
+                                {{ $musicPlan->realm?->label() ?? $musicPlan->setting }}
+                            </flux:badge>
+                            <flux:badge color="{{ $musicPlan->is_published ? 'green' : 'zinc' }}" size="sm">
+                                {{ $musicPlan->is_published ? 'Közzétéve' : 'Privát' }}
+                            </flux:badge>
                         </div>
                     </div>
                 </div>
+                @endif
 
-
-                <!-- Status -->
-                <div class="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
-                    <div class="flex items-center gap-3">
-                        <flux:icon name="{{ $musicPlan->is_published ? 'eye' : 'eye-slash' }}" class="h-5 w-5 text-neutral-500" variant="mini" />
-                        <flux:text class="font-medium">{{ $musicPlan->is_published ? 'Közzétéve' : 'Privát' }}</flux:text>
-                        <div class="flex items-center">
-                            <flux:icon name="external-link" class="mr-1"/>
-                            @if($musicPlan->actual_date)
-                                <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
-                                    Igenaptár
-                                </flux:link>
-                            @else
-                                <flux:text class="text-neutral-500">Igenaptár (nincs dátum)</flux:text>
-                            @endif
+                <!-- Current slots -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <flux:heading size="lg">Énekrend elemei</flux:heading>
+                        <div class="flex items-center gap-2">
+                            <flux:button
+                                wire:click="showAllSlots"
+                                variant="outline"
+                                size="sm"
+                                icon="plus">
+                                Összes elem
+                            </flux:button>
                         </div>
-
                     </div>
+
+                    @if (empty($planSlots))
+                    <flux:callout color="zinc" icon="information-circle" class="border-zinc-200 dark:border-zinc-800">
+                        <flux:callout.heading>Üres énekrend</flux:callout.heading>
+                        <flux:callout.text>Még nincsenek elemek az énekrendben. Használd a sablonokat vagy keress elemeket a keresővel.</flux:callout.text>
+                    </flux:callout>
+                    @else
+                    <div class="space-y-2">
+                        @foreach ($planSlots as $slot)
+                        <div class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <flux:icon name="musical-note" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
+                                <flux:text class="font-medium">{{ $slot['name'] }}</flux:text>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <flux:button
+                                    wire:click="moveSlotUp({{ $slot['pivot_id'] }})"
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="chevron-up"
+                                    :disabled="$loop->first">
+                                </flux:button>
+                                <flux:button
+                                    wire:click="moveSlotDown({{ $slot['pivot_id'] }})"
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="chevron-down"
+                                    :disabled="$loop->last">
+                                </flux:button>
+                                <flux:button
+                                    wire:click="deleteSlot({{ $slot['pivot_id'] }})"
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="trash"
+                                    color="red">
+                                </flux:button>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
                 </div>
 
-                <!-- Editor Columns -->
-                <div class="pt-6 border-t border-neutral-200 dark:border-neutral-800">
-                    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div class="space-y-4 lg:col-span-1">
-                            <div class="flex items-center justify-between">
-                                <flux:heading size="lg">Énekrend elemei</flux:heading>
-                                <flux:badge color="zinc" size="sm">{{ count($planSlots) }} elem</flux:badge>
-                            </div>
+                <!-- Search for slots -->
+                <div class="space-y-3">
+                    <flux:heading size="lg">Elem keresése</flux:heading>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <flux:field class="flex-1">
+                            <flux:input
+                                wire:model.live="slotSearch"
+                                placeholder="Keresés elemek között..."
+                                icon="magnifying-glass" />
+                        </flux:field>
+                        
+                        <flux:field class="sm:w-auto">
+                            <flux:checkbox
+                                wire:model.live="filterExcludeExisting"
+                                label="Csak még nem hozzáadott elemek" />
+                        </flux:field>
+                    </div>
 
-                            <!-- Autocomplete search for slots -->
-                            <div x-data="{ open: false }" x-on:keydown.escape="open = false" class="relative">
-                                <div class="flex gap-2 items-end">
-                                    <div class="flex-1 relative">
-                                        <flux:heading size="sm">Elem hozzáadása</flux:heading>
-                                        <flux:field variant="inline" class="mt-2 mb-2">
-                                            <flux:checkbox
-                                                wire:model.live="filterExcludeExisting"
-                                                id="filter-exclude-existing" />
-                                            <flux:label for="filter-exclude-existing">Csak még nem szereplő elemek</flux:label>
-                                        </flux:field>
-                                        <flux:field>
-                                            <flux:input
-                                                type="text"
-                                                wire:model.live="slotSearch"
-                                                x-on:focus="open = true"
-                                                x-on:click.outside="open = false"
-                                                placeholder="Írd be az elem nevét (pl. Gloria, Bevonulás)..." />
-                                        </flux:field>
+                    @if (!empty($searchResults))
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                        @foreach ($searchResults as $result)
+                        <div class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                            <flux:text class="font-medium">{{ $result->name }}</flux:text>
+                            <flux:button
+                                wire:click="addSlotDirectly({{ $result->id }})"
+                                variant="ghost"
+                                size="sm"
+                                icon="plus">
+                            </flux:button>
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
+                </div>
 
-
-                                        <!-- Dropdown results -->
-                                        <div x-show="open && $wire.searchResults.length > 0"
-                                            x-transition
-                                            class="absolute z-10 mt-1 w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                                            <div class="py-1">
-                                                @foreach($searchResults as $result)
-                                                <button
-                                                    type="button"
-                                                    wire:click="addSlotDirectly({{ $result['id'] }})"
-                                                    wire:loading.attr="disabled"
-                                                    wire:loading.class="opacity-50 cursor-not-allowed"
-                                                    class="w-full text-left px-4 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-between">
-                                                    <div>
-                                                        <div class="font-medium">{{ $result['name'] }}</div>
-                                                        <div class="text-sm text-neutral-600 dark:text-neutral-400">{{ $result['description'] ?: 'Nincs leírás' }}</div>
-                                                    </div>
-                                                    <div class="relative h-4 w-4">
-                                                        <flux:icon name="plus" class="h-4 w-4 text-neutral-900 dark:text-neutral-100" wire:loading.remove wire:target="addSlotDirectly" />
-                                                        <flux:icon.loading class="h-4 w-4 text-neutral-900 dark:text-neutral-100 absolute inset-0" wire:loading wire:target="addSlotDirectly" />
-                                                    </div>
-                                                </button>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <flux:button
-                                        wire:click="showAllSlots"
-                                        wire:loading.attr="disabled"
-                                        wire:loading.class="opacity-50 cursor-not-allowed"
-                                        icon="list-bullet"
-                                        variant="outline"
-                                        class="self-end whitespace-nowrap">
-                                        Összes elem
-                                    </flux:button>
-                                </div>
-                            </div>
-
-                            <!-- All Slots Modal -->
-                            <flux:modal wire:model="showAllSlotsModal" size="lg">
-                                <flux:heading size="lg">Összes elérhető elem</flux:heading>
-
-                                <div class="mt-4 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
-                                    @if(count($allSlots) > 0)
-                                    <div class="divide-y divide-neutral-200 dark:divide-neutral-700">
-                                        @foreach($allSlots as $slot)
-                                        <button
-                                            type="button"
-                                            wire:click="addSlotDirectly({{ $slot['id'] }})"
-                                            wire:loading.attr="disabled"
-                                            wire:loading.class="opacity-50 cursor-not-allowed"
-                                            class="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-between">
-                                            <div class="flex-1">
-                                                <div class="font-medium">{{ $slot['name'] }}</div>
-                                                @if($slot['description'])
-                                                <div class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">{{ $slot['description'] }}</div>
-                                                @else
-                                                <div class="text-sm text-neutral-400 dark:text-neutral-500 mt-1">Nincs leírás</div>
-                                                @endif
-                                            </div>
-                                            <div class="relative h-5 w-5 ml-4">
-                                                <flux:icon name="plus" class="h-5 w-5 text-neutral-900 dark:text-neutral-100" wire:loading.remove wire:target="addSlotDirectly" />
-                                                <flux:icon.loading
-                                                    class="h-5 w-5 text-neutral-900 dark:text-neutral-100 absolute inset-0"
-                                                    wire:loading
-                                                    wire:target="addSlotDirectly({{ $slot['id'] }})"
-                                                />
-                                            </div>
-                                        </button>
-                                        @endforeach
-                                    </div>
-                                    @else
-                                    <div class="p-8 text-center">
-                                        <flux:icon name="inbox" class="h-12 w-12 text-neutral-400 mx-auto" />
-                                        <flux:heading size="md" class="mt-4">Nincs elérhető elem</flux:heading>
-                                        <flux:text class="mt-2 text-neutral-600 dark:text-neutral-400">
-                                            Minden elem már hozzá van adva az énekrendhez.
-                                        </flux:text>
-                                    </div>
-                                    @endif
-                                </div>
-
-                                <div class="mt-6 flex justify-end">
-                                    <flux:button
-                                        wire:click="closeAllSlotsModal"
-                                        variant="outline">
-                                        Bezárás
-                                    </flux:button>
-                                </div>
-                            </flux:modal>
-
-                            @forelse($planSlots as $slot)
-                            <flux:card class="p-2 flex items-start gap-4">
-                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
-                                    {{ $slot['sequence'] }}
-                                </div>
-                                <div class="flex-1 space-y-1">
-                                    <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
-                                    @if($slot['description'])
-                                    <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
+                <!-- Templates -->
+                <div class="space-y-3">
+                    <flux:heading size="lg">Sablonok</flux:heading>
+                    
+                    @if (empty($availableTemplates))
+                    <flux:callout color="zinc" icon="information-circle" class="border-zinc-200 dark:border-zinc-800">
+                        <flux:callout.heading>Nincsenek sablonok</flux:callout.heading>
+                        <flux:callout.text>Jelenleg nincsenek elérhető sablonok.</flux:callout.text>
+                    </flux:callout>
+                    @else
+                    <div class="space-y-3">
+                        @foreach ($availableTemplates as $template)
+                        <div class="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden">
+                            <div class="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800/50">
+                                <div>
+                                    <flux:heading size="md">{{ $template->name }}</flux:heading>
+                                    @if ($template->description)
+                                    <flux:text class="text-neutral-600 dark:text-neutral-400">{{ $template->description }}</flux:text>
                                     @endif
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <div class="flex flex-col gap-1">
-                                        <flux:button
-                                            wire:click="moveSlotUp({{ $slot['pivot_id'] }})"
-                                            wire:loading.attr="disabled"
-                                            wire:loading.class="opacity-50 cursor-not-allowed"
-                                            :disabled="$loop->first"
-                                            icon="chevron-up"
-                                            variant="outline"
-                                            size="xs" />
-                                        <flux:button
-                                            wire:click="moveSlotDown({{ $slot['pivot_id'] }})"
-                                            wire:loading.attr="disabled"
-                                            wire:loading.class="opacity-50 cursor-not-allowed"
-                                            :disabled="$loop->last"
-                                            icon="chevron-down"
-                                            variant="outline"
-                                            size="xs" />
-                                    </div>
-                                    <div class="border-l border-neutral-300 dark:border-neutral-700 h-6"></div>
                                     <flux:button
-                                        wire:click="deleteSlot({{ $slot['pivot_id'] }})"
-                                        wire:confirm="Biztosan eltávolítod ezt az elemet az énekrendből?"
-                                        wire:loading.attr="disabled"
-                                        wire:loading.class="opacity-50 cursor-not-allowed"
-                                        icon="trash"
-                                        variant="danger"
-                                        size="xs" />
+                                        wire:click="toggleTemplate({{ $template->id }})"
+                                        variant="outline"
+                                        size="sm"
+                                        :icon="in_array($template->id, $expandedTemplates) ? 'chevron-up' : 'chevron-down'">
+                                        {{ in_array($template->id, $expandedTemplates) ? 'Összecsukás' : 'Megnyitás' }}
+                                    </flux:button>
+                                    <flux:button
+                                        wire:click="addDefaultSlotsFromTemplate({{ $template->id }})"
+                                        variant="outline"
+                                        size="sm"
+                                        icon="plus">
+                                        Alapértelmezettek
+                                    </flux:button>
+                                    <flux:button
+                                        wire:click="addSlotsFromTemplate({{ $template->id }})"
+                                        variant="solid"
+                                        size="sm"
+                                        icon="plus">
+                                        Összes
+                                    </flux:button>
                                 </div>
-                            </flux:card>
-                            @empty
-                            <flux:callout variant="secondary" icon="musical-note">
-                                Ehhez az énekrendhez még nem adtál elemeket.
-                            </flux:callout>
-                            @endforelse
-                        </div>
-
-                        <div class="space-y-4">
-                            <flux:heading size="lg">Elemek hozzáadása sablonból</flux:heading>
-
-                            @if(count($availableTemplates) > 0)
-                            <div class="space-y-4">
-                                @foreach($availableTemplates as $template)
-                                <flux:card class="overflow-hidden" size="sm">
-                                    <div class="p-1 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                                        wire:click="toggleTemplate({{ $template['id'] }})">
-                                        <div class="flex justify-between items-center">
-                                            <div class="flex items-center gap-2">
-                                                <flux:icon
-                                                    name="chevron-right"
-                                                    class="h-4 w-4 transition-transform duration-200 {{ in_array($template['id'], $expandedTemplates) ? 'rotate-90' : '' }}"
-                                                    variant="mini" />
-                                                <div>
-                                                    <flux:heading size="sm" class="mb-1">{{ $template['name'] }}</flux:heading>
-                                                    @if($template['description'])
-                                                    <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($template['description'], 80) }}</flux:text>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <flux:badge color="blue" size="sm">{{ $template['slot_count'] }} elem</flux:badge>
-                                                <flux:button
-                                                    wire:click.stop="addSlotsFromTemplate({{ $template['id'] }})"
-                                                    wire:loading.attr="disabled"
-                                                    wire:loading.class="opacity-50 cursor-not-allowed"
-                                                    icon="plus"
-                                                    variant="primary"
-                                                    size="sm">
-                                                    <span>Összes</span>
-                                                </flux:button>
-                                                <flux:button
-                                                    wire:click.stop="addDefaultSlotsFromTemplate({{ $template['id'] }})"
-                                                    wire:loading.attr="disabled"
-                                                    wire:loading.class="opacity-50 cursor-not-allowed"
-                                                    icon="plus"
-                                                    variant="outline"
-                                                    size="sm">
-                                                    <span>Szokásos</span>
-                                                </flux:button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    @if(in_array($template['id'], $expandedTemplates))
-                                    <div class="border-t border-neutral-200 dark:border-neutral-800">
-                                        <div class="p-4 space-y-3">
-                                            @foreach($template['slots'] as $slot)
-                                            <div class="flex items-center justify-between py-2 px-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-                                                <div class="flex-1">
-                                                    <div class="flex items-center gap-2">
-                                                        <flux:badge color="zinc" size="xs">{{ $slot['sequence'] }}</flux:badge>
-                                                        <flux:heading size="xs" class="font-medium">{{ $slot['name'] }}</flux:heading>
-                                                        <flux:icon
-                                                            name="star"
-                                                            variant="{{ $slot['is_included_by_default'] ? 'solid' : 'outline' }}"
-                                                            class="h-4 w-4 {{ $slot['is_included_by_default'] ? 'text-amber-500' : 'text-neutral-400' }}" />
-                                                    </div>
-                                                    @if($slot['description'])
-                                                    <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 60) }}</flux:text>
-                                                    @endif
-                                                </div>
-                                                <flux:button
-                                                    wire:click.stop="addSlotFromTemplate({{ $template['id'] }}, {{ $slot['id'] }})"
-                                                    wire:loading.attr="disabled"
-                                                    wire:loading.class="opacity-50 cursor-not-allowed"
-                                                    icon="plus"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    class="ml-4">
-                                                    <span wire:target="addSlotFromTemplate({{ $template['id'] }}, {{ $slot['id'] }})">Hozzáadás</span>
-
-                                                </flux:button>
-                                            </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                    @endif
-                                </flux:card>
-                                @endforeach
                             </div>
-                            @else
-                            <flux:callout variant="secondary" icon="information-circle">
-                                Nincsenek elérhető sablonok. Először hozz létre sablonokat az admin felületen.
-                            </flux:callout>
+                            
+                            @if (in_array($template->id, $expandedTemplates))
+                            <div class="p-4 border-t border-neutral-200 dark:border-neutral-700">
+                                @php
+                                $templateSlots = DB::table('music_plan_template_slots')
+                                    ->join('music_plan_slots', 'music_plan_template_slots.music_plan_slot_id', '=', 'music_plan_slots.id')
+                                    ->where('music_plan_template_id', $template->id)
+                                    ->select('music_plan_slots.id', 'music_plan_slots.name', 'music_plan_template_slots.is_default')
+                                    ->orderBy('music_plan_slots.name')
+                                    ->get();
+                                @endphp
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                    @foreach ($templateSlots as $slot)
+                                    <div class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                        <div class="flex items-center gap-2">
+                                            <flux:text class="font-medium">{{ $slot->name }}</flux:text>
+                                            @if ($slot->is_default)
+                                            <flux:badge color="green" size="xs">Alap</flux:badge>
+                                            @endif
+                                        </div>
+                                        <flux:button
+                                            wire:click="addSlotFromTemplate({{ $template->id }}, {{ $slot->id }})"
+                                            variant="ghost"
+                                            size="sm"
+                                            icon="plus"
+                                            :disabled="in_array($slot->id, $existingSlotIds)">
+                                        </flux:button>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
                             @endif
                         </div>
+                        @endforeach
                     </div>
+                    @endif
                 </div>
 
                 <!-- Actions -->
-                <div class="flex flex-col sm:flex-row gap-3 pt-4">
-                    <flux:button variant="outline" color="zinc" icon="arrow-left" href="{{ route('dashboard') }}">
-                        Vissza az irányítópultra
-                    </flux:button>
-                    <flux:button
-                        variant="danger"
-                        icon="trash"
-                        wire:click="delete"
-                        wire:confirm="Biztosan törölni szeretnéd ezt az énekrendet? A művelet nem visszavonható.">
-                        Énekrend törlése
-                    </flux:button>
+                <div class="flex flex-col sm:flex-row justify-between gap-4 pt-6 border-t border-neutral-200 dark:border-neutral-700">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <flux:button
+                            wire:click="$dispatch('openModal', { component: 'music-plan-settings', arguments: { musicPlan: {{ $musicPlan->id }} } })"
+                            variant="outline"
+                            icon="cog-6-tooth">
+                            Beállítások
+                        </flux:button>
+                        
+                        <flux:button
+                            wire:click="delete"
+                            variant="outline"
+                            color="red"
+                            icon="trash">
+                            Törlés
+                        </flux:button>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <flux:button
+                            wire:click="$dispatch('close')"
+                            variant="outline">
+                            Mégse
+                        </flux:button>
+                        
+                        <flux:button
+                            wire:click="$dispatch('saveMusicPlan', { musicPlan: {{ $musicPlan->id }} })"
+                            variant="solid"
+                            icon="check">
+                            Mentés
+                        </flux:button>
+                    </div>
                 </div>
             </div>
         </flux:card>
     </div>
+
+    <!-- All slots modal -->
+    @if ($showAllSlotsModal)
+    <flux:modal wire:model="showAllSlotsModal" size="xl">
+        <flux:modal.header>
+            <flux:heading size="lg">Összes elem</flux:heading>
+        </flux:modal.header>
+        
+        <flux:modal.body>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <flux:field class="flex-1">
+                        <flux:checkbox
+                            wire:model.live="filterExcludeExisting"
+                            label="Csak még nem hozzáadott elemek" />
+                    </flux:field>
+                    
+                    <flux:text class="text-neutral-600 dark:text-neutral-400">
+                        {{ count($allSlots) }} elem
+                    </flux:text>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-96 overflow-y-auto">
+                    @foreach ($allSlots as $slot)
+                    <div class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                        <flux:text class="font-medium">{{ $slot->name }}</flux:text>
+                        <flux:button
+                            wire:click="addSlotDirectly({{ $slot->id }})"
+                            variant="ghost"
+                            size="sm"
+                            icon="plus">
+                        </flux:button>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </flux:modal.body>
+        
+        <flux:modal.footer>
+            <flux:button
+                wire:click="closeAllSlotsModal"
+                variant="outline">
+                Bezárás
+            </flux:button>
+        </flux:modal.footer>
+    </flux:modal>
+    @endif
 </div>

@@ -14,7 +14,8 @@
 				"database-query",
 				"application-info",
 				"get-absolute-url",
-				"list-routes"
+				"list-routes",
+				"tinker"
 			]
 		}
 	}

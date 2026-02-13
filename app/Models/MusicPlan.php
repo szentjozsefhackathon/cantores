@@ -19,7 +19,7 @@ class MusicPlan extends Model
      */
     protected $fillable = [
         'user_id',
-        'setting',
+        'realm_id',
         'is_published',
     ];
 
@@ -41,6 +41,14 @@ class MusicPlan extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the realm associated with this music plan.
+     */
+    public function realm(): BelongsTo
+    {
+        return $this->belongsTo(Realm::class);
     }
 
     /**
@@ -97,15 +105,29 @@ class MusicPlan extends Model
     }
 
     /**
-     * Scope for plans by setting.
+     * Scope for plans by realm.
      */
-    public function scopeBySetting($query, string $setting)
+    public function scopeByRealm($query, $realm)
     {
-        return $query->where('setting', $setting);
+        if ($realm instanceof Realm) {
+            return $query->where('realm_id', $realm->id);
+        }
+
+        return $query->where('realm_id', $realm);
     }
 
     /**
-     * Get the setting options with icons.
+     * Get the realm options for select inputs.
+     */
+    public static function realmOptions(): array
+    {
+        return Realm::options();
+    }
+
+    /**
+     * Get the setting options with icons (backward compatibility).
+     *
+     * @deprecated Use realmOptions() instead
      */
     public static function settingOptions(): array
     {
@@ -178,5 +200,13 @@ class MusicPlan extends Model
         }
 
         return \Illuminate\Support\Carbon::parse($date);
+    }
+
+    /**
+     * Get the setting name from realm (backward compatibility).
+     */
+    public function getSettingAttribute(): ?string
+    {
+        return $this->realm?->name;
     }
 }

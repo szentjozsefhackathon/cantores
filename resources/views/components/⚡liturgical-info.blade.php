@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\MusicPlan;
 use App\Models\Celebration;
+use App\Models\Realm;
 
 new class extends Component
 {
@@ -82,10 +83,13 @@ new class extends Component
             ]
         );
 
+        // Get default realm (organist)
+        $defaultRealm = Realm::where('name', 'organist')->first();
+
         // Create MusicPlan without celebration fields
         $musicPlan = MusicPlan::create([
             'user_id' => $user->id,
-            'setting' => 'organist', // default
+            'realm_id' => $defaultRealm?->id,
             'is_published' => false,
         ]);
 
@@ -355,7 +359,7 @@ new class extends Component
                                         </flux:text>
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
                                             {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
-                                            • {{ \App\MusicPlanSetting::tryFrom($plan->setting)?->label() ?? $plan->setting }}
+                                            • {{ $plan->realm?->label() ?? $plan->setting }}
                                             {{ $plan->is_published ? '• Közzétéve' : '• Privát' }}
                                         </flux:text>
                                     </div>

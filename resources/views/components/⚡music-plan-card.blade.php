@@ -20,7 +20,7 @@ new class extends Component
             <!-- Header with icon and title -->
             <div class="flex items-start justify-between">
                 <div class="flex items-center gap-4">
-                    <x-music-plan-setting-icon :setting="$musicPlan->setting" />
+                    <x-music-plan-setting-icon :setting="$musicPlan->realm" />
                     <div class="flex-1">
                         <flux:heading size="lg" class="mb-1">
                             {{ $musicPlan->celebration_name ?? '–' }}
@@ -30,7 +30,7 @@ new class extends Component
                                 <span>{{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}</span>
                                 <span>•</span>
                             @endif
-                            <span>{{ \App\MusicPlanSetting::tryFrom($musicPlan->setting)?->label() ?? $musicPlan->setting }}</span>
+                            <span>{{ $musicPlan->realm?->label() ?? $musicPlan->setting }}</span>
                             <span>•</span>
                             <span class="flex items-center gap-1">
                                 <flux:icon name="{{ $musicPlan->is_published ? 'eye' : 'eye-slash' }}" class="h-3 w-3" variant="mini" />

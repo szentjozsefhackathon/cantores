@@ -25,6 +25,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'city_id',
         'first_name_id',
+        'current_realm_id',
     ];
 
     /**
@@ -66,6 +67,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function firstName(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(FirstName::class, 'first_name_id');
+    }
+
+    /**
+     * Get the user's current realm.
+     */
+    public function currentRealm(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Realm::class, 'current_realm_id');
     }
 
     /**
