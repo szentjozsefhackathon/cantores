@@ -23,7 +23,7 @@ test('owner can view their own music plan', function () {
     $response = $this->actingAs($user)->get(route('music-plan-editor', $musicPlan));
 
     $response->assertOk();
-    $response->assertSee($musicPlan->celebration_name);
+    $response->assertSee('Énekrend szerkesztése');
 });
 
 test('non-owner cannot view another user\'s music plan', function () {

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\MusicPlan;
+use App\Models\Celebration;
 
 new class extends Component
 {
@@ -61,45 +62,66 @@ new class extends Component
             return;
         }
 
-        $celebration = $this->celebrations[$celebrationIndex];
+        $celebrationData = $this->celebrations[$celebrationIndex];
 
+        // Update or create Celebration (ensure data matches liturgical info)
+        $celebration = Celebration::updateOrCreate(
+            [
+                'actual_date' => $celebrationData['dateISO'] ?? $this->date,
+                'celebration_key' => $celebrationData['celebrationKey'] ?? 0,
+            ],
+            [
+                'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? 'Unknown',
+                'season' => (int) ($celebrationData['season'] ?? 0),
+                'season_text' => $celebrationData['seasonText'] ?? null,
+                'week' => (int) ($celebrationData['week'] ?? 0),
+                'day' => (int) ($celebrationData['dayofWeek'] ?? 0),
+                'readings_code' => $celebrationData['readingsId'] ?? null,
+                'year_letter' => $celebrationData['yearLetter'] ?? null,
+                'year_parity' => $celebrationData['yearParity'] ?? null,
+            ]
+        );
+
+        // Create MusicPlan without celebration fields
         $musicPlan = MusicPlan::create([
             'user_id' => $user->id,
-            'celebration_name' => $celebration['name'] ?? $celebration['title'] ?? 'Unknown',
-            'actual_date' => $celebration['dateISO'] ?? $this->date,
             'setting' => 'organist', // default
-            'season' => (int) ($celebration['season'] ?? 0),
-            'season_text' => $celebration['seasonText'] ?? null,
-            'week' => (int) ($celebration['week'] ?? 0),
-            'day' => (int) ($celebration['dayofWeek'] ?? 0),
-            'readings_code' => $celebration['readingsId'] ?? null,
-            'year_letter' => $celebration['yearLetter'] ?? null,
-            'year_parity' => $celebration['yearParity'] ?? null,
             'is_published' => false,
         ]);
+
+        // Attach celebration
+        $musicPlan->celebrations()->attach($celebration->id);
 
         // Redirect to MusicPlanEditor page with the created plan
         $this->redirectRoute('music-plan-editor', ['musicPlan' => $musicPlan->id]);
     }
 
-    public function getExistingMusicPlans(array $celebration): \Illuminate\Database\Eloquent\Collection
+    public function getExistingMusicPlans(array $celebrationData): \Illuminate\Database\Eloquent\Collection
     {
         $user = Auth::user();
         if (!$user) {
             return new \Illuminate\Database\Eloquent\Collection();
         }
 
-        $celebrationName = $celebration['name'] ?? $celebration['title'] ?? null;
-        $dateISO = $celebration['dateISO'] ?? $this->date;
+        $celebrationName = $celebrationData['name'] ?? $celebrationData['title'] ?? null;
+        $dateISO = $celebrationData['dateISO'] ?? $this->date;
 
         if (!$celebrationName) {
             return new \Illuminate\Database\Eloquent\Collection();
         }
 
-        return MusicPlan::query()
-            ->where('user_id', $user->id)
-            ->where('celebration_name', $celebrationName)
+        // Find the celebration first
+        $celebration = Celebration::where('name', $celebrationName)
             ->where('actual_date', $dateISO)
+            ->first();
+
+        if (!$celebration) {
+            return new \Illuminate\Database\Eloquent\Collection();
+        }
+
+        // Get music plans through the relationship
+        return $celebration->musicPlans()
+            ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->get();
     }
@@ -332,7 +354,7 @@ new class extends Component
                                             {{ $plan->celebration_name }}
                                         </flux:text>
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
-                                            {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
+                                            {{ \Illuminate\Support\Carbon::parse($plan->actual_date)->translatedFormat('Y. m. d.') }}
                                             • {{ \App\MusicPlanSetting::tryFrom($plan->setting)?->label() ?? $plan->setting }}
                                             {{ $plan->is_published ? '• Közzétéve' : '• Privát' }}
                                         </flux:text>

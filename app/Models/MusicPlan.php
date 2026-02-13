@@ -19,16 +19,7 @@ class MusicPlan extends Model
      */
     protected $fillable = [
         'user_id',
-        'celebration_name',
-        'actual_date',
         'setting',
-        'season',
-        'season_text',
-        'week',
-        'day',
-        'readings_code',
-        'year_letter',
-        'year_parity',
         'is_published',
     ];
 
@@ -40,12 +31,7 @@ class MusicPlan extends Model
     protected function casts(): array
     {
         return [
-            'actual_date' => 'date',
             'is_published' => 'boolean',
-            'season' => 'integer',
-            'season_text' => 'string',
-            'week' => 'integer',
-            'day' => 'integer',
         ];
     }
 
@@ -55,6 +41,15 @@ class MusicPlan extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the celebrations for this music plan.
+     */
+    public function celebrations(): BelongsToMany
+    {
+        return $this->belongsToMany(Celebration::class, 'celebration_music_plan')
+            ->withTimestamps();
     }
 
     /**
@@ -145,20 +140,38 @@ class MusicPlan extends Model
     }
 
     /**
-     * Get the day name for the liturgical day number.
+     * Get the first celebration's day name for the liturgical day number.
+     * This is a convenience method to access day name from the first associated celebration.
      */
     public function getDayNameAttribute(): string
     {
-        $days = [
-            0 => 'vasárnap',
-            1 => 'hétfő',
-            2 => 'kedd',
-            3 => 'szerda',
-            4 => 'csütörtök',
-            5 => 'péntek',
-            6 => 'szombat',
-        ];
+        $firstCelebration = $this->celebrations->first();
+        if ($firstCelebration) {
+            return $firstCelebration->day_name;
+        }
 
-        return $days[$this->day] ?? 'ismeretlen';
+        return 'ismeretlen';
+    }
+
+    /**
+     * Get the first celebration's name.
+     * This is a convenience method to access celebration name from the first associated celebration.
+     */
+    public function getCelebrationNameAttribute(): ?string
+    {
+        $firstCelebration = $this->celebrations->first();
+
+        return $firstCelebration?->name;
+    }
+
+    /**
+     * Get the first celebration's actual date.
+     * This is a convenience method to access actual date from the first associated celebration.
+     */
+    public function getActualDateAttribute(): ?string
+    {
+        $firstCelebration = $this->celebrations->first();
+
+        return $firstCelebration?->actual_date;
     }
 }

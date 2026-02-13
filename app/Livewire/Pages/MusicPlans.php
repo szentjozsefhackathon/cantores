@@ -31,9 +31,12 @@ class MusicPlans extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('celebration_name', 'ilike', "%{$this->search}%")
-                    ->orWhere('season_text', 'ilike', "%{$this->search}%")
-                    ->orWhere('year_letter', 'ilike', "%{$this->search}%");
+                // Search through celebrations relationship
+                $q->whereHas('celebrations', function ($celebrationQuery) {
+                    $celebrationQuery->where('name', 'ilike', "%{$this->search}%")
+                        ->orWhere('season_text', 'ilike', "%{$this->search}%")
+                        ->orWhere('year_letter', 'ilike', "%{$this->search}%");
+                });
             });
         }
 

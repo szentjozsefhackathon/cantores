@@ -26,14 +26,8 @@ new class extends Component
             // Create a new music plan for the current user
             $this->musicPlan = new MusicPlan([
                 'user_id' => Auth::id(),
-                'actual_date' => now(),
-                'season' => 0,
-                'week' => 0,
-                'day' => 0,
                 'is_published' => false,
-                'celebration_name' => 'Új énekrend',
                 'setting' => 'organist',
-                'season_text' => 'Általános idő',
             ]);
             
             // Authorize creation instead of view
@@ -41,6 +35,7 @@ new class extends Component
             
             // Save the new plan to get an ID
             $this->musicPlan->save();
+            
         } else {
             // Load existing music plan
             if (!$musicPlan instanceof MusicPlan) {
@@ -406,21 +401,30 @@ new class extends Component
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Ünnep neve</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name }}</flux:text>
+                        <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
                     </div>
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Dátum</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}</flux:text>
+                        <flux:text class="text-base font-semibold">
+                            @if($musicPlan->actual_date)
+                                {{ \Illuminate\Support\Carbon::parse($musicPlan->actual_date)->translatedFormat('Y. F j.') }}
+                            @else
+                                –
+                            @endif
+                        </flux:text>
                     </div>
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $musicPlan->year_letter ?? '–' }} {{ $musicPlan->year_parity ? '(' . $musicPlan->year_parity . ')' : '' }}</flux:text>
+                        @php
+                            $firstCelebration = $musicPlan->celebrations->first();
+                        @endphp
+                        <flux:text class="text-base font-semibold">{{ $firstCelebration?->year_letter ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:text>
                     </div>
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Időszak, hét, nap</flux:heading>
                         <div class="flex flex-row gap-2">
-                            <flux:badge color="blue" size="sm">{{ $musicPlan->season_text }}</flux:badge>
-                            <flux:badge color="green" size="sm">{{ $musicPlan->week }}.hét</flux:badge>
+                            <flux:badge color="blue" size="sm">{{ $firstCelebration?->season_text ?? '–' }}</flux:badge>
+                            <flux:badge color="green" size="sm">{{ $firstCelebration?->week ?? '–' }}.hét</flux:badge>
                             <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
                         </div>
                     </div>
@@ -434,9 +438,13 @@ new class extends Component
                         <flux:text class="font-medium">{{ $musicPlan->is_published ? 'Közzétéve' : 'Privát' }}</flux:text>
                         <div class="flex items-center">
                             <flux:icon name="external-link" class="mr-1"/>
-                            <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->translatedFormat('Y-m-d') }}" target="_blank">
-                                Igenaptár
-                            </flux:link>
+                            @if($musicPlan->actual_date)
+                                <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ \Illuminate\Support\Carbon::parse($musicPlan->actual_date)->translatedFormat('Y-m-d') }}" target="_blank">
+                                    Igenaptár
+                                </flux:link>
+                            @else
+                                <flux:text class="text-neutral-500">Igenaptár (nincs dátum)</flux:text>
+                            @endif
                         </div>
 
                     </div>
