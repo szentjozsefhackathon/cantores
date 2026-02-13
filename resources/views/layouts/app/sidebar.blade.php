@@ -10,6 +10,11 @@
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
+            <!-- Realm Selector -->
+            <div class="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+                <livewire:realm-selector />
+            </div>
+
             <flux:sidebar.nav>
                 <flux:sidebar.group class="grid">
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
