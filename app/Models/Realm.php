@@ -71,7 +71,7 @@ class Realm extends Model
         return match ($this->name) {
             'organist' => 'organist',
             'guitarist' => 'guitar',
-            default => 'other',
+            default => 'realm_other',
         };
     }
 

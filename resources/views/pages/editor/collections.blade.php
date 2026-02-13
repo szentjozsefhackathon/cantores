@@ -337,7 +337,9 @@
                             variant="cards"
                             wire:model="selectedRealms"
                             value="{{ $realm->id }}"
-                            :label="$realm->label()"                            
+                            :label="$realm->label()"          
+                            :icon="$realm->icon()"
+
                         />
                     @endforeach
                 </flux:checkbox.group>
