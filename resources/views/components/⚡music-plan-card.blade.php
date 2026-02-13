@@ -20,7 +20,7 @@ new class extends Component
             <!-- Header with icon and title -->
             <div class="flex items-start justify-between">
                 <div class="flex items-center gap-4">
-                    <x-music-plan-setting-icon :setting="$musicPlan->realm" />
+                    <x-music-plan-setting-icon :realm="$musicPlan->realm" />
                     <div class="flex-1">
                         <flux:heading size="lg" class="mb-1">
                             {{ $musicPlan->celebration_name ?? '–' }}

@@ -1,13 +1,13 @@
 @php
-    // Accept Realm model, realm name, or realm ID
-    $realm = null;
-    
-    if ($setting instanceof \App\Models\Realm) {
-        $realm = $setting;
-    } elseif (is_string($setting)) {
-        $realm = \App\Models\Realm::where('name', $setting)->first();
-    } elseif (is_int($setting)) {
-        $realm = \App\Models\Realm::find($setting);
+    // Accept Realm model, realm name, or realm ID   
+    if (is_string($realm)) {
+        $realm = \App\Models\Realm::where('name', $realm)->first();
+    } elseif (is_int($realm)) {
+        $realm = \App\Models\Realm::find($realm);
+    } else if ($realm instanceof \App\Models\Realm) {
+        // Do nothing, $realm is already a Realm instance
+    } else {
+        $realm = null;
     }
     
     $icon = $realm?->icon() ?? 'other';
