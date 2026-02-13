@@ -19,7 +19,8 @@
         "livewire/livewire": "^4.0",
         "mallardduck/blade-lucide-icons": "^1.26",
         "owen-it/laravel-auditing": "^14.0",
-        "ryangjchandler/laravel-cloudflare-turnstile": "^3.0"
+        "ryangjchandler/laravel-cloudflare-turnstile": "^3.0",
+        "spatie/laravel-permission": "^7.0"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",
