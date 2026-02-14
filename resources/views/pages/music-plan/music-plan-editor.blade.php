@@ -34,7 +34,7 @@ new class extends Component
             ]);
             
             // Authorize creation instead of view
-            $this->authorize('create', MusicPlan::class);
+            $this->authorize('update', MusicPlan::class);
             
             // Save the new plan to get an ID
             $this->musicPlan->save();
@@ -45,7 +45,7 @@ new class extends Component
                 $musicPlan = MusicPlan::findOrFail($musicPlan);
             }
             
-            $this->authorize('view', $musicPlan);
+            $this->authorize('update', $musicPlan);
             $this->musicPlan = $musicPlan;
         }
         

@@ -57,6 +57,10 @@ Route::livewire('/music-plan/{musicPlan?}', 'pages::music-plan.music-plan-editor
     ->middleware(['auth', 'verified'])
     ->name('music-plan-editor');
 
+// Music plan view - read-only display (public for published plans)
+Route::livewire('/music-plan/{musicPlan}/view', 'pages::music-plan.music-plan-view')
+    ->name('music-plan-view');
+
 // Music plans list
 Route::livewire('/music-plans', \App\Livewire\Pages\MusicPlans::class)
     ->middleware(['auth', 'verified'])

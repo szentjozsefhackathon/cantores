@@ -19,10 +19,15 @@ class MusicPlanPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, MusicPlan $musicPlan): bool
+    public function view(?User $user, MusicPlan $musicPlan): bool
     {
-        // Only the owner can view their own music plan
-        return $user->id === $musicPlan->user_id;
+        // Published music plans can be viewed by anyone
+        if ($musicPlan->is_published) {
+            return true;
+        }
+
+        // Non-published plans can only be viewed by the owner
+        return $user && $user->id === $musicPlan->user_id;
     }
 
     /**
