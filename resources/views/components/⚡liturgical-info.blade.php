@@ -407,7 +407,7 @@ new class extends Component
                     @if($existingPlans->isNotEmpty())
                     <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
-                            Már létező énekrendjeid:
+                            Saját énekrendjeid:
                         </flux:heading>
                         <div class="space-y-2">
                             @foreach($existingPlans as $plan)
@@ -439,7 +439,7 @@ new class extends Component
                     $publishedPlans = $this->getPublishedMusicPlans($celebration);
                     @endphp
                     @if($publishedPlans->isNotEmpty())
-                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
+                    <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
                             Közzétett énekrendek:
                         </flux:heading>
@@ -452,8 +452,9 @@ new class extends Component
                                     <flux:icon name="{{ $plan->realm?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
                                     <div>
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
-                                            {{ $plan->actual_date->translatedFormat('Y. m. d.') }} {{ $plan->user?->displayName ?? 'Ismeretlen' }}
+                                            {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
                                         </flux:text>
+                                        <x-user-badge :user="$plan->user" />                                        
                                     </div>
                                 </div>
                                 <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600" variant="mini" />

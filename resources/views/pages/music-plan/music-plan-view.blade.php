@@ -21,17 +21,17 @@ new #[Layout('layouts::app.main')] class extends Component
         if (!$musicPlan instanceof MusicPlan) {
             $musicPlan = MusicPlan::findOrFail($musicPlan);
         }
-        
+
         // Check authorization using Gate (supports guest users)
         if (!Gate::allows('view', $musicPlan)) {
             abort(403);
         }
-        
+
         $this->musicPlan = $musicPlan;
-        
+
         // Sync published state
         $this->isPublished = $this->musicPlan->is_published;
-        
+
         // Load plan slots
         $this->loadPlanSlots();
     }
@@ -53,115 +53,98 @@ new #[Layout('layouts::app.main')] class extends Component
             })
             ->toArray();
     }
-
 }
 ?>
 
 <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <flux:card class="p-5">
-                <div class="flex items-center gap-4 mb-4">
-                    <x-music-plan-setting-icon :realm="$musicPlan->realm" />
-                    <flux:heading size="xl">Énekrend megtekintése</flux:heading>
+    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <flux:card class="p-5">
+            <div class="flex items-center gap-4 mb-4">
+                <x-music-plan-setting-icon :realm="$musicPlan->realm" />
+                <flux:heading size="xl">Énekrend</flux:heading>
+                <x-user-badge :user="$musicPlan->user" />
+                @if($musicPlan->actual_date)
+                <div class="flex">
+                <flux:icon name="external-link" />
+                <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
+                    Igenaptár
+                </flux:link>
+                </div>
+                @endif
+
+            </div>
+
+            <div class="space-y-4">
+                <!-- Combined info grid -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    <div>
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Ünnep neve</flux:heading>
+                        <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
+                    </div>
+                    <div>
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Dátum</flux:heading>
+                        <flux:text class="text-base font-semibold">
+                            @if($musicPlan->actual_date)
+                            {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
+                            @else
+                            –
+                            @endif
+                        </flux:text>
+                    </div>
+                    <div>
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
+                        @php
+                        $firstCelebration = $musicPlan->celebrations->first();
+                        @endphp
+                        <flux:text class="text-base font-semibold">{{ $firstCelebration?->year_letter ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:text>
+                    </div>
+                    <div>
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Időszak, hét, nap</flux:heading>
+                        <div class="flex flex-row gap-2">
+                            <flux:badge color="blue" size="sm">{{ $firstCelebration?->season_text ?? '–' }}</flux:badge>
+                            <flux:badge color="green" size="sm">{{ $firstCelebration?->week ?? '–' }}.hét</flux:badge>
+                            <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="space-y-4">
-                    <!-- Combined info grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                        <div>
-                            <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Ünnep neve</flux:heading>
-                            <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
-                        </div>
-                        <div>
-                            <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Dátum</flux:heading>
-                            <flux:text class="text-base font-semibold">
-                                @if($musicPlan->actual_date)
-                                {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
-                                @else
-                                –
-                                @endif
-                            </flux:text>
-                        </div>
-                        <div>
-                            <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
-                            @php
-                            $firstCelebration = $musicPlan->celebrations->first();
-                            @endphp
-                            <flux:text class="text-base font-semibold">{{ $firstCelebration?->year_letter ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:text>
-                        </div>
-                        <div>
-                            <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Időszak, hét, nap</flux:heading>
-                            <div class="flex flex-row gap-2">
-                                <flux:badge color="blue" size="sm">{{ $firstCelebration?->season_text ?? '–' }}</flux:badge>
-                                <flux:badge color="green" size="sm">{{ $firstCelebration?->week ?? '–' }}.hét</flux:badge>
-                                <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
+                <!-- Editor Columns -->
+                <div class="pt-6 border-t border-neutral-200 dark:border-neutral-800">
+                    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <div class="space-y-4 lg:col-span-1">
+                            <div class="flex items-center justify-between">
+                                <flux:heading size="lg">Énekrend elemei</flux:heading>
+                                <flux:badge color="zinc" size="sm">{{ count($planSlots) }} elem</flux:badge>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Status -->
-                    <div class="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
-                        <div class="flex items-center gap-3">
-                            <flux:icon name="{{ $isPublished ? 'eye' : 'eye-slash' }}" class="h-5 w-5 {{ $isPublished ? 'text-green-500' : 'text-neutral-500' }}" variant="mini" />
-                            <flux:field variant="inline" class="mb-0">
-                                <flux:label>Közzététel</flux:label>
-                                <flux:text class="font-semibold">{{ $isPublished ? 'Közzétéve' : 'Vázlat' }}</flux:text>
-                            </flux:field>
-                            <div class="flex items-center">
-                                @if($musicPlan->actual_date)
-                                <flux:icon name="external-link" class="mr-1" />
-                                <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
-                                    Igenaptár
-                                </flux:link>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Editor Columns -->
-                    <div class="pt-6 border-t border-neutral-200 dark:border-neutral-800">
-                        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                            <div class="space-y-4 lg:col-span-1">
-                                <div class="flex items-center justify-between">
-                                    <flux:heading size="lg">Énekrend elemei</flux:heading>
-                                    <flux:badge color="zinc" size="sm">{{ count($planSlots) }} elem</flux:badge>
+                            @forelse($planSlots as $slot)
+                            <flux:card class="p-2 flex items-start gap-4">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
+                                    {{ $slot['sequence'] }}
                                 </div>
-
-                                @forelse($planSlots as $slot)
-                                <flux:card class="p-2 flex items-start gap-4">
-                                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
-                                        {{ $slot['sequence'] }}
-                                    </div>
-                                    <div class="flex-1 space-y-1">
-                                        <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
-                                        @if($slot['description'])
-                                        <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
-                                        @endif
-                                    </div>
-                                </flux:card>
-                                @empty
-                                <flux:callout variant="secondary" icon="musical-note">
-                                    Ehhez az énekrendhez még nem adtál elemeket.
-                                </flux:callout>
-                                @endforelse
-                            </div>
-
-                            <div class="space-y-4">
-                                <flux:heading size="lg">Sablon információk</flux:heading>
-                                <flux:callout variant="secondary" icon="information-circle">
-                                    Ez a nézet csak az énekrend adatait jeleníti meg. A szerkesztéshez használd az "Énekrend szerkesztése" lehetőséget.
-                                </flux:callout>
-                            </div>
+                                <div class="flex-1 space-y-1">
+                                    <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
+                                    @if($slot['description'])
+                                    <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
+                                    @endif
+                                </div>
+                            </flux:card>
+                            @empty
+                            <flux:callout variant="secondary" icon="musical-note">
+                                Ehhez az énekrendhez még nem adtál elemeket.
+                            </flux:callout>
+                            @endforelse
                         </div>
                     </div>
-
-                    <!-- Actions -->
-                    <div class="flex flex-col sm:flex-row gap-3 pt-4">
-                        <flux:button variant="outline" color="zinc" icon="arrow-left" href="{{ route('home') }}">
-                            Vissza a kezdőlapra
-                        </flux:button>
-                    </div>
                 </div>
-            </flux:card>
-        </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                    <flux:button variant="outline" color="zinc" icon="arrow-left" href="{{ route('home') }}">
+                        Vissza a kezdőlapra
+                    </flux:button>
+                </div>
+            </div>
+        </flux:card>
     </div>
+</div>
