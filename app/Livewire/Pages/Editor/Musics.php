@@ -7,6 +7,7 @@ use App\Models\Music;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 use OwenIt\Auditing\Models\Audit;
@@ -49,6 +50,23 @@ class Musics extends Component
     public function mount(): void
     {
         $this->authorize('viewAny', Music::class);
+    }
+
+    /**
+     * Reset pagination when search changes.
+     */
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Handle realm change event.
+     */
+    #[On('realm-changed')]
+    public function onRealmChanged(): void
+    {
+        $this->resetPage();
     }
 
     /**

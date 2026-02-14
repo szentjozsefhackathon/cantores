@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 use OwenIt\Auditing\Models\Audit;
@@ -48,6 +49,23 @@ class Collections extends Component
     }
 
     /**
+     * Reset pagination when search changes.
+     */
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Handle realm change event.
+     */
+    #[On('realm-changed')]
+    public function onRealmChanged(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
      * Get all realms for selection.
      */
     public function realms(): \Illuminate\Database\Eloquent\Collection
@@ -65,6 +83,7 @@ class Collections extends Component
                 ->orWhere('abbreviation', 'ilike', "%{$search}%")
                 ->orWhere('author', 'ilike', "%{$search}%");
         })
+            ->forCurrentRealm()
             ->withCount('music')
             ->orderBy('title')
             ->paginate(10);
