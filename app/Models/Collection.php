@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Collection extends Model implements Auditable
@@ -85,5 +86,27 @@ class Collection extends Model implements Auditable
             });
         }
         // If no realm ID, show all collections (no filtering)
+    }
+
+    /**
+     * Format the collection with pivot data for display.
+     */
+    public function formatWithPivot(?\Illuminate\Database\Eloquent\Relations\Pivot $pivot = null): string
+    {
+        $base = $this->abbreviation ?: Str::limit($this->title, 12, '...');
+
+        $parts = [];
+
+        if ($pivot && $pivot->order_number) {
+            $parts[] = $pivot->order_number;
+        }
+
+        $formatted = trim($base.($parts ? ' '.implode(' ', $parts) : ''));
+
+        if ($pivot && $pivot->page_number) {
+            $formatted .= ' '.__('(p.:page)', ['page' => $pivot->page_number]);
+        }
+
+        return $formatted;
     }
 }

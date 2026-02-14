@@ -96,6 +96,7 @@
     "Enter abbreviation": "Add meg a rövidítést",
     "Enter author name": "Add meg a szerző nevét",
     "Save Changes": "Változtatások mentése",
-    "Cannot delete collection that has music assigned to it.": "Nem lehet törölni a gyűjteményt, ha már zeneművel vannak hozzárendelve."
+    "Cannot delete collection that has music assigned to it.": "Nem lehet törölni a gyűjteményt, ha már zeneművek vannak hozzárendelve.",
+    "(p.:page)": "(:page.o)"
 
 }

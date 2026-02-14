@@ -36,8 +36,8 @@
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Title') }}</flux:table.column>
-                <flux:table.column>{{ __('Custom ID') }}</flux:table.column>
                 <flux:table.column>{{ __('Collections') }}</flux:table.column>
+                <flux:table.column>{{ __('Custom ID') }}</flux:table.column>
                 <flux:table.column>{{ __('Realms') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
@@ -50,20 +50,24 @@
                         </flux:table.cell>
                         
                         <flux:table.cell>
+                            <div class="flex flex-wrap items-center gap-2">
+                                @forelse ($music->collections as $collection)
+                                    <flux:badge size="sm">
+                                        {{ $collection->formatWithPivot($collection->pivot) }}
+                                    </flux:badge>
+                                @empty
+                                    <span class="text-gray-400 dark:text-gray-500 text-sm">{{ __('None') }}</span>
+                                @endforelse
+                            </div>
+                        </flux:table.cell>
+                        
+                        <flux:table.cell>
                             @if ($music->custom_id)
                                 <div class="font-mono text-sm text-gray-600 dark:text-gray-400">
                                     {{ $music->custom_id }}
                                 </div>
-                            @else                                
+                            @else
                             @endif
-                        </flux:table.cell>
-                        
-                        <flux:table.cell>
-                            <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                                    {{ $music->collections_count ?? 0 }}
-                                </span>
-                            </div>
                         </flux:table.cell>
                         
                         <flux:table.cell>

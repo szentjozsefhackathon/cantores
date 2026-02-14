@@ -79,7 +79,7 @@ class Musics extends Component
                 ->orWhere('custom_id', 'ilike', "%{$search}%");
         })
             ->forCurrentRealm()
-            ->with(['realms'])
+            ->with(['realms', 'collections'])
             ->withCount('collections')
             ->orderBy('title')
             ->paginate(10);

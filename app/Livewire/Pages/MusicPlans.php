@@ -63,7 +63,7 @@ class MusicPlans extends Component
 
     public function render()
     {
-        return view('livewire.pages.music-plans', [
+        return view('pages.music-plans', [
             'musicPlans' => $this->getMusicPlansQuery()->paginate(12),
         ]);
     }
