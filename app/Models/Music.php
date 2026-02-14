@@ -108,8 +108,10 @@ class Music extends Model implements Auditable
 
         $realmId = $user->current_realm_id;
         if ($realmId) {
-            $query->whereHas('realms', function ($q) use ($realmId) {
-                $q->where('realms.id', $realmId);
+            $query->where(function ($q) use ($realmId) {
+                $q->whereHas('realms', function ($subQ) use ($realmId) {
+                    $subQ->where('realms.id', $realmId);
+                })->orWhereDoesntHave('realms');
             });
         }
         // If no realm ID, show all music (no filtering)

@@ -64,6 +64,7 @@ class Collection extends Model implements Auditable
 
     /**
      * Scope for collections belonging to the current user's realm.
+     * Empty collection realm association means it belongs to all realms, so we include those as well.
      */
     public function scopeForCurrentRealm($query)
     {
@@ -77,8 +78,10 @@ class Collection extends Model implements Auditable
 
         $realmId = $user->current_realm_id;
         if ($realmId) {
-            $query->whereHas('realms', function ($q) use ($realmId) {
-                $q->where('realms.id', $realmId);
+            $query->where(function ($q) use ($realmId) {
+                $q->whereHas('realms', function ($subQ) use ($realmId) {
+                    $subQ->where('realms.id', $realmId);
+                })->orWhereDoesntHave('realms');
             });
         }
         // If no realm ID, show all collections (no filtering)
