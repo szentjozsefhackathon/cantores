@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Music extends Model implements Auditable
 {
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
+    use Searchable;
 
     /**
      * The table associated with the model.
@@ -90,17 +92,29 @@ class Music extends Model implements Auditable
      */
     public function scopeSearch($query, string $search): void
     {
-        $query->where(function ($q) use ($search) {
-            $q->where('title', 'ilike', "%{$search}%")
-                ->orWhere('subtitle', 'ilike', "%{$search}%")
-                ->orWhere('custom_id', 'ilike', "%{$search}%")
-                ->orWhereHas('collections', function ($collectionQuery) use ($search) {
-                    $collectionQuery->where('abbreviation', 'ilike', "%{$search}%")
-                        ->orWhere('title', 'ilike', "%{$search}%")
-                        ->orWhere('music_collection.order_number', 'ilike', "%{$search}%")
-                        ->orWhere('music_collection.page_number', 'ilike', "%{$search}%");
-                });
+        $tokens = preg_split('/\s+/', trim($search), -1, PREG_SPLIT_NO_EMPTY);
+        if (empty($tokens)) {
+            return;
+        }
 
+        $query->where(function ($q) use ($tokens, $search) {
+            // Scout full-text search on music fields (title, subtitle, custom_id)
+            $ids = static::search($search)->keys()->all();
+            if (! empty($ids)) {
+                $q->whereIn('id', $ids);
+            }
+            // Full-text search on collection fields (title, abbreviation)
+            $q->orWhereHas('collections', function ($collectionQuery) use ($search) {
+                $collectionQuery->whereFullText(['title', 'abbreviation'], $search);
+            });
+            // For numeric pivot fields, use ilike with token splitting
+            $q->orWhereHas('collections', function ($collectionQuery) use ($tokens) {
+                $collectionQuery->where(function ($subQuery) use ($tokens) {
+                    foreach ($tokens as $token) {
+                        $subQuery->orWhere('music_collection.order_number', 'ilike', "%{$token}%");
+                    }
+                });
+            });
         });
     }
 
