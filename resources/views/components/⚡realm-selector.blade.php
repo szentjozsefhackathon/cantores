@@ -46,7 +46,11 @@ new class extends Component
 
 <div class="flex items-center justify-center">
     <flux:radio.group wire:model.live="selectedRealmId" variant="segmented">
-            <flux:radio label="Mind" value="" />
+            @if (is_null($this->selectedRealmId))
+                <flux:radio label="Mind" value="" checked />
+            @else
+                <flux:radio label="Mind" value="" />
+            @endif
             @foreach($this->realms() as $realm)
                 <flux:radio value="{{ $realm->id }}" icon="{{ $realm->icon() }}" />
             @endforeach
