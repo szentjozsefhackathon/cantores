@@ -18,6 +18,8 @@ new class extends Component
     // Form fields
     public string $title = '';
 
+    public ?string $subtitle = null;
+
     public ?string $customId = null;
 
     // Collection assignment
@@ -49,6 +51,7 @@ new class extends Component
         $this->authorize('view', $music);
         $this->music = $music->load(['collections', 'realms']);
         $this->title = $music->title;
+        $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
         $this->selectedRealms = $music->realms->pluck('id')->toArray();
     }
@@ -82,6 +85,7 @@ new class extends Component
 
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
             'customId' => ['nullable', 'string', 'max:255'],
             'selectedRealms' => ['nullable', 'array'],
             'selectedRealms.*' => ['integer', Rule::exists('realms', 'id')],
@@ -89,6 +93,7 @@ new class extends Component
 
         $this->music->update([
             'title' => $validated['title'],
+            'subtitle' => $validated['subtitle'],
             'custom_id' => $validated['customId'],
         ]);
 
@@ -290,6 +295,14 @@ new class extends Component
                         <flux:error name="customId" />
                     </flux:field>
                 </div>
+
+                <flux:field :label="__('Subtitle')" :helper="__('Optional subtitle, e.g., movement, part, description')">
+                    <flux:input
+                        wire:model="subtitle"
+                        :placeholder="__('Enter subtitle')"
+                    />
+                    <flux:error name="subtitle" />
+                </flux:field>
 
                 <!-- Realm Selection -->
                 <div class="space-y-2">

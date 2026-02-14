@@ -33,7 +33,7 @@
             </div>
 
         <!-- Music Table -->
-        <flux:table>
+        <flux:table :paginate="$musics">
             <flux:table.columns>
                 <flux:table.column>{{ __('Title') }}</flux:table.column>
                 <flux:table.column>{{ __('Collections') }}</flux:table.column>
@@ -46,7 +46,12 @@
                 @forelse ($musics as $music)
                     <flux:table.row>
                         <flux:table.cell>
-                            <div class="font-medium">{{ $music->title }}</div>
+                            <div>
+                                <div class="font-medium">{{ $music->title }}</div>
+                                @if ($music->subtitle)
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">{{ $music->subtitle }}</div>
+                                @endif
+                            </div>
                         </flux:table.cell>
                         
                         <flux:table.cell>
@@ -148,6 +153,14 @@
                     autofocus
                 />
                 <flux:error name="title" />
+            </flux:field>
+
+            <flux:field :label="__('Subtitle')" :helper="__('Optional subtitle, e.g., movement, part, description')">
+                <flux:input
+                    wire:model="subtitle"
+                    :placeholder="__('Enter subtitle')"
+                />
+                <flux:error name="subtitle" />
             </flux:field>
 
         </div>

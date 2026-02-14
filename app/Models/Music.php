@@ -28,6 +28,7 @@ class Music extends Model implements Auditable
      */
     protected $fillable = [
         'title',
+        'subtitle',
         'custom_id',
         'user_id',
     ];
@@ -85,11 +86,12 @@ class Music extends Model implements Auditable
     }
 
     /**
-     * Scope for searching by title or custom ID.
+     * Scope for searching by title, subtitle or custom ID.
      */
     public function scopeSearch($query, string $search): void
     {
         $query->where('title', 'ilike', "%{$search}%")
+            ->orWhere('subtitle', 'ilike', "%{$search}%")
             ->orWhere('custom_id', 'ilike', "%{$search}%");
     }
 

@@ -33,6 +33,8 @@ class Musics extends Component
     // Form fields
     public string $title = '';
 
+    public ?string $subtitle = null;
+
     public ?string $customId = null;
 
     // Collection assignment
@@ -76,6 +78,7 @@ class Musics extends Component
     {
         $musics = Music::when($this->search, function ($query, $search) {
             $query->where('title', 'ilike', "%{$search}%")
+                ->orWhere('subtitle', 'ilike', "%{$search}%")
                 ->orWhere('custom_id', 'ilike', "%{$search}%");
         })
             ->forCurrentRealm()
@@ -135,12 +138,14 @@ class Musics extends Component
 
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
             'customId' => ['nullable', 'string', 'max:255'],
         ]);
 
         // Create music with owner
         $music = Music::create([
             'title' => $validated['title'],
+            'subtitle' => $validated['subtitle'],
             'custom_id' => $validated['customId'],
             'user_id' => Auth::id(),
         ]);
@@ -165,11 +170,13 @@ class Musics extends Component
 
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
             'customId' => ['nullable', 'string', 'max:255'],
         ]);
 
         $this->editingMusic->update([
             'title' => $validated['title'],
+            'subtitle' => $validated['subtitle'],
             'custom_id' => $validated['customId'],
         ]);
 
@@ -203,6 +210,7 @@ class Musics extends Component
     private function resetForm(): void
     {
         $this->title = '';
+        $this->subtitle = null;
         $this->customId = null;
         $this->collectionSearch = '';
         $this->selectedCollectionId = null;
