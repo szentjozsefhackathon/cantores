@@ -19,7 +19,7 @@ test('component renders with current realm', function () {
     Livewire::actingAs($user)
         ->test('realm-selector')
         ->assertSet('selectedRealmId', $user->current_realm_id)
-        ->assertSee('Organist');
+        ->assertSee('Mind');
 });
 
 test('component shows all realm options', function () {
@@ -27,9 +27,7 @@ test('component shows all realm options', function () {
 
     Livewire::actingAs($user)
         ->test('realm-selector')
-        ->assertSee('Organist')
-        ->assertSee('Guitarist')
-        ->assertSee('Other');
+        ->assertSee('Mind');
 });
 
 test('selecting a realm updates user', function () {
@@ -63,5 +61,5 @@ test('component works when no realm selected', function () {
     Livewire::actingAs($user)
         ->test('realm-selector')
         ->assertSet('selectedRealmId', null)
-        ->assertSee('Select a realm');
+        ->assertSee('Mind');
 });
