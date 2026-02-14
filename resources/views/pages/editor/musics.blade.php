@@ -19,7 +19,7 @@
                     <flux:input
                         type="search"
                         wire:model.live="search"
-                        :placeholder="__('Search music by title or custom ID...')"
+                        :placeholder="__('Search music by title, subtitle, custom ID, collection abbreviation, order number, or page number...')"
                     />
                 </flux:field>
                 

@@ -86,13 +86,22 @@ class Music extends Model implements Auditable
     }
 
     /**
-     * Scope for searching by title, subtitle or custom ID.
+     * Scope for searching by title, subtitle, custom ID, collection title, collection abbreviation, order number, or page number.
      */
     public function scopeSearch($query, string $search): void
     {
-        $query->where('title', 'ilike', "%{$search}%")
-            ->orWhere('subtitle', 'ilike', "%{$search}%")
-            ->orWhere('custom_id', 'ilike', "%{$search}%");
+        $query->where(function ($q) use ($search) {
+            $q->where('title', 'ilike', "%{$search}%")
+                ->orWhere('subtitle', 'ilike', "%{$search}%")
+                ->orWhere('custom_id', 'ilike', "%{$search}%")
+                ->orWhereHas('collections', function ($collectionQuery) use ($search) {
+                    $collectionQuery->where('abbreviation', 'ilike', "%{$search}%")
+                        ->orWhere('title', 'ilike', "%{$search}%")
+                        ->orWhere('music_collection.order_number', 'ilike', "%{$search}%")
+                        ->orWhere('music_collection.page_number', 'ilike', "%{$search}%");
+                });
+
+        });
     }
 
     /**

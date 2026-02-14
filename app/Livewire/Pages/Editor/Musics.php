@@ -77,9 +77,7 @@ class Musics extends Component
     public function render(): View
     {
         $musics = Music::when($this->search, function ($query, $search) {
-            $query->where('title', 'ilike', "%{$search}%")
-                ->orWhere('subtitle', 'ilike', "%{$search}%")
-                ->orWhere('custom_id', 'ilike', "%{$search}%");
+            $query->search($search);
         })
             ->forCurrentRealm()
             ->with(['realms', 'collections'])
