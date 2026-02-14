@@ -10,15 +10,15 @@
         $realm = null;
     }
     
-    $icon = $realm?->icon() ?? 'other';
+    $icon = $realm?->icon() ?? 'realml_other';
 @endphp
 
 @if($icon === 'organist')
-    <x-gameicon-pipe-organ class="h-10 w-10 text-zinc-600 dark:text-zinc-600" />
+    <flux:icon name="organist" class="h-10 w-10 text-zinc-600 dark:text-zinc-600" />
 @elseif($icon === 'guitar')
     <flux:icon name="guitar" class="h-10 w-10" />
 @elseif($icon === 'other')
-    <flux:icon name="guitarist" />
+    <flux:icon name="realm_other" />
 @else
     <flux:icon name="musical-note" class="h-10 w-10" variant="outline" />
 @endif

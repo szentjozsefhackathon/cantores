@@ -169,7 +169,6 @@ class Musics extends Component
         // Check if music has any collections or plan slots assigned
         if ($music->collections()->count() > 0 || $music->musicPlanSlotAssignments()->count() > 0) {
             $this->dispatch('error', message: __('Cannot delete music piece that has collections or plan slots assigned to it.'));
-
             return;
         }
 

@@ -20,11 +20,13 @@ new class extends Component
 
     public function updatedSelectedRealmId($value): void
     {
-        if (! $value) {
-            return;
+        $user = Auth::user();
+
+        // Convert empty string to null
+        if ($value === '') {
+            $value = null;
         }
 
-        $user = Auth::user();
         $user->current_realm_id = $value;
         $user->save();
 
@@ -34,17 +36,15 @@ new class extends Component
 }
 ?>
 
-<div class="realm-selector">
-    <flux:select
-        wire:model.live="selectedRealmId"
-        placeholder="{{ __('Select a realm') }}"
-        class="w-full"
-    >
-        <option value="">{{ __('Select a realm') }}</option>
-        @foreach($this->realms() as $realm)
-            <option value="{{ $realm->id }}" @selected($selectedRealmId == $realm->id)>
-                {{ $realm->label() }}
-            </option>
-        @endforeach
-    </flux:select>
+<div class="flex items-center justify-center">
+    <flux:radio.group wire:model.live="selectedRealmId" variant="segmented" label="Műfaj">
+            @if (is_null(Auth::user()->current_realm_id))
+                <flux:radio label="Mind" value="" checked />
+            @else
+                <flux:radio label="Mind" value="" />
+            @endif
+            @foreach($this->realms() as $realm)
+                <flux:radio value="{{ $realm->id }}" icon="{{ $realm->icon() }}" />
+            @endforeach
+        </flux:radio.group>    
 </div>

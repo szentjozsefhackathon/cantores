@@ -143,6 +143,7 @@
                 <flux:input
                     wire:model="title"
                     :placeholder="__('Enter collection title')"
+                    autofocus
                 />
                 <flux:error name="title" />
             </flux:field>

@@ -28,10 +28,7 @@ new class extends Component
                         <div class="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                             @if($musicPlan->actual_date)
                                 <span>{{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}</span>
-                                <span>•</span>
                             @endif
-                            <span>{{ $musicPlan->realm?->label() ?? $musicPlan->setting }}</span>
-                            <span>•</span>
                             <span class="flex items-center gap-1">
                                 <flux:icon name="{{ $musicPlan->is_published ? 'eye' : 'eye-slash' }}" class="h-3 w-3" variant="mini" />
                                 {{ $musicPlan->is_published ? 'Közzétéve' : 'Privát' }}
@@ -49,7 +46,6 @@ new class extends Component
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
                 @if($firstCelebration && ($firstCelebration->year_letter || $firstCelebration->year_parity))
                 <div>
-                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
                     <flux:text class="text-base font-semibold">
                         {{ $firstCelebration->year_letter ?? '–' }} 
                         @if($firstCelebration->year_parity)
@@ -61,15 +57,13 @@ new class extends Component
 
                 @if($firstCelebration && $firstCelebration->season_text)
                 <div>
-                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Időszak</flux:heading>
                     <flux:text class="text-base font-semibold">{{ $firstCelebration->season_text }}</flux:text>
                 </div>
                 @endif
 
                 @if($firstCelebration && ($firstCelebration->week || $musicPlan->day_name))
                 <div>
-                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Hét és nap</flux:heading>
-                    <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-row gap-2">
                         @if($firstCelebration->week)
                         <flux:badge color="green" size="sm">{{ $firstCelebration->week }}. hét</flux:badge>
                         @endif
@@ -92,14 +86,14 @@ new class extends Component
                     </div>
                     <div class="flex items-center gap-2">
                         <flux:icon name="calendar-days" class="h-4 w-4 text-neutral-500" variant="mini" />
-                        <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">
-                            Létrehozva: {{ $musicPlan->created_at->translatedFormat('Y. m. d. H:i') }}
+                        <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">
+                            {{ $musicPlan->created_at->translatedFormat('Y. m. d. H:i') }}
                         </flux:text>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <flux:icon name="external-link" class="h-3 w-3" variant="mini" />
                     @if($musicPlan->actual_date)
+                    <flux:icon name="external-link" class="h-3 w-3" variant="mini" />                    
                         <flux:link 
                             href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}"
                             target="_blank" 
@@ -107,8 +101,6 @@ new class extends Component
                             onclick="event.stopPropagation()">
                             Igenaptár
                         </flux:link>
-                    @else
-                        <flux:text class="text-xs text-neutral-500">Igenaptár (nincs dátum)</flux:text>
                     @endif
                 </div>
             </div>

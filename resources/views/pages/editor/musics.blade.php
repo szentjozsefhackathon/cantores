@@ -127,6 +127,7 @@
                 <flux:input
                     wire:model="title"
                     :placeholder="__('Enter music piece title')"
+                    autofocus
                 />
                 <flux:error name="title" />
             </flux:field>

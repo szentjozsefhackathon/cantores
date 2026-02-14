@@ -439,13 +439,11 @@ new class extends Component
                         <flux:icon name="{{ $musicPlan->is_published ? 'eye' : 'eye-slash' }}" class="h-5 w-5 text-neutral-500" variant="mini" />
                         <flux:text class="font-medium">{{ $musicPlan->is_published ? 'Közzétéve' : 'Privát' }}</flux:text>
                         <div class="flex items-center">
-                            <flux:icon name="external-link" class="mr-1"/>
                             @if($musicPlan->actual_date)
+                                <flux:icon name="external-link" class="mr-1"/>                            
                                 <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
                                     Igenaptár
                                 </flux:link>
-                            @else
-                                <flux:text class="text-neutral-500">Igenaptár (nincs dátum)</flux:text>
                             @endif
                         </div>
 
