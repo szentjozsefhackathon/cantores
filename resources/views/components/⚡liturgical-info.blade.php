@@ -1,19 +1,22 @@
 <?php
 
-use Livewire\Component;
-use Livewire\Attributes\On;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
-use App\Models\MusicPlan;
 use App\Models\Celebration;
+use App\Models\MusicPlan;
 use App\Models\Realm;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Livewire\Attributes\On;
+use Livewire\Component;
 
 new class extends Component
 {
     public array $celebrations = [];
+
     public string $date;
+
     public bool $loading = true;
+
     public ?string $error = null;
 
     public function mount(): void
@@ -62,11 +65,11 @@ new class extends Component
     public function createMusicPlan(int $celebrationIndex): void
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
-        if (!isset($this->celebrations[$celebrationIndex])) {
+        if (! isset($this->celebrations[$celebrationIndex])) {
             return;
         }
 
@@ -107,15 +110,15 @@ new class extends Component
     public function getExistingMusicPlans(array $celebrationData): \Illuminate\Database\Eloquent\Collection
     {
         $user = Auth::user();
-        if (!$user) {
-            return new \Illuminate\Database\Eloquent\Collection();
+        if (! $user) {
+            return new \Illuminate\Database\Eloquent\Collection;
         }
 
         $celebrationName = $celebrationData['name'] ?? $celebrationData['title'] ?? null;
         $dateISO = $celebrationData['dateISO'] ?? $this->date;
 
-        if (!$celebrationName) {
-            return new \Illuminate\Database\Eloquent\Collection();
+        if (! $celebrationName) {
+            return new \Illuminate\Database\Eloquent\Collection;
         }
 
         // Find the celebration first
@@ -123,13 +126,14 @@ new class extends Component
             ->where('actual_date', $dateISO)
             ->first();
 
-        if (!$celebration) {
-            return new \Illuminate\Database\Eloquent\Collection();
+        if (! $celebration) {
+            return new \Illuminate\Database\Eloquent\Collection;
         }
 
         // Get music plans through the relationship
         $query = $celebration->musicPlans()
-            ->where('user_id', $user->id);
+            ->where('user_id', $user->id)
+            ->with(['user', 'realm', 'celebrations']);
 
         // Filter by current realm
         $realmId = $user->current_realm_id;
@@ -137,7 +141,50 @@ new class extends Component
             // Show plans that belong to the current realm OR have no realm (belongs to all)
             $query->where(function ($q) use ($realmId) {
                 $q->whereNull('realm_id')
-                  ->orWhere('realm_id', $realmId);
+                    ->orWhere('realm_id', $realmId);
+            });
+        }
+        // If $realmId is null, no filtering applied (show all plans)
+
+        return $query->orderBy('created_at', 'desc')->get();
+    }
+
+    public function getPublishedMusicPlans(array $celebrationData): \Illuminate\Database\Eloquent\Collection
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return new \Illuminate\Database\Eloquent\Collection;
+        }
+
+        $celebrationName = $celebrationData['name'] ?? $celebrationData['title'] ?? null;
+        $dateISO = $celebrationData['dateISO'] ?? $this->date;
+
+        if (! $celebrationName) {
+            return new \Illuminate\Database\Eloquent\Collection;
+        }
+
+        // Find the celebration first
+        $celebration = Celebration::where('name', $celebrationName)
+            ->where('actual_date', $dateISO)
+            ->first();
+
+        if (! $celebration) {
+            return new \Illuminate\Database\Eloquent\Collection;
+        }
+
+        // Get published music plans from other users
+        $query = $celebration->musicPlans()
+            ->where('is_published', true)
+            ->where('user_id', '!=', $user->id)
+            ->with(['user', 'realm', 'celebrations']);
+
+        // Filter by current realm
+        $realmId = $user->current_realm_id;
+        if ($realmId !== null) {
+            // Show plans that belong to the current realm OR have no realm (belongs to all)
+            $query->where(function ($q) use ($realmId) {
+                $q->whereNull('realm_id')
+                    ->orWhere('realm_id', $realmId);
             });
         }
         // If $realmId is null, no filtering applied (show all plans)
@@ -359,7 +406,7 @@ new class extends Component
                     @if($existingPlans->isNotEmpty())
                     <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
-                            Már létező énekrendjeid ehhez az ünnephez:
+                            Már létező énekrendjeid:
                         </flux:heading>
                         <div class="space-y-2">
                             @foreach($existingPlans as $plan)
@@ -369,12 +416,40 @@ new class extends Component
                                 <div class="flex items-center gap-3">
                                     <flux:icon name="{{ $plan->realm?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
                                     <div>
-                                        <flux:text class="font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                                            {{ $plan->celebration_name }}
-                                        </flux:text>
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
                                             {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
-                                            {{ $plan->is_published ? 'Közzétéve' : 'Privát' }}
+                                            @if($plan->is_published) 
+                                            <flux:icon name="eye" class="inline" />
+                                            @else
+                                            <flux:icon name="eye-slash" class="inline" />
+                                            @endif
+                                        </flux:text>
+                                    </div>
+                                </div>
+                                <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600" variant="mini" />
+                            </a>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+                    @php
+                    $publishedPlans = $this->getPublishedMusicPlans($celebration);
+                    @endphp
+                    @if($publishedPlans->isNotEmpty())
+                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
+                            Közzétett énekrendek:
+                        </flux:heading>
+                        <div class="space-y-2">
+                            @foreach($publishedPlans as $plan)
+                            <a
+                                href="{{ route('music-plan-editor', ['musicPlan' => $plan->id]) }}"
+                                class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
+                                <div class="flex items-center gap-3">
+                                    <flux:icon name="{{ $plan->realm?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
+                                    <div>
+                                        <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
+                                            {{ $plan->actual_date->translatedFormat('Y. m. d.') }} {{ $plan->user?->displayName ?? 'Ismeretlen' }}
                                         </flux:text>
                                     </div>
                                 </div>
