@@ -21,6 +21,7 @@ new class extends Component
     public array $allSlots = [];
     public ?string $recentlyAddedSlotName = null;
     public bool $filterExcludeExisting = true;
+    public bool $isPublished = false;
 
     public function mount($musicPlan = null): void
     {
@@ -47,6 +48,9 @@ new class extends Component
             $this->authorize('view', $musicPlan);
             $this->musicPlan = $musicPlan;
         }
+        
+        // Sync published state
+        $this->isPublished = $this->musicPlan->is_published;
         
         // Load data for both new and existing plans
         $this->loadAvailableTemplates();
@@ -322,6 +326,13 @@ new class extends Component
         }
     }
 
+    public function updatedIsPublished(): void
+    {
+        $this->authorize('update', $this->musicPlan);
+        $this->musicPlan->is_published = $this->isPublished;
+        $this->musicPlan->save();
+    }
+
     public function addSlotDirectly(int $slotId): void
     {
         $this->authorize('update', $this->musicPlan);
@@ -436,11 +447,14 @@ new class extends Component
                 <!-- Status -->
                 <div class="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
                     <div class="flex items-center gap-3">
-                        <flux:icon name="{{ $musicPlan->is_published ? 'eye' : 'eye-slash' }}" class="h-5 w-5 text-neutral-500" variant="mini" />
-                        <flux:text class="font-medium">{{ $musicPlan->is_published ? 'Közzétéve' : 'Privát' }}</flux:text>
+                        <flux:icon name="{{ $isPublished ? 'eye' : 'eye-slash' }}" class="h-5 w-5 {{ $isPublished ? 'text-green-500' : 'text-neutral-500' }}" variant="mini" />
+                        <flux:field variant="inline" class="mb-0">
+                            <flux:label>Közzététel</flux:label>
+                            <flux:switch wire:model.live="isPublished" />
+                        </flux:field>
                         <div class="flex items-center">
                             @if($musicPlan->actual_date)
-                                <flux:icon name="external-link" class="mr-1"/>                            
+                                <flux:icon name="external-link" class="mr-1"/>
                                 <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
                                     Igenaptár
                                 </flux:link>

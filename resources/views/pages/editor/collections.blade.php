@@ -62,7 +62,7 @@
                                     {{ $collection->abbreviation }}
                                 </div>
                             @else
-                                <span class="text-sm text-gray-400 dark:text-gray-500">{{ __('None') }}</span>
+                                
                             @endif
                         </flux:table.cell>
                         

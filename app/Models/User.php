@@ -71,7 +71,7 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Get the user's current realm.
+     * Get the user's current realm. If it is empty, that means the user is in the "All Realms" mode.
      */
     public function currentRealm(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

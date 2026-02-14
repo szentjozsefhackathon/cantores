@@ -122,9 +122,19 @@ class MusicPlan extends Model
      */
     public function scopeForCurrentRealm($query)
     {
-        $realmId = Auth::user()?->current_realm_id;
+        $user = Auth::user();
+        if (! $user) {
+            // No authenticated user, return empty
+            return $query->whereRaw('1 = 0');
+        }
 
-        return $query->where('realm_id', $realmId ?? 0);
+        $realmId = $user->current_realm_id;
+        if ($realmId) {
+            return $query->where('realm_id', $realmId);
+        }
+
+        // If no realm ID, show all music plans (no filtering)
+        return $query;
     }
 
     /**

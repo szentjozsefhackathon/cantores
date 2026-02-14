@@ -98,14 +98,20 @@ class Music extends Model implements Auditable
      */
     public function scopeForCurrentRealm($query)
     {
-        $realmId = Auth::user()?->current_realm_id;
+        $user = Auth::user();
+        if (! $user) {
+            // No authenticated user, return empty
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $realmId = $user->current_realm_id;
         if ($realmId) {
             $query->whereHas('realms', function ($q) use ($realmId) {
                 $q->where('realms.id', $realmId);
             });
-        } else {
-            // If no realm ID, ensure no results
-            $query->whereRaw('1 = 0');
         }
+        // If no realm ID, show all music (no filtering)
     }
 }

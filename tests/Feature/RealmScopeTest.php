@@ -110,7 +110,7 @@ test('collection scope for current realm filters via many-to-many', function () 
     expect($guitaristCollections->first()->id)->toBe($collection2->id);
 });
 
-test('scope returns empty when user has no current realm', function () {
+test('scope returns all when user has no current realm', function () {
     $user = User::factory()->create([
         'city_id' => $this->city1->id,
         'first_name_id' => $this->firstName1->id,
@@ -120,7 +120,7 @@ test('scope returns empty when user has no current realm', function () {
 
     $this->actingAs($user);
     $plans = MusicPlan::forCurrentRealm()->get();
-    expect($plans)->toHaveCount(0);
+    expect($plans)->toHaveCount(1);
 });
 
 test('scope returns empty when user is not authenticated', function () {

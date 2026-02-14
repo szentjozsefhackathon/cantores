@@ -2,8 +2,11 @@
 
 use App\Models\Collection;
 use App\Models\Music;
+use App\Models\Realm;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 new class extends Component
@@ -24,6 +27,9 @@ new class extends Component
 
     public ?string $orderNumber = null;
 
+    // Realm assignment
+    public array $selectedRealms = [];
+
     // Audit log
     public bool $showAuditModal = false;
 
@@ -41,9 +47,18 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->authorize('view', $music);
-        $this->music = $music->load('collections');
+        $this->music = $music->load(['collections', 'realms']);
         $this->title = $music->title;
         $this->customId = $music->custom_id;
+        $this->selectedRealms = $music->realms->pluck('id')->toArray();
+    }
+
+    /**
+     * Get all realms for selection.
+     */
+    public function realms(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Realm::all();
     }
 
     /**
@@ -68,12 +83,17 @@ new class extends Component
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'customId' => ['nullable', 'string', 'max:255'],
+            'selectedRealms' => ['nullable', 'array'],
+            'selectedRealms.*' => ['integer', Rule::exists('realms', 'id')],
         ]);
 
         $this->music->update([
             'title' => $validated['title'],
             'custom_id' => $validated['customId'],
         ]);
+
+        // Sync selected realms (empty array will detach all)
+        $this->music->realms()->sync($validated['selectedRealms'] ?? []);
 
         $this->dispatch('music-updated');
     }
@@ -271,11 +291,27 @@ new class extends Component
                     </flux:field>
                 </div>
 
+                <!-- Realm Selection -->
+                <div class="space-y-2">
+                    <flux:checkbox.group variant="cards" label="{{ __('Select which realms this music piece belongs to.') }}">
+                        @foreach($this->realms() as $realm)
+                            <flux:checkbox
+                                variant="cards"
+                                wire:model="selectedRealms"
+                                value="{{ $realm->id }}"
+                                :label="$realm->label()"
+                                :icon="$realm->icon()"
+                            />
+                        @endforeach
+                    </flux:checkbox.group>
+                    <flux:error name="selectedRealms" />
+                </div>
+
                 <!-- Save Button -->
                 <div class="flex justify-end items-center gap-4">
                     <x-action-message on="music-updated">
                         {{ __('Saved.') }}
-                    </x-action-message>                    
+                    </x-action-message>
                     <flux:button
                         variant="primary"
                         wire:click="update"
