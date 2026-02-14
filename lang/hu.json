@@ -81,7 +81,7 @@
     "Title": "Cím",
     "Abbreviation": "Rövidítés",
     "Author": "Szerző",
-    "Music Pieces": "Zenedarabok",
+    "Music Pieces": "Zeneművek",
     "Actions": "Műveletek",
     "None": "Nincs",
     "Unknown": "Ismeretlen",
@@ -95,8 +95,7 @@
     "Enter collection title": "Add meg a gyűjtemény címét",
     "Enter abbreviation": "Add meg a rövidítést",
     "Enter author name": "Add meg a szerző nevét",
-    "Cancel": "Mégse",
     "Save Changes": "Változtatások mentése",
-    "Cannot delete collection that has music assigned to it.": "Nem lehet törölni a gyűjteményt, ha már zenedarabok vannak hozzárendelve."
+    "Cannot delete collection that has music assigned to it.": "Nem lehet törölni a gyűjteményt, ha már zeneművel vannak hozzárendelve."
 
 }

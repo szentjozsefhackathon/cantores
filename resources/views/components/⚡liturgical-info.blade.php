@@ -367,15 +367,14 @@ new class extends Component
                                 href="{{ route('music-plan-editor', ['musicPlan' => $plan->id]) }}"
                                 class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
                                 <div class="flex items-center gap-3">
-                                    <flux:icon name="musical-note" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
+                                    <flux:icon name="{{ $plan->realm?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
                                     <div>
                                         <flux:text class="font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400">
                                             {{ $plan->celebration_name }}
                                         </flux:text>
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
                                             {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
-                                            • {{ $plan->realm?->label() ?? $plan->setting }}
-                                            {{ $plan->is_published ? '• Közzétéve' : '• Privát' }}
+                                            {{ $plan->is_published ? 'Közzétéve' : 'Privát' }}
                                         </flux:text>
                                     </div>
                                 </div>
