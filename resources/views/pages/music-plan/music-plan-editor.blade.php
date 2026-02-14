@@ -1,8 +1,6 @@
 <?php
 
 use App\Models\MusicPlan;
-use App\Models\Realm;
-
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -10,48 +8,70 @@ use Livewire\Component;
 new class extends Component
 {
     public MusicPlan $musicPlan;
+
     public array $availableTemplates = [];
+
     public array $planSlots = [];
+
     public array $expandedTemplates = [];
+
     public array $existingSlotIds = [];
+
     public string $slotSearch = '';
+
     public array $searchResults = [];
+
     public ?int $selectedSlotId = null;
+
     public bool $showAllSlotsModal = false;
+
     public array $allSlots = [];
+
     public ?string $recentlyAddedSlotName = null;
+
     public bool $filterExcludeExisting = true;
+
     public bool $isPublished = false;
+
+    public string $musicSearch = '';
+
+    public array $musicSearchResults = [];
+
+    public ?int $selectedSlotForMusic = null;
+
+    public bool $showMusicSearchModal = false;
+
+    public array $slotAssignments = [];
 
     public function mount($musicPlan = null): void
     {
-        if (!$musicPlan) {
+        if (! $musicPlan) {
             // Create a new music plan for the current user
             $this->musicPlan = new MusicPlan([
                 'user_id' => Auth::id(),
                 'is_published' => false,
                 'realm_id' => null,
             ]);
-            
+
             // Authorize creation instead of view
             $this->authorize('update', MusicPlan::class);
-            
+
             // Save the new plan to get an ID
             $this->musicPlan->save();
-            
+
         } else {
             // Load existing music plan
-            if (!$musicPlan instanceof MusicPlan) {
+            if (! $musicPlan instanceof MusicPlan) {
                 $musicPlan = MusicPlan::findOrFail($musicPlan);
             }
-            
+
             $this->authorize('update', $musicPlan);
             $this->musicPlan = $musicPlan;
         }
-        
+
         // Sync published state
         $this->isPublished = $this->musicPlan->is_published;
-        
+
         // Load data for both new and existing plans
         $this->loadAvailableTemplates();
         $this->loadPlanSlots();
@@ -65,12 +85,32 @@ new class extends Component
             ->orderBy('music_plan_slot_plan.sequence')
             ->get()
             ->map(function ($slot) {
+                // Load assignments for this slot in this plan
+                $assignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_id', $this->musicPlan->id)
+                    ->where('music_plan_slot_id', $slot->id)
+                    ->orderBy('sequence')
+                    ->with('music')
+                    ->get()
+                    ->map(function ($assignment) {
+                        return [
+                            'id' => $assignment->id,
+                            'music_id' => $assignment->music_id,
+                            'music_title' => $assignment->music->title,
+                            'music_subtitle' => $assignment->music->subtitle,
+                            'music_custom_id' => $assignment->music->custom_id,
+                            'sequence' => $assignment->sequence,
+                            'notes' => $assignment->notes,
+                        ];
+                    })
+                    ->toArray();
+
                 return [
                     'id' => $slot->id,
                     'pivot_id' => $slot->pivot->id,
                     'name' => $slot->name,
                     'description' => $slot->description,
                     'sequence' => $slot->pivot->sequence,
+                    'assignments' => $assignments,
                 ];
             })
             ->toArray();
@@ -169,7 +209,7 @@ new class extends Component
             $this->loadPlanSlots();
         }
 
-        $this->dispatch('slots-updated', message: $addedCount . ' elem hozzáadva a sablonból.');
+        $this->dispatch('slots-updated', message: $addedCount.' elem hozzáadva a sablonból.');
 
     }
 
@@ -201,7 +241,7 @@ new class extends Component
             $this->loadPlanSlots();
         }
 
-        $this->dispatch('slots-updated', message: $addedCount . ' elem hozzáadva a sablonból.');
+        $this->dispatch('slots-updated', message: $addedCount.' elem hozzáadva a sablonból.');
     }
 
     public function moveSlotUp(int $pivotId): void
@@ -220,7 +260,7 @@ new class extends Component
 
         $pivot = DB::table('music_plan_slot_plan')->where('id', $pivotId)->first();
 
-        if (!$pivot) {
+        if (! $pivot) {
             return;
         }
 
@@ -248,7 +288,7 @@ new class extends Component
             ->orderBy('music_plan_slot_plan.sequence')
             ->get();
 
-        $currentIndex = $slots->search(fn($slot) => $slot->pivot->id === $pivotId);
+        $currentIndex = $slots->search(fn ($slot) => $slot->pivot->id === $pivotId);
 
         if ($currentIndex === false) {
             return;
@@ -284,6 +324,7 @@ new class extends Component
         if (strlen($value) < 2) {
             $this->searchResults = [];
             $this->selectedSlotId = null;
+
             return;
         }
 
@@ -293,7 +334,7 @@ new class extends Component
                     ->orWhere('description', 'ilike', "%{$value}%");
             });
 
-        if ($this->filterExcludeExisting && !empty($this->existingSlotIds)) {
+        if ($this->filterExcludeExisting && ! empty($this->existingSlotIds)) {
             $query->whereNotIn('id', $this->existingSlotIds);
         }
 
@@ -355,14 +396,14 @@ new class extends Component
 
         $this->loadExistingSlotIds();
         $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: $slot->name . ' hozzáadva.');
+        $this->dispatch('slots-updated', message: $slot->name.' hozzáadva.');
     }
 
     public function showAllSlots(): void
     {
         $query = \App\Models\MusicPlanSlot::query();
 
-        if ($this->filterExcludeExisting && !empty($this->existingSlotIds)) {
+        if ($this->filterExcludeExisting && ! empty($this->existingSlotIds)) {
             $query->whereNotIn('id', $this->existingSlotIds);
         }
 
@@ -390,6 +431,90 @@ new class extends Component
     public function clearRecentlyAddedSlot(): void
     {
         $this->recentlyAddedSlotName = null;
+    }
+
+    public function openMusicSearchModal(int $slotId): void
+    {
+        $this->selectedSlotForMusic = $slotId;
+        $this->musicSearch = '';
+        $this->musicSearchResults = [];
+        $this->showMusicSearchModal = true;
+    }
+
+    public function closeMusicSearchModal(): void
+    {
+        $this->showMusicSearchModal = false;
+        $this->selectedSlotForMusic = null;
+        $this->musicSearch = '';
+        $this->musicSearchResults = [];
+    }
+
+    public function updatedMusicSearch(string $value): void
+    {
+        if (strlen($value) < 2) {
+            $this->musicSearchResults = [];
+
+            return;
+        }
+
+        $query = \App\Models\Music::query()
+            ->where(function ($query) use ($value) {
+                $query->where('title', 'ilike', "%{$value}%")
+                    ->orWhere('subtitle', 'ilike', "%{$value}%")
+                    ->orWhere('custom_id', 'ilike', "%{$value}%");
+            })
+            ->limit(10);
+
+        $this->musicSearchResults = $query
+            ->orderBy('title')
+            ->get()
+            ->map(function ($music) {
+                return [
+                    'id' => $music->id,
+                    'title' => $music->title,
+                    'subtitle' => $music->subtitle,
+                    'custom_id' => $music->custom_id,
+                ];
+            })
+            ->toArray();
+    }
+
+    public function assignMusicToSlot(int $musicId): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        if (! $this->selectedSlotForMusic) {
+            return;
+        }
+
+        // Determine next sequence for this slot
+        $existingAssignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_id', $this->musicPlan->id)
+            ->where('music_plan_slot_id', $this->selectedSlotForMusic)
+            ->count();
+        $sequence = $existingAssignments + 1;
+
+        \App\Models\MusicPlanSlotAssignment::create([
+            'music_plan_id' => $this->musicPlan->id,
+            'music_plan_slot_id' => $this->selectedSlotForMusic,
+            'music_id' => $musicId,
+            'sequence' => $sequence,
+        ]);
+
+        $this->loadPlanSlots();
+        $this->closeMusicSearchModal();
+        $this->dispatch('slots-updated', message: 'Zene hozzáadva az elemhez.');
+    }
+
+    public function removeAssignment(int $assignmentId): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
+        if ($assignment && $assignment->music_plan_id === $this->musicPlan->id) {
+            $assignment->delete();
+            $this->loadPlanSlots();
+            $this->dispatch('slots-updated', message: 'Zene eltávolítva.');
+        }
     }
 };
 ?>
@@ -584,6 +709,77 @@ new class extends Component
                                 </div>
                             </flux:modal>
 
+                            <!-- Music Search Modal -->
+                            <flux:modal wire:model="showMusicSearchModal" size="lg">
+                                <flux:heading size="lg">Zene keresése és hozzáadása</flux:heading>
+
+                                <div class="mt-4">
+                                    <flux:field>
+                                        <flux:input
+                                            type="text"
+                                            wire:model.live="musicSearch"
+                                            placeholder="Írd be a zene címét, alcímét vagy azonosítóját..." />
+                                    </flux:field>
+                                </div>
+
+                                <div class="mt-4 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
+                                    @if(count($musicSearchResults) > 0)
+                                    <div class="divide-y divide-neutral-200 dark:divide-neutral-700">
+                                        @foreach($musicSearchResults as $music)
+                                        <button
+                                            type="button"
+                                            wire:click="assignMusicToSlot({{ $music['id'] }})"
+                                            wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                            class="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-between">
+                                            <div class="flex-1">
+                                                <div class="font-medium">{{ $music['title'] }}</div>
+                                                @if($music['subtitle'])
+                                                <div class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">{{ $music['subtitle'] }}</div>
+                                                @endif
+                                                @if($music['custom_id'])
+                                                <div class="text-sm text-neutral-500 dark:text-neutral-500">ID: {{ $music['custom_id'] }}</div>
+                                                @endif
+                                            </div>
+                                            <div class="relative h-5 w-5 ml-4">
+                                                <flux:icon name="plus" class="h-5 w-5 text-neutral-900 dark:text-neutral-100" wire:loading.remove wire:target="assignMusicToSlot" />
+                                                <flux:icon.loading
+                                                    class="h-5 w-5 text-neutral-900 dark:text-neutral-100 absolute inset-0"
+                                                    wire:loading
+                                                    wire:target="assignMusicToSlot"
+                                                />
+                                            </div>
+                                        </button>
+                                        @endforeach
+                                    </div>
+                                    @elseif(strlen($musicSearch) >= 2)
+                                    <div class="p-8 text-center">
+                                        <flux:icon name="inbox" class="h-12 w-12 text-neutral-400 mx-auto" />
+                                        <flux:heading size="md" class="mt-4">Nincs találat</flux:heading>
+                                        <flux:text class="mt-2 text-neutral-600 dark:text-neutral-400">
+                                            Nincs zene a keresési feltételeknek megfelelően.
+                                        </flux:text>
+                                    </div>
+                                    @else
+                                    <div class="p-8 text-center">
+                                        <flux:icon name="magnifying-glass" class="h-12 w-12 text-neutral-400 mx-auto" />
+                                        <flux:heading size="md" class="mt-4">Írj be legalább 2 karaktert</flux:heading>
+                                        <flux:text class="mt-2 text-neutral-600 dark:text-neutral-400">
+                                            Kezdj el gépelni a zene címében, alcímében vagy azonosítójában.
+                                        </flux:text>
+                                    </div>
+                                    @endif
+                                </div>
+
+                                <div class="mt-6 flex justify-end">
+                                    <flux:button
+                                        wire:click="closeMusicSearchModal"
+                                        variant="outline">
+                                        Bezárás
+                                    </flux:button>
+                                </div>
+                            </flux:modal>
+
                             @forelse($planSlots as $slot)
                             <flux:card class="p-2 flex items-start gap-4">
                                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
@@ -593,6 +789,33 @@ new class extends Component
                                     <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
                                     @if($slot['description'])
                                     <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
+                                    @endif
+
+                                    <!-- Assigned music -->
+                                    @if(!empty($slot['assignments']))
+                                    <div class="mt-3 space-y-2">
+                                        @foreach($slot['assignments'] as $assignment)
+                                        <div class="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-lg px-3 py-2">
+                                            <div class="flex-1">
+                                                <div class="font-medium text-sm">{{ $assignment['music_title'] }}</div>
+                                                @if($assignment['music_subtitle'])
+                                                <div class="text-xs text-neutral-600 dark:text-neutral-400">{{ $assignment['music_subtitle'] }}</div>
+                                                @endif
+                                                @if($assignment['music_custom_id'])
+                                                <div class="text-xs text-neutral-500 dark:text-neutral-500">ID: {{ $assignment['music_custom_id'] }}</div>
+                                                @endif
+                                            </div>
+                                            <flux:button
+                                                wire:click="removeAssignment({{ $assignment['id'] }})"
+                                                wire:confirm="Biztosan eltávolítod ezt a zenét az elemből?"
+                                                wire:loading.attr="disabled"
+                                                wire:loading.class="opacity-50 cursor-not-allowed"
+                                                icon="trash"
+                                                variant="danger"
+                                                size="xs" />
+                                        </div>
+                                        @endforeach
+                                    </div>
                                     @endif
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -615,6 +838,14 @@ new class extends Component
                                             size="xs" />
                                     </div>
                                     <div class="border-l border-neutral-300 dark:border-neutral-700 h-6"></div>
+                                    <flux:button
+                                        wire:click="openMusicSearchModal({{ $slot['id'] }})"
+                                        wire:loading.attr="disabled"
+                                        wire:loading.class="opacity-50 cursor-not-allowed"
+                                        icon="plus"
+                                        variant="outline"
+                                        size="xs"
+                                        title="Zene hozzáadása" />
                                     <flux:button
                                         wire:click="deleteSlot({{ $slot['pivot_id'] }})"
                                         wire:confirm="Biztosan eltávolítod ezt az elemet az énekrendből?"
