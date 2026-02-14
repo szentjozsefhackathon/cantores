@@ -46,6 +46,7 @@
                 <flux:table.column>{{ __('Abbreviation') }}</flux:table.column>
                 <flux:table.column>{{ __('Author') }}</flux:table.column>
                 <flux:table.column>{{ __('Music Pieces') }}</flux:table.column>
+                <flux:table.column>{{ __('Realms') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
             
@@ -86,6 +87,20 @@
                         
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
+                                @forelse ($collection->realms as $realm)
+                                    <flux:icon
+                                        name="{{ $realm->icon() }}"
+                                        class="h-5 w-5 text-gray-600 dark:text-gray-400"
+                                        :title="$realm->label()"
+                                    />
+                                @empty
+                                    
+                                @endforelse
+                            </div>
+                        </flux:table.cell>
+                        
+                        <flux:table.cell>
+                            <div class="flex items-center gap-2">
                                 <flux:button 
                                     variant="ghost" 
                                     size="sm" 
@@ -115,7 +130,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="5" class="text-center">
+                        <flux:table.cell colspan="6" class="text-center">
                             <div class="py-8 text-center">
                                 <flux:icon name="folder-open" class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
                                 <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No collections found') }}</h3>

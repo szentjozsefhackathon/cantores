@@ -84,6 +84,7 @@ class Collections extends Component
                 ->orWhere('author', 'ilike', "%{$search}%");
         })
             ->forCurrentRealm()
+            ->with(['realms'])
             ->withCount('music')
             ->orderBy('title')
             ->paginate(10);
