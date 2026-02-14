@@ -36,8 +36,8 @@ new class extends Component
 }
 ?>
 
-<div class="flex items-center justify-center">
-    <flux:radio.group wire:model.live="selectedRealmId" variant="segmented" label="Műfaj">
+<div class="flex items-center justify-center">  
+    <flux:radio.group wire:model.live="selectedRealmId" variant="segmented">
             @if (is_null(Auth::user()->current_realm_id))
                 <flux:radio label="Mind" value="" checked />
             @else

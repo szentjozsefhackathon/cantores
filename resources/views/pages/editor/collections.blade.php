@@ -1,5 +1,6 @@
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div class="mb-8">
+
+<div class="mb-8">
             <flux:heading size="2xl">{{ __('Collections') }}</flux:heading>
             <flux:subheading>{{ __('Manage music collections') }}</flux:subheading>
         </div>
@@ -132,13 +133,14 @@
                 {{ $collections->links() }}
             </div>
         @endif
+        
     </div>
 
     <!-- Modals outside main content for single root -->
     <flux:modal wire:model="showCreateModal" max-width="md">
         <flux:heading size="lg">{{ __('Create Collection') }}</flux:heading>
 
-        <div class="mt-6 space-y-4">
+        <div class="mt-2 space-y-4">
             <flux:field required>
                 <flux:label>{{ __('Title') }}</flux:label>
                 <flux:input
@@ -311,7 +313,7 @@
     <flux:modal wire:model="showEditModal" max-width="md">
         <flux:heading size="lg">{{ __('Edit Collection') }}</flux:heading>
 
-        <div class="mt-6 space-y-4">
+        <div class="mt-2 space-y-4">
             <flux:field :label="__('Title')" required>
                 <flux:input
                     wire:model="title"
