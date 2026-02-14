@@ -85,10 +85,9 @@ new class extends Component
             ->orderBy('music_plan_slot_plan.sequence')
             ->get()
             ->map(function ($slot) {
-                // Load assignments for this slot in this plan
-                $assignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_id', $this->musicPlan->id)
-                    ->where('music_plan_slot_id', $slot->id)
-                    ->orderBy('sequence')
+                // Load assignments for this slot instance in this plan (filter by pivot id)
+                $assignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slot->pivot->id)
+                    ->orderBy('music_sequence')
                     ->with('music')
                     ->get()
                     ->map(function ($assignment) {
@@ -98,7 +97,7 @@ new class extends Component
                             'music_title' => $assignment->music->title,
                             'music_subtitle' => $assignment->music->subtitle,
                             'music_custom_id' => $assignment->music->custom_id,
-                            'sequence' => $assignment->sequence,
+                            'music_sequence' => $assignment->music_sequence,
                             'notes' => $assignment->notes,
                         ];
                     })
@@ -265,13 +264,20 @@ new class extends Component
         }
 
         $deletedSequence = $pivot->sequence;
+        $musicPlanId = $pivot->music_plan_id;
 
-        DB::transaction(function () use ($pivotId, $deletedSequence) {
+        DB::transaction(function () use ($pivotId, $deletedSequence, $musicPlanId) {
+            // First, delete all music assignments for this slot instance in this plan
+            DB::table('music_plan_slot_assignments')
+                ->where('music_plan_slot_plan_id', $pivotId)
+                ->delete();
+
+            // Then delete the slot from the plan
             DB::table('music_plan_slot_plan')->where('id', $pivotId)->delete();
 
             // Decrement sequence for all later slots in the same plan
             DB::table('music_plan_slot_plan')
-                ->where('music_plan_id', $this->musicPlan->id)
+                ->where('music_plan_id', $musicPlanId)
                 ->where('sequence', '>', $deletedSequence)
                 ->decrement('sequence');
         });
@@ -433,9 +439,9 @@ new class extends Component
         $this->recentlyAddedSlotName = null;
     }
 
-    public function openMusicSearchModal(int $slotId): void
+    public function openMusicSearchModal(int $pivotId): void
     {
-        $this->selectedSlotForMusic = $slotId;
+        $this->selectedSlotForMusic = $pivotId;
         $this->musicSearch = '';
         $this->musicSearchResults = [];
         $this->showMusicSearchModal = true;
@@ -487,17 +493,23 @@ new class extends Component
             return;
         }
 
-        // Determine next sequence for this slot
-        $existingAssignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_id', $this->musicPlan->id)
-            ->where('music_plan_slot_id', $this->selectedSlotForMusic)
-            ->count();
-        $sequence = $existingAssignments + 1;
+        // Get the pivot row to identify the slot instance
+        $pivot = DB::table('music_plan_slot_plan')->where('id', $this->selectedSlotForMusic)->first();
+        if (! $pivot) {
+            return;
+        }
+
+        // Determine next music_sequence within this slot instance
+        $maxMusicSequence = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $this->selectedSlotForMusic)
+            ->max('music_sequence');
+        $musicSequence = ($maxMusicSequence ?: 0) + 1;
 
         \App\Models\MusicPlanSlotAssignment::create([
-            'music_plan_id' => $this->musicPlan->id,
-            'music_plan_slot_id' => $this->selectedSlotForMusic,
+            'music_plan_slot_plan_id' => $this->selectedSlotForMusic,
+            'music_plan_id' => $pivot->music_plan_id,
+            'music_plan_slot_id' => $pivot->music_plan_slot_id,
             'music_id' => $musicId,
-            'sequence' => $sequence,
+            'music_sequence' => $musicSequence,
         ]);
 
         $this->loadPlanSlots();
@@ -839,7 +851,7 @@ new class extends Component
                                     </div>
                                     <div class="border-l border-neutral-300 dark:border-neutral-700 h-6"></div>
                                     <flux:button
-                                        wire:click="openMusicSearchModal({{ $slot['id'] }})"
+                                        wire:click="openMusicSearchModal({{ $slot['pivot_id'] }})"
                                         wire:loading.attr="disabled"
                                         wire:loading.class="opacity-50 cursor-not-allowed"
                                         icon="plus"

@@ -6,20 +6,30 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Class MusicPlanSlotAssignment
+ *
+ * Represents an assignment of a music track to a specific slot within a music plan.
+ */
 class MusicPlanSlotAssignment extends Model
 {
     use HasFactory;
 
     /**
      * The attributes that are mass assignable.
+     * IMPORTANT: music_plan_slot_plan_id identifies the specific slot instance within the music plan,
+     * while music_sequence is identifying the position of the music within the slot.
+     * This allows for multiple tracks to be assigned to the same slot in a specific order.
+     * The music_plan_id and music_plan_slot_id are kept for compatibility and referential integrity.
      *
      * @var list<string>
      */
     protected $fillable = [
+        'music_plan_slot_plan_id',
         'music_plan_id',
         'music_plan_slot_id',
         'music_id',
-        'sequence',
+        'music_sequence',
         'notes',
     ];
 
@@ -37,6 +47,14 @@ class MusicPlanSlotAssignment extends Model
     public function musicPlanSlot(): BelongsTo
     {
         return $this->belongsTo(MusicPlanSlot::class);
+    }
+
+    /**
+     * Get the music plan slot plan (pivot) that owns this assignment.
+     */
+    public function musicPlanSlotPlan(): BelongsTo
+    {
+        return $this->belongsTo(MusicPlanSlotPlan::class);
     }
 
     /**

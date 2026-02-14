@@ -54,12 +54,18 @@ class MusicPlanSlot extends Model
 
     /**
      * Get the music items assigned to this slot (through assignments).
+     * This is a convenience method that goes through the MusicPlanSlotAssignment model.
      */
-    public function assignedMusic(): BelongsToMany
+    public function assignedMusic(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
     {
-        return $this->belongsToMany(Music::class, 'music_plan_slot_assignments')
-            ->withPivot(['music_plan_id', 'sequence', 'notes'])
-            ->withTimestamps();
+        return $this->hasManyThrough(
+            Music::class,
+            MusicPlanSlotAssignment::class,
+            'music_plan_slot_id', // Foreign key on MusicPlanSlotAssignment table
+            'id', // Foreign key on Music table
+            'id', // Local key on MusicPlanSlot table
+            'music_id' // Foreign key on MusicPlanSlotAssignment table
+        );
     }
 
     /**

@@ -81,12 +81,18 @@ class MusicPlan extends Model
 
     /**
      * Get the music items assigned to this plan (through assignments).
+     * This is a convenience method that goes through the MusicPlanSlotAssignment model.
      */
-    public function assignedMusic(): BelongsToMany
+    public function assignedMusic(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
     {
-        return $this->belongsToMany(Music::class, 'music_plan_slot_assignments')
-            ->withPivot(['music_plan_slot_id', 'sequence', 'notes'])
-            ->withTimestamps();
+        return $this->hasManyThrough(
+            Music::class,
+            MusicPlanSlotAssignment::class,
+            'music_plan_id', // Foreign key on MusicPlanSlotAssignment table
+            'id', // Foreign key on Music table
+            'id', // Local key on MusicPlan table
+            'music_id' // Foreign key on MusicPlanSlotAssignment table
+        );
     }
 
     /**
@@ -229,5 +235,33 @@ class MusicPlan extends Model
     public function getSettingAttribute(): ?string
     {
         return $this->realm?->name;
+    }
+
+    /**
+     * Detach a slot from this music plan and delete all music assignments for that slot.
+     */
+    public function detachSlot(MusicPlanSlot|int $slot): void
+    {
+        $slotId = $slot instanceof MusicPlanSlot ? $slot->id : $slot;
+
+        // Delete all music assignments for this slot in this plan
+        $this->musicAssignments()
+            ->where('music_plan_slot_id', $slotId)
+            ->delete();
+
+        // Detach the slot from the plan
+        $this->slots()->detach($slotId);
+    }
+
+    /**
+     * Detach all slots from this music plan and delete all music assignments.
+     */
+    public function detachAllSlots(): void
+    {
+        // Delete all music assignments for this plan
+        $this->musicAssignments()->delete();
+
+        // Detach all slots from the plan
+        $this->slots()->detach();
     }
 }
