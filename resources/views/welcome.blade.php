@@ -9,7 +9,10 @@
         </div>
 
         <div class="w-full lg:max-w-4xl mx-auto mt-8 flex justify-center">
-            <livewire:realm-selector />
+            <div class="flex items-center">
+                <flux:heading class="mr-2">Műfaj:</flux:heading>
+                <livewire:realm-selector />
+            </div>
         </div>
 
         @if (Route::has('login'))
