@@ -9,6 +9,7 @@ use App\Services\CelebrationSearchService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new #[Layout('layouts::app.main')] class extends Component
@@ -45,6 +46,18 @@ new #[Layout('layouts::app.main')] class extends Component
         $this->musicPlans = $this->fetchMusicPlans($celebrationIds);
 
         // Aggregate music selections by slot
+        $this->slotMusicMap = $this->aggregateMusicBySlot();
+    }
+
+    /**
+     * Handle realm change event.
+     */
+    #[On('realm-changed')]
+    public function onRealmChanged(): void
+    {
+        // Reload music plans and slot music map when realm changes
+        $celebrationIds = $this->celebrationsWithScores->pluck('celebration.id')->toArray();
+        $this->musicPlans = $this->fetchMusicPlans($celebrationIds);
         $this->slotMusicMap = $this->aggregateMusicBySlot();
     }
 
