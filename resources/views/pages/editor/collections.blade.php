@@ -329,7 +329,8 @@
         <flux:heading size="lg">{{ __('Edit Collection') }}</flux:heading>
 
         <div class="mt-2 space-y-4">
-            <flux:field :label="__('Title')" required>
+            <flux:field required>
+                <flux:label>{{ __('Title') }}</flux:label>
                 <flux:input
                     wire:model="title"
                     :placeholder="__('Enter collection title')"
@@ -337,7 +338,9 @@
                 <flux:error name="title" />
             </flux:field>
 
-            <flux:field :label="__('Abbreviation')" :helper="__('Optional short form, e.g., ÉE, BWV')">
+            <flux:field>
+                <flux:label>{{ __('Abbreviation') }}</flux:label>
+                <flux:description>{{ __('Optional short form, e.g., ÉE, BWV') }}</flux:description>
                 <flux:input
                     wire:model="abbreviation"
                     :placeholder="__('Enter abbreviation')"
@@ -346,7 +349,9 @@
                 <flux:error name="abbreviation" />
             </flux:field>
 
-            <flux:field :label="__('Author')" :helper="__('Optional author or publisher')">
+            <flux:field>
+                <flux:label>{{ __('Author') }}</flux:label>
+                <flux:description>{{ __('Optional author or publisher') }}</flux:description>
                 <flux:input
                     wire:model="author"
                     :placeholder="__('Enter author name')"

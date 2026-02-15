@@ -172,7 +172,11 @@ new class extends Component {
     <x-pages::settings.layout :heading="__('Profile')" >
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
 
-            <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
+            <flux:field>
+                <flux:label>{{ __('Name') }}</flux:label>
+                <flux:input wire:model="name" type="text" required autofocus autocomplete="name" />
+                <flux:error name="name" />
+            </flux:field>
 
             <div>
                 <flux:text class="font-medium">{{ __('Display Name') }}</flux:text>
@@ -214,7 +218,11 @@ new class extends Component {
             </div>
 
             <div>
-                <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
+                <flux:field>
+                    <flux:label>{{ __('Email') }}</flux:label>
+                    <flux:input wire:model="email" type="email" required autocomplete="email" />
+                    <flux:error name="email" />
+                </flux:field>
 
                 @if ($this->hasUnverifiedEmail)
                     <div>

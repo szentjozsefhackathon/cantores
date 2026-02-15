@@ -279,7 +279,8 @@ new class extends Component
             <!-- Edit Form -->
             <div class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <flux:field :label="__('Title')" required>
+                    <flux:field required>
+                        <flux:label>{{ __('Title') }}</flux:label>
                         <flux:input
                             wire:model="title"
                             :placeholder="__('Enter music piece title')"
@@ -287,7 +288,9 @@ new class extends Component
                         <flux:error name="title" />
                     </flux:field>
 
-                    <flux:field :label="__('Custom ID')" :helper="__('Optional unique identifier, e.g., BWV 232, KV 626')">
+                    <flux:field>
+                        <flux:label>{{ __('Custom ID') }}</flux:label>
+                        <flux:description>{{ __('Optional unique identifier, e.g., BWV 232, KV 626') }}</flux:description>
                         <flux:input
                             wire:model="customId"
                             :placeholder="__('Enter custom ID')"
@@ -296,7 +299,9 @@ new class extends Component
                     </flux:field>
                 </div>
 
-                <flux:field :label="__('Subtitle')" :helper="__('Optional subtitle, e.g., movement, part, description')">
+                <flux:field>
+                    <flux:label>{{ __('Subtitle') }}</flux:label>
+                    <flux:description>{{ __('Optional subtitle, e.g., movement, part, description') }}</flux:description>
                     <flux:input
                         wire:model="subtitle"
                         :placeholder="__('Enter subtitle')"
@@ -415,7 +420,8 @@ new class extends Component
                 <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Assign this music piece to a new collection with page and order numbers.') }}</flux:text>
 
                 <div class="space-y-4">
-                    <flux:field :label="__('Collection')" required>
+                    <flux:field required>
+                        <flux:label>{{ __('Collection') }}</flux:label>
                         <flux:select
                             wire:model="selectedCollectionId"
                             searchable
@@ -432,11 +438,13 @@ new class extends Component
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <flux:field>
-                            <flux:input :label="__('Page Number')" type="number" wire:model="pageNumber" :placeholder="__('Page number')" min="1" />
+                            <flux:label>{{ __('Page Number') }}</flux:label>
+                            <flux:input type="number" wire:model="pageNumber" :placeholder="__('Page number')" min="1" />
                             <flux:error name="pageNumber" />
                         </flux:field>
                         <flux:field>
-                            <flux:input :label="__('Order Number')" wire:model="orderNumber" :placeholder="__('Order number')" />
+                            <flux:label>{{ __('Order Number') }}</flux:label>
+                            <flux:input wire:model="orderNumber" :placeholder="__('Order number')" />
                             <flux:error name="orderNumber" />
                         </flux:field>
                     </div>
@@ -573,7 +581,8 @@ new class extends Component
         </flux:subheading>
 
         <div class="mt-6 space-y-4">
-            <flux:field :label="__('Page Number')">
+            <flux:field>
+                <flux:label>{{ __('Page Number') }}</flux:label>
                 <flux:input
                     type="number"
                     wire:model="editingPageNumber"
@@ -583,7 +592,8 @@ new class extends Component
                 <flux:error name="editingPageNumber" />
             </flux:field>
 
-            <flux:field :label="__('Order Number')">
+            <flux:field>
+                <flux:label>{{ __('Order Number') }}</flux:label>
                 <flux:input
                     wire:model="editingOrderNumber"
                     :placeholder="__('Order number')"

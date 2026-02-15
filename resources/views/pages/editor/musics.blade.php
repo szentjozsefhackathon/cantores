@@ -146,7 +146,8 @@
         <flux:heading size="lg">{{ __('Create Music Piece') }}</flux:heading>
 
         <div class="mt-6 space-y-4">
-            <flux:field :label="__('Title')" required>
+            <flux:field required>
+                <flux:label>{{ __('Title') }}</flux:label>
                 <flux:input
                     wire:model="title"
                     :placeholder="__('Enter music piece title')"
@@ -155,7 +156,9 @@
                 <flux:error name="title" />
             </flux:field>
 
-            <flux:field :label="__('Subtitle')" :helper="__('Optional subtitle, e.g., movement, part, description')">
+            <flux:field>
+                <flux:label>{{ __('Subtitle') }}</flux:label>
+                <flux:description>{{ __('Optional subtitle, e.g., movement, part, description') }}</flux:description>
                 <flux:input
                     wire:model="subtitle"
                     :placeholder="__('Enter subtitle')"

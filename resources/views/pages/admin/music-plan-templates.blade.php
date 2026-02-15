@@ -153,28 +153,24 @@
         <form wire:submit="create" class="space-y-4">
             <flux:field>
                 <flux:label for="create-name">{{ __('Name') }} *</flux:label>
-                <flux:input 
-                    id="create-name" 
-                    wire:model="name" 
-                    :placeholder="__('e.g., Sunday Mass, Wedding, Funeral')" 
+                <flux:input
+                    id="create-name"
+                    wire:model="name"
+                    :placeholder="__('e.g., Sunday Mass, Wedding, Funeral')"
                     required
                 />
-                @error('name')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+                <flux:error name="name" />
             </flux:field>
             
             <flux:field>
                 <flux:label for="create-description">{{ __('Description') }}</flux:label>
-                <flux:textarea 
-                    id="create-description" 
-                    wire:model="description" 
-                    :placeholder="__('Optional description of this template')" 
+                <flux:textarea
+                    id="create-description"
+                    wire:model="description"
+                    :placeholder="__('Optional description of this template')"
                     rows="3"
                 />
-                @error('description')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+                <flux:error name="description" />
             </flux:field>
             
             <flux:field>
@@ -182,9 +178,7 @@
                     id="create-is-active"
                     wire:model="is_active"
                     label="{{ __('Active (available for use)') }}" />
-                @error('is_active')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+                <flux:error name="is_active" />
             </flux:field>
             
             <div class="flex justify-end gap-3 pt-4">
@@ -221,14 +215,12 @@
             
             <flux:field>
                 <flux:label for="edit-description">{{ __('Description') }}</flux:label>
-                <flux:textarea 
-                    id="edit-description" 
-                    wire:model="description" 
+                <flux:textarea
+                    id="edit-description"
+                    wire:model="description"
                     rows="3"
                 />
-                @error('description')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+                <flux:error name="description" />
             </flux:field>
 
             <flux:field variant="inline">

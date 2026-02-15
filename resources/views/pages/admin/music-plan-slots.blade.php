@@ -120,28 +120,24 @@
         <form wire:submit="create" class="space-y-4">
             <flux:field>
                 <flux:label for="create-name">{{ __('Name') }} *</flux:label>
-                <flux:input 
-                    id="create-name" 
-                    wire:model="name" 
-                    :placeholder="__('e.g., Entrance Procession, Kyrie, Gloria')" 
+                <flux:input
+                    id="create-name"
+                    wire:model="name"
+                    :placeholder="__('e.g., Entrance Procession, Kyrie, Gloria')"
                     required
                 />
-                @error('name')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+                <flux:error name="name" />
             </flux:field>
             
             <flux:field>
                 <flux:label for="create-description">{{ __('Description') }}</flux:label>
-                <flux:textarea 
-                    id="create-description" 
-                    wire:model="description" 
-                    :placeholder="__('Optional description of this slot')" 
+                <flux:textarea
+                    id="create-description"
+                    wire:model="description"
+                    :placeholder="__('Optional description of this slot')"
                     rows="3"
                 />
-                @error('description')
-                    <flux:error>{{ $message }}</flux:error>
-                @enderror
+                <flux:error name="description" />
             </flux:field>
             
             <div class="flex justify-end gap-3 pt-4">
