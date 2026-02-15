@@ -9,6 +9,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class MusicPlanSlotPlan extends Model
 {
     /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'music_plan_slot_plan';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

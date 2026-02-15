@@ -27,9 +27,15 @@ test('suggestions page loads with criteria', function () {
     $music = Music::factory()->create();
     $musicPlan = MusicPlan::factory()->create(['user_id' => $user->id, 'is_published' => true]);
     $musicPlan->celebrations()->attach($celebration);
+    // Attach slot and get the pivot model
     $musicPlan->slots()->attach($slot, ['sequence' => 1]);
+    // Retrieve the pivot model directly
+    $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $musicPlan->id)
+        ->where('music_plan_slot_id', $slot->id)
+        ->first();
 
     $assignment = MusicPlanSlotAssignment::factory()->create([
+        'music_plan_slot_plan_id' => $pivot->id,
         'music_plan_id' => $musicPlan->id,
         'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,

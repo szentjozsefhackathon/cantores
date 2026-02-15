@@ -62,7 +62,11 @@ new #[Layout('layouts::app.main')] class extends Component
         $query = MusicPlan::whereHas('celebrations', function ($q) use ($celebrationIds) {
             $q->whereIn('celebrations.id', $celebrationIds);
         })
-            ->with(['celebrations', 'musicAssignments.music', 'musicAssignments.musicPlanSlot'])
+            ->with([
+                'celebrations',
+                'musicAssignments.music.collections',
+                'musicAssignments.musicPlanSlot',
+            ])
             ->withCount('celebrations');
 
         // Filter by realm: include plans that belong to the current realm OR have no realm
@@ -73,16 +77,15 @@ new #[Layout('layouts::app.main')] class extends Component
             });
         }
 
-        // Exclude the authenticated user's own private plans? We'll include all for now.
-        // If you want to exclude user's own private plans, you can add:
-        // if ($user) {
-        //     $query->where(function ($q) use ($user) {
-        //         $q->where('is_published', true)
-        //             ->orWhere('user_id', $user->id);
-        //     });
-        // } else {
-        //     $query->where('is_published', true);
-        // }
+        // Show only published plans and user's own plans (private or published)
+        if ($user) {
+            $query->where(function ($q) use ($user) {
+                $q->where('is_published', true)
+                    ->orWhere('user_id', $user->id);
+            });
+        } else {
+            $query->where('is_published', true);
+        }
 
         return $query->orderBy('created_at', 'desc')->get();
     }
@@ -90,7 +93,7 @@ new #[Layout('layouts::app.main')] class extends Component
     /**
      * Aggregate music selections by slot, sorted according to requirements.
      *
-     * @return array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int}>>
+     * @return array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int, collection_info: ?string}>>
      */
     protected function aggregateMusicBySlot(): array
     {
@@ -128,11 +131,20 @@ new #[Layout('layouts::app.main')] class extends Component
                     ];
                 }
 
-                // Add music with celebration score and sequence
+                // Get primary collection info
+                $collectionInfo = null;
+                $music = $assignment->music;
+                $primaryCollection = $music->collections->first();
+                if ($primaryCollection) {
+                    $collectionInfo = $primaryCollection->formatWithPivot($primaryCollection->pivot);
+                }
+
+                // Add music with celebration score, sequence, and collection info
                 $slotMap[$sortKey]['musics'][] = [
-                    'music' => $assignment->music,
+                    'music' => $music,
                     'celebration_score' => $maxScore,
                     'music_sequence' => $assignment->music_sequence ?? 0,
+                    'collection_info' => $collectionInfo,
                 ];
             }
         }
@@ -175,6 +187,50 @@ new #[Layout('layouts::app.main')] class extends Component
         </flux:callout>
     @else
         <div class="mt-6 space-y-8">
+            <!-- Aggregated music by slot (most important) -->
+            <div>
+                <flux:heading size="lg" class="mb-4">Énekjavaslatok szekciók szerint</flux:heading>
+                <div class="space-y-6">
+                    @foreach ($slotMusicMap as $slotName => $musics)
+                        <div>
+                            <flux:heading size="md" class="mb-2">{{ $slotName }}</flux:heading>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                @foreach ($musics as $musicItem)
+                                    @php
+                                        $music = $musicItem['music'];
+                                        $score = $musicItem['celebration_score'];
+                                        $sequence = $musicItem['music_sequence'];
+                                        $collectionInfo = $musicItem['collection_info'];
+                                    @endphp
+                                    <flux:card class="p-3 hover:shadow-md transition-shadow group">
+                                        <div class="flex items-start justify-between">
+                                            <div class="flex-1 min-w-0">
+                                                <flux:heading size="sm" class="truncate text-neutral-900 dark:text-neutral-100">{{ $music->title }}</flux:heading>
+                                                @if ($music->subtitle)
+                                                    <flux:text class="text-xs text-neutral-600 dark:text-neutral-400 truncate">{{ $music->subtitle }}</flux:text>
+                                                @endif
+                                                @if ($collectionInfo)
+                                                    <div class="mt-2">
+                                                        <flux:badge size="xs" color="zinc" class="font-mono text-xs">
+                                                            {{ $collectionInfo }}
+                                                        </flux:badge>
+                                                    </div>
+                                                @endif
+                                                <div class="mt-2 flex items-center gap-2 flex-wrap">
+                                                    <flux:badge size="xs" color="blue" title="Kapcsolódó ünnep értéke">Érték: {{ $score }}</flux:badge>
+                                                    <flux:badge size="xs" color="zinc" title="Sorszám a szekcióban">#{{ $sequence }}</flux:badge>
+                                                </div>
+                                            </div>
+                                            <flux:icon name="musical-note" class="h-5 w-5 text-blue-500 ml-2 flex-shrink-0" variant="mini" />
+                                        </div>
+                                    </flux:card>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
             <!-- Celebrations with scores -->
             <div>
                 <flux:heading size="lg" class="mb-4">Kapcsolódó ünnepek ({{ $celebrationsWithScores->count() }})</flux:heading>
@@ -191,7 +247,7 @@ new #[Layout('layouts::app.main')] class extends Component
                 </div>
             </div>
 
-            <!-- Music plans -->
+            <!-- Music plans (optional, can be collapsed) -->
             <div>
                 <flux:heading size="lg" class="mb-4">Énekrendek ({{ $musicPlans->count() }})</flux:heading>
                 <div class="space-y-3">
@@ -211,42 +267,6 @@ new #[Layout('layouts::app.main')] class extends Component
                                 </flux:badge>
                             </div>
                         </flux:card>
-                    @endforeach
-                </div>
-            </div>
-
-            <!-- Aggregated music by slot -->
-            <div>
-                <flux:heading size="lg" class="mb-4">Énekjavaslatok szekciók szerint</flux:heading>
-                <div class="space-y-6">
-                    @foreach ($slotMusicMap as $slotName => $musics)
-                        <div>
-                            <flux:heading size="md" class="mb-2">{{ $slotName }}</flux:heading>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                @foreach ($musics as $musicItem)
-                                    @php
-                                        $music = $musicItem['music'];
-                                        $score = $musicItem['celebration_score'];
-                                        $sequence = $musicItem['music_sequence'];
-                                    @endphp
-                                    <flux:card class="p-3 hover:shadow-md transition-shadow">
-                                        <div class="flex items-start justify-between">
-                                            <div class="flex-1">
-                                                <flux:heading size="sm" class="truncate">{{ $music->title }}</flux:heading>
-                                                @if ($music->subtitle)
-                                                    <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">{{ $music->subtitle }}</flux:text>
-                                                @endif
-                                                <div class="mt-2 flex items-center gap-2">
-                                                    <flux:badge size="xs" color="blue">Érték: {{ $score }}</flux:badge>
-                                                    <flux:badge size="xs" color="zinc">Sorszám: {{ $sequence }}</flux:badge>
-                                                </div>
-                                            </div>
-                                            <flux:icon name="musical-note" class="h-5 w-5 text-blue-500 ml-2" variant="mini" />
-                                        </div>
-                                    </flux:card>
-                                @endforeach
-                            </div>
-                        </div>
                     @endforeach
                 </div>
             </div>
