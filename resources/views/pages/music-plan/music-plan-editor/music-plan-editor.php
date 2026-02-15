@@ -3,6 +3,7 @@
 use App\Models\MusicPlan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
@@ -447,7 +448,8 @@ new class extends Component
         $this->selectedSlotForMusic = null;
     }
 
-    public function assignMusicToSlot($musicId): void
+    #[On('music-selected')]
+    public function assignMusicToSlot(int $musicId): void
     {
         $this->authorize('update', $this->musicPlan);
 
