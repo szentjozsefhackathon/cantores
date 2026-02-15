@@ -523,10 +523,69 @@ new class extends Component
 
         $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
         if ($assignment && $assignment->music_plan_id === $this->musicPlan->id) {
-            $assignment->delete();
+            $slotPlanId = $assignment->music_plan_slot_plan_id;
+            $deletedSequence = $assignment->music_sequence;
+
+            DB::transaction(function () use ($assignment, $slotPlanId, $deletedSequence) {
+                $assignment->delete();
+
+                // Shift down sequences of remaining assignments in the same slot instance
+                \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slotPlanId)
+                    ->where('music_sequence', '>', $deletedSequence)
+                    ->decrement('music_sequence');
+            });
+
             $this->loadPlanSlots();
             $this->dispatch('slots-updated', message: 'Zene eltávolítva.');
         }
+    }
+
+    public function moveAssignmentUp(int $assignmentId): void
+    {
+        $this->reorderAssignment($assignmentId, 'up');
+    }
+
+    public function moveAssignmentDown(int $assignmentId): void
+    {
+        $this->reorderAssignment($assignmentId, 'down');
+    }
+
+    private function reorderAssignment(int $assignmentId, string $direction): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
+        if (!$assignment || $assignment->music_plan_id !== $this->musicPlan->id) {
+            return;
+        }
+
+        // Get all assignments for the same slot instance (same music_plan_slot_plan_id)
+        $assignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $assignment->music_plan_slot_plan_id)
+            ->orderBy('music_sequence')
+            ->get();
+
+        $currentIndex = $assignments->search(fn ($a) => $a->id === $assignmentId);
+        if ($currentIndex === false) {
+            return;
+        }
+
+        $targetIndex = $direction === 'up' ? $currentIndex - 1 : $currentIndex + 1;
+        if ($targetIndex < 0 || $targetIndex >= $assignments->count()) {
+            return;
+        }
+
+        $current = $assignments[$currentIndex];
+        $target = $assignments[$targetIndex];
+
+        DB::transaction(function () use ($current, $target) {
+            $currentSequence = $current->music_sequence;
+            $targetSequence = $target->music_sequence;
+            $current->update(['music_sequence' => $targetSequence]);
+            $target->update(['music_sequence' => $currentSequence]);
+        });
+
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: 'Zene sorrendje frissítve.');
     }
 };
 ?>
@@ -808,14 +867,37 @@ new class extends Component
                                     <div class="mt-3 space-y-2">
                                         @foreach($slot['assignments'] as $assignment)
                                         <div class="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-lg px-3 py-2">
-                                            <div class="flex-1">
-                                                <div class="font-medium text-sm">{{ $assignment['music_title'] }}</div>
-                                                @if($assignment['music_subtitle'])
-                                                <div class="text-xs text-neutral-600 dark:text-neutral-400">{{ $assignment['music_subtitle'] }}</div>
+                                            <div class="flex items-center gap-3">
+                                                @if(count($slot['assignments']) > 1)
+                                                <div class="flex flex-col gap-1">
+                                                    <flux:button
+                                                        wire:click="moveAssignmentUp({{ $assignment['id'] }})"
+                                                        wire:loading.attr="disabled"
+                                                        wire:loading.class="opacity-50 cursor-not-allowed"
+                                                        :disabled="$loop->first"
+                                                        icon="chevron-up"
+                                                        variant="outline"
+                                                        size="xs" />
+                                                    <flux:button
+                                                        wire:click="moveAssignmentDown({{ $assignment['id'] }})"
+                                                        wire:loading.attr="disabled"
+                                                        wire:loading.class="opacity-50 cursor-not-allowed"
+                                                        :disabled="$loop->last"
+                                                        icon="chevron-down"
+                                                        variant="outline"
+                                                        size="xs" />
+                                                </div>
+                                                <flux:badge>{{ $assignment['music_sequence'] }}</flux:badge>
                                                 @endif
-                                                @if($assignment['music_custom_id'])
-                                                <div class="text-xs text-neutral-500 dark:text-neutral-500">ID: {{ $assignment['music_custom_id'] }}</div>
-                                                @endif
+                                                <div class="flex-1">
+                                                    <div class="font-medium text-sm">{{ $assignment['music_title'] }}</div>
+                                                    @if($assignment['music_subtitle'])
+                                                    <div class="text-xs text-neutral-600 dark:text-neutral-400">{{ $assignment['music_subtitle'] }}</div>
+                                                    @endif
+                                                    @if($assignment['music_custom_id'])
+                                                    <div class="text-xs text-neutral-500 dark:text-neutral-500">ID: {{ $assignment['music_custom_id'] }}</div>
+                                                    @endif
+                                                </div>
                                             </div>
                                             <flux:button
                                                 wire:click="removeAssignment({{ $assignment['id'] }})"
