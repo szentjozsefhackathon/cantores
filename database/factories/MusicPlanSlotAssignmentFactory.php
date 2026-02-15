@@ -24,7 +24,7 @@ class MusicPlanSlotAssignmentFactory extends Factory
     public function definition(): array
     {
         return [
-            'sequence' => $this->faker->numberBetween(1, 10),
+            'music_sequence' => $this->faker->numberBetween(1, 10),
             'notes' => $this->faker->optional()->sentence(),
         ];
     }

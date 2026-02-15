@@ -3,6 +3,7 @@
 use App\Models\Celebration;
 use App\Models\MusicPlan;
 use App\Models\Realm;
+use App\Services\CelebrationSearchService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -191,6 +192,60 @@ new class extends Component
         // If $realmId is null, no filtering applied (show all plans)
 
         return $query->orderBy('created_at', 'desc')->get();
+    }
+
+    /**
+     * Check if there are any related celebrations for the given celebration data.
+     */
+    public function hasSuggestions(array $celebrationData): bool
+    {
+        $criteria = [
+            'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
+            'season' => isset($celebrationData['season']) ? (int) $celebrationData['season'] : null,
+            'week' => isset($celebrationData['week']) ? (int) $celebrationData['week'] : null,
+            'day' => isset($celebrationData['dayofWeek']) ? (int) $celebrationData['dayofWeek'] : null,
+            'readings_code' => $celebrationData['readingsId'] ?? null,
+            'year_letter' => $celebrationData['yearLetter'] ?? null,
+            'year_parity' => $celebrationData['yearParity'] ?? null,
+        ];
+
+        // Remove null values
+        $criteria = array_filter($criteria, fn ($value) => $value !== null);
+
+        $service = app(CelebrationSearchService::class);
+        $related = $service->findRelated($criteria);
+
+        return $related->isNotEmpty();
+    }
+
+    /**
+     * Open the suggestions page for the given celebration.
+     */
+    public function openSuggestions(int $celebrationIndex): void
+    {
+        if (! isset($this->celebrations[$celebrationIndex])) {
+            return;
+        }
+
+        $celebrationData = $this->celebrations[$celebrationIndex];
+
+        // Build criteria to pass to suggestions page
+        $criteria = [
+            'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
+            'season' => isset($celebrationData['season']) ? (int) $celebrationData['season'] : null,
+            'week' => isset($celebrationData['week']) ? (int) $celebrationData['week'] : null,
+            'day' => isset($celebrationData['dayofWeek']) ? (int) $celebrationData['dayofWeek'] : null,
+            'readings_code' => $celebrationData['readingsId'] ?? null,
+            'year_letter' => $celebrationData['yearLetter'] ?? null,
+            'year_parity' => $celebrationData['yearParity'] ?? null,
+        ];
+
+        // Remove null values
+        $criteria = array_filter($criteria, fn ($value) => $value !== null);
+
+        // Store criteria in session or pass as query parameters
+        // For now, we'll redirect to suggestions page with query parameters
+        $this->redirectRoute('suggestions', $criteria);
     }
 };
 ?>
@@ -464,8 +519,8 @@ new class extends Component
                     </div>
                     @endif
 
+                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
                     @auth
-                    <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800">
                         <flux:button
                             wire:click="createMusicPlan({{ $loop->index }})"
                             variant="outline"
@@ -474,8 +529,21 @@ new class extends Component
                             class="w-full">
                             Énekrend létrehozása
                         </flux:button>
-                    </div>
                     @endauth
+                        @php
+                        $hasSuggestions = $this->hasSuggestions($celebration);
+                        @endphp
+                        @if($hasSuggestions)
+                        <flux:button
+                            wire:click="openSuggestions({{ $loop->index }})"
+                            variant="ghost"
+                            size="sm"
+                            icon="light-bulb"
+                            class="w-full">
+                            Énekrend javaslatok
+                        </flux:button>
+                        @endif
+                    </div>
                 </div>
             </flux:card>
             @endforeach

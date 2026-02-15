@@ -78,3 +78,7 @@ Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');
+
+// Suggestions page for music plan recommendations
+Route::livewire('/suggestions', 'pages::suggestions')
+    ->name('suggestions');
