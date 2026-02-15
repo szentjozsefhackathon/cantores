@@ -321,63 +321,7 @@ new #[Layout('layouts::app.main')] class extends Component
                                         $sequence = $musicItem['music_sequence'];
                                         $collectionInfo = $musicItem['collection_info'];
                                     @endphp
-                                    <flux:card class="p-5 hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700 group hover:border-blue-300 dark:hover:border-blue-600">
-                                        <div class="flex flex-col h-full">
-                                            <!-- Music header -->
-                                            <div class="flex items-start justify-between mb-3">
-                                                <div class="flex-1 min-w-0">
-                                                    <flux:heading size="lg" class="text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                                                        {{ $music->title }}
-                                                    </flux:heading>
-                                                    @if ($music->subtitle)
-                                                        <flux:text class="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">
-                                                            {{ $music->subtitle }}
-                                                        </flux:text>
-                                                    @endif
-                                                </div>
-                                                <flux:icon name="music" class="h-5 w-5 text-blue-500 ml-2 flex-shrink-0" />
-                                            </div>
-
-                                            <!-- Collection info -->
-                                            @if ($collectionInfo)
-                                                <div class="mb-4">
-                                                    <flux:badge size="sm" color="zinc" class="font-mono text-xs">
-                                                        {{ $collectionInfo }}
-                                                    </flux:badge>
-                                                </div>
-                                            @endif
-
-                                            <!-- Metadata -->
-                                            <div class="mt-auto space-y-3">
-                                                <div class="flex items-center justify-between text-sm">
-                                                    <div class="flex items-center gap-2">
-                                                        <flux:icon name="star" class="h-4 w-4 text-amber-500" />
-                                                        <span class="text-gray-700 dark:text-gray-300">Relevancia</span>
-                                                    </div>
-                                                    <flux:badge size="sm" color="{{ $score >= 80 ? 'green' : ($score >= 50 ? 'blue' : 'zinc') }}">
-                                                        {{ $score }}%
-                                                    </flux:badge>
-                                                </div>
-                                                <div class="flex items-center justify-between text-sm">
-                                                    <div class="flex items-center gap-2">
-                                                        <flux:icon name="list" class="h-4 w-4 text-gray-500" />
-                                                        <span class="text-gray-700 dark:text-gray-300">Sorszám</span>
-                                                    </div>
-                                                    <flux:badge size="sm" color="zinc">#{{ $sequence }}</flux:badge>
-                                                </div>
-                                            </div>
-
-                                            <!-- Actions -->
-                                            <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 flex justify-between">
-                                                <flux:button size="sm" variant="ghost" icon="eye" class="text-gray-600 dark:text-gray-400">
-                                                    Részletek
-                                                </flux:button>
-                                                <flux:button size="sm" variant="primary" icon="plus" class="ml-auto">
-                                                    Hozzáadás
-                                                </flux:button>
-                                            </div>
-                                        </div>
-                                    </flux:card>
+                                    <livewire:music-card :music="$music" />
                                 @endforeach
                             </div>
                         </div>

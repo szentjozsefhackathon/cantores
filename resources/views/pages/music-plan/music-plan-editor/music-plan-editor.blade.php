@@ -241,15 +241,7 @@
                                                 </div>
                                                 <flux:badge>{{ $assignment['music_sequence'] }}</flux:badge>
                                                 @endif
-                                                <div class="flex-1">
-                                                    <div class="font-medium text-sm">{{ $assignment['music_title'] }}</div>
-                                                    @if($assignment['music_subtitle'])
-                                                    <div class="text-xs text-neutral-600 dark:text-neutral-400">{{ $assignment['music_subtitle'] }}</div>
-                                                    @endif
-                                                    @if($assignment['music_custom_id'])
-                                                    <div class="text-xs text-neutral-500 dark:text-neutral-500">ID: {{ $assignment['music_custom_id'] }}</div>
-                                                    @endif
-                                                </div>
+                                                <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" />
                                             </div>
                                             <flux:button
                                                 wire:click="removeAssignment({{ $assignment['id'] }})"
