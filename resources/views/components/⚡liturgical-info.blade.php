@@ -195,7 +195,9 @@ new class extends Component
     }
 
     /**
-     * Check if there are any related celebrations for the given celebration data.
+     * Check if there are any music plan suggestions for the given celebration data.
+     * Returns true only if there is at least one published music plan attached
+     * or at least one of the authenticated user's own music plans attached.
      */
     public function hasSuggestions(array $celebrationData): bool
     {
@@ -215,7 +217,37 @@ new class extends Component
         $service = app(CelebrationSearchService::class);
         $related = $service->findRelated($criteria);
 
-        return $related->isNotEmpty();
+        if ($related->isEmpty()) {
+            return false;
+        }
+
+        $celebrationIds = $related->pluck('id')->toArray();
+        $user = Auth::user();
+        $realmId = $user ? $user->current_realm_id : Session::get('current_realm_id');
+
+        $query = MusicPlan::whereHas('celebrations', function ($q) use ($celebrationIds) {
+            $q->whereIn('celebrations.id', $celebrationIds);
+        });
+
+        // Filter by realm: include plans that belong to the current realm OR have no realm
+        if ($realmId !== null) {
+            $query->where(function ($q) use ($realmId) {
+                $q->whereNull('realm_id')
+                    ->orWhere('realm_id', $realmId);
+            });
+        }
+
+        // Include published plans OR user's own plans (if logged in)
+        if ($user) {
+            $query->where(function ($q) use ($user) {
+                $q->where('is_published', true)
+                    ->orWhere('user_id', $user->id);
+            });
+        } else {
+            $query->where('is_published', true);
+        }
+
+        return $query->exists();
     }
 
     /**
