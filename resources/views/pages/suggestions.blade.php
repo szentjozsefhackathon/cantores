@@ -452,7 +452,7 @@ new #[Layout('layouts::app.main')] class extends Component
                                         <div class="flex items-center gap-2">
                                             <flux:icon name="user" class="h-4 w-4 text-gray-500" />
                                             <span class="text-gray-700 dark:text-gray-300">
-                                                {{ $plan->user?->name ?? 'Ismeretlen' }}
+                                                {{ $plan->user?->display_name ?? 'Ismeretlen' }}
                                             </span>
                                         </div>
                                         <div class="flex items-center gap-2">
