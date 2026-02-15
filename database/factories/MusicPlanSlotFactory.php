@@ -32,6 +32,7 @@ class MusicPlanSlotFactory extends Factory
         return [
             'name' => fake()->unique()->randomElement($slotNames),
             'description' => fake()->optional()->sentence(),
+            'priority' => fake()->numberBetween(0, 10),
         ];
     }
 }

@@ -27,6 +27,8 @@ class MusicPlanSlots extends Component
 
     public string $description = '';
 
+    public int $priority = 0;
+
     /**
      * Mount the component.
      */
@@ -72,6 +74,7 @@ class MusicPlanSlots extends Component
         $this->editingSlot = $slot;
         $this->name = $slot->name;
         $this->description = $slot->description ?? '';
+        $this->priority = (int) $slot->priority;
         $this->showEditModal = true;
     }
 
@@ -124,7 +127,7 @@ class MusicPlanSlots extends Component
      */
     private function resetForm(): void
     {
-        $this->reset(['name', 'description']);
+        $this->reset(['name', 'description', 'priority']);
         $this->editingSlot = null;
         $this->resetErrorBag();
     }

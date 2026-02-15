@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $priority Defines the order in which slots are displayed in a unified view of a celebration.
+ *                         Lower numbers have higher priority (e.g., priority 1 appears before priority 2).
+ */
 class MusicPlanSlot extends Model
 {
     use HasFactory, SoftDeletes;
@@ -20,6 +24,7 @@ class MusicPlanSlot extends Model
     protected $fillable = [
         'name',
         'description',
+        'priority',
     ];
 
     /**
@@ -31,6 +36,7 @@ class MusicPlanSlot extends Model
     {
         return [
             'deleted_at' => 'datetime',
+            'priority' => 'integer',
         ];
     }
 

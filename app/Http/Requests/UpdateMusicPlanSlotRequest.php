@@ -32,6 +32,7 @@ class UpdateMusicPlanSlotRequest extends FormRequest
                     ->ignore($slotId),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
+            'priority' => ['required', 'integer', 'min:0'],
         ];
     }
 

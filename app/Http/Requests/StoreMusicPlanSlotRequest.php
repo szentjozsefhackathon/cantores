@@ -30,6 +30,7 @@ class StoreMusicPlanSlotRequest extends FormRequest
                 Rule::unique('music_plan_slots', 'name')->whereNull('deleted_at'),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
+            'priority' => ['required', 'integer', 'min:0'],
         ];
     }
 
