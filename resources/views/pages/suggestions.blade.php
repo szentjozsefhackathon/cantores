@@ -128,6 +128,7 @@ new #[Layout('layouts::app.main')] class extends Component
                     $slotMap[$sortKey] = [
                         'slot' => $slot,
                         'musics' => [],
+                        'music_ids' => [],
                     ];
                 }
 
@@ -139,13 +140,34 @@ new #[Layout('layouts::app.main')] class extends Component
                     $collectionInfo = $primaryCollection->formatWithPivot($primaryCollection->pivot);
                 }
 
-                // Add music with celebration score, sequence, and collection info
-                $slotMap[$sortKey]['musics'][] = [
-                    'music' => $music,
-                    'celebration_score' => $maxScore,
-                    'music_sequence' => $assignment->music_sequence ?? 0,
-                    'collection_info' => $collectionInfo,
-                ];
+                $musicId = $music->id;
+                $existingIndex = $slotMap[$sortKey]['music_ids'][$musicId] ?? null;
+
+                if ($existingIndex !== null) {
+                    // Duplicate music in same slot: keep the entry with higher celebration score
+                    // If scores equal, keep the one with lower music_sequence
+                    $existing = &$slotMap[$sortKey]['musics'][$existingIndex];
+                    if ($maxScore > $existing['celebration_score'] ||
+                        ($maxScore === $existing['celebration_score'] && ($assignment->music_sequence ?? 0) < $existing['music_sequence'])) {
+                        // Replace with this better entry
+                        $existing = [
+                            'music' => $music,
+                            'celebration_score' => $maxScore,
+                            'music_sequence' => $assignment->music_sequence ?? 0,
+                            'collection_info' => $collectionInfo,
+                        ];
+                    }
+                    // else keep existing
+                } else {
+                    // New music for this slot
+                    $slotMap[$sortKey]['music_ids'][$musicId] = count($slotMap[$sortKey]['musics']);
+                    $slotMap[$sortKey]['musics'][] = [
+                        'music' => $music,
+                        'celebration_score' => $maxScore,
+                        'music_sequence' => $assignment->music_sequence ?? 0,
+                        'collection_info' => $collectionInfo,
+                    ];
+                }
             }
         }
 
@@ -154,6 +176,8 @@ new #[Layout('layouts::app.main')] class extends Component
 
         // For each slot, sort musics first by celebration score descending, then by music_sequence ascending
         foreach ($slotMap as &$slotData) {
+            // Remove the temporary music_ids array
+            unset($slotData['music_ids']);
             usort($slotData['musics'], function ($a, $b) {
                 if ($a['celebration_score'] !== $b['celebration_score']) {
                     return $b['celebration_score'] <=> $a['celebration_score']; // descending
