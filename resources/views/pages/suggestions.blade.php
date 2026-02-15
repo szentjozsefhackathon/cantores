@@ -4,8 +4,6 @@ namespace App\Livewire\Pages;
 
 use App\Models\Celebration;
 use App\Models\MusicPlan;
-use App\Models\MusicPlanSlot;
-use App\Models\MusicPlanSlotAssignment;
 use App\Services\CelebrationSearchService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -23,8 +21,10 @@ new #[Layout('layouts::app.main')] class extends Component
     /** @var Collection<int, MusicPlan> */
     public Collection $musicPlans;
 
-    /** @var array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int}>> */
+    /** @var array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int, collection_info: ?string}>> */
     public array $slotMusicMap = [];
+
+    public string $activeTab = 'music';
 
     public function mount(): void
     {
@@ -113,7 +113,7 @@ new #[Layout('layouts::app.main')] class extends Component
             // Iterate through assignments
             foreach ($musicPlan->musicAssignments as $assignment) {
                 $slot = $assignment->musicPlanSlot;
-                if (!$slot) {
+                if (! $slot) {
                     continue;
                 }
 
@@ -124,7 +124,7 @@ new #[Layout('layouts::app.main')] class extends Component
                 // Use a composite key for sorting: priority + slot name
                 $sortKey = sprintf('%04d-%s', $priority, $slotName);
 
-                if (!isset($slotMap[$sortKey])) {
+                if (! isset($slotMap[$sortKey])) {
                     $slotMap[$sortKey] = [
                         'slot' => $slot,
                         'musics' => [],
@@ -158,6 +158,7 @@ new #[Layout('layouts::app.main')] class extends Component
                 if ($a['celebration_score'] !== $b['celebration_score']) {
                     return $b['celebration_score'] <=> $a['celebration_score']; // descending
                 }
+
                 return $a['music_sequence'] <=> $b['music_sequence']; // ascending
             });
         }
@@ -174,27 +175,145 @@ new #[Layout('layouts::app.main')] class extends Component
 }
 ?>
 
-<div class="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-<div class="py-8">
-    <flux:heading>
-        {{ __('Énekrend javaslatok') }}
-    </flux:heading>
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <!-- Page header -->
+    <div class="mb-10">
+        <flux:heading size="2xl" class="text-gray-900 dark:text-gray-100">
+            {{ __('Énekrend javaslatok') }}
+        </flux:heading>
+        <flux:text class="text-gray-600 dark:text-gray-400 mt-2 max-w-3xl">
+            Kapcsolódó ünnepek alapján generált énekjavaslatok szekciók szerint. A javaslatok relevanciája a kapcsolódás erősségétől függ.
+        </flux:text>
+    </div>
 
     @if ($celebrationsWithScores->isEmpty())
-        <flux:callout color="zinc" icon="information-circle" class="mt-4">
+        <flux:callout color="amber" icon="information-circle" class="mt-8">
             <flux:callout.heading>Nincs találat</flux:callout.heading>
-            <flux:callout.text>A megadott kritériumokhoz nem található kapcsolódó ünnep.</flux:callout.text>
+            <flux:callout.text>A megadott kritériumokhoz nem található kapcsolódó ünnep. Próbálj meg más keresési feltételeket megadni.</flux:callout.text>
         </flux:callout>
     @else
-        <div class="mt-6 space-y-8">
-            <!-- Aggregated music by slot (most important) -->
-            <div>
-                <flux:heading size="lg" class="mb-4">Énekjavaslatok szekciók szerint</flux:heading>
-                <div class="space-y-6">
-                    @foreach ($slotMusicMap as $slotName => $musics)
-                        <div>
-                            <flux:heading size="md" class="mb-2">{{ $slotName }}</flux:heading>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <!-- Summary stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <flux:card class="p-5 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-800">
+                        <flux:icon name="calendar" class="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                    </div>
+                    <div>
+                        <flux:text class="text-sm text-gray-600 dark:text-gray-400">Kapcsolódó ünnepek</flux:text>
+                        <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">{{ $celebrationsWithScores->count() }}</flux:heading>
+                    </div>
+                </div>
+            </flux:card>
+            <flux:card class="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/20">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 rounded-full bg-emerald-100 dark:bg-emerald-800">
+                        <flux:icon name="musical-note" class="h-6 w-6 text-emerald-600 dark:text-emerald-300" />
+                    </div>
+                    <div>
+                        <flux:text class="text-sm text-gray-600 dark:text-gray-400">Összes énekjavaslat</flux:text>
+                        <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">
+                            {{ collect($slotMusicMap)->sum(fn($musics) => count($musics)) }}
+                        </flux:heading>
+                    </div>
+                </div>
+            </flux:card>
+            <flux:card class="p-5 bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/30 dark:to-violet-800/20">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 rounded-full bg-violet-100 dark:bg-violet-800">
+                        <flux:icon name="folder-git-2" class="h-6 w-6 text-violet-600 dark:text-violet-300" />
+                    </div>
+                    <div>
+                        <flux:text class="text-sm text-gray-600 dark:text-gray-400">Énekrendek</flux:text>
+                        <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">{{ $musicPlans->count() }}</flux:heading>
+                    </div>
+                </div>
+            </flux:card>
+        </div>
+
+        <!-- Tabs navigation -->
+        <div class="mb-8 border-b border-gray-200 dark:border-gray-700">
+            <nav class="-mb-px flex flex-wrap gap-2 md:gap-0 md:space-x-8" role="tablist" aria-label="Javaslatok szekciók">
+                <button
+                    wire:click="$set('activeTab', 'music')"
+                    role="tab"
+                    aria-selected="{{ $activeTab === 'music' ? 'true' : 'false' }}"
+                    aria-controls="music-panel"
+                    id="music-tab"
+                    @class([
+                        'py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap',
+                        'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400' => $activeTab === 'music',
+                        'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' => $activeTab !== 'music',
+                    ])
+                >
+                    <div class="flex items-center gap-2">
+                        <flux:icon name="musical-note" class="h-4 w-4" />
+                        <span class="hidden sm:inline">Énekjavaslatok</span>
+                        <span class="sm:hidden">Énekek</span>
+                        <flux:badge size="xs" color="zinc" class="ml-1">{{ count($slotMusicMap) }}</flux:badge>
+                    </div>
+                </button>
+                <button
+                    wire:click="$set('activeTab', 'celebrations')"
+                    role="tab"
+                    aria-selected="{{ $activeTab === 'celebrations' ? 'true' : 'false' }}"
+                    aria-controls="celebrations-panel"
+                    id="celebrations-tab"
+                    @class([
+                        'py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap',
+                        'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400' => $activeTab === 'celebrations',
+                        'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' => $activeTab !== 'celebrations',
+                    ])
+                >
+                    <div class="flex items-center gap-2">
+                        <flux:icon name="calendar" class="h-4 w-4" />
+                        <span class="hidden sm:inline">Ünnepek</span>
+                        <span class="sm:hidden">Ünn.</span>
+                        <flux:badge size="xs" color="zinc" class="ml-1">{{ $celebrationsWithScores->count() }}</flux:badge>
+                    </div>
+                </button>
+                <button
+                    wire:click="$set('activeTab', 'plans')"
+                    role="tab"
+                    aria-selected="{{ $activeTab === 'plans' ? 'true' : 'false' }}"
+                    aria-controls="plans-panel"
+                    id="plans-tab"
+                    @class([
+                        'py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap',
+                        'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400' => $activeTab === 'plans',
+                        'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' => $activeTab !== 'plans',
+                    ])
+                >
+                    <div class="flex items-center gap-2">
+                        <flux:icon name="folder-git-2" class="h-4 w-4" />
+                        <span class="hidden sm:inline">Énekrendek</span>
+                        <span class="sm:hidden">Rendek</span>
+                        <flux:badge size="xs" color="zinc" class="ml-1">{{ $musicPlans->count() }}</flux:badge>
+                    </div>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab content -->
+        <div>
+            <!-- Music suggestions tab -->
+            @if($activeTab === 'music')
+                <div class="space-y-10" role="tabpanel" id="music-panel" aria-labelledby="music-tab">
+                    @forelse ($slotMusicMap as $slotName => $musics)
+                        <div class="relative">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">{{ $slotName }}</flux:heading>
+                                    <flux:text class="text-gray-600 dark:text-gray-400">
+                                        {{ count($musics) }} énekjavaslat ebben a szekcióban
+                                    </flux:text>
+                                </div>
+                                <flux:badge color="blue" size="lg" class="font-semibold">
+                                    {{ $loop->iteration }}/{{ count($slotMusicMap) }}
+                                </flux:badge>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                                 @foreach ($musics as $musicItem)
                                     @php
                                         $music = $musicItem['music'];
@@ -202,75 +321,194 @@ new #[Layout('layouts::app.main')] class extends Component
                                         $sequence = $musicItem['music_sequence'];
                                         $collectionInfo = $musicItem['collection_info'];
                                     @endphp
-                                    <flux:card class="p-3 hover:shadow-md transition-shadow group">
-                                        <div class="flex items-start justify-between">
-                                            <div class="flex-1 min-w-0">
-                                                <flux:heading size="sm" class="truncate text-neutral-900 dark:text-neutral-100">{{ $music->title }}</flux:heading>
-                                                @if ($music->subtitle)
-                                                    <flux:text class="text-xs text-neutral-600 dark:text-neutral-400 truncate">{{ $music->subtitle }}</flux:text>
-                                                @endif
-                                                @if ($collectionInfo)
-                                                    <div class="mt-2">
-                                                        <flux:badge size="xs" color="zinc" class="font-mono text-xs">
-                                                            {{ $collectionInfo }}
-                                                        </flux:badge>
+                                    <flux:card class="p-5 hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700 group hover:border-blue-300 dark:hover:border-blue-600">
+                                        <div class="flex flex-col h-full">
+                                            <!-- Music header -->
+                                            <div class="flex items-start justify-between mb-3">
+                                                <div class="flex-1 min-w-0">
+                                                    <flux:heading size="lg" class="text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                                        {{ $music->title }}
+                                                    </flux:heading>
+                                                    @if ($music->subtitle)
+                                                        <flux:text class="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">
+                                                            {{ $music->subtitle }}
+                                                        </flux:text>
+                                                    @endif
+                                                </div>
+                                                <flux:icon name="music" class="h-5 w-5 text-blue-500 ml-2 flex-shrink-0" />
+                                            </div>
+
+                                            <!-- Collection info -->
+                                            @if ($collectionInfo)
+                                                <div class="mb-4">
+                                                    <flux:badge size="sm" color="zinc" class="font-mono text-xs">
+                                                        {{ $collectionInfo }}
+                                                    </flux:badge>
+                                                </div>
+                                            @endif
+
+                                            <!-- Metadata -->
+                                            <div class="mt-auto space-y-3">
+                                                <div class="flex items-center justify-between text-sm">
+                                                    <div class="flex items-center gap-2">
+                                                        <flux:icon name="star" class="h-4 w-4 text-amber-500" />
+                                                        <span class="text-gray-700 dark:text-gray-300">Relevancia</span>
                                                     </div>
-                                                @endif
-                                                <div class="mt-2 flex items-center gap-2 flex-wrap">
-                                                    <flux:badge size="xs" color="blue" title="Kapcsolódó ünnep értéke">Érték: {{ $score }}</flux:badge>
-                                                    <flux:badge size="xs" color="zinc" title="Sorszám a szekcióban">#{{ $sequence }}</flux:badge>
+                                                    <flux:badge size="sm" color="{{ $score >= 80 ? 'green' : ($score >= 50 ? 'blue' : 'zinc') }}">
+                                                        {{ $score }}%
+                                                    </flux:badge>
+                                                </div>
+                                                <div class="flex items-center justify-between text-sm">
+                                                    <div class="flex items-center gap-2">
+                                                        <flux:icon name="list" class="h-4 w-4 text-gray-500" />
+                                                        <span class="text-gray-700 dark:text-gray-300">Sorszám</span>
+                                                    </div>
+                                                    <flux:badge size="sm" color="zinc">#{{ $sequence }}</flux:badge>
                                                 </div>
                                             </div>
-                                            <flux:icon name="musical-note" class="h-5 w-5 text-blue-500 ml-2 flex-shrink-0" variant="mini" />
+
+                                            <!-- Actions -->
+                                            <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 flex justify-between">
+                                                <flux:button size="sm" variant="ghost" icon="eye" class="text-gray-600 dark:text-gray-400">
+                                                    Részletek
+                                                </flux:button>
+                                                <flux:button size="sm" variant="primary" icon="plus" class="ml-auto">
+                                                    Hozzáadás
+                                                </flux:button>
+                                            </div>
                                         </div>
                                     </flux:card>
                                 @endforeach
                             </div>
                         </div>
-                    @endforeach
+                    @empty
+                        <flux:callout color="zinc" icon="information-circle">
+                            <flux:callout.heading>Nincs énekjavaslat</flux:callout.heading>
+                            <flux:callout.text>Ehhez a szekcióhoz még nem tartoznak énekjavaslatok.</flux:callout.text>
+                        </flux:callout>
+                    @endforelse
                 </div>
-            </div>
+            @endif
 
-            <!-- Celebrations with scores -->
-            <div>
-                <flux:heading size="lg" class="mb-4">Kapcsolódó ünnepek ({{ $celebrationsWithScores->count() }})</flux:heading>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Celebrations tab -->
+            @if($activeTab === 'celebrations')
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" role="tabpanel" id="celebrations-panel" aria-labelledby="celebrations-tab">
                     @foreach ($celebrationsWithScores as $item)
-                        <flux:card class="p-4">
-                            <flux:heading size="md">{{ $item['celebration']->name }}</flux:heading>
-                            <div class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                                <div>{{ $item['celebration']->actual_date->translatedFormat('Y. m. d.') }}</div>
-                                <div>Érték: <flux:badge color="blue">{{ $item['score'] }}</flux:badge></div>
-                            </div>
-                        </flux:card>
-                    @endforeach
-                </div>
-            </div>
-
-            <!-- Music plans (optional, can be collapsed) -->
-            <div>
-                <flux:heading size="lg" class="mb-4">Énekrendek ({{ $musicPlans->count() }})</flux:heading>
-                <div class="space-y-3">
-                    @foreach ($musicPlans as $plan)
-                        <flux:card class="p-4">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <flux:heading size="sm">{{ $plan->celebrationName ?? 'Ismeretlen' }}</flux:heading>
-                                    <div class="text-sm text-neutral-600 dark:text-neutral-400">
-                                        {{ $plan->actual_date?->translatedFormat('Y. m. d.') ?? 'Nincs dátum' }}
-                                        • {{ $plan->realm?->name ?? 'Nincs realm' }}
-                                        • {{ $plan->is_published ? 'Közzétéve' : 'Privát' }}
-                                    </div>
-                                </div>
-                                <flux:badge color="{{ $plan->is_published ? 'green' : 'zinc' }}">
-                                    {{ $plan->is_published ? 'Közzétéve' : 'Privát' }}
+                        @php
+                            $celebration = $item['celebration'];
+                            $score = $item['score'];
+                            $scoreColor = $score >= 80 ? 'green' : ($score >= 50 ? 'blue' : 'zinc');
+                        @endphp
+                        <flux:card class="p-5 hover:shadow-lg transition-shadow">
+                            <div class="flex items-start justify-between mb-4">
+                                <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">
+                                    {{ $celebration->name }}
+                                </flux:heading>
+                                <flux:badge color="{{ $scoreColor }}" size="lg" class="font-semibold">
+                                    {{ $score }}%
                                 </flux:badge>
                             </div>
+
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-3 text-sm">
+                                    <flux:icon name="calendar" class="h-4 w-4 text-gray-500" />
+                                    <span class="text-gray-700 dark:text-gray-300">
+                                        {{ $celebration->actual_date->translatedFormat('Y. F j.') }}
+                                    </span>
+                                </div>
+                                @if($celebration->liturgical_year)
+                                    <div class="flex items-center gap-3 text-sm">
+                                        <flux:icon name="book-open-text" class="h-4 w-4 text-gray-500" />
+                                        <span class="text-gray-700 dark:text-gray-300">
+                                            {{ $celebration->liturgical_year }}
+                                        </span>
+                                    </div>
+                                @endif
+                                @if($celebration->year_letter)
+                                    <div class="flex items-center gap-3 text-sm">
+                                        <flux:icon name="type" class="h-4 w-4 text-gray-500" />
+                                        <span class="text-gray-700 dark:text-gray-300">
+                                            {{ $celebration->year_letter }}
+                                            @if($celebration->year_parity)
+                                                ({{ $celebration->year_parity }})
+                                            @endif
+                                        </span>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                <div class="flex justify-between items-center">
+                                    <flux:text class="text-xs text-gray-500">
+                                        {{ $celebration->musicPlans()->count() }} énekrend
+                                    </flux:text>
+                                    <flux:button size="sm" variant="ghost" icon="arrow-right">
+                                        Megtekintés
+                                    </flux:button>
+                                </div>
+                            </div>
                         </flux:card>
                     @endforeach
                 </div>
-            </div>
+            @endif
+
+            <!-- Music plans tab -->
+            @if($activeTab === 'plans')
+                <div class="space-y-5" role="tabpanel" id="plans-panel" aria-labelledby="plans-tab">
+                    @foreach ($musicPlans as $plan)
+                        <flux:card class="p-5 hover:shadow-lg transition-shadow">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">
+                                            {{ $plan->celebrationName ?? 'Ismeretlen ünnep' }}
+                                        </flux:heading>
+                                        <flux:badge color="{{ $plan->is_published ? 'green' : 'zinc' }}" size="sm">
+                                            {{ $plan->is_published ? 'Közzétéve' : 'Privát' }}
+                                        </flux:badge>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        <div class="flex items-center gap-2">
+                                            <flux:icon name="calendar" class="h-4 w-4 text-gray-500" />
+                                            <span class="text-gray-700 dark:text-gray-300">
+                                                {{ $plan->actual_date?->translatedFormat('Y. m. d.') ?? 'Nincs dátum' }}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <flux:icon name="map-pin" class="h-4 w-4 text-gray-500" />
+                                            <span class="text-gray-700 dark:text-gray-300">
+                                                {{ $plan->realm?->name ?? 'Nincs realm' }}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <flux:icon name="user" class="h-4 w-4 text-gray-500" />
+                                            <span class="text-gray-700 dark:text-gray-300">
+                                                {{ $plan->user?->name ?? 'Ismeretlen' }}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <flux:icon name="music" class="h-4 w-4 text-gray-500" />
+                                            <span class="text-gray-700 dark:text-gray-300">
+                                                {{ $plan->musicAssignments->count() }} ének
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-3">
+                                    <flux:button size="sm" variant="ghost" icon="eye">
+                                        Megtekintés
+                                    </flux:button>
+                                    <flux:button size="sm" variant="primary" icon="clipboard-copy">
+                                        Másolás
+                                    </flux:button>
+                                </div>
+                            </div>
+                        </flux:card>
+                    @endforeach
+                </div>
+            @endif
         </div>
     @endif
-</div>
 </div>
