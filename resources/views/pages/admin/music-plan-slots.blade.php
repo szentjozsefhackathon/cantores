@@ -35,10 +35,38 @@
         <!-- Slots Table -->
         <flux:table>
             <flux:table.columns>
-                <flux:table.column>{{ __('Name') }}</flux:table.column>
-                <flux:table.column>{{ __('Description') }}</flux:table.column>
-                <flux:table.column>{{ __('Priority') }}</flux:table.column>
-                <flux:table.column>{{ __('Used in Templates') }}</flux:table.column>
+                <flux:table.column
+                    sortable
+                    :sorted="$sortBy === 'name'"
+                    :direction="$sortDirection"
+                    wire:click="sort('name')"
+                >
+                    {{ __('Name') }}
+                </flux:table.column>
+                <flux:table.column
+                    sortable
+                    :sorted="$sortBy === 'description'"
+                    :direction="$sortDirection"
+                    wire:click="sort('description')"
+                >
+                    {{ __('Description') }}
+                </flux:table.column>
+                <flux:table.column
+                    sortable
+                    :sorted="$sortBy === 'priority'"
+                    :direction="$sortDirection"
+                    wire:click="sort('priority')"
+                >
+                    {{ __('Priority') }}
+                </flux:table.column>
+                <flux:table.column
+                    sortable
+                    :sorted="$sortBy === 'templates_count'"
+                    :direction="$sortDirection"
+                    wire:click="sort('templates_count')"
+                >
+                    {{ __('Used in Templates') }}
+                </flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
             

@@ -22,6 +22,11 @@ class MusicPlanSlots extends Component
 
     public ?MusicPlanSlot $editingSlot = null;
 
+    // Sorting
+    public string $sortBy = 'name';
+
+    public string $sortDirection = 'asc';
+
     // Form fields
     public string $name = '';
 
@@ -38,6 +43,19 @@ class MusicPlanSlots extends Component
     }
 
     /**
+     * Sort the table by the given column.
+     */
+    public function sort(string $column): void
+    {
+        if ($this->sortBy === $column) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortBy = $column;
+            $this->sortDirection = 'asc';
+        }
+    }
+
+    /**
      * Render the component.
      */
     public function render(): View
@@ -47,11 +65,13 @@ class MusicPlanSlots extends Component
                 ->orWhere('description', 'ilike', "%{$search}%");
         })
             ->withCount('templates')
-            ->orderBy('name')
+            ->orderBy($this->sortBy, $this->sortDirection)
             ->paginate(20);
 
         return view('pages.admin.music-plan-slots', [
             'musicPlanSlots' => $slots,
+            'sortBy' => $this->sortBy,
+            'sortDirection' => $this->sortDirection,
         ]);
     }
 
