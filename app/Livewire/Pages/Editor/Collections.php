@@ -40,6 +40,10 @@ class Collections extends Component
 
     public array $selectedRealms = [];
 
+    public string $sortBy = 'title';
+
+    public string $sortDirection = 'asc';
+
     /**
      * Mount the component.
      */
@@ -66,6 +70,21 @@ class Collections extends Component
     }
 
     /**
+     * Sort the table by a column.
+     */
+    public function sort(string $column): void
+    {
+        if ($this->sortBy === $column) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortBy = $column;
+            $this->sortDirection = 'asc';
+        }
+
+        $this->resetPage();
+    }
+
+    /**
      * Get all realms for selection.
      */
     public function realms(): \Illuminate\Database\Eloquent\Collection
@@ -86,7 +105,7 @@ class Collections extends Component
             ->forCurrentRealm()
             ->with(['realms'])
             ->withCount('music')
-            ->orderBy('title')
+            ->orderBy($this->sortBy, $this->sortDirection)
             ->paginate(10);
 
         return view('pages.editor.collections', [

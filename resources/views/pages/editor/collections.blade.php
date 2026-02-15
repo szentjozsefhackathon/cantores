@@ -42,9 +42,9 @@
         <!-- Collections Table -->
         <flux:table>
             <flux:table.columns>
-                <flux:table.column>{{ __('Title') }}</flux:table.column>
-                <flux:table.column>{{ __('Abbreviation') }}</flux:table.column>
-                <flux:table.column>{{ __('Author') }}</flux:table.column>
+                <flux:table.column sortable :sorted="$sortBy === 'title'" :direction="$sortDirection" wire:click="sort('title')">{{ __('Title') }}</flux:table.column>
+                <flux:table.column sortable :sorted="$sortBy === 'abbreviation'" :direction="$sortDirection" wire:click="sort('abbreviation')">{{ __('Abbreviation') }}</flux:table.column>
+                <flux:table.column sortable :sorted="$sortBy === 'author'" :direction="$sortDirection" wire:click="sort('author')">{{ __('Author') }}</flux:table.column>
                 <flux:table.column>{{ __('Music Pieces') }}</flux:table.column>
                 <flux:table.column>{{ __('Realms') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
