@@ -204,7 +204,7 @@
                             </flux:modal>
 
                             @forelse($planSlots as $slot)
-                            <flux:card class="p-2 flex items-start gap-4">
+                            <flux:card class="p-2 flex items-start gap-4 {{ count($slot['assignments']) > 0 ? 'border-4' : '' }}">
                                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
                                     {{ $slot['sequence'] }}
                                 </div>
