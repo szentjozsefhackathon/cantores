@@ -281,7 +281,7 @@ new class extends Component
             </x-slot>
         </flux:callout>
         @else
-        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             @foreach ($celebrations as $celebration)
             @php
             // Determine border color based on colorText
