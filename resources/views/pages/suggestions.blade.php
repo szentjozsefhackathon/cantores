@@ -230,73 +230,9 @@ new #[Layout('layouts::app.main')] class extends Component
             <flux:callout.text>A megadott kritériumokhoz nem található kapcsolódó ünnep. Próbálj meg más keresési feltételeket megadni.</flux:callout.text>
         </flux:callout>
     @else
-        <!-- Tabs navigation -->
-        <div class="mb-8 border-b border-gray-200 dark:border-gray-700">
-            <nav class="-mb-px flex flex-wrap gap-2 md:gap-0 md:space-x-8" role="tablist" aria-label="Javaslatok szekciók">
-                <button
-                    wire:click="$set('activeTab', 'music')"
-                    role="tab"
-                    aria-selected="{{ $activeTab === 'music' ? 'true' : 'false' }}"
-                    aria-controls="music-panel"
-                    id="music-tab"
-                    @class([
-                        'py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap',
-                        'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400' => $activeTab === 'music',
-                        'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' => $activeTab !== 'music',
-                    ])
-                >
-                    <div class="flex items-center gap-2">
-                        <flux:icon name="musical-note" class="h-4 w-4" />
-                        <span class="hidden sm:inline">Énekjavaslatok</span>
-                        <span class="sm:hidden">Énekek</span>
-                        <flux:badge size="xs" color="zinc" class="ml-1">{{ count($slotMusicMap) }}</flux:badge>
-                    </div>
-                </button>
-                <button
-                    wire:click="$set('activeTab', 'celebrations')"
-                    role="tab"
-                    aria-selected="{{ $activeTab === 'celebrations' ? 'true' : 'false' }}"
-                    aria-controls="celebrations-panel"
-                    id="celebrations-tab"
-                    @class([
-                        'py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap',
-                        'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400' => $activeTab === 'celebrations',
-                        'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' => $activeTab !== 'celebrations',
-                    ])
-                >
-                    <div class="flex items-center gap-2">
-                        <flux:icon name="calendar" class="h-4 w-4" />
-                        <span class="hidden sm:inline">Ünnepek</span>
-                        <span class="sm:hidden">Ünn.</span>
-                        <flux:badge size="xs" color="zinc" class="ml-1">{{ $celebrationsWithScores->count() }}</flux:badge>
-                    </div>
-                </button>
-                <button
-                    wire:click="$set('activeTab', 'plans')"
-                    role="tab"
-                    aria-selected="{{ $activeTab === 'plans' ? 'true' : 'false' }}"
-                    aria-controls="plans-panel"
-                    id="plans-tab"
-                    @class([
-                        'py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap',
-                        'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400' => $activeTab === 'plans',
-                        'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300' => $activeTab !== 'plans',
-                    ])
-                >
-                    <div class="flex items-center gap-2">
-                        <flux:icon name="folder-git-2" class="h-4 w-4" />
-                        <span class="hidden sm:inline">Énekrendek</span>
-                        <span class="sm:hidden">Rendek</span>
-                        <flux:badge size="xs" color="zinc" class="ml-1">{{ $musicPlans->count() }}</flux:badge>
-                    </div>
-                </button>
-            </nav>
-        </div>
-
-        <!-- Tab content -->
-        <div>
-            <!-- Music suggestions tab -->
-            @if($activeTab === 'music')
+        <!-- Tabs navigation with mary-ui -->
+        <x-mary-tabs wire:model="activeTab" class="mb-8">
+            <x-mary-tab name="music" icon="o-musical-note" label="Énekjavaslatok ({{ count($slotMusicMap) }})">
                 <div class="space-y-10" role="tabpanel" id="music-panel" aria-labelledby="music-tab">
                     @forelse ($slotMusicMap as $slotName => $musics)
                         <div class="relative">
@@ -331,10 +267,9 @@ new #[Layout('layouts::app.main')] class extends Component
                         </flux:callout>
                     @endforelse
                 </div>
-            @endif
+            </x-mary-tab>
 
-            <!-- Celebrations tab -->
-            @if($activeTab === 'celebrations')
+            <x-mary-tab name="celebrations" icon="o-calendar" label="Ünnepek ({{ $celebrationsWithScores->count() }})">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" role="tabpanel" id="celebrations-panel" aria-labelledby="celebrations-tab">
                     @foreach ($celebrationsWithScores as $item)
                         @php
@@ -393,10 +328,9 @@ new #[Layout('layouts::app.main')] class extends Component
                         </flux:card>
                     @endforeach
                 </div>
-            @endif
+            </x-mary-tab>
 
-            <!-- Music plans tab -->
-            @if($activeTab === 'plans')
+            <x-mary-tab name="plans" icon="o-folder" label="Énekrendek ({{ $musicPlans->count() }})">
                 <div class="space-y-5" role="tabpanel" id="plans-panel" aria-labelledby="plans-tab">
                     @foreach ($musicPlans as $plan)
                         <flux:card class="p-5 hover:shadow-lg transition-shadow">
@@ -451,7 +385,7 @@ new #[Layout('layouts::app.main')] class extends Component
                         </flux:card>
                     @endforeach
                 </div>
-            @endif
-        </div>
+            </x-mary-tab>
+        </x-mary-tabs>
     @endif
 </div>
