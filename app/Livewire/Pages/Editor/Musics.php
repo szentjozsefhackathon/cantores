@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages\Editor;
 
+use App\Facades\RealmContext;
 use App\Models\Collection;
 use App\Models\Music;
 use Illuminate\Contracts\View\View;
@@ -149,7 +150,7 @@ class Musics extends Component
         ]);
 
         // Attach current realm if user has one selected
-        $realmId = Auth::user()->current_realm_id;
+        $realmId = RealmContext::getId();
         if ($realmId) {
             $music->realms()->attach($realmId);
         }

@@ -123,9 +123,25 @@ test('scope returns all when user has no current realm', function () {
     expect($plans)->toHaveCount(1);
 });
 
-test('scope returns empty when user is not authenticated', function () {
+test('scope returns all when user is not authenticated and no session realm', function () {
     MusicPlan::factory()->create(['realm_id' => $this->organist->id]);
 
     $plans = MusicPlan::forCurrentRealm()->get();
-    expect($plans)->toHaveCount(0);
+    expect($plans)->toHaveCount(1);
+});
+
+test('scope filters by session realm when user is not authenticated', function () {
+    // Set session realm
+    session(['current_realm_id' => $this->organist->id]);
+
+    // Create plans for different realms
+    $plan1 = MusicPlan::factory()->create(['realm_id' => $this->organist->id]);
+    $plan2 = MusicPlan::factory()->create(['realm_id' => $this->guitarist->id]);
+    $plan3 = MusicPlan::factory()->create(['realm_id' => null]);
+
+    $plans = MusicPlan::forCurrentRealm()->get();
+    expect($plans)->toHaveCount(2); // organist realm + null realm
+    expect($plans->pluck('id')->toArray())->toContain($plan1->id);
+    expect($plans->pluck('id')->toArray())->toContain($plan3->id);
+    expect($plans->pluck('id')->toArray())->not->toContain($plan2->id);
 });

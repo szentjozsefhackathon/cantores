@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Facades\RealmContext;
 use App\Models\Celebration;
 use App\Models\MusicPlan;
 use App\Services\CelebrationSearchService;
@@ -56,7 +57,7 @@ new #[Layout('layouts::app.main')] class extends Component
     protected function fetchMusicPlans(array $celebrationIds): Collection
     {
         $user = Auth::user();
-        $realmId = $user?->current_realm_id;
+        $realmId = RealmContext::getId();
 
         // Get music plans that have at least one of the celebrations
         $query = MusicPlan::whereHas('celebrations', function ($q) use ($celebrationIds) {

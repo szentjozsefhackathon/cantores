@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use OwenIt\Auditing\Contracts\Auditable;
 
@@ -69,23 +68,17 @@ class Collection extends Model implements Auditable
      */
     public function scopeForCurrentRealm($query)
     {
-        $user = Auth::user();
-        if (! $user) {
-            // No authenticated user, return empty
-            $query->whereRaw('1 = 0');
+        $realmId = \App\Facades\RealmContext::getId();
 
-            return;
-        }
-
-        $realmId = $user->current_realm_id;
-        if ($realmId) {
+        if ($realmId !== null) {
+            // Filter by current realm (including collections without realms)
             $query->where(function ($q) use ($realmId) {
                 $q->whereHas('realms', function ($subQ) use ($realmId) {
                     $subQ->where('realms.id', $realmId);
                 })->orWhereDoesntHave('realms');
             });
         }
-        // If no realm ID, show all collections (no filtering)
+        // If $realmId is null, no filtering applied (show all collections)
     }
 
     /**

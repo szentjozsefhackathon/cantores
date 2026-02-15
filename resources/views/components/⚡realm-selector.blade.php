@@ -1,8 +1,7 @@
 <?php
 
+use App\Facades\RealmContext;
 use App\Models\Realm;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
 use Livewire\Component;
 
 new class extends Component
@@ -11,11 +10,7 @@ new class extends Component
 
     public function mount(): void
     {
-        if (Auth::check()) {
-            $this->selectedRealmId = Auth::user()->current_realm_id;
-        } else {
-            $this->selectedRealmId = Session::get('current_realm_id');
-        }
+        $this->selectedRealmId = RealmContext::getId();
     }
 
     public function realms()
@@ -30,13 +25,7 @@ new class extends Component
             $value = null;
         }
 
-        if (Auth::check()) {
-            $user = Auth::user();
-            $user->current_realm_id = $value;
-            $user->save();
-        } else {
-            Session::put('current_realm_id', $value);
-        }
+        RealmContext::set($value);
 
         // Dispatch event to notify other components
         $this->dispatch('realm-changed', realmId: $value);

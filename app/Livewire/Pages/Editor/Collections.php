@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages\Editor;
 
+use App\Facades\RealmContext;
 use App\Models\Collection;
 use App\Models\Realm;
 use Illuminate\Contracts\View\View;
@@ -121,7 +122,7 @@ class Collections extends Component
         $this->authorize('create', Collection::class);
         $this->resetForm();
         // Pre-select the user's current realm
-        $realmId = Auth::user()->current_realm_id;
+        $realmId = RealmContext::getId();
         if ($realmId) {
             $this->selectedRealms = [$realmId];
         }

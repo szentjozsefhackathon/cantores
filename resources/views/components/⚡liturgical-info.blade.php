@@ -1,5 +1,6 @@
 <?php
 
+use App\Facades\RealmContext;
 use App\Models\Celebration;
 use App\Models\MusicPlan;
 use App\Models\Realm;
@@ -98,7 +99,7 @@ new class extends Component
         // Create MusicPlan without celebration fields
         $musicPlan = MusicPlan::create([
             'user_id' => $user->id,
-            'realm_id' => $user->current_realm_id,
+            'realm_id' => RealmContext::getId(),
             'is_published' => false,
         ]);
 
@@ -138,7 +139,7 @@ new class extends Component
             ->with(['user', 'realm', 'celebrations']);
 
         // Filter by current realm
-        $realmId = $user->current_realm_id;
+        $realmId = RealmContext::getId();
         if ($realmId !== null) {
             // Show plans that belong to the current realm OR have no realm (belongs to all)
             $query->where(function ($q) use ($realmId) {
@@ -181,7 +182,7 @@ new class extends Component
         }
 
         // Determine realm filter
-        $realmId = $user ? $user->current_realm_id : Session::get('current_realm_id');
+        $realmId = RealmContext::getId();
         if ($realmId !== null) {
             // Show plans that belong to the current realm OR have no realm (belongs to all)
             $query->where(function ($q) use ($realmId) {
@@ -223,7 +224,7 @@ new class extends Component
 
         $celebrationIds = $related->pluck('id')->toArray();
         $user = Auth::user();
-        $realmId = $user ? $user->current_realm_id : Session::get('current_realm_id');
+        $realmId = RealmContext::getId();
 
         $query = MusicPlan::whereHas('celebrations', function ($q) use ($celebrationIds) {
             $q->whereIn('celebrations.id', $celebrationIds);

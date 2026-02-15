@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Facades\RealmContext;
 use App\Models\MusicPlan;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
@@ -37,7 +38,7 @@ class MusicPlans extends Component
             ->orderBy('created_at', 'desc');
 
         // Filter by current realm
-        $realmId = Auth::user()->current_realm_id;
+        $realmId = RealmContext::getId();
         if ($realmId !== null) {
             // Show plans that belong to the current realm OR have no realm (belongs to all)
             $query->where(function ($q) use ($realmId) {

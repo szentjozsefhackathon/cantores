@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Auth;
 
 class MusicPlan extends Model
 {
@@ -128,19 +127,16 @@ class MusicPlan extends Model
      */
     public function scopeForCurrentRealm($query)
     {
-        $user = Auth::user();
-        if (! $user) {
-            // No authenticated user, return empty
-            return $query->whereRaw('1 = 0');
-        }
+        $realmId = \App\Facades\RealmContext::getId();
 
-        $realmId = $user->current_realm_id;
-        if ($realmId) {
-            return $query->where('realm_id', $realmId);
+        if ($realmId !== null) {
+            // Show plans that belong to the current realm OR have no realm (belongs to all)
+            $query->where(function ($q) use ($realmId) {
+                $q->whereNull('realm_id')
+                    ->orWhere('realm_id', $realmId);
+            });
         }
-
-        // If no realm ID, show all music plans (no filtering)
-        return $query;
+        // If $realmId is null, no filtering applied (show all plans)
     }
 
     /**
