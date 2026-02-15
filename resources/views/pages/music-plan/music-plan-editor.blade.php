@@ -33,10 +33,6 @@ new class extends Component
 
     public bool $isPublished = false;
 
-    public string $musicSearch = '';
-
-    public array $musicSearchResults = [];
-
     public ?int $selectedSlotForMusic = null;
 
     public bool $showMusicSearchModal = false;
@@ -442,8 +438,6 @@ new class extends Component
     public function openMusicSearchModal(int $pivotId): void
     {
         $this->selectedSlotForMusic = $pivotId;
-        $this->musicSearch = '';
-        $this->musicSearchResults = [];
         $this->showMusicSearchModal = true;
     }
 
@@ -451,39 +445,8 @@ new class extends Component
     {
         $this->showMusicSearchModal = false;
         $this->selectedSlotForMusic = null;
-        $this->musicSearch = '';
-        $this->musicSearchResults = [];
     }
 
-    public function updatedMusicSearch(string $value): void
-    {
-        if (strlen($value) < 2) {
-            $this->musicSearchResults = [];
-
-            return;
-        }
-
-        $query = \App\Models\Music::query()
-            ->where(function ($query) use ($value) {
-                $query->where('title', 'ilike', "%{$value}%")
-                    ->orWhere('subtitle', 'ilike', "%{$value}%")
-                    ->orWhere('custom_id', 'ilike', "%{$value}%");
-            })
-            ->limit(10);
-
-        $this->musicSearchResults = $query
-            ->orderBy('title')
-            ->get()
-            ->map(function ($music) {
-                return [
-                    'id' => $music->id,
-                    'title' => $music->title,
-                    'subtitle' => $music->subtitle,
-                    'custom_id' => $music->custom_id,
-                ];
-            })
-            ->toArray();
-    }
 
     public function assignMusicToSlot(int $musicId): void
     {
@@ -784,63 +747,7 @@ new class extends Component
                             <flux:modal wire:model="showMusicSearchModal" size="lg">
                                 <flux:heading size="lg">Zene keresése és hozzáadása</flux:heading>
 
-                                <div class="mt-4">
-                                    <flux:field>
-                                        <flux:input
-                                            type="text"
-                                            wire:model.live="musicSearch"
-                                            placeholder="Írd be a zene címét, alcímét vagy azonosítóját..." />
-                                    </flux:field>
-                                </div>
-
-                                <div class="mt-4 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
-                                    @if(count($musicSearchResults) > 0)
-                                    <div class="divide-y divide-neutral-200 dark:divide-neutral-700">
-                                        @foreach($musicSearchResults as $music)
-                                        <button
-                                            type="button"
-                                            wire:click="assignMusicToSlot({{ $music['id'] }})"
-                                            wire:loading.attr="disabled"
-                                            wire:loading.class="opacity-50 cursor-not-allowed"
-                                            class="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-between">
-                                            <div class="flex-1">
-                                                <div class="font-medium">{{ $music['title'] }}</div>
-                                                @if($music['subtitle'])
-                                                <div class="text-sm text-neutral-600 dark:text-neutral-400 mt-1">{{ $music['subtitle'] }}</div>
-                                                @endif
-                                                @if($music['custom_id'])
-                                                <div class="text-sm text-neutral-500 dark:text-neutral-500">ID: {{ $music['custom_id'] }}</div>
-                                                @endif
-                                            </div>
-                                            <div class="relative h-5 w-5 ml-4">
-                                                <flux:icon name="plus" class="h-5 w-5 text-neutral-900 dark:text-neutral-100" wire:loading.remove wire:target="assignMusicToSlot" />
-                                                <flux:icon.loading
-                                                    class="h-5 w-5 text-neutral-900 dark:text-neutral-100 absolute inset-0"
-                                                    wire:loading
-                                                    wire:target="assignMusicToSlot"
-                                                />
-                                            </div>
-                                        </button>
-                                        @endforeach
-                                    </div>
-                                    @elseif(strlen($musicSearch) >= 2)
-                                    <div class="p-8 text-center">
-                                        <flux:icon name="inbox" class="h-12 w-12 text-neutral-400 mx-auto" />
-                                        <flux:heading size="md" class="mt-4">Nincs találat</flux:heading>
-                                        <flux:text class="mt-2 text-neutral-600 dark:text-neutral-400">
-                                            Nincs zene a keresési feltételeknek megfelelően.
-                                        </flux:text>
-                                    </div>
-                                    @else
-                                    <div class="p-8 text-center">
-                                        <flux:icon name="magnifying-glass" class="h-12 w-12 text-neutral-400 mx-auto" />
-                                        <flux:heading size="md" class="mt-4">Írj be legalább 2 karaktert</flux:heading>
-                                        <flux:text class="mt-2 text-neutral-600 dark:text-neutral-400">
-                                            Kezdj el gépelni a zene címében, alcímében vagy azonosítójában.
-                                        </flux:text>
-                                    </div>
-                                    @endif
-                                </div>
+                                <livewire:music-search selectable="true" wire:music-selected="assignMusicToSlot" />
 
                                 <div class="mt-6 flex justify-end">
                                     <flux:button
