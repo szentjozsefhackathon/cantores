@@ -27,6 +27,37 @@ class CelebrationFactory extends Factory
             'readings_code' => $this->faker->lexify('???###'),
             'year_letter' => $this->faker->randomElement(['A', 'B', 'C']),
             'year_parity' => $this->faker->randomElement(['I', 'II']),
+            'user_id' => null,
+            'is_custom' => false,
         ];
+    }
+
+    /**
+     * Indicate that the celebration is a custom celebration.
+     */
+    public function custom(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_custom' => true,
+            'user_id' => \App\Models\User::factory(),
+            'season' => null,
+            'week' => null,
+            'day' => null,
+            'season_text' => null,
+            'readings_code' => null,
+            'year_letter' => null,
+            'year_parity' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the celebration is a liturgical celebration (non-custom).
+     */
+    public function liturgical(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_custom' => false,
+            'user_id' => null,
+        ]);
     }
 }

@@ -61,6 +61,26 @@ class MusicPlan extends Model
     }
 
     /**
+     * Get the liturgical celebrations (non-custom) for this music plan.
+     */
+    public function liturgicalCelebrations(): BelongsToMany
+    {
+        return $this->belongsToMany(Celebration::class, 'celebration_music_plan')
+            ->where('is_custom', false)
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the custom celebrations for this music plan.
+     */
+    public function customCelebrations(): BelongsToMany
+    {
+        return $this->belongsToMany(Celebration::class, 'celebration_music_plan')
+            ->where('is_custom', true)
+            ->withTimestamps();
+    }
+
+    /**
      * Get the slots for this music plan.
      */
     public function slots(): BelongsToMany

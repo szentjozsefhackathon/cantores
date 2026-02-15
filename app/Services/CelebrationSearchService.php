@@ -37,7 +37,7 @@ class CelebrationSearchService
      */
     public function findRelated(array $criteria): Collection
     {
-        // Fetch all celebrations (excluding the exact match if an ID is provided?)
+        // Fetch all celebrations (including custom celebrations)
         $query = Celebration::query();
 
         // Optionally, we could filter out the exact match if we have a celebration_key

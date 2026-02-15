@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Celebration extends Model
@@ -12,6 +13,7 @@ class Celebration extends Model
 
     /**
      * The attributes that are mass assignable.
+     * Celebration key is not an ID, but the sequence number of the celebration on the given date.
      *
      * @var list<string>
      */
@@ -26,6 +28,8 @@ class Celebration extends Model
         'readings_code',
         'year_letter',
         'year_parity',
+        'user_id',
+        'is_custom',
     ];
 
     /**
@@ -41,6 +45,7 @@ class Celebration extends Model
             'season' => 'integer',
             'week' => 'integer',
             'day' => 'integer',
+            'is_custom' => 'boolean',
         ];
     }
 
@@ -51,6 +56,40 @@ class Celebration extends Model
     {
         return $this->belongsToMany(MusicPlan::class, 'celebration_music_plan')
             ->withTimestamps();
+    }
+
+    /**
+     * Get the user that owns this custom celebration.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Scope a query to only include liturgical celebrations (non-custom).
+     */
+    public function scopeLiturgical($query)
+    {
+        return $query->where('is_custom', false);
+    }
+
+    /**
+     * Scope a query to only include custom celebrations.
+     */
+    public function scopeCustom($query)
+    {
+        return $query->where('is_custom', true);
+    }
+
+    /**
+     * Scope a query to only include celebrations belonging to a specific user.
+     */
+    public function scopeForUser($query, $user)
+    {
+        $userId = $user instanceof User ? $user->id : $user;
+
+        return $query->where('user_id', $userId);
     }
 
     /**
