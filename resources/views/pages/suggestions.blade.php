@@ -202,7 +202,7 @@ new #[Layout('layouts::app.main')] class extends Component
 <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
     <!-- Page header -->
     <div class="mb-10">
-        <flux:heading size="2xl" class="text-gray-900 dark:text-gray-100">
+        <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">
             {{ __('Énekrend javaslatok') }}
         </flux:heading>
         <flux:text class="text-gray-600 dark:text-gray-400 mt-2 max-w-3xl">
@@ -216,45 +216,6 @@ new #[Layout('layouts::app.main')] class extends Component
             <flux:callout.text>A megadott kritériumokhoz nem található kapcsolódó ünnep. Próbálj meg más keresési feltételeket megadni.</flux:callout.text>
         </flux:callout>
     @else
-        <!-- Summary stats -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <flux:card class="p-5 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20">
-                <div class="flex items-center gap-4">
-                    <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-800">
-                        <flux:icon name="calendar" class="h-6 w-6 text-blue-600 dark:text-blue-300" />
-                    </div>
-                    <div>
-                        <flux:text class="text-sm text-gray-600 dark:text-gray-400">Kapcsolódó ünnepek</flux:text>
-                        <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">{{ $celebrationsWithScores->count() }}</flux:heading>
-                    </div>
-                </div>
-            </flux:card>
-            <flux:card class="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/20">
-                <div class="flex items-center gap-4">
-                    <div class="p-3 rounded-full bg-emerald-100 dark:bg-emerald-800">
-                        <flux:icon name="musical-note" class="h-6 w-6 text-emerald-600 dark:text-emerald-300" />
-                    </div>
-                    <div>
-                        <flux:text class="text-sm text-gray-600 dark:text-gray-400">Összes énekjavaslat</flux:text>
-                        <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">
-                            {{ collect($slotMusicMap)->sum(fn($musics) => count($musics)) }}
-                        </flux:heading>
-                    </div>
-                </div>
-            </flux:card>
-            <flux:card class="p-5 bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/30 dark:to-violet-800/20">
-                <div class="flex items-center gap-4">
-                    <div class="p-3 rounded-full bg-violet-100 dark:bg-violet-800">
-                        <flux:icon name="folder-git-2" class="h-6 w-6 text-violet-600 dark:text-violet-300" />
-                    </div>
-                    <div>
-                        <flux:text class="text-sm text-gray-600 dark:text-gray-400">Énekrendek</flux:text>
-                        <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">{{ $musicPlans->count() }}</flux:heading>
-                    </div>
-                </div>
-            </flux:card>
-        </div>
-
         <!-- Tabs navigation -->
         <div class="mb-8 border-b border-gray-200 dark:border-gray-700">
             <nav class="-mb-px flex flex-wrap gap-2 md:gap-0 md:space-x-8" role="tablist" aria-label="Javaslatok szekciók">
@@ -326,10 +287,10 @@ new #[Layout('layouts::app.main')] class extends Component
                     @forelse ($slotMusicMap as $slotName => $musics)
                         <div class="relative">
                             <div class="flex items-center justify-between mb-6">
-                                <div>
-                                    <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">{{ $slotName }}</flux:heading>
+                                <div class="flex flex-row items-center gap-3">
+                                    <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">{{ $slotName }}</flux:heading>
                                     <flux:text class="text-gray-600 dark:text-gray-400">
-                                        {{ count($musics) }} énekjavaslat ebben a szekcióban
+                                        ({{ count($musics) }} javaslat)
                                     </flux:text>
                                 </div>
                                 <flux:badge color="blue" size="lg" class="font-semibold">

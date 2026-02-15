@@ -75,6 +75,12 @@
             @endif
         </header>
         {{ $slot }}
+        <div class="w-full lg:max-w-4xl mx-auto mt-8 flex justify-center">
+            <div class="flex items-center">
+                <flux:heading class="mr-2">Műfaj:</flux:heading>
+                <livewire:realm-selector />
+            </div>
+        </div>
         <footer class="w-full lg:max-w-4xl mx-auto mt-2 flex flex-col items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
             <div class="items-center">&copy; {{ date('Y') }} Cantores.hu. A fejlesztést a <a href="https://github.com/szentjozsefhackathon/cantores" target="_blank" class="hover:text-blue-500 underline">Szent József Hackathon</a> keretében végezzük.</div>
             <div class="flex items-center gap-1">

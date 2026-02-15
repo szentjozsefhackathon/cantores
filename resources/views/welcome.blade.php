@@ -8,13 +8,6 @@
             </main>
         </div>
 
-        <div class="w-full lg:max-w-4xl mx-auto mt-8 flex justify-center">
-            <div class="flex items-center">
-                <flux:heading class="mr-2">Műfaj:</flux:heading>
-                <livewire:realm-selector />
-            </div>
-        </div>
-
         @if (Route::has('login'))
             <div class="h-14.5 hidden lg:block"></div>
         @endif
