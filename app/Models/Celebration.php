@@ -109,4 +109,55 @@ class Celebration extends Model
 
         return $days[$this->day] ?? 'ismeretlen';
     }
+
+    /**
+     * Find the next available celebration_key for a custom celebration.
+     */
+    public static function findNextAvailableKey(int $userId, string $date): int
+    {
+        $existingKeys = self::where('is_custom', true)
+            ->where('user_id', $userId)
+            ->where('actual_date', $date)
+            ->pluck('celebration_key')
+            ->toArray();
+
+        $key = 0;
+        while (in_array($key, $existingKeys)) {
+            $key++;
+        }
+
+        return $key;
+    }
+
+    /**
+     * Update celebration with automatic key adjustment if needed.
+     */
+    public function updateWithKeyAdjustment(array $attributes): bool
+    {
+        if ($this->is_custom && isset($attributes['actual_date'])) {
+            $newDate = $attributes['actual_date'];
+            $userId = $this->user_id;
+
+            // If date is changing, we need to check for conflicts
+            if ($newDate !== $this->actual_date->format('Y-m-d')) {
+                $existingKeys = self::where('is_custom', true)
+                    ->where('user_id', $userId)
+                    ->where('actual_date', $newDate)
+                    ->where('id', '!=', $this->id)
+                    ->pluck('celebration_key')
+                    ->toArray();
+
+                $key = $this->celebration_key;
+                if (in_array($key, $existingKeys)) {
+                    // Find next available key
+                    while (in_array($key, $existingKeys)) {
+                        $key++;
+                    }
+                    $attributes['celebration_key'] = $key;
+                }
+            }
+        }
+
+        return $this->update($attributes);
+    }
 }

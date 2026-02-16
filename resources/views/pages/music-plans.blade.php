@@ -29,12 +29,15 @@ new class extends Component
                         icon="arrow-left">
                         Vissza
                     </flux:button>
-                    <flux:button
-                        href="{{ route('music-plan-editor') }}"
-                        variant="primary"
-                        icon="plus">
-                        Új énekrend
-                    </flux:button>
+                    <form action="{{ route('music-plans.store') }}" method="POST" class="inline">
+                        @csrf
+                        <flux:button
+                            type="submit"
+                            variant="primary"
+                            icon="plus">
+                            Új énekrend
+                        </flux:button>
+                    </form>
                 </div>
             </div>
 

@@ -18,17 +18,45 @@
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Ünnep neve</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
+                        @if($musicPlan->hasCustomCelebrations() && $isEditingCelebration)
+                            <flux:field>
+                                <flux:input
+                                    wire:model.live="celebrationName"
+                                    wire:change="saveCelebration"
+                                    placeholder="Ünnep neve" />
+                            </flux:field>
+                        @else
+                            <div class="flex items-center gap-2">
+                                <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
+                                @if($musicPlan->hasCustomCelebrations())
+                                    <flux:button
+                                        wire:click="toggleCelebrationEditing"
+                                        icon="pencil"
+                                        variant="outline"
+                                        size="xs"
+                                        title="Szerkesztés" />
+                                @endif
+                            </div>
+                        @endif
                     </div>
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Dátum</flux:heading>
-                        <flux:text class="text-base font-semibold">
-                            @if($musicPlan->actual_date)
-                                {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
-                            @else
-                                –
-                            @endif
-                        </flux:text>
+                        @if($musicPlan->hasCustomCelebrations() && $isEditingCelebration)
+                            <flux:field>
+                                <flux:input
+                                    type="date"
+                                    wire:model.live="celebrationDate"
+                                    wire:change="saveCelebration" />
+                            </flux:field>
+                        @else
+                            <flux:text class="text-base font-semibold">
+                                @if($musicPlan->actual_date)
+                                    {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
+                                @else
+                                    –
+                                @endif
+                            </flux:text>
+                        @endif
                     </div>
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
@@ -45,6 +73,25 @@
                             <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
                         </div>
                     </div>
+                    @if($musicPlan->hasCustomCelebrations() && $isEditingCelebration)
+                    <div class="flex items-end">
+                        <flux:button
+                            wire:click="saveCelebration"
+                            icon="check"
+                            variant="primary"
+                            size="sm">
+                            Mentés
+                        </flux:button>
+                        <flux:button
+                            wire:click="toggleCelebrationEditing"
+                            icon="x-mark"
+                            variant="outline"
+                            size="sm"
+                            class="ml-2">
+                            Mégse
+                        </flux:button>
+                    </div>
+                    @endif
                 </div>
 
 

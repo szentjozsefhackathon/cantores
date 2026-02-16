@@ -79,3 +79,37 @@ test('liturgical celebration can be attached to music plan', function () {
         ->and($musicPlan->liturgicalCelebrations)->toHaveCount(1)
         ->and($musicPlan->customCelebrations)->toHaveCount(0);
 });
+
+test('music plan can create custom celebration', function () {
+    $musicPlan = MusicPlan::factory()->create(['user_id' => $this->user->id]);
+
+    $celebration = $musicPlan->createCustomCelebration('My Custom Celebration');
+
+    expect($celebration)->toBeInstanceOf(Celebration::class)
+        ->and($celebration->is_custom)->toBeTrue()
+        ->and($celebration->name)->toBe('My Custom Celebration')
+        ->and($celebration->user_id)->toBe($this->user->id)
+        ->and($musicPlan->hasCustomCelebrations())->toBeTrue()
+        ->and($musicPlan->firstCustomCelebration()->id)->toBe($celebration->id);
+});
+
+test('music plan hasCustomCelebrations returns false when no custom celebrations', function () {
+    $musicPlan = MusicPlan::factory()->create(['user_id' => $this->user->id]);
+    $liturgicalCelebration = Celebration::factory()->liturgical()->create();
+
+    $musicPlan->celebrations()->attach($liturgicalCelebration);
+
+    expect($musicPlan->hasCustomCelebrations())->toBeFalse();
+});
+
+test('POST /music-plans creates music plan with custom celebration', function () {
+    $response = $this->actingAs($this->user)
+        ->post(route('music-plans.store'));
+
+    $response->assertRedirectToRoute('music-plan-editor', ['musicPlan' => \App\Models\MusicPlan::latest()->first()->id]);
+
+    $musicPlan = \App\Models\MusicPlan::where('user_id', $this->user->id)->latest()->first();
+    expect($musicPlan)->not->toBeNull()
+        ->and($musicPlan->hasCustomCelebrations())->toBeTrue()
+        ->and($musicPlan->firstCustomCelebration()->name)->toBe('Egyedi ünnep');
+});

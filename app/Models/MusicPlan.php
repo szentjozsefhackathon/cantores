@@ -280,4 +280,53 @@ class MusicPlan extends Model
         // Detach all slots from the plan
         $this->slots()->detach();
     }
+
+    /**
+     * Create a custom celebration for this music plan.
+     */
+    public function createCustomCelebration(string $name, ?\Illuminate\Support\Carbon $date = null): Celebration
+    {
+        $date = $date ?? now();
+        $dateString = $date->format('Y-m-d');
+
+        // Find the next available celebration_key for this user and date
+        $existingKeys = Celebration::where('is_custom', true)
+            ->where('user_id', $this->user_id)
+            ->where('actual_date', $dateString)
+            ->pluck('celebration_key')
+            ->toArray();
+
+        $celebrationKey = 0;
+        while (in_array($celebrationKey, $existingKeys)) {
+            $celebrationKey++;
+        }
+
+        $celebration = Celebration::create([
+            'name' => $name,
+            'actual_date' => $dateString,
+            'celebration_key' => $celebrationKey,
+            'is_custom' => true,
+            'user_id' => $this->user_id,
+        ]);
+
+        $this->celebrations()->attach($celebration);
+
+        return $celebration;
+    }
+
+    /**
+     * Check if this music plan has any custom celebrations.
+     */
+    public function hasCustomCelebrations(): bool
+    {
+        return $this->customCelebrations()->exists();
+    }
+
+    /**
+     * Get the first custom celebration for this music plan.
+     */
+    public function firstCustomCelebration(): ?Celebration
+    {
+        return $this->customCelebrations()->first();
+    }
 }

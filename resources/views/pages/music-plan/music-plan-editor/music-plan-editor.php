@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\MusicPlan;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -40,30 +39,34 @@ new class extends Component
 
     public array $slotAssignments = [];
 
+    public ?string $celebrationName = null;
+
+    public ?string $celebrationDate = null;
+
+    public bool $isEditingCelebration = false;
+
     public function mount($musicPlan = null): void
     {
         if (! $musicPlan) {
-            // Create a new music plan for the current user
-            $this->musicPlan = new MusicPlan([
-                'user_id' => Auth::id(),
-                'is_published' => false,
-                'realm_id' => null,
-            ]);
+            // Redirect to music plans list since creation should happen via POST
+            $this->redirectRoute('music-plans');
 
-            // Authorize creation instead of view
-            $this->authorize('update', MusicPlan::class);
+            return;
+        }
 
-            // Save the new plan to get an ID
-            $this->musicPlan->save();
+        // Load existing music plan
+        if (! $musicPlan instanceof MusicPlan) {
+            $musicPlan = MusicPlan::findOrFail($musicPlan);
+        }
 
-        } else {
-            // Load existing music plan
-            if (! $musicPlan instanceof MusicPlan) {
-                $musicPlan = MusicPlan::findOrFail($musicPlan);
-            }
+        $this->authorize('update', $musicPlan);
+        $this->musicPlan = $musicPlan;
 
-            $this->authorize('update', $musicPlan);
-            $this->musicPlan = $musicPlan;
+        // Load celebration data if there's a custom celebration
+        $customCelebration = $this->musicPlan->firstCustomCelebration();
+        if ($customCelebration) {
+            $this->celebrationName = $customCelebration->name;
+            $this->celebrationDate = $customCelebration->actual_date->format('Y-m-d');
         }
 
         // Sync published state
@@ -550,5 +553,49 @@ new class extends Component
 
         $this->loadPlanSlots();
         $this->dispatch('slots-updated', message: 'Zene sorrendje frissítve.');
+    }
+
+    public function toggleCelebrationEditing(): void
+    {
+        $this->isEditingCelebration = ! $this->isEditingCelebration;
+    }
+
+    public function saveCelebration(): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $customCelebration = $this->musicPlan->firstCustomCelebration();
+        if (! $customCelebration) {
+            return;
+        }
+
+        $validated = $this->validate([
+            'celebrationName' => ['required', 'string', 'max:255'],
+            'celebrationDate' => ['required', 'date'],
+        ]);
+
+        $customCelebration->updateWithKeyAdjustment([
+            'name' => $validated['celebrationName'],
+            'actual_date' => $validated['celebrationDate'],
+        ]);
+
+        $this->isEditingCelebration = false;
+        $this->dispatch('slots-updated', message: 'Ünnep adatai frissítve.');
+    }
+
+    public function updatedCelebrationName(): void
+    {
+        // Auto-save when user stops typing (debounced)
+        if ($this->musicPlan->hasCustomCelebrations()) {
+            $this->saveCelebration();
+        }
+    }
+
+    public function updatedCelebrationDate(): void
+    {
+        // Auto-save when user stops typing (debounced)
+        if ($this->musicPlan->hasCustomCelebrations()) {
+            $this->saveCelebration();
+        }
     }
 };
