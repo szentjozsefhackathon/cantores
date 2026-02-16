@@ -43,8 +43,8 @@ class Collection extends Model implements Auditable
     public function toSearchableArray()
     {
         return [
-            'id' => $this->id,
             'abbreviation' => $this->abbreviation,
+            'order_number' => $this->order_number,
         ];
     }
 

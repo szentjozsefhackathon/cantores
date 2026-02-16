@@ -114,6 +114,7 @@ class Music extends Model implements Auditable
         $service->applySearch($query, $search);
     }
 
+
     /**
      * Scope for music belonging to the current user's genre.
      */
@@ -166,29 +167,19 @@ class Music extends Model implements Auditable
                 ->orWhere('user_id', $userId);
         });
     }
-    
-        /**
+
+    /**
      * Get the indexable data array for the model.
      *
      * @return array<string, mixed>
      */
-    #[SearchUsingFullText(['title', 'subtitle', 'custom_id'])]
-    #[SearchUsingPrefix(['collection_abbreviations', 'collection_order_numbers'])]
     public function toSearchableArray(): array
     {
-        $array = [];
-        $array['title'] = $this->title;
-        $array['subtitle'] = $this->subtitle;
-        $array['custom_id'] = $this->custom_id;
+        return [            
+            'title' => $this->title,
+            'subtitle' => $this->subtitle,
+            'custom_id' => $this->custom_id,
+        ];
 
-        // map collection abbrev and order number to a concatenated string for full‑text search
-        $collections = $this->collections()->get()->map(function ($collection) {
-            return $collection->abbreviation . ' ' . $collection->order_number;
-        })->all();
-        $array['collections_fulltext'] = implode(' ', $collections);
-
-        return $array;
     }
-
-
 }

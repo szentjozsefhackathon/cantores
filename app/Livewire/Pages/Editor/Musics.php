@@ -127,15 +127,10 @@ class Musics extends Component
         $this->redirectRoute('music-merger', ['left' => $left, 'right' => $right]);
     }
 
-    /**
-     * Render the component.
-     */
-    public function render(): View
+    protected function applyScopes($q)
     {
-        $musics = Music::visibleTo(Auth::user())
-            ->when($this->search, function ($query, $search) {
-                $query->search($search);
-            })
+        return $q
+            ->visibleTo(Auth::user())
             ->when($this->filter === 'public', function ($query) {
                 $query->public();
             })
@@ -148,11 +143,27 @@ class Musics extends Component
             ->forCurrentGenre()
             ->with(['genres', 'collections'])
             ->withCount('collections')
-            ->orderBy('title')
-            ->paginate();
+            ->orderBy('title');
+    }
 
+
+    /**
+     * Render the component.
+     */
+    public function render(): View
+    {
+        if ($this->search) {
+            $musics = Music::search($this->search)
+                ->query(
+                    fn($q) => $this->applyScopes($q)
+                )
+                ->paginate(15);
+        } else {
+            $musics = $this->applyScopes(Music::query())
+                ->paginate(15);
+        }
         return view('pages.editor.musics', [
-            'musics' => $musics,
+            'musics' => $musics
         ]);
     }
 
