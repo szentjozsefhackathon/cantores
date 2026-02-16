@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Scout\Attributes\SearchUsingFullText;
+use Laravel\Scout\Attributes\SearchUsingPrefix;
 use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
 
@@ -164,4 +166,29 @@ class Music extends Model implements Auditable
                 ->orWhere('user_id', $userId);
         });
     }
+    
+        /**
+     * Get the indexable data array for the model.
+     *
+     * @return array<string, mixed>
+     */
+    #[SearchUsingFullText(['title', 'subtitle', 'custom_id'])]
+    #[SearchUsingPrefix(['collection_abbreviations', 'collection_order_numbers'])]
+    public function toSearchableArray(): array
+    {
+        $array = [];
+        $array['title'] = $this->title;
+        $array['subtitle'] = $this->subtitle;
+        $array['custom_id'] = $this->custom_id;
+
+        // map collection abbrev and order number to a concatenated string for full‑text search
+        $collections = $this->collections()->get()->map(function ($collection) {
+            return $collection->abbreviation . ' ' . $collection->order_number;
+        })->all();
+        $array['collections_fulltext'] = implode(' ', $collections);
+
+        return $array;
+    }
+
+
 }

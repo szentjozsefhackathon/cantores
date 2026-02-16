@@ -122,11 +122,9 @@
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
                                 @if ($music->is_private)
-                                    <flux:icon name="eye-slash" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Private')" />
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Private') }}</span>
+                                    <flux:icon name="eye-slash" class="h-5 w-5 text-gqray-500 dark:text-gray-400" :title="__('Private')" />
                                 @else
                                     <flux:icon name="eye" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Public')" />
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Public') }}</span>
                                 @endif
                             </div>
                         </flux:table.cell>

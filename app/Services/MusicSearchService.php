@@ -35,13 +35,8 @@ class MusicSearchService
      */
     public function applySearch(Builder $query, string $search, array $options = []): void
     {
-        $search = trim($search);
-        $tokens = preg_split('/\s+/', trim($search), -1, PREG_SPLIT_NO_EMPTY);
-        if (empty($tokens)) {
-            return;
-        }
 
-        $query->where(function (Builder $q) use ($tokens, $search, $options) {
+        $query->where(function (Builder $q) use ($search, $options) {
             // Scout full‑text search on music fields (title, subtitle, custom_id)
             if ($options['use_scout'] ?? true) {
                 $ids = Music::search($search)->keys()->all();
@@ -49,30 +44,6 @@ class MusicSearchService
                     $q->whereIn('id', $ids);
                 }
             }
-
-            // Scout search on collection fields (title, abbreviation, author)
-            if ($options['use_scout'] ?? true) {
-                $collectionIds = Collection::search($search)->keys()->all();
-                if (! empty($collectionIds)) {
-                    $q->orWhereHas('collections', function (Builder $collectionQuery) use ($collectionIds) {
-                        $collectionQuery->whereIn('collections.id', $collectionIds);
-                    });
-                }
-            } else {
-                // Fallback to simple ILIKE search on title, abbreviation, author
-                $q->orWhereHas('collections', function (Builder $collectionQuery) use ($search) {
-                    $collectionQuery->search($search);
-                });
-            }
-
-            // Numeric pivot fields (order_number) token matching
-            $q->orWhereHas('collections', function (Builder $collectionQuery) use ($tokens) {
-                $collectionQuery->where(function (Builder $subQuery) use ($tokens) {
-                    foreach ($tokens as $token) {
-                        $subQuery->orWhere('music_collection.order_number', 'ilike', "%{$token}%");
-                    }
-                });
-            });
         });
     }
 

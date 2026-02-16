@@ -134,6 +134,13 @@ class BulkImports extends Component
                 'page_number' => null,
             ]);
 
+            // add the collection's genres to the music
+            $collection = Collection::find($this->selectedCollectionId);
+            if ($collection) {
+                $genreIds = $collection->genres()->pluck('genre_id');
+                $music->genres()->attach($genreIds);
+            }
+
             $createdCount++;
         }
 
