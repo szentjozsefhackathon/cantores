@@ -585,17 +585,13 @@ new class extends Component
 
     public function updatedCelebrationName(): void
     {
-        // Auto-save when user stops typing (debounced)
-        if ($this->musicPlan->hasCustomCelebrations()) {
-            $this->saveCelebration();
-        }
+        // Auto-save disabled - saving only via explicit button click
+        // No action needed
     }
 
     public function updatedCelebrationDate(): void
     {
-        // Auto-save when user stops typing (debounced)
-        if ($this->musicPlan->hasCustomCelebrations()) {
-            $this->saveCelebration();
-        }
+        // Auto-save disabled - saving only via explicit button click
+        // No action needed
     }
 };

@@ -22,7 +22,6 @@
                             <flux:field>
                                 <flux:input
                                     wire:model.live="celebrationName"
-                                    wire:change="saveCelebration"
                                     placeholder="Ünnep neve" />
                             </flux:field>
                         @else
@@ -45,8 +44,7 @@
                             <flux:field>
                                 <flux:input
                                     type="date"
-                                    wire:model.live="celebrationDate"
-                                    wire:change="saveCelebration" />
+                                    wire:model.live="celebrationDate" />
                             </flux:field>
                         @else
                             <flux:text class="text-base font-semibold">
@@ -58,6 +56,7 @@
                             </flux:text>
                         @endif
                     </div>
+                    @if(!$musicPlan->hasCustomCelebrations())
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
                         @php
@@ -73,6 +72,7 @@
                             <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
                         </div>
                     </div>
+                    @endif
                     @if($musicPlan->hasCustomCelebrations() && $isEditingCelebration)
                     <div class="flex items-end">
                         <flux:button

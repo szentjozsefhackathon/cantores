@@ -215,7 +215,7 @@ class MusicPlan extends Model
             return $firstCelebration->day_name;
         }
 
-        return 'ismeretlen';
+        return '-';
     }
 
     /**
