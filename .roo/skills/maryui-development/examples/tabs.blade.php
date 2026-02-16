@@ -1,13 +1,13 @@
-<x-tabs wire:model="selectedTab">
-    <x-tab name="users-tab" label="Users" icon="o-users">
+<x-mary-tabs wire:model="selectedTab">
+    <x-mary-tab name="users-tab" label="Users" icon="o-users">
         <div>Users</div>
-    </x-tab>
-    <x-tab name="tricks-tab" label="Tricks" icon="o-sparkles">
+    </x-mary-tab>
+    <x-mary-tab name="tricks-tab" label="Tricks" icon="o-sparkles">
         <div>Tricks</div>
-    </x-tab>
-    <x-tab name="musics-tab" label="Musics" icon="o-musical-note">
+    </x-mary-tab>
+    <x-mary-tab name="musics-tab" label="Musics" icon="o-musical-note">
         <div>Musics</div>
-    </x-tab>
-</x-tabs>
+    </x-mary-tab>
+</x-mary-tabs>
 
 <x-button label="Change to Musics" @click="$wire.selectedTab = 'musics-tab'" />
