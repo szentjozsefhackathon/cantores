@@ -88,6 +88,11 @@ Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');
 
+// Music merging tool
+Route::livewire('/editor/musics/merge', 'editor.music-merger')
+    ->middleware(['auth', 'verified'])
+    ->name('music-merger');
+
 // Suggestions page for music plan recommendations
 Route::livewire('/suggestions', 'pages::suggestions')
     ->name('suggestions');

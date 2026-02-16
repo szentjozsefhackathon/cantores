@@ -156,13 +156,6 @@
                 @endforelse
             </flux:table.rows>
         </flux:table>
-
-        <!-- Pagination -->
-        @if ($musics->hasPages())
-            <div class="mt-4">
-                {{ $musics->links() }}
-            </div>
-        @endif
     </div>
 
     <!-- Modals outside main content for single root -->

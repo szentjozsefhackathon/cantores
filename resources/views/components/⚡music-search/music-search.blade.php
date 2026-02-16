@@ -25,7 +25,7 @@
                 @foreach ($musics as $music)
                     <flux:table.row>
                         <flux:table.cell>
-                            <div>
+                            <div class="max-w-80 text-wrap">
                                 <div class="font-medium">{{ $music->title }}</div>
                                 @if ($music->subtitle)
                                     <div class="text-sm text-gray-600 dark:text-gray-400">{{ $music->subtitle }}</div>
@@ -85,12 +85,6 @@
             </flux:table.rows>
         </flux:table>
 
-        <!-- Pagination -->
-        @if ($musics->hasPages())
-            <div class="mt-4">
-                {{ $musics->links() }}
-            </div>
-        @endif
     @else
         <div class="mt-8 text-center">
             <flux:icon name="folder-open" class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />

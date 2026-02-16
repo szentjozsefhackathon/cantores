@@ -106,7 +106,7 @@ class Music extends Model implements Auditable
     public function scopeSearch($query, string $search): void
     {
         $service = new MusicSearchService;
-        $service->search($query, $search);
+        $service->applySearch($query, $search);
     }
 
     /**

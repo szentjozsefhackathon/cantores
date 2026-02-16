@@ -11,6 +11,8 @@ return new class extends Component
 {
     use AuthorizesRequests, WithPagination;
 
+    public string $source = '';
+
     public string $search = '';
 
     public bool $selectable = false;
@@ -46,7 +48,7 @@ return new class extends Component
      */
     public function selectMusic($musicId): void
     {
-        $this->dispatch('music-selected', musicId: (int) $musicId);
+        $this->dispatch("music-selected{$this->source}", musicId: (int) $musicId);
     }
 
     /**

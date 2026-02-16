@@ -238,9 +238,7 @@
                             <!-- Music Search Modal -->
                             <flux:modal wire:model="showMusicSearchModal" size="lg">
                                 <flux:heading size="lg">Zene keresése és hozzáadása</flux:heading>
-
-                                <livewire:music-search selectable="true" wire:music-selected="assignMusicToSlot" />
-
+                                <livewire:music-search selectable="true" />
                                 <div class="mt-6 flex justify-end">
                                     <flux:button
                                         wire:click="closeMusicSearchModal"
