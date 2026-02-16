@@ -73,4 +73,10 @@ class MusicPolicy
     {
         return $user !== null && $user->is_admin;
     }
+
+    public function merge(Music $target, Music $source, User $user): bool
+    {
+        // Only the owner of both or admin can merge music
+        return $user !== null && ($user->is_admin || ($target->user_id === $user->id && $source->user_id === $user->id));
+    }
 }

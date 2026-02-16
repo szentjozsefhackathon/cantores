@@ -33,18 +33,30 @@
                     </flux:field>
                 </div>
                 
-                <flux:button
-                    variant="primary"
-                    icon="plus"
-                    wire:click="create"
-                >
-                    {{ __('Create Music Piece') }}
-                </flux:button>
+                <div class="flex items-center gap-2">
+                    <flux:button
+                        variant="filled"
+                        icon="combine"
+                        wire:click="merge"
+                        :disabled="!$this->canMerge"
+                        :title="$this->canMerge ? __('Merge selected songs') : __('Select exactly 2 songs to merge')"
+                    >
+                        {{ __('Merge Songs') }}
+                    </flux:button>
+                    <flux:button
+                        variant="primary"
+                        icon="plus"
+                        wire:click="create"
+                    >
+                        {{ __('Create Music Piece') }}
+                    </flux:button>
+                </div>
             </div>
 
         <!-- Music Table -->
         <flux:table :paginate="$musics">
             <flux:table.columns>
+                <flux:table.column>{{ __('Select') }}</flux:table.column>
                 <flux:table.column>{{ __('Title') }}</flux:table.column>
                 <flux:table.column>{{ __('Collections') }}</flux:table.column>
                 <flux:table.column>{{ __('Custom ID') }}</flux:table.column>
@@ -56,6 +68,13 @@
             <flux:table.rows>
                 @forelse ($musics as $music)
                     <flux:table.row>
+                        <flux:table.cell>
+                            <flux:checkbox
+                                wire:model.live="selectedMusicIds"
+                                value="{{ $music->id }}"
+                                hide-label
+                            />
+                        </flux:table.cell>
                         <flux:table.cell>
                             <div>
                                 <div class="font-medium">{{ $music->title }}</div>

@@ -53,6 +53,11 @@ class Musics extends Component
     public bool $isPrivate = false;
 
     /**
+     * Selected music IDs for merging.
+     */
+    public array $selectedMusicIds = [];
+
+    /**
      * Mount the component.
      */
     public function mount(): void
@@ -78,6 +83,51 @@ class Musics extends Component
     }
 
     /**
+     * Toggle selection of a music piece.
+     */
+    public function toggleSelection(int $musicId): void
+    {
+        if (in_array($musicId, $this->selectedMusicIds)) {
+            $this->selectedMusicIds = array_diff($this->selectedMusicIds, [$musicId]);
+        } else {
+            $this->selectedMusicIds[] = $musicId;
+        }
+    }
+
+    /**
+     * Clear all selections.
+     */
+    public function clearSelections(): void
+    {
+        $this->selectedMusicIds = [];
+    }
+
+    /**
+     * Determine if merge button should be enabled.
+     */
+    public function getCanMergeProperty(): bool
+    {
+        return count($this->selectedMusicIds) === 2;
+    }
+
+    /**
+     * Navigate to music merger with selected IDs.
+     */
+    public function merge(): void
+    {
+        if (! $this->canMerge) {
+            return;
+        }
+
+        $ids = $this->selectedMusicIds;
+        sort($ids); // ensure consistent order
+        $left = $ids[0];
+        $right = $ids[1];
+
+        $this->redirectRoute('music-merger', ['left' => $left, 'right' => $right]);
+    }
+
+    /**
      * Render the component.
      */
     public function render(): View
@@ -99,9 +149,7 @@ class Musics extends Component
             ->with(['genres', 'collections'])
             ->withCount('collections')
             ->orderBy('title')
-            ->paginate(10);
-
-        $this->resetPage();
+            ->paginate();
 
         return view('pages.editor.musics', [
             'musics' => $musics,

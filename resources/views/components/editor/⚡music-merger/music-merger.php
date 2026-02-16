@@ -7,6 +7,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 return new class extends Component
@@ -51,12 +52,52 @@ return new class extends Component
 
     public bool $mergedIsPrivate = false;
 
+    #[Url]
+    public int $left;
+
+    #[Url]
+    public int $right;
+
     /**
      * Mount the component.
      */
     public function mount(): void
     {
         $this->authorize('viewAny', Music::class);
+
+        \Log::info('Mounting MusicMerger component', ['left' => $this->left, 'right' => $this->right]);
+
+        if ($this->left) {
+            $this->loadMusicById($this->left, 'left');
+        }
+        if ($this->right) {
+            $this->loadMusicById($this->right, 'right');
+        }
+
+        // If both are loaded, automatically compare
+        if ($this->leftMusic && $this->rightMusic) {
+            $this->compare();
+        }
+    }
+
+    /**
+     * Load a music piece by ID and assign to left or right.
+     */
+    private function loadMusicById(int $musicId, string $side): void
+    {
+        $music = Music::with(['collections', 'genres', 'urls', 'relatedMusic'])
+            ->visibleTo(Auth::user())
+            ->findOrFail($musicId);
+
+        $this->authorize('update', $music);
+
+        if ($side === 'left') {
+            $this->leftMusicId = $musicId;
+            $this->leftMusic = $music;
+        } else {
+            $this->rightMusicId = $musicId;
+            $this->rightMusic = $music;
+        }
     }
 
     /**
