@@ -15,6 +15,10 @@
             @if (Route::has('login'))
                 <!-- Desktop navigation (hidden on mobile) -->
                 <nav class="hidden lg:flex items-center gap-4">
+                    <a href="{{ route('music-plans') }}" class="text-accent hover:underline font-medium text-sm">
+                        <flux:icon name="music" class="inline" variant="mini"></flux:icon>
+                        Énekrendek
+                    </a>
                     @auth
                         <a
                             href="{{ url('/dashboard') }}"
@@ -54,6 +58,9 @@
                         <flux:menu>
                             <flux:menu.item href="{{ url('/about') }}" icon="information-circle">
                                 Bemutatkozás
+                            </flux:menu.item>
+                            <flux:menu.item href="{{ route('music-plans') }}" icon="music">
+                                Énekrendek
                             </flux:menu.item>
                             @auth
                                 <flux:menu.item href="{{ url('/dashboard') }}" icon="home">

@@ -6,16 +6,22 @@ use Livewire\Component;
 new class extends Component
 {
     public MusicPlan $musicPlan;
+    public bool $readonly;
 
-    public function mount(MusicPlan $musicPlan): void
+    public function mount(MusicPlan $musicPlan, bool $readonly = false): void
     {
         $this->musicPlan = $musicPlan;
+        $this->readonly = $readonly;
     }
 };
 ?>
 
 <flux:card class="music-plan-card p-0 overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-neutral-200 dark:border-neutral-800">
+    @if (!$this->readonly)
     <a href="{{ route('music-plan-editor', ['musicPlan' => $musicPlan->id]) }}" class="block">
+    @else
+    <a href="{{ route('music-plan-view', ['musicPlan' => $musicPlan->id]) }}" class="block">
+    @endif
         <div class="p-5 space-y-4">
             <!-- Header with icon and title -->
             <div class="flex items-start justify-between">

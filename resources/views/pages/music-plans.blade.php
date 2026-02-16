@@ -143,7 +143,7 @@ new #[Layout('layouts::app.main')] class extends Component
             @else
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     @foreach($this->musicPlans as $plan)
-                        <livewire:music-plan-card :musicPlan="$plan" :key="$plan->id" />
+                        <livewire:music-plan-card :musicPlan="$plan" :key="$plan->id" readonly="true" />
                     @endforeach
                 </div>
 
