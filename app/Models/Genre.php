@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Realm extends Model
+class Genre extends Model
 {
-    /** @use HasFactory<\Database\Factories\RealmFactory> */
+    /** @use HasFactory<\Database\Factories\GenreFactory> */
     use HasFactory;
 
     /**
@@ -19,39 +19,39 @@ class Realm extends Model
     protected $fillable = ['name'];
 
     /**
-     * Get the music items associated with this realm.
+     * Get the music items associated with this genre.
      */
     public function music(): BelongsToMany
     {
-        return $this->belongsToMany(Music::class, 'music_realm');
+        return $this->belongsToMany(Music::class, 'music_genre');
     }
 
     /**
-     * Get the collections associated with this realm.
+     * Get the collections associated with this genre.
      */
     public function collections(): BelongsToMany
     {
-        return $this->belongsToMany(Collection::class, 'collection_realm');
+        return $this->belongsToMany(Collection::class, 'collection_genre');
     }
 
     /**
-     * Get the users who have this realm as their current realm.
+     * Get the users who have this genre as their current genre.
      */
     public function users()
     {
-        return $this->hasMany(User::class, 'current_realm_id');
+        return $this->hasMany(User::class, 'current_genre_id');
     }
 
     /**
-     * Get the music plans associated with this realm.
+     * Get the music plans associated with this genre.
      */
     public function musicPlans()
     {
-        return $this->hasMany(MusicPlan::class);
+        return $this->hasMany(MusicPlan::class, 'genre_id');
     }
 
     /**
-     * Get the display label for this realm.
+     * Get the display label for this genre.
      */
     public function label(): string
     {
@@ -64,19 +64,19 @@ class Realm extends Model
     }
 
     /**
-     * Get the icon name for this realm.
+     * Get the icon name for this genre.
      */
     public function icon(): string
     {
         return match ($this->name) {
             'organist' => 'organist',
             'guitarist' => 'guitar',
-            default => 'realm_other',
+            default => 'genre_other',
         };
     }
 
     /**
-     * Get the color for this realm.
+     * Get the color for this genre.
      */
     public function color(): string
     {
@@ -88,12 +88,12 @@ class Realm extends Model
     }
 
     /**
-     * Get all realms as options for select inputs.
+     * Get all genres as options for select inputs.
      */
     public static function options(): array
     {
-        return self::all()->mapWithKeys(fn ($realm) => [
-            $realm->id => $realm->label(),
+        return self::all()->mapWithKeys(fn ($genre) => [
+            $genre->id => $genre->label(),
         ])->toArray();
     }
 }

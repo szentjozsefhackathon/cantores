@@ -54,11 +54,11 @@ class Music extends Model implements Auditable
     }
 
     /**
-     * Get the realms associated with this music.
+     * Get the genres associated with this music.
      */
-    public function realms(): BelongsToMany
+    public function genres(): BelongsToMany
     {
-        return $this->belongsToMany(Realm::class, 'music_realm');
+        return $this->belongsToMany(Genre::class, 'music_genre');
     }
 
     /**
@@ -101,14 +101,14 @@ class Music extends Model implements Auditable
      */
     public function scopeForCurrentRealm($query)
     {
-        $realmId = \App\Facades\RealmContext::getId();
+        $genreId = \App\Facades\GenreContext::getId();
 
-        if ($realmId !== null) {
-            // Filter by current realm (including music without realms)
-            $query->where(function ($q) use ($realmId) {
-                $q->whereHas('realms', function ($subQ) use ($realmId) {
-                    $subQ->where('realms.id', $realmId);
-                })->orWhereDoesntHave('realms');
+        if ($genreId !== null) {
+            // Filter by current genre (including music without genres)
+            $query->where(function ($q) use ($genreId) {
+                $q->whereHas('genres', function ($subQ) use ($genreId) {
+                    $subQ->where('genres.id', $genreId);
+                })->orWhereDoesntHave('genres');
             });
         }
         // If $realmId is null, no filtering applied (show all music)

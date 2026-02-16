@@ -6,23 +6,23 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @method static int|null getId()
- * @method static \App\Models\Realm|null get()
- * @method static void set(?int $realmId)
+ * @method static \App\Models\Genre|null get()
+ * @method static void set(?int $genreId)
  * @method static void clear()
- * @method static bool hasRealm()
+ * @method static bool hasGenre()
  * @method static string label()
  * @method static string|null icon()
  * @method static string|null color()
  *
- * @see \App\Services\RealmContext
+ * @see \App\Services\GenreContext
  */
-class RealmContext extends Facade
+class GenreContext extends Facade
 {
     /**
      * Get the registered name of the component.
      */
     protected static function getFacadeAccessor(): string
     {
-        return \App\Services\RealmContext::class;
+        return \App\Services\GenreContext::class;
     }
 }

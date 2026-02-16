@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Facades\RealmContext;
+use App\Facades\GenreContext;
 use App\Models\MusicPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +17,7 @@ class MusicPlanController extends Controller
         $musicPlan = MusicPlan::create([
             'user_id' => Auth::id(),
             'is_published' => false,
-            'realm_id' => RealmContext::getId(),
+            'genre_id' => GenreContext::getId(),
         ]);
 
         // Create a custom celebration for this new music plan

@@ -12,13 +12,13 @@
             <flux:sidebar.collapse class="lg:hidden" />
         </flux:sidebar.header>
 
-        <!-- Realm Selector -->
+        <!-- Genre Selector -->
         <div>
             <flux:text class="text-sm text-neutral-500 dark:text-neutral-400">
                 Műfaj
             </flux:text>
             <div class="border-b border-zinc-200 dark:border-zinc-700">
-                <livewire:realm-selector />
+                <livewire:genre-selector />
             </div>
         </div>
 

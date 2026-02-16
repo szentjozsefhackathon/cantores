@@ -5,9 +5,9 @@ namespace Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Realm>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Genre>
  */
-class RealmFactory extends Factory
+class GenreFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -22,7 +22,7 @@ class RealmFactory extends Factory
     }
 
     /**
-     * Create a realm with the organist name.
+     * Create a genre with the organist name.
      */
     public function organist(): static
     {
@@ -32,7 +32,7 @@ class RealmFactory extends Factory
     }
 
     /**
-     * Create a realm with the guitarist name.
+     * Create a genre with the guitarist name.
      */
     public function guitarist(): static
     {
@@ -42,7 +42,7 @@ class RealmFactory extends Factory
     }
 
     /**
-     * Create a realm with the other name.
+     * Create a genre with the other name.
      */
     public function other(): static
     {

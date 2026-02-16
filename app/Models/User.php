@@ -26,7 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'city_id',
         'first_name_id',
-        'current_realm_id',
+        'current_genre_id',
     ];
 
     /**
@@ -71,11 +71,11 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Get the user's current realm. If it is empty, that means the user is in the "All Realms" mode.
+     * Get the user's current genre. If it is empty, that means the user is in the "All Genres" mode.
      */
-    public function currentRealm(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function currentGenre(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(Realm::class, 'current_realm_id');
+        return $this->belongsTo(Genre::class, 'current_genre_id');
     }
 
     /**

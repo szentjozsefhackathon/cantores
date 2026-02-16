@@ -45,11 +45,11 @@ class Collection extends Model implements Auditable
     }
 
     /**
-     * Get the realms associated with this collection.
+     * Get the genres associated with this collection.
      */
-    public function realms(): BelongsToMany
+    public function genres(): BelongsToMany
     {
-        return $this->belongsToMany(Realm::class, 'collection_realm');
+        return $this->belongsToMany(Genre::class, 'collection_genre');
     }
 
     /**
@@ -64,18 +64,18 @@ class Collection extends Model implements Auditable
 
     /**
      * Scope for collections belonging to the current user's realm.
-     * Empty collection realm association means it belongs to all realms, so we include those as well.
+     * Empty collection genre association means it belongs to all genres, so we include those as well.
      */
     public function scopeForCurrentRealm($query)
     {
-        $realmId = \App\Facades\RealmContext::getId();
+        $genreId = \App\Facades\GenreContext::getId();
 
-        if ($realmId !== null) {
-            // Filter by current realm (including collections without realms)
-            $query->where(function ($q) use ($realmId) {
-                $q->whereHas('realms', function ($subQ) use ($realmId) {
-                    $subQ->where('realms.id', $realmId);
-                })->orWhereDoesntHave('realms');
+        if ($genreId !== null) {
+            // Filter by current genre (including collections without genres)
+            $query->where(function ($q) use ($genreId) {
+                $q->whereHas('genres', function ($subQ) use ($genreId) {
+                    $subQ->where('genres.id', $genreId);
+                })->orWhereDoesntHave('genres');
             });
         }
         // If $realmId is null, no filtering applied (show all collections)

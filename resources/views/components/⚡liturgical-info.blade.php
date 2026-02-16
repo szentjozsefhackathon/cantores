@@ -1,9 +1,9 @@
 <?php
 
-use App\Facades\RealmContext;
+use App\Facades\GenreContext;
 use App\Models\Celebration;
 use App\Models\MusicPlan;
-use App\Models\Realm;
+use App\Models\Genre;
 use App\Services\CelebrationSearchService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -59,8 +59,8 @@ new class extends Component
         $this->fetchLiturgicalInfo();
     }
 
-    #[On('realm-changed')]
-    public function onRealmChanged(): void
+    #[On('genre-changed')]
+    public function onGenreChanged(): void
     {
         // No action needed, just trigger re-render to refresh existing plans list
     }
@@ -99,7 +99,7 @@ new class extends Component
         // Create MusicPlan without celebration fields
         $musicPlan = MusicPlan::create([
             'user_id' => $user->id,
-            'realm_id' => RealmContext::getId(),
+            'genre_id' => GenreContext::getId(),
             'is_published' => false,
         ]);
 
@@ -138,13 +138,13 @@ new class extends Component
             ->where('user_id', $user->id)
             ->with(['user', 'realm', 'celebrations']);
 
-        // Filter by current realm
-        $realmId = RealmContext::getId();
-        if ($realmId !== null) {
-            // Show plans that belong to the current realm OR have no realm (belongs to all)
-            $query->where(function ($q) use ($realmId) {
-                $q->whereNull('realm_id')
-                    ->orWhere('realm_id', $realmId);
+        // Filter by current genre
+        $genreId = GenreContext::getId();
+        if ($genreId !== null) {
+            // Show plans that belong to the current genre OR have no genre (belongs to all)
+            $query->where(function ($q) use ($genreId) {
+                $q->whereNull('genre_id')
+                    ->orWhere('genre_id', $genreId);
             });
         }
         // If $realmId is null, no filtering applied (show all plans)
@@ -181,16 +181,16 @@ new class extends Component
             $query->where('user_id', '!=', $user->id);
         }
 
-        // Determine realm filter
-        $realmId = RealmContext::getId();
-        if ($realmId !== null) {
-            // Show plans that belong to the current realm OR have no realm (belongs to all)
-            $query->where(function ($q) use ($realmId) {
-                $q->whereNull('realm_id')
-                    ->orWhere('realm_id', $realmId);
+        // Determine genre filter
+        $genreId = GenreContext::getId();
+        if ($genreId !== null) {
+            // Show plans that belong to the current genre OR have no genre (belongs to all)
+            $query->where(function ($q) use ($genreId) {
+                $q->whereNull('genre_id')
+                    ->orWhere('genre_id', $genreId);
             });
         }
-        // If $realmId is null, no filtering applied (show all plans)
+        // If $genreId is null, no filtering applied (show all plans)
 
         return $query->orderBy('created_at', 'desc')->get();
     }
@@ -224,17 +224,17 @@ new class extends Component
 
         $celebrationIds = $related->pluck('id')->toArray();
         $user = Auth::user();
-        $realmId = RealmContext::getId();
+        $genreId = GenreContext::getId();
 
         $query = MusicPlan::whereHas('celebrations', function ($q) use ($celebrationIds) {
             $q->whereIn('celebrations.id', $celebrationIds);
         });
 
-        // Filter by realm: include plans that belong to the current realm OR have no realm
-        if ($realmId !== null) {
-            $query->where(function ($q) use ($realmId) {
-                $q->whereNull('realm_id')
-                    ->orWhere('realm_id', $realmId);
+        // Filter by genre: include plans that belong to the current genre OR have no genre
+        if ($genreId !== null) {
+            $query->where(function ($q) use ($genreId) {
+                $q->whereNull('genre_id')
+                    ->orWhere('genre_id', $genreId);
             });
         }
 
@@ -503,7 +503,7 @@ new class extends Component
                                 href="{{ route('music-plan-editor', ['musicPlan' => $plan->id]) }}"
                                 class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
                                 <div class="flex items-center gap-3">
-                                    <flux:icon name="{{ $plan->realm?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
+                                    <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
                                     <div>
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
                                             {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
@@ -537,7 +537,7 @@ new class extends Component
                                 href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
                                 class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
                                 <div class="flex items-center gap-3">
-                                    <flux:icon name="{{ $plan->realm?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
+                                    <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
                                     <div>
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
                                             {{ $plan->actual_date->translatedFormat('Y. m. d.') }}

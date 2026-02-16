@@ -2,7 +2,7 @@
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <flux:card class="p-5">
             <div class="flex items-center gap-4 mb-4">
-                <x-music-plan-setting-icon :realm="$musicPlan->realm" />
+                <x-music-plan-setting-icon :genre="$musicPlan->genre" />
                 <flux:heading size="xl">Énekrend szerkesztése</flux:heading>
             </div>
 

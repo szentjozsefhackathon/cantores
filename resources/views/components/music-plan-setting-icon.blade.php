@@ -1,16 +1,19 @@
 @php
-    // Accept Realm model, realm name, or realm ID   
-    if (is_string($realm)) {
-        $realm = \App\Models\Realm::where('name', $realm)->first();
-    } elseif (is_int($realm)) {
-        $realm = \App\Models\Realm::find($realm);
-    } else if ($realm instanceof \App\Models\Realm) {
-        // Do nothing, $realm is already a Realm instance
+    // Accept Genre model, genre name, or genre ID   
+    // Parameter may be called $genre or $realm (for backward compatibility)
+    $genreParam = $genre ?? $realm ?? null;
+    
+    if (is_string($genreParam)) {
+        $genre = \App\Models\Genre::where('name', $genreParam)->first();
+    } elseif (is_int($genreParam)) {
+        $genre = \App\Models\Genre::find($genreParam);
+    } else if ($genreParam instanceof \App\Models\Genre) {
+        $genre = $genreParam;
     } else {
-        $realm = null;
+        $genre = null;
     }
     
-    $icon = $realm?->icon() ?? 'realml_other';
+    $icon = $genre?->icon() ?? 'genre_other';
 @endphp
 
 @if($icon === 'organist')
@@ -18,7 +21,7 @@
 @elseif($icon === 'guitar')
     <flux:icon name="guitar" class="h-10 w-10" />
 @elseif($icon === 'other')
-    <flux:icon name="realm_other" />
+    <flux:icon name="genre_other" />
 @else
     <flux:icon name="musical-note" class="h-10 w-10" variant="outline" />
 @endif

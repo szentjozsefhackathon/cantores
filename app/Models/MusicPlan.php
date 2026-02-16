@@ -19,7 +19,7 @@ class MusicPlan extends Model
      */
     protected $fillable = [
         'user_id',
-        'realm_id',
+        'genre_id',
         'is_published',
     ];
 
@@ -44,11 +44,11 @@ class MusicPlan extends Model
     }
 
     /**
-     * Get the realm associated with this music plan.
+     * Get the genre associated with this music plan.
      */
-    public function realm(): BelongsTo
+    public function genre(): BelongsTo
     {
-        return $this->belongsTo(Realm::class);
+        return $this->belongsTo(Genre::class);
     }
 
     /**
@@ -131,15 +131,15 @@ class MusicPlan extends Model
     }
 
     /**
-     * Scope for plans by realm.
+     * Scope for plans by genre.
      */
-    public function scopeByRealm($query, $realm)
+    public function scopeByGenre($query, $genre)
     {
-        if ($realm instanceof Realm) {
-            return $query->where('realm_id', $realm->id);
+        if ($genre instanceof Genre) {
+            return $query->where('genre_id', $genre->id);
         }
 
-        return $query->where('realm_id', $realm);
+        return $query->where('genre_id', $genre);
     }
 
     /**
@@ -147,24 +147,24 @@ class MusicPlan extends Model
      */
     public function scopeForCurrentRealm($query)
     {
-        $realmId = \App\Facades\RealmContext::getId();
+        $genreId = \App\Facades\GenreContext::getId();
 
-        if ($realmId !== null) {
-            // Show plans that belong to the current realm OR have no realm (belongs to all)
-            $query->where(function ($q) use ($realmId) {
-                $q->whereNull('realm_id')
-                    ->orWhere('realm_id', $realmId);
+        if ($genreId !== null) {
+            // Show plans that belong to the current genre OR have no genre (belongs to all)
+            $query->where(function ($q) use ($genreId) {
+                $q->whereNull('genre_id')
+                    ->orWhere('genre_id', $genreId);
             });
         }
         // If $realmId is null, no filtering applied (show all plans)
     }
 
     /**
-     * Get the realm options for select inputs.
+     * Get the genre options for select inputs.
      */
-    public static function realmOptions(): array
+    public static function genreOptions(): array
     {
-        return Realm::options();
+        return Genre::options();
     }
 
     /**
@@ -246,11 +246,11 @@ class MusicPlan extends Model
     }
 
     /**
-     * Get the setting name from realm (backward compatibility).
+     * Get the setting name from genre (backward compatibility).
      */
     public function getSettingAttribute(): ?string
     {
-        return $this->realm?->name;
+        return $this->genre?->name;
     }
 
     /**

@@ -2,7 +2,7 @@
 
 use App\Models\Collection;
 use App\Models\Music;
-use App\Models\Realm;
+use App\Models\Genre;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -29,8 +29,8 @@ new class extends Component
 
     public ?string $orderNumber = null;
 
-    // Realm assignment
-    public array $selectedRealms = [];
+    // Genre assignment
+    public array $selectedGenres = [];
 
     // Audit log
     public bool $showAuditModal = false;
@@ -49,19 +49,19 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->authorize('view', $music);
-        $this->music = $music->load(['collections', 'realms']);
+        $this->music = $music->load(['collections', 'genres']);
         $this->title = $music->title;
         $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
-        $this->selectedRealms = $music->realms->pluck('id')->toArray();
+        $this->selectedGenres = $music->genres->pluck('id')->toArray();
     }
 
     /**
      * Get all realms for selection.
      */
-    public function realms(): \Illuminate\Database\Eloquent\Collection
+    public function genres(): \Illuminate\Database\Eloquent\Collection
     {
-        return Realm::all();
+        return Genre::all();
     }
 
     /**
@@ -87,8 +87,8 @@ new class extends Component
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
             'customId' => ['nullable', 'string', 'max:255'],
-            'selectedRealms' => ['nullable', 'array'],
-            'selectedRealms.*' => ['integer', Rule::exists('realms', 'id')],
+            'selectedGenres' => ['nullable', 'array'],
+            'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
         ]);
 
         $this->music->update([
@@ -97,8 +97,8 @@ new class extends Component
             'custom_id' => $validated['customId'],
         ]);
 
-        // Sync selected realms (empty array will detach all)
-        $this->music->realms()->sync($validated['selectedRealms'] ?? []);
+        // Sync selected genres (empty array will detach all)
+        $this->music->genres()->sync($validated['selectedGenres'] ?? []);
 
         $this->dispatch('music-updated');
     }
@@ -309,20 +309,20 @@ new class extends Component
                     <flux:error name="subtitle" />
                 </flux:field>
 
-                <!-- Realm Selection -->
+                <!-- Genre Selection -->
                 <div class="space-y-2">
-                    <flux:checkbox.group variant="cards" label="{{ __('Select which realms this music piece belongs to.') }}">
-                        @foreach($this->realms() as $realm)
+                    <flux:checkbox.group variant="cards" label="{{ __('Select which genres this music piece belongs to.') }}">
+                        @foreach($this->genres() as $genre)
                             <flux:checkbox
                                 variant="cards"
-                                wire:model="selectedRealms"
-                                value="{{ $realm->id }}"
-                                :label="$realm->label()"
-                                :icon="$realm->icon()"
+                                wire:model="selectedGenres"
+                                value="{{ $genre->id }}"
+                                :label="$genre->label()"
+                                :icon="$genre->icon()"
                             />
                         @endforeach
                     </flux:checkbox.group>
-                    <flux:error name="selectedRealms" />
+                    <flux:error name="selectedGenres" />
                 </div>
 
                 <!-- Save Button -->

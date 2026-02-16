@@ -18,7 +18,7 @@ class MusicPlanFactory extends Factory
     {
         return [
             'user_id' => \App\Models\User::factory(),
-            'realm_id' => \App\Models\Realm::factory(),
+            'genre_id' => \App\Models\Genre::factory(),
             'is_published' => fake()->boolean(),
         ];
     }

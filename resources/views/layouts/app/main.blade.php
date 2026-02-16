@@ -85,7 +85,7 @@
         <div class="w-full lg:max-w-4xl mx-auto mt-8 flex justify-center">
             <div class="flex items-center">
                 <flux:heading class="mr-2">Műfaj:</flux:heading>
-                <livewire:realm-selector />
+                <livewire:genre-selector />
             </div>
         </div>
         <footer class="w-full lg:max-w-4xl mx-auto mt-2 flex flex-col items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
