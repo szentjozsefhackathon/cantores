@@ -38,20 +38,40 @@ new #[Layout('layouts::app.main')] class extends Component
 
     private function loadPlanSlots(): void
     {
+        $assignmentsByPivot = $this->musicPlan->musicAssignments()
+            ->with('music.collections')
+            ->orderBy('music_plan_slot_plan_id')
+            ->orderBy('music_sequence')
+            ->get()
+            ->groupBy('music_plan_slot_plan_id');
+
         $this->planSlots = $this->musicPlan->slots()
             ->withPivot('id', 'sequence')
             ->orderBy('music_plan_slot_plan.sequence')
             ->get()
-            ->map(function ($slot) {
+            ->map(function ($slot) use ($assignmentsByPivot) {
+                $pivotId = $slot->pivot->id;
+                $assignments = $assignmentsByPivot->get($pivotId, collect());
+
                 return [
                     'id' => $slot->id,
-                    'pivot_id' => $slot->pivot->id,
+                    'pivot_id' => $pivotId,
                     'name' => $slot->name,
                     'description' => $slot->description,
                     'sequence' => $slot->pivot->sequence,
+                    'assignments' => $assignments->map(function ($assignment) {
+                        return [
+                            'id' => $assignment->id,
+                            'music_id' => $assignment->music_id,
+                            'music_sequence' => $assignment->music_sequence,
+                            'notes' => $assignment->notes,
+                            'music' => $assignment->music,
+                        ];
+                    })->all(),
                 ];
             })
-            ->toArray();
+            ->values()
+            ->all();
     }
 }
 ?>
@@ -126,6 +146,33 @@ new #[Layout('layouts::app.main')] class extends Component
                                     <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
                                     @if($slot['description'])
                                     <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
+                                    @endif
+
+                                    @if(!empty($slot['assignments']))
+                                    <div class="mt-3 space-y-3">
+                                        @foreach($slot['assignments'] as $assignment)
+                                            @if(!empty($assignment['music']))
+                                                <livewire:music-card
+                                                    :key="'music-card-'.$assignment['id']"
+                                                    :music="$assignment['music']"
+                                                />
+                                            @else
+                                            <flux:callout variant="secondary" icon="information-circle">
+                                                A zenei bejegyzés már nem érhető el.
+                                            </flux:callout>
+                                            @endif
+
+                                            @if(!empty($assignment['notes']))
+                                            <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">
+                                                {{ $assignment['notes'] }}
+                                            </flux:text>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                    @else
+                                    <flux:callout variant="secondary" icon="musical-note" class="mt-3">
+                                        Ehhez az elemhez nincs zene hozzárendelve.
+                                    </flux:callout>
                                     @endif
                                 </div>
                             </flux:card>

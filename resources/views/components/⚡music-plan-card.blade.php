@@ -87,7 +87,7 @@ new class extends Component
                     <div class="flex items-center gap-2">
                         <flux:icon name="musical-note" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
                         <flux:text class="text-sm">
-                            {{ $musicPlan->slots()->count() }} elem
+                            {{ $musicPlan->musicAssignments()->count() }} elem
                         </flux:text>
                     </div>
                     <div class="flex items-center gap-2">
