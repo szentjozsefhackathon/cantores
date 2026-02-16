@@ -1,8 +1,8 @@
 <?php
 
 use App\Models\Collection;
-use App\Models\Music;
 use App\Models\Genre;
+use App\Models\Music;
 use App\Models\User;
 use App\Services\MusicSearchService;
 

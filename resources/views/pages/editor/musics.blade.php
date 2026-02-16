@@ -15,13 +15,23 @@
         <div class="space-y-6">
             <!-- Search and Actions -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <flux:field class="w-full sm:w-auto sm:flex-1">
-                    <flux:input
-                        type="search"
-                        wire:model.live="search"
-                        :placeholder="__('Search music by title, subtitle, custom ID, collection abbreviation, order number, or page number...')"
-                    />
-                </flux:field>
+                <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto sm:flex-1">
+                    <flux:field class="w-full sm:w-auto sm:flex-1">
+                        <flux:input
+                            type="search"
+                            wire:model.live="search"
+                            :placeholder="__('Search music by title, subtitle, custom ID, collection abbreviation, order number, or page number...')"
+                        />
+                    </flux:field>
+                    <flux:field class="w-full sm:w-48">
+                        <flux:select wire:model.live="filter">
+                            <option value="all">{{ __('All') }}</option>
+                            <option value="public">{{ __('Public only') }}</option>
+                            <option value="private">{{ __('Private only') }}</option>
+                            <option value="mine">{{ __('My items only') }}</option>
+                        </flux:select>
+                    </flux:field>
+                </div>
                 
                 <flux:button
                     variant="primary"
@@ -39,6 +49,7 @@
                 <flux:table.column>{{ __('Collections') }}</flux:table.column>
                 <flux:table.column>{{ __('Custom ID') }}</flux:table.column>
                 <flux:table.column>{{ __('Genres') }}</flux:table.column>
+                <flux:table.column>{{ __('Privacy') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
             
@@ -91,6 +102,19 @@
                         
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
+                                @if ($music->is_private)
+                                    <flux:icon name="eye-slash" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Private')" />
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Private') }}</span>
+                                @else
+                                    <flux:icon name="eye" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Public')" />
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Public') }}</span>
+                                @endif
+                            </div>
+                        </flux:table.cell>
+                        
+                        <flux:table.cell>
+                            @can('update', $music)                                                            
+                            <div class="flex items-center gap-2">
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
@@ -99,7 +123,7 @@
                                     tag="a"
                                     :title="__('Edit')"
                                 />
-                                
+                            @endcan
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
@@ -164,6 +188,14 @@
                     :placeholder="__('Enter subtitle')"
                 />
                 <flux:error name="subtitle" />
+            </flux:field>
+
+            <flux:field>
+                <flux:checkbox
+                    wire:model="isPrivate"
+                    :label="__('Make this music piece private (only visible to you)')"
+                />
+                <flux:description>{{ __('Private music pieces are only visible to you and cannot be seen by other users.') }}</flux:description>
             </flux:field>
 
         </div>

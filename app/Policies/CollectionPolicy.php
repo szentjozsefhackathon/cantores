@@ -21,8 +21,13 @@ class CollectionPolicy
      */
     public function view(User $user, Collection $collection): bool
     {
-        // All authenticated users can view collections
-        return $user !== null;
+        // Public collections can be viewed by any authenticated user
+        if (! $collection->is_private) {
+            return $user !== null;
+        }
+
+        // Private collections can only be viewed by owner or admin
+        return $user !== null && ($user->is_admin || $collection->user_id === $user->id);
     }
 
     /**

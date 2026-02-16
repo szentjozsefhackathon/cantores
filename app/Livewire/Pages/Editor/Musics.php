@@ -48,6 +48,10 @@ class Musics extends Component
 
     public ?string $orderNumber = null;
 
+    public string $filter = 'visible'; // 'visible', 'all', 'public', 'private', 'mine'
+
+    public bool $isPrivate = false;
+
     /**
      * Mount the component.
      */
@@ -78,20 +82,29 @@ class Musics extends Component
      */
     public function render(): View
     {
-        $musics = Music::when($this->search, function ($query, $search) {
-            $query->search($search);
-        })
+        $musics = Music::visibleTo(Auth::user())
+            ->when($this->search, function ($query, $search) {
+                $query->search($search);
+            })
+            ->when($this->filter === 'public', function ($query) {
+                $query->public();
+            })
+            ->when($this->filter === 'private', function ($query) {
+                $query->private();
+            })
+            ->when($this->filter === 'mine', function ($query) {
+                $query->where('user_id', Auth::id());
+            })
             ->forCurrentGenre()
             ->with(['genres', 'collections'])
             ->withCount('collections')
             ->orderBy('title')
             ->paginate(10);
 
-        $collections = Collection::orderBy('title')->limit(100)->get();
+        $this->resetPage();
 
         return view('pages.editor.musics', [
-            'musics' => $musics,
-            'collections' => $collections,
+            'musics' => $musics
         ]);
     }
 
@@ -140,6 +153,7 @@ class Musics extends Component
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
             'customId' => ['nullable', 'string', 'max:255'],
+            'isPrivate' => ['boolean'],
         ]);
 
         // Create music with owner
@@ -148,6 +162,7 @@ class Musics extends Component
             'subtitle' => $validated['subtitle'],
             'custom_id' => $validated['customId'],
             'user_id' => Auth::id(),
+            'is_private' => $validated['isPrivate'] ?? false,
         ]);
 
         // Attach current genre if user has one selected
@@ -212,6 +227,7 @@ class Musics extends Component
         $this->title = '';
         $this->subtitle = null;
         $this->customId = null;
+        $this->isPrivate = false;
         $this->collectionSearch = '';
         $this->selectedCollectionId = null;
         $this->pageNumber = null;

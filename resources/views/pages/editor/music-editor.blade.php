@@ -22,6 +22,8 @@ new class extends Component
 
     public ?string $customId = null;
 
+    public bool $isPrivate = false;
+
     // Collection assignment
     public ?int $selectedCollectionId = null;
 
@@ -53,6 +55,7 @@ new class extends Component
         $this->title = $music->title;
         $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
+        $this->isPrivate = $music->is_private;
         $this->selectedGenres = $music->genres->pluck('id')->toArray();
     }
 
@@ -87,6 +90,7 @@ new class extends Component
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
             'customId' => ['nullable', 'string', 'max:255'],
+            'isPrivate' => ['boolean'],
             'selectedGenres' => ['nullable', 'array'],
             'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
         ]);
@@ -95,6 +99,7 @@ new class extends Component
             'title' => $validated['title'],
             'subtitle' => $validated['subtitle'],
             'custom_id' => $validated['customId'],
+            'is_private' => $validated['isPrivate'] ?? false,
         ]);
 
         // Sync selected genres (empty array will detach all)
@@ -307,6 +312,17 @@ new class extends Component
                         :placeholder="__('Enter subtitle')"
                     />
                     <flux:error name="subtitle" />
+                </flux:field>
+
+                <!-- Privacy Toggle -->
+                <flux:field>
+                    <flux:label>{{ __('Privacy') }}</flux:label>
+                    <flux:description>{{ __('Private music pieces are only visible to you. Public music pieces are visible to all users.') }}</flux:description>
+                    <flux:checkbox
+                        wire:model="isPrivate"
+                        :label="__('Make this music piece private')"
+                    />
+                    <flux:error name="isPrivate" />
                 </flux:field>
 
                 <!-- Genre Selection -->

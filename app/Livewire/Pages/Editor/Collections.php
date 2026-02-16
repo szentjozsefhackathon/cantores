@@ -45,6 +45,10 @@ class Collections extends Component
 
     public string $sortDirection = 'asc';
 
+    public string $filter = 'visible'; // 'visible', 'all', 'public', 'private', 'mine'
+
+    public bool $isPrivate = false;
+
     /**
      * Mount the component.
      */
@@ -98,11 +102,21 @@ class Collections extends Component
      */
     public function render(): View
     {
-        $collections = Collection::when($this->search, function ($query, $search) {
-            $query->where('title', 'ilike', "%{$search}%")
-                ->orWhere('abbreviation', 'ilike', "%{$search}%")
-                ->orWhere('author', 'ilike', "%{$search}%");
-        })
+        $collections = Collection::visibleTo(Auth::user())
+            ->when($this->search, function ($query, $search) {
+                $query->where('title', 'ilike', "%{$search}%")
+                    ->orWhere('abbreviation', 'ilike', "%{$search}%")
+                    ->orWhere('author', 'ilike', "%{$search}%");
+            })
+            ->when($this->filter === 'public', function ($query) {
+                $query->public();
+            })
+            ->when($this->filter === 'private', function ($query) {
+                $query->private();
+            })
+            ->when($this->filter === 'mine', function ($query) {
+                $query->where('user_id', Auth::id());
+            })
             ->forCurrentGenre()
             ->with(['genres'])
             ->withCount('music')
@@ -139,6 +153,7 @@ class Collections extends Component
         $this->title = $collection->title;
         $this->abbreviation = $collection->abbreviation;
         $this->author = $collection->author;
+        $this->isPrivate = $collection->is_private;
         $this->selectedGenres = $collection->genres->pluck('id')->toArray();
         $this->showEditModal = true;
     }
@@ -169,6 +184,7 @@ class Collections extends Component
             'title' => ['required', 'string', 'max:255', Rule::unique('collections', 'title')],
             'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')],
             'author' => ['nullable', 'string', 'max:255'],
+            'isPrivate' => ['boolean'],
             'selectedGenres' => ['nullable', 'array'],
             'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
         ]);
@@ -176,6 +192,7 @@ class Collections extends Component
         $collection = Collection::create([
             ...$validated,
             'user_id' => Auth::id(),
+            'is_private' => $validated['isPrivate'] ?? false,
         ]);
 
         // Attach selected genres (empty array will detach all)
@@ -197,11 +214,15 @@ class Collections extends Component
             'title' => ['required', 'string', 'max:255', Rule::unique('collections', 'title')->ignore($this->editingCollection->id)],
             'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')->ignore($this->editingCollection->id)],
             'author' => ['nullable', 'string', 'max:255'],
+            'isPrivate' => ['boolean'],
             'selectedGenres' => ['nullable', 'array'],
             'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
         ]);
 
-        $this->editingCollection->update($validated);
+        $this->editingCollection->update([
+            ...$validated,
+            'is_private' => $validated['isPrivate'] ?? false,
+        ]);
 
         // Sync selected genres (empty array will detach all)
         $this->editingCollection->genres()->sync($validated['selectedGenres'] ?? []);
@@ -238,6 +259,7 @@ class Collections extends Component
         $this->title = '';
         $this->abbreviation = null;
         $this->author = null;
+        $this->isPrivate = false;
         $this->selectedGenres = [];
     }
 }

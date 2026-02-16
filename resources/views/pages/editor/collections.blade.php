@@ -47,6 +47,7 @@
                 <flux:table.column sortable :sorted="$sortBy === 'author'" :direction="$sortDirection" wire:click="sort('author')">{{ __('Author') }}</flux:table.column>
                 <flux:table.column>{{ __('Music Pieces') }}</flux:table.column>
                 <flux:table.column>{{ __('Genres') }}</flux:table.column>
+                <flux:table.column>{{ __('Privacy') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
             
@@ -101,14 +102,27 @@
                         
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
-                                <flux:button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    icon="pencil" 
+                                @if ($collection->is_private)
+                                    <flux:icon name="eye-slash" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Private')" />
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Private') }}</span>
+                                @else
+                                    <flux:icon name="globe" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Public')" />
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Public') }}</span>
+                                @endif
+                            </div>
+                        </flux:table.cell>
+                        
+                        <flux:table.cell>
+                            <div class="flex items-center gap-2">
+                            @can('update', $collection)                                
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="pencil"
                                     wire:click="edit({{ $collection->id }})"
                                     :title="__('Edit')"
                                 />
-                                
+                            @endcan
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
@@ -130,7 +144,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="6" class="text-center">
+                        <flux:table.cell colspan="7" class="text-center">
                             <div class="py-8 text-center">
                                 <flux:icon name="folder-open" class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
                                 <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No collections found') }}</h3>
@@ -179,12 +193,20 @@
 
             <flux:field>
                 <flux:label>{{ __('Author') }}</flux:label>
-                <flux:description>{{__('Optional author or publisher')}}</flux:description>                
+                <flux:description>{{__('Optional author or publisher')}}</flux:description>
                 <flux:input
                     wire:model="author"
                     :placeholder="__('Enter author name')"
                 />
                 <flux:error name="author" />
+            </flux:field>
+
+            <flux:field>
+                <flux:checkbox
+                    wire:model="isPrivate"
+                    :label="__('Make this collection private (only visible to you)')"
+                />
+                <flux:description>{{ __('Private collections are only visible to you and cannot be seen by other users.') }}</flux:description>
             </flux:field>
 
             <flux:field>
@@ -359,15 +381,23 @@
                 <flux:error name="author" />
             </flux:field>
 
+            <flux:field>
+                <flux:checkbox
+                    wire:model="isPrivate"
+                    :label="__('Make this collection private (only visible to you)')"
+                />
+                <flux:description>{{ __('Private collections are only visible to you and cannot be seen by other users.') }}</flux:description>
+            </flux:field>
+
             <div class="space-y-2">
                 
                 <flux:checkbox.group variant="cards" label="{{ __('Select which genres this collection belongs to.') }}">
-                @foreach($this->genres() as $genre)                    
+                @foreach($this->genres() as $genre)
                 <flux:checkbox
                             variant="cards"
                             wire:model="selectedGenres"
                             value="{{ $genre->id }}"
-                            :label="$genre->label()"          
+                            :label="$genre->label()"
                             :icon="$genre->icon()"
 
                         />

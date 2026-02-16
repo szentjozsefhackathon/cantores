@@ -25,7 +25,20 @@ class Collection extends Model implements Auditable
         'abbreviation',
         'author',
         'user_id',
+        'is_private',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_private' => 'boolean',
+        ];
+    }
 
     public function toSearchableArray()
     {
@@ -34,8 +47,6 @@ class Collection extends Model implements Auditable
             'abbreviation' => $this->abbreviation,
         ];
     }
-
-
 
     /**
      * Get the user who owns this collection.
@@ -94,6 +105,41 @@ class Collection extends Model implements Auditable
     }
 
     /**
+     * Scope for public collections (not private).
+     */
+    public function scopePublic($query)
+    {
+        return $query->where('is_private', false);
+    }
+
+    /**
+     * Scope for private collections.
+     */
+    public function scopePrivate($query)
+    {
+        return $query->where('is_private', true);
+    }
+
+    /**
+     * Scope for collections visible to a given user.
+     * Shows public collections plus user's own private collections.
+     */
+    public function scopeVisibleTo($query, ?\App\Models\User $user = null)
+    {
+        $userId = $user?->id;
+
+        if (! $userId) {
+            // Guest can only see public items
+            return $query->where('is_private', false);
+        }
+
+        return $query->where(function ($q) use ($userId) {
+            $q->where('is_private', false)
+                ->orWhere('user_id', $userId);
+        });
+    }
+
+    /**
      * Format the collection with pivot data for display.
      */
     public function formatWithPivot(?\Illuminate\Database\Eloquent\Relations\Pivot $pivot = null): string
@@ -106,10 +152,10 @@ class Collection extends Model implements Auditable
             $parts[] = $pivot->order_number;
         }
 
-        $formatted = trim($base . ($parts ? ' ' . implode(' ', $parts) : ''));
+        $formatted = trim($base.($parts ? ' '.implode(' ', $parts) : ''));
 
         if ($pivot && $pivot->page_number) {
-            $formatted .= ' ' . __('(p.:page)', ['page' => $pivot->page_number]);
+            $formatted .= ' '.__('(p.:page)', ['page' => $pivot->page_number]);
         }
 
         return $formatted;

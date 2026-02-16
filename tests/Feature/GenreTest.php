@@ -1,9 +1,9 @@
 <?php
 
 use App\Models\Collection;
+use App\Models\Genre;
 use App\Models\Music;
 use App\Models\MusicPlan;
-use App\Models\Genre;
 use App\Models\User;
 
 beforeEach(function () {

@@ -33,7 +33,20 @@ class Music extends Model implements Auditable
         'subtitle',
         'custom_id',
         'user_id',
+        'is_private',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_private' => 'boolean',
+        ];
+    }
 
     /**
      * Get the user who owns this music.
@@ -112,5 +125,40 @@ class Music extends Model implements Auditable
             });
         }
         // If $genreId is null, no filtering applied (show all music)
+    }
+
+    /**
+     * Scope for public music (not private).
+     */
+    public function scopePublic($query)
+    {
+        return $query->where('is_private', false);
+    }
+
+    /**
+     * Scope for private music.
+     */
+    public function scopePrivate($query)
+    {
+        return $query->where('is_private', true);
+    }
+
+    /**
+     * Scope for music visible to a given user.
+     * Shows public music plus user's own private music.
+     */
+    public function scopeVisibleTo($query, ?\App\Models\User $user = null)
+    {
+        $userId = $user?->id;
+
+        if (! $userId) {
+            // Guest can only see public items
+            return $query->where('is_private', false);
+        }
+
+        return $query->where(function ($q) use ($userId) {
+            $q->where('is_private', false)
+                ->orWhere('user_id', $userId);
+        });
     }
 }

@@ -28,6 +28,7 @@ class CollectionFactory extends Factory
             'abbreviation' => $this->faker->optional()->regexify('[A-Z]{2,4}'),
             'author' => $this->faker->optional()->name(),
             'user_id' => \App\Models\User::factory(),
+            'is_private' => $this->faker->boolean(20), // 20% private
         ];
     }
 }

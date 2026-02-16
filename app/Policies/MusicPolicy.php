@@ -21,8 +21,13 @@ class MusicPolicy
      */
     public function view(User $user, Music $music): bool
     {
-        // All authenticated users can view music
-        return $user !== null;
+        // Public music can be viewed by any authenticated user
+        if (! $music->is_private) {
+            return $user !== null;
+        }
+
+        // Private music can only be viewed by owner or admin
+        return $user !== null && ($user->is_admin || $music->user_id === $user->id);
     }
 
     /**
