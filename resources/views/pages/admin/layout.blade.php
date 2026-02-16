@@ -17,6 +17,12 @@
                 </flux:navlist.item>
             </flux:navlist.group>
 
+            <flux:navlist.group :label="__('Data Import')">
+                <flux:navlist.item :href="route('admin.bulk-imports')" wire:navigate :current="request()->routeIs('admin.bulk-imports')">
+                    {{ __('Bulk Imports') }}
+                </flux:navlist.item>
+            </flux:navlist.group>
+
         </flux:navlist>
     </div>
 
