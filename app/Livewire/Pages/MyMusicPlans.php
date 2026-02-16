@@ -9,7 +9,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-class MusicPlans extends Component
+class MyMusicPlans extends Component
 {
     use WithPagination;
 
@@ -64,7 +64,7 @@ class MusicPlans extends Component
 
     public function render()
     {
-        return view('pages.music-plans', [
+        return view('pages.my-music-plans', [
             'musicPlans' => $this->getMusicPlansQuery()->paginate(12),
         ]);
     }

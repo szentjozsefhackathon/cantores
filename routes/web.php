@@ -66,9 +66,13 @@ Route::livewire('/music-plan/{musicPlan?}', 'pages::music-plan.music-plan-editor
 Route::livewire('/music-plan/{musicPlan}/view', 'pages::music-plan.music-plan-view')
     ->name('music-plan-view');
 
-// Music plans list
-Route::livewire('/music-plans', \App\Livewire\Pages\MusicPlans::class)
+// Music plans list (authenticated user's own plans)
+Route::livewire('/my-music-plans', \App\Livewire\Pages\MyMusicPlans::class)
     ->middleware(['auth', 'verified'])
+    ->name('my-music-plans');
+
+// Public music plans listing (guest accessible)
+Route::livewire('/music-plans', 'pages::music-plans')
     ->name('music-plans');
 
 // Music Library - Editor routes (accessible to all authenticated users)

@@ -33,7 +33,7 @@
                 <flux:sidebar.item icon="music" :href="route('musics')" :current="request()->routeIs('musics')" wire:navigate>
                     {{ __('Music Pieces') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="calendar-days" :href="route('music-plans')" :current="request()->routeIs('music-plans')" wire:navigate>
+                <flux:sidebar.item icon="calendar-days" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>
                     Énekrendjeim
                 </flux:sidebar.item>
             </flux:sidebar.group>

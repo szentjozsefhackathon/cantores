@@ -1,11 +1,89 @@
 <?php
 
-use Livewire\Component;
+namespace App\Livewire\Pages;
 
-new class extends Component
+use App\Facades\RealmContext;
+use App\Models\MusicPlan;
+use Illuminate\Contracts\View\View;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
+use Livewire\Component;
+use Livewire\WithPagination;
+
+new #[Layout('layouts::app.main')] class extends Component
 {
-    //
-};
+    use WithPagination;
+
+    public string $search = '';
+
+    public function mount(): void
+    {
+        $this->search = request()->query('search', '');
+    }
+
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    #[On('realm-changed')]
+    public function onRealmChanged(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Build the query for fetching published music plans.
+     */
+    protected function getMusicPlansQuery()
+    {
+        $query = MusicPlan::query()
+            ->where('is_published', true)
+            ->orderBy('created_at', 'desc');
+
+        // Filter by current realm if set
+        $realmId = RealmContext::getId();
+        if ($realmId !== null) {
+            // Show plans that belong to the current realm OR have no realm (belongs to all)
+            $query->where(function ($q) use ($realmId) {
+                $q->whereNull('realm_id')
+                    ->orWhere('realm_id', $realmId);
+            });
+        }
+
+        // Search filter
+        if ($this->search) {
+            $query->where(function ($q) {
+                // Search through celebrations relationship
+                $q->whereHas('celebrations', function ($celebrationQuery) {
+                    $celebrationQuery->where('name', 'ilike', "%{$this->search}%")
+                        ->orWhere('season_text', 'ilike', "%{$this->search}%")
+                        ->orWhere('year_letter', 'ilike', "%{$this->search}%");
+                });
+            });
+        }
+
+        // Eager load relationships for performance
+        $query->with([
+            'celebrations',
+            'user',
+            'realm',
+            'musicAssignments.music',
+            'musicAssignments.musicPlanSlot',
+        ]);
+
+        return $query;
+    }
+
+    /**
+     * Get the paginated music plans.
+     */
+    public function getMusicPlansProperty(): LengthAwarePaginator
+    {
+        return $this->getMusicPlansQuery()->paginate(12);
+    }
+}
 ?>
 
 <div class="py-8">
@@ -16,28 +94,19 @@ new class extends Component
                 <div class="flex items-center gap-4">
                     <flux:icon name="musical-note" class="h-10 w-10 text-blue-600 dark:text-blue-400" variant="outline" />
                     <div>
-                        <flux:heading size="xl">Énekrendjeim</flux:heading>
+                        <flux:heading size="xl">Közzétett énekrendek</flux:heading>
                         <flux:text class="text-neutral-600 dark:text-neutral-400">
-                            Itt találod az összes létrehozott énekrendedet
+                            Itt találod az összes nyilvános énekrendet
                         </flux:text>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
                     <flux:button 
-                        href="{{ route('dashboard') }}" 
+                        href="{{ route('home') }}" 
                         variant="outline" 
                         icon="arrow-left">
                         Vissza
                     </flux:button>
-                    <form action="{{ route('music-plans.store') }}" method="POST" class="inline">
-                        @csrf
-                        <flux:button
-                            type="submit"
-                            variant="primary"
-                            icon="plus">
-                            Új énekrend
-                        </flux:button>
-                    </form>
                 </div>
             </div>
 
@@ -57,36 +126,31 @@ new class extends Component
                     <div class="flex items-end">
                         <flux:badge color="blue" size="lg" class="px-4 py-2">
                             <flux:icon name="musical-note" class="h-4 w-4 mr-2" variant="mini" />
-                            {{ $musicPlans->total() }} énekrend
+                            {{ $this->musicPlans->total() }} énekrend
                         </flux:badge>
                     </div>
                 </div>
             </div>
 
             <!-- Music plans grid -->
-            @if($musicPlans->isEmpty())
+            @if($this->musicPlans->isEmpty())
                 <flux:callout variant="secondary" icon="musical-note" class="border-dashed">
-                    <flux:callout.heading>Még nincsenek énekrendjeid</flux:callout.heading>
+                    <flux:callout.heading>Nincsenek közzétett énekrendek</flux:callout.heading>
                     <flux:callout.text>
-                        Hozz létre első énekrended a liturgikus naptárból vagy az "Új énekrend" gombbal.
+                        Jelenleg nincs elérhető nyilvános énekrend. Próbálj meg más keresési feltételeket megadni.
                     </flux:callout.text>
-                    <x-slot name="actions">
-                        <flux:button href="{{ route('dashboard') }}" variant="outline" size="sm">
-                            Liturgikus naptár
-                        </flux:button>
-                    </x-slot>
                 </flux:callout>
             @else
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    @foreach($musicPlans as $plan)
+                    @foreach($this->musicPlans as $plan)
                         <livewire:music-plan-card :musicPlan="$plan" :key="$plan->id" />
                     @endforeach
                 </div>
 
                 <!-- Pagination -->
-                @if($musicPlans->hasPages())
+                @if($this->musicPlans->hasPages())
                     <div class="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-800">
-                        {{ $musicPlans->links() }}
+                        {{ $this->musicPlans->links() }}
                     </div>
                 @endif
             @endif

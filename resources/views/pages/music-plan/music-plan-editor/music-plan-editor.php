@@ -49,7 +49,7 @@ new class extends Component
     {
         if (! $musicPlan) {
             // Redirect to music plans list since creation should happen via POST
-            $this->redirectRoute('music-plans');
+            $this->redirectRoute('my-music-plans');
 
             return;
         }
@@ -126,7 +126,7 @@ new class extends Component
 
         $this->musicPlan->delete();
 
-        $this->redirectRoute('music-plans');
+        $this->redirectRoute('my-music-plans');
     }
 
     public function loadAvailableTemplates(): void
