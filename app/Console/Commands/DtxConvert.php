@@ -182,6 +182,10 @@ class DtxConvert extends Command
      */
     private function storeInDatabase(string $collection, array $songs): void
     {
+        // Determine next batch number
+        $latestBatchNumber = BulkImport::max('batch_number');
+        $nextBatchNumber = $latestBatchNumber ? $latestBatchNumber + 1 : 1;
+
         // Delete existing records for this collection
         BulkImport::where('collection', $collection)->delete();
 
@@ -191,13 +195,14 @@ class DtxConvert extends Command
                 'collection' => $collection,
                 'piece' => $song['enek'],
                 'reference' => (string) $song['ienek'],
+                'batch_number' => $nextBatchNumber,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ];
         }
 
         // Use chunk insert for performance
-        foreach (array_chunk($records, 100) as $chunk) {            
+        foreach (array_chunk($records, 100) as $chunk) {
             BulkImport::insert($chunk);
         }
     }

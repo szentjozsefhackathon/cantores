@@ -20,6 +20,7 @@ class BulkImportFactory extends Factory
             'collection' => $this->faker->word(),
             'piece' => $this->faker->sentence(),
             'reference' => (string) $this->faker->unique()->numberBetween(1, 1000),
+            'batch_number' => $this->faker->numberBetween(1, 10),
         ];
     }
 }

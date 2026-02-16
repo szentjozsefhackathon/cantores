@@ -51,3 +51,37 @@ test('mass assignment protection', function () {
     expect($record->reference)->toBe('1');
     expect($record->unknown_field)->toBeNull();
 });
+
+test('batch number is required and defaults to 1', function () {
+    $record = BulkImport::create([
+        'collection' => 'test',
+        'piece' => 'Test piece',
+        'reference' => '2',
+        // batch_number not provided, should default to 1
+    ]);
+
+    expect($record->batch_number)->toBe(1);
+});
+
+test('batch number is cast to integer', function () {
+    $record = BulkImport::create([
+        'collection' => 'test',
+        'piece' => 'Test piece',
+        'reference' => '3',
+        'batch_number' => '5',
+    ]);
+
+    expect($record->batch_number)->toBeInt();
+    expect($record->batch_number)->toBe(5);
+});
+
+test('batch number is mass assignable', function () {
+    $record = new BulkImport([
+        'collection' => 'test',
+        'piece' => 'Test piece',
+        'reference' => '4',
+        'batch_number' => 7,
+    ]);
+
+    expect($record->batch_number)->toBe(7);
+});

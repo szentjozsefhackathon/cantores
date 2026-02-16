@@ -18,6 +18,16 @@ class BulkImport extends Model
         'collection',
         'piece',
         'reference',
+        'batch_number',
+    ];
+
+    /**
+     * The model's default attribute values.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'batch_number' => 1,
     ];
 
     /**
@@ -29,6 +39,7 @@ class BulkImport extends Model
     {
         return [
             'reference' => 'string',
+            'batch_number' => 'integer',
         ];
     }
 }

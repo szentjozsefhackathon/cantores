@@ -147,3 +147,94 @@ DTX;
         unlink($dtxPath);
     }
 });
+
+test('dtx convert command assigns incremental batch numbers', function () {
+    // Create existing bulk import with batch number 3
+    BulkImport::factory()->create(['batch_number' => 3]);
+
+    $collection = 'batchtest_'.uniqid();
+    $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
+
+    $dtxContent = <<<'DTX'
+;Test collection
+RBatchTest
+S1
+
+>1
+/1 First song
+ A test song line.
+
+>2
+/1 Second song
+ Another line.
+DTX;
+
+    Http::fake([
+        $url => Http::response($dtxContent, 200),
+    ]);
+
+    // Run command
+    $this->artisan('dtx:convert', ['collection' => $collection])->assertSuccessful();
+
+    // Verify records have batch number 4 (max + 1)
+    $records = BulkImport::where('collection', $collection)->get();
+    expect($records)->toHaveCount(2);
+    expect($records[0]->batch_number)->toBe(4);
+    expect($records[1]->batch_number)->toBe(4);
+
+    // Run command again with different collection, should get batch number 5
+    $collection2 = 'batchtest2_'.uniqid();
+    $url2 = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection2}.dtx";
+    Http::fake([
+        $url2 => Http::response($dtxContent, 200),
+    ]);
+    $this->artisan('dtx:convert', ['collection' => $collection2])->assertSuccessful();
+
+    $records2 = BulkImport::where('collection', $collection2)->get();
+    expect($records2)->toHaveCount(2);
+    expect($records2[0]->batch_number)->toBe(5);
+
+    // Clean up CSV files
+    $csvPath = storage_path("app/private/dtximport/{$collection}.csv");
+    if (file_exists($csvPath)) {
+        unlink($csvPath);
+    }
+    $csvPath2 = storage_path("app/private/dtximport/{$collection2}.csv");
+    if (file_exists($csvPath2)) {
+        unlink($csvPath2);
+    }
+});
+
+test('dtx convert command assigns batch number 1 when no existing records', function () {
+    // Ensure no bulk imports exist
+    BulkImport::query()->delete();
+
+    $collection = 'batchfirst_'.uniqid();
+    $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
+
+    $dtxContent = <<<'DTX'
+;Test collection
+RFirst
+S1
+
+>1
+/1 First song
+ A test song line.
+DTX;
+
+    Http::fake([
+        $url => Http::response($dtxContent, 200),
+    ]);
+
+    $this->artisan('dtx:convert', ['collection' => $collection])->assertSuccessful();
+
+    $records = BulkImport::where('collection', $collection)->get();
+    expect($records)->toHaveCount(1);
+    expect($records[0]->batch_number)->toBe(1);
+
+    // Clean up CSV
+    $csvPath = storage_path("app/private/dtximport/{$collection}.csv");
+    if (file_exists($csvPath)) {
+        unlink($csvPath);
+    }
+});
