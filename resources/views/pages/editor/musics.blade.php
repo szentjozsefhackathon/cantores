@@ -31,6 +31,21 @@
                             <option value="mine">{{ __('My items only') }}</option>
                         </flux:select>
                     </flux:field>
+                    <flux:field class="w-full sm:w-48">
+                        <flux:select wire:model.live="collectionFilter">
+                            <option value="">{{ __('All Collections') }}</option>
+                            @foreach ($this->collections as $collection)
+                                <option value="{{ $collection->title }}">{{ $collection->title }} ({{ $collection->abbreviation }})</option>
+                            @endforeach
+                        </flux:select>
+                    </flux:field>
+                    <flux:field class="w-full sm:w-48">
+                        <flux:input
+                            type="search"
+                            wire:model.live="collectionFreeText"
+                            :placeholder="__('Filter by collection abbreviation, title, or order number...')"
+                        />
+                    </flux:field>
                 </div>
                 
                 <div class="flex items-center gap-2">

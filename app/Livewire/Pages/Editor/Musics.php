@@ -20,6 +20,10 @@ class Musics extends Component
 
     public string $search = '';
 
+    public string $collectionFilter = '';
+
+    public string $collectionFreeText = '';
+
     public bool $showCreateModal = false;
 
     public bool $showEditModal = false;
@@ -69,6 +73,22 @@ class Musics extends Component
      * Reset pagination when search changes.
      */
     public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when collection filter changes.
+     */
+    public function updatingCollectionFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when collection free text filter changes.
+     */
+    public function updatingCollectionFreeText(): void
     {
         $this->resetPage();
     }
@@ -140,12 +160,39 @@ class Musics extends Component
             ->when($this->filter === 'mine', function ($query) {
                 $query->where('user_id', Auth::id());
             })
+            ->when($this->collectionFilter !== '', function ($query) {
+                $query->whereHas('collections', function ($subQuery) {
+                    $subQuery->search($this->collectionFilter);
+                });
+            })
+            ->when($this->collectionFreeText !== '', function ($query) {
+                $words = preg_split('/\s+/', trim($this->collectionFreeText));
+                $query->whereHas('collections', function ($subQuery) use ($words) {
+                    foreach ($words as $word) {
+                        $subQuery->where(function ($q) use ($word) {
+                            $q->where('collections.title', 'ilike', "%{$word}%")
+                                ->orWhere('collections.abbreviation', 'ilike', "%{$word}%")
+                                ->orWhere('music_collection.order_number', 'ilike', "%{$word}%");
+                        });
+                    }
+                });
+            })
             ->forCurrentGenre()
             ->with(['genres', 'collections'])
             ->withCount('collections')
             ->orderBy('title');
     }
 
+    /**
+     * Get collections for the dropdown filter.
+     */
+    public function getCollectionsProperty()
+    {
+        return Collection::visibleTo(Auth::user())
+            ->forCurrentGenre()
+            ->orderBy('title')
+            ->get();
+    }
 
     /**
      * Render the component.
@@ -155,15 +202,16 @@ class Musics extends Component
         if ($this->search) {
             $musics = Music::search($this->search)
                 ->query(
-                    fn($q) => $this->applyScopes($q)
+                    fn ($q) => $this->applyScopes($q)
                 )
                 ->paginate(15);
         } else {
             $musics = $this->applyScopes(Music::query())
                 ->paginate(15);
         }
+
         return view('pages.editor.musics', [
-            'musics' => $musics
+            'musics' => $musics,
         ]);
     }
 

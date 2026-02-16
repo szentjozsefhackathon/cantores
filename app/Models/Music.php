@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Laravel\Scout\Attributes\SearchUsingFullText;
-use Laravel\Scout\Attributes\SearchUsingPrefix;
 use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
 
@@ -114,7 +112,6 @@ class Music extends Model implements Auditable
         $service->applySearch($query, $search);
     }
 
-
     /**
      * Scope for music belonging to the current user's genre.
      */
@@ -175,7 +172,7 @@ class Music extends Model implements Auditable
      */
     public function toSearchableArray(): array
     {
-        return [            
+        return [
             'title' => $this->title,
             'subtitle' => $this->subtitle,
             'custom_id' => $this->custom_id,

@@ -6,14 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
-use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Collection extends Model implements Auditable
 {
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
-    use Searchable;
 
     /**
      * The attributes that are mass assignable.
@@ -37,14 +35,6 @@ class Collection extends Model implements Auditable
     {
         return [
             'is_private' => 'boolean',
-        ];
-    }
-
-    public function toSearchableArray()
-    {
-        return [
-            'abbreviation' => $this->abbreviation,
-            'order_number' => $this->order_number,
         ];
     }
 
