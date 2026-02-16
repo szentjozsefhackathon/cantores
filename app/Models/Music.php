@@ -34,6 +34,7 @@ class Music extends Model implements Auditable
         'custom_id',
         'user_id',
         'is_private',
+        'import_batch_number',
     ];
 
     /**
@@ -45,6 +46,7 @@ class Music extends Model implements Auditable
     {
         return [
             'is_private' => 'boolean',
+            'import_batch_number' => 'integer',
         ];
     }
 

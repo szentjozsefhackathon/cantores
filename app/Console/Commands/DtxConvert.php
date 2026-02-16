@@ -14,7 +14,7 @@ class DtxConvert extends Command
      *
      * @var string
      */
-    protected $signature = 'dtx:convert {collection : The collection name (e.g., szvu)}';
+    protected $signature = 'dtx:convert {collection : The collection name (e.g., szvu)} {--title : Use ienek as title and leave reference empty}';
 
     /**
      * The console command description.
@@ -29,6 +29,7 @@ class DtxConvert extends Command
     public function handle(): int
     {
         $collection = $this->argument('collection');
+        $useTitle = $this->option('title');
         $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
 
         $this->info("Downloading DTX file from: {$url}");
@@ -57,7 +58,7 @@ class DtxConvert extends Command
 
         $this->info("DTX file saved to: {$dtxPath}");
 
-        $songs = $this->parseDtx($dtxPath);
+        $songs = $this->parseDtx($dtxPath, $useTitle);
 
         if (empty($songs)) {
             $this->warn('No songs found in DTX file.');
@@ -84,9 +85,10 @@ class DtxConvert extends Command
     /**
      * Parse DTX file and extract songs.
      *
+     * @param  bool  $useTitle  If true, use ienek as title and leave reference empty.
      * @return array<int, array{ienek: string, enek: string}>
      */
-    private function parseDtx(string $dtxPath): array
+    private function parseDtx(string $dtxPath, bool $useTitle = false): array
     {
         $songs = [];
         $enekszam = '';
@@ -137,10 +139,10 @@ class DtxConvert extends Command
                     if ($ivers === 1) {
                         $firstline = $this->unescape($line);
                         $firstline = $this->cleanTxt($firstline);
-                        if (! empty($firstline)) {
+                        if (! empty($firstline) || $useTitle) {
                             $songs[] = [
-                                'ienek' => $enekszam,
-                                'enek' => $firstline,
+                                'ienek' => $useTitle ? '' : $enekszam,
+                                'enek' => $useTitle ? $enekszam : $firstline,
                             ];
                             $captured = true;
                         }

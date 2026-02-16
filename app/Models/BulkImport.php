@@ -42,4 +42,12 @@ class BulkImport extends Model
             'batch_number' => 'integer',
         ];
     }
+
+    /**
+     * Get the music pieces imported from this batch.
+     */
+    public function musics(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Music::class, 'import_batch_number', 'batch_number');
+    }
 }

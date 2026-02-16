@@ -4,16 +4,16 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-1">
                 <flux:field class="w-full sm:w-auto sm:flex-1">
-                    <flux:input 
-                        type="search" 
-                        wire:model.live="search" 
-                        :placeholder="__('Search by piece...')" 
+                    <flux:input
+                        type="search"
+                        wire:model.live="search"
+                        :placeholder="__('Search by piece...')"
                     />
                 </flux:field>
 
                 <flux:field class="w-full sm:w-auto">
-                    <flux:select 
-                        wire:model.live="collectionFilter" 
+                    <flux:select
+                        wire:model.live="collectionFilter"
                         :placeholder="__('All Collections')"
                     >
                         <option value="">{{ __('All Collections') }}</option>
@@ -23,14 +23,62 @@
                     </flux:select>
                 </flux:field>
 
-                <flux:button 
-                    variant="ghost" 
-                    icon="x" 
+                <flux:button
+                    variant="ghost"
+                    icon="x"
                     wire:click="resetFilters"
                     :title="__('Reset filters')"
                 />
             </div>
+
+            <flux:button
+                variant="primary"
+                icon="music"
+                wire:click="openCreateMusicDialog"
+                :title="__('Create Music Pieces')"
+            >
+                {{ __('Create Music Pieces') }}
+            </flux:button>
         </div>
+
+        <!-- Create Music Dialog -->
+        <flux:modal wire:model="showDialog" max-width="md">
+            <flux:heading>{{ __('Create Music Pieces from Bulk Import') }}</flux:heading>
+            
+            <div class="mt-6 space-y-4">
+                <flux:field>
+                    <flux:label>{{ __('Batch Number') }}</flux:label>
+                    <flux:select wire:model="selectedBatchNumber" required>
+                        <option value="">{{ __('Select a batch') }}</option>
+                        @foreach ($batchNumbers as $batch)
+                            <option value="{{ $batch }}">{{ $batch }}</option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="selectedBatchNumber" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>{{ __('Collection') }}</flux:label>
+                    <flux:select wire:model="selectedCollectionId" required>
+                        <option value="">{{ __('Select a collection') }}</option>
+                        @foreach ($collectionList as $collection)
+                            <option value="{{ $collection->id }}">{{ $collection->title }}</option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="selectedCollectionId" />
+                </flux:field>
+            </div>
+            
+            <div class="mt-6 flex justify-end gap-3">
+                <flux:button variant="ghost" wire:click="closeDialog" wire:loading.attr="disabled">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" wire:click="importMusic" wire:loading.attr="disabled" wire:loading.class="opacity-50 cursor-not-allowed">
+                    <flux:icon name="music" class="mr-2" wire:loading.class="hidden" />
+                    {{ __('Import') }}
+                </flux:button>
+            </div>
+        </flux:modal>
 
         <!-- Imports Table -->
         <flux:table>

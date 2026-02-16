@@ -104,6 +104,60 @@ DTX;
     }
 });
 
+test('dtx convert command with --title flag uses ienek as title and leaves reference empty', function () {
+    $dtxContent = <<<'DTX'
+;Test collection
+RTest
+S1
+
+>1
+/1 First verse
+ A test song line.
+/2 Second verse
+ Another line.
+
+>2
+/1 Another song
+ Second song line.
+DTX;
+
+    $collection = 'test_title_'.uniqid();
+    $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
+
+    Http::fake([
+        $url => Http::response($dtxContent, 200),
+    ]);
+
+    BulkImport::where('collection', $collection)->delete();
+
+    $this->artisan('dtx:convert', ['collection' => $collection, '--title' => true])
+        ->assertSuccessful();
+
+    $records = BulkImport::where('collection', $collection)->orderBy('piece')->get();
+    expect($records)->toHaveCount(2);
+
+    $first = $records[0];
+    expect($first->piece)->toBe('1');
+    expect($first->reference)->toBe('');
+
+    $second = $records[1];
+    expect($second->piece)->toBe('2');
+    expect($second->reference)->toBe('');
+
+    // Verify CSV file exists and check its content
+    $csvPath = storage_path("app/private/dtximport/{$collection}.csv");
+    expect(file_exists($csvPath))->toBeTrue();
+
+    $csvLines = file($csvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    expect($csvLines)->toHaveCount(3); // header + 2 rows
+    expect($csvLines[0])->toBe('enek,ienek');
+    expect($csvLines[1])->toBe('1,');
+    expect($csvLines[2])->toBe('2,');
+
+    // Clean up CSV
+    unlink($csvPath);
+});
+
 test('dtx convert command handles missing file', function () {
     $collection = 'nonexistent';
     $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
