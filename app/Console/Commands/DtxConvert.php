@@ -190,12 +190,14 @@ class DtxConvert extends Command
             $records[] = [
                 'collection' => $collection,
                 'piece' => $song['enek'],
-                'order_number' => (int) $song['ienek'],
+                'reference' => (string) $song['ienek'],
+                'created_at' => now(),
+                'updated_at' => now()
             ];
         }
 
         // Use chunk insert for performance
-        foreach (array_chunk($records, 100) as $chunk) {
+        foreach (array_chunk($records, 100) as $chunk) {            
             BulkImport::insert($chunk);
         }
     }

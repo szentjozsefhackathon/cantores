@@ -17,8 +17,18 @@ class BulkImport extends Model
     protected $fillable = [
         'collection',
         'piece',
-        'order_number',
+        'reference',
     ];
 
-
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'reference' => 'string',
+        ];
+    }
 }

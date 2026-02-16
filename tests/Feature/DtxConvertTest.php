@@ -46,16 +46,16 @@ DTX;
         ->assertSuccessful();
 
     // Verify records in database
-    $records = BulkImport::where('collection', $collection)->orderBy('order_number')->get();
+    $records = BulkImport::where('collection', $collection)->orderBy('reference')->get();
     expect($records)->toHaveCount(2);
 
     $first = $records[0];
     expect($first->piece)->toBe('A test song line');
-    expect($first->order_number)->toBe(1);
+    expect($first->reference)->toBe('1');
 
     $second = $records[1];
     expect($second->piece)->toBe('Second song line');
-    expect($second->order_number)->toBe(2);
+    expect($second->reference)->toBe('2');
 
     // Verify CSV file exists
     $csvPath = storage_path("app/private/dtximport/{$collection}.csv");
@@ -70,7 +70,7 @@ test('dtx convert command deletes previous records for same collection', functio
     $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
 
     // Create existing record for this collection
-    BulkImport::factory()->create(['collection' => $collection, 'order_number' => 99]);
+    BulkImport::factory()->create(['collection' => $collection, 'reference' => '99']);
 
     // DTX content with one song
     $dtxContent = <<<'DTX'
@@ -95,7 +95,7 @@ DTX;
     $records = BulkImport::where('collection', $collection)->get();
     expect($records)->toHaveCount(1);
     expect($records[0]->piece)->toBe('Only song line');
-    expect($records[0]->order_number)->toBe(1);
+    expect($records[0]->reference)->toBe('1');
 
     // Clean up CSV
     $csvPath = storage_path("app/private/dtximport/{$collection}.csv");

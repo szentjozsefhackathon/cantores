@@ -53,11 +53,11 @@
                 </flux:table.column>
                 <flux:table.column
                     sortable
-                    :sorted="$sortBy === 'order_number'"
+                    :sorted="$sortBy === 'reference'"
                     :direction="$sortDirection"
-                    wire:click="sort('order_number')"
+                    wire:click="sort('reference')"
                 >
-                    {{ __('Order Number') }}
+                    {{ __('Reference') }}
                 </flux:table.column>
                 <flux:table.column>
                     {{ __('Created At') }}
@@ -76,12 +76,12 @@
                         </flux:table.cell>
                         
                         <flux:table.cell>
-                            <div class="font-medium">{{ $import->order_number }}</div>
+                            <div class="font-medium">{{ $import->reference }}</div>
                         </flux:table.cell>
                         
                         <flux:table.cell>
                             <div class="text-sm text-gray-600 dark:text-gray-400">
-                                {{ $import->created_at->format('Y-m-d H:i') }}
+                                {{ $import->created_at }}
                             </div>
                         </flux:table.cell>
                     </flux:table.row>

@@ -3,7 +3,6 @@
 namespace App\Livewire\Pages\Admin;
 
 use App\Models\BulkImport;
-use App\Models\MusicPlanSlot;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
@@ -57,6 +56,9 @@ class BulkImports extends Component
      */
     public function render(): View
     {
+        // If sortBy is 'order_number', change it to 'reference' for compatibility
+        $sortBy = $this->sortBy === 'order_number' ? 'reference' : $this->sortBy;
+
         $imports = BulkImport::query()
             ->when($this->search, function ($query, $search) {
                 $query->where('piece', 'ilike', "%{$search}%");
@@ -64,7 +66,7 @@ class BulkImports extends Component
             ->when($this->collectionFilter, function ($query, $collection) {
                 $query->where('collection', $collection);
             })
-            ->orderBy($this->sortBy, $this->sortDirection)
+            ->orderBy($sortBy, $this->sortDirection)
             ->paginate(20);
 
         $collections = BulkImport::distinct('collection')->pluck('collection');
@@ -72,7 +74,7 @@ class BulkImports extends Component
         return view('livewire.pages.admin.bulk-imports', [
             'imports' => $imports,
             'collections' => $collections,
-            'sortBy' => $this->sortBy,
+            'sortBy' => $sortBy,
             'sortDirection' => $this->sortDirection,
         ]);
     }
