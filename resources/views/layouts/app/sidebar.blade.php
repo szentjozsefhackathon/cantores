@@ -39,6 +39,9 @@
                 <flux:sidebar.item icon="calendar-days" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>
                     Énekrendjeim
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="combine" :href="route('music-merger')" :current="request()->routeIs('music-merge')" wire:navigate>
+                    Énekek egyesítése
+                </flux:sidebar.item>                
             </flux:sidebar.group>
         </flux:sidebar.nav>
 

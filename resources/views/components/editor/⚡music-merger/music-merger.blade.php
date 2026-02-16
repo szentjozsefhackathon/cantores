@@ -49,14 +49,6 @@
         <!-- Right Music Selection -->
         <div class="space-y-4">
             <flux:heading size="lg">{{ __('Right Music (Source B)') }}</flux:heading>
-            <flux:field>
-                <flux:label>{{ __('Search Music') }}</flux:label>
-                <flux:input
-                    type="search"
-                    wire:model.live="rightSearch"
-                    :placeholder="__('Search by title, subtitle, custom ID...')" />
-            </flux:field>
-
             @if ($rightMusic)
             <!-- Selected right music -->
             <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">

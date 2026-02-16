@@ -137,7 +137,7 @@
                                     size="sm"
                                     icon="trash"
                                     wire:click="delete({{ $music->id }})"
-                                    wire:confirm="{{ __('Are you sure you want to delete this music piece? This can only be done if no collections or plan slots are assigned to it.') }}"
+                                    wire:confirm="{{ __('Are you sure you want to delete this music piece? This will remove it from all collections and music plans.') }}"
                                     :title="__('Delete')"
                                 />
                             </div>

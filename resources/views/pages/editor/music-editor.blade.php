@@ -283,7 +283,7 @@ new class extends Component
 
             <!-- Edit Form -->
             <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-3 gap-6">
                     <flux:field required>
                         <flux:label>{{ __('Title') }}</flux:label>
                         <flux:input
@@ -292,17 +292,6 @@ new class extends Component
                         />
                         <flux:error name="title" />
                     </flux:field>
-
-                    <flux:field>
-                        <flux:label>{{ __('Custom ID') }}</flux:label>
-                        <flux:description>{{ __('Optional unique identifier, e.g., BWV 232, KV 626') }}</flux:description>
-                        <flux:input
-                            wire:model="customId"
-                            :placeholder="__('Enter custom ID')"
-                        />
-                        <flux:error name="customId" />
-                    </flux:field>
-                </div>
 
                 <flux:field>
                     <flux:label>{{ __('Subtitle') }}</flux:label>
@@ -313,6 +302,17 @@ new class extends Component
                     />
                     <flux:error name="subtitle" />
                 </flux:field>
+
+                    <flux:field>
+                        <flux:label>{{ __('Custom ID') }}</flux:label>
+                        <flux:input
+                            wire:model="customId"
+                            :placeholder="__('Enter custom ID')"
+                        />
+                        <flux:error name="customId" />
+                    </flux:field>
+
+                </div>
 
                 <!-- Privacy Toggle -->
                 <flux:field>
