@@ -38,7 +38,7 @@
                 <flux:table.column>{{ __('Title') }}</flux:table.column>
                 <flux:table.column>{{ __('Collections') }}</flux:table.column>
                 <flux:table.column>{{ __('Custom ID') }}</flux:table.column>
-                <flux:table.column>{{ __('Realms') }}</flux:table.column>
+                <flux:table.column>{{ __('Genres') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
             
@@ -77,11 +77,11 @@
                         
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
-                                @forelse ($music->realms as $realm)
+                                @forelse ($music->genres as $genre)
                                     <flux:icon
-                                        name="{{ $realm->icon() }}"
+                                        name="{{ $genre->icon() }}"
                                         class="h-5 w-5 text-gray-600 dark:text-gray-400"
-                                        :title="$realm->label()"
+                                        :title="$genre->label()"
                                     />
                                 @empty
                                     

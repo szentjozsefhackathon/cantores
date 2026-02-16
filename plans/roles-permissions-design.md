@@ -18,7 +18,7 @@ This document outlines the design for implementing a comprehensive role-based pe
 - **Use Case**: System administrators, super users
 
 ### 2. Editor  
-- **Description**: Can create and edit content, but limited to their realm
+- **Description**: Can create and edit content, but limited to their genre
 - **Permissions**: Create/read/update content, but not delete system-level resources
 - **Use Case**: Music directors, content managers
 
@@ -77,12 +77,12 @@ This document outlines the design for implementing a comprehensive role-based pe
 - `user.delete` - Delete users
 - `user.manage` - Full management
 
-#### Realm Management (Admin-only)
-- `realm.view` - View realms
-- `realm.create` - Create realms
-- `realm.update` - Update realms
-- `realm.delete` - Delete realms
-- `realm.manage` - Full management
+#### Genre Management (Admin-only)
+- `genre.view` - View genres
+- `genre.create` - Create genres
+- `genre.update` - Update genres
+- `genre.delete` - Delete genres
+- `genre.manage` - Full management
 
 #### System Administration
 - `access.admin` - Access admin panel
@@ -99,27 +99,27 @@ This document outlines the design for implementing a comprehensive role-based pe
 - `collection.view`, `collection.create`, `collection.update`, `collection.delete`
 - `music-plan.view`, `music-plan.create`, `music-plan.update`, `music-plan.delete`
 - `celebration.view`, `celebration.create`, `celebration.update`, `celebration.delete`
-- Limited to their current realm (enforced via policies)
+- Limited to their current genre (enforced via policies)
 
 ### Viewer Role
 - `music.view`
 - `collection.view` 
 - `music-plan.view`
 - `celebration.view`
-- Limited to their current realm (enforced via policies)
+- Limited to their current genre (enforced via policies)
 
-## Realm-Based Permissions
+## Genre-Based Permissions
 
-The application has a realm system where users belong to realms. Permissions should respect realm boundaries:
+The application has a genre system where users belong to genres. Permissions should respect genre boundaries:
 
-1. **Admin**: Can access all realms
-2. **Editor**: Can only manage content in their current realm
-3. **Viewer**: Can only view content in their current realm
+1. **Admin**: Can access all genres
+2. **Editor**: Can only manage content in their current genre
+3. **Viewer**: Can only view content in their current genre
 
 This will be enforced through:
 - Query scopes on models
-- Policy checks that verify `realm_id` matches user's `current_realm_id`
-- Middleware for realm-specific routes
+- Policy checks that verify `genre_id` matches user's `current_genre_id`
+- Middleware for genre-specific routes
 
 ## Migration Strategy
 
@@ -130,7 +130,7 @@ This will be enforced through:
 
 ### Phase 2: Policy Updates
 1. Update existing policies to check roles in addition to ownership
-2. Add realm-based authorization checks
+2. Add genre-based authorization checks
 3. Maintain backward compatibility during transition
 
 ### Phase 3: Middleware Updates
@@ -183,8 +183,8 @@ public function view(User $user, Music $music): bool
         return true;
     }
     
-    // Editor/Viewer can only view music in their realm
-    if ($user->current_realm_id !== $music->realm_id) {
+    // Editor/Viewer can only view music in their genre
+    if ($user->current_genre_id !== $music->genre_id) {
         return false;
     }
     
@@ -210,7 +210,7 @@ public function handle(Request $request, Closure $next)
 
 1. Update existing tests to use roles instead of email-based admin checks
 2. Create new tests for role-based authorization
-3. Test realm-based permission boundaries
+3. Test genre-based permission boundaries
 4. Test role assignment and permission inheritance
 
 ## Backward Compatibility

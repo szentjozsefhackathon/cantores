@@ -33,10 +33,10 @@ return new class extends Component
     }
 
     /**
-     * Handle realm change event.
+     * Handle genre change event.
      */
-    #[On('realm-changed')]
-    public function onRealmChanged(): void
+    #[On('genre-changed')]
+    public function onGenreChanged(): void
     {
         $this->resetPage();
     }
@@ -57,8 +57,8 @@ return new class extends Component
         $musics = Music::when($this->search, function ($query, $search) {
             $query->search($search);
         })
-            ->forCurrentRealm()
-            ->with(['realms', 'collections'])
+            ->forCurrentGenre()
+            ->with(['genres', 'collections'])
             ->withCount('collections')
             ->orderBy('title')
             ->paginate(10);

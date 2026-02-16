@@ -1,7 +1,7 @@
 # Revised Roles and Permissions System Design
 
 ## Overview
-This document outlines the revised design for implementing a comprehensive role-based permission system using Spatie Laravel Permission package. **Important Update**: Realms are NOT used in permissions. Realms are purely UI filters for genres and have no relationship to the permission system.
+This document outlines the revised design for implementing a comprehensive role-based permission system using Spatie Laravel Permission package. **Important Update**: Genres are NOT used in permissions. Genres are purely UI filters for genres and have no relationship to the permission system.
 
 ## Current State Analysis
 - Spatie Laravel Permission package is installed but not utilized
@@ -9,17 +9,17 @@ This document outlines the revised design for implementing a comprehensive role-
 - Policies exist for core resources but use simple ownership checks
 - Permission tables exist but are empty
 - User model already has `HasRoles` trait
-- Realms exist as a separate system for content filtering (organist, guitarist, other genres)
+- Genres exist as a separate system for content filtering (organist, guitarist, other genres)
 
-## Key Clarification: Realms vs Permissions
-- **Realms**: UI filters for genres (organist, guitarist, other). Users (including guests) can set a realm filter to view content filtered by genre. No permission system is needed for realms.
-- **Permissions**: Control access to create, read, update, delete resources. Completely separate from realms.
+## Key Clarification: Genres vs Permissions
+- **Genres**: UI filters for genres (organist, guitarist, other). Users (including guests) can set a genre filter to view content filtered by genre. No permission system is needed for genres.
+- **Permissions**: Control access to create, read, update, delete resources. Completely separate from genres.
 
 ## Role Definitions
 
 ### 1. Admin
 - **Description**: Full system access, can manage all resources and users
-- **Permissions**: All permissions (except realm management permissions which don't exist)
+- **Permissions**: All permissions (except genre management permissions which don't exist)
 - **Use Case**: System administrators, super users
 
 ### 2. Editor  
@@ -104,22 +104,22 @@ This document outlines the revised design for implementing a comprehensive role-
 - `music-plan.view`
 - `celebration.view`
 
-## Important: No Realm-Based Permissions
-The permission system does NOT include realm-based restrictions. Realms are purely for content filtering:
-- Users can filter content by realm (genre) regardless of permissions
-- Permissions are checked independently of realm associations
-- Content visibility in UI may be filtered by realm, but access is controlled by permissions
+## Important: No Genre-Based Permissions
+The permission system does NOT include genre-based restrictions. Genres are purely for content filtering:
+- Users can filter content by genre (genre) regardless of permissions
+- Permissions are checked independently of genre associations
+- Content visibility in UI may be filtered by genre, but access is controlled by permissions
 
 ## Migration Strategy
 
 ### Phase 1: Database Setup
-1. Create roles and permissions seeder (without realm permissions)
+1. Create roles and permissions seeder (without genre permissions)
 2. Assign admin role to existing admin users (based on current `ADMIN_EMAIL`)
 3. Assign viewer role to all other existing users
 
 ### Phase 2: Policy Updates
 1. Update existing policies to check roles in addition to ownership
-2. **DO NOT add realm-based authorization checks** (realms are not permission-related)
+2. **DO NOT add genre-based authorization checks** (genres are not permission-related)
 3. Maintain backward compatibility during transition
 
 ### Phase 3: Middleware Updates
@@ -142,14 +142,14 @@ The Spatie package already provides the necessary tables:
 
 ## Implementation Details
 
-### 1. Seeder Structure (Revised - No Realm Permissions)
+### 1. Seeder Structure (Revised - No Genre Permissions)
 ```php
 // database/seeders/RolePermissionSeeder.php
 $adminRole = Role::create(['name' => 'admin', 'guard_name' => 'web']);
 $editorRole = Role::create(['name' => 'editor', 'guard_name' => 'web']);
 $viewerRole = Role::create(['name' => 'viewer', 'guard_name' => 'web']);
 
-// Create permissions for each resource (NO realm permissions)
+// Create permissions for each resource (NO genre permissions)
 $permissions = [
     'music' => ['view', 'create', 'update', 'delete', 'manage'],
     'collection' => ['view', 'create', 'update', 'delete', 'manage'],
@@ -166,7 +166,7 @@ $editorRole->givePermissionTo([...]); // Editor gets CRUD for own content
 $viewerRole->givePermissionTo([...]); // Viewer gets read-only
 ```
 
-### 2. Policy Updates (Revised - No Realm Checks)
+### 2. Policy Updates (Revised - No Genre Checks)
 ```php
 // app/Policies/MusicPolicy.php
 public function view(User $user, Music $music): bool
@@ -192,7 +192,7 @@ public function update(User $user, Music $music): bool
         return false;
     }
     
-    // For non-admin users, check ownership ONLY (no realm check)
+    // For non-admin users, check ownership ONLY (no genre check)
     return $user->id === $music->user_id;
 }
 ```
@@ -214,7 +214,7 @@ public function handle(Request $request, Closure $next)
 
 1. Update existing tests to use roles instead of email-based admin checks
 2. Create new tests for role-based authorization
-3. **DO NOT test realm-based permission boundaries** (realms are not permission-related)
+3. **DO NOT test genre-based permission boundaries** (genres are not permission-related)
 4. Test role assignment and permission inheritance
 
 ## Backward Compatibility
@@ -226,9 +226,9 @@ To maintain compatibility during migration:
 
 ## Next Steps
 
-1. Create the database seeder with roles and permissions (without realm permissions)
+1. Create the database seeder with roles and permissions (without genre permissions)
 2. Update User model to sync roles with existing admin status
-3. Update policies to incorporate role checks (without realm checks)
+3. Update policies to incorporate role checks (without genre checks)
 4. Update middleware and route protections
 5. Update tests to reflect new authorization system
 6. Optional: Create admin UI for role management
@@ -252,11 +252,11 @@ graph TB
     ResourceAccess --> MusicPlans[Music Plans]
     ResourceAccess --> Celebrations[Celebrations]
     
-    Realms[Realms UI Filter] --> ContentFiltering[Content Filtering]
+    Genres[Genres UI Filter] --> ContentFiltering[Content Filtering]
     ContentFiltering -->|Independent| Permissions
     
-    style Realms fill:#e1f5fe
+    style Genres fill:#e1f5fe
     style Permissions fill:#f3e5f5
 ```
 
-**Key**: Realms (blue) are completely separate from the permission system (purple). They interact only with content filtering, not access control.
+**Key**: Genres (blue) are completely separate from the permission system (purple). They interact only with content filtering, not access control.

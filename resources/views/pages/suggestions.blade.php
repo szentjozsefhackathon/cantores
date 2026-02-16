@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Pages;
 
-use App\Facades\RealmContext;
+use App\Facades\GenreContext;
 use App\Models\Celebration;
 use App\Models\MusicPlan;
 use App\Services\CelebrationSearchService;
@@ -50,12 +50,12 @@ new #[Layout('layouts::app.main')] class extends Component
     }
 
     /**
-     * Handle realm change event.
+     * Handle genre change event.
      */
-    #[On('realm-changed')]
-    public function onRealmChanged(): void
+    #[On('genre-changed')]
+    public function onGenreChanged(): void
     {
-        // Reload music plans and slot music map when realm changes
+        // Reload music plans and slot music map when genre changes
         $celebrationIds = $this->celebrationsWithScores->pluck('celebration.id')->toArray();
         $this->musicPlans = $this->fetchMusicPlans($celebrationIds);
         $this->slotMusicMap = $this->aggregateMusicBySlot();
@@ -70,7 +70,7 @@ new #[Layout('layouts::app.main')] class extends Component
     protected function fetchMusicPlans(array $celebrationIds): Collection
     {
         $user = Auth::user();
-        $realmId = RealmContext::getId();
+        $genreId = GenreContext::getId();
 
         // Get music plans that have at least one of the celebrations
         $query = MusicPlan::whereHas('celebrations', function ($q) use ($celebrationIds) {
@@ -83,11 +83,11 @@ new #[Layout('layouts::app.main')] class extends Component
             ])
             ->withCount('celebrations');
 
-        // Filter by realm: include plans that belong to the current realm OR have no realm
-        if ($realmId !== null) {
-            $query->where(function ($q) use ($realmId) {
-                $q->whereNull('realm_id')
-                    ->orWhere('realm_id', $realmId);
+        // Filter by genre: include plans that belong to the current genre OR have no genre
+        if ($genreId !== null) {
+            $query->where(function ($q) use ($genreId) {
+                $q->whereNull('genre_id')
+                    ->orWhere('genre_id', $genreId);
             });
         }
 
@@ -355,7 +355,7 @@ new #[Layout('layouts::app.main')] class extends Component
                                         <div class="flex items-center gap-2">
                                             <flux:icon name="map-pin" class="h-4 w-4 text-gray-500" />
                                             <span class="text-gray-700 dark:text-gray-300">
-                                                {{ $plan->realm?->name ?? 'Nincs realm' }}
+                                                {{ $plan->genre?->name ?? 'Nincs genre' }}
                                             </span>
                                         </div>
                                         <div class="flex items-center gap-2">

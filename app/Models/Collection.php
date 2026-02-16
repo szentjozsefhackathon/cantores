@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
+use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
 
 class Collection extends Model implements Auditable
 {
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
+    use Searchable;
 
     /**
      * The attributes that are mass assignable.
@@ -24,6 +26,16 @@ class Collection extends Model implements Auditable
         'author',
         'user_id',
     ];
+
+    public function toSearchableArray()
+    {
+        return [
+            'id' => $this->id,
+            'abbreviation' => $this->abbreviation,
+        ];
+    }
+
+
 
     /**
      * Get the user who owns this collection.
@@ -63,10 +75,10 @@ class Collection extends Model implements Auditable
     }
 
     /**
-     * Scope for collections belonging to the current user's realm.
+     * Scope for collections belonging to the current user's genre.
      * Empty collection genre association means it belongs to all genres, so we include those as well.
      */
-    public function scopeForCurrentRealm($query)
+    public function scopeForCurrentGenre($query)
     {
         $genreId = \App\Facades\GenreContext::getId();
 
@@ -78,7 +90,7 @@ class Collection extends Model implements Auditable
                 })->orWhereDoesntHave('genres');
             });
         }
-        // If $realmId is null, no filtering applied (show all collections)
+        // If $genreId is null, no filtering applied (show all collections)
     }
 
     /**
@@ -94,10 +106,10 @@ class Collection extends Model implements Auditable
             $parts[] = $pivot->order_number;
         }
 
-        $formatted = trim($base.($parts ? ' '.implode(' ', $parts) : ''));
+        $formatted = trim($base . ($parts ? ' ' . implode(' ', $parts) : ''));
 
         if ($pivot && $pivot->page_number) {
-            $formatted .= ' '.__('(p.:page)', ['page' => $pivot->page_number]);
+            $formatted .= ' ' . __('(p.:page)', ['page' => $pivot->page_number]);
         }
 
         return $formatted;

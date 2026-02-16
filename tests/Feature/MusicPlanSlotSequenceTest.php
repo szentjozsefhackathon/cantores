@@ -1,17 +1,17 @@
 <?php
 
+use App\Models\Genre;
 use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
 use App\Models\MusicPlanSlotAssignment;
-use App\Models\Realm;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 test('slot assignments respect sequence numbers and music attachments', function () {
-    // Create user and realm
+    // Create user and genre
     $user = User::factory()->create();
-    $realm = Realm::firstOrCreate(['name' => 'Test Realm']);
+    $genre = Genre::firstOrCreate(['name' => 'Test Genre']);
 
     // Create 'Slot 1' and 'Slot 2'
     $slot1 = MusicPlanSlot::factory()->create(['name' => 'Slot 1']);
@@ -20,7 +20,7 @@ test('slot assignments respect sequence numbers and music attachments', function
     // Create 'MusicPlan 1'
     $musicPlan = MusicPlan::factory()->create([
         'user_id' => $user->id,
-        'realm_id' => $realm->id,
+        'genre_id' => $genre->id,
     ]);
 
     // Assign 'Slot 1' with sequence number 1
@@ -84,9 +84,9 @@ test('slot assignments respect sequence numbers and music attachments', function
 });
 
 test('multiple music attachments per slot occurrence with ordering', function () {
-    // Create user and realm
+    // Create user and genre
     $user = User::factory()->create();
-    $realm = Realm::firstOrCreate(['name' => 'Test Realm']);
+    $genre = Genre::firstOrCreate(['name' => 'Test Genre']);
 
     // Create 'Slot 1' and 'Slot 2'
     $slot1 = MusicPlanSlot::factory()->create(['name' => 'Slot 1']);
@@ -95,7 +95,7 @@ test('multiple music attachments per slot occurrence with ordering', function ()
     // Create 'MusicPlan 1'
     $musicPlan = MusicPlan::factory()->create([
         'user_id' => $user->id,
-        'realm_id' => $realm->id,
+        'genre_id' => $genre->id,
     ]);
 
     // Assign 'Slot 1' with sequence number 1

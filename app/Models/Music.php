@@ -93,13 +93,13 @@ class Music extends Model implements Auditable
     public function scopeSearch($query, string $search): void
     {
         $service = new MusicSearchService;
-        $service->applySearch($query, $search);
+        $service->search($query, $search);
     }
 
     /**
-     * Scope for music belonging to the current user's realm.
+     * Scope for music belonging to the current user's genre.
      */
-    public function scopeForCurrentRealm($query)
+    public function scopeForCurrentGenre($query)
     {
         $genreId = \App\Facades\GenreContext::getId();
 
@@ -111,6 +111,6 @@ class Music extends Model implements Auditable
                 })->orWhereDoesntHave('genres');
             });
         }
-        // If $realmId is null, no filtering applied (show all music)
+        // If $genreId is null, no filtering applied (show all music)
     }
 }

@@ -46,7 +46,7 @@
                 <flux:table.column sortable :sorted="$sortBy === 'abbreviation'" :direction="$sortDirection" wire:click="sort('abbreviation')">{{ __('Abbreviation') }}</flux:table.column>
                 <flux:table.column sortable :sorted="$sortBy === 'author'" :direction="$sortDirection" wire:click="sort('author')">{{ __('Author') }}</flux:table.column>
                 <flux:table.column>{{ __('Music Pieces') }}</flux:table.column>
-                <flux:table.column>{{ __('Realms') }}</flux:table.column>
+                <flux:table.column>{{ __('Genres') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
             
@@ -87,11 +87,11 @@
                         
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
-                                @forelse ($collection->realms as $realm)
+                                @forelse ($collection->genres as $genre)
                                     <flux:icon
-                                        name="{{ $realm->icon() }}"
+                                        name="{{ $genre->icon() }}"
                                         class="h-5 w-5 text-gray-600 dark:text-gray-400"
-                                        :title="$realm->label()"
+                                        :title="$genre->label()"
                                     />
                                 @empty
                                     
@@ -188,18 +188,18 @@
             </flux:field>
 
             <flux:field>
-                <flux:label>{{ __('Realms') }}</flux:label>
-                <flux:description>{{__('Select which realms this collection belongs to.')}}</flux:description>
+                <flux:label>{{ __('Genres') }}</flux:label>
+                <flux:description>{{__('Select which genres this collection belongs to.')}}</flux:description>
                 <div class="space-y-2">
-                    @foreach($this->realms() as $realm)
+                    @foreach($this->genres() as $genre)
                         <flux:checkbox
-                            wire:model="selectedRealms"
-                            value="{{ $realm->id }}"
-                            :label="$realm->label()"
+                            wire:model="selectedGenres"
+                            value="{{ $genre->id }}"
+                            :label="$genre->label()"
                         />
                     @endforeach
                 </div>
-                <flux:error name="selectedRealms" />
+                <flux:error name="selectedGenres" />
             </flux:field>
         </div>
 
@@ -361,20 +361,20 @@
 
             <div class="space-y-2">
                 
-                <flux:checkbox.group variant="cards" label="{{ __('Select which realms this collection belongs to.') }}">
-                @foreach($this->realms() as $realm)                    
+                <flux:checkbox.group variant="cards" label="{{ __('Select which genres this collection belongs to.') }}">
+                @foreach($this->genres() as $genre)                    
                 <flux:checkbox
                             variant="cards"
-                            wire:model="selectedRealms"
-                            value="{{ $realm->id }}"
-                            :label="$realm->label()"          
-                            :icon="$realm->icon()"
+                            wire:model="selectedGenres"
+                            value="{{ $genre->id }}"
+                            :label="$genre->label()"          
+                            :icon="$genre->icon()"
 
                         />
                     @endforeach
                 </flux:checkbox.group>
                 </div>
-                <flux:error name="selectedRealms" />
+                <flux:error name="selectedGenres" />
         </div>
 
         <div class="mt-6 flex justify-end gap-3">

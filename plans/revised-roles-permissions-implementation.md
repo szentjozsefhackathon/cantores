@@ -32,7 +32,7 @@ class RolePermissionSeeder extends Seeder
 
     /**
      * Create all permissions for the application.
-     * IMPORTANT: No realm permissions - realms are UI filters, not permission-controlled.
+     * IMPORTANT: No genre permissions - genres are UI filters, not permission-controlled.
      */
     private function createPermissions(): void
     {
@@ -251,7 +251,7 @@ class AdminMiddleware
 }
 ```
 
-## Policy Updates (Revised - No Realm Checks)
+## Policy Updates (Revised - No Genre Checks)
 
 ### Example: MusicPolicy Update
 
@@ -285,7 +285,7 @@ public function update(User $user, Music $music): bool
     }
     
     // For non-admin users, check ownership ONLY
-    // NO realm checks - realms are UI filters, not permission-related
+    // NO genre checks - genres are UI filters, not permission-related
     return $user->id === $music->user_id;
 }
 ```
@@ -307,7 +307,7 @@ public function update(User $user, Collection $collection): bool
     }
     
     // For non-admin users, check ownership ONLY
-    // NO realm checks - realms are UI filters, not permission-related
+    // NO genre checks - genres are UI filters, not permission-related
     return $user->id === $collection->user_id;
 }
 ```
@@ -350,7 +350,7 @@ $viewer = User::factory()->create();
 $viewer->assignRole('viewer');
 ```
 
-### Test Role-Based Access (No Realm Tests)
+### Test Role-Based Access (No Genre Tests)
 ```php
 test('admin can access admin panel', function () {
     $admin = User::factory()->create();
@@ -387,15 +387,15 @@ test('viewer can view music but not edit', function () {
 
 ## Important Changes from Previous Plan
 
-1. **Removed all realm permissions**: No `realm.view`, `realm.create`, etc.
-2. **Removed realm-based authorization checks**: Policies no longer check `$user->current_realm_id !== $music->realm_id`
-3. **Clarified realm purpose**: Realms are UI filters only, not permission-controlled
-4. **Simplified policy logic**: Only role and ownership checks, no realm boundaries
+1. **Removed all genre permissions**: No `genre.view`, `genre.create`, etc.
+2. **Removed genre-based authorization checks**: Policies no longer check `$user->current_genre_id !== $music->genre_id`
+3. **Clarified genre purpose**: Genres are UI filters only, not permission-controlled
+4. **Simplified policy logic**: Only role and ownership checks, no genre boundaries
 
 ## Next Steps After Implementation
 
-1. **Update all existing policies** to incorporate role checks (without realm checks)
-2. **Update tests** to use role-based authorization (without realm tests)
+1. **Update all existing policies** to incorporate role checks (without genre checks)
+2. **Update tests** to use role-based authorization (without genre tests)
 3. **Optional**: Create admin UI for role management
 4. **Optional**: Add role assignment during user registration
 5. **Document** the new permission system for developers
@@ -406,4 +406,4 @@ test('viewer can view music but not edit', function () {
 - Existing admin users will automatically get the admin role
 - All other users will get the viewer role
 - Policies should check both roles and ownership for granular control
-- **No migration needed for realms** - they continue to function as UI filters
+- **No migration needed for genres** - they continue to function as UI filters

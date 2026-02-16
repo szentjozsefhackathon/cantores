@@ -74,12 +74,12 @@ class RolePermissionSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'user.manage', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'role.assign', 'guard_name' => 'web']);
 
-        // Realm permissions (admin-only)
-        Permission::firstOrCreate(['name' => 'realm.view', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'realm.create', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'realm.update', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'realm.delete', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'realm.manage', 'guard_name' => 'web']);
+        // Genre permissions (admin-only)
+        Permission::firstOrCreate(['name' => 'genre.view', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'genre.create', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'genre.update', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'genre.delete', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'genre.manage', 'guard_name' => 'web']);
 
         // System permissions
         Permission::firstOrCreate(['name' => 'access.admin', 'guard_name' => 'web']);

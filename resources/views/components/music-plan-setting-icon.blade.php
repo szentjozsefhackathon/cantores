@@ -1,7 +1,7 @@
 @php
     // Accept Genre model, genre name, or genre ID   
-    // Parameter may be called $genre or $realm (for backward compatibility)
-    $genreParam = $genre ?? $realm ?? null;
+    // Parameter may be called $genre or $genre (for backward compatibility)
+    $genreParam = $genre ?? $genre ?? null;
     
     if (is_string($genreParam)) {
         $genre = \App\Models\Genre::where('name', $genreParam)->first();

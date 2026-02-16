@@ -47,19 +47,19 @@ graph TD
 - **Description**: Full system access
 - **Permissions**: All permissions
 - **Use Case**: System administrators
-- **Access**: All realms, all resources
+- **Access**: All genres, all resources
 
 #### 2. Editor
-- **Description**: Content management within assigned realm
+- **Description**: Content management within assigned genre
 - **Permissions**: Create, read, update, delete content
 - **Use Case**: Music directors, content managers
-- **Access**: Only within current realm
+- **Access**: Only within current genre
 
 #### 3. Viewer
 - **Description**: Read-only access
 - **Permissions**: Read permissions only
 - **Use Case**: Regular users, guests with accounts
-- **Access**: Only within current realm
+- **Access**: Only within current genre
 
 ### Permission Matrix
 
@@ -71,9 +71,9 @@ graph TD
 | Celebration | ✓ | ✓* | ✓* | ✓* | ✓* |
 | Music Plan Template | Admin only | Admin only | Admin only | Admin only | Admin only |
 | User | Admin only | Admin only | Admin only | Admin only | Admin only |
-| Realm | Admin only | Admin only | Admin only | Admin only | Admin only |
+| Genre | Admin only | Admin only | Admin only | Admin only | Admin only |
 
-*✓ = Available to Editor role, * = Within assigned realm only
+*✓ = Available to Editor role, * = Within assigned genre only
 
 ### System Permissions
 - `access.admin` - Access admin panel
@@ -176,8 +176,8 @@ public function view(User $user, Music $music): bool
         return false;
     }
     
-    // Realm check (if applicable)
-    if ($music->realm_id && $user->current_realm_id !== $music->realm_id) {
+    // Genre check (if applicable)
+    if ($music->genre_id && $user->current_genre_id !== $music->genre_id) {
         return false;
     }
     
@@ -201,8 +201,8 @@ public function update(User $user, Music $music): bool
         return false;
     }
     
-    // Realm check
-    if ($music->realm_id && $user->current_realm_id !== $music->realm_id) {
+    // Genre check
+    if ($music->genre_id && $user->current_genre_id !== $music->genre_id) {
         return false;
     }
     
@@ -416,7 +416,7 @@ $permission->removeRole($role);
 ### 1. Use Policies for Complex Logic
 - Keep authorization logic in policies
 - Use role checks as first line of defense
-- Add ownership and realm checks after role checks
+- Add ownership and genre checks after role checks
 
 ### 2. Prefer Role-Based over Direct Permissions
 - Assign permissions to roles, not directly to users
@@ -431,7 +431,7 @@ $permission->removeRole($role);
 ### 4. Testing
 - Create test helpers for role assignment
 - Test all role combinations
-- Include realm-based authorization tests
+- Include genre-based authorization tests
 
 ### 5. Security
 - Regularly audit role assignments
@@ -460,17 +460,17 @@ $customRole->givePermissionTo([
 ]);
 ```
 
-### Realm Integration
+### Genre Integration
 ```php
-// Extend policies for realm-based access
+// Extend policies for genre-based access
 public function view(User $user, Music $music): bool
 {
     if ($user->hasRole('admin')) {
         return true;
     }
     
-    // Realm-based restriction
-    if ($user->current_realm_id !== $music->realm_id) {
+    // Genre-based restriction
+    if ($user->current_genre_id !== $music->genre_id) {
         return false;
     }
     
@@ -494,7 +494,7 @@ Event::listen(RoleAttached::class, function ($event) {
 The role-based permission system provides:
 1. **Flexible authorization** with roles and permissions
 2. **Backward compatibility** with existing email-based admin system
-3. **Realm-based restrictions** for multi-tenant support
+3. **Genre-based restrictions** for multi-tenant support
 4. **Comprehensive testing** support
 5. **Extensible architecture** for future requirements
 

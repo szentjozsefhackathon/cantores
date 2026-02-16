@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Collection;
 use App\Models\Music;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -11,7 +12,7 @@ class MusicSearchService
      * Search music by text and optional filters.
      *
      * @param  string  $search  The search query
-     * @param  array  $filters  Additional filters (e.g., 'realm_id', 'collection_id', 'user_id')
+     * @param  array  $filters  Additional filters (e.g., 'genre_id', 'collection_id', 'user_id')
      * @param  array  $options  Search options (e.g., 'use_scout' => true, 'order_by_relevance' => true)
      */
     public function search(string $search, array $filters = [], array $options = []): Builder
@@ -34,6 +35,7 @@ class MusicSearchService
      */
     public function applySearch(Builder $query, string $search, array $options = []): void
     {
+        $search = trim($search);
         $tokens = preg_split('/\s+/', trim($search), -1, PREG_SPLIT_NO_EMPTY);
         if (empty($tokens)) {
             return;
@@ -48,10 +50,20 @@ class MusicSearchService
                 }
             }
 
-            // Full‑text search on collection fields (title, abbreviation)
-            $q->orWhereHas('collections', function (Builder $collectionQuery) use ($search) {
-                $collectionQuery->whereFullText(['title', 'abbreviation'], $search);
-            });
+            // Scout search on collection fields (title, abbreviation, author)
+            if ($options['use_scout'] ?? true) {
+                $collectionIds = Collection::search($search)->keys()->all();
+                if (! empty($collectionIds)) {
+                    $q->orWhereHas('collections', function (Builder $collectionQuery) use ($collectionIds) {
+                        $collectionQuery->whereIn('collections.id', $collectionIds);
+                    });
+                }
+            } else {
+                // Fallback to simple ILIKE search on title, abbreviation, author
+                $q->orWhereHas('collections', function (Builder $collectionQuery) use ($search) {
+                    $collectionQuery->search($search);
+                });
+            }
 
             // Numeric pivot fields (order_number) token matching
             $q->orWhereHas('collections', function (Builder $collectionQuery) use ($tokens) {
@@ -69,9 +81,9 @@ class MusicSearchService
      */
     protected function applyFilters(Builder $query, array $filters): void
     {
-        if (isset($filters['realm_id'])) {
-            $query->whereHas('realms', function (Builder $q) use ($filters) {
-                $q->where('realms.id', $filters['realm_id']);
+        if (isset($filters['genre_id'])) {
+            $query->whereHas('genres', function (Builder $q) use ($filters) {
+                $q->where('genres.id', $filters['genre_id']);
             });
         }
 

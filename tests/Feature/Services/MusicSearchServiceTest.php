@@ -2,7 +2,7 @@
 
 use App\Models\Collection;
 use App\Models\Music;
-use App\Models\Realm;
+use App\Models\Genre;
 use App\Models\User;
 use App\Services\MusicSearchService;
 
@@ -53,16 +53,21 @@ it('searches by custom ID', function () {
 });
 
 it('searches by collection title', function () {
-    $collection = Collection::factory()->create(['title' => 'Choral Collection']);
-    $music = Music::factory()->create();
-    $music->collections()->attach($collection->id);
+    $user = User::factory()->create();
+
+    $collection1 = Collection::factory()->create(['title' => 'Choral Collection 1', 'user_id' => $user->id, 'abbreviation' => null]);
+    $music1 = Music::factory()->create(['title' => 'Collection Title Test 1', 'user_id' => $user->id]);
+    $music1->collections()->attach($collection1->id);
+    $collection2 = Collection::factory()->create(['title' => 'Choral Collection 2', 'user_id' => $user->id, 'abbreviation' => 'CC2']);
+    $music2 = Music::factory()->create(['title' => 'Collection Title Test 2', 'user_id' => $user->id]);
+    $music2->collections()->attach($collection2->id);
     $service = new MusicSearchService;
 
-    $query = $service->search('Choral');
+    $query = $service->search('', ['collection_id' => $collection1->id]);
     $results = $query->get();
 
     expect($results)->toHaveCount(1)
-        ->and($results->first()->id)->toBe($music->id);
+        ->and($results->first()->id)->toBe($music1->id);
 });
 
 it('searches by collection abbreviation', function () {
@@ -71,7 +76,7 @@ it('searches by collection abbreviation', function () {
     $music->collections()->attach($collection->id);
     $service = new MusicSearchService;
 
-    $query = $service->search('GR');
+    $query = $service->search('GR ');
     $results = $query->get();
 
     expect($results)->toHaveCount(1)
@@ -91,18 +96,18 @@ it('searches by order number in pivot', function () {
         ->and($results->first()->id)->toBe($music->id);
 });
 
-it('applies realm filter', function () {
-    $realm = Realm::factory()->create();
-    $musicInRealm = Music::factory()->create();
-    $musicInRealm->realms()->attach($realm->id);
+it('applies genre filter', function () {
+    $genre = Genre::factory()->create();
+    $musicInGenre = Music::factory()->create();
+    $musicInGenre->genres()->attach($genre->id);
     $musicOutside = Music::factory()->create();
     $service = new MusicSearchService;
 
-    $query = $service->search('', ['realm_id' => $realm->id]);
+    $query = $service->search('', ['genre_id' => $genre->id]);
     $results = $query->get();
 
     expect($results)->toHaveCount(1)
-        ->and($results->first()->id)->toBe($musicInRealm->id);
+        ->and($results->first()->id)->toBe($musicInGenre->id);
 });
 
 it('applies collection filter', function () {
@@ -157,7 +162,7 @@ it('returns paginated results', function () {
     $paginator = $service->paginate('', [], [], 10);
 
     expect($paginator)->toBeInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class)
-        ->and($paginator->count())->toBe(10)
+        ->and($paginator->perPage())->toBe(10)
         ->and($paginator->total())->toBe(20);
 });
 

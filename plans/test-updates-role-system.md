@@ -191,14 +191,14 @@ test('admin can view any music plan regardless of ownership', function () {
     $response->assertOk();
 });
 
-test('editor cannot view another user\'s music plan in different realm', function () {
+test('editor cannot view another user\'s music plan in different genre', function () {
     $editor = User::factory()->create();
     $editor->assignRole('editor');
     
     $otherUser = User::factory()->create();
     $musicPlan = MusicPlan::factory()->create([
         'user_id' => $otherUser->id,
-        'realm_id' => 2, // Different realm
+        'genre_id' => 2, // Different genre
     ]);
     
     $response = $this->actingAs($editor)->get(route('music-plan-editor', $musicPlan));
@@ -358,7 +358,7 @@ When refreshing database during tests, roles and permissions will be cleared. Op
 ### Phase 2: Add New Role Tests
 1. Create tests for each role (admin, editor, viewer)
 2. Test role-based permissions for each resource
-3. Test realm-based restrictions
+3. Test genre-based restrictions
 
 ### Phase 3: Integration Tests
 1. Test end-to-end role assignment flow

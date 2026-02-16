@@ -2,8 +2,9 @@
 
 namespace App\Livewire\Pages\Editor;
 
-use App\Facades\RealmContext;
+use App\Facades\GenreContext;
 use App\Models\Collection;
+use App\Models\Genre;
 use App\Models\Music;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -64,10 +65,10 @@ class Musics extends Component
     }
 
     /**
-     * Handle realm change event.
+     * Handle genre change event.
      */
-    #[On('realm-changed')]
-    public function onRealmChanged(): void
+    #[On('genre-changed')]
+    public function onGenreChanged(): void
     {
         $this->resetPage();
     }
@@ -80,8 +81,8 @@ class Musics extends Component
         $musics = Music::when($this->search, function ($query, $search) {
             $query->search($search);
         })
-            ->forCurrentRealm()
-            ->with(['realms', 'collections'])
+            ->forCurrentGenre()
+            ->with(['genres', 'collections'])
             ->withCount('collections')
             ->orderBy('title')
             ->paginate(10);
@@ -149,10 +150,10 @@ class Musics extends Component
             'user_id' => Auth::id(),
         ]);
 
-        // Attach current realm if user has one selected
-        $realmId = RealmContext::getId();
-        if ($realmId) {
-            $music->realms()->attach($realmId);
+        // Attach current genre if user has one selected
+        $genreId = GenreContext::getId();
+        if ($genreId) {
+            $music->genres()->attach($genreId);
         }
 
         $this->showCreateModal = false;

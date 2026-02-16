@@ -77,12 +77,12 @@ class RolePermissionSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'user.delete', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'user.manage', 'guard_name' => 'web']);
 
-        // Realm permissions (admin-only)
-        Permission::firstOrCreate(['name' => 'realm.view', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'realm.create', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'realm.update', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'realm.delete', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'realm.manage', 'guard_name' => 'web']);
+        // Genre permissions (admin-only)
+        Permission::firstOrCreate(['name' => 'genre.view', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'genre.create', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'genre.update', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'genre.delete', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'genre.manage', 'guard_name' => 'web']);
 
         // System permissions
         Permission::firstOrCreate(['name' => 'access.admin', 'guard_name' => 'web']);
@@ -275,9 +275,9 @@ public function view(User $user, Music $music): bool
         return false;
     }
     
-    // For non-admin users, check realm access
-    // Assuming Music has a realm_id field or relationship
-    if (isset($music->realm_id) && $user->current_realm_id !== $music->realm_id) {
+    // For non-admin users, check genre access
+    // Assuming Music has a genre_id field or relationship
+    if (isset($music->genre_id) && $user->current_genre_id !== $music->genre_id) {
         return false;
     }
     
@@ -296,12 +296,12 @@ public function update(User $user, Music $music): bool
         return false;
     }
     
-    // For non-admin users, check ownership and realm
+    // For non-admin users, check ownership and genre
     if ($user->id !== $music->user_id) {
         return false;
     }
     
-    if (isset($music->realm_id) && $user->current_realm_id !== $music->realm_id) {
+    if (isset($music->genre_id) && $user->current_genre_id !== $music->genre_id) {
         return false;
     }
     

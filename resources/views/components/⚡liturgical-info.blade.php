@@ -136,7 +136,7 @@ new class extends Component
         // Get music plans through the relationship
         $query = $celebration->musicPlans()
             ->where('user_id', $user->id)
-            ->with(['user', 'realm', 'celebrations']);
+            ->with(['user', 'genre', 'celebrations']);
 
         // Filter by current genre
         $genreId = GenreContext::getId();
@@ -147,7 +147,7 @@ new class extends Component
                     ->orWhere('genre_id', $genreId);
             });
         }
-        // If $realmId is null, no filtering applied (show all plans)
+        // If $genreId is null, no filtering applied (show all plans)
 
         return $query->orderBy('created_at', 'desc')->get();
     }
@@ -174,7 +174,7 @@ new class extends Component
         // Get published music plans
         $query = $celebration->musicPlans()
             ->where('is_published', true)
-            ->with(['user', 'realm', 'celebrations']);
+            ->with(['user', 'genre', 'celebrations']);
 
         // Exclude the authenticated user's own plans (if logged in)
         if ($user) {

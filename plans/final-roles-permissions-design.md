@@ -1,7 +1,7 @@
 # Final Roles and Permissions System Design
 
 ## Overview
-This document outlines the final design for implementing a comprehensive role-based permission system using Spatie Laravel Permission package. **Important**: Realms are NOT used in permissions. Realms are purely UI filters for genres and have no relationship to the permission system.
+This document outlines the final design for implementing a comprehensive role-based permission system using Spatie Laravel Permission package. **Important**: Genres are NOT used in permissions. Genres are purely UI filters for genres and have no relationship to the permission system.
 
 ## Current State Analysis
 - Spatie Laravel Permission package is installed but not utilized
@@ -9,11 +9,11 @@ This document outlines the final design for implementing a comprehensive role-ba
 - Policies exist for core resources but use simple ownership checks
 - Permission tables exist but are empty
 - User model already has `HasRoles` trait
-- Realms exist as a separate system for content filtering (organist, guitarist, other genres)
+- Genres exist as a separate system for content filtering (organist, guitarist, other genres)
 
-## Key Clarification: Realms vs Permissions
-- **Realms**: UI filters for genres (organist, guitarist, other). Users (including guests) can set a realm filter to view content filtered by genre. No permission system is needed for realms.
-- **Permissions**: Control access to create, read, update, delete, publish, unpublish, and verify resources. Completely separate from realms.
+## Key Clarification: Genres vs Permissions
+- **Genres**: UI filters for genres (organist, guitarist, other). Users (including guests) can set a genre filter to view content filtered by genre. No permission system is needed for genres.
+- **Permissions**: Control access to create, read, update, delete, publish, unpublish, and verify resources. Completely separate from genres.
 
 ## Role Definitions
 
@@ -137,22 +137,22 @@ This document outlines the final design for implementing a comprehensive role-ba
   - `music-plan.view`, `music-plan.create`, `music-plan.update` (own), `music-plan.delete` (own), `music-plan.publish` (own), `music-plan.unpublish` (own)
   - `celebration.view`
 
-## Important: No Realm-Based Permissions
-The permission system does NOT include realm-based restrictions. Realms are purely for content filtering:
-- Users can filter content by realm (genre) regardless of permissions
-- Permissions are checked independently of realm associations
-- Content visibility in UI may be filtered by realm, but access is controlled by permissions
+## Important: No Genre-Based Permissions
+The permission system does NOT include genre-based restrictions. Genres are purely for content filtering:
+- Users can filter content by genre (genre) regardless of permissions
+- Permissions are checked independently of genre associations
+- Content visibility in UI may be filtered by genre, but access is controlled by permissions
 
 ## Migration Strategy
 
 ### Phase 1: Database Setup
-1. Create roles and permissions seeder (without realm permissions)
+1. Create roles and permissions seeder (without genre permissions)
 2. Assign admin role to existing admin users (based on current `ADMIN_EMAIL`)
 3. Assign contributor role to all other existing users
 
 ### Phase 2: Policy Updates
 1. Update existing policies to check roles and content states (published/unpublished/verified)
-2. **DO NOT add realm-based authorization checks** (realms are not permission-related)
+2. **DO NOT add genre-based authorization checks** (genres are not permission-related)
 3. Maintain backward compatibility during transition
 
 ### Phase 3: Middleware Updates
@@ -182,7 +182,7 @@ $adminRole = Role::create(['name' => 'admin', 'guard_name' => 'web']);
 $editorRole = Role::create(['name' => 'editor', 'guard_name' => 'web']);
 $contributorRole = Role::create(['name' => 'contributor', 'guard_name' => 'web']);
 
-// Create permissions for each resource (NO realm permissions)
+// Create permissions for each resource (NO genre permissions)
 // ... (as detailed in permission matrix)
 
 // Assign permissions to roles
@@ -294,7 +294,7 @@ public function handle(Request $request, Closure $next)
 3. Test content state transitions (unpublished → published → verified)
 4. Test ownership-based permissions for Contributors
 5. Test editor permissions for verified content
-6. **DO NOT test realm-based permission boundaries** (realms are not permission-related)
+6. **DO NOT test genre-based permission boundaries** (genres are not permission-related)
 7. Test role assignment and permission inheritance
 
 ## Backward Compatibility
@@ -307,7 +307,7 @@ To maintain compatibility during migration:
 
 ## Next Steps
 
-1. Create the database seeder with roles and permissions (without realm permissions)
+1. Create the database seeder with roles and permissions (without genre permissions)
 2. Update User model to sync roles with existing admin status
 3. Update policies to incorporate role checks and content state checks
 4. Add `is_published` and `is_verified` fields to relevant models if not present
@@ -336,14 +336,14 @@ graph TB
     Unpublished -->|Visible to| OwnerAdminEditor[Owner, Admin, Editor]
     Verified -->|Core Data Editable by| EditorAdmin[Editor & Admin Only]
     
-    Realms[Realms UI Filter] --> ContentFiltering[Content Filtering]
+    Genres[Genres UI Filter] --> ContentFiltering[Content Filtering]
     ContentFiltering -->|Independent| Permissions
     
-    style Realms fill:#e1f5fe
+    style Genres fill:#e1f5fe
     style ContentState fill:#fff3e0
 ```
 
 **Key**: 
-- Realms (blue) are completely separate from the permission system
+- Genres (blue) are completely separate from the permission system
 - Content States (orange) affect visibility and editability
 - Permissions are role-based with ownership checks for Contributors

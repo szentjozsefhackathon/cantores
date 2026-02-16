@@ -10,7 +10,7 @@ MusicPlan represents a personal plan for a Catholic Mass. It is connected to a u
 |--------|------|-------------|-------------|
 | `id` | bigint | Primary key | AUTO_INCREMENT |
 | `user_id` | bigint | Foreign key to users table | NOT NULL, INDEX |
-| `realm_id` | bigint | Foreign key to realms table | NULLABLE |
+| `genre_id` | bigint | Foreign key to genres table | NULLABLE |
 | `is_published` | boolean | Whether the plan is published or private | DEFAULT false |
 | `created_at` | timestamp | When the record was created | NULLABLE |
 | `updated_at` | timestamp | When the record was last updated | NULLABLE |
@@ -19,11 +19,11 @@ MusicPlan represents a personal plan for a Catholic Mass. It is connected to a u
 1. Primary key: `id`
 2. Foreign key index: `user_id` (references `users.id`)
 3. User visibility index: `(user_id, is_published)` for user-specific queries
-4. Realm index: `realm_id` (references `realms.id`)
+4. Genre index: `genre_id` (references `genres.id`)
 
 **Foreign Keys:**
 - `music_plans.user_id` → `users.id` (cascade on delete)
-- `music_plans.realm_id` → `realms.id` (set null on delete)
+- `music_plans.genre_id` → `genres.id` (set null on delete)
 
 ### Table: `music_plan_slot_plan` (Pivot table)
 | Column | Type | Description | Constraints |
@@ -91,7 +91,7 @@ MusicPlan represents a personal plan for a Catholic Mass. It is connected to a u
 ```mermaid
 erDiagram
     users ||--o{ music_plans : creates
-    realms ||--o{ music_plans : belongs_to
+    genres ||--o{ music_plans : belongs_to
     music_plans }o--o{ celebrations : "many-to-many via celebration_music_plan"
     music_plans }o--o{ music_plan_slots : "many-to-many via music_plan_slot_plan"
     music_plan_slot_plan ||--o{ music_plan_slot_assignments : has
@@ -101,7 +101,7 @@ erDiagram
     music_plans {
         bigint id PK
         bigint user_id FK
-        bigint realm_id FK
+        bigint genre_id FK
         boolean is_published
         timestamp created_at
         timestamp updated_at
@@ -166,7 +166,7 @@ class MusicPlan extends Model
      */
     protected $fillable = [
         'user_id',
-        'realm_id',
+        'genre_id',
         'is_published',
     ];
 
@@ -191,11 +191,11 @@ class MusicPlan extends Model
     }
 
     /**
-     * Get the realm associated with this music plan.
+     * Get the genre associated with this music plan.
      */
-    public function realm(): BelongsTo
+    public function genre(): BelongsTo
     {
-        return $this->belongsTo(Realm::class);
+        return $this->belongsTo(Genre::class);
     }
 
     /**
@@ -258,21 +258,21 @@ class MusicPlan extends Model
     }
 
     /**
-     * Scope for plans by realm.
+     * Scope for plans by genre.
      */
-    public function scopeByRealm($query, $realm)
+    public function scopeByGenre($query, $genre)
     {
-        if ($realm instanceof Realm) {
-            return $query->where('realm_id', $realm->id);
+        if ($genre instanceof Genre) {
+            return $query->where('genre_id', $genre->id);
         }
 
-        return $query->where('realm_id', $realm);
+        return $query->where('genre_id', $genre);
     }
 
     /**
-     * Scope for plans belonging to the current user's realm.
+     * Scope for plans belonging to the current user's genre.
      */
-    public function scopeForCurrentRealm($query)
+    public function scopeForCurrentGenre($query)
     {
         $user = Auth::user();
         if (! $user) {
@@ -280,21 +280,21 @@ class MusicPlan extends Model
             return $query->whereRaw('1 = 0');
         }
 
-        $realmId = $user->current_realm_id;
-        if ($realmId) {
-            return $query->where('realm_id', $realmId);
+        $genreId = $user->current_genre_id;
+        if ($genreId) {
+            return $query->where('genre_id', $genreId);
         }
 
-        // If no realm ID, show all music plans (no filtering)
+        // If no genre ID, show all music plans (no filtering)
         return $query;
     }
 
     /**
-     * Get the realm options for select inputs.
+     * Get the genre options for select inputs.
      */
-    public static function realmOptions(): array
+    public static function genreOptions(): array
     {
-        return Realm::options();
+        return Genre::options();
     }
 
     /**
@@ -339,11 +339,11 @@ class MusicPlan extends Model
     }
 
     /**
-     * Get the setting name from realm (backward compatibility).
+     * Get the setting name from genre (backward compatibility).
      */
     public function getSettingAttribute(): ?string
     {
-        return $this->realm?->name;
+        return $this->genre?->name;
     }
 
     /**
@@ -533,10 +533,10 @@ class MusicPlanSlotPlan extends Model
 - A music plan can have multiple celebrations (e.g., multiple Masses on the same day)
 - Celebration data provides liturgical context: date, season, week, day, readings, etc.
 
-### 4. Realm-Based Organization
-- Music plans belong to a Realm (replaces the old "setting" concept)
-- Users can filter and organize plans by realm
-- Realms represent different musical settings or communities
+### 4. Genre-Based Organization
+- Music plans belong to a Genre (replaces the old "setting" concept)
+- Users can filter and organize plans by genre
+- Genres represent different musical settings or communities
 
 ## Usage Examples
 
@@ -545,7 +545,7 @@ class MusicPlanSlotPlan extends Model
 // Create a music plan
 $musicPlan = MusicPlan::create([
     'user_id' => Auth::id(),
-    'realm_id' => $realm->id,
+    'genre_id' => $genre->id,
     'is_published' => false,
 ]);
 
@@ -578,7 +578,7 @@ $musicPlan = MusicPlan::with([
     'celebrations',
     'slots',
     'slots.musicAssignments.music',
-    'realm',
+    'genre',
     'user'
 ])->find($id);
 
@@ -612,6 +612,6 @@ Tests should verify:
 3. Deleting a slot instance cascades to its music assignments
 4. Deleting a music plan cascades to all related data
 5. Celebrations can be associated/disassociated correctly
-6. Realm-based filtering works as expected
+6. Genre-based filtering works as expected
 
 See `tests/Feature/MusicPlanSlotSequenceTest.php` and `tests/Feature/MusicPlanSlotAssignmentDeletionTest.php` for examples.

@@ -1,26 +1,26 @@
 <?php
 
+use App\Models\Genre;
 use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
 use App\Models\MusicPlanSlotAssignment;
-use App\Models\Realm;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 test('deleting song assignment from slot in one plan does not affect other plans', function () {
     // Create test data
     $user = User::factory()->create();
-    $realm = Realm::firstOrCreate(['name' => 'Test Realm']);
+    $genre = Genre::firstOrCreate(['name' => 'Test Genre']);
 
     $musicPlan1 = MusicPlan::factory()->create([
         'user_id' => $user->id,
-        'realm_id' => $realm->id,
+        'genre_id' => $genre->id,
     ]);
 
     $musicPlan2 = MusicPlan::factory()->create([
         'user_id' => $user->id,
-        'realm_id' => $realm->id,
+        'genre_id' => $genre->id,
     ]);
 
     $slot = MusicPlanSlot::factory()->create();
@@ -75,16 +75,16 @@ test('deleting song assignment from slot in one plan does not affect other plans
 
 test('detaching slot from plan deletes assignments only for that plan', function () {
     $user = User::factory()->create();
-    $realm = Realm::firstOrCreate(['name' => 'Test Realm']);
+    $genre = Genre::firstOrCreate(['name' => 'Test Genre']);
 
     $musicPlan1 = MusicPlan::factory()->create([
         'user_id' => $user->id,
-        'realm_id' => $realm->id,
+        'genre_id' => $genre->id,
     ]);
 
     $musicPlan2 = MusicPlan::factory()->create([
         'user_id' => $user->id,
-        'realm_id' => $realm->id,
+        'genre_id' => $genre->id,
     ]);
 
     $slot = MusicPlanSlot::factory()->create();
@@ -139,11 +139,11 @@ test('detaching slot from plan deletes assignments only for that plan', function
 test('hard deleting slot with assignments is prevented by foreign key constraint', function () {
     // This test expects an exception when trying to force delete a slot that has assignments
     $user = User::factory()->create();
-    $realm = Realm::firstOrCreate(['name' => 'Test Realm']);
+    $genre = Genre::firstOrCreate(['name' => 'Test Genre']);
 
     $musicPlan = MusicPlan::factory()->create([
         'user_id' => $user->id,
-        'realm_id' => $realm->id,
+        'genre_id' => $genre->id,
     ]);
 
     $slot = MusicPlanSlot::factory()->create();
@@ -174,11 +174,11 @@ test('hard deleting slot with assignments is prevented by foreign key constraint
 
 test('soft deleting slot does not delete assignments', function () {
     $user = User::factory()->create();
-    $realm = Realm::firstOrCreate(['name' => 'Test Realm']);
+    $genre = Genre::firstOrCreate(['name' => 'Test Genre']);
 
     $musicPlan = MusicPlan::factory()->create([
         'user_id' => $user->id,
-        'realm_id' => $realm->id,
+        'genre_id' => $genre->id,
     ]);
 
     $slot = MusicPlanSlot::factory()->create();

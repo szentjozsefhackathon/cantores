@@ -1,7 +1,7 @@
-# Realm Refactor Implementation Plan
+# Genre Refactor Implementation Plan
 
 ## Overview
-Replace the `MusicPlanSetting` enum with a `Realm` entity to allow many-to-many relationships between Realms, Music, and Collections. Users will have a nullable `current_realm_id` foreign key.
+Replace the `MusicPlanSetting` enum with a `Genre` entity to allow many-to-many relationships between Genres, Music, and Collections. Users will have a nullable `current_genre_id` foreign key.
 
 ## Current State Analysis
 - `MusicPlanSetting` is an enum with values: `organist`, `guitarist`, `other`
@@ -13,9 +13,9 @@ Replace the `MusicPlanSetting` enum with a `Realm` entity to allow many-to-many 
 
 ### Database Schema Changes
 
-#### 1. Create `realms` table
+#### 1. Create `genres` table
 ```php
-Schema::create('realms', function (Blueprint $table) {
+Schema::create('genres', function (Blueprint $table) {
     $table->id();
     $table->string('name')->unique(); // 'organist', 'guitarist', 'other'
     $table->timestamps();
@@ -24,46 +24,46 @@ Schema::create('realms', function (Blueprint $table) {
 
 #### 2. Create pivot tables
 ```php
-Schema::create('music_realm', function (Blueprint $table) {
+Schema::create('music_genre', function (Blueprint $table) {
     $table->id();
     $table->foreignId('music_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('realm_id')->constrained()->cascadeOnDelete();
+    $table->foreignId('genre_id')->constrained()->cascadeOnDelete();
     $table->timestamps();
     
-    $table->unique(['music_id', 'realm_id']);
+    $table->unique(['music_id', 'genre_id']);
 });
 
-Schema::create('collection_realm', function (Blueprint $table) {
+Schema::create('collection_genre', function (Blueprint $table) {
     $table->id();
     $table->foreignId('collection_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('realm_id')->constrained()->cascadeOnDelete();
+    $table->foreignId('genre_id')->constrained()->cascadeOnDelete();
     $table->timestamps();
     
-    $table->unique(['collection_id', 'realm_id']);
+    $table->unique(['collection_id', 'genre_id']);
 });
 ```
 
-#### 3. Add `current_realm_id` to `users` table
+#### 3. Add `current_genre_id` to `users` table
 ```php
 Schema::table('users', function (Blueprint $table) {
-    $table->foreignId('current_realm_id')->nullable()->constrained('realms')->nullOnDelete();
+    $table->foreignId('current_genre_id')->nullable()->constrained('genres')->nullOnDelete();
 });
 ```
 
 #### 4. Update `music_plans` table
-Option A: Replace `setting` with `realm_id` (preferred if deleting existing data)
+Option A: Replace `setting` with `genre_id` (preferred if deleting existing data)
 ```php
 Schema::table('music_plans', function (Blueprint $table) {
     $table->dropColumn('setting');
-    $table->foreignId('realm_id')->nullable()->constrained()->nullOnDelete();
+    $table->foreignId('genre_id')->nullable()->constrained()->nullOnDelete();
 });
 ```
 
-Option B: Keep `setting` as string for backward compatibility during transition, add `realm_id` separately
+Option B: Keep `setting` as string for backward compatibility during transition, add `genre_id` separately
 
 ### Model Changes
 
-#### 1. Create `App\Models\Realm` model
+#### 1. Create `App\Models\Genre` model
 ```php
 <?php
 
@@ -73,7 +73,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Realm extends Model
+class Genre extends Model
 {
     use HasFactory;
 
@@ -81,17 +81,17 @@ class Realm extends Model
 
     public function music(): BelongsToMany
     {
-        return $this->belongsToMany(Music::class, 'music_realm');
+        return $this->belongsToMany(Music::class, 'music_genre');
     }
 
     public function collections(): BelongsToMany
     {
-        return $this->belongsToMany(Collection::class, 'collection_realm');
+        return $this->belongsToMany(Collection::class, 'collection_genre');
     }
 
     public function users()
     {
-        return $this->hasMany(User::class, 'current_realm_id');
+        return $this->hasMany(User::class, 'current_genre_id');
     }
 
     public function musicPlans()
@@ -130,8 +130,8 @@ class Realm extends Model
 
     public static function options(): array
     {
-        return self::all()->mapWithKeys(fn ($realm) => [
-            $realm->id => $realm->label(),
+        return self::all()->mapWithKeys(fn ($genre) => [
+            $genre->id => $genre->label(),
         ])->toArray();
     }
 }
@@ -139,17 +139,17 @@ class Realm extends Model
 
 #### 2. Update `App\Models\Music` model
 ```php
-public function realms(): BelongsToMany
+public function genres(): BelongsToMany
 {
-    return $this->belongsToMany(Realm::class, 'music_realm');
+    return $this->belongsToMany(Genre::class, 'music_genre');
 }
 ```
 
 #### 3. Update `App\Models\Collection` model
 ```php
-public function realms(): BelongsToMany
+public function genres(): BelongsToMany
 {
-    return $this->belongsToMany(Realm::class, 'collection_realm');
+    return $this->belongsToMany(Genre::class, 'collection_genre');
 }
 ```
 
@@ -157,12 +157,12 @@ public function realms(): BelongsToMany
 ```php
 protected $fillable = [
     // ... existing fields
-    'current_realm_id',
+    'current_genre_id',
 ];
 
-public function currentRealm(): BelongsTo
+public function currentGenre(): BelongsTo
 {
-    return $this->belongsTo(Realm::class, 'current_realm_id');
+    return $this->belongsTo(Genre::class, 'current_genre_id');
 }
 ```
 
@@ -170,25 +170,25 @@ public function currentRealm(): BelongsTo
 ```php
 protected $fillable = [
     'user_id',
-    'realm_id', // replace 'setting'
+    'genre_id', // replace 'setting'
     'is_published',
 ];
 
-public function realm(): BelongsTo
+public function genre(): BelongsTo
 {
-    return $this->belongsTo(Realm::class);
+    return $this->belongsTo(Genre::class);
 }
 
 // Update settingOptions() method
-public static function realmOptions(): array
+public static function genreOptions(): array
 {
-    return Realm::options();
+    return Genre::options();
 }
 
 // Add accessor for backward compatibility if needed
 public function getSettingAttribute(): ?string
 {
-    return $this->realm?->name;
+    return $this->genre?->name;
 }
 ```
 
@@ -199,13 +199,13 @@ public function getSettingAttribute(): ?string
 #### 1. Update `resources/views/components/music-plan-setting-icon.blade.php`
 ```blade
 @php
-    // Accept either Realm model or realm name
-    if ($setting instanceof \App\Models\Realm) {
-        $realm = $setting;
+    // Accept either Genre model or genre name
+    if ($setting instanceof \App\Models\Genre) {
+        $genre = $setting;
     } else {
-        $realm = \App\Models\Realm::where('name', $setting)->first();
+        $genre = \App\Models\Genre::where('name', $setting)->first();
     }
-    $icon = $realm?->icon() ?? 'other';
+    $icon = $genre?->icon() ?? 'other';
 @endphp
 
 @if($icon === 'organist')
@@ -218,64 +218,64 @@ public function getSettingAttribute(): ?string
 ```
 
 #### 2. Update all references to `MusicPlanSetting::tryFrom($setting)?->label()`
-- In `⚡music-plan-card.blade.php`: Use `$musicPlan->realm?->label() ?? $musicPlan->realm?->name`
-- In `⚡liturgical-info.blade.php`: Use `$plan->realm?->label() ?? $plan->realm?->name`
+- In `⚡music-plan-card.blade.php`: Use `$musicPlan->genre?->label() ?? $musicPlan->genre?->name`
+- In `⚡liturgical-info.blade.php`: Use `$plan->genre?->label() ?? $plan->genre?->name`
 - In `music-plan-editor.blade.php`: Update component usage
 
 #### 3. Update any forms that use `MusicPlan::settingOptions()`
-Replace with `MusicPlan::realmOptions()` or `Realm::options()`
+Replace with `MusicPlan::genreOptions()` or `Genre::options()`
 
 ### Data Migration (if keeping existing data)
 Since user indicated they'll delete existing data, we can:
 1. Truncate relevant tables or run fresh migrations
-2. Seed realms table with initial values: 'organist', 'guitarist', 'other'
+2. Seed genres table with initial values: 'organist', 'guitarist', 'other'
 
 ### Testing Strategy
 
-#### 1. Create tests for Realm model
+#### 1. Create tests for Genre model
 ```php
-test('realm has correct label', function () {
-    $realm = Realm::factory()->create(['name' => 'organist']);
-    expect($realm->label())->toBe('Organist');
+test('genre has correct label', function () {
+    $genre = Genre::factory()->create(['name' => 'organist']);
+    expect($genre->label())->toBe('Organist');
 });
 
-test('realm has many music', function () {
-    $realm = Realm::factory()->create();
+test('genre has many music', function () {
+    $genre = Genre::factory()->create();
     $music = Music::factory()->count(3)->create();
-    $realm->music()->attach($music);
+    $genre->music()->attach($music);
     
-    expect($realm->music)->toHaveCount(3);
+    expect($genre->music)->toHaveCount(3);
 });
 
-test('user can have current realm', function () {
-    $realm = Realm::factory()->create();
-    $user = User::factory()->create(['current_realm_id' => $realm->id]);
+test('user can have current genre', function () {
+    $genre = Genre::factory()->create();
+    $user = User::factory()->create(['current_genre_id' => $genre->id]);
     
-    expect($user->currentRealm->id)->toBe($realm->id);
+    expect($user->currentGenre->id)->toBe($genre->id);
 });
 ```
 
 #### 2. Update existing tests
-- Update `MusicPlanFactory` to use `realm_id` instead of `setting`
+- Update `MusicPlanFactory` to use `genre_id` instead of `setting`
 - Update any tests that assert on setting values
 
 #### 3. Test UI components
-- Test that realm icons display correctly
-- Test that realm labels are translated
+- Test that genre icons display correctly
+- Test that genre labels are translated
 
 ### Implementation Steps
 
 1. **Create migrations**
-   - Create realms table
-   - Create music_realm pivot table
-   - Create collection_realm pivot table
-   - Add current_realm_id to users table
-   - Update music_plans table (drop setting, add realm_id)
+   - Create genres table
+   - Create music_genre pivot table
+   - Create collection_genre pivot table
+   - Add current_genre_id to users table
+   - Update music_plans table (drop setting, add genre_id)
 
-2. **Create Realm model and factory**
-   - Create `App\Models\Realm`
-   - Create `Database\Factories\RealmFactory`
-   - Create `Database\Seeders\RealmSeeder` with initial values
+2. **Create Genre model and factory**
+   - Create `App\Models\Genre`
+   - Create `Database\Factories\GenreFactory`
+   - Create `Database\Seeders\GenreSeeder` with initial values
 
 3. **Update existing models**
    - Update Music, Collection, User, MusicPlan models
@@ -286,10 +286,10 @@ test('user can have current realm', function () {
 
 5. **Run migrations and seed data**
    - Run migrations
-   - Seed realms table
+   - Seed genres table
 
 6. **Update tests**
-   - Create new tests for Realm
+   - Create new tests for Genre
    - Update existing tests
 
 7. **Delete MusicPlanSetting enum**
@@ -297,9 +297,9 @@ test('user can have current realm', function () {
    - Delete `app/MusicPlanSetting.php`
 
 8. **Verify functionality**
-   - Test creating music plans with realms
-   - Test assigning music to realms
-   - Test user current realm selection
+   - Test creating music plans with genres
+   - Test assigning music to genres
+   - Test user current genre selection
 
 ### Potential Issues and Mitigations
 
@@ -307,29 +307,29 @@ test('user can have current realm', function () {
 
 2. **Performance**: Many-to-many relationships could impact performance with large datasets. Consider eager loading where needed.
 
-3. **Backward compatibility**: If needed during transition, keep `setting` column temporarily and add accessor/mutator to sync with `realm_id`.
+3. **Backward compatibility**: If needed during transition, keep `setting` column temporarily and add accessor/mutator to sync with `genre_id`.
 
-4. **UI consistency**: Ensure all places that displayed setting now display realm correctly.
+4. **UI consistency**: Ensure all places that displayed setting now display genre correctly.
 
 ### Mermaid Diagram of New Relationships
 
 ```mermaid
 erDiagram
-    User ||--o{ Realm : "current_realm"
+    User ||--o{ Genre : "current_genre"
     User ||--o{ MusicPlan : creates
-    MusicPlan }o--|| Realm : belongs_to
-    Music }o--o{ Realm : "many-to-many"
-    Collection }o--o{ Realm : "many-to-many"
+    MusicPlan }o--|| Genre : belongs_to
+    Music }o--o{ Genre : "many-to-many"
+    Collection }o--o{ Genre : "many-to-many"
     Music }o--o{ Collection : "many-to-many"
     
     User {
         bigint id PK
         string name
         string email
-        bigint current_realm_id FK
+        bigint current_genre_id FK
     }
     
-    Realm {
+    Genre {
         bigint id PK
         string name
     }
@@ -337,7 +337,7 @@ erDiagram
     MusicPlan {
         bigint id PK
         bigint user_id FK
-        bigint realm_id FK
+        bigint genre_id FK
         boolean is_published
     }
     
@@ -351,16 +351,16 @@ erDiagram
         string title
     }
     
-    music_realm {
+    music_genre {
         bigint id PK
         bigint music_id FK
-        bigint realm_id FK
+        bigint genre_id FK
     }
     
-    collection_realm {
+    collection_genre {
         bigint id PK
         bigint collection_id FK
-        bigint realm_id FK
+        bigint genre_id FK
     }
 ```
 

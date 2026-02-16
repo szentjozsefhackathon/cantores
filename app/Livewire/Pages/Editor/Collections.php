@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Pages\Editor;
 
-use App\Facades\RealmContext;
+use App\Facades\GenreContext;
 use App\Models\Collection;
-use App\Models\Realm;
+use App\Models\Genre;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -39,7 +39,7 @@ class Collections extends Component
 
     public ?string $author = null;
 
-    public array $selectedRealms = [];
+    public array $selectedGenres = [];
 
     public string $sortBy = 'title';
 
@@ -62,10 +62,10 @@ class Collections extends Component
     }
 
     /**
-     * Handle realm change event.
+     * Handle genre change event.
      */
-    #[On('realm-changed')]
-    public function onRealmChanged(): void
+    #[On('genre-changed')]
+    public function onGenreChanged(): void
     {
         $this->resetPage();
     }
@@ -86,11 +86,11 @@ class Collections extends Component
     }
 
     /**
-     * Get all realms for selection.
+     * Get all genres for selection.
      */
-    public function realms(): \Illuminate\Database\Eloquent\Collection
+    public function genres(): \Illuminate\Database\Eloquent\Collection
     {
-        return Realm::all();
+        return Genre::all();
     }
 
     /**
@@ -103,8 +103,8 @@ class Collections extends Component
                 ->orWhere('abbreviation', 'ilike', "%{$search}%")
                 ->orWhere('author', 'ilike', "%{$search}%");
         })
-            ->forCurrentRealm()
-            ->with(['realms'])
+            ->forCurrentGenre()
+            ->with(['genres'])
             ->withCount('music')
             ->orderBy($this->sortBy, $this->sortDirection)
             ->paginate(10);
@@ -121,10 +121,10 @@ class Collections extends Component
     {
         $this->authorize('create', Collection::class);
         $this->resetForm();
-        // Pre-select the user's current realm
-        $realmId = RealmContext::getId();
-        if ($realmId) {
-            $this->selectedRealms = [$realmId];
+        // Pre-select the user's current genre
+        $genreId = GenreContext::getId();
+        if ($genreId) {
+            $this->selectedGenres = [$genreId];
         }
         $this->showCreateModal = true;
     }
@@ -139,7 +139,7 @@ class Collections extends Component
         $this->title = $collection->title;
         $this->abbreviation = $collection->abbreviation;
         $this->author = $collection->author;
-        $this->selectedRealms = $collection->realms->pluck('id')->toArray();
+        $this->selectedGenres = $collection->genres->pluck('id')->toArray();
         $this->showEditModal = true;
     }
 
@@ -169,8 +169,8 @@ class Collections extends Component
             'title' => ['required', 'string', 'max:255', Rule::unique('collections', 'title')],
             'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')],
             'author' => ['nullable', 'string', 'max:255'],
-            'selectedRealms' => ['nullable', 'array'],
-            'selectedRealms.*' => ['integer', Rule::exists('realms', 'id')],
+            'selectedGenres' => ['nullable', 'array'],
+            'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
         ]);
 
         $collection = Collection::create([
@@ -178,8 +178,8 @@ class Collections extends Component
             'user_id' => Auth::id(),
         ]);
 
-        // Attach selected realms (empty array will detach all)
-        $collection->realms()->sync($validated['selectedRealms'] ?? []);
+        // Attach selected genres (empty array will detach all)
+        $collection->genres()->sync($validated['selectedGenres'] ?? []);
 
         $this->showCreateModal = false;
         $this->resetForm();
@@ -197,14 +197,14 @@ class Collections extends Component
             'title' => ['required', 'string', 'max:255', Rule::unique('collections', 'title')->ignore($this->editingCollection->id)],
             'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')->ignore($this->editingCollection->id)],
             'author' => ['nullable', 'string', 'max:255'],
-            'selectedRealms' => ['nullable', 'array'],
-            'selectedRealms.*' => ['integer', Rule::exists('realms', 'id')],
+            'selectedGenres' => ['nullable', 'array'],
+            'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
         ]);
 
         $this->editingCollection->update($validated);
 
-        // Sync selected realms (empty array will detach all)
-        $this->editingCollection->realms()->sync($validated['selectedRealms'] ?? []);
+        // Sync selected genres (empty array will detach all)
+        $this->editingCollection->genres()->sync($validated['selectedGenres'] ?? []);
 
         $this->showEditModal = false;
         $this->resetForm();
@@ -238,6 +238,6 @@ class Collections extends Component
         $this->title = '';
         $this->abbreviation = null;
         $this->author = null;
-        $this->selectedRealms = [];
+        $this->selectedGenres = [];
     }
 }

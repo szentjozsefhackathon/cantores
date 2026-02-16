@@ -57,7 +57,7 @@ new class extends Component
     }
 
     /**
-     * Get all realms for selection.
+     * Get all genres for selection.
      */
     public function genres(): \Illuminate\Database\Eloquent\Collection
     {

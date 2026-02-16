@@ -143,9 +143,9 @@ class MusicPlan extends Model
     }
 
     /**
-     * Scope for plans belonging to the current user's realm.
+     * Scope for plans belonging to the current user's genre.
      */
-    public function scopeForCurrentRealm($query)
+    public function scopeForCurrentGenre($query)
     {
         $genreId = \App\Facades\GenreContext::getId();
 
@@ -156,7 +156,7 @@ class MusicPlan extends Model
                     ->orWhere('genre_id', $genreId);
             });
         }
-        // If $realmId is null, no filtering applied (show all plans)
+        // If $genreId is null, no filtering applied (show all plans)
     }
 
     /**
@@ -170,7 +170,7 @@ class MusicPlan extends Model
     /**
      * Get the setting options with icons (backward compatibility).
      *
-     * @deprecated Use realmOptions() instead
+     * @deprecated Use genreOptions() instead
      */
     public static function settingOptions(): array
     {

@@ -46,7 +46,7 @@ class MyMusicPlans extends Component
                     ->orWhere('genre_id', $genreId);
             });
         }
-        // If $realmId is null, no filtering applied (show all plans)
+        // If $genre_id is null, no filtering applied (show all plans)
 
         if ($this->search) {
             $query->where(function ($q) {
