@@ -15,7 +15,9 @@ class MusicMergerTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Music $leftMusic;
+
     protected Music $rightMusic;
 
     protected function setUp(): void

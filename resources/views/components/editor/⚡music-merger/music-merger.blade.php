@@ -146,8 +146,22 @@
                     <div class="border border-gray-200 dark:border-gray-700 rounded p-2 text-sm">
                         <div class="font-medium">{{ $collection->title }} ({{ $collection->abbreviation }})</div>
                         <div class="text-gray-600 dark:text-gray-400">
-                            {{ __('Page:') }} {{ $collection->pivot->page_number ?? '-' }},
-                            {{ __('Order:') }} {{ $collection->pivot->order_number ?? '-' }}
+                            @php
+                                $pivot = $collection->pivot ?? null;
+                                $page = '-';
+                                $order = '-';
+                                if ($pivot) {
+                                    if (is_array($pivot)) {
+                                        $page = $pivot['page_number'] ?? '-';
+                                        $order = $pivot['order_number'] ?? '-';
+                                    } else {
+                                        $page = $pivot->page_number ?? '-';
+                                        $order = $pivot->order_number ?? '-';
+                                    }
+                                }
+                            @endphp
+                            {{ __('Page:') }} {{ $page }},
+                            {{ __('Order:') }} {{ $order }}
                         </div>
                     </div>
                     @empty
@@ -189,8 +203,22 @@
                     <div class="border border-gray-200 dark:border-gray-700 rounded p-2 text-sm">
                         <div class="font-medium">{{ $collection->title }} ({{ $collection->abbreviation }})</div>
                         <div class="text-gray-600 dark:text-gray-400">
-                            {{ __('Page:') }} {{ $collection->pivot->page_number ?? '-' }},
-                            {{ __('Order:') }} {{ $collection->pivot->order_number ?? '-' }}
+                            @php
+                                $pivot = $collection->pivot ?? null;
+                                $page = '-';
+                                $order = '-';
+                                if ($pivot) {
+                                    if (is_array($pivot)) {
+                                        $page = $pivot['page_number'] ?? '-';
+                                        $order = $pivot['order_number'] ?? '-';
+                                    } else {
+                                        $page = $pivot->page_number ?? '-';
+                                        $order = $pivot->order_number ?? '-';
+                                    }
+                                }
+                            @endphp
+                            {{ __('Page:') }} {{ $page }},
+                            {{ __('Order:') }} {{ $order }}
                         </div>
                     </div>
                     @empty
@@ -277,8 +305,13 @@
                                 {{ isset($item['conflict']) ? 'border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20' : '' }}">
                         <div class="font-medium">{{ $item['collection']->title }} ({{ $item['collection']->abbreviation }})</div>
                         <div class="text-gray-600 dark:text-gray-400">
-                            {{ __('Page:') }} {{ $item['pivot']->page_number ?? '-' }},
-                            {{ __('Order:') }} {{ $item['pivot']->order_number ?? '-' }}
+                            @php
+                                $pivotData = $item['pivot_data'] ?? null;
+                                $page = $pivotData['page_number'] ?? '-';
+                                $order = $pivotData['order_number'] ?? '-';
+                            @endphp
+                            {{ __('Page:') }} {{ $page }},
+                            {{ __('Order:') }} {{ $order }}
                         </div>
                         @if (isset($item['conflict']))
                         <div class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">

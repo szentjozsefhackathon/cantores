@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Editor;
 
-use App\Facades\GenreContext;
 use App\Models\Music;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -10,33 +9,46 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
-new class extends Component
+return new class extends Component
 {
     use AuthorizesRequests;
 
     // Music selection
     public ?int $leftMusicId = null;
+
     public ?int $rightMusicId = null;
+
     public string $leftSearch = '';
+
     public string $rightSearch = '';
 
     // Loaded music models
     public ?Music $leftMusic = null;
+
     public ?Music $rightMusic = null;
 
     // Comparison state
     public bool $showComparison = false;
+
     public array $mergedData = [];
+
     public array $conflicts = [];
+
     public array $mergedCollections = [];
+
     public array $mergedGenres = [];
+
     public array $mergedUrls = [];
+
     public array $mergedRelatedMusic = [];
 
     // Editable merged fields
     public string $mergedTitle = '';
+
     public ?string $mergedSubtitle = null;
+
     public ?string $mergedCustomId = null;
+
     public bool $mergedIsPrivate = false;
 
     /**
@@ -79,9 +91,9 @@ new class extends Component
         $music = Music::with(['collections', 'genres', 'urls', 'relatedMusic'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
-        
+
         $this->authorize('update', $music);
-        
+
         $this->leftMusicId = $musicId;
         $this->leftMusic = $music;
         $this->checkComparisonReady();
@@ -96,9 +108,9 @@ new class extends Component
         $music = Music::with(['collections', 'genres', 'urls', 'relatedMusic'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
-        
+
         $this->authorize('update', $music);
-        
+
         $this->rightMusicId = $musicId;
         $this->rightMusic = $music;
         $this->checkComparisonReady();
@@ -114,6 +126,7 @@ new class extends Component
                 $this->dispatch('error', message: __('Cannot select the same music piece for both sides.'));
                 $this->rightMusicId = null;
                 $this->rightMusic = null;
+
                 return;
             }
             $this->compare();
@@ -125,7 +138,7 @@ new class extends Component
      */
     public function compare(): void
     {
-        if (!$this->leftMusic || !$this->rightMusic) {
+        if (! $this->leftMusic || ! $this->rightMusic) {
             return;
         }
 
@@ -149,7 +162,7 @@ new class extends Component
         foreach ($directFields as $field) {
             $leftValue = $this->leftMusic->$field;
             $rightValue = $this->rightMusic->$field;
-            
+
             if ($this->valuesDiffer($leftValue, $rightValue)) {
                 $this->conflicts[$field] = [
                     'left' => $leftValue,
@@ -165,7 +178,7 @@ new class extends Component
                 if ($leftCollection->id === $rightCollection->id) {
                     if ($leftCollection->pivot->page_number != $rightCollection->pivot->page_number ||
                         $leftCollection->pivot->order_number != $rightCollection->pivot->order_number) {
-                        $this->conflicts['collection_' . $leftCollection->id] = [
+                        $this->conflicts['collection_'.$leftCollection->id] = [
                             'type' => 'collection',
                             'collection' => $leftCollection,
                             'left_pivot' => $leftCollection->pivot,
@@ -219,7 +232,7 @@ new class extends Component
      */
     private function resolveField(string $field, $leftValue, $rightValue)
     {
-        if (!isset($this->conflicts[$field])) {
+        if (! isset($this->conflicts[$field])) {
             // No conflict: use left if not empty, otherwise right
             return $leftValue ?? $rightValue;
         }
@@ -245,7 +258,10 @@ new class extends Component
             $key = $collection->id;
             $collectionMap[$key] = [
                 'collection' => $collection,
-                'pivot' => $collection->pivot,
+                'pivot_data' => [
+                    'page_number' => $collection->pivot->page_number ?? null,
+                    'order_number' => $collection->pivot->order_number ?? null,
+                ],
                 'source' => 'left',
             ];
         }
@@ -255,8 +271,8 @@ new class extends Component
             $key = $collection->id;
             if (isset($collectionMap[$key])) {
                 // Same collection - check for conflict
-                if ($collection->pivot->page_number != $collectionMap[$key]['pivot']->page_number ||
-                    $collection->pivot->order_number != $collectionMap[$key]['pivot']->order_number) {
+                if ($collection->pivot->page_number != $collectionMap[$key]['pivot_data']['page_number'] ||
+                    $collection->pivot->order_number != $collectionMap[$key]['pivot_data']['order_number']) {
                     // Conflict: use left's pivot
                     $collectionMap[$key]['conflict'] = true;
                 }
@@ -264,7 +280,10 @@ new class extends Component
                 // Different collection
                 $collectionMap[$key] = [
                     'collection' => $collection,
-                    'pivot' => $collection->pivot,
+                    'pivot_data' => [
+                        'page_number' => $collection->pivot->page_number ?? null,
+                        'order_number' => $collection->pivot->order_number ?? null,
+                    ],
                     'source' => 'right',
                 ];
             }
@@ -289,6 +308,7 @@ new class extends Component
         if ($left === null || $right === null) {
             return true; // One has value, other doesn't
         }
+
         return $left != $right;
     }
 
@@ -322,10 +342,11 @@ new class extends Component
             // Update collections
             $this->leftMusic->collections()->detach();
             foreach ($this->mergedCollections as $item) {
-                $this->leftMusic->collections()->attach($item['collection']->id, [
-                    'page_number' => $item['pivot']->page_number,
-                    'order_number' => $item['pivot']->order_number,
-                ]);
+                $pivotData = $item['pivot_data'] ?? [
+                    'page_number' => $item['pivot']['page_number'] ?? $item['pivot']->page_number ?? null,
+                    'order_number' => $item['pivot']['order_number'] ?? $item['pivot']->order_number ?? null,
+                ];
+                $this->leftMusic->collections()->attach($item['collection']['id'] ?? $item['collection']->id, $pivotData);
             }
 
             // Update genres
@@ -390,4 +411,4 @@ new class extends Component
             'rightResults' => $rightResults,
         ]);
     }
-}
+};

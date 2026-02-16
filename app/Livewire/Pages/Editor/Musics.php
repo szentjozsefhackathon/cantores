@@ -104,7 +104,7 @@ class Musics extends Component
         $this->resetPage();
 
         return view('pages.editor.musics', [
-            'musics' => $musics
+            'musics' => $musics,
         ]);
     }
 

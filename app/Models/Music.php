@@ -62,6 +62,7 @@ class Music extends Model implements Auditable
     public function collections(): BelongsToMany
     {
         return $this->belongsToMany(Collection::class, 'music_collection')
+            ->using(MusicCollection::class)
             ->withPivot(['page_number', 'order_number'])
             ->withTimestamps();
     }
