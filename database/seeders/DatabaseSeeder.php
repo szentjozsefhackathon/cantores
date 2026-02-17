@@ -108,6 +108,20 @@ class DatabaseSeeder extends Seeder
             ['label' => 'video']
         );
 
+        // Create music assignment flags
+        $importantFlag = \App\Models\MusicAssignmentFlag::firstOrCreate(
+            ['name' => 'important'],
+            ['name' => 'important']
+        );
+        $alternativeFlag = \App\Models\MusicAssignmentFlag::firstOrCreate(
+            ['name' => 'alternative'],
+            ['name' => 'alternative']
+        );
+        $lowPriorityFlag = \App\Models\MusicAssignmentFlag::firstOrCreate(
+            ['name' => 'low_priority'],
+            ['name' => 'low_priority']
+        );
+
         // Create a music plan and slot if they exist
         if (class_exists(MusicPlan::class) && class_exists(MusicPlanSlot::class)) {
             $musicPlan = MusicPlan::factory()->create([

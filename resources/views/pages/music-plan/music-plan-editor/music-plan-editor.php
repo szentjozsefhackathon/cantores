@@ -45,6 +45,9 @@ new class extends Component
 
     public bool $isEditingCelebration = false;
 
+    /** An array of flags by [assignmentId] */
+    public array $flags = [];
+
     public function mount($musicPlan = null): void
     {
         if (! $musicPlan) {
@@ -91,6 +94,8 @@ new class extends Component
                     ->with('music')
                     ->get()
                     ->map(function ($assignment) {
+                        // create the flag array for this slot's assignments                     
+                        $this->flags[$assignment->id] = $this->flags[$assignment->id] ?? [];
                         return [
                             'id' => $assignment->id,
                             'music_id' => $assignment->music_id,
@@ -487,6 +492,9 @@ new class extends Component
     public function removeAssignment(int $assignmentId): void
     {
         $this->authorize('update', $this->musicPlan);
+
+        // remove from flags
+        unset($this->flags[$assignmentId]);
 
         $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
         if ($assignment && $assignment->music_plan_id === $this->musicPlan->id) {

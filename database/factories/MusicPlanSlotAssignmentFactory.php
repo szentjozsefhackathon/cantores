@@ -24,6 +24,10 @@ class MusicPlanSlotAssignmentFactory extends Factory
     public function definition(): array
     {
         return [
+            'music_plan_slot_plan_id' => \App\Models\MusicPlanSlotPlan::factory(),
+            'music_plan_id' => \App\Models\MusicPlan::factory(),
+            'music_plan_slot_id' => \App\Models\MusicPlanSlot::factory(),
+            'music_id' => \App\Models\Music::factory(),
             'music_sequence' => $this->faker->numberBetween(1, 10),
             'notes' => $this->faker->optional()->sentence(),
         ];
