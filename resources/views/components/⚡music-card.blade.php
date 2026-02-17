@@ -49,7 +49,27 @@ new class extends Component
                         @endforeach
                     </div>
             </div>
-            <flux:icon name="music" class="h-5 w-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+            <div class="flex items-center gap-1">
+                <div class="flex-col items-center gap-1">
+                @can('update', $music)
+                    <flux:button
+                        variant="ghost"
+                        size="sm"
+                        icon="pencil"
+                        :href="route('music-editor', $music)"
+                        target="_blank"
+                        :title="__('Edit')"
+                        class="!p-1"
+                    />
+                @endcan
+                <div class="hidden sm:flex flex-col items-center gap-1">
+                @foreach($music->genres as $genre)
+                    <flux:icon name="{{ $genre->icon() }}" class="h-5 w-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                @endforeach
+                </div>
+                </div>
+                
+            </div>
         </div>
     </div>
 </div>

@@ -10,7 +10,7 @@
                 <!-- Notification message -->
                 <div class="flex justify-end">
                     <x-action-message on="slots-updated">
-                        {{ __('Művelet sikeres.') }} 
+                        {{ __('Művelet sikeres.') }}
                     </x-action-message>
                 </div>
 
@@ -19,48 +19,48 @@
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Ünnep neve</flux:heading>
                         @if($musicPlan->hasCustomCelebrations() && $isEditingCelebration)
-                            <flux:field>
-                                <flux:input
-                                    wire:model.live="celebrationName"
-                                    placeholder="Ünnep neve" />
-                            </flux:field>
+                        <flux:field>
+                            <flux:input
+                                wire:model.live="celebrationName"
+                                placeholder="Ünnep neve" />
+                        </flux:field>
                         @else
-                            <div class="flex items-center gap-2">
-                                <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
-                                @if($musicPlan->hasCustomCelebrations())
-                                    <flux:button
-                                        wire:click="toggleCelebrationEditing"
-                                        icon="pencil"
-                                        variant="outline"
-                                        size="xs"
-                                        title="Szerkesztés" />
-                                @endif
-                            </div>
+                        <div class="flex items-center gap-2">
+                            <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
+                            @if($musicPlan->hasCustomCelebrations())
+                            <flux:button
+                                wire:click="toggleCelebrationEditing"
+                                icon="pencil"
+                                variant="outline"
+                                size="xs"
+                                title="Szerkesztés" />
+                            @endif
+                        </div>
                         @endif
                     </div>
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Dátum</flux:heading>
                         @if($musicPlan->hasCustomCelebrations() && $isEditingCelebration)
-                            <flux:field>
-                                <flux:input
-                                    type="date"
-                                    wire:model.live="celebrationDate" />
-                            </flux:field>
+                        <flux:field>
+                            <flux:input
+                                type="date"
+                                wire:model.live="celebrationDate" />
+                        </flux:field>
                         @else
-                            <flux:text class="text-base font-semibold">
-                                @if($musicPlan->actual_date)
-                                    {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
-                                @else
-                                    –
-                                @endif
-                            </flux:text>
+                        <flux:text class="text-base font-semibold">
+                            @if($musicPlan->actual_date)
+                            {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
+                            @else
+                            –
+                            @endif
+                        </flux:text>
                         @endif
                     </div>
                     @if(!$musicPlan->hasCustomCelebrations())
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
                         @php
-                            $firstCelebration = $musicPlan->celebrations->first();
+                        $firstCelebration = $musicPlan->celebrations->first();
                         @endphp
                         <flux:text class="text-base font-semibold">{{ $firstCelebration?->year_letter ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:text>
                     </div>
@@ -105,10 +105,10 @@
                         </flux:field>
                         <div class="flex items-center">
                             @if($musicPlan->actual_date)
-                                <flux:icon name="external-link" class="mr-1"/>
-                                <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
-                                    Igenaptár
-                                </flux:link>
+                            <flux:icon name="external-link" class="mr-1" />
+                            <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
+                                Igenaptár
+                            </flux:link>
                             @endif
                         </div>
 
@@ -209,8 +209,7 @@
                                                 <flux:icon.loading
                                                     class="h-5 w-5 text-neutral-900 dark:text-neutral-100 absolute inset-0"
                                                     wire:loading
-                                                    wire:target="addSlotDirectly({{ $slot['id'] }})"
-                                                />
+                                                    wire:target="addSlotDirectly({{ $slot['id'] }})" />
                                             </div>
                                         </button>
                                         @endforeach
@@ -263,9 +262,10 @@
                                     <div class="mt-3 space-y-2">
                                         @foreach($slot['assignments'] as $assignment)
                                         <div wire:key="assignment-{{ $assignment['id'] }}" class="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-lg px-3 py-2">
-                                            <div class="flex items-center gap-3">
+                                            <div class="flex gap-3">
                                                 @if(count($slot['assignments']) > 1)
                                                 <div class="flex flex-col gap-1">
+                                                    <flux:badge>{{ $assignment['music_sequence'] }}</flux:badge>
                                                     <flux:button
                                                         wire:click="moveAssignmentUp({{ $assignment['id'] }})"
                                                         wire:loading.attr="disabled"
@@ -282,42 +282,42 @@
                                                         icon="chevron-down"
                                                         variant="outline"
                                                         size="xs" />
-                                                </div>
-                                                <flux:badge>{{ $assignment['music_sequence'] }}</flux:badge>
-                                                @endif
-                                                <div class="flex flex-col gap-2">
-                                                <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" wire:loading />
-                                                <x-mary-choices
-                                                    placeholder="Címkék"
-                                                    wire:model.live="flags.{{ $assignment['id'] }}"
-                                                    clearable
-                                                    :options="$this->flagOptions"
-                                                >
-                                                    @scope('item', $option)
-                                                        <x-mary-list-item                                                 
+                                                    <flux:button
+                                                        wire:click="removeAssignment({{ $assignment['id'] }})"
+                                                        wire:confirm="Biztosan eltávolítod ezt a zenét az elemből?"
                                                         wire:loading.attr="disabled"
                                                         wire:loading.class="opacity-50 cursor-not-allowed"
-                                                        :item="$option" class="h-8">
+                                                        icon="trash"
+                                                        variant="danger"
+                                                        size="xs" />
+
+                                                </div>
+
+                                                @endif
+                                                <div class="flex flex-col gap-2">
+                                                    <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" wire:loading />
+                                                    <x-mary-choices
+                                                        placeholder="Címkék"
+                                                        wire:model.live="flags.{{ $assignment['id'] }}"
+                                                        clearable
+                                                        :options="$this->flagOptions">
+                                                        @scope('item', $option)
+                                                        <x-mary-list-item
+                                                            wire:loading.attr="disabled"
+                                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                                            :item="$option" class="h-8">
                                                             <x-slot:avatar>
                                                                 <x-mary-icon :name="$option['icon']" :class="'text-'.$option['color'].'-500'" />
                                                             </x-slot:avatar>
                                                         </x-mary-list-item>
-                                                    @endscope
-                                                    @scope('selection', $option)
-                                                        <x-mary-icon :name="$option['icon']" class="text-{{ $option['color'] }}-500 w-4 h-4"/>
+                                                        @endscope
+                                                        @scope('selection', $option)
+                                                        <x-mary-icon :name="$option['icon']" class="text-{{ $option['color'] }}-500 w-4 h-4" />
                                                         <flux:text size="sm" class="inline {{ 'text-'.$option['color'].'-500'}}">{{ $option['name'] }}</flux:text>
-                                                    @endscope
-                                                </x-mary-choices>
+                                                        @endscope
+                                                    </x-mary-choices>
+                                                </div>
                                             </div>
-                                            </div>
-                                            <flux:button
-                                                wire:click="removeAssignment({{ $assignment['id'] }})"
-                                                wire:confirm="Biztosan eltávolítod ezt a zenét az elemből?"
-                                                wire:loading.attr="disabled"
-                                                wire:loading.class="opacity-50 cursor-not-allowed"
-                                                icon="trash"
-                                                variant="danger"
-                                                size="xs" />
                                         </div>
                                         @endforeach
                                     </div>
@@ -341,8 +341,7 @@
                                             icon="chevron-down"
                                             variant="outline"
                                             size="xs" />
-                                    </div>
-                                    <div class="border-l border-neutral-300 dark:border-neutral-700 h-6"></div>
+                                    <div class="border-b border-neutral-300 dark:border-neutral-700 w-6"></div>
                                     <flux:button
                                         wire:click="openMusicSearchModal({{ $slot['pivot_id'] }})"
                                         wire:loading.attr="disabled"
@@ -360,6 +359,8 @@
                                         variant="danger"
                                         size="xs" />
                                 </div>
+                            </div>
+
                             </flux:card>
                             @empty
                             <flux:callout variant="secondary" icon="musical-note">
