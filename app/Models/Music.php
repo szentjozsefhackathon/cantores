@@ -113,6 +113,14 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Get the verification records for this music.
+     */
+    public function verifications(): HasMany
+    {
+        return $this->hasMany(MusicVerification::class);
+    }
+
+    /**
      * Scope for music belonging to the current user's genre.
      */
     public function scopeForCurrentGenre($query)

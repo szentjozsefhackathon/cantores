@@ -79,6 +79,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get the music verification records where this user is the verifier.
+     */
+    public function musicVerifications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(MusicVerification::class, 'verifier_id');
+    }
+
+    /**
      * Get the user's display name (City FirstName).
      */
     public function getDisplayNameAttribute(): string

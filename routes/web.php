@@ -97,6 +97,11 @@ Route::livewire('/editor/musics/merge', 'editor.music-merger')
     ->middleware(['auth', 'verified'])
     ->name('music-merger');
 
+// Music verification tool
+Route::livewire('/editor/musics/verify', \App\Livewire\Pages\Editor\MusicVerifier::class)
+    ->middleware(['auth', 'verified'])
+    ->name('music-verifier');
+
 // Suggestions page for music plan recommendations
 Route::livewire('/suggestions', 'pages::suggestions')
     ->name('suggestions');

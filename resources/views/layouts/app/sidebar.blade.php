@@ -45,6 +45,9 @@
                 <flux:sidebar.item icon="combine" :href="route('music-merger')" :current="request()->routeIs('music-merge')" wire:navigate>
                     Énekek egyesítése
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="check-circle" :href="route('music-verifier')" :current="request()->routeIs('music-verifier')" wire:navigate>
+                    Énekek ellenőrzése
+                </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 
