@@ -76,7 +76,7 @@
     "Whoops!": "Hoppá!",
     "Collections": "Gyűjtemények",
     "Manage music collections": "Zenei gyűjtemények kezelése",
-    "Search collections by title, abbreviation, or author...": "Keresés cím, rövidítés vagy szerző alapján...",
+    "Title, subtitle, etc.": "Cím, alcím stb.",
     "Create Collection": "Gyűjtemény létrehozása",
     "Title": "Cím",
     "Abbreviation": "Rövidítés",
@@ -97,7 +97,6 @@
     "Enter author name": "Add meg a szerző nevét",
     "Save Changes": "Változtatások mentése",
     "Cannot delete collection that has music assigned to it.": "Nem lehet törölni a gyűjteményt, ha már zeneművek vannak hozzárendelve.",
-    "(p.:page)": "(:page.o)",
-    "Search music by title, subtitle, custom ID, collection abbreviation, order number, or page number...": "Keresés cím, alcím, egyedi azonosító, gyűjtemény rövidítés, sorszám vagy oldalszám alapján..."
+    "(p.:page)": "(:page.o)"
 
 }

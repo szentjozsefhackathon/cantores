@@ -52,7 +52,7 @@ class Musics extends Component
 
     public ?string $orderNumber = null;
 
-    public string $filter = 'visible'; // 'visible', 'all', 'public', 'private', 'mine'
+    public string $filter = 'all'; // 'visible', 'all', 'public', 'private', 'mine'
 
     public bool $isPrivate = false;
 

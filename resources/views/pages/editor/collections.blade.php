@@ -26,7 +26,7 @@
                     <flux:input
                         type="search"
                         wire:model.live="search"
-                        :placeholder="__('Search collections by title, abbreviation, or author...')"
+                        :placeholder="__('Title, subtitle, etc.')"
                     />
                 </flux:field>
                 

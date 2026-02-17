@@ -6,14 +6,14 @@
                 <flux:input
                     type="search"
                     wire:model.live="search"
-                    :placeholder="__('Search music by title, subtitle, custom ID, collection abbreviation, order number, or page number...')"
+                    :placeholder="__('Title, subtitle, etc.')"
                 />
             </flux:field>
             <x-mary-choices placeholder="Mind" single wire:model="filter" :options="[
                 ['id' => 'all', 'name' => __('All'), 'icon' => 'o-globe-alt'],
-                ['id' => 'public', 'name' => __('Public only'), 'icon' => 'o-eye'],
-                ['id' => 'private', 'name' => __('Private only'), 'icon' => 'o-eye-slash'],
-                ['id' => 'mine', 'name' => __('My items only'), 'icon' => 'o-user'],
+                ['id' => 'public', 'name' => __('Public'), 'icon' => 'o-eye'],
+                ['id' => 'private', 'name' => __('Private'), 'icon' => 'o-eye-slash'],
+                ['id' => 'mine', 'name' => __('My items'), 'icon' => 'o-user'],
             ]" class="w-full sm:w-48">
                 @scope('item', $option)
                             <x-mary-list-item :item="$option">

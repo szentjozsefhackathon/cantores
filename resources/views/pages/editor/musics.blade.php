@@ -19,18 +19,33 @@
                         <flux:input
                             type="search"
                             wire:model.live="search"
-                            :placeholder="__('Search music by title, subtitle, custom ID, collection abbreviation, order number, or page number...')"
+                            :placeholder="__('Title, subtitle, etc.')"
                         />
                     </flux:field>
-                    <flux:field class="w-full sm:w-48">
-                        <flux:select wire:model.live="filter">
-                            <option value="all">{{ __('All') }}</option>
-                            <option value="public">{{ __('Public only') }}</option>
-                            <option value="private">{{ __('Private only') }}</option>
-                            <option value="mine">{{ __('My items only') }}</option>
-                        </flux:select>
+                    <flux:field class="w-40">
+                        <x-mary-choices placeholder="Láthatóság" single wire:model="filter" :options="[
+                            ['id' => 'all', 'name' => __('All'), 'icon' => 'o-globe-alt'],
+                            ['id' => 'public', 'name' => __('Public'), 'icon' => 'o-eye'],
+                            ['id' => 'private', 'name' => __('Private'), 'icon' => 'o-eye-slash'],
+                            ['id' => 'mine', 'name' => __('My items'), 'icon' => 'o-user'],
+                        ]" >
+                            @scope('item', $option)
+                                        <x-mary-list-item :item="$option">
+                                            <x-slot:avatar>
+                                                <x-mary-icon :name="$option['icon']" />
+                                            </x-slot:avatar>
+                                        </x-mary-list-item>
+                            @endscope
+                        </x-mary-choices>
                     </flux:field>
-                    <flux:field class="w-full sm:w-48">
+                    <flux:field class="w-auto sm:w-48">
+                        <flux:input
+                            type="search"
+                            wire:model.live="collectionFreeText"
+                            :placeholder="__('Rövidítés, sorszám stb.')"
+                        />
+                    </flux:field>
+                    <flux:field class="w-40">
                         <flux:select wire:model.live="collectionFilter">
                             <option value="">{{ __('All Collections') }}</option>
                             @foreach ($this->collections as $collection)
@@ -38,13 +53,7 @@
                             @endforeach
                         </flux:select>
                     </flux:field>
-                    <flux:field class="w-full sm:w-48">
-                        <flux:input
-                            type="search"
-                            wire:model.live="collectionFreeText"
-                            :placeholder="__('Filter by collection abbreviation, title, or order number...')"
-                        />
-                    </flux:field>
+
                 </div>
                 
                 <div class="flex items-center gap-2">
