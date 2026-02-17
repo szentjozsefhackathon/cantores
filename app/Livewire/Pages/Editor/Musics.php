@@ -179,9 +179,9 @@ class Musics extends Component
             })
             ->forCurrentGenre()
             ->with(['genres', 'collections'])
-            ->withCount('collections')
-            ->orderBy('title');
-    }
+            ->when(blank($this->search), fn($q) => $q->orderBy('title'));
+;
+                }
 
     /**
      * Get collections for the dropdown filter.
