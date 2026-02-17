@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Author;
 use App\Models\Collection;
 use App\Models\Music;
 use App\Models\Genre;
@@ -31,6 +32,9 @@ new class extends Component
 
     public ?string $orderNumber = null;
 
+    // Author assignment
+    public ?int $selectedAuthorId = null;
+
     // Genre assignment
     public array $selectedGenres = [];
 
@@ -51,7 +55,7 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->authorize('view', $music);
-        $this->music = $music->load(['collections', 'genres']);
+        $this->music = $music->load(['collections', 'genres', 'authors']);
         $this->title = $music->title;
         $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
@@ -68,14 +72,29 @@ new class extends Component
     }
 
     /**
+     * Get all authors for selection.
+     */
+    public function authors(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Author::visibleTo(Auth::user())
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
      * Render the component.
      */
     public function render(): View
     {
         $collections = Collection::orderBy('title')->limit(100)->get();
+        $authors = Author::visibleTo(Auth::user())
+            ->orderBy('name')
+            ->limit(100)
+            ->get();
 
         return view('pages.editor.music-editor', [
             'collections' => $collections,
+            'authors' => $authors,
         ]);
     }
 
@@ -155,6 +174,48 @@ new class extends Component
         $this->music->load('collections');
 
         $this->dispatch('collection-removed');
+    }
+
+    /**
+     * Add an author to the music piece.
+     */
+    public function addAuthor(): void
+    {
+        $this->authorize('update', $this->music);
+
+        $validated = $this->validate([
+            'selectedAuthorId' => ['required', 'integer', 'exists:authors,id'],
+        ]);
+
+        // Check if already attached
+        if ($this->music->authors()->where('author_id', $validated['selectedAuthorId'])->exists()) {
+            $this->dispatch('error', __('This author is already attached to this music piece.'));
+
+            return;
+        }
+
+        $this->music->authors()->attach($validated['selectedAuthorId']);
+
+        // Refresh the authors relationship
+        $this->music->load('authors');
+
+        // Reset the form field
+        $this->selectedAuthorId = null;
+
+        $this->dispatch('author-added');
+    }
+
+    /**
+     * Remove an author from the music piece.
+     */
+    public function removeAuthor(int $authorId): void
+    {
+        $this->authorize('update', $this->music);
+
+        $this->music->authors()->detach($authorId);
+        $this->music->load('authors');
+
+        $this->dispatch('author-removed');
     }
 
     /**
@@ -476,6 +537,96 @@ new class extends Component
                         <x-action-message on="collection-added">
                             {{ __('Collection added.') }}
                         </x-action-message>
+                    </div>
+                </div>
+            </div>
+        </flux:card>
+
+        <!-- Author Connections -->
+        <flux:card class="p-5 mt-6">
+            <flux:heading size="lg">{{ __('Author Connections') }}</flux:heading>
+            <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage authors of this music piece.') }}</flux:text>
+
+            @if($music->authors->count())
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Author') }}</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                            @foreach($music->authors as $author)
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        {{ $author->name }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-sm">
+                                        <div class="flex items-center gap-2">
+                                            <flux:button
+                                                variant="ghost"
+                                                size="sm"
+                                                icon="trash"
+                                                wire:click="removeAuthor({{ $author->id }})"
+                                                wire:confirm="{{ __('Are you sure you want to remove this author from the music piece?') }}"
+                                                :title="__('Remove')"
+                                            />
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
+                    <flux:icon name="user" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
+                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No authors attached') }}</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece has no authors assigned yet.') }}</p>
+                </div>
+            @endif
+
+            <!-- Author removal message -->
+            <div class="flex justify-end mb-2">
+                <x-action-message on="author-removed">
+                    {{ __('Author removed.') }}
+                </x-action-message>
+                <x-action-message on="author-added">
+                    {{ __('Author added.') }}
+                </x-action-message>
+            </div>
+
+            <!-- Add Author Form -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <flux:heading size="sm">{{ __('Add Author') }}</flux:heading>
+                <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Assign an author to this music piece.') }}</flux:text>
+
+                <div class="space-y-4">
+                    <flux:field required>
+                        <flux:label>{{ __('Author') }}</flux:label>
+                        <flux:select
+                            wire:model="selectedAuthorId"
+                            searchable
+                            :placeholder="__('Type to search authors...')"
+                            clearable
+                        >
+                            <option value="">{{ __('Select an author') }}</option>
+                            @foreach ($authors as $author)
+                                <option value="{{ $author->id }}">{{ $author->name }}</option>
+                            @endforeach
+                        </flux:select>
+                        <flux:error name="selectedAuthorId" />
+                    </flux:field>
+
+                    <div class="flex justify-end items-center gap-4">
+                        <flux:button
+                            variant="primary"
+                            wire:click="addAuthor"
+                            wire:loading.attr="disabled"
+                        >
+                            {{ __('Add Author') }}
+                        </flux:button>
                     </div>
                 </div>
             </div>

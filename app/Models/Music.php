@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Scout\Attributes\SearchUsingFullText;
 use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
 
@@ -65,6 +66,15 @@ class Music extends Model implements Auditable
         return $this->belongsToMany(Collection::class, 'music_collection')
             ->using(MusicCollection::class)
             ->withPivot(['page_number', 'order_number'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the authors associated with this music.
+     */
+    public function authors(): BelongsToMany
+    {
+        return $this->belongsToMany(Author::class, 'author_music')
             ->withTimestamps();
     }
 
@@ -160,6 +170,7 @@ class Music extends Model implements Auditable
      *
      * @return array<string, mixed>
      */
+    #[SearchUsingFullText(['title, subtitle, custom_id'])]
     public function toSearchableArray(): array
     {
         return [

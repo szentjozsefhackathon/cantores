@@ -79,4 +79,10 @@ class MusicPolicy
         // Only the owner of both or admin can merge music
         return $user !== null && ($user->is_admin || ($target->user_id === $user->id && $source->user_id === $user->id));
     }
+
+    public function mergeAny(User $user): bool
+    {
+        // Only admin can merge music
+        return $user !== null && $user->is_admin;
+    }
 }

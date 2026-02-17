@@ -80,6 +80,10 @@ Route::livewire('/collections', \App\Livewire\Pages\Editor\Collections::class)
     ->middleware(['auth', 'verified'])
     ->name('collections');
 
+Route::livewire('/authors', \App\Livewire\Pages\Editor\Authors::class)
+    ->middleware(['auth', 'verified'])
+    ->name('authors');
+
 Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
     ->middleware(['auth', 'verified'])
     ->name('musics');

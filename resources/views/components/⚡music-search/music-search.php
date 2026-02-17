@@ -23,6 +23,10 @@ return new class extends Component
 
     public string $collectionFreeText = '';
 
+    public string $authorFilter = '';
+
+    public string $authorFreeText = '';
+
     public bool $selectable = false;
 
     /**
@@ -62,6 +66,22 @@ return new class extends Component
      * Reset pagination when collection free text filter changes.
      */
     public function updatingCollectionFreeText(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when author filter changes.
+     */
+    public function updatingAuthorFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when author free text filter changes.
+     */
+    public function updatingAuthorFreeText(): void
     {
         $this->resetPage();
     }
@@ -116,8 +136,23 @@ return new class extends Component
                     }
                 });
             })
+            ->when($this->authorFilter !== '', function ($query) {
+                $query->whereHas('authors', function ($subQuery) {
+                    $subQuery->search($this->authorFilter);
+                });
+            })
+            ->when($this->authorFreeText !== '', function ($query) {
+                $words = preg_split('/\s+/', trim($this->authorFreeText));
+                $query->whereHas('authors', function ($subQuery) use ($words) {
+                    foreach ($words as $word) {
+                        $subQuery->where(function ($q) use ($word) {
+                            $q->where('authors.name', 'ilike', "%{$word}%");
+                        });
+                    }
+                });
+            })
             ->forCurrentGenre()
-            ->with(['genres', 'collections'])
+            ->with(['genres', 'collections', 'authors'])
             ->withCount('collections')
             ->orderBy('title');
     }
@@ -130,6 +165,17 @@ return new class extends Component
         return Collection::visibleTo(Auth::user())
             ->forCurrentGenre()
             ->orderBy('title')
+            ->get();
+    }
+
+    /**
+     * Get authors for the dropdown filter.
+     */
+    public function getAuthorsProperty()
+    {
+        return \App\Models\Author::visibleTo(Auth::user())
+            ->forCurrentGenre()
+            ->orderBy('name')
             ->get();
     }
 

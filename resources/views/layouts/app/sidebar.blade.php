@@ -30,6 +30,9 @@
                 <flux:sidebar.item icon="folder" :href="route('collections')" :current="request()->routeIs('collections')" wire:navigate>
                     {{ __('Collections') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="users" :href="route('authors')" :current="request()->routeIs('authors')" wire:navigate>
+                    {{ __('Authors') }}
+                </flux:sidebar.item>
                 <flux:sidebar.item icon="music" :href="route('musics')" :current="request()->routeIs('musics')" wire:navigate>
                     {{ __('Music Pieces') }}
                 </flux:sidebar.item>
@@ -41,7 +44,7 @@
                 </flux:sidebar.item>
                 <flux:sidebar.item icon="combine" :href="route('music-merger')" :current="request()->routeIs('music-merge')" wire:navigate>
                     Énekek egyesítése
-                </flux:sidebar.item>                
+                </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 

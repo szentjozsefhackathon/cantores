@@ -42,6 +42,24 @@
                 </flux:select>
             </flux:field>
         </div>
+
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <flux:field class="w-full sm:flex-1">
+                <flux:input
+                    type="search"
+                    wire:model.live="authorFreeText"
+                    :placeholder="__('Filter by author name...')"
+                />
+            </flux:field>
+            <flux:field class="w-full sm:w-64">
+                <flux:select wire:model.live="authorFilter">
+                    <option value="">{{ __('All Authors') }}</option>
+                    @foreach ($this->authors as $author)
+                        <option value="{{ $author->name }}">{{ $author->name }}</option>
+                    @endforeach
+                </flux:select>
+            </flux:field>
+        </div>
     </div>
 
     <!-- Music Table -->
@@ -50,6 +68,7 @@
             <flux:table.columns>
                 <flux:table.column>{{ __('Title') }}</flux:table.column>
                 <flux:table.column>{{ __('Collections') }}</flux:table.column>
+                <flux:table.column>{{ __('Authors') }}</flux:table.column>
                 <flux:table.column>{{ __('Custom ID') }}</flux:table.column>
                 <flux:table.column></flux:table.column>
                 @if($selectable)
@@ -74,6 +93,18 @@
                                 @forelse ($music->collections as $collection)
                                     <flux:badge size="sm">
                                         {{ $collection->formatWithPivot($collection->pivot) }}
+                                    </flux:badge>
+                                @empty
+                                    <span class="text-gray-400 dark:text-gray-500 text-sm">{{ __('None') }}</span>
+                                @endforelse
+                            </div>
+                        </flux:table.cell>
+
+                        <flux:table.cell>
+                            <div class="flex flex-wrap items-center gap-2">
+                                @forelse ($music->authors as $author)
+                                    <flux:badge size="sm">
+                                        {{ $author->name }}
                                     </flux:badge>
                                 @empty
                                     <span class="text-gray-400 dark:text-gray-500 text-sm">{{ __('None') }}</span>
