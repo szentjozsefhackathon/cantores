@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\MusicAssignmentFlag;
 use App\Models\MusicPlan;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
@@ -48,6 +49,21 @@ new class extends Component
     /** An array of flags by [assignmentId] */
     public array $flags = [];
 
+    /**
+     * Get flag options for Mary UI choices.
+     */
+    public function getFlagOptionsProperty(): array
+    {
+        return MusicAssignmentFlag::all()->map(function ($flag) {
+            return [
+                'id' => $flag->id,
+                'name' => $flag->label(),
+                'icon' => 'o-'.$flag->icon(),
+                'color' => $flag->color(),
+            ];
+        })->toArray();
+    }
+
     public function mount($musicPlan = null): void
     {
         if (! $musicPlan) {
@@ -91,11 +107,12 @@ new class extends Component
                 // Load assignments for this slot instance in this plan (filter by pivot id)
                 $assignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slot->pivot->id)
                     ->orderBy('music_sequence')
-                    ->with('music')
+                    ->with(['music', 'flags'])
                     ->get()
                     ->map(function ($assignment) {
-                        // create the flag array for this slot's assignments                     
-                        $this->flags[$assignment->id] = $this->flags[$assignment->id] ?? [];
+                        // create the flag array for this slot's assignments
+                        $this->flags[$assignment->id] = $assignment->flags->pluck('id')->toArray();
+
                         return [
                             'id' => $assignment->id,
                             'music_id' => $assignment->music_id,
@@ -513,6 +530,19 @@ new class extends Component
             $this->loadPlanSlots();
             $this->dispatch('slots-updated', message: 'Zene eltávolítva.');
         }
+    }
+
+    public function syncFlags(int $assignmentId): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
+        if (! $assignment || $assignment->music_plan_id !== $this->musicPlan->id) {
+            return;
+        }
+
+        $selectedFlagIds = $this->flags[$assignmentId] ?? [];
+        $assignment->flags()->sync($selectedFlagIds);
     }
 
     public function moveAssignmentUp(int $assignmentId): void

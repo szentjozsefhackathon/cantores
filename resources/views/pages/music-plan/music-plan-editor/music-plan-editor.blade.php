@@ -286,9 +286,7 @@
                                                 <flux:badge>{{ $assignment['music_sequence'] }}</flux:badge>
                                                 @endif
                                                 <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" />
-                        <x-mary-choices placeholder="Címkék" wire:model="flags.{{ $assignment['id'] }}" clearable :options="[
-                            ['id' => 'important', 'name' => __('Important'), 'icon' => 'o-star'],
-                        ]">
+                        <x-mary-choices placeholder="Címkék" wire:model="flags.{{ $assignment['id'] }}" wire:change="syncFlags({{ $assignment['id'] }})" clearable :options="$this->flagOptions">
                             </x-mary-choices>
 
                                             </div>

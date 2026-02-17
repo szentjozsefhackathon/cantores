@@ -68,7 +68,7 @@ test('music assignment flag options returns array', function () {
     MusicAssignmentFlag::factory()->create(['name' => 'flag1']);
     MusicAssignmentFlag::factory()->create(['name' => 'flag2']);
     MusicAssignmentFlag::factory()->create(['name' => 'flag3']);
-    
+
     $options = MusicAssignmentFlag::options();
 
     expect($options)->toBeArray();

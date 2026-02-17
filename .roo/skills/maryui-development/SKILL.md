@@ -10,3 +10,6 @@ Prefer using the examples in the skill description when possible, as they will b
 # Tabs component
 
 - Example is shown in the examples/tabs.blade.php file in the skill's directory. Tabs are only supported in Livewire components, and require a wire:model to work. 
+
+# Choices component
+- Example is shown in the examples/choices.blade.php file in the skill's directory. Choices are only supported in Livewire components, and require a wire:model to work.
