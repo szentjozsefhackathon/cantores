@@ -80,9 +80,17 @@ Route::livewire('/collections', \App\Livewire\Pages\Editor\Collections::class)
     ->middleware(['auth', 'verified'])
     ->name('collections');
 
+// Public read-only collection view
+Route::livewire('/collection/{collection}/view', \App\Livewire\Pages\CollectionView::class)
+    ->name('collection-view');
+
 Route::livewire('/authors', \App\Livewire\Pages\Editor\Authors::class)
     ->middleware(['auth', 'verified'])
     ->name('authors');
+
+// Public read-only author view
+Route::livewire('/author/{author}/view', \App\Livewire\Pages\AuthorView::class)
+    ->name('author-view');
 
 Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
     ->middleware(['auth', 'verified'])
@@ -91,6 +99,10 @@ Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');
+
+// Public read-only music view
+Route::livewire('/music/{music}/view', \App\Livewire\Pages\MusicView::class)
+    ->name('music-view');
 
 // Music merging tool
 Route::livewire('/editor/musics/merge', 'editor.music-merger')

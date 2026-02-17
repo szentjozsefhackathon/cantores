@@ -47,7 +47,7 @@ class NotificationService
         }
 
         // Admin users (where is_admin is true)
-        $admins = User::all()->filter(fn(User $user) => $user->is_admin);
+        $admins = User::all()->filter(fn (User $user) => $user->is_admin);
         foreach ($admins as $admin) {
             $recipients[$admin->id] = ['created_at' => now()];
         }

@@ -57,13 +57,13 @@ new class extends Component
         /** @var User $user */
         $user = Auth::user();
         if (! $user) {
-            $this->dispatch('error-report-failed', message:__('You must be logged in to report an error.'));
+            $this->dispatch('error-report-failed', message: __('You must be logged in to report an error.'));
 
             return;
         }
 
         if (! $this->resource) {
-            $this->dispatch('error-report-failed', message:__('No resource selected.'));
+            $this->dispatch('error-report-failed', message: __('No resource selected.'));
 
             return;
         }
@@ -72,7 +72,7 @@ new class extends Component
         $notificationService = app(NotificationService::class);
         $notificationService->createErrorReport($user, $this->resource, $this->message);
 
-        $this->dispatch('error-report-success', message:__('Error report submitted successfully.'));
+        $this->dispatch('error-report-success', message: __('Error report submitted successfully.'));
         $this->closeModal();
     }
 

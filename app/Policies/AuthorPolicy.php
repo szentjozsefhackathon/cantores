@@ -10,20 +10,21 @@ class AuthorPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(?User $user): bool
     {
         // All authenticated users can view authors (they are community-maintained)
+        // Guests can view public authors via individual pages, but not listing
         return $user !== null;
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Author $author): bool
+    public function view(?User $user, Author $author): bool
     {
-        // Public authors can be viewed by any authenticated user
+        // Public authors can be viewed by anyone (including guests)
         if (! $author->is_private) {
-            return $user !== null;
+            return true;
         }
 
         // Private authors can only be viewed by owner or admin

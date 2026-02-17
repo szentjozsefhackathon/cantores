@@ -363,7 +363,6 @@ new class extends Component
 
                 <flux:field>
                     <flux:label>{{ __('Subtitle') }}</flux:label>
-                    <flux:description>{{ __('Optional subtitle, e.g., movement, part, description') }}</flux:description>
                     <flux:input
                         wire:model="subtitle"
                         :placeholder="__('Enter subtitle')"

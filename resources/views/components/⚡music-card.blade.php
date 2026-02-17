@@ -51,6 +51,16 @@ new class extends Component
             </div>
             <div class="flex items-center gap-1">
                 <div class="flex-col items-center gap-1">
+                @can('view', $music)
+                    <flux:button
+                        variant="ghost"
+                        size="sm"
+                        icon="eye"
+                        :href="route('music-view', $music)"
+                        :title="__('View')"
+                        class="!p-1"
+                    />
+                @endcan
                 @can('update', $music)
                     <flux:button
                         variant="ghost"

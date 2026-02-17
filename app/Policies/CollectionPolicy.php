@@ -10,20 +10,21 @@ class CollectionPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(?User $user): bool
     {
         // All authenticated users can view collections (they are community-maintained)
+        // Guests can view public collections via individual pages, but not listing
         return $user !== null;
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Collection $collection): bool
+    public function view(?User $user, Collection $collection): bool
     {
-        // Public collections can be viewed by any authenticated user
+        // Public collections can be viewed by anyone (including guests)
         if (! $collection->is_private) {
-            return $user !== null;
+            return true;
         }
 
         // Private collections can only be viewed by owner or admin

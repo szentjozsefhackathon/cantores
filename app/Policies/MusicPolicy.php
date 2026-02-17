@@ -10,20 +10,21 @@ class MusicPolicy
     /**
      * Determine whether the user can view any models.
      */
-    public function viewAny(User $user): bool
+    public function viewAny(?User $user): bool
     {
         // All authenticated users can view music (they are community-maintained)
+        // Guests can view public music via individual pages, but not listing
         return $user !== null;
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Music $music): bool
+    public function view(?User $user, Music $music): bool
     {
-        // Public music can be viewed by any authenticated user
+        // Public music can be viewed by anyone (including guests)
         if (! $music->is_private) {
-            return $user !== null;
+            return true;
         }
 
         // Private music can only be viewed by owner or admin

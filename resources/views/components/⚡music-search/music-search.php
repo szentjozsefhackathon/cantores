@@ -139,6 +139,13 @@ return new class extends Component
                     $subQuery->search($this->collectionFilter);
                 });
             })
+            ->when($this->authorFilter !== '', function ($q) {
+                $q->whereHas('authors', function ($subQuery) {
+                    // keep whatever your existing scopeSearch does on Author (Eloquent scope)
+                    $subQuery->search($this->authorFilter);
+                });
+            })
+
             ->when($this->collectionFreeText !== '', function ($q) {
                 $words = preg_split('/\s+/', trim($this->collectionFreeText));
                 $q->whereHas('collections', function ($subQuery) use ($words) {
