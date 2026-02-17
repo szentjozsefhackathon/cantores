@@ -17,6 +17,7 @@
             {{ __('Author deleted.') }}
         </x-action-message>
         <x-action-message on="error" />
+        <x-action-message on="success" />
     </div>
 
     <div class="space-y-6">
@@ -101,6 +102,14 @@
                                     wire:click="delete({{ $author->id }})"
                                     wire:confirm="{{ __('Are you sure you want to delete this author? This can only be done if no music pieces are assigned to it.') }}"
                                     :title="__('Delete')"
+                                />
+                                
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="flag"
+                                    wire:click="dispatch('openErrorReportModal', { resourceId: {{ $author->id }}, resourceType: 'author' })"
+                                    :title="__('Report Error')"
                                 />
                             </div>
                         </flux:table.cell>
@@ -313,4 +322,6 @@
             </flux:button>
         </div>
     </flux:modal>
+
+    <livewire:error-report />
 </div>

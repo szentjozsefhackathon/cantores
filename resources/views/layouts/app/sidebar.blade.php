@@ -55,6 +55,12 @@
 
         <flux:sidebar.nav>
 
+            @if(auth()->check())
+            <flux:sidebar.item icon="bell" :href="route('notifications')" :current="request()->routeIs('notifications')" :badge="auth()->user()->unread_notifications_count ? auth()->user()->unread_notifications_count : false" wire:navigate>
+                {{ __('Notifications') }}
+            </flux:sidebar.item>
+            @endif
+
             @if(auth()->check() && auth()->user()->is_admin)
             <flux:sidebar.item icon="shield-check" :href="route('admin.music-plan-templates')" :current="request()->routeIs('admin.nickname-data')" wire:navigate>
                 {{ __('Admin') }}

@@ -118,4 +118,39 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return $this->email === $adminEmail;
     }
+
+    /**
+     * Get the notifications reported by this user.
+     */
+    public function reportedNotifications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Notification::class, 'reporter_id');
+    }
+
+    /**
+     * Get the notifications received by this user.
+     */
+    public function receivedNotifications(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Notification::class, 'notification_user')
+            ->withPivot('read_at')
+            ->withTimestamps()
+            ->orderByPivot('created_at', 'desc');
+    }
+
+    /**
+     * Get the unread notifications for this user.
+     */
+    public function unreadNotifications(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->receivedNotifications()->wherePivotNull('read_at');
+    }
+
+    /**
+     * Get the count of unread notifications.
+     */
+    public function getUnreadNotificationsCountAttribute(): int
+    {
+        return $this->unreadNotifications()->count();
+    }
 }

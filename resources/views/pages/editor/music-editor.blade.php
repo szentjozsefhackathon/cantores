@@ -334,6 +334,13 @@ new class extends Component
                     
                     <flux:button
                         variant="ghost"
+                        icon="flag"
+                        wire:click="dispatch('openErrorReportModal', {'resourceId': {{ $music->id }}, 'resourceType' : 'music'})"
+                        :title="__('Report Error')"
+                    />
+                    
+                    <flux:button
+                        variant="ghost"
                         icon="trash"
                         wire:click="delete"
                         wire:confirm="{{ __('Are you sure you want to delete this music piece? This can only be done if no collections or plan slots are assigned to it.') }}"
@@ -785,4 +792,7 @@ new class extends Component
             </flux:button>
         </div>
     </flux:modal>
+
+    <!-- Error Report Component -->
+    <livewire:error-report/>
 </div>

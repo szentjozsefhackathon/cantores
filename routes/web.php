@@ -105,3 +105,8 @@ Route::livewire('/editor/musics/verify', \App\Livewire\Pages\Editor\MusicVerifie
 // Suggestions page for music plan recommendations
 Route::livewire('/suggestions', 'pages::suggestions')
     ->name('suggestions');
+
+// Notifications page
+Route::livewire('/notifications', \App\Livewire\Pages\Notifications::class)
+    ->middleware(['auth', 'verified'])
+    ->name('notifications');

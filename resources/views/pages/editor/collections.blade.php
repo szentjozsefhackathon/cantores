@@ -139,6 +139,14 @@
                                     wire:confirm="{{ __('Are you sure you want to delete this collection? This can only be done if no music pieces are assigned to it.') }}"
                                     :title="__('Delete')"
                                 />
+                                
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="flag"
+                                    wire:click="dispatch('openErrorReportModal', { resourceId: {{ $collection->id }}, resourceType: 'collection' })"
+                                    :title="__('Report Error')"
+                                />
                             </div>
                         </flux:table.cell>
                     </flux:table.row>
@@ -422,3 +430,5 @@
             </flux:button>
         </div>
     </flux:modal>
+
+    <livewire:error-report />
