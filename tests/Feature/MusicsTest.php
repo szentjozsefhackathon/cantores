@@ -61,7 +61,7 @@ it('redirects to music editor page when editing', function () {
         ->assertRedirectToRoute('music-editor', ['music' => $music->id]);
 });
 
-it('prevents deleting music with collections assigned', function () {
+it('allows deleting music with collections assigned and removes pivot records', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
@@ -69,11 +69,23 @@ it('prevents deleting music with collections assigned', function () {
     $collection = \App\Models\Collection::factory()->create(['user_id' => $user->id]);
     $music->collections()->attach($collection->id);
 
+    // Ensure pivot exists
+    $this->assertDatabaseHas('music_collection', [
+        'music_id' => $music->id,
+        'collection_id' => $collection->id,
+    ]);
+
     Livewire::test(\App\Livewire\Pages\Editor\Musics::class)
         ->call('delete', $music)
-        ->assertDispatched('error');
+        ->assertDispatched('music-deleted');
 
-    $this->assertDatabaseHas('musics', ['id' => $music->id]);
+    // Music should be deleted
+    $this->assertDatabaseMissing('musics', ['id' => $music->id]);
+    // Pivot should be cascade deleted
+    $this->assertDatabaseMissing('music_collection', [
+        'music_id' => $music->id,
+        'collection_id' => $collection->id,
+    ]);
 });
 
 it('allows deleting music without assignments', function () {
