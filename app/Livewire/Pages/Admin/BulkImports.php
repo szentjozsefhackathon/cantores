@@ -106,19 +106,20 @@ class BulkImports extends Component
 
         foreach ($imports as $import) {
             // Check if a music already exists in the selected collection with the same order_number (reference)
-            $existing = \App\Models\Music::whereHas('collections', function ($query) {
-                $query->where('collections.id', $this->selectedCollectionId);
-            })->whereHas('collections', function ($query) use ($import) {
-                $query->where('music_collection.order_number', $import->reference);
+            $existing = \App\Models\Music::whereHas('collections', function ($query) use ($import) {
+                $query->where('collections.id', $this->selectedCollectionId)
+                    ->where('music_collection.order_number', $import->reference);
             })->exists();
 
             if ($existing) {
+                \Log::info("Skipping import: {$import->piece} (reference: {$import->reference}) - already exists in collection ID {$this->selectedCollectionId}");
                 $skippedCount++;
 
                 continue;
             }
 
             // Create new music
+            \Log::info("Importing music: {$import->piece} (reference: {$import->reference}) into collection ID {$this->selectedCollectionId}");
             $music = \App\Models\Music::create([
                 'title' => $import->piece,
                 'subtitle' => null,

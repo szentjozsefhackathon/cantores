@@ -135,8 +135,8 @@ class DtxConvert extends Command
                     if (empty($enekszam) || ! empty($firstline) || $captured) {
                         break;
                     }
-                    // Only capture first line of first verse
-                    if ($ivers === 1) {
+                    // Only capture first line of first verse (or song without verse)
+                    if ($ivers === 1 || $ivers === 0) {
                         $firstline = $this->unescape($line);
                         $firstline = $this->cleanTxt($firstline);
                         if (! empty($firstline) || $useTitle) {
