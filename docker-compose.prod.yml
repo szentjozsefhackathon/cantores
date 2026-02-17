@@ -38,11 +38,8 @@ services:
         required: false
     volumes:
       - storage:/var/www/html/storage
-      - sphinx_trigger:/opt/sphinx/trigger
     depends_on:
       database:
-        condition: service_healthy
-      sphinx:
         condition: service_healthy
     labels:
       - traefik.enable=true
