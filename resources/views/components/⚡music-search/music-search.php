@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Author;
 use App\Models\Collection;
 use App\Models\Music;
 use Illuminate\Contracts\View\View;
@@ -103,59 +104,80 @@ return new class extends Component
         $this->dispatch("music-selected{$this->source}", musicId: (int) $musicId);
     }
 
-    /**
-     * Apply the same scopes as the musics page.
+        /**
+     * Render the component.
      */
-    protected function applyScopes($query)
+    public function render(): View
     {
-        return $query
+        if ($this->search) {
+            $musics = Music::search($this->search)
+                ->query(fn($q) => $this->applyScopes($q, searching: true))
+                ->paginate(10);
+        } else {
+            $musics = $this->applyScopes(Music::query(), searching: false)
+                ->paginate(10);
+        }
+        return view('components.⚡music-search/music-search', [
+            'musics' => $musics,
+        ]);
+    }
+
+    protected function applyScopes($query, bool $searching)
+    {
+        $query = $query
             ->visibleTo(Auth::user())
-            ->when($this->filter === 'public', function ($query) {
-                $query->public();
-            })
-            ->when($this->filter === 'private', function ($query) {
-                $query->private();
-            })
-            ->when($this->filter === 'mine', function ($query) {
-                $query->where('user_id', Auth::id());
-            })
-            ->when($this->collectionFilter !== '', function ($query) {
-                $query->whereHas('collections', function ($subQuery) {
+            ->when($this->filter === 'public', fn($q) => $q->public())
+            ->when($this->filter === 'private', fn($q) => $q->private())
+            ->when($this->filter === 'mine', fn($q) => $q->where('user_id', Auth::id()));
+
+        // Collections: keep your existing ilike logic; no full-text index required
+        $query = $query
+            ->when($this->collectionFilter !== '', function ($q) {
+                $q->whereHas('collections', function ($subQuery) {
+                    // keep whatever your existing scopeSearch does on Collection (Eloquent scope)
                     $subQuery->search($this->collectionFilter);
                 });
             })
-            ->when($this->collectionFreeText !== '', function ($query) {
+            ->when($this->collectionFreeText !== '', function ($q) {
                 $words = preg_split('/\s+/', trim($this->collectionFreeText));
-                $query->whereHas('collections', function ($subQuery) use ($words) {
+                $q->whereHas('collections', function ($subQuery) use ($words) {
                     foreach ($words as $word) {
-                        $subQuery->where(function ($q) use ($word) {
-                            $q->where('collections.title', 'ilike', "%{$word}%")
+                        $subQuery->where(function ($qq) use ($word) {
+                            $qq->where('collections.title', 'ilike', "%{$word}%")
                                 ->orWhere('collections.abbreviation', 'ilike', "%{$word}%")
                                 ->orWhere('music_collection.order_number', 'ilike', "%{$word}%");
                         });
                     }
                 });
-            })
-            ->when($this->authorFilter !== '', function ($query) {
-                $query->whereHas('authors', function ($subQuery) {
-                    $subQuery->search($this->authorFilter);
-                });
-            })
-            ->when($this->authorFreeText !== '', function ($query) {
-                $words = preg_split('/\s+/', trim($this->authorFreeText));
-                $query->whereHas('authors', function ($subQuery) use ($words) {
-                    foreach ($words as $word) {
-                        $subQuery->where(function ($q) use ($word) {
-                            $q->where('authors.name', 'ilike', "%{$word}%");
-                        });
-                    }
-                });
-            })
+            });
+
+        $query = $query
+            ->when($this->authorFreeText !== '', function ($q) {
+                $authorIds = Author::search($this->authorFreeText)
+                    ->take(500)
+                    ->keys();
+
+                if ($authorIds->isEmpty()) {
+                    $q->whereRaw('1=0'); // AND semantics: no matching author => no musics
+                    return;
+                }
+
+                $q->whereHas('authors', fn($aq) => $aq->whereIn('authors.id', $authorIds));
+            });
+
+        $query = $query
             ->forCurrentGenre()
             ->with(['genres', 'collections', 'authors'])
-            ->withCount('collections')
-            ->orderBy('title');
+            ->withCount('collections');
+
+        // Only order by title when NOT using Scout search (keep relevance rank when searching)
+        if (! $searching) {
+            $query->orderBy('title');
+        }
+
+        return $query;
     }
+
 
     /**
      * Get collections for the dropdown filter.
@@ -174,29 +196,8 @@ return new class extends Component
     public function getAuthorsProperty()
     {
         return \App\Models\Author::visibleTo(Auth::user())
-            ->forCurrentGenre()
             ->orderBy('name')
             ->get();
     }
 
-    /**
-     * Render the component.
-     */
-    public function render(): View
-    {
-        if ($this->search) {
-            $musics = Music::search($this->search)
-                ->query(
-                    fn ($q) => $this->applyScopes($q)
-                )
-                ->paginate(10);
-        } else {
-            $musics = $this->applyScopes(Music::query())
-                ->paginate(10);
-        }
-
-        return view('components.⚡music-search/music-search', [
-            'musics' => $musics,
-        ]);
-    }
 };

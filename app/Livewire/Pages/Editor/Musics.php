@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Editor;
 
 use App\Facades\GenreContext;
+use App\Models\Author;
 use App\Models\Collection;
 use App\Models\Genre;
 use App\Models\Music;
@@ -167,55 +168,60 @@ class Musics extends Component
         $this->redirectRoute('music-merger', ['left' => $left, 'right' => $right]);
     }
 
-    protected function applyScopes($q)
+    protected function applyScopes($query, bool $searching)
     {
-        return $q
+        $query = $query
             ->visibleTo(Auth::user())
-            ->when($this->filter === 'public', function ($query) {
-                $query->public();
-            })
-            ->when($this->filter === 'private', function ($query) {
-                $query->private();
-            })
-            ->when($this->filter === 'mine', function ($query) {
-                $query->where('user_id', Auth::id());
-            })
-            ->when($this->collectionFilter !== '', function ($query) {
-                $query->whereHas('collections', function ($subQuery) {
+            ->when($this->filter === 'public', fn($q) => $q->public())
+            ->when($this->filter === 'private', fn($q) => $q->private())
+            ->when($this->filter === 'mine', fn($q) => $q->where('user_id', Auth::id()));
+
+        // Collections: keep your existing ilike logic; no full-text index required
+        $query = $query
+            ->when($this->collectionFilter !== '', function ($q) {
+                $q->whereHas('collections', function ($subQuery) {
+                    // keep whatever your existing scopeSearch does on Collection (Eloquent scope)
                     $subQuery->search($this->collectionFilter);
                 });
             })
-            ->when($this->collectionFreeText !== '', function ($query) {
+            ->when($this->collectionFreeText !== '', function ($q) {
                 $words = preg_split('/\s+/', trim($this->collectionFreeText));
-                $query->whereHas('collections', function ($subQuery) use ($words) {
+                $q->whereHas('collections', function ($subQuery) use ($words) {
                     foreach ($words as $word) {
-                        $subQuery->where(function ($q) use ($word) {
-                            $q->where('collections.title', 'ilike', "%{$word}%")
+                        $subQuery->where(function ($qq) use ($word) {
+                            $qq->where('collections.title', 'ilike', "%{$word}%")
                                 ->orWhere('collections.abbreviation', 'ilike', "%{$word}%")
                                 ->orWhere('music_collection.order_number', 'ilike', "%{$word}%");
                         });
                     }
                 });
-            })
-            ->when($this->authorFilter !== '', function ($query) {
-                $query->whereHas('authors', function ($subQuery) {
-                    $subQuery->search($this->authorFilter);
-                });
-            })
-            ->when($this->authorFreeText !== '', function ($query) {
-                $words = preg_split('/\s+/', trim($this->authorFreeText));
-                $query->whereHas('authors', function ($subQuery) use ($words) {
-                    foreach ($words as $word) {
-                        $subQuery->where(function ($q) use ($word) {
-                            $q->where('authors.name', 'ilike', "%{$word}%");
-                        });
-                    }
-                });
-            })
+            });
+
+        $query = $query
+            ->when($this->authorFreeText !== '', function ($q) {
+                $authorIds = Author::search($this->authorFreeText)
+                    ->take(500)
+                    ->keys();
+
+                if ($authorIds->isEmpty()) {
+                    $q->whereRaw('1=0'); // AND semantics: no matching author => no musics
+                    return;
+                }
+
+                $q->whereHas('authors', fn($aq) => $aq->whereIn('authors.id', $authorIds));
+            });
+
+        $query = $query
             ->forCurrentGenre()
             ->with(['genres', 'collections', 'authors'])
-            ->when(blank($this->search), fn ($q) => $q->orderBy('title'));
+            ->withCount('collections');
 
+        // Only order by title when NOT using Scout search (keep relevance rank when searching)
+        if (! $searching) {
+            $query->orderBy('title');
+        }
+
+        return $query;
     }
 
     /**
@@ -246,15 +252,12 @@ class Musics extends Component
     {
         if ($this->search) {
             $musics = Music::search($this->search)
-                ->query(
-                    fn ($q) => $this->applyScopes($q)
-                )
-                ->paginate(15);
+                ->query(fn($q) => $this->applyScopes($q, searching: true))
+                ->paginate(10);
         } else {
-            $musics = $this->applyScopes(Music::query())
-                ->paginate(15);
+            $musics = $this->applyScopes(Music::query(), searching: false)
+                ->paginate(10);
         }
-
         return view('pages.editor.musics', [
             'musics' => $musics,
         ]);

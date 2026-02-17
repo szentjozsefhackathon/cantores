@@ -165,19 +165,31 @@ class Music extends Model implements Auditable
         });
     }
 
-    /**
-     * Get the indexable data array for the model.
-     *
-     * @return array<string, mixed>
-     */
-    #[SearchUsingFullText(['title, subtitle, custom_id'])]
+    #[SearchUsingFullText(['titles'], ['language' => 'hungarian'])]
     public function toSearchableArray(): array
     {
         return [
-            'title' => $this->title,
-            'subtitle' => $this->subtitle,
+            'titles' => $this->titles,
+            // DO NOT include custom_id in the full-text columns (we want it as ILIKE)
             'custom_id' => $this->custom_id,
         ];
+    }
 
+    /**
+     * Helper to compute the denormalized titles field.
+     */
+    public function computeTitles(): string
+    {
+        return trim(implode(' ', array_filter([
+            $this->title,
+            $this->subtitle,
+        ])));
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Music $music) {
+            $music->titles = $music->computeTitles();
+        });
     }
 }
