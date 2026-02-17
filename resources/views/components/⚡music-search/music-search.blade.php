@@ -1,23 +1,59 @@
 <div>
-    <!-- Search -->
-    <flux:field class="w-full">
-        <flux:input
-            type="search"
-            wire:model.live="search"
-            :placeholder="__('Search music by title, subtitle, custom ID, collection abbreviation, order number, or page number...')"
-        />
-    </flux:field>
+    <!-- Search and Filters -->
+    <div class="flex flex-col gap-4 mb-6">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <flux:field class="w-full sm:flex-1">
+                <flux:input
+                    type="search"
+                    wire:model.live="search"
+                    :placeholder="__('Search music by title, subtitle, custom ID, collection abbreviation, order number, or page number...')"
+                />
+            </flux:field>
+            <x-mary-choices placeholder="Mind" single wire:model="filter" :options="[
+                ['id' => 'all', 'name' => __('All'), 'icon' => 'o-globe-alt'],
+                ['id' => 'public', 'name' => __('Public only'), 'icon' => 'o-eye'],
+                ['id' => 'private', 'name' => __('Private only'), 'icon' => 'o-eye-slash'],
+                ['id' => 'mine', 'name' => __('My items only'), 'icon' => 'o-user'],
+            ]" class="w-full sm:w-48">
+                @scope('item', $option)
+                            <x-mary-list-item :item="$option">
+                                <x-slot:avatar>
+                                    <x-mary-icon :name="$option['icon']" />
+                                </x-slot:avatar>
+                            </x-mary-list-item>
+                @endscope
+            </x-mary-choices>
+        </div>
+
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <flux:field class="w-full sm:flex-1">
+                <flux:input
+                    type="search"
+                    wire:model.live="collectionFreeText"
+                    :placeholder="__('Filter by collection abbreviation, title, or order number...')"
+                />
+            </flux:field>
+            <flux:field class="w-full sm:w-64">
+                <flux:select wire:model.live="collectionFilter">
+                    <option value="">{{ __('All Collections') }}</option>
+                    @foreach ($this->collections as $collection)
+                        <option value="{{ $collection->title }}">{{ $collection->title }} ({{ $collection->abbreviation }})</option>
+                    @endforeach
+                </flux:select>
+            </flux:field>
+        </div>
+    </div>
 
     <!-- Music Table -->
     @if($musics->count() > 0)
-        <flux:table :paginate="$musics" class="mt-6">
+        <flux:table :paginate="$musics">
             <flux:table.columns>
                 <flux:table.column>{{ __('Title') }}</flux:table.column>
                 <flux:table.column>{{ __('Collections') }}</flux:table.column>
                 <flux:table.column>{{ __('Custom ID') }}</flux:table.column>
-                <flux:table.column>{{ __('Genres') }}</flux:table.column>
+                <flux:table.column></flux:table.column>
                 @if($selectable)
-                    <flux:table.column class="w-20">{{ __('Select') }}</flux:table.column>
+                    <flux:table.column></flux:table.column>
                 @endif
             </flux:table.columns>
 

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Services\MusicSearchService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -101,15 +100,6 @@ class Music extends Model implements Auditable
     public function musicPlanSlotAssignments(): HasMany
     {
         return $this->hasMany(MusicPlanSlotAssignment::class);
-    }
-
-    /**
-     * Scope for searching by title, subtitle, custom ID, collection title, collection abbreviation, order number, or page number.
-     */
-    public function scopeSearch($query, string $search): void
-    {
-        $service = new MusicSearchService;
-        $service->applySearch($query, $search);
     }
 
     /**
