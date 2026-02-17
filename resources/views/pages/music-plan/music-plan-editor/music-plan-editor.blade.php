@@ -286,18 +286,18 @@
                                                 <flux:badge>{{ $assignment['music_sequence'] }}</flux:badge>
                                                 @endif
                                                 <div class="flex flex-col gap-2">
-                                                <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" />
+                                                <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" wire:loading />
                                                 <x-mary-choices
                                                     placeholder="Címkék"
-                                                    wire:model="flags.{{ $assignment['id'] }}"
-                                                    wire:change="syncFlags({{ $assignment['id'] }})"
+                                                    wire:model.live="flags.{{ $assignment['id'] }}"
                                                     clearable
                                                     :options="$this->flagOptions"
-                                                    size="sm"
-                                                    class="text-sm"
                                                 >
                                                     @scope('item', $option)
-                                                        <x-mary-list-item :item="$option">
+                                                        <x-mary-list-item                                                 
+                                                        wire:loading.attr="disabled"
+                                                        wire:loading.class="opacity-50 cursor-not-allowed"
+                                                        :item="$option" class="h-8">
                                                             <x-slot:avatar>
                                                                 <x-mary-icon :name="$option['icon']" :class="'text-'.$option['color'].'-500'" />
                                                             </x-slot:avatar>

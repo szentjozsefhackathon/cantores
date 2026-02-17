@@ -58,7 +58,7 @@ new class extends Component
             return [
                 'id' => $flag->id,
                 'name' => $flag->label(),
-                'icon' => 'o-'.$flag->icon(),
+                'icon' => 's-'.$flag->icon(),
                 'color' => $flag->color(),
             ];
         })->toArray();
@@ -536,6 +536,7 @@ new class extends Component
     {
         $this->authorize('update', $this->musicPlan);
 
+
         $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
         if (! $assignment || $assignment->music_plan_id !== $this->musicPlan->id) {
             return;
@@ -620,6 +621,12 @@ new class extends Component
         $this->isEditingCelebration = false;
         $this->dispatch('slots-updated', message: 'Ünnep adatai frissítve.');
     }
+
+    public function updatedFlags($value, $key)
+    {
+        $this->syncFlags((int) $key);
+    }
+
 
     public function updatedCelebrationName(): void
     {
