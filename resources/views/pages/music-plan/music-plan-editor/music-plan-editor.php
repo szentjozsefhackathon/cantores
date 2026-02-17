@@ -337,6 +337,7 @@ new class extends Component
         });
 
         $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: 'Elem sorrendje frissítve.');
     }
 
     private function updatePivotSequence(int $pivotId, int $sequence): void
@@ -536,7 +537,6 @@ new class extends Component
     {
         $this->authorize('update', $this->musicPlan);
 
-
         $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
         if (! $assignment || $assignment->music_plan_id !== $this->musicPlan->id) {
             return;
@@ -626,7 +626,6 @@ new class extends Component
     {
         $this->syncFlags((int) $key);
     }
-
 
     public function updatedCelebrationName(): void
     {

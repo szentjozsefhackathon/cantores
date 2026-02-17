@@ -248,7 +248,7 @@
                             </flux:modal>
 
                             @forelse($planSlots as $slot)
-                            <flux:card class="p-2 flex items-start gap-4 {{ count($slot['assignments']) > 0 ? 'border-4' : '' }}">
+                            <flux:card wire:key="slot-{{ $slot['pivot_id'] }}" class="p-2 flex items-start gap-4 {{ count($slot['assignments']) > 0 ? 'border-4' : '' }}">
                                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
                                     {{ $slot['sequence'] }}
                                 </div>
@@ -262,7 +262,7 @@
                                     @if(!empty($slot['assignments']))
                                     <div class="mt-3 space-y-2">
                                         @foreach($slot['assignments'] as $assignment)
-                                        <div class="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-lg px-3 py-2">
+                                        <div wire:key="assignment-{{ $assignment['id'] }}" class="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-lg px-3 py-2">
                                             <div class="flex items-center gap-3">
                                                 @if(count($slot['assignments']) > 1)
                                                 <div class="flex flex-col gap-1">
