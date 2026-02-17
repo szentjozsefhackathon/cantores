@@ -139,6 +139,14 @@
                 wire:confirm="{{ __('Are you sure you want to mark all pending fields as rejected?') }}">
                 {{ __('Reject All Pending') }}
             </flux:button>
+            <flux:button
+                variant="outline"
+                icon="pencil"
+                :href="route('music-editor', ['music' => $music->id])"
+                tag="a"
+                :title="__('Edit Music')">
+                {{ __('Edit Music') }}
+            </flux:button>
         </div>
 
         <!-- Fields verification table -->
