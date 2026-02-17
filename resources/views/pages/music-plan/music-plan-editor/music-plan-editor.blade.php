@@ -236,7 +236,7 @@
                             </flux:modal>
 
                             <!-- Music Search Modal -->
-                            <flux:modal wire:model="showMusicSearchModal" size="lg">
+                            <flux:modal wire:model="showMusicSearchModal" class="max-w-4xl">
                                 <livewire:music-search selectable="true" />
                                 <div class="mt-6 flex justify-end">
                                     <flux:button
