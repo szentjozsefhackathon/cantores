@@ -172,9 +172,22 @@ class Musics extends Component
     {
         $query = $query
             ->visibleTo(Auth::user())
-            ->when($this->filter === 'public', fn($q) => $q->public())
-            ->when($this->filter === 'private', fn($q) => $q->private())
-            ->when($this->filter === 'mine', fn($q) => $q->where('user_id', Auth::id()));
+            ->when($this->filter === 'public', fn ($q) => $q->public())
+            ->when($this->filter === 'private', fn ($q) => $q->private())
+            ->when($this->filter === 'mine', fn ($q) => $q->where('user_id', Auth::id()));
+
+        if ($searching) {
+            $words = preg_split('/\s+/', trim($this->search), -1, PREG_SPLIT_NO_EMPTY);
+            $query = $query->orWhere(function ($q) use ($words) {
+                foreach ($words as $word) {
+                    $q->where('musics.titles', 'ilike', '%'.$word.'%');
+                }
+            });
+            $query->orderByRaw(
+                'GREATEST('.implode(', ', array_fill(0, count($words), 'similarity(musics.titles, ?)')).') DESC',
+                $words
+            );
+        }
 
         // Collections: keep your existing ilike logic; no full-text index required
         $query = $query
@@ -205,10 +218,11 @@ class Musics extends Component
 
                 if ($authorIds->isEmpty()) {
                     $q->whereRaw('1=0'); // AND semantics: no matching author => no musics
+
                     return;
                 }
 
-                $q->whereHas('authors', fn($aq) => $aq->whereIn('authors.id', $authorIds));
+                $q->whereHas('authors', fn ($aq) => $aq->whereIn('authors.id', $authorIds));
             });
 
         $query = $query
@@ -252,12 +266,13 @@ class Musics extends Component
     {
         if ($this->search) {
             $musics = Music::search($this->search)
-                ->query(fn($q) => $this->applyScopes($q, searching: true))
+                ->query(fn ($q) => $this->applyScopes($q, searching: true))
                 ->paginate(10);
         } else {
             $musics = $this->applyScopes(Music::query(), searching: false)
                 ->paginate(10);
         }
+
         return view('pages.editor.musics', [
             'musics' => $musics,
         ]);

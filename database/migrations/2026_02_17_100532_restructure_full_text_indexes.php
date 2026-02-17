@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-public function up(): void
+    public function up(): void
     {
         // MUSICS: add the single FTS column
         Schema::table('musics', function (Blueprint $table) {

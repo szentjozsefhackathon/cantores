@@ -85,9 +85,23 @@ return new class extends Component
      */
     private function loadMusicById(int $musicId, string $side): void
     {
+        \Log::info('loadMusicById called', [
+            'musicId' => $musicId,
+            'side' => $side,
+            'userId' => Auth::id(),
+        ]);
+
         $music = Music::with(['collections', 'genres', 'urls', 'relatedMusic'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
+
+        \Log::info('Music loaded', [
+            'requestedId' => $musicId,
+            'loadedId' => $music->id,
+            'loadedTitle' => $music->titles,
+            'isPrivate' => $music->is_private,
+            'userId' => $music->user_id,
+        ]);
 
         $this->authorize('update', $music);
 

@@ -104,19 +104,20 @@ return new class extends Component
         $this->dispatch("music-selected{$this->source}", musicId: (int) $musicId);
     }
 
-        /**
+    /**
      * Render the component.
      */
     public function render(): View
     {
         if ($this->search) {
             $musics = Music::search($this->search)
-                ->query(fn($q) => $this->applyScopes($q, searching: true))
+                ->query(fn ($q) => $this->applyScopes($q, searching: true))
                 ->paginate(10);
         } else {
             $musics = $this->applyScopes(Music::query(), searching: false)
                 ->paginate(10);
         }
+
         return view('components.⚡music-search/music-search', [
             'musics' => $musics,
         ]);
@@ -126,9 +127,9 @@ return new class extends Component
     {
         $query = $query
             ->visibleTo(Auth::user())
-            ->when($this->filter === 'public', fn($q) => $q->public())
-            ->when($this->filter === 'private', fn($q) => $q->private())
-            ->when($this->filter === 'mine', fn($q) => $q->where('user_id', Auth::id()));
+            ->when($this->filter === 'public', fn ($q) => $q->public())
+            ->when($this->filter === 'private', fn ($q) => $q->private())
+            ->when($this->filter === 'mine', fn ($q) => $q->where('user_id', Auth::id()));
 
         // Collections: keep your existing ilike logic; no full-text index required
         $query = $query
@@ -159,10 +160,11 @@ return new class extends Component
 
                 if ($authorIds->isEmpty()) {
                     $q->whereRaw('1=0'); // AND semantics: no matching author => no musics
+
                     return;
                 }
 
-                $q->whereHas('authors', fn($aq) => $aq->whereIn('authors.id', $authorIds));
+                $q->whereHas('authors', fn ($aq) => $aq->whereIn('authors.id', $authorIds));
             });
 
         $query = $query
@@ -177,7 +179,6 @@ return new class extends Component
 
         return $query;
     }
-
 
     /**
      * Get collections for the dropdown filter.
@@ -199,5 +200,4 @@ return new class extends Component
             ->orderBy('name')
             ->get();
     }
-
 };

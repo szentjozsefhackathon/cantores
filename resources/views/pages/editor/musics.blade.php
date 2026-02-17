@@ -129,7 +129,7 @@
                     <!-- Music Table -->
                     <flux:table :paginate="$musics">
                         <flux:table.columns>
-                            <flux:table.column>{{ __('Select') }}</flux:table.column>
+                            <flux:table.column></flux:table.column>
                             <flux:table.column>{{ __('Title') }}</flux:table.column>
                             <flux:table.column>{{ __('Collections') }}</flux:table.column>
                             <flux:table.column>{{ __('Authors') }}</flux:table.column>
@@ -144,13 +144,12 @@
                             <flux:table.row>
                                 <flux:table.cell>
                                     <flux:checkbox
-                                        wire:model.live="selectedMusicIds"
-                                        value="{{ $music->id }}"
-                                        hide-label />
+                                        wire:click="toggleSelection({{ $music->id }})"
+                                        :checked="in_array($music->id, $selectedMusicIds)" />
                                 </flux:table.cell>
                                 <flux:table.cell>
                                     <div>
-                                        <div class="font-medium">{{ $music->title }}</div>
+                                        <div class="font-medium">{{ $music->title }} </div>
                                         @if ($music->subtitle)
                                         <div class="text-sm text-gray-600 dark:text-gray-400">{{ $music->subtitle }}</div>
                                         @endif
