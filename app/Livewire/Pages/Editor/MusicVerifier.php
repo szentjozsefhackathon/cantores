@@ -255,7 +255,7 @@ class MusicVerifier extends Component
         $this->authorize('create', MusicVerification::class);
 
         // Validate status
-        $allowedStatuses = ['verified', 'rejected', 'empty'];
+        $allowedStatuses = ['verified', 'rejected'];
         if (! in_array($status, $allowedStatuses)) {
             $this->dispatch('error', message: __('Invalid verification status.'));
 
@@ -298,6 +298,35 @@ class MusicVerifier extends Component
         $this->fieldNotes[$key] = $notes ?? '';
 
         $this->dispatch('verification-updated', message: __('Verification saved.'));
+    }
+
+    /**
+     * Remove verification for a field (unverify).
+     */
+    public function unverifyField(string $fieldName, ?int $pivotReference): void
+    {
+        $this->authorize('create', MusicVerification::class);
+
+        // Ensure music is selected
+        if (! $this->musicId || ! $this->music) {
+            $this->dispatch('error', message: __('No music selected.'));
+
+            return;
+        }
+
+        $key = $this->getVerificationKey($fieldName, $pivotReference);
+
+        // Delete existing verification if it exists
+        if (isset($this->verifications[$key])) {
+            $this->verifications[$key]->delete();
+            unset($this->verifications[$key]);
+        }
+
+        // Reset local state to pending
+        $this->fieldStatuses[$key] = 'pending';
+        $this->fieldNotes[$key] = '';
+
+        $this->dispatch('verification-updated', message: __('Verification removed.'));
     }
 
     /**
@@ -359,7 +388,6 @@ class MusicVerifier extends Component
         $verified = 0;
         $rejected = 0;
         $pending = 0;
-        $empty = 0;
 
         foreach ($this->fieldStatuses as $status) {
             $total++;
@@ -371,7 +399,8 @@ class MusicVerifier extends Component
                     $rejected++;
                     break;
                 case 'empty':
-                    $empty++;
+                    // Treat empty as pending (since empty is no longer a valid status)
+                    $pending++;
                     break;
                 default:
                     $pending++;
@@ -384,8 +413,7 @@ class MusicVerifier extends Component
             'verified' => $verified,
             'rejected' => $rejected,
             'pending' => $pending,
-            'empty' => $empty,
-            'progress' => $total > 0 ? round(($verified + $rejected + $empty) / $total * 100) : 0,
+            'progress' => $total > 0 ? round(($verified + $rejected) / $total * 100) : 0,
         ];
     }
 }

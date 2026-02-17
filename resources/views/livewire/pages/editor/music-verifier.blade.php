@@ -94,7 +94,7 @@
         </div>
 
         <!-- Verification stats -->
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
                 <div class="text-2xl font-bold">{{ $verificationStats['total'] ?? 0 }}</div>
                 <div class="text-sm text-gray-600 dark:text-gray-400">{{ __('Total Fields') }}</div>
@@ -111,10 +111,6 @@
                 <div class="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{{ $verificationStats['pending'] ?? 0 }}</div>
                 <div class="text-sm text-yellow-600 dark:text-yellow-400">{{ __('Pending') }}</div>
             </div>
-            <div class="border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-center bg-blue-50 dark:bg-blue-900/20">
-                <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ $verificationStats['empty'] ?? 0 }}</div>
-                <div class="text-sm text-blue-600 dark:text-blue-400">{{ __('Empty') }}</div>
-            </div>
         </div>
 
         <!-- Progress bar -->
@@ -123,7 +119,7 @@
                 <span>{{ __('Verification Progress') }}</span>
                 <span>{{ $verificationStats['progress'] ?? 0 }}%</span>
             </div>
-            <x-mary-progress :value="$verificationStats['progress'] ?? 0" :max="$verificationStats['total']" />
+            <x-mary-progress :value="$verificationStats['progress'] ?? 0" />
 
         </div>
 
@@ -142,13 +138,6 @@
                 wire:click="verifyAll('rejected')"
                 wire:confirm="{{ __('Are you sure you want to mark all pending fields as rejected?') }}">
                 {{ __('Reject All Pending') }}
-            </flux:button>
-            <flux:button
-                variant="outline"
-                icon="document"
-                wire:click="verifyAll('empty')"
-                wire:confirm="{{ __('Are you sure you want to mark all pending fields as empty?') }}">
-                {{ __('Mark All as Empty') }}
             </flux:button>
         </div>
 
@@ -213,12 +202,6 @@
                                         {{ __('Rejected') }}
                                     </span>
                                     @break
-                                @case('empty')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300">
-                                        <flux:icon name="document" class="h-3 w-3 mr-1" />
-                                        {{ __('Empty') }}
-                                    </span>
-                                    @break
                                 @default
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300">
                                         <flux:icon name="clock" class="h-3 w-3 mr-1" />
@@ -243,8 +226,7 @@
                                     :disabled="$status === 'verified'"
                                     wire:loading.attr="disabled"
                                     wire:loading.class="opacity-50 cursor-not-allowed">
-                                    <span wire:loading.remove>{{ __('Verify') }}</span>
-                                    <span wire:loading>{{ __('Saving...') }}</span>
+                                    <span>{{ __('Verify') }}</span>
                                 </flux:button>
                                 <flux:button
                                     variant="danger"
@@ -254,19 +236,17 @@
                                     :disabled="$status === 'rejected'"
                                     wire:loading.attr="disabled"
                                     wire:loading.class="opacity-50 cursor-not-allowed">
-                                    <span wire:loading.remove>{{ __('Reject') }}</span>
-                                    <span wire:loading>{{ __('Saving...') }}</span>
+                                    <span>{{ __('Reject') }}</span>
                                 </flux:button>
                                 <flux:button
-                                    variant="primary" color="green"
+                                    variant="outline"
                                     size="sm"
-                                    icon="document"
-                                    wire:click="verifyField('{{ $field['name'] }}', {{ $field['pivot_reference'] ?? 'null' }}, 'empty', $fieldNotes['{{ $key }}'] ?? '')"
-                                    :disabled="$status === 'empty'"
+                                    icon="trash"
+                                    wire:click="unverifyField('{{ $field['name'] }}', {{ $field['pivot_reference'] ?? 'null' }})"
+                                    :disabled="$status === 'pending'"
                                     wire:loading.attr="disabled"
                                     wire:loading.class="opacity-50 cursor-not-allowed">
-                                    <span wire:loading.remove>{{ __('Empty') }}</span>
-                                    <span wire:loading>{{ __('Saving...') }}</span>
+                                    <span>{{ __('Unverify') }}</span>
                                 </flux:button>
                             </div>
                         </td>
@@ -280,9 +260,9 @@
         <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-6">
             <flux:heading size="lg" class="mb-4">{{ __('Verification Summary') }}</flux:heading>
             <p class="text-gray-700 dark:text-gray-300 mb-4">
-                {{ __('Verification helps ensure data quality. Verified fields are marked as correct, rejected fields need correction, and empty fields indicate missing data.') }}
+                {{ __('Verification helps ensure data quality. Verified fields are marked as correct, rejected fields need correction. Use unverify to remove verification.') }}
             </p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="flex items-center">
                     <flux:icon name="check-circle" class="h-5 w-5 text-green-500 mr-2" />
                     <span class="text-sm">{{ __('Verified: Data is correct') }}</span>
@@ -290,10 +270,6 @@
                 <div class="flex items-center">
                     <flux:icon name="x-circle" class="h-5 w-5 text-red-500 mr-2" />
                     <span class="text-sm">{{ __('Rejected: Data is incorrect') }}</span>
-                </div>
-                <div class="flex items-center">
-                    <flux:icon name="document" class="h-5 w-5 text-blue-500 mr-2" />
-                    <span class="text-sm">{{ __('Empty: Field is intentionally empty') }}</span>
                 </div>
             </div>
         </div>

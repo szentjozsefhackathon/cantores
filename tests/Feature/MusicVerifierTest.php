@@ -1,10 +1,10 @@
 <?php
 
+use App\Livewire\Pages\Editor\MusicVerifier;
 use App\Models\Music;
 use App\Models\MusicVerification;
 use App\Models\User;
 use Livewire\Livewire;
-use App\Livewire\Pages\Editor\MusicVerifier;
 
 beforeEach(function () {
     $this->admin = User::factory()->create(['email' => 'admin@example.com']);
@@ -85,21 +85,6 @@ it('rejects a field', function () {
     ]);
 });
 
-it('marks field as empty', function () {
-    Livewire::actingAs($this->admin)
-        ->test(MusicVerifier::class)
-        ->call('selectMusic', $this->music->id)
-        ->call('verifyField', 'title', null, 'empty', 'Field is empty')
-        ->assertDispatched('verification-updated');
-
-    $this->assertDatabaseHas('music_verifications', [
-        'music_id' => $this->music->id,
-        'field_name' => 'title',
-        'status' => 'empty',
-        'notes' => 'Field is empty',
-    ]);
-});
-
 it('validates status', function () {
     Livewire::actingAs($this->admin)
         ->test(MusicVerifier::class)
@@ -144,6 +129,26 @@ it('updates existing verification', function () {
         'id' => $verification->id,
         'status' => 'verified',
         'notes' => 'Updated note',
+    ]);
+});
+
+it('unverifies field', function () {
+    $verification = MusicVerification::factory()->create([
+        'music_id' => $this->music->id,
+        'verifier_id' => $this->admin->id,
+        'field_name' => 'title',
+        'status' => 'verified',
+        'notes' => 'Some note',
+    ]);
+
+    Livewire::actingAs($this->admin)
+        ->test(MusicVerifier::class)
+        ->call('selectMusic', $this->music->id)
+        ->call('unverifyField', 'title', null)
+        ->assertDispatched('verification-updated');
+
+    $this->assertDatabaseMissing('music_verifications', [
+        'id' => $verification->id,
     ]);
 });
 
