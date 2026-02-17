@@ -285,10 +285,30 @@
                                                 </div>
                                                 <flux:badge>{{ $assignment['music_sequence'] }}</flux:badge>
                                                 @endif
+                                                <div class="flex flex-col gap-2">
                                                 <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" />
-                        <x-mary-choices placeholder="Címkék" wire:model="flags.{{ $assignment['id'] }}" wire:change="syncFlags({{ $assignment['id'] }})" clearable :options="$this->flagOptions">
-                            </x-mary-choices>
-
+                                                <x-mary-choices
+                                                    placeholder="Címkék"
+                                                    wire:model="flags.{{ $assignment['id'] }}"
+                                                    wire:change="syncFlags({{ $assignment['id'] }})"
+                                                    clearable
+                                                    :options="$this->flagOptions"
+                                                    size="sm"
+                                                    class="text-sm"
+                                                >
+                                                    @scope('item', $option)
+                                                        <x-mary-list-item :item="$option">
+                                                            <x-slot:avatar>
+                                                                <x-mary-icon :name="$option['icon']" :class="'text-'.$option['color'].'-500'" />
+                                                            </x-slot:avatar>
+                                                        </x-mary-list-item>
+                                                    @endscope
+                                                    @scope('selection', $option)
+                                                        <x-mary-icon :name="$option['icon']" class="text-{{ $option['color'] }}-500 w-4 h-4"/>
+                                                        <flux:text size="sm" class="inline {{ 'text-'.$option['color'].'-500'}}">{{ $option['name'] }}</flux:text>
+                                                    @endscope
+                                                </x-mary-choices>
+                                            </div>
                                             </div>
                                             <flux:button
                                                 wire:click="removeAssignment({{ $assignment['id'] }})"

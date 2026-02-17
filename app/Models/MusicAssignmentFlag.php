@@ -49,7 +49,7 @@ class MusicAssignmentFlag extends Model
     {
         return match ($this->name) {
             'important' => 'star',
-            'alternative' => 'refresh-cw',
+            'alternative' => 'arrow-path',
             'low_priority' => 'arrow-down',
             default => 'flag',
         };
