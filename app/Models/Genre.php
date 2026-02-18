@@ -71,7 +71,7 @@ class Genre extends Model
         return match ($this->name) {
             'organist' => 'organist',
             'guitarist' => 'guitar',
-            default => 'genre_other',
+            default => 'landmark',
         };
     }
 

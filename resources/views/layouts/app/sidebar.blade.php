@@ -15,16 +15,25 @@
 <body class="min-h-screen bg-white dark:bg-zinc-800">
     <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
         <flux:sidebar.header>
-            <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+            <x-app-logo :sidebar="true" href="{{ route('home') }}" wire:navigate />
             <flux:sidebar.collapse class="lg:hidden" />
         </flux:sidebar.header>
+
+        <!-- Dark Mode Switcher -->
+        <div>
+            <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="w-full">
+                <flux:radio value="light" icon="sun" aria-label="Light mode"></flux:radio>
+                <flux:radio value="dark" icon="moon" aria-label="Dark mode"></flux:radio>
+                <flux:radio value="system" icon="computer-desktop" aria-label="System preference"></flux:radio>
+            </flux:radio.group>
+        </div>
 
         <!-- Genre Selector -->
         <div>
             <flux:text class="text-sm text-neutral-500 dark:text-neutral-400">
                 Műfaj
             </flux:text>
-            <div class="border-b border-zinc-200 dark:border-zinc-700">
+            <div>
                 <livewire:genre-selector />
             </div>
         </div>

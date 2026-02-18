@@ -17,7 +17,7 @@
 @endphp
 
 @if($icon === 'organist')
-    <flux:icon name="organist" class="h-10 w-10 text-zinc-600 dark:text-zinc-600" />
+    <flux:icon name="organist" class="h-10 w-10 dark:text-zinc-300 text-zinc-600" />
 @elseif($icon === 'guitar')
     <flux:icon name="guitar" class="h-10 w-10" />
 @elseif($icon === 'other')
