@@ -17,7 +17,6 @@ test('error report component can be instantiated', function () {
         ->assertSet('message', '');
 });
 
-
 test('close modal resets state', function () {
     Livewire::test('error-report')
         ->set('showModal', true)
@@ -43,7 +42,6 @@ test('submit validates max length 160', function () {
         ->call('submit')
         ->assertHasErrors(['message' => 'max']);
 });
-
 
 // Integration test: test that the component actually creates notifications
 test('component creates notification when submitted with resource', function () {
