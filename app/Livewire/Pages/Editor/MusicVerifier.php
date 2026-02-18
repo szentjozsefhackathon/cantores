@@ -368,12 +368,10 @@ class MusicVerifier extends Component
      */
     public function render(): View
     {
-        $searchResults = $this->search ? $this->searchMusic($this->search) : [];
         $verifiableFields = $this->music ? $this->getVerifiableFields() : [];
         $verificationStats = $this->music ? $this->calculateVerificationStats() : [];
 
         return view('livewire.pages.editor.music-verifier', [
-            'searchResults' => $searchResults,
             'verifiableFields' => $verifiableFields,
             'verificationStats' => $verificationStats,
         ]);

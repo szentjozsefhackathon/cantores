@@ -15,54 +15,6 @@
     <div class="max-w-3xl mx-auto">
         <flux:heading size="lg" class="mb-4">{{ __('Select Music to Verify') }}</flux:heading>
         
-        <!-- Search input -->
-        <div class="mb-6">
-            <flux:field>
-                <flux:label>{{ __('Search music by title, subtitle, or custom ID') }}</flux:label>
-                <flux:input
-                    wire:model.live="search"
-                    :placeholder="__('Type to search...')"
-                    icon="magnifying-glass" />
-            </flux:field>
-        </div>
-
-        <!-- Search results -->
-        @if (count($searchResults) > 0)
-        <div class="space-y-3 mb-6">
-            @foreach ($searchResults as $music)
-            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                 wire:click="selectMusic({{ $music['id'] }})">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <div class="font-bold text-lg">{{ $music['title'] }}</div>
-                        @if ($music['subtitle'])
-                        <div class="text-gray-600 dark:text-gray-400">{{ $music['subtitle'] }}</div>
-                        @endif
-                        @if ($music['custom_id'])
-                        <div class="text-sm font-mono text-gray-500 dark:text-gray-500">{{ $music['custom_id'] }}</div>
-                        @endif
-                    </div>
-                    <flux:icon name="chevron-right" class="h-5 w-5 text-gray-400" />
-                </div>
-                <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {{ __('Collections:') }} {{ $music['collections_count'] }},
-                    {{ __('Verifications:') }} {{ $music['verifications_count'] }}
-                </div>
-            </div>
-            @endforeach
-        </div>
-        @elseif ($search)
-        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-            <flux:icon name="document-magnifying-glass" class="h-12 w-12 mx-auto mb-4" />
-            <p>{{ __('No music found matching your search.') }}</p>
-        </div>
-        @else
-        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-            <flux:icon name="document-text" class="h-12 w-12 mx-auto mb-4" />
-            <p>{{ __('Start typing to search for music to verify.') }}</p>
-        </div>
-        @endif
-
         <!-- Or use music-search component -->
         <div class="mt-8">
             <flux:heading size="md" class="mb-4">{{ __('Or select from music search') }}</flux:heading>

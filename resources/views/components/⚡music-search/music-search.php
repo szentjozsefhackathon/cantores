@@ -131,6 +131,19 @@ return new class extends Component
             ->when($this->filter === 'private', fn ($q) => $q->private())
             ->when($this->filter === 'mine', fn ($q) => $q->where('user_id', Auth::id()));
 
+        if ($searching) {
+            $words = preg_split('/\s+/', trim($this->search), -1, PREG_SPLIT_NO_EMPTY);
+            $query = $query->orWhere(function ($q) use ($words) {
+                foreach ($words as $word) {
+                    $q->where('musics.titles', 'ilike', '%'.$word.'%');
+                }
+            });
+            $query->orderByRaw(
+                'GREATEST('.implode(', ', array_fill(0, count($words), 'similarity(musics.titles, ?)')).') DESC',
+                $words
+            );
+        }
+
         // Collections: keep your existing ilike logic; no full-text index required
         $query = $query
             ->when($this->collectionFilter !== '', function ($q) {
@@ -145,7 +158,6 @@ return new class extends Component
                     $subQuery->search($this->authorFilter);
                 });
             })
-
             ->when($this->collectionFreeText !== '', function ($q) {
                 $words = preg_split('/\s+/', trim($this->collectionFreeText));
                 $q->whereHas('collections', function ($subQuery) use ($words) {

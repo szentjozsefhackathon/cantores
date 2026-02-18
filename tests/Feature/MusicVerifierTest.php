@@ -4,10 +4,13 @@ use App\Livewire\Pages\Editor\MusicVerifier;
 use App\Models\Music;
 use App\Models\MusicVerification;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
+uses(RefreshDatabase::class);
+
 beforeEach(function () {
-    $this->admin = User::factory()->create(['email' => 'admin@example.com']);
+    $this->admin = User::factory()->create(['email' => \Config::get('admin.email')]);
     $this->nonAdmin = User::factory()->create(['email' => 'user@example.com']);
     $this->music = Music::factory()->create();
 });
@@ -22,14 +25,6 @@ it('requires admin to access component', function () {
     Livewire::actingAs($this->admin)
         ->test(MusicVerifier::class)
         ->assertOk();
-});
-
-it('searches music', function () {
-    Livewire::actingAs($this->admin)
-        ->test(MusicVerifier::class)
-        ->set('search', $this->music->title)
-        ->call('searchMusic', $this->music->title)
-        ->assertSee($this->music->title);
 });
 
 it('selects music for verification', function () {

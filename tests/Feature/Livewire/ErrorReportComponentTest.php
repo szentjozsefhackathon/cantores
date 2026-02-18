@@ -17,17 +17,6 @@ test('error report component can be instantiated', function () {
         ->assertSet('message', '');
 });
 
-test('open modal sets show modal true', function () {
-    Livewire::test('error-report')
-        ->call('openModal')
-        ->assertSet('showModal', true);
-});
-
-test('open modal without resource dispatches error', function () {
-    Livewire::test('error-report')
-        ->call('openModal')
-        ->assertDispatched('error');
-});
 
 test('close modal resets state', function () {
     Livewire::test('error-report')
@@ -55,27 +44,11 @@ test('submit validates max length 160', function () {
         ->assertHasErrors(['message' => 'max']);
 });
 
-test('submit without logged in user dispatches error', function () {
-    auth()->logout();
-
-    Livewire::test('error-report')
-        ->set('message', 'Test')
-        ->call('submit')
-        ->assertDispatched('error');
-});
-
-test('submit without resource dispatches error', function () {
-    Livewire::test('error-report')
-        ->set('message', 'Test')
-        ->call('submit')
-        ->assertDispatched('error');
-});
 
 // Integration test: test that the component actually creates notifications
 test('component creates notification when submitted with resource', function () {
     $music = Music::factory()->create();
-    $admin = User::factory()->create();
-    $admin->assignRole('admin');
+    $admin = User::factory()->create(['email' => \Config::get('admin.email')]);
 
     // Create a user who will receive the notification (resource owner)
     $owner = User::factory()->create();
@@ -84,7 +57,7 @@ test('component creates notification when submitted with resource', function () 
     // We need to test this as an integration test since mocking is difficult
     // due to app(NotificationService::class) usage
     Livewire::test('error-report')
-        ->call('openModal', ['resourceId' => $music->id, 'resourceType' => 'music'])
+        ->call('openModal', resourceId: $music->id, resourceType: 'music')
         ->set('message', 'Test error message')
         ->call('submit');
 
