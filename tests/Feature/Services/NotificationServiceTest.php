@@ -5,8 +5,11 @@ use App\Models\Music;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
+
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     // Ensure admin role exists
@@ -16,7 +19,7 @@ beforeEach(function () {
 test('create error report creates notification with recipients', function () {
     $reporter = User::factory()->create();
     $resource = Music::factory()->create(['user_id' => null]); // no owner
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['email' => \Config::get('admin.email')]);
     $admin->assignRole('admin');
 
     $service = new NotificationService;
@@ -38,7 +41,7 @@ test('create error report includes resource owner as recipient', function () {
     $reporter = User::factory()->create();
     $owner = User::factory()->create();
     $resource = Music::factory()->create(['user_id' => $owner->id]);
-    $admin = User::factory()->create();
+    $admin = User::factory()->create(['email' => \Config::get('admin.email')]);
     $admin->assignRole('admin');
 
     $service = new NotificationService;

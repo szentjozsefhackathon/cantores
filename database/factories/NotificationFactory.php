@@ -21,7 +21,7 @@ class NotificationFactory extends Factory
     {
         return [
             'type' => NotificationType::ERROR_REPORT,
-            'message' => $this->faker->sentence(10),
+            'message' => $this->faker->text(60),
             'reporter_id' => User::factory(),
             'notifiable_id' => 1,
             'notifiable_type' => \App\Models\Music::class,

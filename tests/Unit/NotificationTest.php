@@ -6,6 +6,9 @@ use App\Models\Collection;
 use App\Models\Music;
 use App\Models\Notification;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(Tests\TestCase::class, RefreshDatabase::class);
 
 test('notification can be created', function () {
     $user = User::factory()->create();
@@ -119,7 +122,7 @@ test('notification resource title attribute', function () {
 
     expect($notification->resource_title)->toBe('Test Music Title');
 
-    $collection = Collection::factory()->create(['name' => 'Test Collection']);
+    $collection = Collection::factory()->create(['title' => 'Test Collection']);
     $notification2 = Notification::factory()->create([
         'notifiable_id' => $collection->id,
         'notifiable_type' => Collection::class,
