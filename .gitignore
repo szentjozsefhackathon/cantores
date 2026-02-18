@@ -24,6 +24,7 @@ yarn-error.log
 
 .env.docker
 .env.prod
+.env.deploy
 .editorconfig
 /.devcontainer
 /.github
