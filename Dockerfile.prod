@@ -1,15 +1,34 @@
 ARG NODE_VERSION=22-alpine
+
+# Stage 1: Install Composer dependencies (skip scripts to avoid artisan errors)
+FROM composer:2 AS composer
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --no-cache --no-scripts --no-autoloader
+
+# Generate optimized autoloader without running post-autoload-dump scripts
+RUN composer dump-autoload --no-dev --optimize --no-scripts
+
+# Stage 2: Build frontend assets (needs vendor for flux.css)
 FROM node:${NODE_VERSION} AS node
 WORKDIR /app
+
+# Bring in the vendor directory from the composer stage
+COPY --from=composer /app/vendor ./vendor
+
+# Install Node dependencies and build
 COPY package*.json ./
 RUN npm install
 COPY resources resources
 COPY public public
 COPY vite.config.js vite.config.js
 RUN npm run build
+
+# Clean up development node_modules (optional)
 RUN rm -rf node_modules
 RUN npm install --omit=dev
 
+# Stage 3: Final PHP/Apache image
 FROM php:8.4-apache AS php
 WORKDIR /var/www/html
 
@@ -19,22 +38,34 @@ RUN apt-get update && apt-get upgrade -y && \
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
-# Add extensions not included in the base image
+# Add PHP extensions
 ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.7.24/install-php-extensions /usr/local/bin/
 RUN install-php-extensions gd gmp memcached pdo_pgsql pdo_mysql xdebug zip pcntl bcmath intl
 
+# Apache configuration
 COPY docker/sites-available/000-default.conf.prod /etc/apache2/sites-available/000-default.conf
+
+# Copy application code
 COPY . .
-COPY --from=node /app .
 
-RUN phar install --no-dev --no-interaction --no-cache
+# Run full composer install (with scripts) in the final image
+RUN composer install --no-dev --no-interaction --no-cache
 
+# Overlay built assets from node stage
+COPY --from=node /app/public/build ./public/build
+
+# Optional: Keep production node_modules if needed for any runtime Node usage
+COPY --from=node /app/node_modules ./node_modules
+
+# Set Git commit hash
 ARG GIT_COMMIT_HASH
 ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
 RUN echo "<?php return [ 'hash' => '$GIT_COMMIT_HASH' ];" > config/version.php
 
+# Permissions
 RUN chown -R www-data:www-data bootstrap/cache
 RUN chown -R www-data:www-data storage
 
+# PHP and Apache settings
 RUN cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
 RUN a2enmod rewrite headers
