@@ -8,6 +8,7 @@ use App\Models\MusicPlan;
 use App\Services\CelebrationSearchService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -28,6 +29,9 @@ new #[Layout('layouts::app.main')] class extends Component
 
     public string $activeTab = 'music';
 
+    /** @var array<string, mixed>|null */
+    public ?array $celebrationDetails = null;
+
     public function mount(): void
     {
         $this->criteria = request()->query();
@@ -47,6 +51,58 @@ new #[Layout('layouts::app.main')] class extends Component
 
         // Aggregate music selections by slot
         $this->slotMusicMap = $this->aggregateMusicBySlot();
+
+        // Fetch celebration details from external API for the first celebration (highest score)
+        $this->fetchCelebrationDetails();
+    }
+
+    /**
+     * Fetch celebration details from the external API.
+     */
+    protected function fetchCelebrationDetails(): void
+    {
+        if ($this->celebrationsWithScores->isEmpty()) {
+            return;
+        }
+
+        // Get the first celebration (highest score)
+        $firstCelebration = $this->celebrationsWithScores->first()['celebration'];
+        $date = $firstCelebration->actual_date->format('Y-m-d');
+
+        try {
+            $response = Http::timeout(10)->get("https://szentjozsefhackathon.github.io/napi-lelki-batyu/{$date}.json");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                // Find the matching celebration in the data
+                $celebrationData = $this->findMatchingCelebration($data['celebration'] ?? [], $firstCelebration);
+                $this->celebrationDetails = $celebrationData;
+            }
+        } catch (\Exception $e) {
+            // Silently fail, celebrationDetails remains null
+        }
+    }
+
+    /**
+     * Find the matching celebration in the API response.
+     *
+     * @param  array<int, array<string, mixed>>  $celebrations
+     * @param  Celebration  $target
+     * @return array<string, mixed>|null
+     */
+    protected function findMatchingCelebration(array $celebrations, Celebration $target): ?array
+    {
+        foreach ($celebrations as $celebration) {
+            // Compare by name and dateISO
+            $nameMatches = ($celebration['name'] ?? $celebration['title'] ?? null) === $target->name;
+            $dateMatches = ($celebration['dateISO'] ?? null) === $target->actual_date->format('Y-m-d');
+
+            if ($nameMatches && $dateMatches) {
+                return $celebration;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -59,6 +115,34 @@ new #[Layout('layouts::app.main')] class extends Component
         $celebrationIds = $this->celebrationsWithScores->pluck('celebration.id')->toArray();
         $this->musicPlans = $this->fetchMusicPlans($celebrationIds);
         $this->slotMusicMap = $this->aggregateMusicBySlot();
+    }
+
+    /**
+     * Open suggestions page for a specific celebration.
+     */
+    public function openCelebrationSuggestions(int $celebrationId): void
+    {
+        $celebration = Celebration::find($celebrationId);
+        if (!$celebration) {
+            return;
+        }
+
+        // Build criteria from the celebration model (same as openSuggestions in liturgical-info)
+        $criteria = [
+            'name' => $celebration->name,
+            'season' => $celebration->season,
+            'week' => $celebration->week,
+            'day' => $celebration->day,
+            'readings_code' => $celebration->readings_code,
+            'year_letter' => $celebration->year_letter,
+            'year_parity' => $celebration->year_parity,
+        ];
+
+        // Remove null values
+        $criteria = array_filter($criteria, fn ($value) => $value !== null);
+
+        // Redirect to suggestions page with new criteria
+        $this->redirectRoute('suggestions', $criteria);
     }
 
     /**
@@ -224,6 +308,78 @@ new #[Layout('layouts::app.main')] class extends Component
         </flux:text>
     </div>
 
+    <!-- Celebration details section -->
+    @if ($celebrationDetails)
+        <div class="mb-10">
+            <flux:card class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">
+                        {{ $celebrationDetails['name'] ?? $celebrationDetails['title'] ?? 'Ünnep adatai' }}
+                    </flux:heading>
+                    <flux:badge color="blue" size="lg">
+                        {{ \Carbon\Carbon::parse($celebrationDetails['dateISO'] ?? '')->translatedFormat('Y. F j.') }}
+                    </flux:badge>
+                </div>
+
+                <!-- Display parts -->
+                @if (isset($celebrationDetails['parts']) && is_array($celebrationDetails['parts']))
+                    <div class="space-y-6">
+                        @foreach ($celebrationDetails['parts'] as $partIndex => $part)
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                <flux:heading size="md" class="mb-3">
+                                    {{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}
+                                </flux:heading>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    @foreach ($part as $key => $value)
+                                        @if (!is_array($value) && $key !== 'short_title')
+                                            <div class="flex flex-col">
+                                                <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ $key }}</span>
+                                                <span class="text-gray-900 dark:text-gray-100 mt-1">{{ $value }}</span>
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <flux:callout color="zinc" icon="information-circle">
+                        <flux:callout.heading>Nincs részletes adat</flux:callout.heading>
+                        <flux:callout.text>Ehhez az ünnephez nem található részletes olvasmány adat.</flux:callout.text>
+                    </flux:callout>
+                @endif
+
+                <!-- Display parts2 if present -->
+                @if (isset($celebrationDetails['parts2']) && is_array($celebrationDetails['parts2']))
+                    <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <flux:heading size="lg" class="mb-4">
+                            {{ $celebrationDetails['parts2cause'] ?? 'Másodlagos olvasmányok' }}
+                        </flux:heading>
+                        <div class="space-y-6">
+                            @foreach ($celebrationDetails['parts2'] as $partIndex => $part)
+                                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                    <flux:heading size="md" class="mb-3">
+                                        {{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}
+                                    </flux:heading>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        @foreach ($part as $key => $value)
+                                            @if (!is_array($value) && $key !== 'short_title')
+                                                <div class="flex flex-col">
+                                                    <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ $key }}</span>
+                                                    <span class="text-gray-900 dark:text-gray-100 mt-1">{{ $value }}</span>
+                                                </div>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            </flux:card>
+        </div>
+    @endif
+
     @if ($celebrationsWithScores->isEmpty())
         <flux:callout color="amber" icon="information-circle" class="mt-8">
             <flux:callout.heading>Nincs találat</flux:callout.heading>
@@ -275,16 +431,19 @@ new #[Layout('layouts::app.main')] class extends Component
                         @php
                             $celebration = $item['celebration'];
                             $score = $item['score'];
-                            $scoreColor = $score >= 80 ? 'green' : ($score >= 50 ? 'blue' : 'zinc');
+                            $starCount = $score <= 5 ? 1 : ($score <= 10 ? 2 : 3);
+                            $starColor = $score <= 5 ? 'text-zinc-400' : ($score <= 10 ? 'text-blue-500' : 'text-blue-600');
                         @endphp
                         <flux:card class="p-5 hover:shadow-lg transition-shadow">
                             <div class="flex items-start justify-between mb-4">
                                 <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">
                                     {{ $celebration->name }}
                                 </flux:heading>
-                                <flux:badge color="{{ $scoreColor }}" size="lg" class="font-semibold">
-                                    {{ $score }}%
-                                </flux:badge>
+                                <div class="flex items-center gap-1">
+                                    @for ($i = 0; $i < $starCount; $i++)
+                                        <flux:icon name="star" class="h-5 w-5 {{ $starColor }} fill-current" />
+                                    @endfor
+                                </div>
                             </div>
 
                             <div class="space-y-3">
@@ -320,7 +479,7 @@ new #[Layout('layouts::app.main')] class extends Component
                                     <flux:text class="text-xs text-gray-500">
                                         {{ $celebration->musicPlans()->count() }} énekrend
                                     </flux:text>
-                                    <flux:button size="sm" variant="ghost" icon="arrow-right">
+                                    <flux:button size="sm" variant="ghost" icon="arrow-right" wire:click="openCelebrationSuggestions({{ $celebration->id }})">
                                         Megtekintés
                                     </flux:button>
                                 </div>
@@ -374,12 +533,11 @@ new #[Layout('layouts::app.main')] class extends Component
                                 </div>
 
                                 <div class="flex items-center gap-3">
-                                    <flux:button size="sm" variant="ghost" icon="eye">
-                                        Megtekintés
-                                    </flux:button>
-                                    <flux:button size="sm" variant="primary" icon="clipboard-copy">
-                                        Másolás
-                                    </flux:button>
+                                    <a href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}" target="_blank" class="inline-block">
+                                        <flux:button size="sm" variant="ghost" icon="eye">
+                                            Megtekintés
+                                        </flux:button>
+                                    </a>
                                 </div>
                             </div>
                         </flux:card>
