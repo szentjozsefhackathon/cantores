@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
     {
         // Always run production seeders (roles, permissions, admin user)
         $this->call(RolePermissionSeeder::class);
+        $this->call(SystemAdminSeeder::class);
 
         // Run test data seeders only in the testing environment
         if (app()->environment('testing')) {
