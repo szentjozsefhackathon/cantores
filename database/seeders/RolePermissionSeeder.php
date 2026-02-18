@@ -35,9 +35,8 @@ class RolePermissionSeeder extends Seeder
 
         Permission::firstOrCreate(['name' => 'content.create']);
         Permission::firstOrCreate(['name' => 'content.edit.own']); // includes delete
+        Permission::firstOrCreate(['name' => 'content.edit.verified']); // includes delete
         Permission::firstOrCreate(['name' => 'content.edit.published']); // includes delete
-        Permission::firstOrCreate(['name' => 'content.publish.own']);
-        Permission::firstOrCreate(['name' => 'content.publish.published']);
 
         Permission::firstOrCreate(['name' => 'masterdata.maintain']);
         Permission::firstOrCreate(['name' => 'system.maintain']);
@@ -76,10 +75,9 @@ class RolePermissionSeeder extends Seeder
             'content.create',
             // Edit own content
             'content.edit.own',
-            'content.publish.own',
             // Edit published content (including unpublish)
             'content.edit.published',
-            'content.publish.published',
+            'content.edit.verified',
             // Master data maintenance
             'masterdata.maintain',
         ];
@@ -89,7 +87,6 @@ class RolePermissionSeeder extends Seeder
         $contributorPermissions = [
             'content.create',
             'content.edit.own',
-            'content.publish.own',
         ];
         $contributorRole->givePermissionTo($contributorPermissions);
 

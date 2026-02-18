@@ -36,7 +36,7 @@ class MusicPolicy
      */
     public function create(User $user): bool
     {
-        // All authenticated users can create music (community-maintained)
+        // Any authenticated user can create music
         return $user !== null;
     }
 
@@ -45,8 +45,15 @@ class MusicPolicy
      */
     public function update(User $user, Music $music): bool
     {
-        // Only the owner or admin can update music
-        return $user !== null && ($user->is_admin || $music->user_id === $user->id);
+        return $user !== null && (
+            $user->hasPermissionTo('content.edit.published') ||
+            ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id)
+        );
+    }
+
+    public function updateVerified(User $user, Music $music): bool
+    {
+        return $user !== null && $user->hasPermissionTo('content.edit.verified');
     }
 
     /**
@@ -54,9 +61,15 @@ class MusicPolicy
      */
     public function delete(User $user, Music $music): bool
     {
-        // Only the owner or admin can delete music
-        // Additional checks for assignments are done in the controller/component
-        return $user !== null && ($user->is_admin || $music->user_id === $user->id);
+        // Only users with 'content.edit.verified' can delete verified music
+        if ($music->is_verified) {
+            return $user !== null && $user->hasPermissionTo('content.edit.verified');
+        }
+
+        return $user !== null && (
+            $user->hasPermissionTo('content.edit.published') ||
+            ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id)
+        );
     }
 
     /**
@@ -84,6 +97,6 @@ class MusicPolicy
     public function mergeAny(User $user): bool
     {
         // Only admin can merge music
-        return $user !== null && $user->is_admin;
+        return $user !== null && $user->hasPermissionTo('content.edit.published');
     }
 }

@@ -32,9 +32,9 @@ test('create error report creates notification with recipients', function () {
     expect($notification->notifiable_id)->toBe($resource->id);
     expect($notification->notifiable_type)->toBe(Music::class);
 
-    // Should have recipient: admin (owner not present)
-    expect($notification->recipients)->toHaveCount(1);
-    expect($notification->recipients->first()->id)->toBe($admin->id);
+    // Should have recipient: admin (owner not present) - includes seeded admin
+    expect($notification->recipients)->toHaveCount(2);
+    expect($notification->recipients->pluck('id')->toArray())->toContain($admin->id);
 });
 
 test('create error report includes resource owner as recipient', function () {
@@ -50,7 +50,8 @@ test('create error report includes resource owner as recipient', function () {
     $recipientIds = $notification->recipients->pluck('id')->toArray();
     expect($recipientIds)->toContain($owner->id);
     expect($recipientIds)->toContain($admin->id);
-    expect($notification->recipients)->toHaveCount(2);
+    // Includes seeded admin as well
+    expect($notification->recipients)->toHaveCount(3);
 });
 
 test('create error report runs in transaction', function () {

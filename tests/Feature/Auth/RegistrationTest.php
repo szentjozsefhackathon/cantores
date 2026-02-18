@@ -25,9 +25,11 @@ test('new users can register', function () {
     $city = City::firstOrCreate(['name' => 'Budapest']);
     $firstName = FirstName::firstOrCreate(['name' => 'Albert'], ['gender' => 'male']);
 
+    $email = fake()->unique()->safeEmail();
+
     $response = $this->post(route('register.store'), [
         'name' => 'John Doe',
-        'email' => 'test@example.com',
+        'email' => $email,
         'password' => 'password',
         'password_confirmation' => 'password',
         'city_id' => $city->id,
@@ -40,7 +42,7 @@ test('new users can register', function () {
 
     $this->assertAuthenticated();
     $this->assertDatabaseHas('users', [
-        'email' => 'test@example.com',
+        'email' => $email,
         'city_id' => $city->id,
         'first_name_id' => $firstName->id,
     ]);

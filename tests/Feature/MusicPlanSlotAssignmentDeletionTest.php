@@ -6,7 +6,10 @@ use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+
+uses(RefreshDatabase::class);
 
 test('deleting song assignment from slot in one plan does not affect other plans', function () {
     // Create test data
@@ -59,16 +62,16 @@ test('deleting song assignment from slot in one plan does not affect other plans
         'music_sequence' => 1,
     ]);
 
-    // Verify both assignments exist
-    expect(MusicPlanSlotAssignment::count())->toBe(2);
+    // Verify both assignments exist (plus 2 from seeder)
+    expect(MusicPlanSlotAssignment::count())->toBe(4);
     expect($assignment1->exists())->toBeTrue();
     expect($assignment2->exists())->toBeTrue();
 
     // Delete assignment from plan1 only
     $assignment1->delete();
 
-    // Verify assignment1 is deleted but assignment2 still exists
-    expect(MusicPlanSlotAssignment::count())->toBe(1);
+    // Verify assignment1 is deleted but assignment2 still exists (total becomes 3)
+    expect(MusicPlanSlotAssignment::count())->toBe(3);
     expect(MusicPlanSlotAssignment::find($assignment1->id))->toBeNull();
     expect(MusicPlanSlotAssignment::find($assignment2->id))->not()->toBeNull();
 });

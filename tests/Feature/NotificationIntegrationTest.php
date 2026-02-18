@@ -83,8 +83,8 @@ test('error report creates notification with correct recipients', function () {
     expect($notification->notifiable_id)->toBe($music->id);
     expect($notification->notifiable_type)->toBe(Music::class);
 
-    // Recipients: owner (user) and admin
-    expect($notification->recipients)->toHaveCount(2);
+    // Recipients: owner (user) and all admin users (including seeded admin)
+    expect($notification->recipients)->toHaveCount(3);
     expect($notification->recipients->pluck('id')->toArray())->toContain($this->user->id, $this->admin->id);
 });
 
@@ -94,7 +94,7 @@ test('error report for resource without owner only notifies admin', function () 
     $service = new NotificationService;
     $notification = $service->createErrorReport($this->user, $music, 'Test');
 
-    // Only admin should be recipient
-    expect($notification->recipients)->toHaveCount(1);
-    expect($notification->recipients->first()->id)->toBe($this->admin->id);
+    // Only admin users should be recipients (including seeded admin)
+    expect($notification->recipients)->toHaveCount(2);
+    expect($notification->recipients->pluck('id')->toArray())->toContain($this->admin->id);
 });

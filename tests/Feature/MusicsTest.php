@@ -49,6 +49,8 @@ it('creates music without custom id', function () {
 
 it('redirects to music editor page when editing', function () {
     $user = User::factory()->create();
+    // Assign contributor role so user has content.edit.own permission
+    $user->assignRole('contributor');
     $this->actingAs($user);
 
     $music = Music::factory()->create([
@@ -63,6 +65,8 @@ it('redirects to music editor page when editing', function () {
 
 it('allows deleting music with collections assigned and removes pivot records', function () {
     $user = User::factory()->create();
+    // Assign contributor role so user has content.edit.own permission
+    $user->assignRole('contributor');
     $this->actingAs($user);
 
     $music = Music::factory()->create(['user_id' => $user->id]);
@@ -90,6 +94,8 @@ it('allows deleting music with collections assigned and removes pivot records', 
 
 it('allows deleting music without assignments', function () {
     $user = User::factory()->create();
+    // Assign contributor role so user has content.edit.own permission
+    $user->assignRole('contributor');
     $this->actingAs($user);
 
     $music = Music::factory()->create(['user_id' => $user->id]);

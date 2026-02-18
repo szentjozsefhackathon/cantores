@@ -78,7 +78,10 @@ trait HasMusicSearchScopes
         $query = $query
             ->forCurrentGenre()
             ->with(['genres', 'collections', 'authors'])
-            ->withCount('collections');
+            ->withCount('collections')
+            ->withCount(['verifications as verified_verifications_count' => function ($q) {
+                $q->where('status', 'verified');
+            }]);
 
         // Only order by title when NOT using Scout search (keep relevance rank when searching)
         if (! $searching) {

@@ -200,4 +200,14 @@ class Music extends Model implements Auditable
             $music->titles = $music->computeTitles();
         });
     }
+
+    public function getIsVerifiedAttribute(): bool
+    {
+        if (isset($this->verified_verifications_count)) {
+            return $this->verified_verifications_count > 0;
+        } else {
+            // Fallback if the count is not loaded (e.g., not eager loaded)
+            return $this->verifications()->where('status', 'verified')->exists();
+        }
+    }
 }

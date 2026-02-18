@@ -35,67 +35,68 @@
 
                     <!-- Thin dropdown: keep compact (still spans 1 cell) -->
                     <div>
-                                        <flux:field>
-                    <flux:input
-                        type="search"
-                        wire:model.live="collectionFreeText"
-                        :placeholder="__('Rövidítés, sorszám stb.')" />
-                </flux:field>
+                        <flux:field>
+                            <flux:input
+                                type="search"
+                                wire:model.live="collectionFreeText"
+                                :placeholder="__('Rövidítés, sorszám stb.')" />
+                        </flux:field>
 
                         <flux:field>
                     </div>
 
                     <div>
-                <flux:field class="">
-                    <flux:select wire:model.live="collectionFilter">
-                        <option value="">{{ __('All Collections') }}</option>
-                        @foreach ($this->collections as $collection)
-                        <option value="{{ $collection->title }}">{{ $collection->title }} ({{ $collection->abbreviation }})</option>
-                        @endforeach
-                    </flux:select>
-                </flux:field>
+                        <flux:field class="">
+                            <flux:select wire:model.live="collectionFilter">
+                                <option value="">{{ __('All Collections') }}</option>
+                                @foreach ($this->collections as $collection)
+                                <option value="{{ $collection->title }}">{{ $collection->title }} ({{ $collection->abbreviation }})</option>
+                                @endforeach
+                            </flux:select>
+                        </flux:field>
                     </div>
 
                     <!-- Another free text (bigger): span 2 on lg -->
                     <div class="lg:col-span-2">
-                <flux:field >
-                    <flux:input
-                        type="search"
-                        wire:model.live="authorFreeText"
-                        :placeholder="__('Author name...')" />
-                </flux:field>
+                        <flux:field>
+                            <flux:input
+                                type="search"
+                                wire:model.live="authorFreeText"
+                                :placeholder="__('Author name...')" />
+                        </flux:field>
 
                     </div>
 
                     <!-- Thin dropdown -->
                     <div>
-                    <flux:select wire:model.live="authorFilter">
-                        <option value="">{{ __('All Authors') }}</option>
-                        @foreach ($this->authors as $author)
-                        <option value="{{ $author->name }}">{{ $author->name }}</option>
-                        @endforeach
-                    </flux:select>
+                        <flux:select wire:model.live="authorFilter">
+                            <option value="">{{ __('All Authors') }}</option>
+                            @foreach ($this->authors as $author)
+                            <option value="{{ $author->name }}">{{ $author->name }}</option>
+                            @endforeach
+                        </flux:select>
 
                     </div>
 
                     <!-- Bigger dropdown -->
                     <div>
 
-                            <x-mary-choices placeholder="Láthatóság" single wire:model="filter" :options="[
+                        <x-mary-choices placeholder="Láthatóság" single wire:model="filter" :options="[
                             ['id' => 'all', 'name' => __('All'), 'icon' => 'o-globe-alt'],
                             ['id' => 'public', 'name' => __('Public'), 'icon' => 'o-eye'],
                             ['id' => 'private', 'name' => __('Private'), 'icon' => 'o-eye-slash'],
                             ['id' => 'mine', 'name' => __('My items'), 'icon' => 'o-user'],
                         ]">
-                                @scope('item', $option)
-                                <x-mary-list-item :item="$option">
-                                    <x-slot:avatar>
-                                        <x-mary-icon :name="$option['icon']" />
-                                    </x-slot:avatar>
-                                </x-mary-list-item>
-                                @endscope
-                            </x-mary-choices>
-                        </flux:field>                    </div>
+                            @scope('item', $option)
+                            <x-mary-list-item :item="$option">
+                                <x-slot:avatar>
+                                    <x-mary-icon :name="$option['icon']" />
+                                </x-slot:avatar>
+                            </x-mary-list-item>
+                            @endscope
+                        </x-mary-choices>
+                        </flux:field>
+                    </div>
                 </div>
             </div>
 
@@ -149,7 +150,12 @@
                                 </flux:table.cell>
                                 <flux:table.cell>
                                     <div>
-                                        <div class="font-medium">{{ $music->title }} </div>
+                                        <div class="font-medium">
+                                            @if ($music->is_verified)
+                                            <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
+                                            @endif
+                                            {{ $music->title }}
+                                        </div>
                                         @if ($music->subtitle)
                                         <div class="text-sm text-gray-600 dark:text-gray-400">{{ $music->subtitle }}</div>
                                         @endif

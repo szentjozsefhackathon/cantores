@@ -53,10 +53,11 @@ return new class extends Component
     public bool $mergedIsPrivate = false;
 
     #[Url]
-    public int $left;
+    public ?int $left = null;
+
 
     #[Url]
-    public int $right;
+    public ?int $right = null;
 
     /**
      * Mount the component.
@@ -64,8 +65,6 @@ return new class extends Component
     public function mount(): void
     {
         $this->authorize('viewAny', Music::class);
-
-        \Log::info('Mounting MusicMerger component', ['left' => $this->left, 'right' => $this->right]);
 
         if ($this->left) {
             $this->loadMusicById($this->left, 'left');
