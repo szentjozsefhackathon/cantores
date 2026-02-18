@@ -1,5 +1,12 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark" x-data="{
+  init() {
+    const root = document.documentElement;
+    const apply = () => root.setAttribute('data-theme', root.classList.contains('dark') ? 'dark' : 'light');
+    apply();
+    new MutationObserver(() => apply()).observe(root, { attributes: true, attributeFilter: ['class'] });
+  }
+}">
 
 <head>
     @include('partials.head')

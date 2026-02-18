@@ -14,7 +14,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     // Clear any existing music plans to ensure clean test state
     MusicPlan::query()->delete();
-    
+
     $this->organist = Genre::firstOrCreate(['name' => 'organist']);
     $this->guitarist = Genre::firstOrCreate(['name' => 'guitarist']);
 

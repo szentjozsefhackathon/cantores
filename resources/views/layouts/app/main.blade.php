@@ -1,5 +1,12 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark" x-data="{
+  init() {
+    const root = document.documentElement;
+    const apply = () => root.setAttribute('data-theme', root.classList.contains('dark') ? 'dark' : 'light');
+    apply();
+    new MutationObserver(() => apply()).observe(root, { attributes: true, attributeFilter: ['class'] });
+  }
+}">
     <head>
         @include('partials.head')
     </head>
@@ -26,10 +33,18 @@
                         >
                             {{ __('Dashboard') }}
                         </a>
+                        
+                        <div class="flex items-center">
+                            <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="scale-75">
+                                <flux:radio value="light" icon="sun" aria-label="Light mode"></flux:radio>
+                                <flux:radio value="dark" icon="moon" aria-label="Dark mode"></flux:radio>
+                                <flux:radio value="system" icon="computer-desktop" aria-label="System preference"></flux:radio>
+                            </flux:radio.group>
+                        </div>
                     @else
                         <a href="{{ url('/about') }}" class="text-accent hover:underline font-medium text-sm">
                         <flux:icon name="information-circle" class="inline" variant="mini"></flux:icon>
-                        Bemutatkozás</a>
+                        Rólunk</a>
 
                         <a
                             href="{{ route('login') }}"
@@ -47,6 +62,14 @@
 
                                 {{ __('Register') }}
                             </a>
+                            
+                            <div class="flex items-center">
+                                <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="scale-75">
+                                    <flux:radio value="light" icon="sun" aria-label="Light mode"></flux:radio>
+                                    <flux:radio value="dark" icon="moon" aria-label="Dark mode"></flux:radio>
+                                    <flux:radio value="system" icon="computer-desktop" aria-label="System preference"></flux:radio>
+                                </flux:radio.group>
+                            </div>
                         @endif
                     @endauth
                 </nav>
@@ -57,14 +80,14 @@
                         <flux:button variant="ghost" square icon="bars-3" aria-label="Menu" />
                         <flux:menu>
                             <flux:menu.item href="{{ url('/about') }}" icon="information-circle">
-                                Bemutatkozás
+                                Rólunk
                             </flux:menu.item>
                             <flux:menu.item href="{{ route('music-plans') }}" icon="music">
                                 Énekrendek
                             </flux:menu.item>
                             @auth
                                 <flux:menu.item href="{{ url('/dashboard') }}" icon="home">
-                                    Dashboard
+                                    Irányítópult
                                 </flux:menu.item>
                             @else
                                 <flux:menu.item href="{{ route('login') }}" icon="log-in">

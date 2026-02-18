@@ -556,7 +556,7 @@ new class extends Component
                     @auth
                         <flux:button
                             wire:click="createMusicPlan({{ $loop->index }})"
-                            variant="outline"
+                            variant="filled"
                             size="sm"
                             icon="musical-note"
                             class="w-full">
@@ -568,8 +568,7 @@ new class extends Component
                         @endphp
                         @if($hasSuggestions)
                         <flux:button
-                            wire:click="openSuggestions({{ $loop->index }})"
-                            variant="ghost"
+                            wire:click="openSuggestions({{ $loop->index }})"                            
                             size="sm"
                             icon="light-bulb"
                             class="w-full">
