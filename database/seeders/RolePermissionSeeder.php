@@ -28,63 +28,20 @@ class RolePermissionSeeder extends Seeder
      */
     private function createPermissions(): void
     {
-        // Music permissions
-        Permission::firstOrCreate(['name' => 'music.view', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music.create', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music.update', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music.delete', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music.manage', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music.unpublish', 'guard_name' => 'web']);
+        
+        // Content permissions. These apply to music, collections and authors.
+        // Guest users can view published content.
+        // Every logged in user can create, edit, publish, unpublish and delete their own content. There are some rules around that (like if the music is verified, it became "common" treasure, the owner cannot edit it any more freely).
 
-        // Collection permissions
-        Permission::firstOrCreate(['name' => 'collection.view', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'collection.create', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'collection.update', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'collection.delete', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'collection.manage', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'collection.unpublish', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'content.create']);
+        Permission::firstOrCreate(['name' => 'content.edit.own']); // includes delete
+        Permission::firstOrCreate(['name' => 'content.edit.published']); // includes delete
+        Permission::firstOrCreate(['name' => 'content.publish.own']);
+        Permission::firstOrCreate(['name' => 'content.publish.published']);
 
-        // Music Plan permissions
-        Permission::firstOrCreate(['name' => 'music-plan.view', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music-plan.create', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music-plan.update', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music-plan.delete', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music-plan.manage', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music-plan.unpublish', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'masterdata.maintain']);
+        Permission::firstOrCreate(['name' => 'system.maintain']);
 
-        // Music Plan Template permissions (admin-only)
-        Permission::firstOrCreate(['name' => 'music-plan-template.view', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music-plan-template.create', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music-plan-template.update', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music-plan-template.delete', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'music-plan-template.manage', 'guard_name' => 'web']);
-
-        // Celebration permissions
-        Permission::firstOrCreate(['name' => 'celebration.view', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'celebration.create', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'celebration.update', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'celebration.delete', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'celebration.manage', 'guard_name' => 'web']);
-
-        // User permissions (admin-only)
-        Permission::firstOrCreate(['name' => 'user.view', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'user.create', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'user.update', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'user.delete', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'user.manage', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'role.assign', 'guard_name' => 'web']);
-
-        // Genre permissions (admin-only)
-        Permission::firstOrCreate(['name' => 'genre.view', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'genre.create', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'genre.update', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'genre.delete', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'genre.manage', 'guard_name' => 'web']);
-
-        // System permissions
-        Permission::firstOrCreate(['name' => 'access.admin', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'manage.roles', 'guard_name' => 'web']);
-        Permission::firstOrCreate(['name' => 'system.settings', 'guard_name' => 'web']);
 
         $this->command->info('Permissions created successfully.');
     }
@@ -94,9 +51,9 @@ class RolePermissionSeeder extends Seeder
      */
     private function createRoles(): void
     {
-        Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'editor', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'contributor', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'admin']);
+        Role::firstOrCreate(['name' => 'editor']);
+        Role::firstOrCreate(['name' => 'contributor']);
 
         $this->command->info('Roles created successfully.');
     }
@@ -115,23 +72,24 @@ class RolePermissionSeeder extends Seeder
 
         // Editor permissions
         $editorPermissions = [
-            // View permissions
-            'music.view', 'collection.view', 'music-plan.view', 'celebration.view',
-            // Unpublish permissions (can unpublish any content)
-            'music.unpublish', 'collection.unpublish', 'music-plan.unpublish',
-            // Note: Editors can only edit published content - this will be handled in policies
-            // They don't get create/update/delete permissions directly
+            // Create permissions
+            'content.create',
+            // Edit own content
+            'content.edit.own',
+            'content.publish.own',
+            // Edit published content (including unpublish)
+            'content.edit.published',
+            'content.publish.published',
+            // Master data maintenance
+            'masterdata.maintain',
         ];
         $editorRole->givePermissionTo($editorPermissions);
 
         // Contributor permissions (default role)
         $contributorPermissions = [
-            // Create permissions
-            'music.create', 'collection.create', 'music-plan.create',
-            // View permissions
-            'music.view', 'collection.view', 'music-plan.view', 'celebration.view',
-            // Note: Update/delete permissions for own content will be handled in policies
-            // based on ownership, not via role permissions
+            'content.create',
+            'content.edit.own',
+            'content.publish.own',
         ];
         $contributorRole->givePermissionTo($contributorPermissions);
 
