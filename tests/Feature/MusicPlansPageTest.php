@@ -53,7 +53,7 @@ test('music-plans page search filters by celebration name', function () {
 test('music-plans page paginates results', function () {
     // Use an existing genre to avoid unique constraint violations
     $genre = \App\Models\Genre::first();
-    
+
     // Create 15 published plans
     MusicPlan::factory()->count(15)->create([
         'is_published' => true,
@@ -63,12 +63,12 @@ test('music-plans page paginates results', function () {
     $response = $this->get('/music-plans');
 
     $response->assertOk();
-    
+
     // Get the total count that should be shown in the badge
     $totalPublished = \App\Models\MusicPlan::where('is_published', true)->count();
-    
+
     // Badge shows total published count (includes plans from other tests)
-    $response->assertSee($totalPublished . ' énekrend');
+    $response->assertSee($totalPublished.' énekrend');
 });
 
 test('music-plans page does not require authentication', function () {

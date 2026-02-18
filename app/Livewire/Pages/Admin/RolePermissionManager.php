@@ -112,7 +112,6 @@ class RolePermissionManager extends Component
         }
 
         $role = Role::find($this->selectedRoleId);
-        \Log::info("Selected role: {$role->name}, permissions: " . implode(', ', $role->permissions->pluck('name')->toArray()));        
         if ($role) {
             $this->selectedPermissions = $role->permissions->pluck('id')->toArray();
         } else {

@@ -144,8 +144,8 @@ it('loads audits for collection', function () {
 it('attaches selected genres when creating a collection', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
-    $genre1 = \App\Models\Genre::factory()->create(['name' => 'organist']);
-    $genre2 = \App\Models\Genre::factory()->create(['name' => 'guitarist']);
+    $genre1 = \App\Models\Genre::firstOrCreate(['name' => 'organist']);
+    $genre2 = \App\Models\Genre::firstOrCreate(['name' => 'guitarist']);
 
     Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
         ->set('title', 'New Collection')
@@ -163,9 +163,9 @@ it('syncs genres when updating a collection', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
     $collection = Collection::factory()->create(['user_id' => $user->id]);
-    $genre1 = \App\Models\Genre::factory()->create(['name' => 'organist']);
-    $genre2 = \App\Models\Genre::factory()->create(['name' => 'guitarist']);
-    $genre3 = \App\Models\Genre::factory()->create(['name' => 'other']);
+    $genre1 = \App\Models\Genre::firstOrCreate(['name' => 'organist']);
+    $genre2 = \App\Models\Genre::firstOrCreate(['name' => 'guitarist']);
+    $genre3 = \App\Models\Genre::firstOrCreate(['name' => 'other']);
 
     // Attach initial genres
     $collection->genres()->attach([$genre1->id, $genre2->id]);

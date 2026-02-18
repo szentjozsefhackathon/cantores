@@ -5,10 +5,10 @@ use App\Models\User;
 use Livewire\Livewire;
 
 beforeEach(function () {
-    // Create genres
-    Genre::factory()->organist()->create();
-    Genre::factory()->guitarist()->create();
-    Genre::factory()->other()->create();
+    // Ensure genres exist
+    Genre::firstOrCreate(['name' => 'organist']);
+    Genre::firstOrCreate(['name' => 'guitarist']);
+    Genre::firstOrCreate(['name' => 'other']);
 });
 
 test('component renders with current genre', function () {

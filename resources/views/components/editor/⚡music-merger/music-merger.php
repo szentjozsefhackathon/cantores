@@ -55,7 +55,6 @@ return new class extends Component
     #[Url]
     public ?int $left = null;
 
-
     #[Url]
     public ?int $right = null;
 

@@ -8,7 +8,7 @@ use App\Models\User;
 
 beforeEach(function () {
     // Ensure the default genre exists
-    Genre::factory()->other()->create();
+    Genre::firstOrCreate(['name' => 'other']);
 });
 
 test('default genre is other and has no associations', function () {

@@ -17,7 +17,7 @@ test('genre context returns null when no user and no session', function () {
 });
 
 test('genre context returns user genre when authenticated', function () {
-    $genre = Genre::factory()->organist()->create();
+    $genre = Genre::where('name', 'organist')->firstOrFail();
     $user = User::factory()->create(['current_genre_id' => $genre->id]);
 
     $this->actingAs($user);
@@ -31,7 +31,7 @@ test('genre context returns user genre when authenticated', function () {
 });
 
 test('genre context returns session genre when guest', function () {
-    $genre = Genre::factory()->guitarist()->create();
+    $genre = Genre::where('name', 'guitarist')->firstOrFail();
     Session::put('current_genre_id', $genre->id);
 
     expect(GenreContext::getId())->toBe($genre->id);
@@ -40,8 +40,8 @@ test('genre context returns session genre when guest', function () {
 });
 
 test('genre context prefers user genre over session', function () {
-    $userGenre = Genre::factory()->organist()->create();
-    $sessionGenre = Genre::factory()->guitarist()->create();
+    $userGenre = Genre::where('name', 'organist')->firstOrFail();
+    $sessionGenre = Genre::where('name', 'guitarist')->firstOrFail();
     $user = User::factory()->create(['current_genre_id' => $userGenre->id]);
 
     Session::put('current_genre_id', $sessionGenre->id);
@@ -52,7 +52,7 @@ test('genre context prefers user genre over session', function () {
 });
 
 test('genre context set updates user genre', function () {
-    $genre = Genre::factory()->organist()->create();
+    $genre = Genre::where('name', 'organist')->firstOrFail();
     $user = User::factory()->create(['current_genre_id' => null]);
 
     $this->actingAs($user);
@@ -64,7 +64,7 @@ test('genre context set updates user genre', function () {
 });
 
 test('genre context set updates session when guest', function () {
-    $genre = Genre::factory()->guitarist()->create();
+    $genre = Genre::where('name', 'guitarist')->firstOrFail();
 
     GenreContext::set($genre->id);
 
@@ -72,7 +72,7 @@ test('genre context set updates session when guest', function () {
 });
 
 test('genre context clear removes genre', function () {
-    $genre = Genre::factory()->organist()->create();
+    $genre = Genre::where('name', 'organist')->firstOrFail();
     $user = User::factory()->create(['current_genre_id' => $genre->id]);
 
     $this->actingAs($user);

@@ -12,8 +12,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->organist = Genre::factory()->organist()->create();
-    $this->guitarist = Genre::factory()->guitarist()->create();
+    // Clear any existing music plans to ensure clean test state
+    MusicPlan::query()->delete();
+    
+    $this->organist = Genre::firstOrCreate(['name' => 'organist']);
+    $this->guitarist = Genre::firstOrCreate(['name' => 'guitarist']);
 
     // Create unique city/first_name combos to avoid unique constraint violations
     $this->city1 = City::firstOrCreate(['name' => 'Test City A']);
@@ -116,26 +119,34 @@ test('collection scope for current genre filters via many-to-many', function () 
     expect($guitaristCollections)->toHaveCount(3);
     expect($guitaristCollections->pluck('id'))->toContain($collection2->id);
 });
-
 test('scope returns all when user has no current genre', function () {
     $user = User::factory()->create([
         'city_id' => $this->city1->id,
         'first_name_id' => $this->firstName1->id,
         'current_genre_id' => null,
     ]);
+
+    // Create 4 music plans with various genre_ids (including null)
     MusicPlan::factory()->create(['genre_id' => $this->organist->id]);
+    MusicPlan::factory()->create(['genre_id' => $this->guitarist->id]);
+    MusicPlan::factory()->create(['genre_id' => null]);
+    MusicPlan::factory()->create(['genre_id' => null]);
 
     $this->actingAs($user);
     $plans = MusicPlan::forCurrentGenre()->get();
-    // Includes all music plans (seeder + test created)
+    // When user has no current genre, scope returns all music plans
     expect($plans)->toHaveCount(4);
 });
 
 test('scope returns all when user is not authenticated and no session genre', function () {
+    // Create 4 music plans with various genre_ids (including null)
     MusicPlan::factory()->create(['genre_id' => $this->organist->id]);
+    MusicPlan::factory()->create(['genre_id' => $this->guitarist->id]);
+    MusicPlan::factory()->create(['genre_id' => null]);
+    MusicPlan::factory()->create(['genre_id' => null]);
 
     $plans = MusicPlan::forCurrentGenre()->get();
-    // Includes all music plans (seeder + test created)
+    // When no user and no session genre, scope returns all music plans
     expect($plans)->toHaveCount(4);
 });
 

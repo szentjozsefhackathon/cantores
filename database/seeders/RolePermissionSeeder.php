@@ -28,7 +28,7 @@ class RolePermissionSeeder extends Seeder
      */
     private function createPermissions(): void
     {
-        
+
         // Content permissions. These apply to music, collections and authors.
         // Guest users can view published content.
         // Every logged in user can create, edit, publish, unpublish and delete their own content. There are some rules around that (like if the music is verified, it became "common" treasure, the owner cannot edit it any more freely).
@@ -40,7 +40,6 @@ class RolePermissionSeeder extends Seeder
 
         Permission::firstOrCreate(['name' => 'masterdata.maintain']);
         Permission::firstOrCreate(['name' => 'system.maintain']);
-
 
         $this->command->info('Permissions created successfully.');
     }
