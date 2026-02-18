@@ -15,11 +15,8 @@ beforeEach(function () {
         \Spatie\Permission\Models\Role::create(['name' => 'admin', 'guard_name' => 'web']);
     }
 
-    // Ensure admin user exists with correct email
-    $this->admin = User::firstOrCreate(
-        ['email' => config('admin.email')],
-        User::factory()->raw(['email' => config('admin.email')])
-    );
+    // Create admin user with random email (no longer need special email)
+    $this->admin = User::factory()->create();
     $this->admin->assignRole('admin');
 });
 

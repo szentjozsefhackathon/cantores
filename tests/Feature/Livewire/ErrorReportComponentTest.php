@@ -46,7 +46,10 @@ test('submit validates max length 160', function () {
 // Integration test: test that the component actually creates notifications
 test('component creates notification when submitted with resource', function () {
     $music = Music::factory()->create();
-    $admin = User::factory()->create(['email' => \Config::get('admin.email')]);
+    // Ensure admin role exists
+    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
 
     // Create a user who will receive the notification (resource owner)
     $owner = User::factory()->create();

@@ -4,8 +4,11 @@ use App\Models\MusicVerification;
 use App\Models\User;
 
 beforeEach(function () {
-    $this->admin = User::factory()->create(['email' => 'admin@example.com']);
-    $this->nonAdmin = User::factory()->create(['email' => 'user@example.com']);
+    // Ensure admin role exists
+    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    $this->admin = User::factory()->create();
+    $this->admin->assignRole('admin');
+    $this->nonAdmin = User::factory()->create();
     $this->verification = MusicVerification::factory()->create();
 });
 

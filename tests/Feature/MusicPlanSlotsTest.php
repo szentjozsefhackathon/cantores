@@ -12,16 +12,18 @@ beforeEach(function () {
     $this->firstName1 = FirstName::firstOrCreate(['name' => 'Test Slots First A'], ['gender' => 'male']);
     $this->firstName2 = FirstName::firstOrCreate(['name' => 'Test Slots First B'], ['gender' => 'female']);
 
+    // Ensure admin role exists
+    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+
     $this->admin = User::factory()->create([
         'city_id' => $this->city1->id,
         'first_name_id' => $this->firstName1->id,
-        'email' => 'admin@example.com',
     ]);
+    $this->admin->assignRole('admin');
 
     $this->user = User::factory()->create([
         'city_id' => $this->city2->id,
         'first_name_id' => $this->firstName2->id,
-        'email' => 'user@example.com',
     ]);
 });
 
