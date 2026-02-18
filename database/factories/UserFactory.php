@@ -28,16 +28,20 @@ class UserFactory extends Factory
         static $counter = 0;
         $counter++;
 
+        // Generate unique names using counter and random string to avoid collisions
+        $cityName = 'Test City ' . $counter . ' ' . Str::random(4);
+        $firstNameName = 'TestFirstName' . $counter . ' ' . Str::random(4);
+
         // Create a unique city for each user to avoid unique constraint violations
         $city = City::firstOrCreate(
-            ['name' => 'Test City '.$counter],
-            ['name' => 'Test City '.$counter]
+            ['name' => $cityName],
+            ['name' => $cityName]
         );
 
         // Create a unique first name for each user
         $firstName = FirstName::firstOrCreate(
-            ['name' => 'TestFirstName'.$counter],
-            ['name' => 'TestFirstName'.$counter, 'gender' => 'male']
+            ['name' => $firstNameName],
+            ['name' => $firstNameName, 'gender' => 'male']
         );
 
         return [

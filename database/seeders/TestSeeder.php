@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\City;
 use App\Models\Collection;
+use App\Models\FirstName;
 use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
@@ -20,6 +22,18 @@ class TestSeeder extends Seeder
      */
     public function run(): void
     {
+        // Create a city for the test user with a unique name to avoid constraint violations
+        $city = City::firstOrCreate(
+            ['name' => 'Test City Seeder'],
+            ['name' => 'Test City Seeder']
+        );
+
+        // Create a first name for the test user with a unique name
+        $firstName = FirstName::firstOrCreate(
+            ['name' => 'TestFirstName Seeder'],
+            ['name' => 'TestFirstName Seeder', 'gender' => 'male']
+        );
+
         // Create or get a test user
         $user = User::firstOrCreate(
             ['email' => 'test@example.com'],
@@ -27,6 +41,8 @@ class TestSeeder extends Seeder
                 'name' => 'Test User',
                 'password' => bcrypt('password'),
                 'email_verified_at' => now(),
+                'city_id' => $city->id,
+                'first_name_id' => $firstName->id,
             ]
         );
 
@@ -139,7 +155,7 @@ class TestSeeder extends Seeder
                 'music_plan_id' => $musicPlan->id,
                 'music_plan_slot_id' => $slot->id,
                 'music_id' => $music1->id,
-                'sequence' => 1,
+                'music_sequence' => 1,
                 'notes' => 'Traditional setting',
             ]);
 
@@ -147,7 +163,7 @@ class TestSeeder extends Seeder
                 'music_plan_id' => $musicPlan->id,
                 'music_plan_slot_id' => $slot->id,
                 'music_id' => $music2->id,
-                'sequence' => 2,
+                'music_sequence' => 2,
                 'notes' => 'Congregational hymn',
             ]);
         }

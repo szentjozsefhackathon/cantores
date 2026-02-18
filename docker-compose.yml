@@ -75,7 +75,9 @@ services:
       start_period: 1m
       interval: 10s
       timeout: 5s
-      retries: 3      
+      retries: 3  
+    volumes:
+      - db-testing-data:/var/lib/postgresql/data
   composer:
     image: creshu-app-dev
     env_file:
@@ -88,7 +90,7 @@ services:
     depends_on:
       database:
         condition: service_healthy
-    command: bash -c "source $$NVM_DIR/nvm.sh && npm install && npm run build && php composer.phar install --no-interaction"
+    command: bash -c "source $$NVM_DIR/nvm.sh && npm install && npm run build && composer install --no-interaction"
   migrator:
     image: creshu-app-dev
     env_file:
@@ -106,23 +108,23 @@ services:
         condition: service_completed_successfully
     networks:
       - creshu-network
-  #migrator_testing:
-  #   image: creshu-app-dev
-  #   env_file:
-  #     - path: ./.env.docker
-  #       required: false
-  #   environment:
-  #     - XDEBUG_CONFIG="mode=off"
-  #   volumes:
-  #     - .:/var/www/html
-  #   depends_on:
-  #     database_testing:
-  #       condition: service_healthy
-  #     composer:
-  #       condition: service_completed_successfully
-  #   networks:
-  #     - creshu-network      
-  #   command: php artisan migrate:refresh --seed --seeder="Database\\Seeders\\DatabaseSeeder" --env=testing
+  migrator_testing:
+     image: creshu-app-dev
+     env_file:
+       - path: ./.env.docker
+         required: false
+     environment:
+       - XDEBUG_CONFIG="mode=off"
+     volumes:
+       - .:/var/www/html
+     depends_on:
+       database_testing:
+         condition: service_healthy
+       composer:
+         condition: service_completed_successfully
+     networks:
+       - creshu-network      
+     command: php artisan migrate:refresh --seed --seeder="Database\\Seeders\\DatabaseSeeder" --env=testing
   mailpit:
     image: axllent/mailpit:latest
     ports:
@@ -138,5 +140,6 @@ services:
   
 volumes:
   db-data:
+  db-testing-data:
 networks:
   creshu-network:
