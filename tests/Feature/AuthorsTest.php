@@ -125,8 +125,16 @@ it('searches authors using full-text search', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    Author::factory()->create(['name' => 'John Doe']);
-    Author::factory()->create(['name' => 'Jane Smith']);
+    Author::factory()->create([
+        'name' => 'John Doe',
+        'user_id' => $user->id,
+        'is_private' => false,
+    ]);
+    Author::factory()->create([
+        'name' => 'Jane Smith',
+        'user_id' => $user->id,
+        'is_private' => false,
+    ]);
 
     // Search for "John"
     Livewire::test(\App\Livewire\Pages\Editor\Authors::class)

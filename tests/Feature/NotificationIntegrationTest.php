@@ -14,12 +14,17 @@ beforeEach(function () {
     if (! \Spatie\Permission\Models\Role::where('name', 'admin')->exists()) {
         \Spatie\Permission\Models\Role::create(['name' => 'admin', 'guard_name' => 'web']);
     }
+
+    // Ensure admin user exists with correct email
+    $this->admin = User::firstOrCreate(
+        ['email' => config('admin.email')],
+        User::factory()->raw(['email' => config('admin.email')])
+    );
+    $this->admin->assignRole('admin');
 });
 
 test('notification bell updates after error report', function () {
     $music = Music::factory()->create();
-    $admin = User::factory()->create();
-    $admin->assignRole('admin');
 
     $bell = Livewire::test(\App\Livewire\Components\NotificationBell::class);
     $bell->assertSet('unreadCount', 0);
@@ -38,15 +43,13 @@ test('notification bell updates after error report', function () {
 
 test('notifications page shows reported error', function () {
     $music = Music::factory()->create();
-    $admin = User::factory()->create();
-    $admin->assignRole('admin');
 
     $service = new NotificationService;
     $notification = $service->createErrorReport($this->user, $music, 'Test error');
 
     // Attach notification to admin (already done) and also to user if owner
     // Now visit notifications page as admin
-    $this->actingAs($admin);
+    $this->actingAs($this->admin);
     Livewire::test(\App\Livewire\Pages\Notifications::class)
         ->assertViewHas('notifications', function ($notifications) use ($notification) {
             return $notifications->contains('id', $notification->id);
@@ -55,13 +58,11 @@ test('notifications page shows reported error', function () {
 
 test('mark as read removes from unread count', function () {
     $music = Music::factory()->create();
-    $admin = User::factory()->create();
-    $admin->assignRole('admin');
 
     $service = new NotificationService;
     $notification = $service->createErrorReport($this->user, $music, 'Test');
 
-    $this->actingAs($admin);
+    $this->actingAs($this->admin);
     $bell = Livewire::test(\App\Livewire\Components\NotificationBell::class);
     $bell->assertSet('unreadCount', 1);
 
@@ -74,8 +75,6 @@ test('mark as read removes from unread count', function () {
 
 test('error report creates notification with correct recipients', function () {
     $music = Music::factory()->create(['user_id' => $this->user->id]);
-    $admin = User::factory()->create();
-    $admin->assignRole('admin');
 
     $service = new NotificationService;
     $notification = $service->createErrorReport($this->user, $music, 'This music has incorrect title');
@@ -89,18 +88,16 @@ test('error report creates notification with correct recipients', function () {
 
     // Recipients: owner (user) and admin
     expect($notification->recipients)->toHaveCount(2);
-    expect($notification->recipients->pluck('id')->toArray())->toContain($this->user->id, $admin->id);
+    expect($notification->recipients->pluck('id')->toArray())->toContain($this->user->id, $this->admin->id);
 });
 
 test('error report for resource without owner only notifies admin', function () {
     $music = Music::factory()->create(['user_id' => null]);
-    $admin = User::factory()->create();
-    $admin->assignRole('admin');
 
     $service = new NotificationService;
     $notification = $service->createErrorReport($this->user, $music, 'Test');
 
     // Only admin should be recipient
     expect($notification->recipients)->toHaveCount(1);
-    expect($notification->recipients->first()->id)->toBe($admin->id);
+    expect($notification->recipients->first()->id)->toBe($this->admin->id);
 });
