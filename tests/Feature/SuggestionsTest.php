@@ -25,7 +25,7 @@ test('suggestions page loads with criteria', function () {
     // Create a music plan with a slot and assignment
     $slot = MusicPlanSlot::factory()->create(['priority' => 1]);
     $music = Music::factory()->create();
-    $musicPlan = MusicPlan::factory()->create(['user_id' => $user->id, 'is_published' => true]);
+    $musicPlan = MusicPlan::factory()->create(['user_id' => $user->id, 'is_private' => false]);
     $musicPlan->celebrations()->attach($celebration);
     // Attach slot and get the pivot model
     $musicPlan->slots()->attach($slot, ['sequence' => 1]);
@@ -95,7 +95,7 @@ test('same music appears only once per slot in suggestions', function () {
     $music = Music::factory()->create();
 
     // Create two music plans that both have the same celebration
-    $musicPlan1 = MusicPlan::factory()->create(['user_id' => $user->id, 'is_published' => true]);
+    $musicPlan1 = MusicPlan::factory()->create(['user_id' => $user->id, 'is_private' => false]);
     $musicPlan1->celebrations()->attach($celebration);
     $pivot1 = $musicPlan1->slots()->attach($slot, ['sequence' => 1]);
     $pivotModel1 = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $musicPlan1->id)
@@ -110,7 +110,7 @@ test('same music appears only once per slot in suggestions', function () {
         'music_sequence' => 1,
     ]);
 
-    $musicPlan2 = MusicPlan::factory()->create(['user_id' => $user->id, 'is_published' => true]);
+    $musicPlan2 = MusicPlan::factory()->create(['user_id' => $user->id, 'is_private' => false]);
     $musicPlan2->celebrations()->attach($celebration);
     $pivot2 = $musicPlan2->slots()->attach($slot, ['sequence' => 1]);
     $pivotModel2 = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $musicPlan2->id)

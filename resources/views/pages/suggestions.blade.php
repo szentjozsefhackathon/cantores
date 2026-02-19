@@ -495,8 +495,8 @@ new #[Layout('layouts::app.main')] class extends Component
                                         <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">
                                             {{ $plan->celebrationName ?? 'Ismeretlen ünnep' }}
                                         </flux:heading>
-                                        <flux:badge color="{{ $plan->is_published ? 'green' : 'zinc' }}" size="sm">
-                                            {{ $plan->is_published ? 'Közzétéve' : 'Privát' }}
+                                        <flux:badge color="{{ !$plan->is_private ? 'green' : 'zinc' }}" size="sm">
+                                            {{ !$plan->is_private ? 'Közzétéve' : 'Privát' }}
                                         </flux:badge>
                                     </div>
 

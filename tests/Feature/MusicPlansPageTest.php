@@ -12,9 +12,9 @@ test('music-plans page loads for guests', function () {
 
 test('music-plans page shows published plans', function () {
     $celebration = Celebration::factory()->create(['name' => 'Test Celebration']);
-    $publishedPlan = MusicPlan::factory()->create(['is_published' => true]);
+    $publishedPlan = MusicPlan::factory()->create(['is_private' => false]);
     $publishedPlan->celebrations()->attach($celebration);
-    $unpublishedPlan = MusicPlan::factory()->create(['is_published' => false]);
+    $unpublishedPlan = MusicPlan::factory()->create(['is_private' => true]);
 
     $response = $this->get('/music-plans');
 
@@ -25,7 +25,7 @@ test('music-plans page shows published plans', function () {
 
 test('music-plans page includes plans attached to custom celebrations', function () {
     $celebration = Celebration::factory()->create(['is_custom' => true]);
-    $plan = MusicPlan::factory()->create(['is_published' => true]);
+    $plan = MusicPlan::factory()->create(['is_private' => false]);
     $plan->celebrations()->attach($celebration);
 
     $response = $this->get('/music-plans');
@@ -38,9 +38,9 @@ test('music-plans page search filters by celebration name', function () {
     $celebration1 = Celebration::factory()->create(['name' => 'Easter Sunday']);
     $celebration2 = Celebration::factory()->create(['name' => 'Christmas Day']);
 
-    $plan1 = MusicPlan::factory()->create(['is_published' => true]);
+    $plan1 = MusicPlan::factory()->create(['is_private' => false]);
     $plan1->celebrations()->attach($celebration1);
-    $plan2 = MusicPlan::factory()->create(['is_published' => true]);
+    $plan2 = MusicPlan::factory()->create(['is_private' => false]);
     $plan2->celebrations()->attach($celebration2);
 
     $response = $this->get('/music-plans?search=Easter');
@@ -56,7 +56,7 @@ test('music-plans page paginates results', function () {
 
     // Create 15 published plans
     MusicPlan::factory()->count(15)->create([
-        'is_published' => true,
+        'is_private' => false,
         'genre_id' => $genre->id,
     ]);
 
@@ -65,7 +65,7 @@ test('music-plans page paginates results', function () {
     $response->assertOk();
 
     // Get the total count that should be shown in the badge
-    $totalPublished = \App\Models\MusicPlan::where('is_published', true)->count();
+    $totalPublished = \App\Models\MusicPlan::where('is_private', false)->count();
 
     // Badge shows total published count (includes plans from other tests)
     $response->assertSee($totalPublished.' énekrend');

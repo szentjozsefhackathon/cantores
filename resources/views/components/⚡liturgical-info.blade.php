@@ -100,7 +100,7 @@ new class extends Component
         $musicPlan = MusicPlan::create([
             'user_id' => $user->id,
             'genre_id' => GenreContext::getId(),
-            'is_published' => false,
+            'is_private' => true,
         ]);
 
         // Attach celebration
@@ -173,7 +173,7 @@ new class extends Component
 
         // Get published music plans
         $query = $celebration->musicPlans()
-            ->where('is_published', true)
+            ->where('is_private', false)
             ->with(['user', 'genre', 'celebrations']);
 
         // Exclude the authenticated user's own plans (if logged in)
@@ -241,11 +241,11 @@ new class extends Component
         // Include published plans OR user's own plans (if logged in)
         if ($user) {
             $query->where(function ($q) use ($user) {
-                $q->where('is_published', true)
+                $q->where('is_private', false)
                     ->orWhere('user_id', $user->id);
             });
         } else {
-            $query->where('is_published', true);
+            $query->where('is_private', false);
         }
 
         return $query->exists();
@@ -507,7 +507,7 @@ new class extends Component
                                     <div>
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
                                             {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
-                                            @if($plan->is_published)
+                                            @if(!$plan->is_private)
                                             <flux:icon name="eye" class="inline" />
                                             @else
                                             <flux:icon name="eye-slash" class="inline" />

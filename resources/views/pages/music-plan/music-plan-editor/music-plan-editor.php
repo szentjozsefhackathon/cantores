@@ -89,7 +89,7 @@ new class extends Component
         }
 
         // Sync published state
-        $this->isPublished = $this->musicPlan->is_published;
+        $this->isPublished = ! $this->musicPlan->is_private;
 
         // Load data for both new and existing plans
         $this->loadAvailableTemplates();
@@ -399,7 +399,7 @@ new class extends Component
     public function updatedIsPublished(): void
     {
         $this->authorize('update', $this->musicPlan);
-        $this->musicPlan->is_published = $this->isPublished;
+        $this->musicPlan->is_private = ! $this->isPublished;
         $this->musicPlan->save();
     }
 

@@ -39,7 +39,7 @@ new #[Layout('layouts::app.main')] class extends Component
     protected function getMusicPlansQuery()
     {
         $query = MusicPlan::query()
-            ->where('is_published', true)
+            ->where('is_private', false)
             ->orderBy('created_at', 'desc');
 
         // Filter by current genre if set

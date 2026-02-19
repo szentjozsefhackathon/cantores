@@ -30,7 +30,7 @@ new #[Layout('layouts::app.main')] class extends Component
         $this->musicPlan = $musicPlan;
 
         // Sync published state
-        $this->isPublished = $this->musicPlan->is_published;
+        $this->isPublished = !$this->musicPlan->is_private;
 
         // Load plan slots
         $this->loadPlanSlots();
