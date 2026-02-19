@@ -55,10 +55,7 @@
             <!-- Celebrations grouped view -->
             @if($celebrations->isEmpty())
                 <flux:callout variant="secondary" icon="musical-note" class="border-dashed">
-                    <flux:callout.heading>Még nincsenek énekrendjeid</flux:callout.heading>
-                    <flux:callout.text>
-                        Hozz létre első énekrended a liturgikus naptárból vagy az "Új énekrend" gombbal.
-                    </flux:callout.text>
+                    <flux:callout.heading>Nincs a keresésnek megfelelő énekrend</flux:callout.heading>
                     <x-slot name="actions">
                         <flux:button href="{{ route('dashboard') }}" variant="outline" size="sm">
                             Liturgikus naptár

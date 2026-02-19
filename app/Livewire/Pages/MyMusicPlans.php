@@ -53,11 +53,12 @@ class MyMusicPlans extends Component
             });
         }
 
-        if ($this->search) {
-            $query->where(function ($q) {
-                $q->where('name', 'ilike', "%{$this->search}%")
-                    ->orWhere('season_text', 'ilike', "%{$this->search}%")
-                    ->orWhere('year_letter', 'ilike', "%{$this->search}%");
+        $searchTerm = trim($this->search);
+        if ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'ilike', "%{$searchTerm}%")
+                    ->orWhere('season_text', 'ilike', "%{$searchTerm}%")
+                    ->orWhere('year_letter', 'ilike', "%{$searchTerm}%");
             });
         }
 
