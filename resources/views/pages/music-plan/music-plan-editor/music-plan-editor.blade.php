@@ -2,7 +2,7 @@
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <flux:card class="p-5">
             <div class="flex items-center gap-4 mb-4">
-                <x-music-plan-setting-icon :genre="$musicPlan->genre" />
+                <livewire:music-plan-setting-icon :genreId="$genreId" :wire:key="'setting-icon-'.$genreId" />
                 <flux:heading size="xl">Énekrend szerkesztése</flux:heading>
             </div>
 
@@ -15,7 +15,7 @@
                 </div>
 
                 <!-- Combined info grid -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Ünnep neve</flux:heading>
                         @if($musicPlan->hasCustomCelebrations() && $isEditingCelebration)
@@ -56,6 +56,7 @@
                         </flux:text>
                         @endif
                     </div>
+                    <livewire:music-plan-editor.genre-select :music-plan="$musicPlan" wire:model.live="genreId"/>
                     @if(!$musicPlan->hasCustomCelebrations())
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
@@ -220,8 +221,9 @@
                                     </div>
                                 </div>
                             </div>
-
+                            
                             <!-- All Slots Modal -->
+                            @if($showAllSlotsModal)
                             <flux:modal wire:model="showAllSlotsModal" size="lg">
                                 <flux:heading size="lg">Összes elérhető elem</flux:heading>
 
@@ -272,7 +274,9 @@
                                     </flux:button>
                                 </div>
                             </flux:modal>
+                            @endif
 
+                            @if($showCreateSlotModal)
                             <!-- Create Custom Slot Modal -->
                             <flux:modal wire:model="showCreateSlotModal" size="md">
                                 <flux:heading size="lg">Új egyedi elem</flux:heading>
@@ -312,7 +316,9 @@
                                     </flux:button>
                                 </div>
                             </flux:modal>
+                            @endif
 
+                            @if($showMusicSearchModal)
                             <!-- Music Search Modal -->
                             <flux:modal wire:model="showMusicSearchModal" class="max-w-4xl">
                                 <livewire:music-search selectable="true" />
@@ -324,6 +330,7 @@
                                     </flux:button>
                                 </div>
                             </flux:modal>
+                            @endif
 
                             @forelse($planSlots as $slot)
                             <flux:card wire:key="slot-{{ $slot['pivot_id'] }}" class="p-2 flex items-start gap-4 {{ count($slot['assignments']) > 0 ? 'border-4' : '' }}">
@@ -603,9 +610,10 @@
                         Énekrend törlése
                     </flux:button>
                 </div>
-
+                
                 <!-- Celebration selector modal -->
-                <flux:modal wire:model="showCelebrationSelector" title="Liturgikus ünnep kiválasztása" class="md:w-2xl">
+                @if ($showCelebrationSelector)                 
+                <flux:modal wire:model.self="showCelebrationSelector" title="Liturgikus ünnep kiválasztása" class="md:w-2xl">
                     <div class="flex flex-col gap-4">
                     <livewire:liturgical-info selectable />
 
@@ -616,8 +624,9 @@
                             Mégse
                         </flux:button>
                     </div>
-            </div>
-            </flux:modal>
+                    </div>
+                </flux:modal>
+                @endif
     </div>
     </flux:card>
 </div>

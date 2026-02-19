@@ -82,7 +82,7 @@ new #[Layout('layouts::app.main')] class extends Component
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <flux:card class="p-5">
             <div class="flex items-center gap-4 mb-4">
-                <x-music-plan-setting-icon :genre="$musicPlan->genre" />
+                <livewire:music-plan-setting-icon :genreId="$musicPlan->genre_id" />
                 <flux:heading size="xl">Énekrend</flux:heading>
                 <x-user-badge :user="$musicPlan->user" />
                 @if($musicPlan->actual_date)

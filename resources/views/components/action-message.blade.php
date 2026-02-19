@@ -20,7 +20,7 @@
             clearTimeout(timeout);
             message = event.message || '{{ $slot->isEmpty() ? __('Hiba.') : $slot }}';
             shown = true;
-            timeout = setTimeout(() => { shown = false; console.log(event); }, 3000);
+            timeout = setTimeout(() => { shown = false; }, 3000);
         })
     "
     x-show="shown"

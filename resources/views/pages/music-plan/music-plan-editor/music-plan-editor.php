@@ -23,6 +23,8 @@ new class extends Component
     public array $searchResults = [];
 
     public ?int $selectedSlotId = null;
+    
+    public ?int $genreId = null;
 
     public bool $showAllSlotsModal = false;
 
@@ -116,6 +118,8 @@ new class extends Component
 
         // Sync published state
         $this->isPublished = ! $this->musicPlan->is_private;
+
+        $this->genreId = $this->musicPlan->genre_id;
 
         // Load data for both new and existing plans
         $this->loadAvailableTemplates();
@@ -825,7 +829,6 @@ new class extends Component
 
         $this->dispatch('slots-updated', message: 'Liturgikus ünnep csatolva.');
 
-        
     }
 
     #[On('celebration-selected')]
@@ -862,4 +865,5 @@ new class extends Component
         // Auto-save disabled - saving only via explicit button click
         // No action needed
     }
+
 };
