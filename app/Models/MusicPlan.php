@@ -270,7 +270,7 @@ class MusicPlan extends Model
     /**
      * Create a custom celebration for this music plan.
      */
-    public function createCustomCelebration(string $name, ?\Illuminate\Support\Carbon $date = null): Celebration
+    public function createCustomCelebration(string $name, ?\DateTimeInterface $date = null): Celebration
     {
         $date = $date ?? now();
         $dateString = $date->format('Y-m-d');
