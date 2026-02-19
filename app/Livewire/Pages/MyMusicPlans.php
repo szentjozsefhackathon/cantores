@@ -38,7 +38,7 @@ class MyMusicPlans extends Component
                 $q->visibleTo(Auth::user())
                     ->where('user_id', Auth::id());
             })
-            ->orderBy('actual_date', 'asc')
+            ->orderBy('actual_date', 'desc')
             ->orderBy('celebration_key', 'asc');
 
         // Filter by current genre

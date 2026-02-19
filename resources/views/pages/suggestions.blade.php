@@ -292,26 +292,29 @@ new #[Layout('layouts::app.main')] class extends Component
 
         return $result;
     }
+
+    protected function sanitize($text): string
+    {
+        return strip_tags($text, '<b><br><sup><small><i><em><strong>');
+    }
 }
 ?>
 
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<div class="max-w-7xl mx-auto py-2 px-2 sm:px-6 lg:px-8">
     <!-- Page header -->
-    <div class="mb-10">
-        <flux:heading size="xl" class="text-gray-900 dark:text-gray-100">
-            {{ __('Énekrend javaslatok') }}
-        </flux:heading>
-        <flux:text class="text-gray-600 dark:text-gray-400 mt-2 max-w-3xl">
+    <div class="mb-2">
+        <flux:heading size="xl">{{ __('Énekrend javaslatok') }}</flux:heading>
+        <flux:text>
             Kapcsolódó ünnepek alapján generált énekjavaslatok szekciók szerint. A javaslatok relevanciája a kapcsolódás erősségétől függ.
         </flux:text>
     </div>
 
     <!-- Celebration details section -->
     @if ($celebrationDetails)
-        <div class="mb-10">
-            <flux:card class="p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">
+        <div class="mb-4">
+            <flux:card class="p-4 pb-0">
+                <div class="flex items-center gap-2 mb-2">
+                    <flux:heading size="lg">
                         {{ $celebrationDetails['name'] ?? $celebrationDetails['title'] ?? 'Ünnep adatai' }}
                     </flux:heading>
                     <flux:badge color="blue" size="lg">
@@ -321,19 +324,18 @@ new #[Layout('layouts::app.main')] class extends Component
 
                 <!-- Display parts as tabs -->
                 @if (isset($celebrationDetails['parts']) && is_array($celebrationDetails['parts']))
-                    <x-mary-tabs wire:model="activePartTab" class="mb-6">
+                    <x-mary-tabs wire:model="activePartTab">
                         @foreach ($celebrationDetails['parts'] as $partIndex => $part)
                             <x-mary-tab name="part-{{ $partIndex }}" label="{{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}">
-                                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                        @foreach ($part as $key => $value)
-                                            @if (!is_array($value) && $key !== 'short_title')
-                                                <div class="flex flex-col">
-                                                    <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ $key }}</span>
-                                                    <span class="text-gray-900 dark:text-gray-100 mt-1">{{ $value }}</span>
-                                                </div>
-                                            @endif
-                                        @endforeach
+                                <div class="rounded-2xl border border-zinc-200 bg-amber-50/80 dark:bg-zinc-900 p-4 dark:border-zinc-800 p-2 font-serif shadow-lg">
+                                    <div class="grid grid-cols-1 gap-2 text-sm ">
+                                        <div>
+                                            <flux:heading class="inline" >{{ $part['ref'] ?? '' }}</flux:heading>
+                                            <flux:text class="inline">{!! $this->sanitize($part['teaser'] ?? '') !!}</flux:text>
+                                        </div>
+                                        <div>{{ $part['title'] ?? '' }}</div>
+                                        <div>{!! $this->sanitize($part['text'] ?? '') !!}</div>
+                                        <div>{{ $part['ending'] ?? '' }}</div>
                                     </div>
                                 </div>
                             </x-mary-tab>

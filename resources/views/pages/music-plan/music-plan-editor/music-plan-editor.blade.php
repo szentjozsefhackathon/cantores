@@ -94,6 +94,29 @@
                     @endif
                 </div>
 
+                <!-- Celebration assignment switching -->
+                <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">Ünnep hozzárendelés módosítása</flux:heading>
+                    <div class="flex flex-wrap gap-2">
+                        @if($musicPlan->hasCustomCelebrations())
+                            <flux:button
+                                wire:click="switchToLiturgicalCelebration"
+                                icon="calendar"
+                                variant="outline"
+                                size="sm">
+                                Liturgikus ünnepre váltás
+                            </flux:button>
+                        @else
+                            <flux:button
+                                wire:click="switchToCustomCelebration"
+                                icon="pencil"
+                                variant="outline"
+                                size="sm">
+                                Egyedi ünnepre váltás
+                            </flux:button>
+                        @endif
+                    </div>
+                </div>
 
                 <!-- Status -->
                 <div class="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
@@ -474,6 +497,21 @@
                         Énekrend törlése
                     </flux:button>
                 </div>
+
+                <!-- Celebration selector modal -->
+                <flux:modal wire:model="showCelebrationSelector" title="Liturgikus ünnep kiválasztása" size="lg">
+                    <livewire:liturgical-info selectable />
+
+                    <x-slot name="footer">
+                        <div class="flex justify-end gap-2">
+                            <flux:button
+                                wire:click="cancelCelebrationSelection"
+                                variant="outline">
+                                Mégse
+                            </flux:button>
+                        </div>
+                    </x-slot>
+                </flux:modal>
             </div>
         </flux:card>
     </div>

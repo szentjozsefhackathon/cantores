@@ -22,8 +22,11 @@ new class extends Component
 
     public ?string $error = null;
 
-    public function mount(): void
+    public bool $selectable = false;
+
+    public function mount(bool $selectable = false): void
     {
+        $this->selectable = $selectable;
         $this->date = Carbon::now()->format('Y-m-d');
         $this->fetchLiturgicalInfo();
     }
@@ -108,6 +111,36 @@ new class extends Component
 
         // Redirect to MusicPlanEditor page with the created plan
         $this->redirectRoute('music-plan-editor', ['musicPlan' => $musicPlan->id]);
+    }
+
+    public function selectCelebration(int $celebrationIndex): void
+    {
+        if (! isset($this->celebrations[$celebrationIndex])) {
+            return;
+        }
+
+        $celebrationData = $this->celebrations[$celebrationIndex];
+
+        // Update or create Celebration (ensure data matches liturgical info)
+        $celebration = Celebration::updateOrCreate(
+            [
+                'actual_date' => $celebrationData['dateISO'] ?? $this->date,
+                'celebration_key' => $celebrationData['celebrationKey'] ?? 0,
+            ],
+            [
+                'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? 'Unknown',
+                'season' => (int) ($celebrationData['season'] ?? 0),
+                'season_text' => $celebrationData['seasonText'] ?? null,
+                'week' => (int) ($celebrationData['week'] ?? 0),
+                'day' => (int) ($celebrationData['dayofWeek'] ?? 0),
+                'readings_code' => $celebrationData['readingsId'] ?? null,
+                'year_letter' => $celebrationData['yearLetter'] ?? null,
+                'year_parity' => $celebrationData['yearParity'] ?? null,
+            ]
+        );
+
+        // Emit event with celebration ID for parent component to handle
+        $this->dispatch('celebration-selected', celebrationId: $celebration->id);
     }
 
     public function getExistingMusicPlans(array $celebrationData): \Illuminate\Database\Eloquent\Collection
@@ -553,6 +586,16 @@ new class extends Component
                     @endif
 
                     <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
+                    @if($selectable)
+                        <flux:button
+                            wire:click="selectCelebration({{ $loop->index }})"
+                            variant="primary"
+                            size="sm"
+                            icon="check-circle"
+                            class="w-full">
+                            Ünnep kiválasztása
+                        </flux:button>
+                    @endif
                     @auth
                         <flux:button
                             wire:click="createMusicPlan({{ $loop->index }})"
@@ -568,7 +611,7 @@ new class extends Component
                         @endphp
                         @if($hasSuggestions)
                         <flux:button
-                            wire:click="openSuggestions({{ $loop->index }})"                            
+                            wire:click="openSuggestions({{ $loop->index }})"
                             size="sm"
                             icon="light-bulb"
                             class="w-full">

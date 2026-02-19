@@ -46,6 +46,14 @@ new class extends Component
 
     public bool $isEditingCelebration = false;
 
+    public bool $showCelebrationSelector = false;
+
+    public array $availableCelebrations = [];
+
+    public ?int $selectedCelebrationId = null;
+
+    public string $celebrationSearch = '';
+
     /** An array of flags by [assignmentId] */
     public array $flags = [];
 
@@ -620,6 +628,99 @@ new class extends Component
 
         $this->isEditingCelebration = false;
         $this->dispatch('slots-updated', message: 'Ünnep adatai frissítve.');
+    }
+
+    public function switchToCustomCelebration(): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        // Detach all existing celebrations
+        $this->musicPlan->celebrations()->detach();
+
+        // Create a new custom celebration
+        $celebration = $this->musicPlan->createCustomCelebration(
+            'Egyedi ünnep',
+            now()
+        );
+
+        // Update component state
+        $this->celebrationName = $celebration->name;
+        $this->celebrationDate = $celebration->actual_date->format('Y-m-d');
+        $this->isEditingCelebration = true;
+
+        $this->dispatch('slots-updated', message: 'Átváltva egyedi ünnepre.');
+    }
+
+    public function switchToLiturgicalCelebration(): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        // Show celebration selector
+        $this->showCelebrationSelector = true;
+        $this->loadAvailableCelebrations();
+    }
+
+    public function loadAvailableCelebrations(): void
+    {
+        $this->availableCelebrations = \App\Models\Celebration::query()
+            ->where('is_custom', false)
+            ->when($this->celebrationSearch, function ($query, $search) {
+                $query->where('name', 'ilike', "%{$search}%");
+            })
+            ->orderBy('actual_date', 'desc')
+            ->orderBy('name')
+            ->limit(50)
+            ->get()
+            ->map(function ($celebration) {
+                return [
+                    'id' => $celebration->id,
+                    'name' => $celebration->name,
+                    'date' => $celebration->actual_date->format('Y. F j.'),
+                    'season_text' => $celebration->season_text,
+                    'year_letter' => $celebration->year_letter,
+                    'year_parity' => $celebration->year_parity,
+                ];
+            })
+            ->toArray();
+    }
+
+    public function attachLiturgicalCelebration(int $celebrationId): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $celebration = \App\Models\Celebration::findOrFail($celebrationId);
+
+        // Detach all existing celebrations
+        $this->musicPlan->celebrations()->detach();
+
+        // Attach the selected liturgical celebration
+        $this->musicPlan->celebrations()->attach($celebration);
+
+        // Reset component state
+        $this->showCelebrationSelector = false;
+        $this->celebrationName = null;
+        $this->celebrationDate = null;
+        $this->isEditingCelebration = false;
+
+        $this->dispatch('slots-updated', message: 'Liturgikus ünnep csatolva.');
+    }
+
+    #[On('celebration-selected')]
+    public function onCelebrationSelected(int $celebrationId): void
+    {
+        $this->attachLiturgicalCelebration($celebrationId);
+    }
+
+    public function cancelCelebrationSelection(): void
+    {
+        $this->showCelebrationSelector = false;
+        $this->selectedCelebrationId = null;
+        $this->celebrationSearch = '';
+    }
+
+    public function updatedCelebrationSearch(): void
+    {
+        $this->loadAvailableCelebrations();
     }
 
     public function updatedFlags($value, $key)
