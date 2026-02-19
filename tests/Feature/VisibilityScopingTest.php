@@ -46,26 +46,26 @@ it('private model is not visible to other authenticated users', function () {
     expect($visible->pluck('id'))->not->toContain($privateAuthor->id);
 });
 
-it('MusicPlan with is_published field works correctly', function () {
+it('MusicPlan with is_private field works correctly', function () {
     $owner = User::factory()->create();
-    $publishedPlan = MusicPlan::factory()->create(['is_published' => true, 'user_id' => $owner->id]);
-    $unpublishedPlan = MusicPlan::factory()->create(['is_published' => false, 'user_id' => $owner->id]);
+    $publicPlan = MusicPlan::factory()->create(['is_private' => false, 'user_id' => $owner->id]);
+    $privatePlan = MusicPlan::factory()->create(['is_private' => true, 'user_id' => $owner->id]);
 
-    // Guest can see published plan
+    // Guest can see public plan
     $visibleToGuest = MusicPlan::visibleTo(null)->get();
-    expect($visibleToGuest->pluck('id'))->toContain($publishedPlan->id);
-    expect($visibleToGuest->pluck('id'))->not->toContain($unpublishedPlan->id);
+    expect($visibleToGuest->pluck('id'))->toContain($publicPlan->id);
+    expect($visibleToGuest->pluck('id'))->not->toContain($privatePlan->id);
 
     // Owner can see both (because owner can see private)
     $visibleToOwner = MusicPlan::visibleTo($owner)->get();
-    expect($visibleToOwner->pluck('id'))->toContain($publishedPlan->id);
-    expect($visibleToOwner->pluck('id'))->toContain($unpublishedPlan->id);
+    expect($visibleToOwner->pluck('id'))->toContain($publicPlan->id);
+    expect($visibleToOwner->pluck('id'))->toContain($privatePlan->id);
 
-    // Other user can see only published
+    // Other user can only see public
     $otherUser = User::factory()->create();
     $visibleToOther = MusicPlan::visibleTo($otherUser)->get();
-    expect($visibleToOther->pluck('id'))->toContain($publishedPlan->id);
-    expect($visibleToOther->pluck('id'))->not->toContain($unpublishedPlan->id);
+    expect($visibleToOther->pluck('id'))->toContain($publicPlan->id);
+    expect($visibleToOther->pluck('id'))->not->toContain($privatePlan->id);
 });
 
 it('cascading visibility: public Music with private Author excludes Author for non-owner', function () {

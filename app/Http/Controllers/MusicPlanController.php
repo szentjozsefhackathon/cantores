@@ -16,7 +16,7 @@ class MusicPlanController extends Controller
     {
         $musicPlan = MusicPlan::create([
             'user_id' => Auth::id(),
-            'is_published' => false,
+            'is_private' => true,
             'genre_id' => GenreContext::getId(),
         ]);
 

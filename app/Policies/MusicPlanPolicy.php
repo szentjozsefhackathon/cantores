@@ -21,13 +21,13 @@ class MusicPlanPolicy
      */
     public function view(?User $user, MusicPlan $musicPlan): bool
     {
-        // Published music plans can be viewed by anyone
-        if ($musicPlan->is_published) {
-            return true;
+        // Private music plans can only be viewed by the owner
+        if ($musicPlan->is_private) {
+            return $user && $user->id === $musicPlan->user_id;
         }
 
-        // Non-published plans can only be viewed by the owner
-        return $user && $user->id === $musicPlan->user_id;
+        // Public plans can be viewed by anyone
+        return true;
     }
 
     /**

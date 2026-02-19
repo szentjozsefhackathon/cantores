@@ -22,7 +22,7 @@ class MusicPlan extends Model
     protected $fillable = [
         'user_id',
         'genre_id',
-        'is_published',
+        'is_private',
     ];
 
     /**
@@ -33,18 +33,8 @@ class MusicPlan extends Model
     protected function casts(): array
     {
         return [
-            'is_published' => 'boolean',
+            'is_private' => 'boolean',
         ];
-    }
-
-    public function getVisibilityField(): string
-    {
-        return 'is_published';
-    }
-
-    public function getVisibilityPublicValue(): bool
-    {
-        return true;
     }
 
     /**

@@ -19,7 +19,7 @@ class MusicPlanFactory extends Factory
         return [
             'user_id' => \App\Models\User::factory(),
             'genre_id' => \App\Models\Genre::first()->id,
-            'is_published' => fake()->boolean(),
+            'is_private' => fake()->boolean(),
         ];
     }
 }
