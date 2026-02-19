@@ -50,6 +50,16 @@ class AuthorPolicy
     }
 
     /**
+     * Determine whether the user can change the privacy setting of the model.
+     */
+    public function changePrivacy(User $user, Author $author): bool
+    {
+        // Only the owner or admin can change the privacy setting of authors
+        return $user !== null && ($user->is_admin || $author->user_id === $user->id);
+    }
+
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Author $author): bool

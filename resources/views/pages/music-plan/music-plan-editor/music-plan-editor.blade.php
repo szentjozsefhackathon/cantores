@@ -406,6 +406,7 @@
                                                 @endif
                                                 <div class="flex flex-col gap-2">
                                                     <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" wire:loading />
+                                                    <div class="text-sm">
                                                     <x-mary-choices
                                                         placeholder="Címkék"
                                                         wire:model.live="flags.{{ $assignment['id'] }}"
@@ -426,6 +427,7 @@
                                                         <flux:text size="sm" class="inline {{ 'text-'.$option['color'].'-500'}}">{{ $option['name'] }}</flux:text>
                                                         @endscope
                                                     </x-mary-choices>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

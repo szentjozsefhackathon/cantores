@@ -152,7 +152,7 @@
                 />
                 <flux:error name="name" />
             </flux:field>
-
+            
             <flux:field>
                 <flux:checkbox
                     wire:model="isPrivate"
@@ -302,6 +302,7 @@
                 <flux:error name="name" />
             </flux:field>
 
+            @can('changePrivacy', $editingAuthor)
             <flux:field>
                 <flux:checkbox
                     wire:model="isPrivate"
@@ -309,6 +310,7 @@
                 />
                 <flux:description>{{ __('Private authors are only visible to you and cannot be seen by other users.') }}</flux:description>
             </flux:field>
+            @endcan
 
         </div>
 

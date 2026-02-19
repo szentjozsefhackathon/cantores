@@ -49,6 +49,30 @@ new class extends Component
     public ?int $editingPageNumber = null;
     public ?string $editingOrderNumber = null;
 
+    // Author multi-searchable
+
+    // Options list
+    public \Illuminate\Support\Collection $authorsSearchable;
+
+    public function searchAuthor(string $value = '')
+    {
+        // Besides the search results, you must include on demand selected option
+        $selectedOption = Author::where('id', $this->selectedAuthorId)->get();
+
+        // don't include already selected authors in the search results
+        $query = Author::visibleTo(Auth::user())
+            ->where('name', 'ilike', "%$value%")
+            ->whereNotIn('id', $this->music->authors->pluck('id'));
+
+        $this->authorsSearchable = $query
+            ->take(20)
+            ->get()
+            ->sortBy('name')
+            ->values()
+            ->merge($selectedOption);
+    }
+
+
     /**
      * Mount the component.
      */
@@ -61,6 +85,7 @@ new class extends Component
         $this->customId = $music->custom_id;
         $this->isPrivate = $music->is_private;
         $this->selectedGenres = $music->genres->pluck('id')->toArray();
+        $this->searchAuthor();
     }
 
     /**
@@ -224,13 +249,13 @@ new class extends Component
     public function editCollection(int $collectionId): void
     {
         $this->authorize('update', $this->music);
-        
+
         $collection = $this->music->collections()->where('collection_id', $collectionId)->first();
-        
+
         if (!$collection) {
             return;
         }
-        
+
         $this->editingCollectionId = $collectionId;
         $this->editingPageNumber = $collection->pivot->page_number;
         $this->editingOrderNumber = $collection->pivot->order_number;
@@ -255,7 +280,7 @@ new class extends Component
         ]);
 
         $this->music->load('collections');
-        
+
         $this->showEditModal = false;
         $this->editingCollectionId = null;
         $this->editingPageNumber = null;
@@ -306,8 +331,7 @@ new class extends Component
                 variant="ghost"
                 icon="arrow-left"
                 :href="route('musics')"
-                tag="a"
-            >
+                tag="a">
                 {{ __('Back to Music List') }}
             </flux:button>
         </div>
@@ -321,31 +345,27 @@ new class extends Component
             <div class="flex items-center justify-between gap-4 mb-6">
                 <div>
                     <flux:heading size="xl">{{ __('Edit Music Piece') }}</flux:heading>
-                    <flux:subheading>{{ $music->title }}</flux:subheading>
                 </div>
-                
+
                 <div class="flex items-center gap-2">
                     <flux:button
                         variant="ghost"
                         icon="history"
                         wire:click="showAuditLog"
-                        :title="__('View Audit Log')"
-                    />
-                    
+                        :title="__('View Audit Log')" />
+
                     <flux:button
                         variant="ghost"
                         icon="flag"
                         wire:click="dispatch('openErrorReportModal', {'resourceId': {{ $music->id }}, 'resourceType' : 'music'})"
-                        :title="__('Report Error')"
-                    />
-                    
+                        :title="__('Report Error')" />
+
                     <flux:button
                         variant="ghost"
                         icon="trash"
                         wire:click="delete"
                         wire:confirm="{{ __('Are you sure you want to delete this music piece? This can only be done if no collections or plan slots are assigned to it.') }}"
-                        :title="__('Delete')"
-                    />
+                        :title="__('Delete')" />
                 </div>
             </div>
 
@@ -356,58 +376,61 @@ new class extends Component
                         <flux:label>{{ __('Title') }}</flux:label>
                         <flux:input
                             wire:model="title"
-                            :placeholder="__('Enter music piece title')"
-                        />
+                            :placeholder="__('Enter music piece title')" />
                         <flux:error name="title" />
                     </flux:field>
 
-                <flux:field>
-                    <flux:label>{{ __('Subtitle') }}</flux:label>
-                    <flux:input
-                        wire:model="subtitle"
-                        :placeholder="__('Enter subtitle')"
-                    />
-                    <flux:error name="subtitle" />
-                </flux:field>
+                    <flux:field>
+                        <flux:label>{{ __('Subtitle') }}</flux:label>
+                        <flux:input
+                            wire:model="subtitle"
+                            :placeholder="__('Enter subtitle')" />
+                        <flux:error name="subtitle" />
+                    </flux:field>
 
                     <flux:field>
                         <flux:label>{{ __('Custom ID') }}</flux:label>
                         <flux:input
                             wire:model="customId"
-                            :placeholder="__('Enter custom ID')"
-                        />
+                            :placeholder="__('Enter custom ID')" />
                         <flux:error name="customId" />
                     </flux:field>
 
                 </div>
-
-                <!-- Privacy Toggle -->
-                <flux:field>
-                    <flux:label>{{ __('Privacy') }}</flux:label>
-                    <flux:description>{{ __('Private music pieces are only visible to you. Public music pieces are visible to all users.') }}</flux:description>
-                    <flux:checkbox
-                        wire:model="isPrivate"
-                        :label="__('Make this music piece private')"
-                    />
-                    <flux:error name="isPrivate" />
-                </flux:field>
-
-                <!-- Genre Selection -->
-                <div class="space-y-2">
-                    <flux:checkbox.group variant="cards" label="{{ __('Select which genres this music piece belongs to.') }}">
-                        @foreach($this->genres() as $genre)
+                <div class="gap-4 flex">
+                    <!-- Genre Selection -->
+                    <div>
+                        <flux:field>
+                            <flux:label>{{ __('Genres') }}</flux:label>
+                            <flux:description>{{ __('Select one or more genres that apply to this music piece.') }}</flux:description>
+                            <div class="space-y-2">
+                                <flux:checkbox.group variant="cards">
+                                    @foreach($this->genres() as $genre)
+                                    <flux:checkbox
+                                        variant="cards"
+                                        wire:model="selectedGenres"
+                                        value="{{ $genre->id }}"
+                                        :label="$genre->label()"
+                                        :icon="$genre->icon()" />
+                                    @endforeach
+                                </flux:checkbox.group>
+                                <flux:error name="selectedGenres" />
+                            </div>
+                        </flux:field>
+                    </div>
+                    <!-- Privacy Toggle -->
+                    <div>
+                        <flux:field>
+                            <flux:label>{{ __('Privacy') }}</flux:label>
+                            <flux:description>{{ __('Private music pieces are only visible to you. Public music pieces are visible to all users.') }}</flux:description>
                             <flux:checkbox
-                                variant="cards"
-                                wire:model="selectedGenres"
-                                value="{{ $genre->id }}"
-                                :label="$genre->label()"
-                                :icon="$genre->icon()"
-                            />
-                        @endforeach
-                    </flux:checkbox.group>
-                    <flux:error name="selectedGenres" />
-                </div>
+                                wire:model="isPrivate"
+                                :label="__('Make this music piece private')" />
+                            <flux:error name="isPrivate" />
+                        </flux:field>
+                    </div>
 
+                </div>
                 <!-- Save Button -->
                 <div class="flex justify-end items-center gap-4">
                     <x-action-message on="music-updated">
@@ -416,8 +439,7 @@ new class extends Component
                     <flux:button
                         variant="primary"
                         wire:click="update"
-                        wire:loading.attr="disabled"
-                    >
+                        wire:loading.attr="disabled">
                         {{ __('Save Changes') }}
                     </flux:button>
                 </div>
@@ -430,61 +452,59 @@ new class extends Component
             <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage collections this music piece belongs to.') }}</flux:text>
 
             @if($music->collections->count())
-                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                            <tr>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Collection') }}</th>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Page Number') }}</th>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Order Number') }}</th>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                            @foreach($music->collections as $collection)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                                        {{ $collection->title }}
-                                        @if($collection->abbreviation)
-                                            <span class="text-gray-500 dark:text-gray-400">({{ $collection->abbreviation }})</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $collection->pivot->page_number ?? '-' }}
-                                    </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $collection->pivot->order_number ?? '-' }}
-                                    </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm">
-                                        <div class="flex items-center gap-2">
-                                            <flux:button
-                                                variant="ghost"
-                                                size="sm"
-                                                icon="pencil"
-                                                wire:click="editCollection({{ $collection->id }})"
-                                                :title="__('Edit')"
-                                            />
-                                            <flux:button
-                                                variant="ghost"
-                                                size="sm"
-                                                icon="trash"
-                                                wire:click="removeCollection({{ $collection->id }})"
-                                                wire:confirm="{{ __('Are you sure you want to remove this collection from the music piece?') }}"
-                                                :title="__('Remove')"
-                                            />
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Collection') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Page Number') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Order Number') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($music->collections as $collection)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {{ $collection->title }}
+                                @if($collection->abbreviation)
+                                <span class="text-gray-500 dark:text-gray-400">({{ $collection->abbreviation }})</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {{ $collection->pivot->page_number ?? '-' }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {{ $collection->pivot->order_number ?? '-' }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm">
+                                <div class="flex items-center gap-2">
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="pencil"
+                                        wire:click="editCollection({{ $collection->id }})"
+                                        :title="__('Edit')" />
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="trash"
+                                        wire:click="removeCollection({{ $collection->id }})"
+                                        wire:confirm="{{ __('Are you sure you want to remove this collection from the music piece?') }}"
+                                        :title="__('Remove')" />
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
             @else
-                <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
-                    <flux:icon name="folder-open" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
-                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No collections attached') }}</h3>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece is not attached to any collections yet.') }}</p>
-                </div>
+            <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
+                <flux:icon name="folder-open" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
+                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No collections attached') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece is not attached to any collections yet.') }}</p>
+            </div>
             @endif
 
             <!-- Collection removal message -->
@@ -503,29 +523,24 @@ new class extends Component
                 <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Assign this music piece to a new collection with page and order numbers.') }}</flux:text>
 
                 <div class="space-y-4">
-                    <flux:field required>
-                        <flux:label>{{ __('Collection') }}</flux:label>
-                        <flux:select
-                            wire:model="selectedCollectionId"
-                            searchable
-                            :placeholder="__('Type to search collections...')"
-                            clearable
-                        >
-                            <option value="">{{ __('Select a collection') }}</option>
-                            @foreach ($collections as $collection)
-                                <option value="{{ $collection->id }}">{{ $collection->title }}@if($collection->abbreviation) ({{ $collection->abbreviation }})@endif</option>
-                            @endforeach
-                        </flux:select>
-                        <flux:error name="selectedCollectionId" />
-                    </flux:field>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <flux:field>
+                    <div class="flex gap-4">
+                        <flux:field required class="flex-1">
+                            <flux:label>{{ __('Collection') }}</flux:label>
+                            <flux:select
+                                wire:model="selectedCollectionId">
+                              <option value="">{{ __('Select a collection') }}</option>
+                                @foreach ($collections as $collection)
+                                <flux:select.option value="{{ $collection->id }}">{{ $collection->title }}@if($collection->abbreviation) ({{ $collection->abbreviation }})@endif</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                            <flux:error name="selectedCollectionId" />
+                        </flux:field>
+                        <flux:field class="w-32">
                             <flux:label>{{ __('Page Number') }}</flux:label>
                             <flux:input type="number" wire:model="pageNumber" :placeholder="__('Page number')" min="1" />
                             <flux:error name="pageNumber" />
                         </flux:field>
-                        <flux:field>
+                        <flux:field class="w-32">
                             <flux:label>{{ __('Order Number') }}</flux:label>
                             <flux:input wire:model="orderNumber" :placeholder="__('Order number')" />
                             <flux:error name="orderNumber" />
@@ -536,8 +551,7 @@ new class extends Component
                         <flux:button
                             variant="primary"
                             wire:click="addCollection"
-                            wire:loading.attr="disabled"
-                        >
+                            wire:loading.attr="disabled">
                             {{ __('Add Collection') }}
                         </flux:button>
                         <x-action-message on="collection-added">
@@ -554,43 +568,42 @@ new class extends Component
             <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage authors of this music piece.') }}</flux:text>
 
             @if($music->authors->count())
-                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                            <tr>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Author') }}</th>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                            @foreach($music->authors as $author)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                                        {{ $author->name }}
-                                    </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm">
-                                        <div class="flex items-center gap-2">
-                                            <flux:button
-                                                variant="ghost"
-                                                size="sm"
-                                                icon="trash"
-                                                wire:click="removeAuthor({{ $author->id }})"
-                                                wire:confirm="{{ __('Are you sure you want to remove this author from the music piece?') }}"
-                                                :title="__('Remove')"
-                                            />
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Author') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($music->authors as $author)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {{ $author->name }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm">
+                                <div class="flex items-center gap-2">
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="trash"
+                                        wire:click="removeAuthor({{ $author->id }})"
+                                        wire:confirm="{{ __('Are you sure you want to remove this author from the music piece?') }}"
+                                        :title="__('Remove')" />
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
             @else
-                <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
-                    <flux:icon name="user" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
-                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No authors attached') }}</h3>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece has no authors assigned yet.') }}</p>
-                </div>
+            <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
+                <flux:icon name="user" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
+                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No authors attached') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece has no authors assigned yet.') }}</p>
+            </div>
             @endif
 
             <!-- Author removal message -->
@@ -604,43 +617,30 @@ new class extends Component
             </div>
 
             <!-- Add Author Form -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                <flux:heading size="sm">{{ __('Add Author') }}</flux:heading>
-                <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Assign an author to this music piece.') }}</flux:text>
-
-                <div class="space-y-4">
-                    <flux:field required>
-                        <flux:label>{{ __('Author') }}</flux:label>
-                        <flux:select
-                            wire:model="selectedAuthorId"
-                            searchable
-                            :placeholder="__('Type to search authors...')"
-                            clearable
-                        >
-                            <option value="">{{ __('Select an author') }}</option>
-                            @foreach ($authors as $author)
-                                <option value="{{ $author->id }}">{{ $author->name }}</option>
-                            @endforeach
-                        </flux:select>
-                        <flux:error name="selectedAuthorId" />
-                    </flux:field>
-
-                    <div class="flex justify-end items-center gap-4">
-                        <flux:button
-                            variant="primary"
-                            wire:click="addAuthor"
-                            wire:loading.attr="disabled"
-                        >
-                            {{ __('Add Author') }}
-                        </flux:button>
-                    </div>
+            <div class="flex items-end gap-4">
+                <div class="flex-1">
+                    <x-mary-choices
+                        label="Szerző kiválasztása"
+                        wire:model="selectedAuthorId"
+                        :options="$authorsSearchable"
+                        placeholder="Keresés..."
+                        search-function="searchAuthor"
+                        no-result-text="Nincs találat"
+                        single
+                        searchable />
                 </div>
+                <flux:button
+                    variant="primary"
+                    wire:click="addAuthor"
+                    wire:loading.attr="disabled">
+                    {{ __('Add Author') }}
+                </flux:button>
             </div>
         </flux:card>
     </div>
 
     <!-- Audit Log Modal -->
-     @if($showAuditModal)
+    @if($showAuditModal)
     <flux:modal wire:model="showAuditModal" max-width="4xl">
         <flux:heading size="lg">{{ __('Audit Log') }}</flux:heading>
         <flux:subheading>
@@ -649,99 +649,98 @@ new class extends Component
 
         <div class="mt-6">
             @if(count($audits))
-                <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-800">
-                            <tr>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Event') }}</th>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Changes') }}</th>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('When') }}</th>
-                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Who') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                            @foreach($audits as $audit)
-                                <tr>
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                                        @switch($audit->event)
-                                            @case('created')
-                                                <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
-                                                    {{ __('Created') }}
-                                                </span>
-                                                @break
-                                            @case('updated')
-                                                <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                                                    {{ __('Updated') }}
-                                                </span>
-                                                @break
-                                            @case('deleted')
-                                                <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-300">
-                                                    {{ __('Deleted') }}
-                                                </span>
-                                                @break
-                                            @default
-                                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-900 dark:text-gray-300">
-                                                    {{ $audit->event }}
-                                                </span>
-                                        @endswitch
-                                    </td>
-                                    <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                                        @if($audit->event === 'created')
-                                            {{ __('Music piece was created.') }}
-                                        @elseif($audit->event === 'deleted')
-                                            {{ __('Music piece was deleted.') }}
-                                        @else
-                                            @php
-                                                $oldValues = $audit->old_values ?? [];
-                                                $newValues = $audit->new_values ?? [];
-                                                $changes = [];
-                                                foreach ($newValues as $key => $value) {
-                                                    $old = $oldValues[$key] ?? null;
-                                                    if ($old != $value) {
-                                                        $changes[] = __($key) . ': "' . ($old ?? __('empty')) . '" → "' . ($value ?? __('empty')) . '"';
-                                                    }
-                                                }
-                                            @endphp
-                                            @if(count($changes))
-                                                <ul class="list-disc list-inside space-y-1">
-                                                    @foreach($changes as $change)
-                                                        <li class="text-xs">{{ $change }}</li>
-                                                    @endforeach
-                                                </ul>
-                                            @else
-                                                <span class="text-gray-400 dark:text-gray-500">{{ __('No field changes recorded') }}</span>
-                                            @endif
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $audit->created_at->translatedFormat('Y-m-d H:i:s') }}
-                                    </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                        @if($audit->user)
-                                            {{ $audit->user->display_name }}
-                                        @else
-                                            <span class="text-gray-400 dark:text-gray-500">{{ __('System') }}</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+            <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Event') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Changes') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('When') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Who') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($audits as $audit)
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                                @switch($audit->event)
+                                @case('created')
+                                <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
+                                    {{ __('Created') }}
+                                </span>
+                                @break
+                                @case('updated')
+                                <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                    {{ __('Updated') }}
+                                </span>
+                                @break
+                                @case('deleted')
+                                <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-300">
+                                    {{ __('Deleted') }}
+                                </span>
+                                @break
+                                @default
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+                                    {{ $audit->event }}
+                                </span>
+                                @endswitch
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                @if($audit->event === 'created')
+                                {{ __('Music piece was created.') }}
+                                @elseif($audit->event === 'deleted')
+                                {{ __('Music piece was deleted.') }}
+                                @else
+                                @php
+                                $oldValues = $audit->old_values ?? [];
+                                $newValues = $audit->new_values ?? [];
+                                $changes = [];
+                                foreach ($newValues as $key => $value) {
+                                $old = $oldValues[$key] ?? null;
+                                if ($old != $value) {
+                                $changes[] = __($key) . ': "' . ($old ?? __('empty')) . '" → "' . ($value ?? __('empty')) . '"';
+                                }
+                                }
+                                @endphp
+                                @if(count($changes))
+                                <ul class="list-disc list-inside space-y-1">
+                                    @foreach($changes as $change)
+                                    <li class="text-xs">{{ $change }}</li>
+                                    @endforeach
+                                </ul>
+                                @else
+                                <span class="text-gray-400 dark:text-gray-500">{{ __('No field changes recorded') }}</span>
+                                @endif
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {{ $audit->created_at->translatedFormat('Y-m-d H:i:s') }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                @if($audit->user)
+                                {{ $audit->user->display_name }}
+                                @else
+                                <span class="text-gray-400 dark:text-gray-500">{{ __('System') }}</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
             @else
-                <div class="text-center py-8">
-                    <flux:icon name="logs" class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No audit logs found') }}</h3>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('No changes have been recorded for this music piece yet.') }}</p>
-                </div>
+            <div class="text-center py-8">
+                <flux:icon name="logs" class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No audit logs found') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('No changes have been recorded for this music piece yet.') }}</p>
+            </div>
             @endif
         </div>
 
         <div class="mt-6 flex justify-end">
             <flux:button
                 variant="ghost"
-                wire:click="$set('showAuditModal', false)"
-            >
+                wire:click="$set('showAuditModal', false)">
                 {{ __('Close') }}
             </flux:button>
         </div>
@@ -763,8 +762,7 @@ new class extends Component
                     type="number"
                     wire:model="editingPageNumber"
                     :placeholder="__('Page number')"
-                    min="1"
-                />
+                    min="1" />
                 <flux:error name="editingPageNumber" />
             </flux:field>
 
@@ -772,8 +770,7 @@ new class extends Component
                 <flux:label>{{ __('Order Number') }}</flux:label>
                 <flux:input
                     wire:model="editingOrderNumber"
-                    :placeholder="__('Order number')"
-                />
+                    :placeholder="__('Order number')" />
                 <flux:error name="editingOrderNumber" />
             </flux:field>
         </div>
@@ -781,15 +778,13 @@ new class extends Component
         <div class="mt-6 flex justify-end gap-3">
             <flux:button
                 variant="ghost"
-                wire:click="$set('showEditModal', false)"
-            >
+                wire:click="$set('showEditModal', false)">
                 {{ __('Cancel') }}
             </flux:button>
             <flux:button
                 variant="primary"
                 wire:click="updateCollection"
-                wire:loading.attr="disabled"
-            >
+                wire:loading.attr="disabled">
                 {{ __('Save Changes') }}
             </flux:button>
         </div>
@@ -797,5 +792,5 @@ new class extends Component
     @endif
 
     <!-- Error Report Component -->
-    <livewire:error-report/>
+    <livewire:error-report />
 </div>
