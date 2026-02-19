@@ -1,4 +1,4 @@
-<x-pages::admin.layout :heading="__('Music Plan Slots')" :subheading="__('Manage global music plan slots that can be used across templates')">
+<x-pages::admin.layout :heading="__('Music Plan Slots')" :subheading="__('Manage global and custom music plan slots')">
     <div class="space-y-6">
         <!-- Action messages -->
         <div class="flex justify-end">
@@ -15,17 +15,27 @@
 
         <!-- Search and Actions -->
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <flux:field class="w-full sm:w-auto sm:flex-1">
-                <flux:input 
-                    type="search" 
-                    wire:model.live="search" 
-                    :placeholder="__('Search slots by name or description...')" 
-                />
-            </flux:field>
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-1">
+                <flux:field class="w-full sm:w-auto sm:max-w-xs">
+                    <flux:select wire:model.live="filterType">
+                        <option value="all">{{ __('All Slots') }}</option>
+                        <option value="global">{{ __('Global Slots') }}</option>
+                        <option value="custom">{{ __('Custom Slots') }}</option>
+                    </flux:select>
+                </flux:field>
+                
+                <flux:field class="w-full sm:w-auto sm:flex-1">
+                    <flux:input
+                        type="search"
+                        wire:model.live="search"
+                        :placeholder="__('Search slots by name or description...')"
+                    />
+                </flux:field>
+            </div>
             
-            <flux:button 
-                variant="primary" 
-                icon="plus" 
+            <flux:button
+                variant="primary"
+                icon="plus"
                 wire:click="showCreate"
             >
                 {{ __('Create Slot') }}
@@ -61,6 +71,17 @@
                 </flux:table.column>
                 <flux:table.column
                     sortable
+                    :sorted="$sortBy === 'is_custom'"
+                    :direction="$sortDirection"
+                    wire:click="sort('is_custom')"
+                >
+                    {{ __('Type') }}
+                </flux:table.column>
+                <flux:table.column>
+                    {{ __('Scope') }}
+                </flux:table.column>
+                <flux:table.column
+                    sortable
                     :sorted="$sortBy === 'templates_count'"
                     :direction="$sortDirection"
                     wire:click="sort('templates_count')"
@@ -92,6 +113,41 @@
                         </flux:table.cell>
                         
                         <flux:table.cell>
+                            @if ($musicPlanSlot->is_custom)
+                                <span class="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                    {{ __('Custom') }}
+                                </span>
+                            @else
+                                <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    {{ __('Global') }}
+                                </span>
+                            @endif
+                        </flux:table.cell>
+                        
+                        <flux:table.cell>
+                            @if ($musicPlanSlot->is_custom)
+                                <div class="space-y-1">
+                                    @if ($musicPlanSlot->musicPlan)
+                                        <div class="text-sm">
+                                            <span class="text-gray-500 dark:text-gray-400">{{ __('Plan:') }}</span>
+                                            <a href="{{ route('music-plan-view', $musicPlanSlot->musicPlan) }}" class="font-medium text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300">
+                                                {{ $musicPlanSlot->musicPlan->name }}
+                                            </a>
+                                        </div>
+                                    @endif
+                                    @if ($musicPlanSlot->owner)
+                                        <div class="text-sm">
+                                            <span class="text-gray-500 dark:text-gray-400">{{ __('Owner:') }}</span>
+                                            <span class="font-medium">{{ $musicPlanSlot->owner->name }}</span>
+                                        </div>
+                                    @endif
+                                </div>
+                            @else
+                                <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('Available to all plans') }}</span>
+                            @endif
+                        </flux:table.cell>
+                        
+                        <flux:table.cell>
                             <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-300">
                                 {{ $musicPlanSlot->templates_count ?? 0 }}
                             </span>
@@ -120,7 +176,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="5" class="text-center py-8">
+                        <flux:table.cell colspan="7" class="text-center py-8">
                             <div class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
                                 <flux:icon name="musical-note" class="h-12 w-12 mb-2 opacity-50" />
                                 <p class="text-lg font-medium">{{ __('No slots found') }}</p>

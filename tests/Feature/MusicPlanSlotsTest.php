@@ -53,8 +53,9 @@ test('admin can view music plan slots', function () {
 });
 
 test('admin can create a music plan slot', function () {
+    $timestamp = time();
     $data = [
-        'name' => 'Entrance Procession',
+        'name' => "Entrance Procession Test {$timestamp}",
         'description' => 'The opening song for Mass',
     ];
 
@@ -126,4 +127,29 @@ test('search functionality works', function () {
         ->set('search', 'Entrance')
         ->assertSee($slot1->name)
         ->assertDontSee($slot2->name);
+});
+
+test('filter by type works', function () {
+    // Create unique names using timestamps to avoid conflicts
+    $timestamp = time();
+    $globalSlot = MusicPlanSlot::factory()->create([
+        'is_custom' => false,
+        'name' => "Global Slot Test {$timestamp}",
+    ]);
+    $customSlot = MusicPlanSlot::factory()->create([
+        'is_custom' => true,
+        'name' => "Custom Slot Test {$timestamp}",
+    ]);
+
+    Livewire::actingAs($this->admin)
+        ->test(\App\Livewire\Pages\Admin\MusicPlanSlots::class)
+        ->set('filterType', 'global')
+        ->assertSee($globalSlot->name)
+        ->assertDontSee($customSlot->name)
+        ->set('filterType', 'custom')
+        ->assertSee($customSlot->name)
+        ->assertDontSee($globalSlot->name)
+        ->set('filterType', 'all')
+        ->assertSee($globalSlot->name)
+        ->assertSee($customSlot->name);
 });

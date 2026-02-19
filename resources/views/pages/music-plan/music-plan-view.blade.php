@@ -38,6 +38,7 @@ new #[Layout('layouts::app.main')] class extends Component
 
     private function loadPlanSlots(): void
     {
+        $user = Auth::user();
         $assignmentsByPivot = $this->musicPlan->musicAssignments()
             ->with('music.collections')
             ->orderBy('music_plan_slot_plan_id')
@@ -45,7 +46,8 @@ new #[Layout('layouts::app.main')] class extends Component
             ->get()
             ->groupBy('music_plan_slot_plan_id');
 
-        $this->planSlots = $this->musicPlan->slots()
+        $this->planSlots = $this->musicPlan->allSlots()
+            ->visibleToUser($user)
             ->withPivot('id', 'sequence')
             ->orderBy('music_plan_slot_plan.sequence')
             ->get()

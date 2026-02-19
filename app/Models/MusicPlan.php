@@ -93,6 +93,41 @@ class MusicPlan extends Model
     }
 
     /**
+     * Get the custom slots created specifically for this music plan.
+     */
+    public function customSlots(): HasMany
+    {
+        return $this->hasMany(MusicPlanSlot::class)
+            ->where('is_custom', true);
+    }
+
+    /**
+     * Get all slots available for this plan (both global and custom).
+     * This returns a query builder that can be further filtered.
+     */
+    public function allSlots()
+    {
+        return MusicPlanSlot::forPlan($this);
+    }
+
+    /**
+     * Create a custom slot for this music plan.
+     */
+    public function createCustomSlot(array $data): MusicPlanSlot
+    {
+        $data['music_plan_id'] = $this->id;
+        $data['user_id'] = $this->user_id;
+        $data['is_custom'] = true;
+
+        // Ensure priority is 0 for custom slots if not specified
+        if (! isset($data['priority'])) {
+            $data['priority'] = 0;
+        }
+
+        return MusicPlanSlot::create($data);
+    }
+
+    /**
      * Get the music assignments for this plan.
      */
     public function musicAssignments(): HasMany

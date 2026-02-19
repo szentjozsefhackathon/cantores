@@ -168,7 +168,7 @@ new #[Layout('layouts::app.main')] class extends Component
                 'celebrations',
                 'musicAssignments.music' => fn ($q) => $q->visibleTo($user),
                 'musicAssignments.music.collections' => fn ($q) => $q->visibleTo($user),
-                'musicAssignments.musicPlanSlot',
+                'musicAssignments.musicPlanSlot' => fn ($q) => $q->visibleToUser($user),
             ])
             ->withCount('celebrations');
 
@@ -231,9 +231,11 @@ new #[Layout('layouts::app.main')] class extends Component
                 // Get primary collection info
                 $collectionInfo = null;
                 $music = $assignment->music;
-                $primaryCollection = $music->collections->first();
-                if ($primaryCollection) {
-                    $collectionInfo = $primaryCollection->formatWithPivot($primaryCollection->pivot);
+                if ($music) {
+                    $primaryCollection = $music->collections->first();
+                    if ($primaryCollection) {
+                        $collectionInfo = $primaryCollection->formatWithPivot($primaryCollection->pivot);
+                    }
                 }
 
                 $musicId = $music->id;

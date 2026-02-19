@@ -57,6 +57,14 @@ new class extends Component
     /** An array of flags by [assignmentId] */
     public array $flags = [];
 
+    public bool $showCreateSlotModal = false;
+
+    public string $newSlotName = '';
+
+    public string $newSlotDescription = '';
+
+    public array $newSlotCustomColumns = [];
+
     /**
      * Get flag options for Mary UI choices.
      */
@@ -468,6 +476,48 @@ new class extends Component
     public function clearRecentlyAddedSlot(): void
     {
         $this->recentlyAddedSlotName = null;
+    }
+
+    public function openCreateSlotModal(): void
+    {
+        $this->showCreateSlotModal = true;
+        $this->newSlotName = '';
+        $this->newSlotDescription = '';
+        $this->newSlotCustomColumns = [];
+        $this->resetValidation();
+    }
+
+    public function closeCreateSlotModal(): void
+    {
+        $this->showCreateSlotModal = false;
+        $this->resetValidation();
+    }
+
+    public function createCustomSlot(): void
+    {
+        $this->authorize('create', [\App\Models\MusicPlanSlot::class, $this->musicPlan]);
+
+        $validated = $this->validate([
+            'newSlotName' => ['required', 'string', 'max:255'],
+            'newSlotDescription' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $slot = $this->musicPlan->createCustomSlot([
+            'name' => $validated['newSlotName'],
+            'description' => $validated['newSlotDescription'] ?? '',
+        ]);
+
+        // Attach the newly created slot to the plan
+        $existingSlots = $this->musicPlan->slots()->count();
+        $sequence = $existingSlots + 1;
+        $this->musicPlan->slots()->attach($slot->id, [
+            'sequence' => $sequence,
+        ]);
+
+        $this->closeCreateSlotModal();
+        $this->loadExistingSlotIds();
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slot->name);
     }
 
     public function openMusicSearchModal(int $pivotId): void

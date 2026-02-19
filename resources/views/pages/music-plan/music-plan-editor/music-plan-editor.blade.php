@@ -193,15 +193,24 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <flux:button
-                                        wire:click="showAllSlots"
-                                        wire:loading.attr="disabled"
-                                        wire:loading.class="opacity-50 cursor-not-allowed"
-                                        icon="list-bullet"
-                                        variant="outline"
-                                        class="self-end whitespace-nowrap">
-                                        Összes elem
-                                    </flux:button>
+                                    <div class="flex flex-col gap-2">
+                                        <flux:button
+                                            wire:click="openCreateSlotModal"
+                                            icon="plus"
+                                            variant="outline"
+                                            class="whitespace-nowrap">
+                                            Új egyedi elem
+                                        </flux:button>
+                                        <flux:button
+                                            wire:click="showAllSlots"
+                                            wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                            icon="list-bullet"
+                                            variant="outline"
+                                            class="whitespace-nowrap">
+                                            Összes elem
+                                        </flux:button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -253,6 +262,46 @@
                                         wire:click="closeAllSlotsModal"
                                         variant="outline">
                                         Bezárás
+                                    </flux:button>
+                                </div>
+                            </flux:modal>
+
+                            <!-- Create Custom Slot Modal -->
+                            <flux:modal wire:model="showCreateSlotModal" size="md">
+                                <flux:heading size="lg">Új egyedi elem</flux:heading>
+
+                                <div class="mt-6 space-y-4">
+                                    <flux:field>
+                                        <flux:label>Elem neve *</flux:label>
+                                        <flux:input
+                                            wire:model.live="newSlotName"
+                                            placeholder="Közbenjárás, köszöntés stb."
+                                            autofocus />
+                                            <flux:error name="newSlotName" />
+                                    </flux:field>
+
+                                    <flux:field>
+                                        <flux:label>Leírás (opcionális)</flux:label>
+                                        <flux:textarea
+                                            wire:model.live="newSlotDescription"
+                                            placeholder="Rövid leírás az elemről..."
+                                            rows="3" />
+                                            <flux:error name="newSlotDescription" />
+                                    </flux:field>
+                                </div>
+
+                                <div class="mt-8 flex justify-end gap-3">
+                                    <flux:button
+                                        wire:click="closeCreateSlotModal"
+                                        variant="outline">
+                                        Mégse
+                                    </flux:button>
+                                    <flux:button
+                                        wire:click="createCustomSlot"
+                                        variant="primary"
+                                        icon="plus">
+                                        <span wire:loading.remove wire:target="createCustomSlot">Létrehozás</span>
+                                        <span wire:loading wire:target="createCustomSlot">Feldolgozás...</span>
                                     </flux:button>
                                 </div>
                             </flux:modal>

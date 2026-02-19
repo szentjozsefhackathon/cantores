@@ -22,6 +22,9 @@ class MusicPlanSlots extends Component
 
     public ?MusicPlanSlot $editingSlot = null;
 
+    // Filtering
+    public string $filterType = 'all'; // 'all', 'global', 'custom'
+
     // Sorting
     public string $sortBy = 'name';
 
@@ -60,10 +63,14 @@ class MusicPlanSlots extends Component
      */
     public function render(): View
     {
-        $slots = MusicPlanSlot::when($this->search, function ($query, $search) {
-            $query->where('name', 'ilike', "%{$search}%")
-                ->orWhere('description', 'ilike', "%{$search}%");
-        })
+        $slots = MusicPlanSlot::query()
+            ->when($this->filterType === 'global', fn ($q) => $q->global())
+            ->when($this->filterType === 'custom', fn ($q) => $q->custom())
+            ->when($this->search, function ($query, $search) {
+                $query->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('description', 'ilike', "%{$search}%");
+            })
+            ->with(['musicPlan', 'owner'])
             ->withCount('templates')
             ->orderBy($this->sortBy, $this->sortDirection)
             ->paginate(20);
