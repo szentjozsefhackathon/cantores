@@ -6,9 +6,9 @@ use App\Facades\GenreContext;
 use App\Models\Celebration;
 use App\Models\MusicPlan;
 use App\Services\CelebrationSearchService;
+use App\Services\LiturgicalInfoService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -61,7 +61,7 @@ new #[Layout('layouts::app.main')] class extends Component
     }
 
     /**
-     * Fetch celebration details from the external API.
+     * Fetch celebration details from the external API using the caching service.
      */
     protected function fetchCelebrationDetails(): void
     {
@@ -73,40 +73,14 @@ new #[Layout('layouts::app.main')] class extends Component
         $firstCelebration = $this->celebrationsWithScores->first()['celebration'];
         $date = $firstCelebration->actual_date->format('Y-m-d');
 
-        try {
-            $response = Http::timeout(10)->get("https://szentjozsefhackathon.github.io/napi-lelki-batyu/{$date}.json");
+        $service = app(LiturgicalInfoService::class);
+        $celebrationData = $service->findCelebration(
+            $date,
+            $firstCelebration->name,
+            $firstCelebration->actual_date->format('Y-m-d')
+        );
 
-            if ($response->successful()) {
-                $data = $response->json();
-                // Find the matching celebration in the data
-                $celebrationData = $this->findMatchingCelebration($data['celebration'] ?? [], $firstCelebration);
-                $this->celebrationDetails = $celebrationData;
-            }
-        } catch (\Exception $e) {
-            // Silently fail, celebrationDetails remains null
-        }
-    }
-
-    /**
-     * Find the matching celebration in the API response.
-     *
-     * @param  array<int, array<string, mixed>>  $celebrations
-     * @param  Celebration  $target
-     * @return array<string, mixed>|null
-     */
-    protected function findMatchingCelebration(array $celebrations, Celebration $target): ?array
-    {
-        foreach ($celebrations as $celebration) {
-            // Compare by name and dateISO
-            $nameMatches = ($celebration['name'] ?? $celebration['title'] ?? null) === $target->name;
-            $dateMatches = ($celebration['dateISO'] ?? null) === $target->actual_date->format('Y-m-d');
-
-            if ($nameMatches && $dateMatches) {
-                return $celebration;
-            }
-        }
-
-        return null;
+        $this->celebrationDetails = $celebrationData;
     }
 
     /**

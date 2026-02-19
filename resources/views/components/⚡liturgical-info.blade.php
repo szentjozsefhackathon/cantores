@@ -5,9 +5,9 @@ use App\Models\Celebration;
 use App\Models\MusicPlan;
 use App\Models\Genre;
 use App\Services\CelebrationSearchService;
+use App\Services\LiturgicalInfoService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -37,11 +37,11 @@ new class extends Component
         $this->error = null;
 
         try {
-            $response = Http::timeout(10)->get("https://szentjozsefhackathon.github.io/napi-lelki-batyu/{$this->date}.json");
-
-            if ($response->successful()) {
-                $data = $response->json();
-                $this->celebrations = $data['celebration'] ?? [];
+            $service = app(LiturgicalInfoService::class);
+            $celebrations = $service->getCelebrations($this->date);
+            
+            if ($celebrations !== null) {
+                $this->celebrations = $celebrations;
             } else {
                 $this->error = 'Failed to fetch liturgical information.';
             }
