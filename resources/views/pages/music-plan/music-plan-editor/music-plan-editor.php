@@ -14,8 +14,6 @@ new class extends Component
 
     public array $planSlots = [];
 
-    public array $expandedTemplates = [];
-
     public array $existingSlotIds = [];
 
     public string $slotSearch = '';
@@ -23,7 +21,7 @@ new class extends Component
     public array $searchResults = [];
 
     public ?int $selectedSlotId = null;
-    
+
     public ?int $genreId = null;
 
     public bool $showAllSlotsModal = false;
@@ -214,15 +212,7 @@ new class extends Component
             ->toArray();
     }
 
-    public function toggleTemplate(int $templateId): void
-    {
-        if (in_array($templateId, $this->expandedTemplates)) {
-            $this->expandedTemplates = array_diff($this->expandedTemplates, [$templateId]);
-        } else {
-            $this->expandedTemplates[] = $templateId;
-        }
-    }
-
+    #[On('add-slot-from-template')]
     public function addSlotFromTemplate(int $templateId, int $slotId): void
     {
         $this->authorize('update', $this->musicPlan);
@@ -240,6 +230,7 @@ new class extends Component
         $this->dispatch('slots-updated', message: 'Elem hozzáadva.');
     }
 
+    #[On('add-slots-from-template')]
     public function addSlotsFromTemplate(int $templateId): void
     {
         $this->authorize('update', $this->musicPlan);
@@ -270,6 +261,7 @@ new class extends Component
 
     }
 
+    #[On('add-default-slots-from-template')]
     public function addDefaultSlotsFromTemplate(int $templateId): void
     {
         $this->authorize('update', $this->musicPlan);
@@ -865,5 +857,4 @@ new class extends Component
         // Auto-save disabled - saving only via explicit button click
         // No action needed
     }
-
 };
