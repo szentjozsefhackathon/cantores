@@ -2,6 +2,18 @@
 
 namespace App\Providers;
 
+use App\Models\Author;
+use App\Models\City;
+use App\Models\Collection;
+use App\Models\FirstName;
+use App\Models\Genre;
+use App\Models\Music;
+use App\Observers\AuthorObserver;
+use App\Observers\CityObserver;
+use App\Observers\CollectionObserver;
+use App\Observers\FirstNameObserver;
+use App\Observers\GenreObserver;
+use App\Observers\MusicObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +36,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Genre::observe(GenreObserver::class);
+        City::observe(CityObserver::class);
+        FirstName::observe(FirstNameObserver::class);
+        Collection::observe(CollectionObserver::class);
+        Music::observe(MusicObserver::class);
+        Author::observe(AuthorObserver::class);
     }
 
     /**

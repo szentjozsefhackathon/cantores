@@ -49,7 +49,7 @@ new class extends Component
             @php
                 $firstCelebration = $musicPlan->celebrations->first();
             @endphp
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+            <div class="flex flex-row gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
                 @if($firstCelebration && ($firstCelebration->year_letter || $firstCelebration->year_parity))
                 <div>
                     <flux:text class="text-base font-semibold">

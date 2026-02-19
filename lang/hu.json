@@ -98,6 +98,31 @@
     "Save Changes": "Változtatások mentése",
     "Cannot delete collection that has music assigned to it.": "Nem lehet törölni a gyűjteményt, ha már zeneművek vannak hozzárendelve.",
     "(p.:page)": "(:page.o)",
-    "Edit Music": "Zene szerkesztése"
+    "Edit Music": "Zene szerkesztése",
+    "Guitarist": "Gitáros",
+    "Organist": "Orgonás",
+    "Other": "Egyéb",
+    "Authors": "Szerzők",
+    "Manage music authors": "Szerzők kezelése",
+    "No authors found": "Nincs szerző",
+    "Get started by creating a new author.": "Hozz létre egy új szerzőt a kezdéshez.",
+    "Edit Author": "Szerző szerkesztése",
+    "Cannot delete author that has music assigned to it.": "Nem lehet törölni a szerzőt, ha már zeneművek vannak hozzárendelve.",
+    "Nickname Data": "Becenév adatok",
+    "Manage nickname data": "Becenév adatok kezelése",
+    "Upload CSV": "CSV feltöltése",
+    "Download CSV": "CSV letöltése",
+    "Cities": "Városok",
+    "First Names": "Keresztnevek",
+    "Create Author": "Szerző létrehozása",
+    "Privacy": "Láthatóság",
+    "Make this author private (only visible to you)": "Tedd ezt a szerzőt priváttá (csak te láthatod)",
+    "Private authors are only visible to you and cannot be seen by other users.": "A privát szerzők csak neked láthatóak, és más felhasználók nem láthatják őket.",
+    "Report Error": "Hiba jelentése",
+    "Please describe the error you found. This report will be sent to the owner and administrators.": "Kérjük, írd le a talált hibát. Ez a jelentés a tulajdonoshoz és az adminisztrátorokhoz kerül elküldésre.",
+    "Error description": "Hiba leírása",
+    "Submit Report": "Jelentés elküldése",
+    "Maximum 160 characters.": "Maximum 160 karakter.",
+    "Enter a brief description of the error": "Adj meg egy rövid leírást a hibáról"
 
-}
+}   

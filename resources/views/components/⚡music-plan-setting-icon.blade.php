@@ -12,7 +12,7 @@ new class extends Component
     {
         if (! $this->genreId) return 'musical-note';
 
-        return Genre::find($this->genreId)?->icon() ?? 'musical-note';
+        return Genre::findCached($this->genreId)?->icon() ?? 'musical-note';
     }
 };
 ?>

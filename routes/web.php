@@ -13,8 +13,8 @@ Route::view('dashboard', 'dashboard')
 Route::view('/about', 'pages.about')->name('about');
 
 Route::get('/random-nickname', function () {
-    $cities = \App\Models\City::orderBy('name')->get();
-    $firstNames = \App\Models\FirstName::orderBy('name')->get();
+    $cities = \App\Models\City::allCached();
+    $firstNames = \App\Models\FirstName::allCached();
 
     // Get used combinations
     $usedCombinations = \App\Models\User::select('city_id', 'first_name_id')

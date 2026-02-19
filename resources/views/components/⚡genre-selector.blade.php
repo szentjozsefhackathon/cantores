@@ -15,7 +15,7 @@ new class extends Component
 
     public function genres()
     {
-        return Genre::all();
+        return Genre::allCached();
     }
 
     public function updatedSelectedGenreId($value): void

@@ -32,7 +32,7 @@ class GenreContext
             return null;
         }
 
-        return Genre::find($id);
+        return Genre::findCached($id);
     }
 
     /**

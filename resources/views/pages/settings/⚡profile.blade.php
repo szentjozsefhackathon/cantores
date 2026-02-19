@@ -98,8 +98,8 @@ new class extends Component {
      */
     public function randomizeNickname(): void
     {
-        $cities = \App\Models\City::orderBy('name')->get();
-        $firstNames = \App\Models\FirstName::orderBy('name')->get();
+        $cities = \App\Models\City::allCached();
+        $firstNames = \App\Models\FirstName::allCached();
         $currentUser = Auth::user();
 
         // Get used combinations excluding the current user's combination
@@ -147,13 +147,13 @@ new class extends Component {
     #[Computed]
     public function cities(): \Illuminate\Database\Eloquent\Collection
     {
-        return \App\Models\City::orderBy('name')->get();
+        return \App\Models\City::allCached();
     }
 
     #[Computed]
     public function firstNames(): \Illuminate\Database\Eloquent\Collection
     {
-        return \App\Models\FirstName::orderBy('name')->get();
+        return \App\Models\FirstName::allCached();
     }
 
     #[Computed]

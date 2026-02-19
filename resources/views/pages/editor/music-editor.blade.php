@@ -66,9 +66,9 @@ new class extends Component
     /**
      * Get all genres for selection.
      */
-    public function genres(): \Illuminate\Database\Eloquent\Collection
+    public function genres(): \Illuminate\Support\Collection
     {
-        return Genre::all();
+        return Genre::allCached();
     }
 
     /**

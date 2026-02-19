@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Concerns\HasVisibilityScoping;
+use App\Support\CacheKey;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Scout\Attributes\SearchUsingFullText;
 use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -176,5 +178,29 @@ class Music extends Model implements Auditable
             // Fallback if the count is not loaded (e.g., not eager loaded)
             return $this->verifications()->where('status', 'verified')->exists();
         }
+    }
+
+    /**
+     * Find a music by ID with caching (TTL: 5 minutes).
+     */
+    public static function findCached(int $id): ?self
+    {
+        $key = CacheKey::forModel('music', 'id', ['id' => $id]);
+
+        return Cache::remember($key, 300, function () use ($id) {
+            return static::with(['collections', 'authors', 'genres', 'user'])->find($id);
+        });
+    }
+
+    /**
+     * Get all music with caching (TTL: 5 minutes).
+     */
+    public static function allCached(): \Illuminate\Database\Eloquent\Collection
+    {
+        $key = CacheKey::forModel('music', 'all');
+
+        return Cache::remember($key, 300, function () {
+            return static::with(['collections', 'authors', 'genres', 'user'])->orderBy('title')->get();
+        });
     }
 }

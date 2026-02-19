@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Concerns\HasVisibilityScoping;
+use App\Support\CacheKey;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Scout\Attributes\SearchUsingFullText;
 use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -77,5 +79,29 @@ class Author extends Model implements Auditable
         return [
             'name' => $this->name,
         ];
+    }
+
+    /**
+     * Find an author by ID with caching (TTL: 1 hour).
+     */
+    public static function findCached(int $id): ?self
+    {
+        $key = CacheKey::forModel('author', 'id', ['id' => $id]);
+
+        return Cache::remember($key, 3600, function () use ($id) {
+            return static::with(['user'])->find($id);
+        });
+    }
+
+    /**
+     * Get all authors with caching (TTL: 1 hour).
+     */
+    public static function allCached(): \Illuminate\Database\Eloquent\Collection
+    {
+        $key = CacheKey::forModel('author', 'all');
+
+        return Cache::remember($key, 3600, function () {
+            return static::with(['user'])->orderBy('name')->get();
+        });
     }
 }

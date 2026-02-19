@@ -137,6 +137,7 @@
         
     </div>
 
+    @if($showCreateModal)
     <!-- Modals outside main content for single root -->
     <flux:modal wire:model="showCreateModal" max-width="md">
         <flux:heading size="lg">{{ __('Create Author') }}</flux:heading>
@@ -177,7 +178,9 @@
             </flux:button>
         </div>
     </flux:modal>
+    @endif
 
+    @if($showAuditModal)
     <flux:modal wire:model="showAuditModal" max-width="4xl">
         <flux:heading size="lg">{{ __('Audit Log') }}</flux:heading>
         <flux:subheading>
@@ -283,7 +286,9 @@
             </flux:button>
         </div>
     </flux:modal>
+    @endif
 
+    @if($showEditModal)
     <flux:modal wire:model="showEditModal" max-width="md">
         <flux:heading size="lg">{{ __('Edit Author') }}</flux:heading>
 
@@ -322,6 +327,7 @@
             </flux:button>
         </div>
     </flux:modal>
+    @endif
 
     <livewire:error-report />
 </div>

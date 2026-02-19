@@ -43,7 +43,7 @@ new class extends Component
     // ✅ Use Eloquent so label/name methods work
     public function getGenresProperty()
     {
-        return Genre::query()->orderBy('name')->get();
+        return Genre::allCached()->sortBy('name');
     }
          
     

@@ -50,8 +50,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::twoFactorChallengeView(fn () => view('pages::auth.two-factor-challenge'));
         Fortify::confirmPasswordView(fn () => view('pages::auth.confirm-password'));
         Fortify::registerView(function () {
-            $cities = \App\Models\City::orderBy('name')->get();
-            $firstNames = \App\Models\FirstName::orderBy('name')->get();
+            $cities = \App\Models\City::allCached();
+            $firstNames = \App\Models\FirstName::allCached();
 
             // Get used combinations
             $usedCombinations = \App\Models\User::select('city_id', 'first_name_id')

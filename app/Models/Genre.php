@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Support\CacheKey;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\Cache;
 
 class Genre extends Model
 {
@@ -92,8 +95,48 @@ class Genre extends Model
      */
     public static function options(): array
     {
-        return self::all()->mapWithKeys(fn ($genre) => [
-            $genre->id => $genre->label(),
-        ])->toArray();
+        return self::optionsCached();
+    }
+
+    /**
+     * Get all genres, cached forever.
+     *
+     * @return \Illuminate\Support\Collection<int, self>
+     */
+    public static function allCached(): SupportCollection
+    {
+        $key = CacheKey::forModel('genre', 'all');
+
+        return Cache::rememberForever($key, function () {
+            return self::all();
+        });
+    }
+
+    /**
+     * Get genre options, cached forever.
+     *
+     * @return array<int, string>
+     */
+    public static function optionsCached(): array
+    {
+        $key = CacheKey::forModel('genre', 'options');
+
+        return Cache::rememberForever($key, function () {
+            return self::allCached()->mapWithKeys(fn ($genre) => [
+                $genre->id => $genre->label(),
+            ])->toArray();
+        });
+    }
+
+    /**
+     * Find a genre by ID, cached forever.
+     */
+    public static function findCached(int $id): ?self
+    {
+        $key = CacheKey::forModel('genre', 'id', ['id' => $id]);
+
+        return Cache::rememberForever($key, function () use ($id) {
+            return self::find($id);
+        });
     }
 }

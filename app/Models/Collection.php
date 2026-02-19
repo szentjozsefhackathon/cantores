@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Concerns\HasVisibilityScoping;
+use App\Support\CacheKey;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use OwenIt\Auditing\Contracts\Auditable;
 
@@ -117,5 +119,45 @@ class Collection extends Model implements Auditable
         }
 
         return $formatted;
+    }
+
+    /**
+     * Find a collection by ID with caching (TTL: 1 hour).
+     */
+    public static function findCached(int $id): ?self
+    {
+        $key = CacheKey::forModel('collection', 'id', ['id' => $id]);
+
+        return Cache::remember($key, 3600, function () use ($id) {
+            return static::with(['genres', 'user'])->find($id);
+        });
+    }
+
+    /**
+     * Get all collections with caching (TTL: 1 hour).
+     */
+    public static function allCached(): \Illuminate\Database\Eloquent\Collection
+    {
+        $key = CacheKey::forModel('collection', 'all');
+
+        return Cache::remember($key, 3600, function () {
+            return static::with(['genres', 'user'])->orderBy('title')->get();
+        });
+    }
+
+    /**
+     * Get collections as options for dropdowns with caching (TTL: 1 hour).
+     */
+    public static function optionsCached(): array
+    {
+        $key = CacheKey::forModel('collection', 'options');
+
+        return Cache::remember($key, 3600, function () {
+            return static::visibleTo(auth()->user())
+                ->orderBy('title')
+                ->get()
+                ->mapWithKeys(fn ($collection) => [$collection->id => $collection->title])
+                ->toArray();
+        });
     }
 }

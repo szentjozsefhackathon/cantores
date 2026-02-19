@@ -28,8 +28,8 @@ new class extends Component
 
     public function loadData()
     {
-        $this->cities = City::orderBy('name')->get();
-        $this->firstNames = FirstName::orderBy('name')->get();
+        $this->cities = City::allCached();
+        $this->firstNames = FirstName::allCached();
     }
 
     public function uploadCitiesCsv()
