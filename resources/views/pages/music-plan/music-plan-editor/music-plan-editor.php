@@ -108,6 +108,7 @@ new class extends Component
 
         // Load celebration data if there's a custom celebration
         $customCelebration = $this->musicPlan->firstCustomCelebration();
+        \Log::debug('Custom celebration for plan '.$this->musicPlan->id.': '.($customCelebration ? $customCelebration->id : 'none'));
         if ($customCelebration) {
             $this->celebrationName = $customCelebration->name;
             $this->celebrationDate = $customCelebration->actual_date->format('Y-m-d');

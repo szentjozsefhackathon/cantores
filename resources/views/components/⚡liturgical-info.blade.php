@@ -86,6 +86,7 @@ new class extends Component
             [
                 'actual_date' => $celebrationData['dateISO'] ?? $this->date,
                 'celebration_key' => $celebrationData['celebrationKey'] ?? 0,
+                'is_custom' => false, // Ensure these celebrations are marked as non-custom
             ],
             [
                 'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? 'Unknown',
