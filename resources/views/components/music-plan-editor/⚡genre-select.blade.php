@@ -56,7 +56,7 @@ new class extends Component
     @if($isEditingGenre)
     <div class="space-y-2">
         <flux:field>
-            <flux:select wire:model.live="genreId">
+            <flux:select wire:model="genreId">
                 <flux:select.option value="">– Nincs műfaj –</flux:select.option>
                 @foreach($this->genres as $genre)
                 <flux:select.option value="{{ $genre->id }}">{{ $genre->label() }}</flux:select.option>

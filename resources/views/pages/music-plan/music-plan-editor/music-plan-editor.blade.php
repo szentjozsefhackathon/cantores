@@ -1,6 +1,6 @@
 <div class="py-8">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <flux:card class="p-5">
+        <flux:card class="p-5" wire:loading.class="opacity-50" wire:target="isPublished">
             <div class="flex items-center gap-4 mb-4">
                 <livewire:music-plan-setting-icon :genreId="$genreId" :wire:key="'setting-icon-'.$genreId" />
                 <flux:heading size="xl">Énekrend szerkesztése</flux:heading>
@@ -127,12 +127,17 @@
                 </div>
 
                 <!-- Status -->
-                <div class="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
+                <div class="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800" >
                     <div class="flex items-center gap-3">
                         <flux:icon name="{{ $isPublished ? 'eye' : 'eye-slash' }}" class="h-5 w-5 {{ $isPublished ? 'text-green-500' : 'text-neutral-500' }}" variant="mini" />
-                        <flux:field variant="inline" class="mb-0">
+                        <flux:field variant="inline" class="mb-0" >
                             <flux:label>Közzététel</flux:label>
-                            <flux:switch wire:model.live="isPublished" />
+                            <flux:switch wire:model.live="isPublished" 
+                            wire:loading.attr="disabled"
+                            
+                            wire:target="isPublished"
+
+                            />
                         </flux:field>
                         <div class="flex items-center">
                             @if($musicPlan->actual_date)
