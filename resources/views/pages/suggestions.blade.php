@@ -29,6 +29,10 @@ new #[Layout('layouts::app.main')] class extends Component
 
     public string $activeTab = 'music';
 
+    public string $activePartTab = 'part-0';
+
+    public string $activePart2Tab = 'part2-0';
+
     /** @var array<string, mixed>|null */
     public ?array $celebrationDetails = null;
 
@@ -321,46 +325,12 @@ new #[Layout('layouts::app.main')] class extends Component
                     </flux:badge>
                 </div>
 
-                <!-- Display parts -->
+                <!-- Display parts as tabs -->
                 @if (isset($celebrationDetails['parts']) && is_array($celebrationDetails['parts']))
-                    <div class="space-y-6">
+                    <x-mary-tabs wire:model="activePartTab" class="mb-6">
                         @foreach ($celebrationDetails['parts'] as $partIndex => $part)
-                            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                                <flux:heading size="md" class="mb-3">
-                                    {{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}
-                                </flux:heading>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                    @foreach ($part as $key => $value)
-                                        @if (!is_array($value) && $key !== 'short_title')
-                                            <div class="flex flex-col">
-                                                <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ $key }}</span>
-                                                <span class="text-gray-900 dark:text-gray-100 mt-1">{{ $value }}</span>
-                                            </div>
-                                        @endif
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <flux:callout color="zinc" icon="information-circle">
-                        <flux:callout.heading>Nincs részletes adat</flux:callout.heading>
-                        <flux:callout.text>Ehhez az ünnephez nem található részletes olvasmány adat.</flux:callout.text>
-                    </flux:callout>
-                @endif
-
-                <!-- Display parts2 if present -->
-                @if (isset($celebrationDetails['parts2']) && is_array($celebrationDetails['parts2']))
-                    <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                        <flux:heading size="lg" class="mb-4">
-                            {{ $celebrationDetails['parts2cause'] ?? 'Másodlagos olvasmányok' }}
-                        </flux:heading>
-                        <div class="space-y-6">
-                            @foreach ($celebrationDetails['parts2'] as $partIndex => $part)
-                                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                                    <flux:heading size="md" class="mb-3">
-                                        {{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}
-                                    </flux:heading>
+                            <x-mary-tab name="part-{{ $partIndex }}" label="{{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}">
+                                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                         @foreach ($part as $key => $value)
                                             @if (!is_array($value) && $key !== 'short_title')
@@ -372,8 +342,40 @@ new #[Layout('layouts::app.main')] class extends Component
                                         @endforeach
                                     </div>
                                 </div>
+                            </x-mary-tab>
+                        @endforeach
+                    </x-mary-tabs>
+                @else
+                    <flux:callout color="zinc" icon="information-circle">
+                        <flux:callout.heading>Nincs részletes adat</flux:callout.heading>
+                        <flux:callout.text>Ehhez az ünnephez nem található részletes olvasmány adat.</flux:callout.text>
+                    </flux:callout>
+                @endif
+
+                <!-- Display parts2 as tabs -->
+                @if (isset($celebrationDetails['parts2']) && is_array($celebrationDetails['parts2']))
+                    <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <flux:heading size="lg" class="mb-4">
+                            {{ $celebrationDetails['parts2cause'] ?? 'Másodlagos olvasmányok' }}
+                        </flux:heading>
+                        <x-mary-tabs wire:model="activePart2Tab" class="mb-6">
+                            @foreach ($celebrationDetails['parts2'] as $partIndex => $part)
+                                <x-mary-tab name="part2-{{ $partIndex }}" label="{{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}">
+                                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                            @foreach ($part as $key => $value)
+                                                @if (!is_array($value) && $key !== 'short_title')
+                                                    <div class="flex flex-col">
+                                                        <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ $key }}</span>
+                                                        <span class="text-gray-900 dark:text-gray-100 mt-1">{{ $value }}</span>
+                                                    </div>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </x-mary-tab>
                             @endforeach
-                        </div>
+                        </x-mary-tabs>
                     </div>
                 @endif
             </flux:card>
