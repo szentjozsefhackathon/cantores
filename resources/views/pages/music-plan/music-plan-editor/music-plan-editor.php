@@ -65,6 +65,15 @@ new class extends Component
 
     public array $newSlotCustomColumns = [];
 
+    /** @var int|null The ID of the slot being edited, null if not editing */
+    public ?int $editingSlotId = null;
+
+    /** @var string The temporary name for the slot being edited */
+    public string $editingSlotName = '';
+
+    /** @var string The temporary description for the slot being edited */
+    public string $editingSlotDescription = '';
+
     /**
      * Get flag options for Mary UI choices.
      */
@@ -147,6 +156,7 @@ new class extends Component
                     'name' => $slot->name,
                     'description' => $slot->description,
                     'sequence' => $slot->pivot->sequence,
+                    'is_custom' => $slot->is_custom,
                     'assignments' => $assignments,
                 ];
             })
@@ -518,6 +528,57 @@ new class extends Component
         $this->loadExistingSlotIds();
         $this->loadPlanSlots();
         $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slot->name);
+    }
+
+    public function startEditingSlot(int $slotId): void
+    {
+        $slot = \App\Models\MusicPlanSlot::find($slotId);
+
+        if (! $slot || ! $slot->is_custom) {
+            return;
+        }
+
+        $this->authorize('update', $slot);
+
+        $this->editingSlotId = $slotId;
+        $this->editingSlotName = $slot->name;
+        $this->editingSlotDescription = $slot->description ?? '';
+    }
+
+    public function cancelEditingSlot(): void
+    {
+        $this->editingSlotId = null;
+        $this->editingSlotName = '';
+        $this->editingSlotDescription = '';
+    }
+
+    public function saveEditedSlot(): void
+    {
+        if (! $this->editingSlotId) {
+            return;
+        }
+
+        $slot = \App\Models\MusicPlanSlot::find($this->editingSlotId);
+
+        if (! $slot || ! $slot->is_custom) {
+            return;
+        }
+
+        $this->authorize('update', $slot);
+
+        $validated = $this->validate([
+            'editingSlotName' => ['required', 'string', 'max:255'],
+            'editingSlotDescription' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $slot->update([
+            'name' => $validated['editingSlotName'],
+            'description' => $validated['editingSlotDescription'] ?? '',
+        ]);
+
+        $this->cancelEditingSlot();
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: 'Elem frissítve: '.$slot->name);
     }
 
     public function openMusicSearchModal(int $pivotId): void

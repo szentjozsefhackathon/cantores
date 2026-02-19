@@ -136,7 +136,7 @@ class MusicPlanSlot extends Model
      * Global slots are visible to all users.
      * Custom slots are visible only to the owner.
      */
-    public function scopeVisibleToUser(Builder $query, User|int $user): Builder
+    public function scopeVisibleToUser(Builder $query, User|int|null $user = null): Builder
     {
         $userId = $user instanceof User ? $user->id : $user;
 

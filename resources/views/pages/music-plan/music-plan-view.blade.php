@@ -46,7 +46,7 @@ new #[Layout('layouts::app.main')] class extends Component
             ->get()
             ->groupBy('music_plan_slot_plan_id');
 
-        $this->planSlots = $this->musicPlan->allSlots()
+        $this->planSlots = $this->musicPlan->slots()
             ->visibleToUser($user)
             ->withPivot('id', 'sequence')
             ->orderBy('music_plan_slot_plan.sequence')

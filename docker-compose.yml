@@ -137,9 +137,17 @@ services:
       - --memory-limit=32
     networks:
       - creshu-network    
-  
+  services:
+    qdrant:
+      image: qdrant/qdrant
+      ports:
+        - "6333:6333"
+      volumes:
+        - qdrant_storage:/qdrant/storage
+
 volumes:
   db-data:
   db-testing-data:
+  qdrant_storage:  
 networks:
   creshu-network:

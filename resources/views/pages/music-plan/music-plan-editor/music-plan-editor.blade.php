@@ -324,9 +324,28 @@
                                     {{ $slot['sequence'] }}
                                 </div>
                                 <div class="flex-1 space-y-1">
+                                    @if($editingSlotId === $slot['id'])
+                                    <div class="space-y-3">
+                                        <flux:field>
+                                            <flux:input
+                                                wire:model.live="editingSlotName"
+                                                placeholder="Elem neve"
+                                                autofocus />
+                                            <flux:error name="editingSlotName" />
+                                        </flux:field>
+                                        <flux:field>
+                                            <flux:textarea
+                                                wire:model.live="editingSlotDescription"
+                                                placeholder="Leírás (opcionális)"
+                                                rows="2" />
+                                            <flux:error name="editingSlotDescription" />
+                                        </flux:field>
+                                    </div>
+                                    @else
                                     <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
                                     @if($slot['description'])
                                     <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
+                                    @endif
                                     @endif
 
                                     <!-- Assigned music -->
@@ -397,6 +416,26 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <div class="flex flex-col gap-1">
+                                        @if($editingSlotId === $slot['id'])
+                                        <!-- Save/Cancel buttons when editing -->
+                                        <flux:button
+                                            wire:click="saveEditedSlot"
+                                            wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                            icon="check"
+                                            variant="primary"
+                                            size="xs"
+                                            title="Mentés" />
+                                        <flux:button
+                                            wire:click="cancelEditingSlot"
+                                            wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                            icon="x-mark"
+                                            variant="outline"
+                                            size="xs"
+                                            title="Mégse" />
+                                        @else
+                                        <!-- Normal buttons when not editing -->
                                         <flux:button
                                             wire:click="moveSlotUp({{ $slot['pivot_id'] }})"
                                             wire:loading.attr="disabled"
@@ -422,6 +461,16 @@
                                             variant="outline"
                                             size="xs"
                                             title="Zene hozzáadása" />
+                                        @if($slot['is_custom'])
+                                        <flux:button
+                                            wire:click="startEditingSlot({{ $slot['id'] }})"
+                                            wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                            icon="pencil"
+                                            variant="outline"
+                                            size="xs"
+                                            title="Szerkesztés" />
+                                        @endif
                                         <flux:button
                                             wire:click="deleteSlot({{ $slot['pivot_id'] }})"
                                             wire:confirm="Biztosan eltávolítod ezt az elemet az énekrendből?"
@@ -430,6 +479,7 @@
                                             icon="trash"
                                             variant="danger"
                                             size="xs" />
+                                        @endif
                                     </div>
                                 </div>
 
