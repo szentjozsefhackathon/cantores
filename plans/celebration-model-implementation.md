@@ -120,7 +120,7 @@ public function celebrations(): BelongsToMany
 
 // Remove celebration-related fields from $fillable
 // Update casts to remove celebration-related fields
-// Keep only: user_id, setting, is_published
+// Keep only: user_id, setting, is_private
 ```
 
 ## Data Migration Strategy
@@ -155,7 +155,7 @@ $musicPlan = MusicPlan::create([
     'celebration_name' => $celebration['name'] ?? $celebration['title'] ?? 'Unknown',
     'actual_date' => $celebration['dateISO'] ?? $this->date,
     // ... other celebration fields
-    'is_published' => false,
+    'is_private' => true,
 ]);
 ```
 
@@ -187,7 +187,7 @@ $celebrationModel = Celebration::firstOrCreate(
 $musicPlan = MusicPlan::create([
     'user_id' => $user->id,
     'setting' => 'organist', // default
-    'is_published' => false,
+    'is_private' => true,
 ]);
 
 // Attach celebration

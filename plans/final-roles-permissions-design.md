@@ -220,7 +220,7 @@ public function view(User $user, Music $music): bool
     }
     
     // Check if music is published
-    if (!$music->is_published) {
+    if ($music->is_private) {
         // Only owner, admin, or editors can view unpublished
         return $user->hasPermissionTo('music.view.unpublished') && 
                ($user->id === $music->user_id || $user->hasRole('editor'));
@@ -310,7 +310,7 @@ To maintain compatibility during migration:
 1. Create the database seeder with roles and permissions (without genre permissions)
 2. Update User model to sync roles with existing admin status
 3. Update policies to incorporate role checks and content state checks
-4. Add `is_published` and `is_verified` fields to relevant models if not present
+4. Add `is_private` and `is_verified` fields to relevant models if not present
 5. Update middleware and route protections
 6. Update tests to reflect new authorization system
 7. Optional: Create admin UI for role management

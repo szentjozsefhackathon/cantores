@@ -35,8 +35,8 @@ Implement a three-role system (Admin, Editor, Contributor) with specific permiss
 - **Unpublish exception**: Editors/Admins can unpublish any music plan
 
 ### Published vs Unpublished Content
-- **Music Plans**: Have `is_published` field (already exists)
-- **Musics & Collections**: Need `is_published` field added (see Database Changes)
+- **Music Plans**: Have `is_private` field (already exists)
+- **Musics & Collections**: Need `is_private` field added (see Database Changes)
 - **Editing rules**:
   - Contributors: Can edit their own (published or unpublished)
   - Editors/Admins: Can edit only when published
@@ -49,16 +49,16 @@ Implement a three-role system (Admin, Editor, Contributor) with specific permiss
 
 ## Database Changes
 
-### 1. Add `is_published` fields
+### 1. Add `is_private` fields
 ```php
 // Migration for musics table
 Schema::table('musics', function (Blueprint $table) {
-    $table->boolean('is_published')->default(false);
+    $table->boolean('is_private')->default(false);
 });
 
 // Migration for collections table  
 Schema::table('collections', function (Blueprint $table) {
-    $table->boolean('is_published')->default(false);
+    $table->boolean('is_private')->default(false);
 });
 ```
 
@@ -126,7 +126,7 @@ See `database/seeders/RolePermissionSeeder.php` for complete implementation.
 ## Implementation Steps
 
 ### Phase 1: Database Setup
-1. Create migrations for `is_published` fields
+1. Create migrations for `is_private` fields
 2. Run `RolePermissionSeeder` to create roles and permissions
 3. Assign roles to existing users
 
@@ -179,14 +179,14 @@ protected function createUserWithRole($role)
 - Policies should handle both old and new authorization
 
 ### Data Migration
-- All existing musics/collections should be marked as `is_published = true`
+- All existing musics/collections should be marked as `is_private = false` (public)
 - This maintains existing visibility
 
 ## Files to Create/Modify
 
 ### New Files
-- `database/migrations/YYYY_MM_DD_HHMMSS_add_is_published_to_musics_table.php`
-- `database/migrations/YYYY_MM_DD_HHMMSS_add_is_published_to_collections_table.php`
+- `database/migrations/YYYY_MM_DD_HHMMSS_add_is_private_to_musics_table.php`
+- `database/migrations/YYYY_MM_DD_HHMMSS_add_is_private_to_collections_table.php`
 
 ### Modified Files
 - `database/seeders/RolePermissionSeeder.php`

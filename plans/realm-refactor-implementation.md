@@ -171,7 +171,7 @@ public function currentGenre(): BelongsTo
 protected $fillable = [
     'user_id',
     'genre_id', // replace 'setting'
-    'is_published',
+    'is_private',
 ];
 
 public function genre(): BelongsTo
@@ -338,7 +338,7 @@ erDiagram
         bigint id PK
         bigint user_id FK
         bigint genre_id FK
-        boolean is_published
+        boolean is_private
     }
     
     Music {

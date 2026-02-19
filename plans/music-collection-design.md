@@ -196,7 +196,7 @@ erDiagram
         string readings_code
         char year_letter
         string year_parity
-        boolean is_published
+        boolean is_private
         timestamp created_at
         timestamp updated_at
     }

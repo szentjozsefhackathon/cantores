@@ -13,7 +13,7 @@
 
 3. **Remove celebration columns from music_plans table migration**
    - Columns to remove: celebration_name, actual_date, season, season_text, week, day, readings_code, year_letter, year_parity
-   - Keep: user_id, setting, is_published, timestamps
+   - Keep: user_id, setting, is_private, timestamps
 
 ## Phase 2: Models
 4. **Create Celebration model** (app/Models/Celebration.php)

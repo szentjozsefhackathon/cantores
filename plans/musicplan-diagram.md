@@ -19,7 +19,7 @@ erDiagram
         string readings_code
         char liturgical_year
         string parity
-        boolean is_published
+        boolean is_private
         timestamp created_at
         timestamp updated_at
     }
@@ -53,7 +53,7 @@ flowchart TD
     H --> J
     I --> J
     
-    J --> K[Add filters:<br/>is_published = true<br/>id != current_plan_id]
+    J --> K[Add filters:<br/>is_private = false<br/>id != current_plan_id]
     
     K --> L[Execute query<br/>ORDER BY actual_date DESC]
     
@@ -69,7 +69,7 @@ flowchart TD
 - **Match Type 1 (Celebration)**: `celebrationName = ?`
 - **Match Type 2 (Liturgical)**: `season_id = ? AND week_id = ? AND day_id = ?` (liturgical_year NOT considered)
 - **Match Type 3 (Readings)**: `readings_code = ?`
-- **Filters Applied**: `is_published = true`, `id != current_plan_id`
+- **Filters Applied**: `is_private = false`, `id != current_plan_id`
 - **Ordering**: `actual_date DESC` (most recent first)
 - **Scope**: All published plans regardless of user
 
@@ -98,7 +98,7 @@ classDiagram
         +readings_code: string
         +liturgical_year: char
         +parity: string
-        +is_published: boolean
+        +is_private: boolean
         +user() BelongsTo
         +previousPlans() Collection
         +isFixedDateFeast() bool
@@ -124,7 +124,7 @@ classDiagram
 | Index | Columns | Purpose | Query Example |
 |-------|---------|---------|---------------|
 | Primary | `id` | Unique identification | `WHERE id = ?` |
-| User Visibility | `user_id, is_published` | User-specific queries | `WHERE user_id = ? AND is_published = ?` |
+| User Visibility | `user_id, is_private` | User-specific queries | `WHERE user_id = ? AND is_private = ?` |
 | Liturgical Lookup | `season_id, week_id, day_id, liturgical_year` | Historical plan lookup | `WHERE season_id = ? AND week_id = ? AND day_id = ? AND liturgical_year = ?` |
 | Date Lookup | `actual_date` | Date-based queries | `WHERE actual_date BETWEEN ? AND ?` |
 | Setting Filter | `setting` | Filter by instrument type | `WHERE setting = ?` |
@@ -144,7 +144,7 @@ classDiagram
 | `readings_code` | string | nullable, max:50 | External system code |
 | `liturgical_year` | char | required, in:A,B,C | Liturgical cycle year |
 | `parity` | string | nullable, in:I,II | Weekday mass parity |
-| `is_published` | boolean | boolean | Default: false |
+| `is_private` | boolean | boolean | Default: false |
 
 ## API Endpoints (Future Consideration)
 

@@ -11,14 +11,14 @@ MusicPlan represents a personal plan for a Catholic Mass. It is connected to a u
 | `id` | bigint | Primary key | AUTO_INCREMENT |
 | `user_id` | bigint | Foreign key to users table | NOT NULL, INDEX |
 | `genre_id` | bigint | Foreign key to genres table | NULLABLE |
-| `is_published` | boolean | Whether the plan is published or private | DEFAULT false |
+| `is_private` | boolean | Whether the plan is private (not public) | DEFAULT false |
 | `created_at` | timestamp | When the record was created | NULLABLE |
 | `updated_at` | timestamp | When the record was last updated | NULLABLE |
 
 **Indexes:**
 1. Primary key: `id`
 2. Foreign key index: `user_id` (references `users.id`)
-3. User visibility index: `(user_id, is_published)` for user-specific queries
+3. User visibility index: `(user_id, is_private)` for user-specific queries
 4. Genre index: `genre_id` (references `genres.id`)
 
 **Foreign Keys:**
@@ -102,7 +102,7 @@ erDiagram
         bigint id PK
         bigint user_id FK
         bigint genre_id FK
-        boolean is_published
+        boolean is_private
         timestamp created_at
         timestamp updated_at
     }
@@ -167,7 +167,7 @@ class MusicPlan extends Model
     protected $fillable = [
         'user_id',
         'genre_id',
-        'is_published',
+        'is_private',
     ];
 
     /**
@@ -178,7 +178,7 @@ class MusicPlan extends Model
     protected function casts(): array
     {
         return [
-            'is_published' => 'boolean',
+            'is_private' => 'boolean',
         ];
     }
 
@@ -242,11 +242,11 @@ class MusicPlan extends Model
     }
 
     /**
-     * Scope for published plans.
+     * Scope for public plans (not private).
      */
-    public function scopePublished($query)
+    public function scopePublic($query)
     {
-        return $query->where('is_published', true);
+        return $query->where('is_private', false);
     }
 
     /**
@@ -254,7 +254,7 @@ class MusicPlan extends Model
      */
     public function scopePrivate($query)
     {
-        return $query->where('is_published', false);
+        return $query->where('is_private', true);
     }
 
     /**
@@ -546,7 +546,7 @@ class MusicPlanSlotPlan extends Model
 $musicPlan = MusicPlan::create([
     'user_id' => Auth::id(),
     'genre_id' => $genre->id,
-    'is_published' => false,
+    'is_private' => true,
 ]);
 
 // Associate with a celebration

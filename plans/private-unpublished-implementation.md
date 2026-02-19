@@ -8,12 +8,12 @@ This plan outlines the schema changes and code updates required to implement pri
 ### Database Schema
 - **musics table**: `id`, `title`, `subtitle`, `custom_id`, `user_id` (nullable), `created_at`, `updated_at`
 - **collections table**: `id`, `title`, `abbreviation`, `author`, `user_id` (nullable), `created_at`, `updated_at`
-- **music_plans table**: `id`, `user_id`, `genre_id`, `is_published` (boolean, default false), `created_at`, `updated_at`
+- **music_plans table**: `id`, `user_id`, `genre_id`, `is_private` (boolean, default false), `created_at`, `updated_at`
 
 ### Models
 - **Music**: No `is_private` property, no cast, no scopes for privacy.
 - **Collection**: No `is_private` property, no cast, no scopes for privacy.
-- **MusicPlan**: Has `is_published` cast, `published()` and `private()` scopes.
+- **MusicPlan**: Has `is_private` cast, `public()` and `private()` scopes.
 
 ### Policies
 - **MusicPolicy**: Allows any authenticated user to view any music (`viewAny` and `view` return true).
@@ -95,7 +95,7 @@ return new class extends Migration
 };
 ```
 
-**Note**: No migration needed for `music_plans` as `is_published` already exists.
+**Note**: The `music_plans` table already has the field (previously named `is_published`, now renamed to `is_private` via migration `2026_02_19_080125_rename_is_published_to_is_private_on_music_plans.php`).
 
 ### 2. Model Updates
 
@@ -151,7 +151,7 @@ public function scopeVisibleTo($query, ?User $user = null)
 - Similar updates as Music model.
 
 #### MusicPlan Model (`app/Models/MusicPlan.php`)
-- Already has `is_published` cast and scopes. Ensure `visibleTo` scope consistency.
+- Already has `is_private` cast and scopes (uses the `HasVisibilityScoping` trait). Ensure `visibleTo` scope consistency.
 
 ### 3. Policy Updates
 
@@ -234,7 +234,7 @@ public function render(): View
 - Consider adding filter toggles (Show public/private/all) for owners.
 
 #### MusicPlan Publishing
-- No changes needed; existing UI already handles `is_published`.
+- No changes needed; existing UI already handles `is_private` (previously `is_published`).
 
 ### 6. Testing Strategy
 
