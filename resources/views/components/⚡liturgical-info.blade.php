@@ -26,7 +26,7 @@ new class extends Component
 
     public function mount(bool $selectable = false): void
     {
-        $this->selectable = $selectable;
+        $selectable = $selectable;
         $this->date = Carbon::now()->format('Y-m-d');
         $this->fetchLiturgicalInfo();
     }
@@ -402,7 +402,11 @@ new class extends Component
             </x-slot>
         </flux:callout>
         @else
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            @if ($selectable)
+                <div class="grid grid-cols-1 gap-6">
+            @else 
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            @endif
             @foreach ($celebrations as $celebration)
             @php
             // Determine border color based on colorText
@@ -596,6 +600,7 @@ new class extends Component
                             Ünnep kiválasztása
                         </flux:button>
                     @endif
+                    @if (!$selectable)
                     @auth
                         <flux:button
                             wire:click="createMusicPlan({{ $loop->index }})"
@@ -618,6 +623,7 @@ new class extends Component
                             Énekrend javaslatok
                         </flux:button>
                         @endif
+                    @endif
                     </div>
                 </div>
             </flux:card>

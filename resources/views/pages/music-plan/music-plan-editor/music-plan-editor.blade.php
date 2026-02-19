@@ -99,21 +99,21 @@
                     <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">Ünnep hozzárendelés módosítása</flux:heading>
                     <div class="flex flex-wrap gap-2">
                         @if($musicPlan->hasCustomCelebrations())
-                            <flux:button
-                                wire:click="switchToLiturgicalCelebration"
-                                icon="calendar"
-                                variant="outline"
-                                size="sm">
-                                Liturgikus ünnepre váltás
-                            </flux:button>
+                        <flux:button
+                            wire:click="switchToLiturgicalCelebration"
+                            icon="calendar"
+                            variant="outline"
+                            size="sm">
+                            Liturgikus ünnepre váltás
+                        </flux:button>
                         @else
-                            <flux:button
-                                wire:click="switchToCustomCelebration"
-                                icon="pencil"
-                                variant="outline"
-                                size="sm">
-                                Egyedi ünnepre váltás
-                            </flux:button>
+                        <flux:button
+                            wire:click="switchToCustomCelebration"
+                            icon="pencil"
+                            variant="outline"
+                            size="sm">
+                            Egyedi ünnepre váltás
+                        </flux:button>
                         @endif
                     </div>
                 </div>
@@ -364,25 +364,25 @@
                                             icon="chevron-down"
                                             variant="outline"
                                             size="xs" />
-                                    <div class="border-b border-neutral-300 dark:border-neutral-700 w-6"></div>
-                                    <flux:button
-                                        wire:click="openMusicSearchModal({{ $slot['pivot_id'] }})"
-                                        wire:loading.attr="disabled"
-                                        wire:loading.class="opacity-50 cursor-not-allowed"
-                                        icon="plus"
-                                        variant="outline"
-                                        size="xs"
-                                        title="Zene hozzáadása" />
-                                    <flux:button
-                                        wire:click="deleteSlot({{ $slot['pivot_id'] }})"
-                                        wire:confirm="Biztosan eltávolítod ezt az elemet az énekrendből?"
-                                        wire:loading.attr="disabled"
-                                        wire:loading.class="opacity-50 cursor-not-allowed"
-                                        icon="trash"
-                                        variant="danger"
-                                        size="xs" />
+                                        <div class="border-b border-neutral-300 dark:border-neutral-700 w-6"></div>
+                                        <flux:button
+                                            wire:click="openMusicSearchModal({{ $slot['pivot_id'] }})"
+                                            wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                            icon="plus"
+                                            variant="outline"
+                                            size="xs"
+                                            title="Zene hozzáadása" />
+                                        <flux:button
+                                            wire:click="deleteSlot({{ $slot['pivot_id'] }})"
+                                            wire:confirm="Biztosan eltávolítod ezt az elemet az énekrendből?"
+                                            wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                            icon="trash"
+                                            variant="danger"
+                                            size="xs" />
+                                    </div>
                                 </div>
-                            </div>
 
                             </flux:card>
                             @empty
@@ -499,20 +499,20 @@
                 </div>
 
                 <!-- Celebration selector modal -->
-                <flux:modal wire:model="showCelebrationSelector" title="Liturgikus ünnep kiválasztása" size="lg">
+                <flux:modal wire:model="showCelebrationSelector" title="Liturgikus ünnep kiválasztása" class="md:w-2xl">
+                    <div class="flex flex-col gap-4">
                     <livewire:liturgical-info selectable />
 
-                    <x-slot name="footer">
-                        <div class="flex justify-end gap-2">
-                            <flux:button
-                                wire:click="cancelCelebrationSelection"
-                                variant="outline">
-                                Mégse
-                            </flux:button>
-                        </div>
-                    </x-slot>
-                </flux:modal>
+                    <div class="flex">
+                        <flux:spacer />
+                        <flux:button
+                            wire:click="cancelCelebrationSelection">
+                            Mégse
+                        </flux:button>
+                    </div>
             </div>
-        </flux:card>
+            </flux:modal>
     </div>
+    </flux:card>
+</div>
 </div>
