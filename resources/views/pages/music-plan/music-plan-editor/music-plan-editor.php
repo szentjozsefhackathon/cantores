@@ -464,6 +464,10 @@ new class extends Component
 
         $this->allSlots = $query
             ->orderBy('name')
+            ->where(function ($q) {
+                $q->where('is_custom', false)
+                    ->orWhere('music_plan_id', $this->musicPlan->id);
+            })
             ->get()
             ->map(function ($slot) {
                 return [
