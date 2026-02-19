@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasVisibilityScoping;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -13,6 +14,7 @@ use OwenIt\Auditing\Contracts\Auditable;
 class Music extends Model implements Auditable
 {
     use HasFactory;
+    use HasVisibilityScoping;
     use \OwenIt\Auditing\Auditable;
     use Searchable;
 
@@ -136,41 +138,6 @@ class Music extends Model implements Auditable
             });
         }
         // If $genreId is null, no filtering applied (show all music)
-    }
-
-    /**
-     * Scope for public music (not private).
-     */
-    public function scopePublic($query)
-    {
-        return $query->where('is_private', false);
-    }
-
-    /**
-     * Scope for private music.
-     */
-    public function scopePrivate($query)
-    {
-        return $query->where('is_private', true);
-    }
-
-    /**
-     * Scope for music visible to a given user.
-     * Shows public music plus user's own private music.
-     */
-    public function scopeVisibleTo($query, ?\App\Models\User $user = null)
-    {
-        $userId = $user?->id;
-
-        if (! $userId) {
-            // Guest can only see public items
-            return $query->where('is_private', false);
-        }
-
-        return $query->where(function ($q) use ($userId) {
-            $q->where('is_private', false)
-                ->orWhere('user_id', $userId);
-        });
     }
 
     #[SearchUsingFullText(['titles'], ['language' => 'hungarian'])]

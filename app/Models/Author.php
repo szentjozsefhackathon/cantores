@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasVisibilityScoping;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,7 @@ use OwenIt\Auditing\Contracts\Auditable;
 class Author extends Model implements Auditable
 {
     use HasFactory;
+    use HasVisibilityScoping;
     use \OwenIt\Auditing\Auditable;
     use Searchable;
 
@@ -62,41 +64,6 @@ class Author extends Model implements Auditable
     public function scopeSearch($query, string $search): void
     {
         $query->where('name', 'ilike', "%{$search}%");
-    }
-
-    /**
-     * Scope for public authors (not private).
-     */
-    public function scopePublic($query)
-    {
-        return $query->where('is_private', false);
-    }
-
-    /**
-     * Scope for private authors.
-     */
-    public function scopePrivate($query)
-    {
-        return $query->where('is_private', true);
-    }
-
-    /**
-     * Scope for authors visible to a given user.
-     * Shows public authors plus user's own private authors.
-     */
-    public function scopeVisibleTo($query, ?\App\Models\User $user = null)
-    {
-        $userId = $user?->id;
-
-        if (! $userId) {
-            // Guest can only see public items
-            return $query->where('is_private', false);
-        }
-
-        return $query->where(function ($q) use ($userId) {
-            $q->where('is_private', false)
-                ->orWhere('user_id', $userId);
-        });
     }
 
     /**

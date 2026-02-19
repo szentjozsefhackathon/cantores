@@ -22,7 +22,7 @@ class CollectionView extends Component
     {
         // Load existing collection
         if (! $collection instanceof Collection) {
-            $collection = Collection::findOrFail($collection);
+            $collection = Collection::visibleTo(Auth::user())->findOrFail($collection);
         }
 
         // Check authorization using Gate (supports guest users)

@@ -34,6 +34,7 @@ class MyMusicPlans extends Component
     public function getMusicPlansQuery()
     {
         $query = MusicPlan::query()
+            ->visibleTo(Auth::user())
             ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc');
 

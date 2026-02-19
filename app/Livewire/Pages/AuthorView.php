@@ -22,7 +22,7 @@ class AuthorView extends Component
     {
         // Load existing author
         if (! $author instanceof Author) {
-            $author = Author::findOrFail($author);
+            $author = Author::visibleTo(Auth::user())->findOrFail($author);
         }
 
         // Check authorization using Gate (supports guest users)

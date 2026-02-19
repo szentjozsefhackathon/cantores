@@ -166,7 +166,8 @@ new #[Layout('layouts::app.main')] class extends Component
         })
             ->with([
                 'celebrations',
-                'musicAssignments.music.collections',
+                'musicAssignments.music' => fn ($q) => $q->visibleTo($user),
+                'musicAssignments.music.collections' => fn ($q) => $q->visibleTo($user),
                 'musicAssignments.musicPlanSlot',
             ])
             ->withCount('celebrations');
@@ -180,14 +181,7 @@ new #[Layout('layouts::app.main')] class extends Component
         }
 
         // Show only published plans and user's own plans (private or published)
-        if ($user) {
-            $query->where(function ($q) use ($user) {
-                $q->where('is_published', true)
-                    ->orWhere('user_id', $user->id);
-            });
-        } else {
-            $query->where('is_published', true);
-        }
+        $query->visibleTo($user);
 
         return $query->orderBy('created_at', 'desc')->get();
     }

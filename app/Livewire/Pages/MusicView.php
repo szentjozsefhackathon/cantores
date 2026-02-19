@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages;
 
 use App\Models\Music;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -16,7 +17,7 @@ class MusicView extends Component
     {
         // Load existing music
         if (! $music instanceof Music) {
-            $music = Music::findOrFail($music);
+            $music = Music::visibleTo(Auth::user())->findOrFail($music);
         }
 
         // Check authorization using Gate (supports guest users)

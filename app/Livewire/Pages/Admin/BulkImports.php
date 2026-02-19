@@ -136,7 +136,7 @@ class BulkImports extends Component
             ]);
 
             // add the collection's genres to the music
-            $collection = Collection::find($this->selectedCollectionId);
+            $collection = Collection::visibleTo(Auth::user())->findOrFail($this->selectedCollectionId);
             if ($collection) {
                 $genreIds = $collection->genres()->pluck('genre_id');
                 $music->genres()->attach($genreIds);

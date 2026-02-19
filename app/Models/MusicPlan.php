@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasVisibilityScoping;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class MusicPlan extends Model
 {
     use HasFactory;
+    use HasVisibilityScoping;
 
     /**
      * The attributes that are mass assignable.
@@ -33,6 +35,16 @@ class MusicPlan extends Model
         return [
             'is_published' => 'boolean',
         ];
+    }
+
+    public function getVisibilityField(): string
+    {
+        return 'is_published';
+    }
+
+    public function getVisibilityPublicValue(): bool
+    {
+        return true;
     }
 
     /**
@@ -112,22 +124,6 @@ class MusicPlan extends Model
             'id', // Local key on MusicPlan table
             'music_id' // Foreign key on MusicPlanSlotAssignment table
         );
-    }
-
-    /**
-     * Scope for published plans.
-     */
-    public function scopePublished($query)
-    {
-        return $query->where('is_published', true);
-    }
-
-    /**
-     * Scope for private plans.
-     */
-    public function scopePrivate($query)
-    {
-        return $query->where('is_published', false);
     }
 
     /**
