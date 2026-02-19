@@ -640,6 +640,7 @@ new class extends Component
     </div>
 
     <!-- Audit Log Modal -->
+     @if($showAuditModal)
     <flux:modal wire:model="showAuditModal" max-width="4xl">
         <flux:heading size="lg">{{ __('Audit Log') }}</flux:heading>
         <flux:subheading>
@@ -745,7 +746,9 @@ new class extends Component
             </flux:button>
         </div>
     </flux:modal>
+    @endif
 
+    @if($showEditModal)
     <!-- Edit Collection Modal -->
     <flux:modal wire:model="showEditModal" max-width="lg">
         <flux:heading size="lg">{{ __('Edit Collection Connection') }}</flux:heading>
@@ -791,6 +794,7 @@ new class extends Component
             </flux:button>
         </div>
     </flux:modal>
+    @endif
 
     <!-- Error Report Component -->
     <livewire:error-report/>

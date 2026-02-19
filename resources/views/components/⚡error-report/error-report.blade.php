@@ -3,6 +3,7 @@
     <x-action-message on="error-report-failed" />
 
     <!-- Modal -->
+    @if($showModal)
     <flux:modal wire:model="showModal" max-width="md">
         <flux:heading size="lg">{{ __('Report Error') }}</flux:heading>
         <flux:subheading>
@@ -39,4 +40,5 @@
             </flux:button>
         </div>
     </flux:modal>
+    @endif
 </div>
