@@ -173,6 +173,11 @@ new class extends Component
     {
         $this->authorize('delete', $this->musicPlan);
 
+        // Delete custom celebrations attached to this music plan
+        $this->musicPlan->customCelebrations()->each(function ($celebration) {
+            $celebration->delete();
+        });
+
         $this->musicPlan->delete();
 
         $this->redirectRoute('my-music-plans');
@@ -819,6 +824,8 @@ new class extends Component
         $this->isEditingCelebration = false;
 
         $this->dispatch('slots-updated', message: 'Liturgikus ünnep csatolva.');
+
+        
     }
 
     #[On('celebration-selected')]
