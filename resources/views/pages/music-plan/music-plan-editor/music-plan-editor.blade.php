@@ -114,6 +114,13 @@
                             size="sm">
                             Egyedi ünnepre váltás
                         </flux:button>
+                        <flux:button
+                            wire:click="switchToLiturgicalCelebration"
+                            icon="calendar"
+                            variant="outline"
+                            size="sm">
+                            Liturgikus ünnep cseréje
+                        </flux:button>
                         @endif
                     </div>
                 </div>

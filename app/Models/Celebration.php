@@ -107,7 +107,7 @@ class Celebration extends Model
             6 => 'szombat',
         ];
 
-        return $days[$this->day] ?? 'ismeretlen';
+        return $days[$this->day] ?? '-';
     }
 
     /**

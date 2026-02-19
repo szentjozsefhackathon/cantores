@@ -13,12 +13,6 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <flux:button 
-                        href="{{ route('dashboard') }}" 
-                        variant="outline" 
-                        icon="arrow-left">
-                        Vissza
-                    </flux:button>
                     <form action="{{ route('music-plans.store') }}" method="POST" class="inline">
                         @csrf
                         <flux:button
