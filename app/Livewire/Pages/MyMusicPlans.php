@@ -3,7 +3,7 @@
 namespace App\Livewire\Pages;
 
 use App\Facades\GenreContext;
-use App\Models\MusicPlan;
+use App\Models\Celebration;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -31,42 +31,68 @@ class MyMusicPlans extends Component
         $this->resetPage();
     }
 
-    public function getMusicPlansQuery()
+    public function getCelebrationsQuery()
     {
-        $query = MusicPlan::query()
-            ->visibleTo(Auth::user())
-            ->where('user_id', Auth::id())
-            ->orderBy('created_at', 'desc');
+        $query = Celebration::query()
+            ->whereHas('musicPlans', function ($q) {
+                $q->visibleTo(Auth::user())
+                    ->where('user_id', Auth::id());
+            })
+            ->orderBy('actual_date', 'asc')
+            ->orderBy('celebration_key', 'asc');
 
         // Filter by current genre
         $genreId = GenreContext::getId();
         if ($genreId !== null) {
-            // Show plans that belong to the current genre OR have no genre (belongs to all)
-            $query->where(function ($q) use ($genreId) {
-                $q->whereNull('genre_id')
-                    ->orWhere('genre_id', $genreId);
+            $query->whereHas('musicPlans', function ($q) use ($genreId) {
+                $q->where(function ($subQ) use ($genreId) {
+                    $subQ->whereNull('genre_id')
+                        ->orWhere('genre_id', $genreId);
+                });
             });
         }
-        // If $genre_id is null, no filtering applied (show all plans)
 
         if ($this->search) {
             $query->where(function ($q) {
-                // Search through celebrations relationship
-                $q->whereHas('celebrations', function ($celebrationQuery) {
-                    $celebrationQuery->where('name', 'ilike', "%{$this->search}%")
-                        ->orWhere('season_text', 'ilike', "%{$this->search}%")
-                        ->orWhere('year_letter', 'ilike', "%{$this->search}%");
-                });
+                $q->where('name', 'ilike', "%{$this->search}%")
+                    ->orWhere('season_text', 'ilike', "%{$this->search}%")
+                    ->orWhere('year_letter', 'ilike', "%{$this->search}%");
             });
         }
 
         return $query;
     }
 
+    public function getCelebrationsWithPlans()
+    {
+        $celebrations = $this->getCelebrationsQuery()->get();
+
+        // Eager load musicPlans with necessary constraints
+        $celebrations->load(['musicPlans' => function ($query) {
+            $query->visibleTo(Auth::user())
+                ->where('user_id', Auth::id())
+                ->orderBy('created_at', 'desc');
+
+            // Apply genre filter if needed
+            $genreId = GenreContext::getId();
+            if ($genreId !== null) {
+                $query->where(function ($q) use ($genreId) {
+                    $q->whereNull('genre_id')
+                        ->orWhere('genre_id', $genreId);
+                });
+            }
+        }]);
+
+        // Filter out celebrations that have no music plans after filtering
+        return $celebrations->filter(function ($celebration) {
+            return $celebration->musicPlans->isNotEmpty();
+        });
+    }
+
     public function render()
     {
         return view('pages.my-music-plans', [
-            'musicPlans' => $this->getMusicPlansQuery()->paginate(12),
+            'celebrations' => $this->getCelebrationsWithPlans(),
         ]);
     }
 }

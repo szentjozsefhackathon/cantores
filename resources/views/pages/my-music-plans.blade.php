@@ -1,13 +1,3 @@
-<?php
-
-use Livewire\Component;
-
-new class extends Component
-{
-    //
-};
-?>
-
 <div class="py-8">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <flux:card class="p-5">
@@ -46,25 +36,30 @@ new class extends Component
                 <div class="flex flex-col md:flex-row gap-4">
                     <div class="flex-1">
                         <flux:field>
-                            <flux:label>Keresés énekrendek között</flux:label>
-                            <flux:input 
-                                type="search" 
-                                wire:model.live="search" 
-                                placeholder="Keresés ünnep neve, időszak vagy liturgikus év szerint..." 
+                            <flux:label>Keresés ünnepek között</flux:label>
+                            <flux:input
+                                type="search"
+                                wire:model.live="search"
+                                placeholder="Keresés ünnep neve, időszak vagy liturgikus év szerint..."
                                 icon="magnifying-glass" />
                         </flux:field>
                     </div>
                     <div class="flex items-end">
+                        @php
+                            $totalPlans = $celebrations->sum(function ($celebration) {
+                                return $celebration->musicPlans->count();
+                            });
+                        @endphp
                         <flux:badge color="blue" size="lg" class="px-4 py-2">
                             <flux:icon name="musical-note" class="h-4 w-4 mr-2" variant="mini" />
-                            {{ $musicPlans->total() }} énekrend
+                            {{ $totalPlans }} énekrend {{ $celebrations->count() }} ünnepen
                         </flux:badge>
                     </div>
                 </div>
             </div>
 
-            <!-- Music plans grid -->
-            @if($musicPlans->isEmpty())
+            <!-- Celebrations grouped view -->
+            @if($celebrations->isEmpty())
                 <flux:callout variant="secondary" icon="musical-note" class="border-dashed">
                     <flux:callout.heading>Még nincsenek énekrendjeid</flux:callout.heading>
                     <flux:callout.text>
@@ -77,18 +72,58 @@ new class extends Component
                     </x-slot>
                 </flux:callout>
             @else
-                <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    @foreach($musicPlans as $plan)
-                        <livewire:music-plan-card :musicPlan="$plan" :key="$plan->id" />
+                <div class="space-y-8">
+                    @foreach($celebrations as $celebration)
+                        <div class="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden">
+                            <!-- Celebration header -->
+                            <div class="bg-neutral-50 dark:bg-neutral-900 px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                    <div>
+                                        <div class="flex items-center gap-3">
+                                            <flux:icon name="calendar" class="h-5 w-5 text-blue-600 dark:text-blue-400" variant="outline" />
+                                            <flux:heading size="lg">{{ $celebration->name }}</flux:heading>
+                                        </div>
+                                        <div class="mt-2 flex flex-wrap items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
+                                            <div class="flex items-center gap-1">
+                                                <flux:icon name="clock" class="h-4 w-4" variant="mini" />
+                                                {{ $celebration->actual_date->format('Y. m. d.') }}
+                                            </div>
+                                            @if($celebration->season_text)
+                                                <div class="flex items-center gap-1">
+                                                    <flux:icon name="leaf" class="h-4 w-4" variant="mini" />
+                                                    {{ $celebration->season_text }}
+                                                </div>
+                                            @endif
+                                            @if($celebration->year_letter)
+                                                <div class="flex items-center gap-1">
+                                                    <flux:icon name="book-open" class="h-4 w-4" variant="mini" />
+                                                    {{ $celebration->year_letter }} év
+                                                </div>
+                                            @endif
+                                            @if($celebration->is_custom)
+                                                <flux:badge color="amber" size="sm">Egyéni ünnep</flux:badge>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <flux:badge color="blue" size="lg">
+                                            {{ $celebration->musicPlans->count() }} énekrend
+                                        </flux:badge>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Music plans for this celebration -->
+                            <div class="p-6">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                                    @foreach($celebration->musicPlans as $plan)
+                                        <livewire:music-plan-card :musicPlan="$plan" :key="$plan->id" />
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
                     @endforeach
                 </div>
-
-                <!-- Pagination -->
-                @if($musicPlans->hasPages())
-                    <div class="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-800">
-                        {{ $musicPlans->links() }}
-                    </div>
-                @endif
             @endif
         </flux:card>
     </div>

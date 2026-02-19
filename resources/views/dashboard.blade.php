@@ -4,7 +4,7 @@
             <livewire:liturgical-info />
         </div>
         <div class="col-span-1">
-            <!-- Right half: Add content or leave empty -->
+            <livewire:pages.my-music-plans />
         </div>
     </div>
 </x-layouts::app>
