@@ -14,6 +14,7 @@ new #[Layout('layouts::app.main')] class extends Component
     public MusicPlan $musicPlan;
     public array $planSlots = [];
     public bool $isPublished = false;
+    public bool $isOwner = false;
 
     public function mount($musicPlan): void
     {
@@ -28,6 +29,9 @@ new #[Layout('layouts::app.main')] class extends Component
         }
 
         $this->musicPlan = $musicPlan;
+
+        // Check if current user is the owner
+        $this->isOwner = Auth::check() && Auth::id() === $this->musicPlan->user_id;
 
         // Sync published state
         $this->isPublished = !$this->musicPlan->is_private;
@@ -129,6 +133,16 @@ new #[Layout('layouts::app.main')] class extends Component
                         </div>
                     </div>
                 </div>
+
+                @if($isOwner && $musicPlan->private_notes)
+                <!-- Private notes (owner only) -->
+                <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">Privát megjegyzéseid</flux:heading>
+                    <flux:card class="p-4 bg-neutral-50 dark:bg-neutral-900/50">
+                        <flux:text class="whitespace-pre-wrap">{{ $musicPlan->private_notes }}</flux:text>
+                    </flux:card>
+                </div>
+                @endif
 
                 <!-- Editor Columns -->
                 <div class="pt-6 border-t border-neutral-200 dark:border-neutral-800">

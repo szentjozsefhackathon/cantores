@@ -95,6 +95,28 @@
                     @endif
                 </div>
 
+                <!-- Private notes -->
+                <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800">
+                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">Privát megjegyzések (csak neked látható)</flux:heading>
+                    <flux:field>
+                        <flux:textarea
+                            wire:model.live="privateNotes"
+                            placeholder="Írj ide privát megjegyzéseket az énekrenddel kapcsolatban (pl. emlékeztetők, gondolatok)..."
+                            rows="4"
+                            class="w-full" />
+                    </flux:field>
+                    <div class="flex justify-end mt-2">
+                        <flux:button
+                            wire:click="savePrivateNotes"
+                            wire:loading.attr="disabled"
+                            icon="check"
+                            variant="primary"
+                            size="sm">
+                            Mentés
+                        </flux:button>
+                    </div>
+                </div>
+
                 <!-- Celebration assignment switching -->
                 <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800">
                     <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">Ünnep hozzárendelés módosítása</flux:heading>

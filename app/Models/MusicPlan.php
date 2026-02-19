@@ -23,6 +23,7 @@ class MusicPlan extends Model
         'user_id',
         'genre_id',
         'is_private',
+        'private_notes',
     ];
 
     /**

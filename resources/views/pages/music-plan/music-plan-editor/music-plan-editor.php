@@ -46,6 +46,8 @@ new class extends Component
 
     public bool $isEditingCelebration = false;
 
+    public ?string $privateNotes = null;
+
     public bool $showCelebrationSelector = false;
 
     public array $availableCelebrations = [];
@@ -118,6 +120,7 @@ new class extends Component
         $this->isPublished = ! $this->musicPlan->is_private;
 
         $this->genreId = $this->musicPlan->genre_id;
+        $this->privateNotes = $this->musicPlan->private_notes;
 
         // Load data for both new and existing plans
         $this->loadAvailableTemplates();
@@ -844,6 +847,17 @@ new class extends Component
     public function updatedFlags($value, $key)
     {
         $this->syncFlags((int) $key);
+    }
+
+    public function savePrivateNotes(): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $this->musicPlan->update([
+            'private_notes' => $this->privateNotes,
+        ]);
+
+        $this->dispatch('slots-updated', message: 'Privát megjegyzések mentve.');
     }
 
     public function updatedCelebrationName(): void
