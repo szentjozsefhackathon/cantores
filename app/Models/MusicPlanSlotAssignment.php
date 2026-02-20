@@ -35,6 +35,41 @@ class MusicPlanSlotAssignment extends Model
     ];
 
     /**
+     * Get the casts array.
+     *
+     * @return array<string, string>
+     */
+    public function casts(): array
+    {
+        return [];
+    }
+
+    /**
+     * Get the formatted scope label.
+     */
+    public function getScopeLabelAttribute(): string
+    {
+        if ($this->scopes->isEmpty()) {
+            return '';
+        }
+
+        $grouped = $this->scopes->groupBy(fn ($scope) => $scope->scope_type->value);
+
+        $parts = [];
+        foreach ($grouped as $type => $scopes) {
+            $numbers = $scopes->pluck('scope_number')->filter()->sort()->unique()->values();
+            $typeLabel = $scopes->first()->scope_type->label();
+            if ($numbers->isEmpty()) {
+                $parts[] = $typeLabel;
+            } else {
+                $parts[] = $typeLabel.' '.$numbers->join(',');
+            }
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
      * Get the music plan that owns this assignment.
      */
     public function musicPlan(): BelongsTo
@@ -75,6 +110,14 @@ class MusicPlanSlotAssignment extends Model
             MusicAssignmentFlag::class,
             'music_plan_slot_assignment_music_assignment_flag'
         );
+    }
+
+    /**
+     * Get the scopes associated with this assignment.
+     */
+    public function scopes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(MusicPlanSlotAssignmentScope::class, 'music_plan_slot_assignment_id');
     }
 
     /**

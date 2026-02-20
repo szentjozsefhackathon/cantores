@@ -428,6 +428,55 @@
                                                         @endscope
                                                     </x-mary-choices>
                                                     </div>
+                                                    <div class="space-y-2">
+                                                        @foreach($assignment['scopes'] as $index => $scope)
+                                                        <div class="flex gap-2 items-center">
+                                                            <div class="flex-1">
+                                                                <flux:field variant="inline" class="mb-0">
+                                                                    <flux:label class="text-xs">Részlet szám</flux:label>
+                                                                    <flux:input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        wire:model.live="assignmentScopes.{{ $assignment['id'] }}.{{ $index }}.number"
+                                                                        placeholder="pl. 1"
+                                                                        class="w-full"
+                                                                        size="sm" />
+                                                                </flux:field>
+                                                            </div>
+                                                            <div class="flex-1">
+                                                                <flux:field variant="inline" class="mb-0">
+                                                                    <flux:label class="text-xs">Részlet típus</flux:label>
+                                                                    <flux:select
+                                                                        wire:model.live="assignmentScopes.{{ $assignment['id'] }}.{{ $index }}.type"
+                                                                        placeholder="Válassz..."
+                                                                        size="sm"
+                                                                        class="w-full">
+                                                                        <flux:option value="">–</flux:option>
+                                                                        @foreach($this->scopeTypeOptions as $option)
+                                                                        <flux:option value="{{ $option['value'] }}">{{ $option['label'] }}</flux:option>
+                                                                        @endforeach
+                                                                    </flux:select>
+                                                                </flux:field>
+                                                            </div>
+                                                            <div class="pt-5">
+                                                                <flux:button
+                                                                    wire:click="removeScope({{ $assignment['id'] }}, {{ $index }})"
+                                                                    icon="x-mark"
+                                                                    variant="danger"
+                                                                    size="xs" />
+                                                            </div>
+                                                        </div>
+                                                        @endforeach
+                                                        <div class="pt-1">
+                                                            <flux:button
+                                                                wire:click="addScope({{ $assignment['id'] }})"
+                                                                icon="plus"
+                                                                variant="outline"
+                                                                size="xs">
+                                                                További részlet
+                                                            </flux:button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

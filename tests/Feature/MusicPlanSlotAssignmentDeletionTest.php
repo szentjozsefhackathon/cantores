@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MusicScopeType;
 use App\Models\Genre;
 use App\Models\Music;
 use App\Models\MusicPlan;
@@ -215,4 +216,64 @@ test('soft deleting slot does not delete assignments', function () {
 
     // Verify assignment still exists
     expect(MusicPlanSlotAssignment::find($assignment->id))->not()->toBeNull();
+});
+
+test('scope fields can be set and retrieved', function () {
+    $user = User::factory()->create();
+    $genre = Genre::firstOrCreate(['name' => 'Test Genre']);
+    $musicPlan = MusicPlan::factory()->create([
+        'user_id' => $user->id,
+        'genre_id' => $genre->id,
+    ]);
+    $slot = MusicPlanSlot::factory()->create();
+    $music = Music::factory()->create(['user_id' => $user->id]);
+
+    // Attach slot to plan
+    $musicPlan->slots()->attach($slot->id, ['sequence' => 1]);
+
+    // Get pivot row
+    $pivot = DB::table('music_plan_slot_plan')
+        ->where('music_plan_id', $musicPlan->id)
+        ->where('music_plan_slot_id', $slot->id)
+        ->where('sequence', 1)
+        ->first();
+
+    $assignment = MusicPlanSlotAssignment::create([
+        'music_plan_slot_plan_id' => $pivot->id,
+        'music_plan_id' => $musicPlan->id,
+        'music_plan_slot_id' => $slot->id,
+        'music_id' => $music->id,
+        'music_sequence' => 1,
+    ]);
+
+    // Add a scope
+    $assignment->scopes()->create([
+        'scope_number' => 2,
+        'scope_type' => MusicScopeType::VERSE,
+    ]);
+
+    $freshAssignment = MusicPlanSlotAssignment::with('scopes')->find($assignment->id);
+    expect($freshAssignment->scopes)->toHaveCount(1);
+    expect($freshAssignment->scopes->first()->scope_number)->toBe(2);
+    expect($freshAssignment->scopes->first()->scope_type)->toBe(MusicScopeType::VERSE);
+    expect($freshAssignment->scope_label)->toBe('Verse 2');
+
+    // Test multiple scopes
+    $assignment->scopes()->create([
+        'scope_number' => 3,
+        'scope_type' => MusicScopeType::MOVEMENT,
+    ]);
+    $freshAssignment->refresh();
+    expect($freshAssignment->scopes)->toHaveCount(2);
+    expect($freshAssignment->scope_label)->toBe('Verse 2, Movement 3');
+
+    // Test nullable scope (no scopes)
+    $assignment2 = MusicPlanSlotAssignment::create([
+        'music_plan_slot_plan_id' => $pivot->id,
+        'music_plan_id' => $musicPlan->id,
+        'music_plan_slot_id' => $slot->id,
+        'music_id' => $music->id,
+        'music_sequence' => 2,
+    ]);
+    expect($assignment2->scope_label)->toBe('');
 });

@@ -44,7 +44,7 @@ new #[Layout('layouts::app.main')] class extends Component
     {
         $user = Auth::user();
         $assignmentsByPivot = $this->musicPlan->musicAssignments()
-            ->with('music.collections')
+            ->with(['music.collections', 'scopes'])
             ->orderBy('music_plan_slot_plan_id')
             ->orderBy('music_sequence')
             ->get()
@@ -72,6 +72,7 @@ new #[Layout('layouts::app.main')] class extends Component
                             'music_sequence' => $assignment->music_sequence,
                             'notes' => $assignment->notes,
                             'music' => $assignment->music,
+                            'scope_label' => $assignment->scope_label,
                         ];
                     })->all(),
                 ];
@@ -168,6 +169,11 @@ new #[Layout('layouts::app.main')] class extends Component
                                     <div class="mt-3 space-y-3">
                                         @foreach($slot['assignments'] as $assignment)
                                             @if(!empty($assignment['music']))
+                                                @if(!empty($assignment['scope_label']))
+                                                    <div class="mb-1">
+                                                        <flux:badge color="zinc" size="sm">{{ $assignment['scope_label'] }}</flux:badge>
+                                                    </div>
+                                                @endif
                                                 <livewire:music-card
                                                     :key="'music-card-'.$assignment['id']"
                                                     :music="$assignment['music']"

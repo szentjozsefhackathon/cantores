@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MusicScopeType;
 use App\Models\MusicAssignmentFlag;
 use App\Models\MusicPlan;
 use Illuminate\Support\Facades\DB;
@@ -59,6 +60,9 @@ new class extends Component
     /** An array of flags by [assignmentId] */
     public array $flags = [];
 
+    /** An array of scopes by [assignmentId] => [['type' => string|null, 'number' => int|null], ...] */
+    public array $assignmentScopes = [];
+
     public bool $showCreateSlotModal = false;
 
     public string $newSlotName = '';
@@ -87,6 +91,20 @@ new class extends Component
                 'name' => $flag->label(),
                 'icon' => 's-'.$flag->icon(),
                 'color' => $flag->color(),
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get scope type options for dropdown.
+     */
+    public function getScopeTypeOptionsProperty(): array
+    {
+        return collect(MusicScopeType::cases())->map(function ($type) {
+            return [
+                'value' => $type->value,
+                'label' => $type->label(),
+                'abbreviation' => $type->abbreviation(),
             ];
         })->toArray();
     }
@@ -138,11 +156,18 @@ new class extends Component
                 // Load assignments for this slot instance in this plan (filter by pivot id)
                 $assignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slot->pivot->id)
                     ->orderBy('music_sequence')
-                    ->with(['music', 'flags'])
+                    ->with(['music', 'flags', 'scopes'])
                     ->get()
                     ->map(function ($assignment) {
                         // create the flag array for this slot's assignments
                         $this->flags[$assignment->id] = $assignment->flags->pluck('id')->toArray();
+                        // build scopes array
+                        $this->assignmentScopes[$assignment->id] = $assignment->scopes->map(function ($scope) {
+                            return [
+                                'type' => $scope->scope_type?->value,
+                                'number' => $scope->scope_number,
+                            ];
+                        })->toArray();
 
                         return [
                             'id' => $assignment->id,
@@ -152,6 +177,12 @@ new class extends Component
                             'music_custom_id' => $assignment->music->custom_id,
                             'music_sequence' => $assignment->music_sequence,
                             'notes' => $assignment->notes,
+                            'scopes' => $assignment->scopes->map(function ($scope) {
+                                return [
+                                    'type' => $scope->scope_type,
+                                    'number' => $scope->scope_number,
+                                ];
+                            })->toArray(),
                         ];
                     })
                     ->toArray();
@@ -672,6 +703,53 @@ new class extends Component
 
         $selectedFlagIds = $this->flags[$assignmentId] ?? [];
         $assignment->flags()->sync($selectedFlagIds);
+    }
+
+    public function updateScope(int $assignmentId, ?int $scopeNumber, ?string $scopeType): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
+        if (! $assignment || $assignment->music_plan_id !== $this->musicPlan->id) {
+            return;
+        }
+
+        // Sync all scopes from assignmentScopes
+        $scopes = $this->assignmentScopes[$assignmentId] ?? [];
+        $assignment->scopes()->delete();
+        foreach ($scopes as $scope) {
+            if (! empty($scope['type']) && ! empty($scope['number'])) {
+                $assignment->scopes()->create([
+                    'scope_type' => $scope['type'],
+                    'scope_number' => $scope['number'],
+                ]);
+            }
+        }
+
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: 'Scope updated.');
+    }
+
+    public function addScope(int $assignmentId): void
+    {
+        if (! isset($this->assignmentScopes[$assignmentId])) {
+            $this->assignmentScopes[$assignmentId] = [];
+        }
+        $this->assignmentScopes[$assignmentId][] = ['type' => null, 'number' => null];
+        $this->updateScope($assignmentId, null, null);
+    }
+
+    public function removeScope(int $assignmentId, int $index): void
+    {
+        if (isset($this->assignmentScopes[$assignmentId][$index])) {
+            array_splice($this->assignmentScopes[$assignmentId], $index, 1);
+            $this->updateScope($assignmentId, null, null);
+        }
+    }
+
+    public function updatedAssignmentScopes($value, $key): void
+    {
+        $this->updateScope((int) $key, null, null);
     }
 
     public function moveAssignmentUp(int $assignmentId): void
