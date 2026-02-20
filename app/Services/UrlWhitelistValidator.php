@@ -113,7 +113,7 @@ class UrlWhitelistValidator
         // Normalize path
         $path = $components['path'] ?? '/';
         if (! str_starts_with($path, '/')) {
-            $path = '/' . $path;
+            $path = '/'.$path;
         }
 
         $query = $components['query'] ?? null;
@@ -209,7 +209,7 @@ class UrlWhitelistValidator
 
         // Ensure prefix starts with slash
         if (! str_starts_with($prefix, '/')) {
-            $prefix = '/' . $prefix;
+            $prefix = '/'.$prefix;
         }
 
         // Exact match or prefix match

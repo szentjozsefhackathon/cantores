@@ -122,3 +122,8 @@ Route::livewire('/suggestions', 'pages::suggestions')
 Route::livewire('/notifications', \App\Livewire\Pages\Notifications::class)
     ->middleware(['auth', 'verified'])
     ->name('notifications');
+
+// Contact us page
+Route::livewire('/contact', 'contact-us')
+    ->middleware(['auth', 'verified'])
+    ->name('contact');

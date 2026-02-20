@@ -82,6 +82,10 @@
                 {{ __('Admin') }}
             </flux:sidebar.item>
             @endif
+
+            <flux:sidebar.item icon="envelope" :href="route('contact')" :current="request()->routeIs('contact')" wire:navigate>
+                {{ __('Contact Us') }}
+            </flux:sidebar.item>
         </flux:sidebar.nav>
 
         <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->displayName" />

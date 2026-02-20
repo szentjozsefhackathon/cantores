@@ -102,4 +102,41 @@ class NotificationService
     {
         return $notification->delete();
     }
+
+    /**
+     * Create a contact message notification.
+     */
+    public function createContactMessage(User $sender, string $subject, string $message): Notification
+    {
+        return DB::transaction(function () use ($sender, $subject, $message) {
+            $notification = Notification::create([
+                'type' => NotificationType::CONTACT_MESSAGE,
+                'message' => $subject.': '.$message,
+                'reporter_id' => $sender->id,
+                'notifiable_id' => null,
+                'notifiable_type' => null,
+            ]);
+
+            $recipients = $this->getRecipientsForContactMessage();
+            $notification->recipients()->attach($recipients);
+
+            return $notification;
+        });
+    }
+
+    /**
+     * Determine recipients for a contact message (admin users).
+     */
+    protected function getRecipientsForContactMessage(): array
+    {
+        $recipients = [];
+
+        // Admin users (where is_admin is true)
+        $admins = User::all()->filter(fn (User $user) => $user->is_admin);
+        foreach ($admins as $admin) {
+            $recipients[$admin->id] = ['created_at' => now()];
+        }
+
+        return $recipients;
+    }
 }

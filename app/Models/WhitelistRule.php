@@ -62,6 +62,7 @@ class WhitelistRule extends Model implements Auditable
     public function getPatternAttribute(): string
     {
         $portPart = $this->allow_any_port ? ':*' : '';
+
         return "{$this->scheme}://{$this->hostname}{$portPart}{$this->path_prefix}";
     }
 }
