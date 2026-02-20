@@ -57,6 +57,11 @@ Route::post('/music-plans', [\App\Http\Controllers\MusicPlanController::class, '
     ->middleware(['auth', 'verified'])
     ->name('music-plans.store');
 
+// Music plan copy (POST)
+Route::post('/music-plans/{musicPlan}/copy', [\App\Http\Controllers\MusicPlanController::class, 'copy'])
+    ->middleware(['auth', 'verified'])
+    ->name('music-plans.copy');
+
 // Music plan editor - with optional parameter for existing plans
 Route::livewire('/music-plan/{musicPlan?}', 'pages::music-plan.music-plan-editor')
     ->middleware(['auth', 'verified'])

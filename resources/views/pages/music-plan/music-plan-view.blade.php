@@ -85,6 +85,7 @@ new #[Layout('layouts::app.main')] class extends Component
 
 <div class="py-8">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <livewire:music-plan-card-extended :musicPlan="$musicPlan"/>
         <flux:card class="p-5">
             <div class="flex items-center gap-4 mb-4">
                 <livewire:music-plan-setting-icon :genreId="$musicPlan->genre_id" />
@@ -212,6 +213,14 @@ new #[Layout('layouts::app.main')] class extends Component
                     <flux:button variant="outline" color="zinc" icon="arrow-left" href="{{ route('home') }}">
                         Vissza a kezdőlapra
                     </flux:button>
+                    @if($isOwner)
+                    <form method="POST" action="{{ route('music-plans.copy', $musicPlan) }}" class="inline">
+                        @csrf
+                        <flux:button type="submit" variant="outline" color="blue" icon="clipboard-copy">
+                            Másolat készítése
+                        </flux:button>
+                    </form>
+                    @endif
                 </div>
             </div>
         </flux:card>

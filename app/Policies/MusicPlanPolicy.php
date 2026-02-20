@@ -74,4 +74,18 @@ class MusicPlanPolicy
         // Only the owner can force delete their own music plan
         return $user->id === $musicPlan->user_id;
     }
+
+    /**
+     * Determine whether the user can copy the model.
+     */
+    public function copy(?User $user, MusicPlan $musicPlan): bool
+    {
+        // Owners can always copy their own music plan
+        if ($user && $user->id === $musicPlan->user_id) {
+            return true;
+        }
+
+        // All authenticated users can copy published plans
+        return ! $musicPlan->is_private;
+    }
 }

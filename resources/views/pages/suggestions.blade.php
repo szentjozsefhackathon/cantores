@@ -466,55 +466,11 @@ new #[Layout('layouts::app.main')] class extends Component
             <x-mary-tab name="plans" icon="o-folder" label="Énekrendek ({{ $musicPlans->count() }})">
                 <div class="space-y-5" role="tabpanel" id="plans-panel" aria-labelledby="plans-tab">
                     @foreach ($musicPlans as $plan)
-                        <flux:card class="p-5 hover:shadow-lg transition-shadow">
-                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">
-                                            {{ $plan->celebrationName ?? 'Ismeretlen ünnep' }}
-                                        </flux:heading>
-                                        <flux:badge color="{{ !$plan->is_private ? 'green' : 'zinc' }}" size="sm">
-                                            {{ !$plan->is_private ? 'Közzétéve' : 'Privát' }}
-                                        </flux:badge>
-                                    </div>
-
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                        <div class="flex items-center gap-2">
-                                            <flux:icon name="calendar" class="h-4 w-4 text-gray-500" />
-                                            <span class="text-gray-700 dark:text-gray-300">
-                                                {{ $plan->actual_date?->translatedFormat('Y. m. d.') ?? 'Nincs dátum' }}
-                                            </span>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <flux:icon name="map-pin" class="h-4 w-4 text-gray-500" />
-                                            <span class="text-gray-700 dark:text-gray-300">
-                                                {{ $plan->genre?->name ?? 'Nincs genre' }}
-                                            </span>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <flux:icon name="user" class="h-4 w-4 text-gray-500" />
-                                            <span class="text-gray-700 dark:text-gray-300">
-                                                {{ $plan->user?->display_name ?? 'Ismeretlen' }}
-                                            </span>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <flux:icon name="music" class="h-4 w-4 text-gray-500" />
-                                            <span class="text-gray-700 dark:text-gray-300">
-                                                {{ $plan->musicAssignments->count() }} ének
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-3">
-                                    <a href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}" target="_blank" class="inline-block">
-                                        <flux:button size="sm" variant="ghost" icon="eye">
-                                            Megtekintés
-                                        </flux:button>
-                                    </a>
-                                </div>
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <livewire:music-plan-card-extended :musicPlan="$plan" class="max-w-full" :showOpenButton="true"/>
                             </div>
-                        </flux:card>
+                        </div>
                     @endforeach
                 </div>
             </x-mary-tab>

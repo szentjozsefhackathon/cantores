@@ -609,6 +609,12 @@
                     <flux:button variant="outline" color="zinc" icon="arrow-left" href="{{ route('dashboard') }}">
                         Vissza az irányítópultra
                     </flux:button>
+                    <form method="POST" action="{{ route('music-plans.copy', $musicPlan) }}" class="inline">
+                        @csrf
+                        <flux:button type="submit" variant="outline" color="blue" icon="clipboard-copy">
+                            Másolat készítése
+                        </flux:button>
+                    </form>
                     <flux:button
                         variant="danger"
                         icon="trash"

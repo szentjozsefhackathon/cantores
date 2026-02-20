@@ -25,4 +25,16 @@ class MusicPlanController extends Controller
 
         return redirect()->route('music-plan-editor', ['musicPlan' => $musicPlan->id]);
     }
+
+    /**
+     * Copy an existing music plan.
+     */
+    public function copy(MusicPlan $musicPlan): RedirectResponse
+    {
+        $this->authorize('copy', $musicPlan);
+
+        $newPlan = $musicPlan->copy(Auth::user());
+
+        return redirect()->route('music-plan-editor', ['musicPlan' => $newPlan->id]);
+    }
 }

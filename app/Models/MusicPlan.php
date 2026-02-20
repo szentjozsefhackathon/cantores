@@ -351,4 +351,105 @@ class MusicPlan extends Model
     {
         return $this->customCelebrations()->first();
     }
+
+    /**
+     * Create a copy of this music plan with all its slots and assignments.
+     * When copying a published plan (not owned by the user), excludes custom slots,
+     * private notes, and private music assignments.
+     */
+    public function copy(?User $copier = null): self
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($copier) {
+            // Determine if this is a published plan being copied by a non-owner
+            $isPublishedCopy = $copier && $copier->id !== $this->user_id && ! $this->is_private;
+
+            // Create a new music plan with the same attributes
+            $newPlan = self::create([
+                'user_id' => $copier?->id ?? $this->user_id,
+                'genre_id' => $this->genre_id,
+                'is_private' => true, // New copies are always private
+                'private_notes' => $isPublishedCopy ? null : $this->private_notes,
+            ]);
+
+            // Copy all celebrations (both custom and liturgical)
+            foreach ($this->celebrations as $celebration) {
+                $newPlan->celebrations()->attach($celebration);
+            }
+
+            // Get all slots with their sequence and pivot ID
+            $slots = $this->slots()
+                ->withPivot('sequence', 'id')
+                ->orderBy('music_plan_slot_plan.sequence')
+                ->get();
+
+            // Copy each slot and its assignments
+            foreach ($slots as $slot) {
+                // Skip custom slots when copying a published plan
+                if ($isPublishedCopy && $slot->is_custom) {
+                    continue;
+                }
+
+                // For custom slots, create a new custom slot for the new plan
+                if ($slot->is_custom) {
+                    $newSlot = $newPlan->createCustomSlot([
+                        'name' => $slot->name,
+                        'description' => $slot->description,
+                        'priority' => $slot->priority,
+                    ]);
+                    $slotId = $newSlot->id;
+                } else {
+                    // For global slots, just use the same slot
+                    $slotId = $slot->id;
+                }
+
+                // Attach the slot to the new plan with the same sequence
+                $newPlan->slots()->attach($slotId, [
+                    'sequence' => $slot->pivot->sequence,
+                ]);
+
+                // Get the new pivot record ID directly from the database
+                $newPivotId = \Illuminate\Support\Facades\DB::table('music_plan_slot_plan')
+                    ->where('music_plan_id', $newPlan->id)
+                    ->where('music_plan_slot_id', $slotId)
+                    ->value('id');
+
+                // Copy all assignments for this slot
+                $assignments = MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slot->pivot->id)
+                    ->orderBy('music_sequence')
+                    ->with(['flags', 'scopes', 'music'])
+                    ->get();
+
+                foreach ($assignments as $assignment) {
+                    // Skip private music when copying a published plan
+                    if ($isPublishedCopy && $assignment->music && $assignment->music->is_private) {
+                        continue;
+                    }
+
+                    $newAssignment = MusicPlanSlotAssignment::create([
+                        'music_plan_slot_plan_id' => $newPivotId,
+                        'music_plan_id' => $newPlan->id,
+                        'music_plan_slot_id' => $slotId,
+                        'music_id' => $assignment->music_id,
+                        'music_sequence' => $assignment->music_sequence,
+                        'notes' => $assignment->notes,
+                    ]);
+
+                    // Copy flags
+                    if ($assignment->flags->isNotEmpty()) {
+                        $newAssignment->flags()->sync($assignment->flags->pluck('id'));
+                    }
+
+                    // Copy scopes
+                    foreach ($assignment->scopes as $scope) {
+                        $newAssignment->scopes()->create([
+                            'scope_type' => $scope->scope_type,
+                            'scope_number' => $scope->scope_number,
+                        ]);
+                    }
+                }
+            }
+
+            return $newPlan;
+        });
+    }
 }
