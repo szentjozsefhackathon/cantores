@@ -5,10 +5,12 @@ use App\Models\Collection;
 use App\Models\Music;
 use App\Models\Genre;
 use App\Models\WhitelistRule;
+use App\MusicRelationshipType;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
@@ -46,6 +48,13 @@ new class extends Component
     public ?string $editingUrlLabel = null;
     public ?string $editingUrl = null;
 
+    // Related music management
+    public ?int $selectedRelatedMusicId = null;
+    public ?string $selectedRelationshipType = null;
+
+    // Related music modal
+    public bool $showRelatedMusicSearchModal = false;
+
     // Audit log
     public bool $showAuditModal = false;
 
@@ -82,6 +91,92 @@ new class extends Component
             ->merge($selectedOption);
     }
 
+    /**
+     * Handle music selection from the music-search component.
+     */
+    #[On('music-selected.relatedMusic')]
+    public function selectRelatedMusic(int $musicId): void
+    {
+        $this->selectedRelatedMusicId = $musicId;
+        $this->addRelatedMusic();
+    }
+
+    public function openRelatedMusicSearchModal(): void
+    {
+        $this->showRelatedMusicSearchModal = true;
+    }
+
+    public function closeRelatedMusicSearchModal(): void
+    {
+        $this->showRelatedMusicSearchModal = false;
+        $this->selectedRelatedMusicId = null;
+        $this->selectedRelationshipType = null;
+    }
+
+    /**
+     * Add a related music piece.
+     */
+    public function addRelatedMusic(): void
+    {
+        $this->authorize('update', $this->music);
+
+        $validated = $this->validate([
+            'selectedRelatedMusicId' => ['required', 'integer', 'exists:musics,id'],
+            'selectedRelationshipType' => ['required', 'string', Rule::in(array_column(MusicRelationshipType::cases(), 'value'))],
+        ]);
+
+        // Check if same music
+        if ($this->music->id === $validated['selectedRelatedMusicId']) {
+            $this->dispatch('error', __('Cannot relate a music piece to itself.'));
+            return;
+        }
+
+        // Check if relation already exists (in either direction)
+        $existing = $this->music->relatedMusic()
+            ->wherePivot('related_music_id', $validated['selectedRelatedMusicId'])
+            ->exists();
+        $existingReverse = Music::where('id', $validated['selectedRelatedMusicId'])
+            ->first()
+            ?->relatedMusic()
+            ->wherePivot('related_music_id', $this->music->id)
+            ->exists() ?? false;
+        if ($existing || $existingReverse) {
+            $this->dispatch('error', __('This music piece is already related.'));
+            return;
+        }
+
+        $this->music->relatedMusic()->attach($validated['selectedRelatedMusicId'], [
+            'relationship_type' => $validated['selectedRelationshipType'],
+        ]);
+
+        // Refresh the relationship
+        $this->music->load('relatedMusic');
+
+        // Reset form fields
+        $this->selectedRelatedMusicId = null;
+        $this->selectedRelationshipType = null;
+
+        // Close the modal
+        $this->showRelatedMusicSearchModal = false;
+
+        $this->dispatch('related-music-added');
+    }
+
+    /**
+     * Remove a related music piece.
+     */
+    public function removeRelatedMusic(int $relatedMusicId): void
+    {
+        $this->authorize('update', $this->music);
+
+        $this->music->relatedMusic()->detach($relatedMusicId);
+
+        // Refresh the relationship
+        $this->music->load('relatedMusic');
+
+        $this->dispatch('related-music-removed');
+    }
+
 
     /**
      * Mount the component.
@@ -89,7 +184,7 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->authorize('view', $music);
-        $this->music = $music->load(['collections', 'genres', 'authors', 'urls']);
+        $this->music = $music->load(['collections', 'genres', 'authors', 'urls', 'relatedMusic']);
         $this->title = $music->title;
         $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
@@ -918,7 +1013,121 @@ new class extends Component
                 </div>
             </div>
         </flux:card>
+
+        <!-- Related Music Connections -->
+        <flux:card class="p-5 mt-6">
+            <flux:heading size="lg">{{ __('Related Music') }}</flux:heading>
+            <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage related music pieces (variations, arrangements, etc.).') }}</flux:text>
+
+            @if($music->relatedMusic->count())
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Music Piece') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Relationship Type') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($music->relatedMusic as $related)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <div class="max-w-80 text-wrap">
+                                    <div class="font-medium">{{ $related->title }}</div>
+                                    @if ($related->subtitle)
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">{{ $related->subtitle }}</div>
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {{ \App\MusicRelationshipType::from($related->pivot->relationship_type)->name }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm">
+                                <div class="flex items-center gap-2">
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="trash"
+                                        wire:click="removeRelatedMusic({{ $related->id }})"
+                                        wire:confirm="{{ __('Are you sure you want to remove this related music?') }}"
+                                        :title="__('Remove')" />
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @else
+            <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
+                <flux:icon name="music" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
+                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No related music') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece has no related music yet.') }}</p>
+            </div>
+            @endif
+
+            <!-- Related music action messages -->
+            <div class="flex justify-end mb-2">
+                <x-action-message on="related-music-added">
+                    {{ __('Related music added.') }}
+                </x-action-message>
+                <x-action-message on="related-music-removed">
+                    {{ __('Related music removed.') }}
+                </x-action-message>
+            </div>
+
+            <!-- Add Related Music Button -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <flux:heading size="sm">{{ __('Add Related Music') }}</flux:heading>
+                <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Search for a music piece and select a relationship type.') }}</flux:text>
+
+                <div class="flex justify-end">
+                    <flux:button
+                        variant="primary"
+                        wire:click="openRelatedMusicSearchModal"
+                        icon="plus">
+                        {{ __('Add Related Music') }}
+                    </flux:button>
+                </div>
+            </div>
+        </flux:card>
     </div>
+
+    <!-- Related Music Search Modal -->
+    @if($showRelatedMusicSearchModal)
+    <flux:modal wire:model="showRelatedMusicSearchModal" class="max-w-4xl">
+        <flux:heading size="lg">{{ __('Add Related Music') }}</flux:heading>
+        <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Select a relationship type and search for a music piece. Click the Select button on a music to add it as related.') }}</flux:text>
+
+        <!-- Relationship type selection -->
+        <flux:field required class="mb-6">
+            <flux:label>{{ __('Relationship Type') }}</flux:label>
+            <flux:select wire:model="selectedRelationshipType">
+                <option value="">{{ __('Select a relationship type') }}</option>
+                @foreach(\App\MusicRelationshipType::cases() as $type)
+                <flux:select.option value="{{ $type->value }}">{{ __(ucfirst($type->value)) }}</flux:select.option>
+                @endforeach
+            </flux:select>
+            <flux:error name="selectedRelationshipType" />
+        </flux:field>
+
+        <!-- Music search component -->
+        <livewire:music-search selectable="true" source=".relatedMusic" />
+
+        <!-- Hidden field for selected music ID -->
+        <input type="hidden" wire:model="selectedRelatedMusicId" />
+        <flux:error name="selectedRelatedMusicId" />
+
+        <div class="mt-6 flex justify-end">
+            <flux:button
+                wire:click="closeRelatedMusicSearchModal"
+                variant="outline">
+                {{ __('Close') }}
+            </flux:button>
+        </div>
+    </flux:modal>
+    @endif
 
     <!-- Audit Log Modal -->
     @if($showAuditModal)
