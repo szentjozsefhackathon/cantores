@@ -429,7 +429,7 @@
                                                     </x-mary-choices>
                                                     </div>
                                                     <div class="space-y-2">
-                                                        @foreach($assignment['scopes'] as $index => $scope)
+                                                        @foreach(($this->assignmentScopes[$assignment['id']] ?? []) as $index => $scope)
                                                         <div class="flex gap-2 items-center">
                                                             <div class="flex-1">
                                                                 <flux:field variant="inline" class="mb-0">
@@ -451,9 +451,9 @@
                                                                         placeholder="Válassz..."
                                                                         size="sm"
                                                                         class="w-full">
-                                                                        <flux:option value="">–</flux:option>
+                                                                        <flux:select.option value="">–</flux:select.option>
                                                                         @foreach($this->scopeTypeOptions as $option)
-                                                                        <flux:option value="{{ $option['value'] }}">{{ $option['label'] }}</flux:option>
+                                                                        <flux:select.option value="{{ $option['value'] }}">{{ $option['label'] }}</flux:select.option>
                                                                         @endforeach
                                                                     </flux:select>
                                                                 </flux:field>

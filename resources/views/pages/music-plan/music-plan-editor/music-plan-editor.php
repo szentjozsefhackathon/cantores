@@ -161,13 +161,26 @@ new class extends Component
                     ->map(function ($assignment) {
                         // create the flag array for this slot's assignments
                         $this->flags[$assignment->id] = $assignment->flags->pluck('id')->toArray();
-                        // build scopes array
-                        $this->assignmentScopes[$assignment->id] = $assignment->scopes->map(function ($scope) {
+
+                        // Build database scopes (type as enum value)
+                        $dbScopes = $assignment->scopes->map(function ($scope) {
                             return [
                                 'type' => $scope->scope_type?->value,
                                 'number' => $scope->scope_number,
                             ];
                         })->toArray();
+
+                        // Get existing scopes (may include placeholders)
+                        $existingScopes = $this->assignmentScopes[$assignment->id] ?? [];
+
+                        // Filter placeholders (type or number null)
+                        $placeholders = array_filter($existingScopes, fn($scope) => $scope['type'] === null || $scope['number'] === null);
+
+                        // Merge: database scopes first, then placeholders
+                        $mergedScopes = array_merge($dbScopes, $placeholders);
+
+                        // Update assignmentScopes
+                        $this->assignmentScopes[$assignment->id] = $mergedScopes;
 
                         return [
                             'id' => $assignment->id,
@@ -177,12 +190,7 @@ new class extends Component
                             'music_custom_id' => $assignment->music->custom_id,
                             'music_sequence' => $assignment->music_sequence,
                             'notes' => $assignment->notes,
-                            'scopes' => $assignment->scopes->map(function ($scope) {
-                                return [
-                                    'type' => $scope->scope_type,
-                                    'number' => $scope->scope_number,
-                                ];
-                            })->toArray(),
+                            'scopes' => $mergedScopes,
                         ];
                     })
                     ->toArray();
@@ -736,7 +744,7 @@ new class extends Component
             $this->assignmentScopes[$assignmentId] = [];
         }
         $this->assignmentScopes[$assignmentId][] = ['type' => null, 'number' => null];
-        $this->updateScope($assignmentId, null, null);
+        // Do NOT call updateScope here – placeholder stays in memory until filled
     }
 
     public function removeScope(int $assignmentId, int $index): void
