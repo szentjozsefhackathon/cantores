@@ -33,6 +33,18 @@ Use Flux UI components when available. Fall back to standard Blade components wh
 <flux:button variant="primary">Click me</flux:button>
 </code-snippet>
 
+# Basic rules
+
+- When creating new components ALWAYS use
+php artisan make:livewire <component-name>
+- The component is created in resources/views/components/⚡component-name. But you almost must refer to it with component-name, without the emoji.
+- The component is a single file component: all PHP and Blade code must go into it
+- The ⚡ emoji means it is a _Livewire_ component
+
+# Rules when displaying flash messages
+- Use <x-action-message> for flash messages, not custom code. This ensures consistent styling and behavior across the app.
+- Trigger messages with $this->dispatch('event-name', message: 'Message text') in the component class, and listen for them with on="event-name" in the Blade template.
+
 ## Available Components (Free Edition)
 
 Available: avatar, badge, brand, breadcrumbs, button, callout, checkbox, dropdown, field, heading, icon, input, modal, navbar, otp-input, profile, radio, select, separator, skeleton, switch, text, textarea, tooltip

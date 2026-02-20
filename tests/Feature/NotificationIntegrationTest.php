@@ -23,7 +23,7 @@ beforeEach(function () {
 test('notification bell updates after error report', function () {
     $music = Music::factory()->create();
 
-    $bell = Livewire::test(\App\Livewire\Components\NotificationBell::class);
+    $bell = Livewire::test('notification-bell');
     $bell->assertSet('unreadCount', 0);
 
     // Create error report
@@ -60,7 +60,7 @@ test('mark as read removes from unread count', function () {
     $notification = $service->createErrorReport($this->user, $music, 'Test');
 
     $this->actingAs($this->admin);
-    $bell = Livewire::test(\App\Livewire\Components\NotificationBell::class);
+    $bell = Livewire::test('notification-bell');
     $bell->assertSet('unreadCount', 1);
 
     Livewire::test(\App\Livewire\Pages\Notifications::class)
