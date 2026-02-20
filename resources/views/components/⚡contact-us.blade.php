@@ -4,16 +4,18 @@ use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
 {
-    public bool $showModal = true;
+    public bool $showModal = false;
 
     public string $subject = '';
 
     public string $message = '';
 
+    #[On('openContactModal')]
     public function openModal(): void
     {
         $this->showModal = true;

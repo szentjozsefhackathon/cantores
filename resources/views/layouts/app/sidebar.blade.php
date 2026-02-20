@@ -83,7 +83,11 @@
             </flux:sidebar.item>
             @endif
 
-            <flux:sidebar.item icon="envelope" :href="route('contact')" :current="request()->routeIs('contact')" wire:navigate>
+            <flux:sidebar.item 
+                icon="envelope" 
+                as="button" 
+                x-on:click="Livewire.dispatch('openContactModal')"
+                wire:ignore>
                 {{ __('Contact Us') }}
             </flux:sidebar.item>
         </flux:sidebar.nav>
@@ -145,6 +149,8 @@
     </flux:header>
 
     {{ $slot }}
+
+    <livewire:contact-us />
 
     @fluxScripts
 </body>
