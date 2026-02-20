@@ -135,7 +135,7 @@ new class  extends Component
 
         $this->resetForm();
         $this->showCreateModal = false;
-        session()->flash('message', $message);
+        $this->dispatch("notify", message: $message);
     }
 
     public function confirmDelete(int $id): void
@@ -152,7 +152,7 @@ new class  extends Component
         $rule->delete();
         $this->showDeleteModal = false;
         $this->selectedRules = array_diff($this->selectedRules, [$this->deletingId]);
-        session()->flash('message', 'Rule deleted successfully.');
+        $this->dispatch("notify", message: 'Rule deleted successfully.');
     }
 
     public function bulkActivate(): void
@@ -160,7 +160,7 @@ new class  extends Component
         $this->authorize('system.maintain');
         WhitelistRule::whereIn('id', $this->selectedRules)->update(['is_active' => true]);
         $this->selectedRules = [];
-        session()->flash('message', 'Selected rules activated.');
+        $this->dispatch("notify", message: 'Selected rules activated.');
     }
 
     public function bulkDeactivate(): void
@@ -168,7 +168,7 @@ new class  extends Component
         $this->authorize('system.maintain');
         WhitelistRule::whereIn('id', $this->selectedRules)->update(['is_active' => false]);
         $this->selectedRules = [];
-        session()->flash('message', 'Selected rules deactivated.');
+        $this->dispatch("notify", message: 'Selected rules deactivated.');
     }
 
     public function bulkDelete(): void
@@ -176,7 +176,7 @@ new class  extends Component
         $this->authorize('system.maintain');
         WhitelistRule::whereIn('id', $this->selectedRules)->delete();
         $this->selectedRules = [];
-        session()->flash('message', 'Selected rules deleted.');
+        $this->dispatch("notify", message: 'Selected rules deleted.');
     }
 
     public function testRule(): void
@@ -228,6 +228,7 @@ new class  extends Component
 ?>
 
 <x-pages::admin.layout :heading="__('URL Whitelist Management')">
+    <x-action-message on="notify" />
     <div class="mt-5 space-y-8">
                 <div class="mt-6 border-t pt-6">
                     <h3 class="mb-4 text-lg font-semibold">Test Rule</h3>
