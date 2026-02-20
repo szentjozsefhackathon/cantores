@@ -174,7 +174,7 @@ new class extends Component
                         $existingScopes = $this->assignmentScopes[$assignment->id] ?? [];
 
                         // Filter placeholders (type or number null)
-                        $placeholders = array_filter($existingScopes, fn($scope) => $scope['type'] === null || $scope['number'] === null);
+                        $placeholders = array_filter($existingScopes, fn ($scope) => $scope['type'] === null || $scope['number'] === null);
 
                         // Merge: database scopes first, then placeholders
                         $mergedScopes = array_merge($dbScopes, $placeholders);
@@ -191,6 +191,7 @@ new class extends Component
                             'music_sequence' => $assignment->music_sequence,
                             'notes' => $assignment->notes,
                             'scopes' => $mergedScopes,
+                            'scope_label' => $assignment->scope_label,
                         ];
                     })
                     ->toArray();
@@ -755,9 +756,9 @@ new class extends Component
         }
     }
 
-    public function updatedAssignmentScopes($value, $key): void
+    public function saveScope(int $assignmentId, int $index): void
     {
-        $this->updateScope((int) $key, null, null);
+        $this->updateScope($assignmentId, null, null);
     }
 
     public function moveAssignmentUp(int $assignmentId): void

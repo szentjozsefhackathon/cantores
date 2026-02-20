@@ -429,7 +429,13 @@
                                                     </x-mary-choices>
                                                     </div>
                                                     <div class="space-y-2">
+                                                        @if($assignment['scope_label'])
+                                                        <div class="flex flex-wrap gap-1">
+                                                            <flux:badge>{{ $assignment['scope_label'] }}</flux:badge>
+                                                        </div>
+                                                        @endif
                                                         @foreach(($this->assignmentScopes[$assignment['id']] ?? []) as $index => $scope)
+                                                        @if(empty($scope['type']) || empty($scope['number']))
                                                         <div class="flex gap-2 items-center">
                                                             <div class="flex-1">
                                                                 <flux:field variant="inline" class="mb-0">
@@ -437,7 +443,7 @@
                                                                     <flux:input
                                                                         type="number"
                                                                         min="1"
-                                                                        wire:model.live="assignmentScopes.{{ $assignment['id'] }}.{{ $index }}.number"
+                                                                        wire:model="assignmentScopes.{{ $assignment['id'] }}.{{ $index }}.number"
                                                                         placeholder="pl. 1"
                                                                         class="w-full"
                                                                         size="sm" />
@@ -447,7 +453,7 @@
                                                                 <flux:field variant="inline" class="mb-0">
                                                                     <flux:label class="text-xs">Részlet típus</flux:label>
                                                                     <flux:select
-                                                                        wire:model.live="assignmentScopes.{{ $assignment['id'] }}.{{ $index }}.type"
+                                                                        wire:model="assignmentScopes.{{ $assignment['id'] }}.{{ $index }}.type"
                                                                         placeholder="Válassz..."
                                                                         size="sm"
                                                                         class="w-full">
@@ -458,7 +464,12 @@
                                                                     </flux:select>
                                                                 </flux:field>
                                                             </div>
-                                                            <div class="pt-5">
+                                                            <div class="pt-5 flex gap-1">
+                                                                <flux:button
+                                                                    wire:click="saveScope({{ $assignment['id'] }}, {{ $index }})"
+                                                                    icon="check"
+                                                                    variant="primary"
+                                                                    size="xs" />
                                                                 <flux:button
                                                                     wire:click="removeScope({{ $assignment['id'] }}, {{ $index }})"
                                                                     icon="x-mark"
@@ -466,6 +477,7 @@
                                                                     size="xs" />
                                                             </div>
                                                         </div>
+                                                        @endif
                                                         @endforeach
                                                         <div class="pt-1">
                                                             <flux:button
