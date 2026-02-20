@@ -30,4 +30,35 @@ class MusicUrl extends Model implements Auditable
     {
         return $this->belongsTo(Music::class);
     }
+
+    /**
+     * Validate this URL against the whitelist rules.
+     */
+    public function validateAgainstWhitelist(): bool
+    {
+        return self::validateUrl($this->url);
+    }
+
+    /**
+     * Check if this URL is whitelisted.
+     */
+    public function isWhitelisted(): bool
+    {
+        return $this->validateAgainstWhitelist();
+    }
+
+    /**
+     * Validate a URL string against whitelist rules.
+     */
+    public static function validateUrl(string $url): bool
+    {
+        $validator = app(\App\Services\UrlWhitelistValidator::class);
+
+        try {
+            return $validator->validate($url);
+        } catch (\InvalidArgumentException $e) {
+            // Malformed URL is considered not whitelisted
+            return false;
+        }
+    }
 }

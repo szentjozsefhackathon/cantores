@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Music;
 use App\MusicUrlLabel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -25,6 +26,7 @@ class MusicUrlFactory extends Factory
     public function definition(): array
     {
         return [
+            'music_id' => Music::factory(),
             'url' => $this->faker->url(),
             'label' => $this->faker->randomElement([
                 MusicUrlLabel::SheetMusic->value,

@@ -111,6 +111,59 @@
                 </div>
                 @endif
 
+                <!-- URLs -->
+                <div>
+                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('External Links') }}</flux:heading>
+                    @if($music->urls->isNotEmpty())
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            @foreach($music->urls as $url)
+                                @php
+                                    $labelColors = [
+                                        'sheet_music' => 'blue',
+                                        'audio' => 'green',
+                                        'video' => 'purple',
+                                        'text' => 'amber',
+                                        'information' => 'zinc',
+                                    ];
+                                    $labelIcons = [
+                                        'sheet_music' => 'document-text',
+                                        'audio' => 'music',
+                                        'video' => 'video-camera',
+                                        'text' => 'book-open-text',
+                                        'information' => 'information-circle',
+                                    ];
+                                    $labelTranslations = [
+                                        'sheet_music' => __('Sheet Music'),
+                                        'audio' => __('Audio'),
+                                        'video' => __('Video'),
+                                        'text' => __('Text'),
+                                        'information' => __('Information'),
+                                    ];
+                                    $color = $labelColors[$url->label] ?? 'zinc';
+                                    $icon = $labelIcons[$url->label] ?? 'external-link';
+                                    $labelText = $labelTranslations[$url->label] ?? ucfirst(str_replace('_', ' ', $url->label));
+                                @endphp
+                                <a href="{{ $url->url }}" target="_blank" rel="noopener noreferrer" class="block">
+                                    <flux:card class="p-4 hover:shadow-md transition-shadow" variant="outline">
+                                        <div class="flex items-start gap-3">
+                                            <flux:icon :name="$icon" class="h-5 w-5 text-{{ $color }}-500 shrink-0 mt-0.5" />
+                                            <div class="flex-1 min-w-0">
+                                                <flux:text class="font-medium text-sm truncate">{{ $labelText }}</flux:text>
+                                                <flux:text class="text-xs text-gray-500 dark:text-gray-400 truncate" title="{{ $url->url }}">{{ Str::limit($url->url, 40) }}</flux:text>
+                                            </div>
+                                            <flux:icon name="external-link" class="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                                        </div>
+                                    </flux:card>
+                                </a>
+                            @endforeach
+                        </div>
+                    @else
+                        <flux:callout color="zinc" variant="soft">
+                            <flux:text>{{ __('No external links available for this music piece.') }}</flux:text>
+                        </flux:callout>
+                    @endif
+                </div>
+
                 <!-- Additional info -->
                 <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
                     <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Additional Information') }}</flux:heading>

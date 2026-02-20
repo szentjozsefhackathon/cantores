@@ -38,6 +38,13 @@ new class extends Component
     // Genre assignment
     public array $selectedGenres = [];
 
+    // URL management
+    public ?string $newUrlLabel = null;
+    public ?string $newUrl = null;
+    public ?int $editingUrlId = null;
+    public ?string $editingUrlLabel = null;
+    public ?string $editingUrl = null;
+
     // Audit log
     public bool $showAuditModal = false;
 
@@ -79,7 +86,7 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->authorize('view', $music);
-        $this->music = $music->load(['collections', 'genres', 'authors']);
+        $this->music = $music->load(['collections', 'genres', 'authors', 'urls']);
         $this->title = $music->title;
         $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
@@ -241,6 +248,107 @@ new class extends Component
         $this->music->load('authors');
 
         $this->dispatch('author-removed');
+    }
+
+    /**
+     * Add a URL to the music piece.
+     */
+    public function addUrl(): void
+    {
+        $this->authorize('update', $this->music);
+
+        $validated = $this->validate([
+            'newUrlLabel' => ['required', 'string', Rule::in(array_column(\App\MusicUrlLabel::cases(), 'value'))],
+            'newUrl' => ['required', 'string', 'url', new \App\Rules\WhitelistedUrl()],
+        ]);
+
+        // Create the URL
+        $this->music->urls()->create([
+            'label' => $validated['newUrlLabel'],
+            'url' => $validated['newUrl'],
+        ]);
+
+        // Refresh the URLs relationship
+        $this->music->load('urls');
+
+        // Reset the form fields
+        $this->newUrlLabel = null;
+        $this->newUrl = null;
+
+        $this->dispatch('url-added');
+    }
+
+    /**
+     * Edit a URL.
+     */
+    public function editUrl(int $urlId): void
+    {
+        $this->authorize('update', $this->music);
+
+        $url = $this->music->urls()->find($urlId);
+
+        if (!$url) {
+            return;
+        }
+
+        $this->editingUrlId = $urlId;
+        $this->editingUrlLabel = $url->label;
+        $this->editingUrl = $url->url;
+    }
+
+    /**
+     * Update the editing URL.
+     */
+    public function updateUrl(): void
+    {
+        $this->authorize('update', $this->music);
+
+        $validated = $this->validate([
+            'editingUrlLabel' => ['required', 'string', Rule::in(array_column(\App\MusicUrlLabel::cases(), 'value'))],
+            'editingUrl' => ['required', 'string', 'url', new \App\Rules\WhitelistedUrl()],
+        ]);
+
+        $url = $this->music->urls()->find($this->editingUrlId);
+
+        if (!$url) {
+            return;
+        }
+
+        $url->update([
+            'label' => $validated['editingUrlLabel'],
+            'url' => $validated['editingUrl'],
+        ]);
+
+        // Refresh the URLs relationship
+        $this->music->load('urls');
+
+        // Reset the editing state
+        $this->cancelEditUrl();
+
+        $this->dispatch('url-updated');
+    }
+
+    /**
+     * Delete a URL from the music piece.
+     */
+    public function deleteUrl(int $urlId): void
+    {
+        $this->authorize('update', $this->music);
+
+        $this->music->urls()->where('id', $urlId)->delete();
+        $this->music->load('urls');
+
+        $this->dispatch('url-deleted');
+    }
+
+    /**
+     * Cancel editing a URL.
+     */
+    public function cancelEditUrl(): void
+    {
+        $this->editingUrlId = null;
+        $this->editingUrlLabel = null;
+        $this->editingUrl = null;
     }
 
     /**
@@ -635,6 +743,170 @@ new class extends Component
                     wire:loading.attr="disabled">
                     {{ __('Add Author') }}
                 </flux:button>
+            </div>
+        </flux:card>
+
+        <!-- URL Connections -->
+        <flux:card class="p-5 mt-6">
+            <flux:heading size="lg">{{ __('URL Connections') }}</flux:heading>
+            <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage external URLs related to this music piece (sheet music, audio, video, etc.).') }}</flux:text>
+
+            @if($music->urls->count())
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Label') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('URL') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($music->urls as $url)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                                @switch($url->label)
+                                    @case('sheet_music')
+                                        {{ __('Sheet Music') }}
+                                        @break
+                                    @case('audio')
+                                        {{ __('Audio') }}
+                                        @break
+                                    @case('video')
+                                        {{ __('Video') }}
+                                        @break
+                                    @case('text')
+                                        {{ __('Text') }}
+                                        @break
+                                    @case('information')
+                                        {{ __('Information') }}
+                                        @break
+                                    @default
+                                        {{ $url->label }}
+                                @endswitch
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                <a href="{{ $url->url }}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs block">
+                                    {{ $url->url }}
+                                </a>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm">
+                                <div class="flex items-center gap-2">
+                                    @if($editingUrlId === $url->id)
+                                        <flux:button
+                                            variant="ghost"
+                                            size="sm"
+                                            icon="check"
+                                            wire:click="updateUrl"
+                                            wire:loading.attr="disabled"
+                                            :title="__('Save')" />
+                                        <flux:button
+                                            variant="ghost"
+                                            size="sm"
+                                            icon="x"
+                                            wire:click="cancelEditUrl"
+                                            :title="__('Cancel')" />
+                                    @else
+                                        <flux:button
+                                            variant="ghost"
+                                            size="sm"
+                                            icon="pencil"
+                                            wire:click="editUrl({{ $url->id }})"
+                                            :title="__('Edit')" />
+                                        <flux:button
+                                            variant="ghost"
+                                            size="sm"
+                                            icon="trash"
+                                            wire:click="deleteUrl({{ $url->id }})"
+                                            wire:confirm="{{ __('Are you sure you want to delete this URL?') }}"
+                                            :title="__('Delete')" />
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                        @if($editingUrlId === $url->id)
+                        <tr class="bg-gray-50 dark:bg-gray-800">
+                            <td colspan="3" class="px-4 py-4">
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <flux:field required>
+                                            <flux:label>{{ __('Label') }}</flux:label>
+                                            <flux:select wire:model="editingUrlLabel">
+                                                <option value="">{{ __('Select a label') }}</option>
+                                                @foreach(\App\MusicUrlLabel::cases() as $label)
+                                                <flux:select.option value="{{ $label->value }}">{{ __(ucfirst(str_replace('_', ' ', $label->value))) }}</flux:select.option>
+                                                @endforeach
+                                            </flux:select>
+                                            <flux:error name="editingUrlLabel" />
+                                        </flux:field>
+                                        <flux:field required>
+                                            <flux:label>{{ __('URL') }}</flux:label>
+                                            <flux:input wire:model="editingUrl" :placeholder="__('https://example.com')" />
+                                            <flux:error name="editingUrl" />
+                                        </flux:field>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        @endif
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @else
+            <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
+                <flux:icon name="globe" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
+                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No URLs attached') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece has no external URLs yet.') }}</p>
+            </div>
+            @endif
+
+            <!-- URL action messages -->
+            <div class="flex justify-end mb-2">
+                <x-action-message on="url-added">
+                    {{ __('URL added.') }}
+                </x-action-message>
+                <x-action-message on="url-updated">
+                    {{ __('URL updated.') }}
+                </x-action-message>
+                <x-action-message on="url-deleted">
+                    {{ __('URL deleted.') }}
+                </x-action-message>
+            </div>
+
+            <!-- Add URL Form -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <flux:heading size="sm">{{ __('Add URL') }}</flux:heading>
+                <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Add a new external URL for this music piece. URLs must be whitelisted.') }}</flux:text>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <flux:field required>
+                            <flux:label>{{ __('Label') }}</flux:label>
+                            <flux:select wire:model="newUrlLabel">
+                                <option value="">{{ __('Select a label') }}</option>
+                                @foreach(\App\MusicUrlLabel::cases() as $label)
+                                <flux:select.option value="{{ $label->value }}">{{ __(ucfirst(str_replace('_', ' ', $label->value))) }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                            <flux:error name="newUrlLabel" />
+                        </flux:field>
+                        <flux:field required>
+                            <flux:label>{{ __('URL') }}</flux:label>
+                            <flux:input wire:model="newUrl" :placeholder="__('https://example.com')" />
+                            <flux:error name="newUrl" />
+                        </flux:field>
+                    </div>
+
+                    <div class="flex justify-end items-center gap-4">
+                        <flux:button
+                            variant="primary"
+                            wire:click="addUrl"
+                            wire:loading.attr="disabled">
+                            {{ __('Add URL') }}
+                        </flux:button>
+                    </div>
+                </div>
             </div>
         </flux:card>
     </div>

@@ -58,7 +58,6 @@ class AuthorPolicy
         return $user !== null && ($user->is_admin || $author->user_id === $user->id);
     }
 
-
     /**
      * Determine whether the user can delete the model.
      */
