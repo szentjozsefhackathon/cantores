@@ -8,13 +8,17 @@
                 {{ __('Users') }}
             </flux:navlist.item>
 
-            <flux:navlist.group :label="__('Security')">
+            <flux:navlist.group :heading="__('Security')">
                 <flux:navlist.item :href="route('admin.role-permissions')" wire:navigate :current="request()->routeIs('admin.role-permissions')">
                     {{ __('Role Permissions') }}
                 </flux:navlist.item>
+                <flux:navlist.item :href="route('admin.url-whitelist')" wire:navigate :current="request()->routeIs('admin.url-whitelist')">
+                    {{ __('Manage Whitelist Rules') }}
+                </flux:navlist.item>
+
             </flux:navlist.group>
             
-            <flux:navlist.group :label="__('Music Plans')">
+            <flux:navlist.group :heading="__('Music Plans')">
                 <flux:navlist.item :href="route('admin.music-plan-slots')" wire:navigate :current="request()->routeIs('admin.music-plan-slots')">
                     {{ __('Music Plan Slots') }}
                 </flux:navlist.item>
@@ -23,7 +27,7 @@
                 </flux:navlist.item>
             </flux:navlist.group>
 
-            <flux:navlist.group :label="__('Data Import')">
+            <flux:navlist.group :heading="__('Data Import')">
                 <flux:navlist.item :href="route('admin.bulk-imports')" wire:navigate :current="request()->routeIs('admin.bulk-imports')">
                     {{ __('Bulk Imports') }}
                 </flux:navlist.item>

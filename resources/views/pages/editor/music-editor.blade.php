@@ -4,6 +4,7 @@ use App\Models\Author;
 use App\Models\Collection;
 use App\Models\Music;
 use App\Models\Genre;
+use App\Models\WhitelistRule;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -56,6 +57,8 @@ new class extends Component
     public ?int $editingPageNumber = null;
     public ?string $editingOrderNumber = null;
 
+    public \Illuminate\Support\Collection $whitelistRules;
+
     // Author multi-searchable
 
     // Options list
@@ -93,6 +96,7 @@ new class extends Component
         $this->isPrivate = $music->is_private;
         $this->selectedGenres = $music->genres->pluck('id')->toArray();
         $this->searchAuthor();
+        $this->whitelistRules = WhitelistRule::active()->get();
     }
 
     /**
@@ -565,8 +569,8 @@ new class extends Component
                     <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
                         <tr>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Collection') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Page Number') }}</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Order Number') }}</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Page Number') }}</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
@@ -580,10 +584,10 @@ new class extends Component
                                 @endif
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                {{ $collection->pivot->page_number ?? '-' }}
+                                {{ $collection->pivot->order_number ?? '-' }}
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                {{ $collection->pivot->order_number ?? '-' }}
+                                {{ $collection->pivot->page_number ?? '-' }}
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm">
                                 <div class="flex items-center gap-2">
@@ -644,14 +648,15 @@ new class extends Component
                             <flux:error name="selectedCollectionId" />
                         </flux:field>
                         <flux:field class="w-32">
-                            <flux:label>{{ __('Page Number') }}</flux:label>
-                            <flux:input type="number" wire:model="pageNumber" :placeholder="__('Page number')" min="1" />
-                            <flux:error name="pageNumber" />
-                        </flux:field>
-                        <flux:field class="w-32">
                             <flux:label>{{ __('Order Number') }}</flux:label>
                             <flux:input wire:model="orderNumber" :placeholder="__('Order number')" />
                             <flux:error name="orderNumber" />
+                        </flux:field>
+
+                        <flux:field class="w-32">
+                            <flux:label>{{ __('Page Number') }}</flux:label>
+                            <flux:input type="number" wire:model="pageNumber" :placeholder="__('Page number')" min="1" />
+                            <flux:error name="pageNumber" />
                         </flux:field>
                     </div>
 
@@ -798,14 +803,14 @@ new class extends Component
                                             size="sm"
                                             icon="check"
                                             wire:click="updateUrl"
-                                            wire:loading.attr="disabled"
-                                            :title="__('Save')" />
+                                            wire:loading.attr="disabled">{{ __('Save') }}</flux:button>
                                         <flux:button
+                                            :wire:key="'cancel-' . $url->id"
                                             variant="ghost"
                                             size="sm"
                                             icon="x"
                                             wire:click="cancelEditUrl"
-                                            :title="__('Cancel')" />
+                                            wire:loading.attr="disabled">{{ __('Cancel') }}</flux:button>
                                     @else
                                         <flux:button
                                             variant="ghost"
@@ -878,6 +883,10 @@ new class extends Component
             <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <flux:heading size="sm">{{ __('Add URL') }}</flux:heading>
                 <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Add a new external URL for this music piece. URLs must be whitelisted.') }}</flux:text>
+                <flux:icon name="shield-check" class="h-5 w-5 text-green-500 inline" />                
+                @foreach($whitelistRules as $rule)
+                    <flux:text class="inline text-sm mb-2">{{ $rule->pattern }}</flux:text>
+                @endforeach
 
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
@@ -1029,6 +1038,13 @@ new class extends Component
 
         <div class="mt-6 space-y-4">
             <flux:field>
+                <flux:label>{{ __('Order Number') }}</flux:label>
+                <flux:input
+                    wire:model="editingOrderNumber"
+                    :placeholder="__('Order number')" />
+                <flux:error name="editingOrderNumber" />
+            </flux:field>
+            <flux:field>
                 <flux:label>{{ __('Page Number') }}</flux:label>
                 <flux:input
                     type="number"
@@ -1036,15 +1052,7 @@ new class extends Component
                     :placeholder="__('Page number')"
                     min="1" />
                 <flux:error name="editingPageNumber" />
-            </flux:field>
-
-            <flux:field>
-                <flux:label>{{ __('Order Number') }}</flux:label>
-                <flux:input
-                    wire:model="editingOrderNumber"
-                    :placeholder="__('Order number')" />
-                <flux:error name="editingOrderNumber" />
-            </flux:field>
+            </flux:field>            
         </div>
 
         <div class="mt-6 flex justify-end gap-3">

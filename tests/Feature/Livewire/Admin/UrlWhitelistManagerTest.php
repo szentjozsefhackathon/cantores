@@ -18,7 +18,7 @@ test('admin can access url whitelist manager', function () {
 
     Livewire::test(\App\Livewire\Pages\Admin\UrlWhitelistManager::class)
         ->assertStatus(200)
-        ->assertSee('URL Whitelist Manager');
+        ->assertSee('URL Whitelist Rules');
 });
 
 test('non-admin cannot access url whitelist manager', function () {

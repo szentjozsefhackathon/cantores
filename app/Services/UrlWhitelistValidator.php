@@ -113,7 +113,40 @@ class UrlWhitelistValidator
         // Normalize path
         $path = $components['path'] ?? '/';
         if (! str_starts_with($path, '/')) {
-            $path = '/'.$path;
+            $path = '/' . $path;
+        }
+
+        $query = $components['query'] ?? null;
+
+        if ($query !== null && $query !== '') {
+            // Parse query into an array of keys/values
+            parse_str($query, $params);
+
+            // Normalize keys to lowercase for comparison
+            $keys = array_map('strtolower', array_keys($params));
+
+            // Block common redirector parameters
+            $blocked = [
+                'next',
+                'url',
+                'redirect',
+                'redirect_url',
+                'redirecturi',
+                'redirect_uri',
+                'return',
+                'returnto',
+                'continue',
+                'dest',
+                'destination',
+                'target',
+                'to',
+            ];
+
+            foreach ($blocked as $bad) {
+                if (in_array($bad, $keys, true)) {
+                    throw new InvalidArgumentException("URL must not contain '{$bad}' query parameter: {$url}");
+                }
+            }
         }
 
         return [
@@ -121,7 +154,7 @@ class UrlWhitelistValidator
             'host' => $host,
             'port' => $port,
             'path' => $path,
-            'query' => $components['query'] ?? null,
+            'query' => $query,
             'fragment' => $components['fragment'] ?? null,
             'original_url' => $url,
         ];
@@ -176,7 +209,7 @@ class UrlWhitelistValidator
 
         // Ensure prefix starts with slash
         if (! str_starts_with($prefix, '/')) {
-            $prefix = '/'.$prefix;
+            $prefix = '/' . $prefix;
         }
 
         // Exact match or prefix match
