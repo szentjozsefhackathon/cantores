@@ -263,13 +263,13 @@ test('test URL handles invalid URL gracefully', function () {
 test('shows matching URLs count', function () {
     $this->actingAs($this->admin);
     $rule = WhitelistRule::factory()->create([
-        'hostname' => 'example.com',
+        'hostname' => 'test-example.com',
         'scheme' => 'https',
     ]);
 
     // Create some music URLs that would match
-    \App\Models\MusicUrl::factory()->create(['url' => 'https://example.com/music/song1']);
-    \App\Models\MusicUrl::factory()->create(['url' => 'https://example.com/music/song2']);
+    \App\Models\MusicUrl::factory()->create(['url' => 'https://test-example.com/music/song1']);
+    \App\Models\MusicUrl::factory()->create(['url' => 'https://test-example.com/music/song2']);
 
     Livewire::test('pages::admin.url-whitelist')
         ->assertSet('matchingUrlsCount.'.$rule->id, 2);
