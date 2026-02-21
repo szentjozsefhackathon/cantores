@@ -224,6 +224,7 @@ new class extends Component
             ->get();
 
         return view('pages.editor.music-editor', [
+            'music' => $this->music,
             'collections' => $collections,
             'authors' => $authors,
         ]);

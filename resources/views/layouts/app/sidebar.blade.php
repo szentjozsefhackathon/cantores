@@ -68,6 +68,9 @@
             <flux:sidebar.item icon="check-circle" :href="route('music-verifier')" :current="request()->routeIs('music-verifier')" wire:navigate>
                 Énekek ellenőrzése
             </flux:sidebar.item>
+            <flux:sidebar.item icon="tag" :href="route('music-tag-manager')" :current="request()->routeIs('music-tag-manager')" wire:navigate>
+                Zenei címkék
+            </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 

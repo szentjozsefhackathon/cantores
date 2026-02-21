@@ -119,6 +119,11 @@ Route::livewire('/editor/musics/verify', \App\Livewire\Pages\Editor\MusicVerifie
     ->middleware(['auth', 'verified'])
     ->name('music-verifier');
 
+// Music tag manager tool
+Route::livewire('/editor/music-tags', \App\Livewire\Pages\Editor\MusicTagManager::class)
+    ->middleware(['auth', 'verified'])
+    ->name('music-tag-manager');
+
 // Suggestions page for music plan recommendations
 Route::livewire('/suggestions', 'pages::suggestions')
     ->name('suggestions');

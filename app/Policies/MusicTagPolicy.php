@@ -12,7 +12,7 @@ class MusicTagPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('editor');
+        return $user->hasPermissionTo('masterdata.maintain');
     }
 
     /**
@@ -28,7 +28,7 @@ class MusicTagPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole('editor');
+        return $user->hasPermissionTo('masterdata.maintain');
     }
 
     /**
@@ -36,7 +36,7 @@ class MusicTagPolicy
      */
     public function update(User $user, MusicTag $musicTag): bool
     {
-        return $user->hasRole('editor');
+        return $user->hasPermissionTo('masterdata.maintain');
     }
 
     /**
@@ -44,7 +44,7 @@ class MusicTagPolicy
      */
     public function delete(User $user, MusicTag $musicTag): bool
     {
-        return $user->hasRole('editor');
+        return $user->hasPermissionTo('masterdata.maintain');
     }
 
     /**
@@ -52,7 +52,7 @@ class MusicTagPolicy
      */
     public function restore(User $user, MusicTag $musicTag): bool
     {
-        return $user->hasRole('editor');
+        return $user->hasPermissionTo('masterdata.maintain');
     }
 
     /**
@@ -60,6 +60,6 @@ class MusicTagPolicy
      */
     public function forceDelete(User $user, MusicTag $musicTag): bool
     {
-        return $user->hasRole('editor');
+        return $user->hasPermissionTo('masterdata.maintain');
     }
 }
