@@ -410,6 +410,7 @@ new class extends Component
         $url = $this->music->urls()->find($this->editingUrlId);
 
         if (!$url) {
+            $this->cancelEditUrl();
             return;
         }
 

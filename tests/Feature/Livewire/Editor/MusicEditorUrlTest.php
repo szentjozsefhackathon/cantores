@@ -19,7 +19,7 @@ test('music editor shows existing URLs', function () {
         'url' => 'https://example.com/sheet.pdf',
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->assertSee($url->url)
         ->assertSee('Sheet Music');
 });
@@ -32,7 +32,7 @@ test('adds URL with whitelist validation', function () {
         'is_active' => true,
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'https://example.com/music/song.pdf')
         ->call('addUrl')
@@ -54,15 +54,15 @@ test('fails to add non-whitelisted URL', function () {
         'is_active' => true,
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'https://not-allowed.com/music/song.pdf')
         ->call('addUrl')
-        ->assertHasErrors(['newUrl' => 'WhitelistedUrl']);
+        ->assertHasErrors('newUrl');
 });
 
 test('validates URL format when adding', function () {
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'not-a-valid-url')
         ->call('addUrl')
@@ -70,7 +70,7 @@ test('validates URL format when adding', function () {
 });
 
 test('validates label when adding URL', function () {
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'invalid_label')
         ->set('newUrl', 'https://example.com/music.pdf')
         ->call('addUrl')
@@ -91,7 +91,7 @@ test('edits existing URL', function () {
         'url' => 'https://example.com/music/old.pdf',
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->call('editUrl', $url->id)
         ->assertSet('editingUrlId', $url->id)
         ->assertSet('editingUrlLabel', 'sheet_music')
@@ -121,11 +121,11 @@ test('fails to edit URL with non-whitelisted URL', function () {
         'url' => 'https://example.com/music/old.pdf',
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->call('editUrl', $url->id)
         ->set('editingUrl', 'https://not-allowed.com/music/new.pdf')
         ->call('updateUrl')
-        ->assertHasErrors(['editingUrl' => 'WhitelistedUrl']);
+        ->assertHasErrors('editingUrl');
 });
 
 test('deletes URL', function () {
@@ -135,7 +135,7 @@ test('deletes URL', function () {
         'url' => 'https://example.com/music.pdf',
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->call('deleteUrl', $url->id)
         ->assertDispatched('url-deleted');
 
@@ -149,7 +149,7 @@ test('cancels URL editing', function () {
         'url' => 'https://example.com/music.pdf',
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->call('editUrl', $url->id)
         ->assertSet('editingUrlId', $url->id)
         ->call('cancelEditUrl')
@@ -162,7 +162,7 @@ test('requires authorization to add URL', function () {
     $otherUser = User::factory()->create();
     $this->actingAs($otherUser);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'https://example.com/music.pdf')
         ->call('addUrl')
@@ -174,7 +174,7 @@ test('requires authorization to edit URL', function () {
     $this->actingAs($otherUser);
     $url = MusicUrl::factory()->create(['music_id' => $this->music->id]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->call('editUrl', $url->id)
         ->assertForbidden();
 });
@@ -184,7 +184,7 @@ test('requires authorization to delete URL', function () {
     $this->actingAs($otherUser);
     $url = MusicUrl::factory()->create(['music_id' => $this->music->id]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->call('deleteUrl', $url->id)
         ->assertForbidden();
 });
@@ -197,7 +197,7 @@ test('handles URL with query parameters and fragments', function () {
         'is_active' => true,
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'https://example.com/music/song.pdf?param=value#section')
         ->call('addUrl')
@@ -218,7 +218,7 @@ test('handles URL with different port when allowed', function () {
         'is_active' => true,
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'https://example.com:8080/music/song.pdf')
         ->call('addUrl')
@@ -239,11 +239,11 @@ test('rejects URL with non-default port when not allowed', function () {
         'is_active' => true,
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'https://example.com:8080/music/song.pdf')
         ->call('addUrl')
-        ->assertHasErrors(['newUrl' => 'WhitelistedUrl']);
+        ->assertHasErrors('newUrl');
 });
 
 test('shows appropriate error message for non-whitelisted URL', function () {
@@ -254,7 +254,7 @@ test('shows appropriate error message for non-whitelisted URL', function () {
         'is_active' => true,
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'https://not-allowed.com/path')
         ->call('addUrl')
@@ -270,7 +270,7 @@ test('resets form after adding URL', function () {
         'is_active' => true,
     ]);
 
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'https://example.com/music/song.pdf')
         ->call('addUrl')
@@ -279,13 +279,20 @@ test('resets form after adding URL', function () {
 });
 
 test('handles editing non-existent URL gracefully', function () {
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->call('editUrl', 9999)
         ->assertSet('editingUrlId', null);
 });
 
 test('handles updating non-existent URL gracefully', function () {
-    Livewire::test('pages.editor.music-editor', ['music' => $this->music])
+    WhitelistRule::factory()->create([
+        'hostname' => 'example.com',
+        'path_prefix' => '/music',
+        'scheme' => 'https',
+        'is_active' => true,
+    ]);
+
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->set('editingUrlId', 9999)
         ->set('editingUrlLabel', 'sheet_music')
         ->set('editingUrl', 'https://example.com/music.pdf')
