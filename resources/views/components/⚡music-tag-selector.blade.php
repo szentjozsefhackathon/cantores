@@ -1,13 +1,68 @@
 <?php
 
 use App\Models\Music;
+use App\Models\MusicTag;
 use Livewire\Component;
-use Livewire\Attributes\On;
 
 new class extends Component
 {
-    // Component logic is in MusicTagSelector.php
-};
+    public Music $music;
+
+    public ?int $selectedTagId = null;
+
+    /**
+     * Mount the component.
+     */
+    public function mount(Music $music): void
+    {
+        $this->music = $music->load('tags');
+    }
+
+    /**
+     * Get all available tags.
+     */
+    public function availableTags()
+    {
+        return MusicTag::whereNotIn('id', $this->music->tags->pluck('id'))
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Add a tag to the music.
+     */
+    public function addTag(): void
+    {
+        if (! $this->selectedTagId) {
+            return;
+        }
+
+        $tag = MusicTag::find($this->selectedTagId);
+
+        if (! $tag || $this->music->tags()->where('music_tag_id', $this->selectedTagId)->exists()) {
+            return;
+        }
+
+        $this->music->tags()->attach($this->selectedTagId);
+        $this->music->load('tags');
+
+        $this->selectedTagId = null;
+
+        $this->dispatch('tag-added');
+    }
+
+    /**
+     * Remove a tag from the music.
+     */
+    public function removeTag(int $tagId): void
+    {
+        $this->music->tags()->detach($tagId);
+        $this->music->load('tags');
+
+        $this->dispatch('tag-removed');
+    }
+}
 
 ?>
 
@@ -51,7 +106,7 @@ new class extends Component
             <div class="flex-1">
                 <flux:select wire:model="selectedTagId">
                     <option value="">{{ __('Select a tag') }}</option>
-                    @foreach($availableTags as $tag)
+                    @foreach($this->availableTags() as $tag)
                     <flux:select.option value="{{ $tag->id }}">
                         {{ $tag->name }} ({{ $tag->typeLabel() }})
                     </flux:select.option>
