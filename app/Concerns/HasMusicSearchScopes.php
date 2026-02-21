@@ -75,9 +75,19 @@ trait HasMusicSearchScopes
                 $q->whereHas('authors', fn ($aq) => $aq->whereIn('authors.id', $authorIds));
             });
 
+        // Tags: AND logic - music must have ALL selected tags
+        $query = $query
+            ->when(! empty($this->tagFilters), function ($q) {
+                foreach ($this->tagFilters as $tagId) {
+                    $q->whereHas('tags', function ($subQuery) use ($tagId) {
+                        $subQuery->where('music_tags.id', $tagId);
+                    });
+                }
+            });
+
         $query = $query
             ->forCurrentGenre()
-            ->with(['genres', 'collections', 'authors'])
+            ->with(['genres', 'collections', 'authors', 'tags'])
             ->withCount('collections')
             ->withCount(['verifications as verified_verifications_count' => function ($q) {
                 $q->where('status', 'verified');

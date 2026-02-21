@@ -97,6 +97,42 @@
                         </x-mary-choices>
                         </flux:field>
                     </div>
+
+                    <!-- Tags filter (AND logic) -->
+                    <div class="lg:col-span-2">
+                        <flux:field>
+                            <x-mary-choices
+                                placeholder="Címkék (összes kiválasztott)"
+                                wire:model.live="tagFilters"
+                                :options="$this->tags->map(fn($tag) => [
+                                    'id' => $tag->id,
+                                    'name' => $tag->name . ($tag->type ? ' (' . $tag->type->label() . ')' : ''),
+                                    'icon' => $tag->icon(),
+                                ])->toArray()">
+                                @scope('item', $option)
+                                <x-mary-list-item :item="$option">
+                                    <x-slot:avatar>
+                                        <flux:icon :name="$option['icon'] ?? null" class="h-4 w-4" />
+                                    </x-slot:avatar>
+                                </x-mary-list-item>
+                                @endscope
+                                @scope('selection', $selectedTags)
+                                @foreach ($selectedTags as $tagId)
+                                <div class="inline">
+                                    @php
+                                    $tag = $this->tags->firstWhere('id', $tagId);
+                                    @endphp
+                                    @if ($tag)
+                                    <flux:icon :name="$tag->icon()" class="h-4 w-4 inline" />
+                                    <span class="text-gray-900 dark:text-gray-100 inline">{{ $tag->name }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ $tag->typeLabel() }}</span>
+                                    @endif
+                                </div>
+                                @endforeach
+                                @endscope
+                            </x-mary-choices>
+                        </flux:field>
+                    </div>
                 </div>
             </div>
 

@@ -62,6 +62,8 @@ class Musics extends Component
 
     public bool $isPrivate = false;
 
+    public array $tagFilters = [];
+
     /**
      * Selected music IDs for merging.
      */
@@ -111,6 +113,14 @@ class Musics extends Component
      * Reset pagination when author free text filter changes.
      */
     public function updatingAuthorFreeText(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when tag filters change.
+     */
+    public function updatingTagFilters(): void
     {
         $this->resetPage();
     }
@@ -305,5 +315,13 @@ class Musics extends Component
         $this->selectedCollectionId = null;
         $this->pageNumber = null;
         $this->orderNumber = null;
+    }
+
+    /**
+     * Get available tags for the filter.
+     */
+    public function getTagsProperty()
+    {
+        return \App\Models\MusicTag::orderBy('name')->get();
     }
 }
