@@ -13,6 +13,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->group(functio
 
     // Bulk Imports
     Route::livewire('bulk-imports', \App\Livewire\Pages\Admin\BulkImports::class)->name('admin.bulk-imports');
+    Route::livewire('musicplan-imports', \App\Livewire\Pages\Admin\MusicPlanImports::class)->name('admin.musicplan-imports');
 
     // Role Permissions
     Route::livewire('role-permissions', \App\Livewire\Pages\Admin\RolePermissionManager::class)->name('admin.role-permissions');

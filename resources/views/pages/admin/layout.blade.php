@@ -31,6 +31,9 @@
                 <flux:navlist.item :href="route('admin.bulk-imports')" wire:navigate :current="request()->routeIs('admin.bulk-imports')">
                     {{ __('Bulk Imports') }}
                 </flux:navlist.item>
+                <flux:navlist.item :href="route('admin.musicplan-imports')" wire:navigate :current="request()->routeIs('admin.musicplan-imports')">
+                    {{ __('MusicPlan Imports') }}
+                </flux:navlist.item>
             </flux:navlist.group>
 
         </flux:navlist>
