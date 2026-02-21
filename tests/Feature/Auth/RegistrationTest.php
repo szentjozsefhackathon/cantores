@@ -46,6 +46,9 @@ test('new users can register', function () {
         'city_id' => $city->id,
         'first_name_id' => $firstName->id,
     ]);
+
+    $user = \App\Models\User::where('email', $email)->first();
+    expect($user->hasRole('contributor'))->toBeTrue();
 });
 
 test('registration requires city and first name', function () {

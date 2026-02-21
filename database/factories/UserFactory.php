@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\City;
 use App\Models\FirstName;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -56,6 +57,16 @@ class UserFactory extends Factory
             'city_id' => $city->id,
             'first_name_id' => $firstName->id,
         ];
+    }
+
+    /**
+     * Configure the factory to assign the contributor role after creating a user.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            $user->assignRole('contributor');
+        });
     }
 
     /**

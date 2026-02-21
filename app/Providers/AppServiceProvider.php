@@ -8,12 +8,14 @@ use App\Models\Collection;
 use App\Models\FirstName;
 use App\Models\Genre;
 use App\Models\Music;
+use App\Models\User;
 use App\Observers\AuthorObserver;
 use App\Observers\CityObserver;
 use App\Observers\CollectionObserver;
 use App\Observers\FirstNameObserver;
 use App\Observers\GenreObserver;
 use App\Observers\MusicObserver;
+use App\Observers\UserObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
         Collection::observe(CollectionObserver::class);
         Music::observe(MusicObserver::class);
         Author::observe(AuthorObserver::class);
+        User::observe(UserObserver::class);
     }
 
     /**

@@ -38,6 +38,7 @@ services:
         required: false
     volumes:
       - storage:/var/www/html/storage
+      - ./import:/var/www/html/storage/app/private/import:ro
     depends_on:
       database:
         condition: service_healthy
