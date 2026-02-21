@@ -184,7 +184,7 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->authorize('view', $music);
-        $this->music = $music->load(['collections', 'genres', 'authors', 'urls', 'relatedMusic']);
+        $this->music = $music->load(['collections', 'genres', 'authors', 'urls', 'relatedMusic', 'tags']);
         $this->title = $music->title;
         $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
@@ -657,6 +657,14 @@ new class extends Component
                     </flux:button>
                 </div>
             </div>
+        </flux:card>
+
+        <!-- Music Tags -->
+        <flux:card class="p-5 mt-6">
+            <flux:heading size="lg">{{ __('Music Tags') }}</flux:heading>
+            <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Assign tags to categorize this music piece by type, instrument, season, and more.') }}</flux:text>
+
+            <livewire:music-tag-selector :music="$music" />
         </flux:card>
 
         <!-- Collection Connections -->

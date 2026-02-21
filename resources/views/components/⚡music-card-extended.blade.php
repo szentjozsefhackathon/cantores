@@ -15,6 +15,7 @@ new class extends Component
             'authors',
             'genres',
             'urls',
+            'tags',
             'relatedMusic.authors',
             'relatedMusic.collections',
         ]);
@@ -24,6 +25,8 @@ new class extends Component
     #[On('collection-added')]
     #[On('collection-removed')]
     #[On('collection-updated')]
+    #[On('tag-added')]
+    #[On('tag-removed')]
     public function refreshMusic(): void
     {
         $this->music->refresh()->load([
@@ -31,6 +34,7 @@ new class extends Component
             'authors',
             'genres',
             'urls',
+            'tags',
             'relatedMusic.authors',
             'relatedMusic.collections',
         ]);
@@ -52,7 +56,7 @@ new class extends Component
                     </p>
                 @endif
 
-                    <div class="mt-0.5">
+                    <div class="mt-0.5 flex flex-wrap gap-1">
                         @if($music->custom_id)
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             {{ $music->custom_id }}
@@ -60,6 +64,9 @@ new class extends Component
                         @endif
                         @foreach($music->collections as $collection)
                             <livewire:collection-badge :collection="$collection" />
+                        @endforeach
+                        @foreach($music->tags as $tag)
+                            <livewire:music-tag-badge :tag="$tag" />
                         @endforeach
                     </div>
             </div>
@@ -123,6 +130,20 @@ new class extends Component
                 @foreach($music->genres as $genre)
                     <flux:badge color="blue" size="sm" :icon="$genre->icon()">
                         {{ $genre->label() }}
+                    </flux:badge>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        <!-- Tags -->
+        @if($music->tags->isNotEmpty())
+        <div>
+            <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Tags') }}</flux:heading>
+            <div class="flex flex-wrap gap-1">
+                @foreach($music->tags as $tag)
+                    <flux:badge size="sm" :icon="$tag->icon()">
+                        {{ $tag->name }}
                     </flux:badge>
                 @endforeach
             </div>

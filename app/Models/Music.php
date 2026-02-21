@@ -91,6 +91,14 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Get the tags associated with this music.
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(MusicTag::class, 'music_music_tag');
+    }
+
+    /**
      * Get the related music items (variations).
      */
     public function relatedMusic(): BelongsToMany

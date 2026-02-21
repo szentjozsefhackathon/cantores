@@ -10,16 +10,18 @@ new class extends Component
 
     public function mount(Music $music): void
     {
-        $this->music = $music->load('collections');
+        $this->music = $music->load(['collections', 'tags']);
     }
 
     #[On('music-updated')]
     #[On('collection-added')]
     #[On('collection-removed')]
     #[On('collection-updated')]
+    #[On('tag-added')]
+    #[On('tag-removed')]
     public function refreshMusic(): void
     {
-        $this->music->refresh()->load('collections');
+        $this->music->refresh()->load(['collections', 'tags']);
     }
 }
 ?>
@@ -38,7 +40,7 @@ new class extends Component
                     </p>
                 @endif
 
-                    <div class="mt-1">
+                    <div class="mt-1 flex flex-wrap gap-1">
                         @if($music->custom_id)
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             {{ $music->custom_id }}
@@ -46,6 +48,9 @@ new class extends Component
                         @endif
                         @foreach($music->collections as $collection)
                             <livewire:collection-badge :collection="$collection" />
+                        @endforeach
+                        @foreach($music->tags as $tag)
+                            <livewire:music-tag-badge :tag="$tag" />
                         @endforeach
                     </div>
             </div>
