@@ -90,7 +90,9 @@ new #[Layout('layouts::app.main')] class extends Component
             <div class="flex items-center gap-4 mb-4">
                 <livewire:music-plan-setting-icon :genreId="$musicPlan->genre_id" />
                 <flux:heading size="xl">Énekrend</flux:heading>
-                <x-user-badge :user="$musicPlan->user" />
+                @auth
+                    <x-user-badge :user="$musicPlan->user" />
+                @endauth
                 @if($musicPlan->actual_date)
                 <div class="flex">
                 <flux:icon name="external-link" />

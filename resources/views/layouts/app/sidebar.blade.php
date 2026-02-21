@@ -39,31 +39,35 @@
         </div>
 
         <flux:sidebar.nav>
-            <flux:sidebar.group class="grid">
-                <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                    {{ __('Dashboard') }}
-                </flux:sidebar.item>
-                <flux:sidebar.item icon="folder" :href="route('collections')" :current="request()->routeIs('collections')" wire:navigate>
-                    {{ __('Collections') }}
-                </flux:sidebar.item>
-                <flux:sidebar.item icon="users" :href="route('authors')" :current="request()->routeIs('authors')" wire:navigate>
-                    {{ __('Authors') }}
-                </flux:sidebar.item>
-                <flux:sidebar.item icon="music" :href="route('musics')" :current="request()->routeIs('musics')" wire:navigate>
-                    {{ __('Music Pieces') }}
+            <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
+                {{ __('Dashboard') }}
+            </flux:sidebar.item>
+            <flux:sidebar.group heading="Énekrend">
+                <flux:sidebar.item icon="calendar-days" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>
+                    Énekrendjeim
                 </flux:sidebar.item>
                 <flux:sidebar.item icon="globe" :href="route('music-plans')" :current="request()->routeIs('music-plans')" wire:navigate>
                     Közzétett énekrendek
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="calendar-days" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>
-                    Énekrendjeim
+            </flux:sidebar.group>
+            <flux:sidebar.group heading="Könyvtár">
+                <flux:sidebar.item icon="folder" :href="route('collections')" :current="request()->routeIs('collections')" wire:navigate>
+                    {{ __('Collections') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="combine" :href="route('music-merger')" :current="request()->routeIs('music-merge')" wire:navigate>
-                    Énekek egyesítése
+                <flux:sidebar.item icon="music" :href="route('musics')" :current="request()->routeIs('musics')" wire:navigate>
+                    {{ __('Music Pieces') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="check-circle" :href="route('music-verifier')" :current="request()->routeIs('music-verifier')" wire:navigate>
-                    Énekek ellenőrzése
+                <flux:sidebar.item icon="users" :href="route('authors')" :current="request()->routeIs('authors')" wire:navigate>
+                    {{ __('Authors') }}
                 </flux:sidebar.item>
+            </flux:sidebar.group>
+            <flux:sidebar.group heading="Szerkesztő">
+            <flux:sidebar.item icon="combine" :href="route('music-merger')" :current="request()->routeIs('music-merge')" wire:navigate>
+                Énekek egyesítése
+            </flux:sidebar.item>
+            <flux:sidebar.item icon="check-circle" :href="route('music-verifier')" :current="request()->routeIs('music-verifier')" wire:navigate>
+                Énekek ellenőrzése
+            </flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 
@@ -83,9 +87,9 @@
             </flux:sidebar.item>
             @endif
 
-            <flux:sidebar.item 
-                icon="envelope" 
-                as="button" 
+            <flux:sidebar.item
+                icon="envelope"
+                as="button"
                 x-on:click="Livewire.dispatch('openContactModal')"
                 wire:ignore>
                 {{ __('Contact Us') }}
@@ -112,12 +116,12 @@
                     <div class="p-0 text-sm font-normal">
                         <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
                             <flux:avatar
-                               :name="auth()->user()->displayName"
-                               :initials="auth()->user()->initials()" />
+                                :name="auth()->user()->displayName"
+                                :initials="auth()->user()->initials()" />
 
                             <div class="grid flex-1 text-start text-sm leading-tight">
-                               <flux:heading class="truncate">{{ auth()->user()->displayName }}</flux:heading>
-                               <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
+                                <flux:heading class="truncate">{{ auth()->user()->displayName }}</flux:heading>
+                                <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
                             </div>
                         </div>
                     </div>

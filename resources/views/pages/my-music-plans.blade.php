@@ -106,7 +106,7 @@
 
                             <!-- Music plans for this celebration -->
                             <div class="p-6">
-                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                     @foreach($celebration->musicPlans as $plan)
                                         <livewire:music-plan-card :musicPlan="$plan" :key="$plan->id" />
                                     @endforeach

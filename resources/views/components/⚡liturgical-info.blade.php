@@ -581,7 +581,9 @@ new class extends Component
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
                                             {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
                                         </flux:text>
-                                        <x-user-badge :user="$plan->user" />                                        
+                                        @auth
+                                            <x-user-badge :user="$plan->user" />
+                                        @endauth
                                     </div>
                                 </div>
                                 <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600" variant="mini" />

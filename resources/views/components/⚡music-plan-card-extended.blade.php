@@ -95,7 +95,9 @@ new class extends Component
             </div>
             <div class="gap-2">
                 @if($showOpenButton)
-                <x-user-badge :user="$musicPlan->user" />                
+                    @auth
+                        <x-user-badge :user="$musicPlan->user" />
+                    @endauth
                 <div class="flex justify-end mt-2">
                     <a href="{{ route('music-plan-view', ['musicPlan' => $musicPlan]) }}" target="_blank" class="inline-block">
                         <flux:button size="xs" variant="outline" color="blue" icon="eye">
