@@ -521,7 +521,7 @@
 
                         <div class="space-y-4">
                             <!-- Tabs for template and suggestions -->
-                            <x-mary-tabs class="mb-8" wire:model="activeTemplateTab">
+                            <x-mary-tabs class="mb-8" wire:model="activeTemplateTab" wire:key="template-tabs">
                                 <x-mary-tab name="template" label="Énekrend sablon">
                                     <div class="space-y-4">
                                         <livewire:music-plan-editor.music-plan-template :templates="$availableTemplates" :musicPlan="$musicPlan" />

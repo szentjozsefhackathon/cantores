@@ -55,6 +55,8 @@ new class extends Component
 
     public bool $showCreateSlotModal = false;
 
+    public string $activeTemplateTab = 'template';
+
     public string $newSlotName = '';
 
     public string $newSlotDescription = '';
