@@ -404,38 +404,45 @@
                             @endif
 
                             @forelse($planSlots as $slot)
-                            <flux:card wire:key="slot-{{ $slot['pivot_id'] }}" class="p-2 flex items-start gap-4 {{ count($slot['assignments']) > 0 ? 'border-4' : '' }}">
-                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
-                                    {{ $slot['sequence'] }}
-                                </div>
-                                <div class="flex-1 space-y-1">
-                                    @if($editingSlotId === $slot['id'])
-                                    <div class="space-y-3">
-                                        <flux:field>
-                                            <flux:input
-                                                wire:model.live="editingSlotName"
-                                                placeholder="Elem neve"
-                                                autofocus />
-                                            <flux:error name="editingSlotName" />
-                                        </flux:field>
-                                        <flux:field>
-                                            <flux:textarea
-                                                wire:model.live="editingSlotDescription"
-                                                placeholder="Leírás (opcionális)"
-                                                rows="2" />
-                                            <flux:error name="editingSlotDescription" />
-                                        </flux:field>
-                                    </div>
-                                    @else
-                                    <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
-                                    @if($slot['description'])
-                                    <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
-                                    @endif
-                                    @endif
+                            <flux:card wire:key="slot-{{ $slot['pivot_id'] }}" class="p-2 {{ count($slot['assignments']) > 0 ? 'border-4' : '' }}">
+                                <div class="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
+                                    <!-- Left column: sequence, name/description, and assignments -->
+                                    <div class="space-y-4">
+                                        <!-- First row: sequence and name/description -->
+                                        <div class="flex items-start gap-4">
+                                            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold flex-shrink-0">
+                                                {{ $slot['sequence'] }}
+                                            </div>
+                                            <div class="flex-1 space-y-1">
+                                                @if($editingSlotId === $slot['id'])
+                                                <div class="space-y-3">
+                                                    <flux:field>
+                                                        <flux:input
+                                                            wire:model.live="editingSlotName"
+                                                            placeholder="Elem neve"
+                                                            autofocus />
+                                                        <flux:error name="editingSlotName" />
+                                                    </flux:field>
+                                                    <flux:field>
+                                                        <flux:textarea
+                                                            wire:model.live="editingSlotDescription"
+                                                            placeholder="Leírás (opcionális)"
+                                                            rows="2" />
+                                                        <flux:error name="editingSlotDescription" />
+                                                    </flux:field>
+                                                </div>
+                                                @else
+                                                <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
+                                                @if($slot['description'])
+                                                <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
+                                                @endif
+                                                @endif
+                                            </div>
+                                        </div>
 
-                                    <!-- Assigned music -->
-                                    @if(!empty($slot['assignments']))
-                                    <div class="mt-3 space-y-2">
+                                        <!-- Second row: Assigned music -->
+                                        @if(!empty($slot['assignments']))
+                                        <div class="space-y-2">
                                         @foreach($slot['assignments'] as $assignment)
                                         <div wire:key="assignment-{{ $assignment['id'] }}" class="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-lg px-3 py-2">
                                             <div class="flex gap-3">
@@ -589,11 +596,13 @@
                                             </div>
                                         </div>
                                         @endforeach
+                                        </div>
+                                        @endif
                                     </div>
-                                    @endif
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <div class="flex flex-col gap-1">
+
+                                    <!-- Right column: buttons spanning all rows -->
+                                    <div class="flex items-start gap-2">
+                                        <div class="flex flex-col gap-1">
                                         @if($editingSlotId === $slot['id'])
                                         <!-- Save/Cancel buttons when editing -->
                                         <flux:button
@@ -660,6 +669,7 @@
                                         @endif
                                     </div>
                                 </div>
+                            </div>
 
                             </flux:card>
                             @empty
