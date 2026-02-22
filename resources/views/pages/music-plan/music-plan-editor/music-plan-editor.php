@@ -17,21 +17,7 @@ new class extends Component
 
     public array $existingSlotIds = [];
 
-    public string $slotSearch = '';
-
-    public array $searchResults = [];
-
-    public ?int $selectedSlotId = null;
-
     public ?int $genreId = null;
-
-    public bool $showAllSlotsModal = false;
-
-    public array $allSlots = [];
-
-    public ?string $recentlyAddedSlotName = null;
-
-    public bool $filterExcludeExisting = true;
 
     public bool $isPublished = false;
 
@@ -259,6 +245,22 @@ new class extends Component
             ->toArray();
     }
 
+    #[On('slot-added')]
+    public function onSlotAdded(string $slotName): void
+    {
+        $this->loadExistingSlotIds();
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: $slotName.' hozzáadva.');
+    }
+
+    #[On('slot-created')]
+    public function onSlotCreated(string $slotName): void
+    {
+        $this->loadExistingSlotIds();
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slotName);
+    }
+
     #[On('add-slot-from-template')]
     public function addSlotFromTemplate(int $templateId, int $slotId): void
     {
@@ -423,194 +425,11 @@ new class extends Component
             ->update(['sequence' => $sequence]);
     }
 
-    public function updatedSlotSearch(string $value): void
-    {
-        if (strlen($value) < 1) {
-            $this->searchResults = [];
-            $this->selectedSlotId = null;
-
-            return;
-        }
-
-        $query = \App\Models\MusicPlanSlot::query()
-            ->where(function ($query) use ($value) {
-                $query->where('name', 'ilike', "%{$value}%")
-                    ->orWhere('description', 'ilike', "%{$value}%");
-            });
-
-        if ($this->filterExcludeExisting && ! empty($this->existingSlotIds)) {
-            $query->whereNotIn('id', $this->existingSlotIds);
-        }
-
-        $this->searchResults = $query
-            ->orderBy('name')
-            ->limit(10)
-            ->get()
-            ->map(function ($slot) {
-                return [
-                    'id' => $slot->id,
-                    'name' => $slot->name,
-                    'description' => $slot->description,
-                ];
-            })
-            ->toArray();
-
-        // Auto-select first result if available
-        if (count($this->searchResults) > 0) {
-            $this->selectedSlotId = $this->searchResults[0]['id'];
-        } else {
-            $this->selectedSlotId = null;
-        }
-    }
-
-    public function updatedFilterExcludeExisting(): void
-    {
-        // If there's an active search, refresh the results
-        if (strlen($this->slotSearch) >= 2) {
-            $this->updatedSlotSearch($this->slotSearch);
-        }
-    }
-
     public function updatedIsPublished(): void
     {
         $this->authorize('update', $this->musicPlan);
         $this->musicPlan->is_private = ! $this->isPublished;
         $this->musicPlan->save();
-    }
-
-    public function addSlotDirectly(int $slotId): void
-    {
-        $this->authorize('update', $this->musicPlan);
-
-        $slot = \App\Models\MusicPlanSlot::findOrFail($slotId);
-
-        // Get existing slots for this plan to determine next sequence
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-
-        $this->musicPlan->slots()->attach($slotId, [
-            'sequence' => $sequence,
-        ]);
-
-        // Clear search
-        $this->slotSearch = '';
-        $this->searchResults = [];
-        $this->selectedSlotId = null;
-        $this->recentlyAddedSlotName = $slot->name;
-
-        $this->loadExistingSlotIds();
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: $slot->name.' hozzáadva.');
-    }
-
-    public function showAllSlots(): void
-    {
-        $query = \App\Models\MusicPlanSlot::query();
-
-        if ($this->filterExcludeExisting && ! empty($this->existingSlotIds)) {
-            $query->whereNotIn('id', $this->existingSlotIds);
-        }
-
-        $this->allSlots = $query
-            ->orderBy('name')
-            ->where(function ($q) {
-                $q->where('is_custom', false)
-                    ->orWhere('music_plan_id', $this->musicPlan->id);
-            })
-            ->get()
-            ->map(function ($slot) {
-                return [
-                    'id' => $slot->id,
-                    'name' => $slot->name,
-                    'description' => $slot->description,
-                ];
-            })
-            ->toArray();
-
-        $this->showAllSlotsModal = true;
-    }
-
-    public function closeAllSlotsModal(): void
-    {
-        $this->showAllSlotsModal = false;
-        $this->allSlots = [];
-    }
-
-    public function clearRecentlyAddedSlot(): void
-    {
-        $this->recentlyAddedSlotName = null;
-    }
-
-    public function openCreateSlotModal(): void
-    {
-        $this->showCreateSlotModal = true;
-        $this->newSlotName = '';
-        $this->newSlotDescription = '';
-        $this->newSlotCustomColumns = [];
-        $this->resetValidation();
-    }
-
-    public function closeCreateSlotModal(): void
-    {
-        $this->showCreateSlotModal = false;
-        $this->resetValidation();
-    }
-
-    public function createCustomSlot(): void
-    {
-        $this->authorize('create', [\App\Models\MusicPlanSlot::class, $this->musicPlan]);
-
-        $validated = $this->validate([
-            'newSlotName' => ['required', 'string', 'max:255'],
-            'newSlotDescription' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $slot = $this->musicPlan->createCustomSlot([
-            'name' => $validated['newSlotName'],
-            'description' => $validated['newSlotDescription'] ?? '',
-        ]);
-
-        // Attach the newly created slot to the plan
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-        $this->musicPlan->slots()->attach($slot->id, [
-            'sequence' => $sequence,
-        ]);
-
-        $this->closeCreateSlotModal();
-        $this->loadExistingSlotIds();
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slot->name);
-    }
-
-    public function createCustomSlotFromSearch(): void
-    {
-        $this->authorize('create', [\App\Models\MusicPlanSlot::class, $this->musicPlan]);
-
-        $validated = $this->validate([
-            'slotSearch' => ['required', 'string', 'max:255'],
-        ]);
-
-        $slot = $this->musicPlan->createCustomSlot([
-            'name' => $validated['slotSearch'],
-            'description' => '',
-        ]);
-
-        // Attach the newly created slot to the plan
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-        $this->musicPlan->slots()->attach($slot->id, [
-            'sequence' => $sequence,
-        ]);
-
-        // Clear search
-        $this->slotSearch = '';
-        $this->searchResults = [];
-        $this->selectedSlotId = null;
-
-        $this->loadExistingSlotIds();
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slot->name);
     }
 
     public function startEditingSlot(int $slotId): void
