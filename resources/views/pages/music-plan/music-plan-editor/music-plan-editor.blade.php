@@ -538,7 +538,7 @@
                                             'readings_code' => $musicPlan->celebrations->first()?->readings_code,
                                             'year_letter' => $musicPlan->celebrations->first()?->year_letter,
                                             'year_parity' => $musicPlan->celebrations->first()?->year_parity,
-                                        ]" />
+                                        ]" :musicPlanId="$musicPlan->id" />
                                     </div>
                                 </x-mary-tab>
                             </x-mary-tabs>

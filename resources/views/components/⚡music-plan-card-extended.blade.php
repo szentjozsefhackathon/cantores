@@ -12,6 +12,7 @@ new class extends Component
     public array $planSlots = [];
     public bool $isOwner = false;
     public bool $showOpenButton = false;
+    public ?int $musicPlanId = null;
 
     public function mount(MusicPlan $musicPlan): void
     {
@@ -186,21 +187,35 @@ new class extends Component
                         <div class="mt-0.5 space-y-0.5">
                             @foreach($slot['assignments'] as $assignment)
                             @if(!empty($assignment['music']))
-                            <div class="text-xs">
-                                @if(!empty($assignment['scope_label']))
-                                <flux:badge color="zinc" size="xs" class="mb-0.5">{{ $assignment['scope_label'] }}</flux:badge>
-                                @endif
-                                <div class="text-gray-700 dark:text-gray-300 font-medium truncate">
-                                    {{ $assignment['music']->title }}
+                            <div class="text-xs flex items-start justify-between gap-2">
+                                <div class="flex-1 min-w-0">
+                                    @if(!empty($assignment['scope_label']))
+                                    <flux:badge color="zinc" size="xs" class="mb-0.5">{{ $assignment['scope_label'] }}</flux:badge>
+                                    @endif
+                                    <div class="text-gray-700 dark:text-gray-300 font-medium truncate">
+                                        {{ $assignment['music']->title }}
+                                    </div>
+                                    @if($assignment['music']->subtitle)
+                                    <div class="text-gray-600 dark:text-gray-400 line-clamp-1">
+                                        {{ Str::limit($assignment['music']->subtitle, 50) }}
+                                    </div>
+                                    @endif
+                                    @if(!empty($assignment['notes']))
+                                    <div class="text-gray-500 dark:text-gray-500 italic line-clamp-1">
+                                        {{ Str::limit($assignment['notes'], 50) }}
+                                    </div>
+                                    @endif
                                 </div>
-                                @if($assignment['music']->subtitle)
-                                <div class="text-gray-600 dark:text-gray-400 line-clamp-1">
-                                    {{ Str::limit($assignment['music']->subtitle, 50) }}
-                                </div>
-                                @endif
-                                @if(!empty($assignment['notes']))
-                                <div class="text-gray-500 dark:text-gray-500 italic line-clamp-1">
-                                    {{ Str::limit($assignment['notes'], 50) }}
+                                @if($musicPlanId)
+                                <div class="flex-shrink-0">
+                                    <flux:button
+                                        wire:click="$parent.addMusicToMusicPlan({{ $assignment['music']->id }}, '{{ $slot['name'] }}')"
+                                        wire:loading.attr="disabled"
+                                        wire:loading.class="opacity-50 cursor-not-allowed"
+                                        icon="plus"
+                                        variant="primary"
+                                        size="xs"
+                                        title="Zene hozzáadása az énekrendhez" />
                                 </div>
                                 @endif
                             </div>

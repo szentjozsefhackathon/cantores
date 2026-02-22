@@ -261,6 +261,14 @@ new class extends Component
         $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slotName);
     }
 
+    #[On('music-added-from-suggestions')]
+    public function onMusicAddedFromSuggestions(int $musicId, string $slotName): void
+    {
+        $this->loadExistingSlotIds();
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: 'Zene hozzáadva: '.$slotName);
+    }
+
     #[On('add-slot-from-template')]
     public function addSlotFromTemplate(int $templateId, int $slotId): void
     {

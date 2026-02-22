@@ -24,9 +24,12 @@ new class extends Component
 
     public string $activeTab = 'music';
 
-    public function mount(array $criteria = []): void
+    public ?int $musicPlanId = null;
+
+    public function mount(array $criteria = [], ?int $musicPlanId = null): void
     {
         $this->criteria = $criteria;
+        $this->musicPlanId = $musicPlanId;
 
         $service = app(CelebrationSearchService::class);
         $related = $service->findRelated($this->criteria);
@@ -190,6 +193,67 @@ new class extends Component
 
         return $result;
     }
+
+    /**
+     * Add music from suggestions to the music plan.
+     * Finds the appropriate slot by name or creates one if needed.
+     */
+    public function addMusicToMusicPlan(int $musicId, string $slotName): void
+    {
+        if (! $this->musicPlanId) {
+            return;
+        }
+
+        $musicPlan = \App\Models\MusicPlan::findOrFail($this->musicPlanId);
+        $this->authorize('update', $musicPlan);
+
+        // Find or create the slot
+        $slot = \App\Models\MusicPlanSlot::firstOrCreate(
+            ['name' => $slotName, 'is_custom' => false],
+            ['description' => null]
+        );
+
+        // Check if slot is already attached to this plan
+        $existingSlotPlan = DB::table('music_plan_slot_plan')
+            ->where('music_plan_id', $musicPlan->id)
+            ->where('music_plan_slot_id', $slot->id)
+            ->first();
+
+        $slotPlanId = null;
+        if ($existingSlotPlan) {
+            $slotPlanId = $existingSlotPlan->id;
+        } else {
+            // Attach slot to plan with next sequence
+            $maxSequence = DB::table('music_plan_slot_plan')
+                ->where('music_plan_id', $musicPlan->id)
+                ->max('sequence') ?? 0;
+
+            $slotPlanId = DB::table('music_plan_slot_plan')->insertGetId([
+                'music_plan_id' => $musicPlan->id,
+                'music_plan_slot_id' => $slot->id,
+                'sequence' => $maxSequence + 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Determine next music_sequence within this slot instance
+        $maxMusicSequence = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slotPlanId)
+            ->max('music_sequence');
+        $musicSequence = ($maxMusicSequence ?: 0) + 1;
+
+        // Create the assignment
+        \App\Models\MusicPlanSlotAssignment::create([
+            'music_plan_slot_plan_id' => $slotPlanId,
+            'music_plan_id' => $musicPlan->id,
+            'music_plan_slot_id' => $slot->id,
+            'music_id' => $musicId,
+            'music_sequence' => $musicSequence,
+        ]);
+
+        // Dispatch event to notify the music plan editor
+        $this->dispatch('music-added-from-suggestions', musicId: $musicId, slotName: $slotName);
+    }
 };
 ?>
 
@@ -226,7 +290,21 @@ new class extends Component
                                         $sequence = $musicItem['music_sequence'];
                                         $collectionInfo = $musicItem['collection_info'];
                                     @endphp
-                                    <livewire:music-card :music="$music" />
+                                    <div class="relative">
+                                        <livewire:music-card :music="$music" />
+                                        @if($musicPlanId)
+                                        <div class="absolute top-2 right-2">
+                                            <flux:button
+                                                wire:click="addMusicToMusicPlan({{ $music->id }}, '{{ $slotName }}')"
+                                                wire:loading.attr="disabled"
+                                                wire:loading.class="opacity-50 cursor-not-allowed"
+                                                icon="plus"
+                                                variant="primary"
+                                                size="sm"
+                                                title="Zene hozzáadása az énekrendhez" />
+                                        </div>
+                                        @endif
+                                    </div>
                                 @endforeach
                             </div>
                         </div>
@@ -244,7 +322,7 @@ new class extends Component
                     @foreach ($musicPlans as $plan)
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div class="flex-1">
-                                <livewire:music-plan-card-extended :musicPlan="$plan" class="max-w-full" :showOpenButton="true"/>
+                                <livewire:music-plan-card-extended :musicPlan="$plan" class="max-w-full" :showOpenButton="true" :musicPlanId="$musicPlanId"/>
                             </div>
                         </div>
                     @endforeach
