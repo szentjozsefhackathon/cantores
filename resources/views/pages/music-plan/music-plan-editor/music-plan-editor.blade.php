@@ -227,13 +227,6 @@
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <flux:button
-                                            wire:click="openCreateSlotModal"
-                                            icon="plus"
-                                            variant="outline"
-                                            class="whitespace-nowrap">
-                                            Új egyedi elem
-                                        </flux:button>
-                                        <flux:button
                                             wire:click="showAllSlots"
                                             wire:loading.attr="disabled"
                                             wire:loading.class="opacity-50 cursor-not-allowed"

@@ -425,7 +425,7 @@ new class extends Component
 
     public function updatedSlotSearch(string $value): void
     {
-        if (strlen($value) < 2) {
+        if (strlen($value) < 1) {
             $this->searchResults = [];
             $this->selectedSlotId = null;
 
