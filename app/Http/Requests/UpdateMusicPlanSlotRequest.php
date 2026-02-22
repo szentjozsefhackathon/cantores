@@ -29,6 +29,7 @@ class UpdateMusicPlanSlotRequest extends FormRequest
                 'max:255',
                 Rule::unique('music_plan_slots', 'name')
                     ->whereNull('deleted_at')
+                    ->where('is_custom', 'f')
                     ->ignore($slotId),
             ],
             'description' => ['nullable', 'string', 'max:1000'],

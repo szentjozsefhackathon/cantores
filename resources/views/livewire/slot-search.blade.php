@@ -17,6 +17,7 @@
                     x-on:click.outside="open = false"
                     :placeholder="__('Type slot name (e.g., Gloria, Entrance)...')"
                     autocomplete="off" />
+                <flux:error name="slotSearch" />
             </flux:field>
 
             <!-- Dropdown results -->

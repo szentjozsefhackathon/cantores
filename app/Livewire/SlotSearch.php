@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class SlotSearch extends Component
@@ -162,7 +163,7 @@ class SlotSearch extends Component
         $this->authorize('create', [MusicPlanSlot::class, $this->musicPlan]);
 
         $validated = $this->validate([
-            'newSlotName' => ['required', 'string', 'max:255'],
+            'newSlotName' => ['required', 'string', 'max:255', Rule::unique('music_plan_slots', 'name')->whereNull('deleted_at')->where('is_custom', 'f')],
             'newSlotDescription' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -188,7 +189,7 @@ class SlotSearch extends Component
         $this->authorize('create', [MusicPlanSlot::class, $this->musicPlan]);
 
         $validated = $this->validate([
-            'slotSearch' => ['required', 'string', 'max:255'],
+            'slotSearch' => ['required', 'string', 'max:255', Rule::unique('music_plan_slots', 'name')->whereNull('deleted_at')->where('is_custom', 'f')],
         ]);
 
         $slot = $this->musicPlan->createCustomSlot([

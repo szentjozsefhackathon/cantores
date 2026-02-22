@@ -27,7 +27,7 @@ class StoreMusicPlanSlotRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('music_plan_slots', 'name')->whereNull('deleted_at'),
+                Rule::unique('music_plan_slots', 'name')->whereNull('deleted_at')->where('is_custom', 'f'),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
             'priority' => ['required', 'integer', 'min:0'],
