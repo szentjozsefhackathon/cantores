@@ -48,6 +48,7 @@ class MusicPlanTemplateSlots extends Component
     public function render(): View
     {
         $availableSlots = MusicPlanSlot::active()
+            ->global()
             ->whereNotIn('id', $this->template->slots->pluck('id'))
             ->orderBy('name')
             ->get();
