@@ -150,9 +150,11 @@ DTX;
 
     $csvLines = file($csvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     expect($csvLines)->toHaveCount(3); // header + 2 rows
-    expect($csvLines[0])->toBe('enek,ienek');
-    expect($csvLines[1])->toBe('1,');
-    expect($csvLines[2])->toBe('2,');
+    // New CSV format: title,reference,"page number",tag
+    // fputcsv quotes fields with spaces, and empty fields are not quoted
+    expect($csvLines[0])->toBe('title,reference,"page number",tag');
+    expect($csvLines[1])->toBe('1,,,');
+    expect($csvLines[2])->toBe('2,,,');
 
     // Clean up CSV
     unlink($csvPath);

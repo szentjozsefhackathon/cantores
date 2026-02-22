@@ -18,6 +18,8 @@ class BulkImport extends Model
         'collection',
         'piece',
         'reference',
+        'page_number',
+        'tag',
         'batch_number',
     ];
 
@@ -39,6 +41,8 @@ class BulkImport extends Model
     {
         return [
             'reference' => 'string',
+            'page_number' => 'integer',
+            'tag' => 'string',
             'batch_number' => 'integer',
         ];
     }

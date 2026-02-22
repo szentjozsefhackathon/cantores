@@ -14,14 +14,14 @@ class DtxConvert extends Command
      *
      * @var string
      */
-    protected $signature = 'dtx:convert {collection : The collection name (e.g., szvu)} {--title : Use ienek as title and leave reference empty}';
+    protected $signature = 'dtx:convert {collection : The collection name (e.g., szvu)} {--title : Use ienek as title and leave reference empty} {--csv : Use CSV file instead of DTX}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Download DTX file from GitHub and import into bulk_imports table';
+    protected $description = 'Download DTX file from GitHub and import into bulk_imports table, or import from CSV file';
 
     /**
      * Execute the console command.
@@ -30,56 +30,165 @@ class DtxConvert extends Command
     {
         $collection = $this->argument('collection');
         $useTitle = $this->option('title');
-        $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
+        $useCsv = $this->option('csv');
 
-        $this->info("Downloading DTX file from: {$url}");
+        if ($useCsv) {
+            // Import from CSV file
+            $csvPath = storage_path("app/{$collection}.csv");
+            if (! file_exists($csvPath)) {
+                $this->error("CSV file not found: {$csvPath}");
 
-        try {
-            $response = Http::timeout(30)->get($url);
-        } catch (\Exception $e) {
-            $this->error("Failed to download DTX file: {$e->getMessage()}");
+                return self::FAILURE;
+            }
 
-            return self::FAILURE;
+            $this->info("Importing from CSV file: {$csvPath}");
+            $songs = $this->parseCsv($csvPath);
+
+            if (empty($songs)) {
+                $this->warn('No songs found in CSV file.');
+
+                return self::FAILURE;
+            }
+
+            // Store in database
+            $this->storeInDatabase($collection, $songs);
+            $this->info('Stored '.count($songs)." songs in bulk_imports table for collection '{$collection}'.");
+
+            return self::SUCCESS;
+        } else {
+            // Original DTX import logic
+            $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
+
+            $this->info("Downloading DTX file from: {$url}");
+
+            try {
+                $response = Http::timeout(30)->get($url);
+            } catch (\Exception $e) {
+                $this->error("Failed to download DTX file: {$e->getMessage()}");
+
+                return self::FAILURE;
+            }
+
+            if (! $response->successful()) {
+                $this->error("HTTP error: {$response->status()} - {$response->body()}");
+
+                return self::FAILURE;
+            }
+
+            // Save to storage directory (private/dtximport)
+            $dtxDir = storage_path('app/private/dtximport');
+            if (! is_dir($dtxDir)) {
+                mkdir($dtxDir, 0755, true);
+            }
+            $dtxPath = $dtxDir.'/'.$collection.'.dtx';
+            file_put_contents($dtxPath, $response->body());
+
+            $this->info("DTX file saved to: {$dtxPath}");
+
+            $songs = $this->parseDtx($dtxPath, $useTitle);
+
+            if (empty($songs)) {
+                $this->warn('No songs found in DTX file.');
+
+                return self::FAILURE;
+            }
+
+            // Store in database
+            $this->storeInDatabase($collection, $songs);
+            $this->info('Stored '.count($songs)." songs in bulk_imports table for collection '{$collection}'.");
+
+            $csvPath = $this->generateCsv($dtxPath, $songs);
+
+            $this->info("CSV file created: {$csvPath}");
+            $this->info('Conversion completed.');
+
+            // Optionally delete the temporary DTX file
+            unlink($dtxPath);
+            $this->info('Temporary DTX file removed.');
+
+            return self::SUCCESS;
+        }
+    }
+
+    /**
+     * Parse CSV file with columns: title, reference, page number, tag
+     *
+     * @return array<int, array{ienek: string, enek: string, page_number: ?int, tag: ?string}>
+     */
+    private function parseCsv(string $csvPath): array
+    {
+        $songs = [];
+
+        if (! file_exists($csvPath)) {
+            return $songs;
         }
 
-        if (! $response->successful()) {
-            $this->error("HTTP error: {$response->status()} - {$response->body()}");
+        $file = new SplFileObject($csvPath);
+        $file->setFlags(SplFileObject::READ_CSV);
+        $file->setCsvControl(',', '"', '\\');
 
-            return self::FAILURE;
+        $header = null;
+        $rowCount = 0;
+
+        foreach ($file as $row) {
+            if ($row === null || $row === [null]) {
+                continue; // Skip empty rows
+            }
+
+            if ($header === null) {
+                $header = $row;
+                // Normalize header names
+                $header = array_map('strtolower', array_map('trim', $header));
+
+                continue;
+            }
+
+            $rowCount++;
+
+            // Map columns based on header
+            $data = array_combine($header, array_pad($row, count($header), ''));
+
+            // Determine title and reference based on available columns
+            $title = '';
+            $reference = '';
+            $pageNumber = null;
+            $tag = null;
+
+            if (isset($data['title'])) {
+                $title = trim($data['title']);
+            } elseif (isset($data['enek'])) {
+                $title = trim($data['enek']);
+            }
+
+            if (isset($data['reference'])) {
+                $reference = trim($data['reference']);
+            } elseif (isset($data['ienek'])) {
+                $reference = trim($data['ienek']);
+            }
+
+            if (isset($data['page number']) && ! empty(trim($data['page number']))) {
+                $pageNumber = (int) trim($data['page number']);
+            } elseif (isset($data['page_number']) && ! empty(trim($data['page_number']))) {
+                $pageNumber = (int) trim($data['page_number']);
+            }
+
+            if (isset($data['tag']) && ! empty(trim($data['tag']))) {
+                $tag = trim($data['tag']);
+            }
+
+            if (empty($title) && empty($reference)) {
+                continue; // Skip empty rows
+            }
+
+            $songs[] = [
+                'ienek' => $reference,
+                'enek' => $title,
+                'page_number' => $pageNumber,
+                'tag' => $tag,
+            ];
         }
 
-        // Save to storage directory (private/dtximport)
-        $dtxDir = storage_path('app/private/dtximport');
-        if (! is_dir($dtxDir)) {
-            mkdir($dtxDir, 0755, true);
-        }
-        $dtxPath = $dtxDir.'/'.$collection.'.dtx';
-        file_put_contents($dtxPath, $response->body());
-
-        $this->info("DTX file saved to: {$dtxPath}");
-
-        $songs = $this->parseDtx($dtxPath, $useTitle);
-
-        if (empty($songs)) {
-            $this->warn('No songs found in DTX file.');
-
-            return self::FAILURE;
-        }
-
-        // Store in database
-        $this->storeInDatabase($collection, $songs);
-        $this->info('Stored '.count($songs)." songs in bulk_imports table for collection '{$collection}'.");
-
-        $csvPath = $this->generateCsv($dtxPath, $songs);
-
-        $this->info("CSV file created: {$csvPath}");
-        $this->info('Conversion completed.');
-
-        // Optionally delete the temporary DTX file
-        unlink($dtxPath);
-        $this->info('Temporary DTX file removed.');
-
-        return self::SUCCESS;
+        return $songs;
     }
 
     /**
@@ -170,10 +279,16 @@ class DtxConvert extends Command
         }
 
         $csvFile = new SplFileObject($csvPath, 'w');
-        $csvFile->fputcsv(['enek', 'ienek']);
+        // Generate CSV with new format columns
+        $csvFile->fputcsv(['title', 'reference', 'page number', 'tag']);
 
         foreach ($songs as $song) {
-            $csvFile->fputcsv([$song['enek'], $song['ienek']]);
+            $csvFile->fputcsv([
+                $song['enek'], // title
+                $song['ienek'], // reference
+                '', // page number (empty for DTX imports)
+                '', // tag (empty for DTX imports)
+            ]);
         }
 
         return $csvPath;
@@ -193,14 +308,17 @@ class DtxConvert extends Command
 
         $records = [];
         foreach ($songs as $song) {
-            $records[] = [
+            $record = [
                 'collection' => $collection,
                 'piece' => $song['enek'],
                 'reference' => (string) $song['ienek'],
+                'page_number' => $song['page_number'] ?? null,
+                'tag' => $song['tag'] ?? null,
                 'batch_number' => $nextBatchNumber,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
+            $records[] = $record;
         }
 
         // Use chunk insert for performance

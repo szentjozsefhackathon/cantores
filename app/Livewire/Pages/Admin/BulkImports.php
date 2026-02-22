@@ -2,9 +2,11 @@
 
 namespace App\Livewire\Pages\Admin;
 
+use App\Enums\MusicTagType;
 use App\Models\BulkImport;
 use App\Models\Collection;
 use App\Models\Music;
+use App\Models\MusicTag;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -106,7 +108,7 @@ class BulkImports extends Component
 
         foreach ($imports as $import) {
             // Check if a music already exists in the selected collection with the same order_number (reference)
-            $existing = \App\Models\Music::whereHas('collections', function ($query) use ($import) {
+            $existing = Music::whereHas('collections', function ($query) use ($import) {
                 $query->where('collections.id', $this->selectedCollectionId)
                     ->where('music_collection.order_number', $import->reference);
             })->exists();
@@ -120,7 +122,7 @@ class BulkImports extends Component
 
             // Create new music
             \Log::info("Importing music: {$import->piece} (reference: {$import->reference}) into collection ID {$this->selectedCollectionId}");
-            $music = \App\Models\Music::create([
+            $music = Music::create([
                 'title' => $import->piece,
                 'subtitle' => null,
                 'custom_id' => null,
@@ -129,17 +131,22 @@ class BulkImports extends Component
                 'import_batch_number' => $import->batch_number,
             ]);
 
-            // Attach to selected collection with order_number = reference
+            // Attach to selected collection with order_number = reference and page_number if available
             $music->collections()->attach($this->selectedCollectionId, [
                 'order_number' => $import->reference,
-                'page_number' => null,
+                'page_number' => $import->page_number ?? null,
             ]);
 
-            // add the collection's genres to the music
+            // Add the collection's genres to the music
             $collection = Collection::visibleTo(Auth::user())->findOrFail($this->selectedCollectionId);
             if ($collection) {
                 $genreIds = $collection->genres()->pluck('genre_id');
                 $music->genres()->attach($genreIds);
+            }
+
+            // Handle tag if present
+            if (! empty($import->tag)) {
+                $this->attachTagToMusic($music, $import->tag);
             }
 
             $createdCount++;
@@ -155,12 +162,42 @@ class BulkImports extends Component
     }
 
     /**
+     * Attach a tag to music, creating it if necessary.
+     */
+    private function attachTagToMusic(Music $music, string $tagName): void
+    {
+        // Transform tag name to Firstlettercase: ALLELUJA->Alleluja
+        $transformedName = ucfirst(strtolower($tagName));
+
+        // Find or create tag with Liturgy type (default)
+        $tag = MusicTag::firstOrCreate(
+            [
+                'name' => $transformedName,
+                'type' => MusicTagType::Liturgy,
+            ],
+            [
+                'name' => $transformedName,
+                'type' => MusicTagType::Liturgy,
+            ]
+        );
+
+        // Attach tag to music
+        $music->tags()->attach($tag->id);
+    }
+
+    /**
      * Render the component.
      */
     public function render(): View
     {
         // If sortBy is 'order_number', change it to 'reference' for compatibility
         $sortBy = $this->sortBy === 'order_number' ? 'reference' : $this->sortBy;
+
+        // Ensure sortBy is a valid column
+        $validColumns = ['collection', 'piece', 'reference', 'page_number', 'tag', 'batch_number', 'created_at'];
+        if (! in_array($sortBy, $validColumns)) {
+            $sortBy = 'collection';
+        }
 
         $imports = BulkImport::query()
             ->when($this->search, function ($query, $search) {
