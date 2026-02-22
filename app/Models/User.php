@@ -27,6 +27,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'city_id',
         'first_name_id',
         'current_genre_id',
+        'blocked',
+        'blocked_at',
     ];
 
     /**
@@ -51,6 +53,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'blocked' => 'boolean',
+            'blocked_at' => 'datetime',
         ];
     }
 

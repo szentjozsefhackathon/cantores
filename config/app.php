@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'only_admin_login' => env('APP_ONLY_ADMIN_LOGIN', false),
+
 ];

@@ -67,3 +67,44 @@ test('users can logout', function () {
 
     $this->assertGuest();
 });
+
+test('blocked users cannot authenticate', function () {
+    $user = User::factory()->create(['blocked' => true]);
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $response->assertSessionHasErrorsIn('email');
+    $this->assertGuest();
+});
+
+test('admin-only login restricts non-admin users when enabled', function () {
+    config(['app.only_admin_login' => true]);
+
+    $user = User::factory()->create(); // non-admin
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $response->assertSessionHasErrorsIn('email');
+    $this->assertGuest();
+});
+
+test('admin-only login allows admin users when enabled', function () {
+    config(['app.only_admin_login' => true]);
+
+    $user = User::factory()->create();
+    $user->assignRole('admin');
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $response->assertSessionHasNoErrors()->assertRedirect(route('dashboard', absolute: false));
+    $this->assertAuthenticated();
+});
