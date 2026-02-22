@@ -520,9 +520,28 @@
                         </div>
 
                         <div class="space-y-4">
-                            <flux:heading size="lg">Elemek hozzáadása sablonból</flux:heading>
+                            <!-- Tabs for template and suggestions -->
+                            <x-mary-tabs class="mb-8" wire:model="activeTemplateTab">
+                                <x-mary-tab name="template" label="Énekrend sablon">
+                                    <div class="space-y-4">
+                                        <livewire:music-plan-editor.music-plan-template :templates="$availableTemplates" :musicPlan="$musicPlan" />
+                                    </div>
+                                </x-mary-tab>
 
-                            <livewire:music-plan-editor.music-plan-template :templates="$availableTemplates" :musicPlan="$musicPlan" />
+                                <x-mary-tab name="suggestions" label="Énekek hozzáadása énekrendből">
+                                    <div class="space-y-4">
+                                        <livewire:suggestions-content :criteria="[
+                                            'name' => $musicPlan->celebration_name,
+                                            'season' => $musicPlan->celebrations->first()?->season,
+                                            'week' => $musicPlan->celebrations->first()?->week,
+                                            'day' => $musicPlan->celebrations->first()?->day,
+                                            'readings_code' => $musicPlan->celebrations->first()?->readings_code,
+                                            'year_letter' => $musicPlan->celebrations->first()?->year_letter,
+                                            'year_parity' => $musicPlan->celebrations->first()?->year_parity,
+                                        ]" />
+                                    </div>
+                                </x-mary-tab>
+                            </x-mary-tabs>
                         </div>
                     </div>
                 </div>
