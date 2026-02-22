@@ -100,3 +100,70 @@ test('city and first name combination must be unique', function () {
 
     $response->assertSessionHasErrors(['city_id', 'first_name_id']);
 });
+
+test('new users are blocked when block_new_users config is true', function () {
+    config(['app.block_new_users' => true]);
+
+    $city = City::firstOrCreate(['name' => 'Berlin']);
+    $firstName = FirstName::firstOrCreate(['name' => 'Hans'], ['gender' => 'male']);
+
+    $email = fake()->unique()->safeEmail();
+
+    $response = $this->post(route('register.store'), [
+        'name' => 'John Doe',
+        'email' => $email,
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'city_id' => $city->id,
+        'first_name_id' => $firstName->id,
+        'cf-turnstile-response' => Turnstile::dummy(),
+    ]);
+
+    $response->assertSessionHasNoErrors()
+        ->assertRedirect(route('dashboard', absolute: false));
+
+    $this->assertAuthenticated();
+
+    $user = \App\Models\User::where('email', $email)->first();
+    expect($user->blocked)->toBeTrue()
+        ->and($user->blocked_at)->not->toBeNull();
+
+    // User should be able to log out and then be blocked from logging in
+    auth()->logout();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $email,
+        'password' => 'password',
+    ]);
+
+    $response->assertSessionHasErrorsIn('email');
+    $this->assertGuest();
+});
+
+test('new users are not blocked when block_new_users config is false', function () {
+    config(['app.block_new_users' => false]);
+
+    $city = City::firstOrCreate(['name' => 'Vienna']);
+    $firstName = FirstName::firstOrCreate(['name' => 'Franz'], ['gender' => 'male']);
+
+    $email = fake()->unique()->safeEmail();
+
+    $response = $this->post(route('register.store'), [
+        'name' => 'Jane Doe',
+        'email' => $email,
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'city_id' => $city->id,
+        'first_name_id' => $firstName->id,
+        'cf-turnstile-response' => Turnstile::dummy(),
+    ]);
+
+    $response->assertSessionHasNoErrors()
+        ->assertRedirect(route('dashboard', absolute: false));
+
+    $this->assertAuthenticated();
+
+    $user = \App\Models\User::where('email', $email)->first();
+    expect($user->blocked)->toBeFalse()
+        ->and($user->blocked_at)->toBeNull();
+});

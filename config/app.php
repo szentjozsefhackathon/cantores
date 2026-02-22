@@ -124,5 +124,6 @@ return [
     ],
 
     'only_admin_login' => env('APP_ONLY_ADMIN_LOGIN', false),
+    'block_new_users' => env('APP_BLOCK_NEW_USERS', false),
 
 ];

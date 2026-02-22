@@ -59,6 +59,22 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Scope a query to only include blocked users.
+     */
+    public function scopeBlocked(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->where('blocked', true);
+    }
+
+    /**
+     * Scope a query to only include non-blocked users.
+     */
+    public function scopeNotBlocked(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->where('blocked', false);
+    }
+
+    /**
      * Get the user's city.
      */
     public function city(): \Illuminate\Database\Eloquent\Relations\BelongsTo

@@ -40,12 +40,16 @@ class CreateNewUser implements CreatesNewUsers
             }
         })->validate();
 
+        $blocked = config('app.block_new_users', false);
+
         return User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => $input['password'],
             'city_id' => $input['city_id'],
             'first_name_id' => $input['first_name_id'],
+            'blocked' => $blocked,
+            'blocked_at' => $blocked ? now() : null,
         ]);
     }
 }
