@@ -520,7 +520,6 @@
                                                             <button
                                                                 type="button"
                                                                 wire:click="removeScope({{ $assignment['id'] }}, {{ $index }})"
-                                                                wire:confirm="Biztosan eltávolítod ezt a részletet?"
                                                                 wire:loading.attr="disabled"
                                                                 wire:loading.class="opacity-50 cursor-not-allowed"
                                                                 class="h-4 w-4 flex items-center justify-center rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300">
