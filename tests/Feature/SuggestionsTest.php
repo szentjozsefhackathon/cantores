@@ -6,6 +6,9 @@ use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 test('suggestions page loads with criteria', function () {
     $user = User::factory()->create();
