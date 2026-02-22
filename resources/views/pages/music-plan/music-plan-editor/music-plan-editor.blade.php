@@ -439,8 +439,10 @@
                                         @foreach($slot['assignments'] as $assignment)
                                         <div wire:key="assignment-{{ $assignment['id'] }}" class="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-lg px-3 py-2">
                                             <div class="flex gap-3">
-                                                @if(count($slot['assignments']) > 1)
+                                                <!-- Button bar - always displayed -->
                                                 <div class="flex flex-col gap-1">
+                                                    @if(count($slot['assignments']) > 1)
+                                                    <!-- Show sequence badge and move buttons when multiple assignments -->
                                                     <flux:badge>{{ $assignment['music_sequence'] }}</flux:badge>
                                                     <flux:button
                                                         wire:click="moveAssignmentUp({{ $assignment['id'] }})"
@@ -458,6 +460,9 @@
                                                         icon="chevron-down"
                                                         variant="outline"
                                                         size="xs" />
+                                                    @endif
+                                                    
+                                                    <!-- Delete button - always shown -->
                                                     <flux:button
                                                         wire:click="removeAssignment({{ $assignment['id'] }})"
                                                         wire:confirm="Biztosan eltávolítod ezt a zenét az elemből?"
@@ -466,11 +471,8 @@
                                                         icon="trash"
                                                         variant="danger"
                                                         size="xs" />
-           
-                                                </div>
-           
-                                                @endif
-                                                <div class="flex flex-col gap-1">
+                                                    
+                                                    <!-- Move to slot button - always shown when multiple slots exist -->
                                                     @if(count($planSlots) > 1)
                                                     <flux:button
                                                         wire:click="openMoveAssignmentModal({{ $assignment['id'] }})"
