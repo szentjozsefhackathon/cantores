@@ -524,7 +524,7 @@
                             <x-mary-tabs class="mb-8" wire:model="activeTemplateTab" wire:key="template-tabs">
                                 <x-mary-tab name="template" label="Énekrend sablon">
                                     <div class="space-y-4">
-                                        <livewire:music-plan-editor.music-plan-template :templates="$availableTemplates" :musicPlan="$musicPlan" />
+                                        <livewire:music-plan-editor.music-plan-template :templates="$availableTemplates" :musicPlan="$musicPlan" wire:key="template-component" />
                                     </div>
                                 </x-mary-tab>
 
@@ -538,7 +538,7 @@
                                             'readings_code' => $musicPlan->celebrations->first()?->readings_code,
                                             'year_letter' => $musicPlan->celebrations->first()?->year_letter,
                                             'year_parity' => $musicPlan->celebrations->first()?->year_parity,
-                                        ]" :musicPlanId="$musicPlan->id" />
+                                        ]" :musicPlanId="$musicPlan->id" wire:key="suggestions-component" />
                                     </div>
                                 </x-mary-tab>
                             </x-mary-tabs>
