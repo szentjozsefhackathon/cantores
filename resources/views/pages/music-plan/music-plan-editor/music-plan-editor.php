@@ -583,6 +583,36 @@ new class extends Component
         $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slot->name);
     }
 
+    public function createCustomSlotFromSearch(): void
+    {
+        $this->authorize('create', [\App\Models\MusicPlanSlot::class, $this->musicPlan]);
+
+        $validated = $this->validate([
+            'slotSearch' => ['required', 'string', 'max:255'],
+        ]);
+
+        $slot = $this->musicPlan->createCustomSlot([
+            'name' => $validated['slotSearch'],
+            'description' => '',
+        ]);
+
+        // Attach the newly created slot to the plan
+        $existingSlots = $this->musicPlan->slots()->count();
+        $sequence = $existingSlots + 1;
+        $this->musicPlan->slots()->attach($slot->id, [
+            'sequence' => $sequence,
+        ]);
+
+        // Clear search
+        $this->slotSearch = '';
+        $this->searchResults = [];
+        $this->selectedSlotId = null;
+
+        $this->loadExistingSlotIds();
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slot->name);
+    }
+
     public function startEditingSlot(int $slotId): void
     {
         $slot = \App\Models\MusicPlanSlot::find($slotId);

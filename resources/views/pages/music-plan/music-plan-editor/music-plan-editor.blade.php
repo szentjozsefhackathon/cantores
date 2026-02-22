@@ -183,7 +183,7 @@
 
 
                                         <!-- Dropdown results -->
-                                        <div x-show="open && $wire.searchResults.length > 0"
+                                        <div x-show="open && ($wire.searchResults.length > 0 || ($wire.slotSearch.length >= 2 && $wire.searchResults.length === 0))"
                                             x-transition
                                             class="absolute z-10 mt-1 w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                                             <div class="py-1">
@@ -204,6 +204,24 @@
                                                     </div>
                                                 </button>
                                                 @endforeach
+
+                                                @if(count($searchResults) === 0 && strlen($slotSearch) >= 2)
+                                                <button
+                                                    type="button"
+                                                    wire:click="createCustomSlotFromSearch"
+                                                    wire:loading.attr="disabled"
+                                                    wire:loading.class="opacity-50 cursor-not-allowed"
+                                                    class="w-full text-left px-4 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-between">
+                                                    <div>
+                                                        <div class="font-medium">Új egyedi elem: {{ $slotSearch }}</div>
+                                                        <div class="text-sm text-neutral-600 dark:text-neutral-400">Kattints a létrehozáshoz</div>
+                                                    </div>
+                                                    <div class="relative h-4 w-4">
+                                                        <flux:icon name="plus" class="h-4 w-4 text-neutral-900 dark:text-neutral-100" wire:loading.remove wire:target="createCustomSlotFromSearch" />
+                                                        <flux:icon.loading class="h-4 w-4 text-neutral-900 dark:text-neutral-100 absolute inset-0" wire:loading wire:target="createCustomSlotFromSearch" />
+                                                    </div>
+                                                </button>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
