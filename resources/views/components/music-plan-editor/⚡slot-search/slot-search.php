@@ -212,6 +212,4 @@ new class extends Component
         $this->loadExistingSlotIds();
         $this->dispatch('slot-created', slotName: $slot->name);
     }
-
-
 };

@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -80,5 +79,4 @@ new class extends Component
         $this->closeModal();
         $this->dispatch('refresh-users');
     }
-
 };
