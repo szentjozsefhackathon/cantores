@@ -177,7 +177,8 @@
                                                 wire:model.live="slotSearch"
                                                 x-on:focus="open = true"
                                                 x-on:click.outside="open = false"
-                                                placeholder="Írd be az elem nevét (pl. Gloria, Bevonulás)..." />
+                                                placeholder="Írd be az elem nevét (pl. Gloria, Bevonulás)..."
+                                                autocomplete="off" />
                                         </flux:field>
 
 
