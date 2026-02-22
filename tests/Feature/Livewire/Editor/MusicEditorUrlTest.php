@@ -171,10 +171,10 @@ test('requires authorization to add URL', function () {
 
 test('requires authorization to edit URL', function () {
     $otherUser = User::factory()->create();
-    $this->actingAs($otherUser);
     $url = MusicUrl::factory()->create(['music_id' => $this->music->id]);
 
-    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
+    Livewire::actingAs($otherUser)
+        ->test('pages::editor.music-editor', ['music' => $this->music])
         ->call('editUrl', $url->id)
         ->assertForbidden();
 });

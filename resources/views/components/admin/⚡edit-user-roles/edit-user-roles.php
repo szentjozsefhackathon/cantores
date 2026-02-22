@@ -81,8 +81,4 @@ new class extends Component
         $this->dispatch('refresh-users');
     }
 
-    public function render(): View
-    {
-        return view('components.admin.edit-user-roles.edit-user-roles');
-    }
 };

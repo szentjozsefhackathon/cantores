@@ -42,7 +42,7 @@ class AuthorView extends Component
     {
         $musics = $this->getMusicsQuery()->paginate(12);
 
-        return view('livewire.pages.author-view', [
+        return view('pages.author-view', [
             'musics' => $musics,
         ]);
     }

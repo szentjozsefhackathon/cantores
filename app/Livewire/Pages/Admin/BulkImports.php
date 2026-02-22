@@ -213,7 +213,7 @@ class BulkImports extends Component
         $batchNumbers = BulkImport::distinct('batch_number')->orderBy('batch_number')->pluck('batch_number');
         $collectionList = Collection::visibleTo(Auth::user())->orderBy('title')->get();
 
-        return view('livewire.pages.admin.bulk-imports', [
+        return view('pages.admin.bulk-imports', [
             'imports' => $imports,
             'collections' => $collections,
             'batchNumbers' => $batchNumbers,

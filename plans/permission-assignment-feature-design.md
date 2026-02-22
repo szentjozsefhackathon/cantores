@@ -222,7 +222,7 @@ class RolePermissionManager extends Component
     
     public function render(): View
     {
-        return view('livewire.pages.admin.role-permission-manager', [
+        return view('pages.admin.role-permission-manager', [
             'roles' => $this->getRoles(),
             'groupedPermissions' => $this->getGroupedPermissions(),
         ]);

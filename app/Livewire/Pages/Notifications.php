@@ -42,7 +42,7 @@ class Notifications extends Component
         $user = Auth::user();
         $notifications = $user ? $notificationService->getNotificationsForUser($user) : collect();
 
-        return view('livewire.pages.notifications', [
+        return view('pages.notifications', [
             'notifications' => $notifications,
         ]);
     }

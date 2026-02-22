@@ -153,7 +153,7 @@
                                         'sheet_music' => 'document-text',
                                         'audio' => 'music',
                                         'video' => 'video-camera',
-                                        'text' => 'book-open-text',
+                                        'text' => 'book-open',
                                         'information' => 'information-circle',
                                     ];
                                     $labelTranslations = [

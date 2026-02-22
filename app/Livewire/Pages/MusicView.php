@@ -30,6 +30,6 @@ class MusicView extends Component
 
     public function render()
     {
-        return view('livewire.pages.music-view');
+        return view('pages.music-view');
     }
 }

@@ -161,7 +161,7 @@
                             </div>
 
                             <!-- Slot Search Component -->
-                            <livewire:slot-search :music-plan="$musicPlan" />
+                            <livewire:music-plan-editor.slot-search :music-plan="$musicPlan" />
 
                             @if($showMusicSearchModal)
                             <!-- Music Search Modal -->

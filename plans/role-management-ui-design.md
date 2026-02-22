@@ -92,7 +92,7 @@ class UserRoleManager extends Component
     
     public function render()
     {
-        return view('livewire.pages.admin.user-role-manager');
+        return view('pages.admin.user-role-manager');
     }
 }
 ```
@@ -143,7 +143,7 @@ class RoleManager extends Component
     
     public function render()
     {
-        return view('livewire.pages.admin.role-manager');
+        return view('pages.admin.role-manager');
     }
 }
 ```
@@ -152,7 +152,7 @@ class RoleManager extends Component
 
 #### User Role Manager View
 ```blade
-{{-- resources/views/livewire/pages/admin/user-role-manager.blade.php --}}
+{{-- resources/views/pages/admin/user-role-manager.blade.php --}}
 <div>
     <div class="mb-6">
         <h2 class="text-2xl font-bold">User Role Management</h2>

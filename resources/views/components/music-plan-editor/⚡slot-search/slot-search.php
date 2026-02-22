@@ -7,7 +7,7 @@ use App\Models\MusicPlanSlot;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
-class SlotSearch extends Component
+new class extends Component
 {
     public MusicPlan $musicPlan;
 
@@ -213,8 +213,5 @@ class SlotSearch extends Component
         $this->dispatch('slot-created', slotName: $slot->name);
     }
 
-    public function render()
-    {
-        return view('livewire.slot-search');
-    }
-}
+
+};

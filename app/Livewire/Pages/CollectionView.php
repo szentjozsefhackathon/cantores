@@ -42,7 +42,7 @@ class CollectionView extends Component
     {
         $musics = $this->getMusicsQuery()->paginate(12);
 
-        return view('livewire.pages.collection-view', [
+        return view('pages.collection-view', [
             'musics' => $musics,
         ]);
     }

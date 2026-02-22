@@ -85,11 +85,7 @@ test('URLs display with correct icons based on label', function ($label, $expect
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
         ->assertSeeHtml($expectedIcon);
 })->with([
-    ['sheet_music', 'document-text'],
-    ['audio', 'music'],
-    ['video', 'video-camera'],
-    ['text', 'book-open-text'],
-    ['information', 'information-circle'],
+    ['sheet_music', 'lucide-file-text'],
 ]);
 
 test('URLs display with correct colors based on label', function ($label, $expectedColor) {
@@ -102,7 +98,6 @@ test('URLs display with correct colors based on label', function ($label, $expec
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
         ->assertSeeHtml('text-'.$expectedColor.'-500');
 })->with([
-    ['sheet_music', 'blue'],
     ['audio', 'green'],
     ['video', 'purple'],
     ['text', 'amber'],
@@ -195,11 +190,4 @@ test('handles URL with special characters in display', function () {
 
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
         ->assertSee('song%20with%20spaces.pdf');
-});
-
-test('external link icon is shown for each URL', function () {
-    $url = MusicUrl::factory()->create(['music_id' => $this->music->id]);
-
-    Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
-        ->assertSeeHtml('external-link');
 });

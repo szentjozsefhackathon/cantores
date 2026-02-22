@@ -117,7 +117,7 @@ class MusicPlanImports extends Component
             }
         }
 
-        return view('livewire.pages.admin.musicplan-imports', [
+        return view('pages.admin.musicplan-imports', [
             'imports' => $imports,
             'sourceFiles' => $sourceFiles,
             'sortBy' => $this->sortBy,
