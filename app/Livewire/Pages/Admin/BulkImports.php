@@ -167,7 +167,7 @@ class BulkImports extends Component
     private function attachTagToMusic(Music $music, string $tagName): void
     {
         // Transform tag name to Firstlettercase: ALLELUJA->Alleluja
-        $transformedName = ucfirst(strtolower($tagName));
+        $transformedName = mb_convert_case($tagName, MB_CASE_TITLE);
 
         // Find or create tag with Liturgy type (default)
         $tag = MusicTag::firstOrCreate(
