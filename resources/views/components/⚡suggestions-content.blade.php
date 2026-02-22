@@ -79,6 +79,11 @@ new class extends Component
             });
         }
 
+        // Exclude the current music plan if we're editing one
+        if ($this->musicPlanId !== null) {
+            $query->where('id', '!=', $this->musicPlanId);
+        }
+
         // Show only published plans and user's own plans (private or published)
         $query->visibleTo($user);
 
