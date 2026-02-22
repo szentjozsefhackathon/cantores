@@ -506,23 +506,24 @@
                                                         @endscope
                                                     </x-mary-choices>
                                                     </div>
-                                                    <div class="space-y-2">
+                                                    <div class="flex flex-wrap gap-2">
                                                         <!-- Display saved scopes as badges -->
                                                         @foreach(($this->assignmentScopes[$assignment['id']] ?? []) as $index => $scope)
                                                         @if(!empty($scope['type']) && !empty($scope['number']))
-                                                        <div class="flex items-center gap-2">
-                                                            @php
-                                                                $scopeTypeLabel = collect($this->scopeTypeOptions)->firstWhere('value', $scope['type'])['label'] ?? $scope['type'];
-                                                            @endphp
-                                                            <flux:badge>{{ $scopeTypeLabel }} {{ $scope['number'] }}</flux:badge>
-                                                            <flux:button
+                                                        @php
+                                                            $scopeTypeLabel = collect($this->scopeTypeOptions)->firstWhere('value', $scope['type'])['label'] ?? $scope['type'];
+                                                        @endphp
+                                                        <div class="inline-flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-full px-2 py-1 text-xs font-medium">
+                                                            <span>{{ $scopeTypeLabel }} {{ $scope['number'] }}</span>
+                                                            <button
+                                                                type="button"
                                                                 wire:click="removeScope({{ $assignment['id'] }}, {{ $index }})"
                                                                 wire:confirm="Biztosan eltávolítod ezt a részletet?"
                                                                 wire:loading.attr="disabled"
                                                                 wire:loading.class="opacity-50 cursor-not-allowed"
-                                                                icon="x-mark"
-                                                                variant="danger"
-                                                                size="xs" />
+                                                                class="h-4 w-4 flex items-center justify-center rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300">
+                                                                <flux:icon name="x-mark" class="h-3 w-3" />
+                                                            </button>
                                                         </div>
                                                         @endif
                                                         @endforeach
