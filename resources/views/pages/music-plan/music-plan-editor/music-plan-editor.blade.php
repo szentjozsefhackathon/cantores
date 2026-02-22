@@ -337,6 +337,72 @@
                             </flux:modal>
                             @endif
 
+                            @if($showMoveAssignmentModal && $assignmentToMove)
+                            <!-- Move Assignment Modal -->
+                            <flux:modal wire:model="showMoveAssignmentModal" size="md">
+                                <flux:heading size="lg">Zene áthelyezése másik elembe</flux:heading>
+
+                                <div class="mt-6 space-y-4">
+                                    <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">
+                                        Válassz ki egy elemet, ahova áthelyezed ezt a zenét:
+                                    </flux:text>
+
+                                    <div class="space-y-2 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg p-3">
+                                        @forelse($planSlots as $targetSlot)
+                                            @php
+                                                $assignment = null;
+                                                foreach($planSlots as $s) {
+                                                    foreach($s['assignments'] as $a) {
+                                                        if($a['id'] === $assignmentToMove) {
+                                                            $assignment = $a;
+                                                            break 2;
+                                                        }
+                                                    }
+                                                }
+                                                $isCurrentSlot = $assignment && $assignment['id'] === $assignmentToMove &&
+                                                    collect($targetSlot['assignments'])->contains('id', $assignmentToMove);
+                                            @endphp
+                                            @if(!$isCurrentSlot)
+                                            <button
+                                                type="button"
+                                                wire:click="moveAssignmentToSlot({{ $assignmentToMove }}, {{ $targetSlot['pivot_id'] }})"
+                                                wire:loading.attr="disabled"
+                                                wire:loading.class="opacity-50 cursor-not-allowed"
+                                                class="w-full text-left p-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 transition">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold text-sm">
+                                                        {{ $targetSlot['sequence'] }}
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <div class="font-medium">{{ $targetSlot['name'] }}</div>
+                                                        @if($targetSlot['description'])
+                                                        <div class="text-xs text-neutral-600 dark:text-neutral-400">{{ Str::limit($targetSlot['description'], 80) }}</div>
+                                                        @endif
+                                                    </div>
+                                                    <flux:icon name="arrow-right" class="h-4 w-4 text-neutral-400" />
+                                                </div>
+                                            </button>
+                                            @endif
+                                        @empty
+                                        <div class="p-4 text-center">
+                                            <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">
+                                                Nincs más elem az énekrendben.
+                                            </flux:text>
+                                        </div>
+                                        @endforelse
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 flex justify-end">
+                                    <flux:button
+                                        wire:click="closeMoveAssignmentModal"
+                                        variant="outline">
+                                        Mégse
+                                    </flux:button>
+                                </div>
+                            </flux:modal>
+                            @endif
+
                             @forelse($planSlots as $slot)
                             <flux:card wire:key="slot-{{ $slot['pivot_id'] }}" class="p-2 flex items-start gap-4 {{ count($slot['assignments']) > 0 ? 'border-4' : '' }}">
                                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
@@ -400,10 +466,22 @@
                                                         icon="trash"
                                                         variant="danger"
                                                         size="xs" />
-
+           
                                                 </div>
-
+           
                                                 @endif
+                                                <div class="flex flex-col gap-1">
+                                                    @if(count($planSlots) > 1)
+                                                    <flux:button
+                                                        wire:click="openMoveAssignmentModal({{ $assignment['id'] }})"
+                                                        wire:loading.attr="disabled"
+                                                        wire:loading.class="opacity-50 cursor-not-allowed"
+                                                        icon="arrow-right"
+                                                        variant="outline"
+                                                        size="xs"
+                                                        title="Áthelyezés másik elembe" />
+                                                    @endif
+                                                </div>
                                                 <div class="flex flex-col gap-2">
                                                     <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" wire:loading />
                                                     <div class="text-sm">
@@ -429,11 +507,27 @@
                                                     </x-mary-choices>
                                                     </div>
                                                     <div class="space-y-2">
-                                                        @if($assignment['scope_label'])
-                                                        <div class="flex flex-wrap gap-1">
-                                                            <flux:badge>{{ $assignment['scope_label'] }}</flux:badge>
+                                                        <!-- Display saved scopes as badges -->
+                                                        @foreach(($this->assignmentScopes[$assignment['id']] ?? []) as $index => $scope)
+                                                        @if(!empty($scope['type']) && !empty($scope['number']))
+                                                        <div class="flex items-center gap-2">
+                                                            @php
+                                                                $scopeTypeLabel = collect($this->scopeTypeOptions)->firstWhere('value', $scope['type'])['label'] ?? $scope['type'];
+                                                            @endphp
+                                                            <flux:badge>{{ $scopeTypeLabel }} {{ $scope['number'] }}</flux:badge>
+                                                            <flux:button
+                                                                wire:click="removeScope({{ $assignment['id'] }}, {{ $index }})"
+                                                                wire:confirm="Biztosan eltávolítod ezt a részletet?"
+                                                                wire:loading.attr="disabled"
+                                                                wire:loading.class="opacity-50 cursor-not-allowed"
+                                                                icon="x-mark"
+                                                                variant="danger"
+                                                                size="xs" />
                                                         </div>
                                                         @endif
+                                                        @endforeach
+                                                        
+                                                        <!-- Form for adding new scopes -->
                                                         @foreach(($this->assignmentScopes[$assignment['id']] ?? []) as $index => $scope)
                                                         @if(empty($scope['type']) || empty($scope['number']))
                                                         <div class="flex gap-2 items-center">

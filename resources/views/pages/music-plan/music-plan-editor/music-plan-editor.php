@@ -43,6 +43,10 @@ new class extends Component
 
     public ?string $celebrationName = null;
 
+    public ?int $assignmentToMove = null;
+
+    public bool $showMoveAssignmentModal = false;
+
     public ?string $celebrationDate = null;
 
     public bool $isEditingCelebration = false;
@@ -807,6 +811,65 @@ new class extends Component
 
         $this->loadPlanSlots();
         $this->dispatch('slots-updated', message: 'Zene sorrendje frissítve.');
+    }
+
+    public function openMoveAssignmentModal(int $assignmentId): void
+    {
+        $this->assignmentToMove = $assignmentId;
+        $this->showMoveAssignmentModal = true;
+    }
+
+    public function closeMoveAssignmentModal(): void
+    {
+        $this->showMoveAssignmentModal = false;
+        $this->assignmentToMove = null;
+    }
+
+    public function moveAssignmentToSlot(int $assignmentId, int $targetSlotPlanId): void
+    {
+        $this->authorize('update', $this->musicPlan);
+
+        $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
+        if (! $assignment || $assignment->music_plan_id !== $this->musicPlan->id) {
+            return;
+        }
+
+        // Verify target slot exists and belongs to this plan
+        $targetSlotPlan = DB::table('music_plan_slot_plan')
+            ->where('id', $targetSlotPlanId)
+            ->where('music_plan_id', $this->musicPlan->id)
+            ->first();
+
+        if (! $targetSlotPlan) {
+            return;
+        }
+
+        $currentSlotPlanId = $assignment->music_plan_slot_plan_id;
+
+        DB::transaction(function () use ($assignment, $targetSlotPlanId, $currentSlotPlanId) {
+            // Get the max music_sequence in the target slot
+            $maxMusicSequence = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $targetSlotPlanId)
+                ->max('music_sequence');
+            $newMusicSequence = ($maxMusicSequence ?: 0) + 1;
+
+            // Get the deleted sequence from current slot
+            $deletedSequence = $assignment->music_sequence;
+
+            // Update the assignment to the new slot
+            $assignment->update([
+                'music_plan_slot_plan_id' => $targetSlotPlanId,
+                'music_sequence' => $newMusicSequence,
+            ]);
+
+            // Shift down sequences of remaining assignments in the old slot instance
+            \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $currentSlotPlanId)
+                ->where('music_sequence', '>', $deletedSequence)
+                ->decrement('music_sequence');
+        });
+
+        $this->closeMoveAssignmentModal();
+        $this->loadPlanSlots();
+        $this->dispatch('slots-updated', message: 'Zene áthelyezve másik elembe.');
     }
 
     public function toggleCelebrationEditing(): void
