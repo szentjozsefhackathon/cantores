@@ -136,8 +136,7 @@ new class extends \Livewire\Component
                                             @endforeach
                                         </flux:select>
                                     @else
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                                            :style="{ backgroundColor: 'var(--color-' + '{{ $tag->color() }}' + '-100)', color: 'var(--color-' + '{{ $tag->color() }}' + '-800)' }">
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-{{$tag->color()}}-200 text-{{$tag->color()}}-800">
                                             {{ $tag->typeLabel() }}
                                         </span>
                                     @endif

@@ -4,14 +4,14 @@ namespace App\Enums;
 
 enum MusicTagType: string
 {
-    case PartOfMass = 'part_of_mass';
-    case Instrument = 'instrument';
     case Season = 'season';
     case Liturgy = 'liturgy';
+    case PartOfMass = 'part_of_mass';
     case Occasion = 'occasion';
+    case Daily = 'daily';
+    case Theme = 'theme';
+    case Instrument = 'instrument';
     case Style = 'style';
-    case Vocal = 'vocal';
-    case Instrumental = 'instrumental';
 
     public function label(): string
     {
@@ -21,23 +21,23 @@ enum MusicTagType: string
             self::Season => __('Season'),
             self::Liturgy => __('Liturgy'),
             self::Occasion => __('Occasion'),
+            self::Daily => __('Daily'),
+            self::Theme => __('Theme'),
             self::Style => __('Style'),
-            self::Vocal => __('Vocal'),
-            self::Instrumental => __('Instrumental'),
         };
     }
 
     public function icon(): string
     {
         return match ($this) {
-            self::PartOfMass => 'book-open',
-            self::Instrument => 'music',
-            self::Season => 'calendar',
+            self::PartOfMass => 'church',
+            self::Instrument => 'piano',
+            self::Season => 'leaf',
             self::Liturgy => 'cross',
             self::Occasion => 'gift',
+            self::Daily => 'sun',
+            self::Theme => 'light-bulb',
             self::Style => 'palette',
-            self::Vocal => 'mic-2',
-            self::Instrumental => 'guitar',
         };
     }
 
@@ -49,9 +49,9 @@ enum MusicTagType: string
             self::Season => 'green',
             self::Liturgy => 'red',
             self::Occasion => 'yellow',
+            self::Daily => 'orange',
+            self::Theme => 'indigo',
             self::Style => 'pink',
-            self::Vocal => 'orange',
-            self::Instrumental => 'cyan',
         };
     }
 }
