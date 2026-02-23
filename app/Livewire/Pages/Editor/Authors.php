@@ -148,7 +148,7 @@ class Authors extends Component
         $this->authorize('create', Author::class);
 
         $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('authors', 'name')],
+            'name' => $this->getNameValidationRule(),
             'isPrivate' => ['boolean'],
         ]);
 
@@ -171,7 +171,7 @@ class Authors extends Component
         $this->authorize('update', $this->editingAuthor);
 
         $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('authors', 'name')->ignore($this->editingAuthor->id)],
+            'name' => $this->getNameValidationRule($this->editingAuthor),
             'isPrivate' => ['boolean'],
         ]);
 
@@ -202,6 +202,35 @@ class Authors extends Component
 
         $author->delete();
         $this->dispatch('author-deleted');
+    }
+
+    /**
+     * Get the appropriate validation rule for the name field.
+     * Only enforces uniqueness for public authors.
+     */
+    private function getNameValidationRule(?Author $author = null): array
+    {
+        $rules = ['required', 'string', 'max:255'];
+
+        // Add a closure that checks uniqueness only for public authors
+        $rules[] = function ($attribute, $value, $fail) use ($author) {
+            // Check if the author is being made public
+            // $this->isPrivate should be set from the form data at validation time
+            if ($this->isPrivate === false) {
+                $query = Author::where('name', $value)
+                    ->where('is_private', false);
+
+                if ($author) {
+                    $query->where('id', '!=', $author->id);
+                }
+
+                if ($query->exists()) {
+                    $fail(__('An author with this name already exists in the public library.'));
+                }
+            }
+        };
+
+        return $rules;
     }
 
     /**

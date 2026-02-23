@@ -5,17 +5,97 @@ use App\Models\Music;
 use App\Models\User;
 use Livewire\Livewire;
 
-it('requires unique name for authors', function () {
+it('prevents duplicate public authors', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    Author::factory()->create(['name' => 'Existing Author']);
+    // Create a public author
+    Author::factory()->create(['name' => 'Existing Author', 'is_private' => false]);
 
+    // Try to create another public author with same name
     Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
         ->set('name', 'Existing Author')
         ->set('isPrivate', false)
         ->call('store')
-        ->assertHasErrors(['name' => 'unique']);
+        ->assertHasErrors(['name']);
+});
+
+it('allows duplicate names for private authors', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // Create a private author
+    Author::factory()->create(['name' => 'Existing Author', 'is_private' => true]);
+
+    // Try to create another private author with same name (should be allowed)
+    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+        ->set('name', 'Existing Author')
+        ->set('isPrivate', true)
+        ->call('store')
+        ->assertHasNoErrors();
+
+    // Should also allow private author with same name as public author
+    Author::factory()->create(['name' => 'Public Author', 'is_private' => false]);
+
+    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+        ->set('name', 'Public Author')
+        ->set('isPrivate', true)
+        ->call('store')
+        ->assertHasNoErrors();
+});
+
+it('prevents publishing private author when public author with same name exists', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // Create a public author
+    Author::factory()->create(['name' => 'Existing Author', 'is_private' => false]);
+
+    // Create a private author with same name
+    $privateAuthor = Author::factory()->create(['name' => 'Existing Author', 'is_private' => true, 'user_id' => $user->id]);
+
+    // Try to update the private author to public (should fail)
+    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+        ->call('edit', $privateAuthor)
+        ->set('isPrivate', false)
+        ->call('update')
+        ->assertHasErrors(['name']);
+});
+
+it('allows updating private author while staying private even with duplicate public name', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // Create a public author
+    Author::factory()->create(['name' => 'Existing Author', 'is_private' => false]);
+
+    // Create a private author with same name
+    $privateAuthor = Author::factory()->create(['name' => 'Existing Author', 'is_private' => true, 'user_id' => $user->id]);
+
+    // Try to update the private author (change name but stay private) - should be allowed
+    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+        ->call('edit', $privateAuthor)
+        ->set('name', 'Existing Author Updated')
+        ->set('isPrivate', true)
+        ->call('update')
+        ->assertHasNoErrors();
+});
+
+it('prevents updating public author to duplicate another public author name', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // Create two public authors
+    Author::factory()->create(['name' => 'First Author', 'is_private' => false]);
+    $secondAuthor = Author::factory()->create(['name' => 'Second Author', 'is_private' => false, 'user_id' => $user->id]);
+
+    // Try to update second author to have same name as first (should fail)
+    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+        ->call('edit', $secondAuthor)
+        ->set('name', 'First Author')
+        ->set('isPrivate', false)
+        ->call('update')
+        ->assertHasErrors(['name']);
 });
 
 it('creates author with name', function () {
