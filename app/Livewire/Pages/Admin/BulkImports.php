@@ -105,15 +105,24 @@ class BulkImports extends Component
 
         $createdCount = 0;
         $skippedCount = 0;
+        $tagAddedCount = 0;
 
         foreach ($imports as $import) {
             // Check if a music already exists in the selected collection with the same order_number (reference)
-            $existing = Music::whereHas('collections', function ($query) use ($import) {
+            $existingMusic = Music::whereHas('collections', function ($query) use ($import) {
                 $query->where('collections.id', $this->selectedCollectionId)
                     ->where('music_collection.order_number', $import->reference);
-            })->exists();
+            })->first();
 
-            if ($existing) {
+            if ($existingMusic) {
+                // If tag is present and different from existing tags, add it
+                if (! empty($import->tag)) {
+                    $tagAdded = $this->attachTagToMusic($existingMusic, $import->tag);
+                    if ($tagAdded) {
+                        $tagAddedCount++;
+                        \Log::info("Added tag '{$import->tag}' to existing music: {$import->piece} (reference: {$import->reference}) in collection ID {$this->selectedCollectionId}");
+                    }
+                }
                 \Log::info("Skipping import: {$import->piece} (reference: {$import->reference}) - already exists in collection ID {$this->selectedCollectionId}");
                 $skippedCount++;
 
@@ -155,34 +164,45 @@ class BulkImports extends Component
         $this->isImporting = false;
         $this->showDialog = false;
 
-        session()->flash('message', __('Imported :created music pieces, skipped :skipped (already exist).', [
+        $message = __('Imported :created music pieces, skipped :skipped (already exist).', [
             'created' => $createdCount,
             'skipped' => $skippedCount,
-        ]));
+        ]);
+
+        if ($tagAddedCount > 0) {
+            $message .= ' '.__('Added :tag_added tags to existing music.', ['tag_added' => $tagAddedCount]);
+        }
+
+        session()->flash('message', $message);
     }
 
     /**
      * Attach a tag to music, creating it if necessary.
+     * Returns true if the tag was attached (i.e., it wasn't already attached), false otherwise.
      */
-    private function attachTagToMusic(Music $music, string $tagName): void
+    private function attachTagToMusic(Music $music, string $tagName): bool
     {
         // Transform tag name to Firstlettercase: ALLELUJA->Alleluja
         $transformedName = mb_convert_case($tagName, MB_CASE_TITLE);
 
-        // Find or create tag with Liturgy type (default)
+        // Find existing tag by name (any type) or create with Liturgy type
         $tag = MusicTag::firstOrCreate(
-            [
-                'name' => $transformedName,
-                'type' => MusicTagType::Liturgy,
-            ],
+            ['name' => $transformedName],
             [
                 'name' => $transformedName,
                 'type' => MusicTagType::Liturgy,
             ]
         );
 
+        // Check if the music already has this tag
+        if ($music->tags()->where('music_tag_id', $tag->id)->exists()) {
+            return false;
+        }
+
         // Attach tag to music
         $music->tags()->attach($tag->id);
+
+        return true;
     }
 
     /**
