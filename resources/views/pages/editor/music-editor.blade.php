@@ -589,13 +589,7 @@ new class extends Component
                     <flux:field required>
                         <flux:label class="flex items-center gap-2">
                             {{ __('Title') }}
-                            @php
-                                $titleVerifications = $music->verifications->where('field_name', 'title');
-                                $titleVerified = $titleVerifications->where('status', 'verified')->count() > 0;
-                            @endphp
-                            @if($titleVerified)
-                                <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
-                            @endif
+                            <livewire:verification-icon :fieldName="'title'" :music="$music" />
                         </flux:label>
                         <flux:input
                             wire:model="title"
@@ -606,13 +600,7 @@ new class extends Component
                     <flux:field>
                         <flux:label class="flex items-center gap-2">
                             {{ __('Subtitle') }}
-                            @php
-                                $subtitleVerifications = $music->verifications->where('field_name', 'subtitle');
-                                $subtitleVerified = $subtitleVerifications->where('status', 'verified')->count() > 0;
-                            @endphp
-                            @if($subtitleVerified)
-                                <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
-                            @endif
+                            <livewire:verification-icon :fieldName="'subtitle'" :music="$music" />
                         </flux:label>
                         <flux:input
                             wire:model="subtitle"
@@ -623,13 +611,7 @@ new class extends Component
                     <flux:field>
                         <flux:label class="flex items-center gap-2">
                             {{ __('Custom ID') }}
-                            @php
-                                $customIdVerifications = $music->verifications->where('field_name', 'custom_id');
-                                $customIdVerified = $customIdVerifications->where('status', 'verified')->count() > 0;
-                            @endphp
-                            @if($customIdVerified)
-                                <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
-                            @endif
+                            <livewire:verification-icon :fieldName="'custom_id'" :music="$music" />
                         </flux:label>
                         <flux:input
                             wire:model="customId"
@@ -642,7 +624,9 @@ new class extends Component
                     <!-- Genre Selection -->
                     <div>
                         <flux:field>
-                            <flux:label>{{ __('Genres') }}</flux:label>
+                            <flux:label>{{ __('Genres') }}
+                                <livewire:verification-icon fieldName="genre" :music="$music" />
+                            </flux:label>
                             <flux:description>{{ __('Select one or more genres that apply to this music piece.') }}</flux:description>
                             <div class="space-y-2">
                                 <flux:checkbox.group variant="cards">
@@ -718,19 +702,11 @@ new class extends Component
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                                 <div class="flex items-center gap-2">
+                                    <livewire:verification-icon fieldName="collection" :music="$music" :pivotReference="$collection->id" />
+
                                     {{ $collection->title }}
                                     @if($collection->abbreviation)
                                     <span class="text-gray-500 dark:text-gray-400">({{ $collection->abbreviation }})</span>
-                                    @endif
-                                    @php
-                                        $collectionVerified = $music->verifications()
-                                            ->where('field_name', 'collection')
-                                            ->where('pivot_reference', $collection->id)
-                                            ->where('status', 'verified')
-                                            ->exists();
-                                    @endphp
-                                    @if($collectionVerified)
-                                        <flux:icon name="check" variant="solid" class="h-4 w-4 text-green-500" title="{{ __('Verified') }}" />
                                     @endif
                                 </div>
                             </td>
@@ -791,7 +767,7 @@ new class extends Component
                             <flux:label>{{ __('Collection') }}</flux:label>
                             <flux:select
                                 wire:model="selectedCollectionId">
-                              <option value="">{{ __('Select a collection') }}</option>
+                                <option value="">{{ __('Select a collection') }}</option>
                                 @foreach ($collections as $collection)
                                 <flux:select.option value="{{ $collection->id }}">{{ $collection->title }}@if($collection->abbreviation) ({{ $collection->abbreviation }})@endif</flux:select.option>
                                 @endforeach
@@ -848,16 +824,7 @@ new class extends Component
                             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                                 <div class="flex items-center gap-2">
                                     {{ $author->name }}
-                                    @php
-                                        $authorVerified = $music->verifications()
-                                            ->where('field_name', 'author')
-                                            ->where('pivot_reference', $author->id)
-                                            ->where('status', 'verified')
-                                            ->exists();
-                                    @endphp
-                                    @if($authorVerified)
-                                        <flux:icon name="check" variant="solid" class="h-4 w-4 text-green-500" title="{{ __('Verified') }}" />
-                                    @endif
+                                    <livewire:verification-icon :fieldName="'author'" :music="$music" :pivotReference="$author->id" />
                                 </div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm">
@@ -937,33 +904,33 @@ new class extends Component
                             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                                 <div class="flex items-center gap-2">
                                     @switch($url->label)
-                                        @case('sheet_music')
-                                            {{ __('Sheet Music') }}
-                                            @break
-                                        @case('audio')
-                                            {{ __('Audio') }}
-                                            @break
-                                        @case('video')
-                                            {{ __('Video') }}
-                                            @break
-                                        @case('text')
-                                            {{ __('Text') }}
-                                            @break
-                                        @case('information')
-                                            {{ __('Information') }}
-                                            @break
-                                        @default
-                                            {{ $url->label }}
+                                    @case('sheet_music')
+                                    {{ __('Sheet Music') }}
+                                    @break
+                                    @case('audio')
+                                    {{ __('Audio') }}
+                                    @break
+                                    @case('video')
+                                    {{ __('Video') }}
+                                    @break
+                                    @case('text')
+                                    {{ __('Text') }}
+                                    @break
+                                    @case('information')
+                                    {{ __('Information') }}
+                                    @break
+                                    @default
+                                    {{ $url->label }}
                                     @endswitch
                                     @php
-                                        $urlVerified = $music->verifications()
-                                            ->where('field_name', 'url')
-                                            ->where('pivot_reference', $url->id)
-                                            ->where('status', 'verified')
-                                            ->exists();
+                                    $urlVerified = $music->verifications()
+                                    ->where('field_name', 'url')
+                                    ->where('pivot_reference', $url->id)
+                                    ->where('status', 'verified')
+                                    ->exists();
                                     @endphp
                                     @if($urlVerified)
-                                        <flux:icon name="check" variant="solid" class="h-4 w-4 text-green-500" title="{{ __('Verified') }}" />
+                                    <flux:icon name="check" variant="solid" class="h-4 w-4 text-green-500" title="{{ __('Verified') }}" />
                                     @endif
                                 </div>
                             </td>
@@ -975,33 +942,33 @@ new class extends Component
                             <td class="px-4 py-3 whitespace-nowrap text-sm">
                                 <div class="flex items-center gap-2">
                                     @if($editingUrlId === $url->id)
-                                        <flux:button
-                                            variant="ghost"
-                                            size="sm"
-                                            icon="check"
-                                            wire:click="updateUrl"
-                                            wire:loading.attr="disabled">{{ __('Save') }}</flux:button>
-                                        <flux:button
-                                            :wire:key="'cancel-' . $url->id"
-                                            variant="ghost"
-                                            size="sm"
-                                            icon="x"
-                                            wire:click="cancelEditUrl"
-                                            wire:loading.attr="disabled">{{ __('Cancel') }}</flux:button>
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="check"
+                                        wire:click="updateUrl"
+                                        wire:loading.attr="disabled">{{ __('Save') }}</flux:button>
+                                    <flux:button
+                                        :wire:key="'cancel-' . $url->id"
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="x"
+                                        wire:click="cancelEditUrl"
+                                        wire:loading.attr="disabled">{{ __('Cancel') }}</flux:button>
                                     @else
-                                        <flux:button
-                                            variant="ghost"
-                                            size="sm"
-                                            icon="pencil"
-                                            wire:click="editUrl({{ $url->id }})"
-                                            :title="__('Edit')" />
-                                        <flux:button
-                                            variant="ghost"
-                                            size="sm"
-                                            icon="trash"
-                                            wire:click="deleteUrl({{ $url->id }})"
-                                            wire:confirm="{{ __('Are you sure you want to delete this URL?') }}"
-                                            :title="__('Delete')" />
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="pencil"
+                                        wire:click="editUrl({{ $url->id }})"
+                                        :title="__('Edit')" />
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="trash"
+                                        wire:click="deleteUrl({{ $url->id }})"
+                                        wire:confirm="{{ __('Are you sure you want to delete this URL?') }}"
+                                        :title="__('Delete')" />
                                     @endif
                                 </div>
                             </td>
@@ -1060,9 +1027,9 @@ new class extends Component
             <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                 <flux:heading size="sm">{{ __('Add URL') }}</flux:heading>
                 <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Add a new external URL for this music piece. URLs must be whitelisted.') }}</flux:text>
-                <flux:icon name="shield-check" class="h-5 w-5 text-green-500 inline" />                
+                <flux:icon name="shield-check" class="h-5 w-5 text-green-500 inline" />
                 @foreach($whitelistRules as $rule)
-                    <flux:text class="inline text-sm mb-2">{{ $rule->pattern }}</flux:text>
+                <flux:text class="inline text-sm mb-2">{{ $rule->pattern }}</flux:text>
                 @endforeach
 
                 <div class="space-y-4">
@@ -1118,7 +1085,7 @@ new class extends Component
                                 <div class="max-w-80 text-wrap">
                                     <div class="font-medium">{{ $related->title }}</div>
                                     @if ($related->subtitle)
-                                        <div class="text-sm text-gray-600 dark:text-gray-400">{{ $related->subtitle }}</div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">{{ $related->subtitle }}</div>
                                     @endif
                                 </div>
                             </td>
@@ -1343,7 +1310,7 @@ new class extends Component
                     :placeholder="__('Page number')"
                     min="1" />
                 <flux:error name="editingPageNumber" />
-            </flux:field>            
+            </flux:field>
         </div>
 
         <div class="mt-6 flex justify-end gap-3">

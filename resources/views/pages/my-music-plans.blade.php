@@ -56,11 +56,6 @@
             @if($celebrations->isEmpty())
                 <flux:callout variant="secondary" icon="musical-note" class="border-dashed">
                     <flux:callout.heading>Nincs a keresésnek megfelelő énekrend</flux:callout.heading>
-                    <x-slot name="actions">
-                        <flux:button href="{{ route('dashboard') }}" variant="outline" size="sm">
-                            Liturgikus naptár
-                        </flux:button>
-                    </x-slot>
                 </flux:callout>
             @else
                 <div class="space-y-8">

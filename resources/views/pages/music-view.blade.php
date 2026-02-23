@@ -101,16 +101,7 @@
                             <a href="{{ route('author-view', $author) }}" class="inline-block">
                                 <flux:badge color="purple" size="sm" class="hover:bg-purple-600 transition-colors flex items-center gap-1">
                                     {{ $author->name }}
-                                    @php
-                                        $authorVerified = $music->verifications()
-                                            ->where('field_name', 'authors')
-                                            ->where('pivot_reference', $author->id)
-                                            ->where('status', 'verified')
-                                            ->exists();
-                                    @endphp
-                                    @if($authorVerified)
-                                        <flux:icon name="check" variant="solid" class="h-3 w-3" title="{{ __('Verified') }}" />
-                                    @endif
+                                    <livewire:verification-icon :fieldName="'authors'" :music="$music" :pivotReference="$author->id" />
                                 </flux:badge>
                             </a>
                         @endforeach

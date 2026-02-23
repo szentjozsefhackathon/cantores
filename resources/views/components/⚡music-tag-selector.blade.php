@@ -74,19 +74,11 @@ new class extends Component
         <div class="flex flex-wrap gap-2 mt-2">
             @foreach($music->tags as $tag)
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-sm">
+                <livewire:verification-icon fieldName="tag" :music="$music" :pivotReference="$tag->id" />
                 <flux:icon :name="$tag->icon()" class="h-4 w-4" />
                 <span class="text-gray-900 dark:text-gray-100">{{ $tag->name }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ $tag->typeLabel() }}</span>
-                @php
-                    $tagVerified = $music->verifications()
-                        ->where('field_name', 'tags')
-                        ->where('pivot_reference', $tag->id)
-                        ->where('status', 'verified')
-                        ->exists();
-                @endphp
-                @if($tagVerified)
-                    <flux:icon name="check" variant="solid" class="h-3 w-3 text-green-500" title="{{ __('Verified') }}" />
-                @endif
+
                 <flux:button
                     variant="ghost"
                     size="sm"

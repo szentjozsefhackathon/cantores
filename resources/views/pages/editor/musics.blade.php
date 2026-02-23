@@ -81,7 +81,7 @@
                     <!-- Bigger dropdown -->
                     <div>
 
-                        <x-mary-choices placeholder="Láthatóság" single wire:model="filter" :options="[
+                        <x-mary-choices placeholder="Láthatóság" single wire:model.live="filter" :options="[
                             ['id' => 'all', 'name' => __('All'), 'icon' => 'o-globe-alt'],
                             ['id' => 'public', 'name' => __('Public'), 'icon' => 'o-eye'],
                             ['id' => 'private', 'name' => __('Private'), 'icon' => 'o-eye-slash'],
