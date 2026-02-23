@@ -70,7 +70,7 @@ trait HasMusicSearchScopes
                         $subQuery->where(function ($qq) use ($word) {
                             $qq->where('collections.title', 'ilike', "%{$word}%")
                                 ->orWhere('collections.abbreviation', 'ilike', "%{$word}%")
-                                ->orWhere('music_collection.order_number', 'ilike', "%{$word}%");
+                                ->orWhere('music_collection.order_number', 'ilike', "{$word}");
                         });
                     }
                 });

@@ -6,6 +6,7 @@ use App\Models\MusicPlan;
 use App\Services\CelebrationSearchService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
@@ -35,7 +36,7 @@ new class extends Component
         $related = $service->findRelated($this->criteria);
 
         // Store celebrations with scores
-        $this->celebrationsWithScores = $related->map(fn (Celebration $celebration) => [
+        $this->celebrationsWithScores = $related->map(fn(Celebration $celebration) => [
             'celebration' => $celebration,
             'score' => $celebration->score,
         ]);
@@ -47,6 +48,19 @@ new class extends Component
         // Aggregate music selections by slot
         $this->slotMusicMap = $this->aggregateMusicBySlot();
     }
+
+    /**
+     * Handle genre change event.
+     */
+    #[On('genre-changed')]
+    public function onGenreChanged(): void
+    {
+        // Reload music plans and slot music map when genre changes
+        $celebrationIds = $this->celebrationsWithScores->pluck('celebration.id')->toArray();
+        $this->musicPlans = $this->fetchMusicPlans($celebrationIds);
+        $this->slotMusicMap = $this->aggregateMusicBySlot();
+    }
+
 
     /**
      * Fetch music plans associated with the given celebration IDs.
@@ -65,9 +79,9 @@ new class extends Component
         })
             ->with([
                 'celebrations',
-                'musicAssignments.music' => fn ($q) => $q->visibleTo($user),
-                'musicAssignments.music.collections' => fn ($q) => $q->visibleTo($user),
-                'musicAssignments.musicPlanSlot' => fn ($q) => $q->visibleToUser($user),
+                'musicAssignments.music' => fn($q) => $q->visibleTo($user),
+                'musicAssignments.music.collections' => fn($q) => $q->visibleTo($user),
+                'musicAssignments.musicPlanSlot' => fn($q) => $q->visibleToUser($user),
             ])
             ->withCount('celebrations');
 
@@ -98,6 +112,7 @@ new class extends Component
     protected function aggregateMusicBySlot(): array
     {
         $slotMap = [];
+        $genreId = GenreContext::getId();
 
         foreach ($this->musicPlans as $musicPlan) {
             // Determine the celebration score for this plan (highest score among its celebrations?)
@@ -117,6 +132,26 @@ new class extends Component
                     continue;
                 }
 
+                // Get primary collection info
+                $collectionInfo = null;
+                $music = $assignment->music;
+                if (! $music) {
+                    continue;
+                }
+
+                // Filter music by current genre: only include if it has the current genre or has no genres
+                if ($genreId !== null) {
+                    $musicGenreIds = $music->genres->pluck('id')->toArray();
+                    if (! empty($musicGenreIds) && ! in_array($genreId, $musicGenreIds)) {
+                        continue;
+                    }
+                }
+
+                $primaryCollection = $music->collections->first();
+                if ($primaryCollection) {
+                    $collectionInfo = $primaryCollection->formatWithPivot($primaryCollection->pivot);
+                }
+
                 $slotKey = $slot->id;
                 $slotName = $slot->name;
                 $priority = $slot->priority;
@@ -132,16 +167,6 @@ new class extends Component
                     ];
                 }
 
-                // Get primary collection info
-                $collectionInfo = null;
-                $music = $assignment->music;
-                if ($music) {
-                    $primaryCollection = $music->collections->first();
-                    if ($primaryCollection) {
-                        $collectionInfo = $primaryCollection->formatWithPivot($primaryCollection->pivot);
-                    }
-                }
-
                 $musicId = $music->id;
                 $existingIndex = $slotMap[$sortKey]['music_ids'][$musicId] ?? null;
 
@@ -149,8 +174,10 @@ new class extends Component
                     // Duplicate music in same slot: keep the entry with higher celebration score
                     // If scores equal, keep the one with lower music_sequence
                     $existing = &$slotMap[$sortKey]['musics'][$existingIndex];
-                    if ($maxScore > $existing['celebration_score'] ||
-                        ($maxScore === $existing['celebration_score'] && ($assignment->music_sequence ?? 0) < $existing['music_sequence'])) {
+                    if (
+                        $maxScore > $existing['celebration_score'] ||
+                        ($maxScore === $existing['celebration_score'] && ($assignment->music_sequence ?? 0) < $existing['music_sequence'])
+                    ) {
                         // Replace with this better entry
                         $existing = [
                             'music' => $music,
@@ -264,75 +291,75 @@ new class extends Component
 
 <div>
     @if ($celebrationsWithScores->isEmpty())
-        <flux:callout color="amber" icon="information-circle" class="mt-8">
-            <flux:callout.heading>Nincs találat</flux:callout.heading>
-            <flux:callout.text>A megadott kritériumokhoz nem található kapcsolódó ünnep. Próbálj meg más keresési feltételeket megadni.</flux:callout.text>
-        </flux:callout>
+    <flux:callout color="amber" icon="information-circle" class="mt-8">
+        <flux:callout.heading>Nincs találat</flux:callout.heading>
+        <flux:callout.text>A megadott kritériumokhoz nem található kapcsolódó ünnep. Próbálj meg más keresési feltételeket megadni.</flux:callout.text>
+    </flux:callout>
     @else
-        <!-- Tabs navigation with mary-ui -->
-        <x-mary-tabs wire:model="activeTab" class="mb-8">
-            <x-mary-tab name="music" icon="o-musical-note" label="Énekjavaslatok ({{ count($slotMusicMap) }})">
-                <div class="space-y-10" role="tabpanel" id="music-panel" aria-labelledby="music-tab">
-                    @forelse ($slotMusicMap as $slotName => $musics)
-                        <div class="relative">
-                            <div class="flex items-center justify-between mb-6">
-                                <div class="flex flex-row items-center gap-3">
-                                    <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">{{ $slotName }}</flux:heading>
-                                    <flux:text class="text-gray-600 dark:text-gray-400">
-                                        ({{ count($musics) }} javaslat)
-                                    </flux:text>
-                                </div>
-                                <flux:badge color="blue" size="lg" class="font-semibold">
-                                    {{ $loop->iteration }}/{{ count($slotMusicMap) }}
-                                </flux:badge>
-                            </div>
-
-                            <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4 sm:gap-5">
-                                @foreach ($musics as $musicItem)
-                                    @php
-                                        $music = $musicItem['music'];
-                                        $score = $musicItem['celebration_score'];
-                                        $sequence = $musicItem['music_sequence'];
-                                        $collectionInfo = $musicItem['collection_info'];
-                                    @endphp
-                                    <div class="relative">
-                                        <livewire:music-card :music="$music" />
-                                        @if($musicPlanId)
-                                        <div class="absolute top-2 right-2">
-                                            <flux:button
-                                                wire:click="addMusicToMusicPlan({{ $music->id }}, '{{ $slotName }}')"
-                                                wire:loading.attr="disabled"
-                                                wire:loading.class="opacity-50 cursor-not-allowed"
-                                                icon="plus"
-                                                variant="primary"
-                                                size="sm"
-                                                title="Zene hozzáadása az énekrendhez" />
-                                        </div>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
+    <!-- Tabs navigation with mary-ui -->
+    <x-mary-tabs wire:model="activeTab" class="mb-8">
+        <x-mary-tab name="music" icon="o-musical-note" label="Énekjavaslatok ({{ count($slotMusicMap) }})">
+            <div class="space-y-10" role="tabpanel" id="music-panel" aria-labelledby="music-tab">
+                @forelse ($slotMusicMap as $slotName => $musics)
+                <div class="relative" wire:key="slotMusicMap-{{ $slotName }}">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex flex-row items-center gap-3">
+                            <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">{{ $slotName }}</flux:heading>
+                            <flux:text class="text-gray-600 dark:text-gray-400">
+                                ({{ count($musics) }} javaslat)
+                            </flux:text>
                         </div>
-                    @empty
-                        <flux:callout color="zinc" icon="information-circle">
-                            <flux:callout.heading>Nincs énekjavaslat</flux:callout.heading>
-                            <flux:callout.text>Ehhez a szekcióhoz még nem tartoznak énekjavaslatok.</flux:callout.text>
-                        </flux:callout>
-                    @endforelse
-                </div>
-            </x-mary-tab>
+                        <flux:badge color="blue" size="lg" class="font-semibold">
+                            {{ $loop->iteration }}/{{ count($slotMusicMap) }}
+                        </flux:badge>
+                    </div>
 
-            <x-mary-tab name="plans" icon="o-folder" label="Énekrendek ({{ $musicPlans->count() }})">
-                <div class="space-y-5" role="tabpanel" id="plans-panel" aria-labelledby="plans-tab">
-                    @foreach ($musicPlans as $plan)
-                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div class="flex-1">
-                                <livewire:music-plan-card-extended :musicPlan="$plan" class="max-w-full" :showOpenButton="true" :musicPlanId="$musicPlanId"/>
+                    <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4 sm:gap-5">
+                        @foreach ($musics as $musicItem)
+                        @php
+                        $music = $musicItem['music'];
+                        $score = $musicItem['celebration_score'];
+                        $sequence = $musicItem['music_sequence'];
+                        $collectionInfo = $musicItem['collection_info'];
+                        @endphp
+                        <div class="relative" wire:key="slotMusicMap-{{ $slotName }}-{{ $music->id }}">
+                            <livewire:music-card :music="$music" />
+                            @if($musicPlanId)
+                            <div class="absolute top-2 right-2">
+                                <flux:button
+                                    wire:click="addMusicToMusicPlan({{ $music->id }}, '{{ $slotName }}')"
+                                    wire:loading.attr="disabled"
+                                    wire:loading.class="opacity-50 cursor-not-allowed"
+                                    icon="plus"
+                                    variant="primary"
+                                    size="sm"
+                                    title="Zene hozzáadása az énekrendhez" />
                             </div>
+                            @endif
                         </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
-            </x-mary-tab>
-        </x-mary-tabs>
+                @empty
+                <flux:callout color="zinc" icon="information-circle">
+                    <flux:callout.heading>Nincs énekjavaslat</flux:callout.heading>
+                    <flux:callout.text>Ehhez a szekcióhoz még nem tartoznak énekjavaslatok.</flux:callout.text>
+                </flux:callout>
+                @endforelse
+            </div>
+        </x-mary-tab>
+
+        <x-mary-tab name="plans" icon="o-folder" label="Énekrendek ({{ $musicPlans->count() }})">
+            <div class="space-y-5" role="tabpanel" id="plans-panel" aria-labelledby="plans-tab">
+                @foreach ($musicPlans as $plan)
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4" wire:key="musicPlanSuggestion-{{ $plan->id }}">
+                    <div class="flex-1">
+                        <livewire:music-plan-card-extended :musicPlan="$plan" class="max-w-full" :showOpenButton="true" :musicPlanId="$musicPlanId" />
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </x-mary-tab>
+    </x-mary-tabs>
     @endif
 </div>

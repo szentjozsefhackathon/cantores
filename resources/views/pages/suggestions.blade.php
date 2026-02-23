@@ -80,17 +80,6 @@ new #[Layout('layouts::app.main')] class extends Component
         $this->celebrationDetails = $celebrationData;
     }
 
-    /**
-     * Handle genre change event.
-     */
-    #[On('genre-changed')]
-    public function onGenreChanged(): void
-    {
-        // Reload music plans and slot music map when genre changes
-        $celebrationIds = $this->celebrationsWithScores->pluck('celebration.id')->toArray();
-        $this->musicPlans = $this->fetchMusicPlans($celebrationIds);
-        $this->slotMusicMap = $this->aggregateMusicBySlot();
-    }
 
     /**
      * Open suggestions page for a specific celebration.
