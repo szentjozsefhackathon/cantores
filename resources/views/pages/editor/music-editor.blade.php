@@ -608,6 +608,7 @@ new class extends Component
                             {{ __('Subtitle') }}
                             @php
                                 $subtitleVerifications = $music->verifications->where('field_name', 'subtitle');
+                                $subtitleVerified = $subtitleVerifications->where('status', 'verified')->count() > 0;
                             @endphp
                             @if($subtitleVerified)
                                 <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
@@ -624,6 +625,7 @@ new class extends Component
                             {{ __('Custom ID') }}
                             @php
                                 $customIdVerifications = $music->verifications->where('field_name', 'custom_id');
+                                $customIdVerified = $customIdVerifications->where('status', 'verified')->count() > 0;
                             @endphp
                             @if($customIdVerified)
                                 <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
@@ -715,10 +717,22 @@ new class extends Component
                         @foreach($music->collections as $collection)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {{ $collection->title }}
-                                @if($collection->abbreviation)
-                                <span class="text-gray-500 dark:text-gray-400">({{ $collection->abbreviation }})</span>
-                                @endif
+                                <div class="flex items-center gap-2">
+                                    {{ $collection->title }}
+                                    @if($collection->abbreviation)
+                                    <span class="text-gray-500 dark:text-gray-400">({{ $collection->abbreviation }})</span>
+                                    @endif
+                                    @php
+                                        $collectionVerified = $music->verifications()
+                                            ->where('field_name', 'collection')
+                                            ->where('pivot_reference', $collection->id)
+                                            ->where('status', 'verified')
+                                            ->exists();
+                                    @endphp
+                                    @if($collectionVerified)
+                                        <flux:icon name="check" variant="solid" class="h-4 w-4 text-green-500" title="{{ __('Verified') }}" />
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                 {{ $collection->pivot->order_number ?? '-' }}
@@ -832,7 +846,19 @@ new class extends Component
                         @foreach($music->authors as $author)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {{ $author->name }}
+                                <div class="flex items-center gap-2">
+                                    {{ $author->name }}
+                                    @php
+                                        $authorVerified = $music->verifications()
+                                            ->where('field_name', 'author')
+                                            ->where('pivot_reference', $author->id)
+                                            ->where('status', 'verified')
+                                            ->exists();
+                                    @endphp
+                                    @if($authorVerified)
+                                        <flux:icon name="check" variant="solid" class="h-4 w-4 text-green-500" title="{{ __('Verified') }}" />
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm">
                                 <div class="flex items-center gap-2">
@@ -909,25 +935,37 @@ new class extends Component
                         @foreach($music->urls as $url)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                                @switch($url->label)
-                                    @case('sheet_music')
-                                        {{ __('Sheet Music') }}
-                                        @break
-                                    @case('audio')
-                                        {{ __('Audio') }}
-                                        @break
-                                    @case('video')
-                                        {{ __('Video') }}
-                                        @break
-                                    @case('text')
-                                        {{ __('Text') }}
-                                        @break
-                                    @case('information')
-                                        {{ __('Information') }}
-                                        @break
-                                    @default
-                                        {{ $url->label }}
-                                @endswitch
+                                <div class="flex items-center gap-2">
+                                    @switch($url->label)
+                                        @case('sheet_music')
+                                            {{ __('Sheet Music') }}
+                                            @break
+                                        @case('audio')
+                                            {{ __('Audio') }}
+                                            @break
+                                        @case('video')
+                                            {{ __('Video') }}
+                                            @break
+                                        @case('text')
+                                            {{ __('Text') }}
+                                            @break
+                                        @case('information')
+                                            {{ __('Information') }}
+                                            @break
+                                        @default
+                                            {{ $url->label }}
+                                    @endswitch
+                                    @php
+                                        $urlVerified = $music->verifications()
+                                            ->where('field_name', 'url')
+                                            ->where('pivot_reference', $url->id)
+                                            ->where('status', 'verified')
+                                            ->exists();
+                                    @endphp
+                                    @if($urlVerified)
+                                        <flux:icon name="check" variant="solid" class="h-4 w-4 text-green-500" title="{{ __('Verified') }}" />
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                 <a href="{{ $url->url }}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs block">

@@ -123,6 +123,32 @@ class MusicPolicy
     }
 
     /**
+     * Check if user can update a verified relation (collection, author, URL, tag).
+     * Verified relations on published music require content.edit.verified permission.
+     */
+    public function updateVerifiedRelation(User $user, Music $music, string $relationType, ?int $relationId = null): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        // Check if this specific relation is verified
+        $isRelationVerified = $music->verifications()
+            ->where('field_name', $relationType)
+            ->where('pivot_reference', $relationId)
+            ->where('status', 'verified')
+            ->exists();
+
+        if ($isRelationVerified) {
+            return $user->hasPermissionTo('content.edit.verified');
+        }
+
+        // For non-verified relations, allow with content.edit.published or content.edit.own
+        return $user->hasPermissionTo('content.edit.published') ||
+               ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id);
+    }
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Music $music): bool

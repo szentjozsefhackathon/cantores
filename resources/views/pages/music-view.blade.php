@@ -66,6 +66,32 @@
                 </div>
                 @endif
 
+                <!-- Tags -->
+                @if($music->tags->isNotEmpty())
+                <div>
+                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Tags') }}</flux:heading>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach($music->tags as $tag)
+                            <div class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-sm">
+                                <flux:icon :name="$tag->icon()" class="h-4 w-4" />
+                                <span class="text-gray-900 dark:text-gray-100">{{ $tag->name }}</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">{{ $tag->typeLabel() }}</span>
+                                @php
+                                    $tagVerified = $music->verifications()
+                                        ->where('field_name', 'tag')
+                                        ->where('pivot_reference', $tag->id)
+                                        ->where('status', 'verified')
+                                        ->exists();
+                                @endphp
+                                @if($tagVerified)
+                                    <flux:icon name="check" variant="solid" class="h-3 w-3 text-green-500" title="{{ __('Verified') }}" />
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 <!-- Authors -->
                 @if($music->authors->isNotEmpty())
                 <div>
@@ -73,8 +99,18 @@
                     <div class="flex flex-wrap gap-2">
                         @foreach($music->authors as $author)
                             <a href="{{ route('author-view', $author) }}" class="inline-block">
-                                <flux:badge color="purple" size="sm" class="hover:bg-purple-600 transition-colors">
+                                <flux:badge color="purple" size="sm" class="hover:bg-purple-600 transition-colors flex items-center gap-1">
                                     {{ $author->name }}
+                                    @php
+                                        $authorVerified = $music->verifications()
+                                            ->where('field_name', 'authors')
+                                            ->where('pivot_reference', $author->id)
+                                            ->where('status', 'verified')
+                                            ->exists();
+                                    @endphp
+                                    @if($authorVerified)
+                                        <flux:icon name="check" variant="solid" class="h-3 w-3" title="{{ __('Verified') }}" />
+                                    @endif
                                 </flux:badge>
                             </a>
                         @endforeach
@@ -90,10 +126,22 @@
                         @foreach($music->collections as $collection)
                             <a href="{{ route('collection-view', $collection) }}" class="block">
                                 <div class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                    <div>
-                                        <flux:text class="font-medium">{{ $collection->title }}</flux:text>
-                                        @if($collection->abbreviation)
-                                            <flux:text class="text-sm text-gray-500 dark:text-gray-400">({{ $collection->abbreviation }})</flux:text>
+                                    <div class="flex items-center gap-2">
+                                        <div>
+                                            <flux:text class="font-medium">{{ $collection->title }}</flux:text>
+                                            @if($collection->abbreviation)
+                                                <flux:text class="text-sm text-gray-500 dark:text-gray-400">({{ $collection->abbreviation }})</flux:text>
+                                            @endif
+                                        </div>
+                                        @php
+                                            $collectionVerified = $music->verifications()
+                                                ->where('field_name', 'collection')
+                                                ->where('pivot_reference', $collection->id)
+                                                ->where('status', 'verified')
+                                                ->exists();
+                                        @endphp
+                                        @if($collectionVerified)
+                                            <flux:icon name="check" variant="solid" class="h-4 w-4 text-green-500" title="{{ __('Verified') }}" />
                                         @endif
                                     </div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">
@@ -172,7 +220,19 @@
                                         <div class="flex items-start gap-3">
                                             <flux:icon :name="$icon" class="h-5 w-5 text-{{ $color }}-500 shrink-0 mt-0.5" />
                                             <div class="flex-1 min-w-0">
-                                                <flux:text class="font-medium text-sm truncate">{{ $labelText }}</flux:text>
+                                                <div class="flex items-center gap-2">
+                                                    <flux:text class="font-medium text-sm truncate">{{ $labelText }}</flux:text>
+                                                    @php
+                                                        $urlVerified = $music->verifications()
+                                                            ->where('field_name', 'url')
+                                                            ->where('pivot_reference', $url->id)
+                                                            ->where('status', 'verified')
+                                                            ->exists();
+                                                    @endphp
+                                                    @if($urlVerified)
+                                                        <flux:icon name="check" variant="solid" class="h-3 w-3 text-green-500 shrink-0" title="{{ __('Verified') }}" />
+                                                    @endif
+                                                </div>
                                                 <flux:text class="text-xs text-gray-500 dark:text-gray-400 truncate" title="{{ $url->url }}">{{ Str::limit($url->url, 40) }}</flux:text>
                                             </div>
                                             <flux:icon name="external-link" class="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />

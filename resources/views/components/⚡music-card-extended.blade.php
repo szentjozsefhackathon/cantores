@@ -113,24 +113,10 @@ new class extends Component
             <div class="flex flex-wrap gap-1">
                 @foreach($music->authors as $author)
                     <a href="{{ route('author-view', $author) }}" class="inline-block">
-                        <flux:badge color="purple" size="sm" class="hover:bg-purple-600 transition-colors">
-                            {{ $author->name }}
+                        <flux:badge color="purple" size="sm">
+                            <flux:icon name="user-circle" variant="mini" class="mr-1" /> {{ $author->name }}
                         </flux:badge>
                     </a>
-                @endforeach
-            </div>
-        </div>
-        @endif
-
-        <!-- Genres (text) -->
-        @if($music->genres->isNotEmpty())
-        <div>
-            <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Genres') }}</flux:heading>
-            <div class="flex flex-wrap gap-1">
-                @foreach($music->genres as $genre)
-                    <flux:badge color="blue" size="sm" :icon="$genre->icon()">
-                        {{ $genre->label() }}
-                    </flux:badge>
                 @endforeach
             </div>
         </div>
