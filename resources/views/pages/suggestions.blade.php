@@ -53,9 +53,6 @@ new #[Layout('layouts::app.main')] class extends Component
         $celebrationIds = $related->pluck('id')->toArray();
         $this->musicPlans = $this->fetchMusicPlans($celebrationIds);
 
-        // Aggregate music selections by slot
-        $this->slotMusicMap = $this->aggregateMusicBySlot();
-
         // Fetch celebration details from external API for the first celebration (highest score)
         $this->fetchCelebrationDetails();
     }
@@ -158,115 +155,6 @@ new #[Layout('layouts::app.main')] class extends Component
         $query->visibleTo($user);
 
         return $query->orderBy('created_at', 'desc')->get();
-    }
-
-    /**
-     * Aggregate music selections by slot, sorted according to requirements.
-     *
-     * @return array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int, collection_info: ?string}>>
-     */
-    protected function aggregateMusicBySlot(): array
-    {
-        $slotMap = [];
-
-        foreach ($this->musicPlans as $musicPlan) {
-            // Determine the celebration score for this plan (highest score among its celebrations?)
-            // We'll compute the max score of celebrations that are in our list.
-            $planCelebrationIds = $musicPlan->celebrations->pluck('id')->toArray();
-            $maxScore = 0;
-            foreach ($this->celebrationsWithScores as $item) {
-                if (in_array($item['celebration']->id, $planCelebrationIds)) {
-                    $maxScore = max($maxScore, $item['score']);
-                }
-            }
-
-            // Iterate through assignments
-            foreach ($musicPlan->musicAssignments as $assignment) {
-                $slot = $assignment->musicPlanSlot;
-                if (! $slot) {
-                    continue;
-                }
-
-                $slotKey = $slot->id;
-                $slotName = $slot->name;
-                $priority = $slot->priority;
-
-                // Use a composite key for sorting: priority + slot name
-                $sortKey = sprintf('%04d-%s', $priority, $slotName);
-
-                if (! isset($slotMap[$sortKey])) {
-                    $slotMap[$sortKey] = [
-                        'slot' => $slot,
-                        'musics' => [],
-                        'music_ids' => [],
-                    ];
-                }
-
-                // Get primary collection info
-                $collectionInfo = null;
-                $music = $assignment->music;
-                if ($music) {
-                    $primaryCollection = $music->collections->first();
-                    if ($primaryCollection) {
-                        $collectionInfo = $primaryCollection->formatWithPivot($primaryCollection->pivot);
-                    }
-                }
-
-                $musicId = $music->id;
-                $existingIndex = $slotMap[$sortKey]['music_ids'][$musicId] ?? null;
-
-                if ($existingIndex !== null) {
-                    // Duplicate music in same slot: keep the entry with higher celebration score
-                    // If scores equal, keep the one with lower music_sequence
-                    $existing = &$slotMap[$sortKey]['musics'][$existingIndex];
-                    if ($maxScore > $existing['celebration_score'] ||
-                        ($maxScore === $existing['celebration_score'] && ($assignment->music_sequence ?? 0) < $existing['music_sequence'])) {
-                        // Replace with this better entry
-                        $existing = [
-                            'music' => $music,
-                            'celebration_score' => $maxScore,
-                            'music_sequence' => $assignment->music_sequence ?? 0,
-                            'collection_info' => $collectionInfo,
-                        ];
-                    }
-                    // else keep existing
-                } else {
-                    // New music for this slot
-                    $slotMap[$sortKey]['music_ids'][$musicId] = count($slotMap[$sortKey]['musics']);
-                    $slotMap[$sortKey]['musics'][] = [
-                        'music' => $music,
-                        'celebration_score' => $maxScore,
-                        'music_sequence' => $assignment->music_sequence ?? 0,
-                        'collection_info' => $collectionInfo,
-                    ];
-                }
-            }
-        }
-
-        // Sort slots by priority then slot name (already encoded in sortKey)
-        ksort($slotMap);
-
-        // For each slot, sort musics first by celebration score descending, then by music_sequence ascending
-        foreach ($slotMap as &$slotData) {
-            // Remove the temporary music_ids array
-            unset($slotData['music_ids']);
-            usort($slotData['musics'], function ($a, $b) {
-                if ($a['celebration_score'] !== $b['celebration_score']) {
-                    return $b['celebration_score'] <=> $a['celebration_score']; // descending
-                }
-
-                return $a['music_sequence'] <=> $b['music_sequence']; // ascending
-            });
-        }
-
-        // Return map with slot name as key for easy display
-        $result = [];
-        foreach ($slotMap as $slotData) {
-            $slot = $slotData['slot'];
-            $result[$slot->name] = $slotData['musics'];
-        }
-
-        return $result;
     }
 
     protected function sanitize($text): string
