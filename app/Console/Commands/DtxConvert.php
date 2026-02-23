@@ -226,12 +226,32 @@ class DtxConvert extends Command
                     // short name, ignore
                     break;
                 case '>':
-                    // New song
-                    $enekszam = trim(substr($line, 1));
+                    // New song - format can be ">8" or ">8    A mélyből Hozzád"
+                    $content = trim(substr($line, 1));
+
+                    // Check if title is on the same line as song number
+                    // Format: >NUMBER    TITLE or >NUMBER TITLE
+                    $parts = preg_split('/\s{2,}|\t/', $content, 2);
+                    $enekszam = $parts[0];
+
+                    // If there's a title on the same line, use it
+                    if (isset($parts[1]) && ! empty($parts[1])) {
+                        $firstline = $this->unescape($parts[1]);
+                        $firstline = $this->cleanTxt($firstline);
+                        if (! empty($firstline) || $useTitle) {
+                            $songs[] = [
+                                'ienek' => $useTitle ? '' : $enekszam,
+                                'enek' => $useTitle ? $enekszam : $firstline,
+                            ];
+                            $captured = true;
+                        }
+                    } else {
+                        $firstline = '';
+                        $captured = false;
+                    }
+
                     $ivers = 0;
-                    $firstline = '';
                     $diaszam = '';
-                    $captured = false;
                     break;
                 case '/':
                     // New verse
