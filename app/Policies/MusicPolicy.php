@@ -149,6 +149,52 @@ class MusicPolicy
     }
 
     /**
+     * Check if user can change published state to private.
+     * Users can change their own content to private if the music is not verified.
+     * Otherwise requires content.edit.verified permission.
+     */
+    public function changePublishedToPrivate(?User $user, Music $music): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        // Allow users to change their own content to private if music is not verified
+        if (! $music->is_verified && $music->user_id === $user->id) {
+            return true;
+        }
+
+        // Otherwise require content.edit.verified permission
+        return $user->hasPermissionTo('content.edit.verified');
+    }
+
+    /**
+     * Check if user can edit or delete a verified relation.
+     * Verified relations require content.edit.verified permission.
+     */
+    public function editOrDeleteVerifiedRelation(User $user, Music $music, string $relationType, ?int $relationId = null): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        // Check if this specific relation is verified
+        $isRelationVerified = $music->verifications()
+            ->where('field_name', $relationType)
+            ->where('pivot_reference', $relationId)
+            ->where('status', 'verified')
+            ->exists();
+
+        if ($isRelationVerified) {
+            return $user->hasPermissionTo('content.edit.verified');
+        }
+
+        // For non-verified relations, allow with content.edit.published or content.edit.own
+        return $user->hasPermissionTo('content.edit.published') ||
+               ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id);
+    }
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Music $music): bool

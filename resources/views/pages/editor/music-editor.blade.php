@@ -168,6 +168,7 @@ new class extends Component
     public function removeRelatedMusic(int $relatedMusicId): void
     {
         $this->authorize('update', $this->music);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'related_music', $relatedMusicId]);
 
         $this->music->relatedMusic()->detach($relatedMusicId);
 
@@ -258,6 +259,10 @@ new class extends Component
             $this->authorize('updateField', [$this->music, 'custom_id']);
         }
 
+        // Check if changing from public to private
+        if ($validated['isPrivate'] && !$this->music->is_private) {
+            $this->authorize('changePublishedToPrivate', $this->music);
+        }
 
         $this->music->update([
             'title' => $validated['title'],
@@ -314,6 +319,7 @@ new class extends Component
     public function removeCollection(int $collectionId): void
     {
         $this->authorize('update', $this->music);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'collection', $collectionId]);
 
         $this->music->collections()->detach($collectionId);
         $this->music->load('collections');
@@ -356,6 +362,7 @@ new class extends Component
     public function removeAuthor(int $authorId): void
     {
         $this->authorize('update', $this->music);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'author', $authorId]);
 
         $this->music->authors()->detach($authorId);
         $this->music->load('authors');
@@ -397,6 +404,7 @@ new class extends Component
     public function editUrl(int $urlId): void
     {
         $this->authorize('update', $this->music);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'url', $urlId]);
 
         $url = $this->music->urls()->find($urlId);
 
@@ -415,6 +423,7 @@ new class extends Component
     public function updateUrl(): void
     {
         $this->authorize('update', $this->music);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'url', $this->editingUrlId]);
 
         $validated = $this->validate([
             'editingUrlLabel' => ['required', 'string', Rule::in(array_column(\App\MusicUrlLabel::cases(), 'value'))],
@@ -448,6 +457,7 @@ new class extends Component
     public function deleteUrl(int $urlId): void
     {
         $this->authorize('update', $this->music);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'url', $urlId]);
 
         $this->music->urls()->where('id', $urlId)->delete();
         $this->music->load('urls');
@@ -471,6 +481,7 @@ new class extends Component
     public function editCollection(int $collectionId): void
     {
         $this->authorize('update', $this->music);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'collection', $collectionId]);
 
         $collection = $this->music->collections()->where('collection_id', $collectionId)->first();
 
@@ -490,6 +501,7 @@ new class extends Component
     public function updateCollection(): void
     {
         $this->authorize('update', $this->music);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'collection', $this->editingCollectionId]);
 
         $validated = $this->validate([
             'editingPageNumber' => ['nullable', 'integer', 'min:1'],
@@ -666,7 +678,8 @@ new class extends Component
                             <flux:description>{{ __('Private music pieces are only visible to you. Public music pieces are visible to all users.') }}</flux:description>
                             <flux:checkbox
                                 wire:model="isPrivate"
-                                :label="__('Make this music piece private')" />
+                                :label="__('Make this music piece private')"
+                                :disabled="!$music->is_private && !Auth::user()?->can('changePublishedToPrivate', $music)" />
                             <flux:error name="isPrivate" />
                         </flux:field>
                     </div>
