@@ -57,6 +57,7 @@ class MusicVerifier extends Component
             'urls',
             'authors',
             'relatedMusic',
+            'tags',
             'verifications' => function ($query) {
                 $query->where('verifier_id', Auth::id())->orWhere('status', 'pending');
             },
@@ -180,6 +181,17 @@ class MusicVerifier extends Component
                 'label' => __('Genre').' '.($index + 1),
                 'value' => $genre->name,
                 'pivot_reference' => $genre->id,
+            ];
+        }
+
+        // Tags
+        foreach ($this->music->tags as $index => $tag) {
+            $fields[] = [
+                'type' => 'relation',
+                'name' => 'tag',
+                'label' => __('Tag').' '.($index + 1),
+                'value' => $tag->name,
+                'pivot_reference' => $tag->id,
             ];
         }
 

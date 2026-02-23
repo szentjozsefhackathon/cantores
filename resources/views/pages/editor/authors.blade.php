@@ -144,11 +144,12 @@
 
         <div class="mt-2 space-y-4">
             <flux:field required>
-                <flux:label>{{ __('Name') }}</flux:label>
+                <flux:label>{{ __('Use Last Name, First Name format for Non-Hungarian authors (e.g., Bach, Johann Sebastian).') }}</flux:label>
                 <flux:input
                     wire:model="name"
                     :placeholder="__('Enter author name')"
                     autofocus
+                    autocomplete="off"
                 />
                 <flux:error name="name" />
             </flux:field>
@@ -294,7 +295,7 @@
 
         <div class="mt-2 space-y-4">
             <flux:field required>
-                <flux:label>{{ __('Name') }}</flux:label>
+                <flux:label>{{ __('Use Last Name, First Name format for Non-Hungarian authors (e.g., Bach, Johann Sebastian).') }}</flux:label>
                 <flux:input
                     wire:model="name"
                     :placeholder="__('Enter author name')"

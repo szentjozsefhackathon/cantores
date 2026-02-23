@@ -630,5 +630,6 @@
     "A sequence number is required.": "A sorszám kötelező.",
     "Sequence must be at least 1.": "A sorszámnak legalább 1-nek kell lennie.",
     "A slot must be selected.": "Helyet kell kiválasztani.",
-    "The selected slot does not exist.": "A kiválasztott hely nem létezik."
+    "The selected slot does not exist.": "A kiválasztott hely nem létezik.",
+    "Use Last Name, First Name format for Non-Hungarian authors (e.g., Bach, Johann Sebastian).": "Használd a Vezetéknév, Keresztnév formátumot nem magyar szerzők esetén (pl. Bach, Johann Sebastian)."
 }
