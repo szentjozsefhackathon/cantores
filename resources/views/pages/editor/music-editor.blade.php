@@ -599,6 +599,15 @@ new class extends Component
                         wire:click="dispatch('openErrorReportModal', {'resourceId': {{ $music->id }}, 'resourceType' : 'music'})"
                         :title="__('Report Error')" />
 
+                    @if(auth()->check() && auth()->user()->isEditor)
+                    <flux:button
+                        variant="ghost"
+                        icon="check-circle"
+                        :href="route('music-verifier', ['musicId' => $music->id])"
+                        tag="a"
+                        :title="__('Verify Music')" />
+                    @endif
+
                     <flux:button
                         variant="ghost"
                         icon="trash"

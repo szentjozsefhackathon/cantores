@@ -61,6 +61,7 @@
                     {{ __('Authors') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>
+            @if(auth()->check() && auth()->user()->isEditor)
             <flux:sidebar.group heading="Szerkesztő">
             <flux:sidebar.item icon="combine" :href="route('music-merger')" :current="request()->routeIs('music-merge')" wire:navigate>
                 Énekek egyesítése
@@ -72,6 +73,7 @@
                 Zenei címkék
             </flux:sidebar.item>
             </flux:sidebar.group>
+            @endif
         </flux:sidebar.nav>
 
         <flux:spacer />

@@ -146,6 +146,22 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Determine if the user is an editor.
+     */
+    public function getIsEditorAttribute(): bool
+    {
+        return $this->hasRole('editor');
+    }
+
+    /**
+     * Determine if the user is an editor (method for compatibility).
+     */
+    public function isEditor(): bool
+    {
+        return $this->isEditor;
+    }
+
+    /**
      * Get the notifications reported by this user.
      */
     public function reportedNotifications(): \Illuminate\Database\Eloquent\Relations\HasMany
