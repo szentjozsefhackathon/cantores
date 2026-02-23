@@ -57,6 +57,72 @@ class MusicPolicy
     }
 
     /**
+     * Check if user can update a specific field on the music.
+     * If the field is verified, requires content.edit.verified permission.
+     * Otherwise, requires content.edit.published or content.edit.own.
+     */
+    public function updateField(User $user, Music $music, string $fieldName): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        // Check if this specific field is verified
+        $isFieldVerified = $music->verifications()
+            ->where('field_name', $fieldName)
+            ->where('status', 'verified')
+            ->exists();
+
+        if ($isFieldVerified) {
+            return $user->hasPermissionTo('content.edit.verified');
+        }
+
+        // For non-verified fields, allow with content.edit.published or content.edit.own
+        return $user->hasPermissionTo('content.edit.published') ||
+               ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id);
+    }
+
+    /**
+     * Check if user can attach a relation to music.
+     * Adding new relations is always allowed with content.edit.published.
+     */
+    public function attachRelation(User $user, Music $music, string $relationType): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        return $user->hasPermissionTo('content.edit.published') ||
+               ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id);
+    }
+
+    /**
+     * Check if user can detach a relation from music.
+     * If the relation is verified, requires content.edit.verified permission.
+     */
+    public function detachRelation(User $user, Music $music, string $relationType, ?int $relationId = null): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        // Check if this specific relation is verified
+        $isRelationVerified = $music->verifications()
+            ->where('field_name', $relationType)
+            ->where('pivot_reference', $relationId)
+            ->where('status', 'verified')
+            ->exists();
+
+        if ($isRelationVerified) {
+            return $user->hasPermissionTo('content.edit.verified');
+        }
+
+        // For non-verified relations, allow with content.edit.published or content.edit.own
+        return $user->hasPermissionTo('content.edit.published') ||
+               ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id);
+    }
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Music $music): bool

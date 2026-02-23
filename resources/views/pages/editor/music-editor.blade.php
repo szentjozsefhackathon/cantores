@@ -587,7 +587,16 @@ new class extends Component
             <div class="space-y-6">
                 <div class="grid grid-cols-3 gap-6">
                     <flux:field required>
-                        <flux:label>{{ __('Title') }}</flux:label>
+                        <flux:label class="flex items-center gap-2">
+                            {{ __('Title') }}
+                            @php
+                                $titleVerifications = $music->verifications->where('field_name', 'title');
+                                $titleVerified = $titleVerifications->where('status', 'verified')->count() > 0;
+                            @endphp
+                            @if($titleVerified)
+                                <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
+                            @endif
+                        </flux:label>
                         <flux:input
                             wire:model="title"
                             :placeholder="__('Enter music piece title')" />
@@ -595,7 +604,15 @@ new class extends Component
                     </flux:field>
 
                     <flux:field>
-                        <flux:label>{{ __('Subtitle') }}</flux:label>
+                        <flux:label class="flex items-center gap-2">
+                            {{ __('Subtitle') }}
+                            @php
+                                $subtitleVerifications = $music->verifications->where('field_name', 'subtitle');
+                            @endphp
+                            @if($subtitleVerified)
+                                <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
+                            @endif
+                        </flux:label>
                         <flux:input
                             wire:model="subtitle"
                             :placeholder="__('Enter subtitle')" />
@@ -603,7 +620,15 @@ new class extends Component
                     </flux:field>
 
                     <flux:field>
-                        <flux:label>{{ __('Custom ID') }}</flux:label>
+                        <flux:label class="flex items-center gap-2">
+                            {{ __('Custom ID') }}
+                            @php
+                                $customIdVerifications = $music->verifications->where('field_name', 'custom_id');
+                            @endphp
+                            @if($customIdVerified)
+                                <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
+                            @endif
+                        </flux:label>
                         <flux:input
                             wire:model="customId"
                             :placeholder="__('Enter custom ID')" />
@@ -670,7 +695,9 @@ new class extends Component
 
         <!-- Collection Connections -->
         <flux:card class="p-5 mt-6">
-            <flux:heading size="lg">{{ __('Collection Connections') }}</flux:heading>
+            <flux:heading size="lg" class="flex items-center gap-2">
+                {{ __('Collection Connections') }}
+            </flux:heading>
             <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage collections this music piece belongs to.') }}</flux:text>
 
             @if($music->collections->count())
@@ -787,7 +814,9 @@ new class extends Component
 
         <!-- Author Connections -->
         <flux:card class="p-5 mt-6">
-            <flux:heading size="lg">{{ __('Author Connections') }}</flux:heading>
+            <flux:heading size="lg" class="flex items-center gap-2">
+                {{ __('Author Connections') }}
+            </flux:heading>
             <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage authors of this music piece.') }}</flux:text>
 
             @if($music->authors->count())

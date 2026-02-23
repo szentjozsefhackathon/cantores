@@ -271,6 +271,7 @@ class Musics extends Component
      */
     public function update(): void
     {
+        // First, check if user has general update permission
         $this->authorize('update', $this->editingMusic);
 
         $validated = $this->validate([
@@ -279,11 +280,28 @@ class Musics extends Component
             'customId' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $this->editingMusic->update([
-            'title' => $validated['title'],
-            'subtitle' => $validated['subtitle'],
-            'custom_id' => $validated['customId'],
-        ]);
+        // Check permission for each field being updated
+        $fieldsToUpdate = [];
+
+        if (isset($validated['title']) && $validated['title'] !== $this->editingMusic->title) {
+            $this->authorize('updateField', [$this->editingMusic, 'title']);
+            $fieldsToUpdate['title'] = $validated['title'];
+        }
+
+        if (isset($validated['subtitle']) && $validated['subtitle'] !== $this->editingMusic->subtitle) {
+            $this->authorize('updateField', [$this->editingMusic, 'subtitle']);
+            $fieldsToUpdate['subtitle'] = $validated['subtitle'];
+        }
+
+        if (isset($validated['customId']) && $validated['customId'] !== $this->editingMusic->custom_id) {
+            $this->authorize('updateField', [$this->editingMusic, 'custom_id']);
+            $fieldsToUpdate['custom_id'] = $validated['customId'];
+        }
+
+        // Only update if there are changes
+        if (! empty($fieldsToUpdate)) {
+            $this->editingMusic->update($fieldsToUpdate);
+        }
 
         $this->showEditModal = false;
         $this->resetForm();
