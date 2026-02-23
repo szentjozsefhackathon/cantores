@@ -12,6 +12,9 @@ Route::view('dashboard', 'dashboard')
 
 Route::view('/about', 'pages.about')->name('about');
 
+Route::view('/terms', 'pages.terms')->name('terms');
+Route::view('/privacy', 'pages.privacy')->name('privacy');
+
 Route::get('/random-nickname', function () {
     $cities = \App\Models\City::allCached();
     $firstNames = \App\Models\FirstName::allCached();
