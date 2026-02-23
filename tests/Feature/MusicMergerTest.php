@@ -73,7 +73,7 @@ class MusicMergerTest extends TestCase
     {
         $this->get(route('music-merger'))
             ->assertOk()
-            ->assertSee('Merge Music Pieces');
+            ->assertSee(__('Merge Music Pieces'));
     }
 
     /** @test */

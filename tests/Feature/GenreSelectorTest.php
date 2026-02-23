@@ -19,7 +19,7 @@ test('component renders with current genre', function () {
     Livewire::actingAs($user)
         ->test('genre-selector')
         ->assertSet('selectedGenreId', $user->current_genre_id)
-        ->assertSee('Mind');
+        ->assertSee(__('All'));
 });
 
 test('component shows all genre options', function () {
@@ -27,7 +27,7 @@ test('component shows all genre options', function () {
 
     Livewire::actingAs($user)
         ->test('genre-selector')
-        ->assertSee('Mind');
+        ->assertSee(__('All'));
 });
 
 test('selecting a genre updates user', function () {
@@ -61,5 +61,5 @@ test('component works when no genre selected', function () {
     Livewire::actingAs($user)
         ->test('genre-selector')
         ->assertSet('selectedGenreId', null)
-        ->assertSee('Mind');
+        ->assertSee(__('All'));
 });

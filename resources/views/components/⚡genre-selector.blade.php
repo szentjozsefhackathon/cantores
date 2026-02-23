@@ -36,9 +36,9 @@ new class extends Component
 <div class="flex items-center justify-center">
     <flux:radio.group wire:model.live="selectedGenreId" variant="segmented">
             @if (is_null($this->selectedGenreId))
-                <flux:radio label="Mind" value="" checked />
+                <flux:radio label="{{ __('All') }}" value="" checked />
             @else
-                <flux:radio label="Mind" value="" />
+                <flux:radio label="{{ __('All') }}" value="" />
             @endif
             @foreach($this->genres() as $genre)
                 <flux:radio value="{{ $genre->id }}" icon="{{ $genre->icon() }}" />

@@ -24,7 +24,7 @@ test('music tag has correct icon and color for type', function () {
 
     expect($tag->icon())->toBe('music');
     expect($tag->color())->toBe('blue');
-    expect($tag->typeLabel())->toBe('Instrument');
+    expect($tag->typeLabel())->toBe(__('Instrument'));
 });
 
 test('music can have multiple tags', function () {

@@ -1,12 +1,13 @@
 <?php
 
 use App\Models\Music;
+use App\Models\MusicVerification;
 use App\Models\User;
 use App\Policies\MusicPolicy;
 use Spatie\Permission\Models\Permission;
 
 beforeEach(function () {
-    $this->policy = new MusicPolicy();
+    $this->policy = new MusicPolicy;
 });
 
 it('allows user to change their own non-verified music to private', function () {
@@ -15,8 +16,8 @@ it('allows user to change their own non-verified music to private', function () 
         'user_id' => $user->id,
     ]);
 
-    // Mock the is_verified attribute to return false
-    $music->is_verified = false;
+    // No verification records, so music is not verified
+    // $music->is_verified will be false
 
     $result = $this->policy->changePublishedToPrivate($user, $music);
 
@@ -29,8 +30,8 @@ it('denies user to change verified music to private without permission', functio
         'user_id' => $user->id,
     ]);
 
-    // Mock the is_verified attribute to return true
-    $music->is_verified = true;
+    // Create a verified verification for the title field
+    MusicVerification::factory()->for($music)->verified()->forField('title')->create();
 
     $result = $this->policy->changePublishedToPrivate($user, $music);
 
@@ -46,8 +47,8 @@ it('allows user with content.edit.verified permission to change verified music t
         'user_id' => $user->id,
     ]);
 
-    // Mock the is_verified attribute to return true
-    $music->is_verified = true;
+    // Create a verified verification for the title field
+    MusicVerification::factory()->for($music)->verified()->forField('title')->create();
 
     $result = $this->policy->changePublishedToPrivate($user, $music);
 
@@ -61,8 +62,7 @@ it('denies user to change other users non-verified music to private', function (
         'user_id' => $user1->id,
     ]);
 
-    // Mock the is_verified attribute to return false
-    $music->is_verified = false;
+    // No verification records, so music is not verified
 
     $result = $this->policy->changePublishedToPrivate($user2, $music);
 
@@ -79,8 +79,8 @@ it('allows user with content.edit.verified permission to change other users musi
         'user_id' => $user1->id,
     ]);
 
-    // Mock the is_verified attribute to return true
-    $music->is_verified = true;
+    // Create a verified verification for the title field
+    MusicVerification::factory()->for($music)->verified()->forField('title')->create();
 
     $result = $this->policy->changePublishedToPrivate($user2, $music);
 

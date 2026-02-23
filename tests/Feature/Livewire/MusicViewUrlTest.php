@@ -22,15 +22,15 @@ test('music view displays URLs when present', function () {
     ]);
 
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
-        ->assertSee('External Links')
+        ->assertSee(__('External Links'))
         ->assertSee($url->url)
-        ->assertSee('Sheet Music');
+        ->assertSee(__('Sheet Music'));
 });
 
 test('music view shows no URLs placeholder when empty', function () {
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
-        ->assertSee('External Links')
-        ->assertSee('No external links available for this music piece.');
+        ->assertSee(__('External Links'))
+        ->assertSee(__('No external links available for this music piece.'));
 });
 
 test('URLs are displayed as clickable links', function () {
@@ -46,22 +46,60 @@ test('URLs are displayed as clickable links', function () {
         ->assertSeeHtml('rel="noopener noreferrer"');
 });
 
-test('label mapping works correctly for all label types', function ($label, $expectedText) {
+test('label mapping works correctly for sheet music', function () {
     $url = MusicUrl::factory()->create([
         'music_id' => $this->music->id,
-        'label' => $label,
+        'label' => 'sheet_music',
         'url' => 'https://example.com/test',
     ]);
 
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
-        ->assertSee($expectedText);
-})->with([
-    ['sheet_music', 'Sheet Music'],
-    ['audio', 'Audio'],
-    ['video', 'Video'],
-    ['text', 'Text'],
-    ['information', 'Information'],
-]);
+        ->assertSee(__('Sheet Music'));
+});
+
+test('label mapping works correctly for audio', function () {
+    $url = MusicUrl::factory()->create([
+        'music_id' => $this->music->id,
+        'label' => 'audio',
+        'url' => 'https://example.com/test',
+    ]);
+
+    Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
+        ->assertSee(__('Audio'));
+});
+
+test('label mapping works correctly for video', function () {
+    $url = MusicUrl::factory()->create([
+        'music_id' => $this->music->id,
+        'label' => 'video',
+        'url' => 'https://example.com/test',
+    ]);
+
+    Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
+        ->assertSee(__('Video'));
+});
+
+test('label mapping works correctly for text', function () {
+    $url = MusicUrl::factory()->create([
+        'music_id' => $this->music->id,
+        'label' => 'text',
+        'url' => 'https://example.com/test',
+    ]);
+
+    Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
+        ->assertSee(__('Text'));
+});
+
+test('label mapping works correctly for information', function () {
+    $url = MusicUrl::factory()->create([
+        'music_id' => $this->music->id,
+        'label' => 'information',
+        'url' => 'https://example.com/test',
+    ]);
+
+    Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
+        ->assertSee(__('Information'));
+});
 
 test('URLs are truncated for display', function () {
     $longUrl = 'https://example.com/very/long/path/to/a/document/that/exceeds/the/character/limit/for/display.pdf';
@@ -123,7 +161,7 @@ test('guest can view URLs on public music', function () {
 
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $music])
         ->assertSee($url->url)
-        ->assertSee('Sheet Music');
+        ->assertSee(__('Sheet Music'));
 });
 
 test('guest cannot view URLs on private music', function () {

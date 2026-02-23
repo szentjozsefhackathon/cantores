@@ -21,7 +21,7 @@ test('music editor shows existing URLs', function () {
 
     Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->assertSee($url->url)
-        ->assertSee('Sheet Music');
+        ->assertSee(__('Sheet Music'));
 });
 
 test('adds URL with whitelist validation', function () {
