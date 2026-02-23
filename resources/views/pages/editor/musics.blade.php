@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
     <!-- Action messages -->
     <div class="mb-4 flex justify-end">
         <x-action-message on="music-deleted">
@@ -11,7 +11,7 @@
         <!-- Search and Actions -->
 
         <!-- Container -->
-        <div class="mx-auto max-w-7xl p-4 sm:p-6">
+        <div class="mx-auto p-4 sm:p-6">
             <!-- Filters card -->
             <div class="rounded-2xl border p-4 shadow-sm sm:p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -187,7 +187,7 @@
                                 </flux:table.cell>
                                 <flux:table.cell>
                                     <div>
-                                        <div class="font-medium">
+                                        <div class="font-medium max-w-80 text-wrap">
                                             @if ($music->is_verified)
                                             <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
                                             @endif
