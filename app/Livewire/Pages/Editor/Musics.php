@@ -36,8 +36,6 @@ class Musics extends Component
 
     public bool $showAuditModal = false;
 
-    public ?Music $editingMusic = null;
-
     public ?Music $auditingMusic = null;
 
     public $audits = [];
@@ -264,49 +262,6 @@ class Musics extends Component
         $this->showCreateModal = false;
         $this->resetForm();
         $this->redirectRoute('music-editor', ['music' => $music->id]);
-    }
-
-    /**
-     * Update the editing music piece.
-     */
-    public function update(): void
-    {
-        // First, check if user has general update permission
-        $this->authorize('update', $this->editingMusic);
-
-        $validated = $this->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'subtitle' => ['nullable', 'string', 'max:255'],
-            'customId' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        // Check permission for each field being updated
-        $fieldsToUpdate = [];
-
-        if (isset($validated['title']) && $validated['title'] !== $this->editingMusic->title) {
-            $this->authorize('updateField', [$this->editingMusic, 'title']);
-            $fieldsToUpdate['title'] = $validated['title'];
-        }
-
-        if (isset($validated['subtitle']) && $validated['subtitle'] !== $this->editingMusic->subtitle) {
-            $this->authorize('updateField', [$this->editingMusic, 'subtitle']);
-            $fieldsToUpdate['subtitle'] = $validated['subtitle'];
-        }
-
-        if (isset($validated['customId']) && $validated['customId'] !== $this->editingMusic->custom_id) {
-            $this->authorize('updateField', [$this->editingMusic, 'custom_id']);
-            $fieldsToUpdate['custom_id'] = $validated['customId'];
-        }
-
-        // Only update if there are changes
-        if (! empty($fieldsToUpdate)) {
-            $this->editingMusic->update($fieldsToUpdate);
-        }
-
-        $this->showEditModal = false;
-        $this->resetForm();
-        $this->editingMusic = null;
-        $this->dispatch('music-updated');
     }
 
     /**

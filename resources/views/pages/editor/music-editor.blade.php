@@ -236,7 +236,7 @@ new class extends Component
     public function update(): void
     {
         $this->authorize('update', $this->music);
-
+          
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
@@ -245,6 +245,19 @@ new class extends Component
             'selectedGenres' => ['nullable', 'array'],
             'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
         ]);
+
+        if (isset($validated['title']) && $validated['title'] !== $this->music->title) {
+            $this->authorize('updateField', [$this->music, 'title']);
+        }
+
+        if (isset($validated['subtitle']) && $validated['subtitle'] !== $this->music->subtitle) {
+            $this->authorize('updateField', [$this->music, 'subtitle']);
+        }
+
+        if (isset($validated['customId']) && $validated['customId'] !== $this->music->custom_id) {
+            $this->authorize('updateField', [$this->music, 'custom_id']);
+        }
+
 
         $this->music->update([
             'title' => $validated['title'],
@@ -593,7 +606,8 @@ new class extends Component
                         </flux:label>
                         <flux:input
                             wire:model="title"
-                            :placeholder="__('Enter music piece title')" />
+                            :placeholder="__('Enter music piece title')"
+                            :readonly="!Auth::user()?->can('updateField', [$music, 'title'])" />
                         <flux:error name="title" />
                     </flux:field>
 
@@ -604,7 +618,8 @@ new class extends Component
                         </flux:label>
                         <flux:input
                             wire:model="subtitle"
-                            :placeholder="__('Enter subtitle')" />
+                            :placeholder="__('Enter subtitle')"
+                            :readonly="!Auth::user()?->can('updateField', [$music, 'subtitle'])" />
                         <flux:error name="subtitle" />
                     </flux:field>
 
@@ -615,7 +630,8 @@ new class extends Component
                         </flux:label>
                         <flux:input
                             wire:model="customId"
-                            :placeholder="__('Enter custom ID')" />
+                            :placeholder="__('Enter custom ID')"
+                            :readonly="!Auth::user()?->can('updateField', [$music, 'custom_id'])" />
                         <flux:error name="customId" />
                     </flux:field>
 

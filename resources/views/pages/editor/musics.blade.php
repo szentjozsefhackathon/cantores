@@ -99,7 +99,7 @@
                     </div>
 
                     <!-- Tags filter (AND logic) -->
-                    <div class="lg:col-span-2">
+                    <div class="lg:col-span-2 text-sm">
                         <flux:field>
                             <x-mary-choices
                                 placeholder="Címkék (összes kiválasztott)"
