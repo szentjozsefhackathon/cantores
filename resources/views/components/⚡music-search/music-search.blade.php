@@ -10,9 +10,9 @@
                 />
             </flux:field>
             <x-mary-choices placeholder="Mind" single wire:model="filter" :options="[
-                ['id' => 'all', 'name' => __('All'), 'icon' => 'o-globe-alt'],
-                ['id' => 'public', 'name' => __('Public'), 'icon' => 'o-eye'],
-                ['id' => 'private', 'name' => __('Private'), 'icon' => 'o-eye-slash'],
+                ['id' => 'all', 'name' => __('All'), 'icon' => 'lucide.layers'],
+                ['id' => 'public', 'name' => __('Public'), 'icon' => 'lucide.globe'],
+                ['id' => 'private', 'name' => __('Private'), 'icon' => 'lucide.globe-lock'],
                 ['id' => 'mine', 'name' => __('My items'), 'icon' => 'o-user'],
             ]" class="w-full sm:w-48">
                 @scope('item', $option)
@@ -29,7 +29,8 @@
             <flux:field class="w-full sm:flex-1">
                 <flux:input
                     type="search"
-                    wire:model.live="collectionFreeText"
+                    wire:model.live.debounce.500ms="collectionFreeText"
+                    autocomplete="off"
                     :placeholder="__('Filter by collection abbreviation, title, or order number...')"
                 />
             </flux:field>
@@ -47,7 +48,8 @@
             <flux:field class="w-full sm:flex-1">
                 <flux:input
                     type="search"
-                    wire:model.live="authorFreeText"
+                    wire:model.live.debounce.500ms="authorFreeText"
+                    autocomplete="off"
                     :placeholder="__('Filter by author name...')"
                 />
             </flux:field>

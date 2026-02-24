@@ -67,7 +67,7 @@
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
                                 @if ($author->is_private)
-                                    <flux:icon name="eye-slash" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Private')" />
+                                    <flux:icon name="globe-lock" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Private')" />
                                     <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Private') }}</span>
                                 @else
                                     <flux:icon name="globe" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Public')" />

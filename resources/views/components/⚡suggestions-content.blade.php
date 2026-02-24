@@ -349,7 +349,7 @@ new class extends Component
             </div>
         </x-mary-tab>
 
-        <x-mary-tab name="plans" icon="o-folder" label="Énekrendek ({{ $musicPlans->count() }})">
+        <x-mary-tab name="plans" icon="lucide.list-music" label="Énekrendek ({{ $musicPlans->count() }})">
             <div class="space-y-5" role="tabpanel" id="plans-panel" aria-labelledby="plans-tab">
                 @foreach ($musicPlans as $plan)
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4" wire:key="musicPlanSuggestion-{{ $plan->id }}">

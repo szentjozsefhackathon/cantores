@@ -88,7 +88,7 @@ new class extends Component
                         <span>{{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}</span>
                         @endif
                         <span class="flex items-center gap-0.5">
-                            <flux:icon name="{{ !$musicPlan->is_private ? 'eye' : 'eye-slash' }}" class="h-3 w-3" variant="mini" />
+                            <flux:icon name="{{ !$musicPlan->is_private ? 'globe' : 'globe-lock' }}" class="h-3 w-3" variant="mini" />
                             {{ !$musicPlan->is_private ? 'Közzétéve' : 'Privát' }}
                         </span>
                     </div>

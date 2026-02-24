@@ -120,10 +120,10 @@
                 <div class="mt-2 text-sm">
                     <div class="flex items-center gap-2">
                         @if ($leftMusic->is_private)
-                        <flux:icon name="eye-slash" class="h-4 w-4" />
+                        <flux:icon name="globe-lock" class="h-4 w-4" />
                         <span>{{ __('Private') }}</span>
                         @else
-                        <flux:icon name="eye" class="h-4 w-4" />
+                        <flux:icon name="globe" class="h-4 w-4" />
                         <span>{{ __('Public') }}</span>
                         @endif
                     </div>
@@ -177,10 +177,10 @@
                 <div class="mt-2 text-sm">
                     <div class="flex items-center gap-2">
                         @if ($rightMusic->is_private)
-                        <flux:icon name="eye-slash" class="h-4 w-4" />
+                        <flux:icon name="globe-lock" class="h-4 w-4" />
                         <span>{{ __('Private') }}</span>
                         @else
-                        <flux:icon name="eye" class="h-4 w-4" />
+                        <flux:icon name="globe" class="h-4 w-4" />
                         <span>{{ __('Public') }}</span>
                         @endif
                     </div>

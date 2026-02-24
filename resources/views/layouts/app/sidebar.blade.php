@@ -43,7 +43,7 @@
                 {{ __('Dashboard') }}
             </flux:sidebar.item>
             <flux:sidebar.group heading="Énekrend">
-                <flux:sidebar.item icon="calendar-days" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>
+                <flux:sidebar.item icon="list-music" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>
                     Énekrendjeim
                 </flux:sidebar.item>
                 <flux:sidebar.item icon="globe" :href="route('music-plans')" :current="request()->routeIs('music-plans')" wire:navigate>

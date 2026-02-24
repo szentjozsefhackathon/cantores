@@ -547,9 +547,9 @@ new class extends Component
                                         <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
                                             {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
                                             @if(!$plan->is_private)
-                                            <flux:icon name="eye" class="inline" />
+                                            <flux:icon name="globe" class="inline" />
                                             @else
-                                            <flux:icon name="eye-slash" class="inline" />
+                                            <flux:icon name="globe-lock" class="inline" />
                                             @endif
                                         </flux:text>
                                     </div>

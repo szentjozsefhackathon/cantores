@@ -129,7 +129,7 @@
                 <!-- Status -->
                 <div class="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800" >
                     <div class="flex items-center gap-3">
-                        <flux:icon name="{{ $isPublished ? 'eye' : 'eye-slash' }}" class="h-5 w-5 {{ $isPublished ? 'text-green-500' : 'text-neutral-500' }}" variant="mini" />
+                        <flux:icon name="{{ $isPublished ? 'globe' : 'globe-lock' }}" class="h-5 w-5 {{ $isPublished ? 'text-green-500' : 'text-neutral-500' }}" variant="mini" />
                         <flux:field variant="inline" class="mb-0" >
                             <flux:label>Közzététel</flux:label>
                             <flux:switch wire:model.live="isPublished" 
@@ -161,12 +161,12 @@
                             </div>
 
                             <!-- Slot Search Component -->
-                            <livewire:music-plan-editor.slot-search :music-plan="$musicPlan" />
+                            <livewire:music-plan-editor.slot-search lazy :music-plan="$musicPlan" />
 
                             @if($showMusicSearchModal)
                             <!-- Music Search Modal -->
                             <flux:modal wire:model="showMusicSearchModal" class="max-w-4xl">
-                                <livewire:music-search selectable="true" />
+                                <livewire:music-search lazy selectable="true" />
                                 <div class="mt-6 flex justify-end">
                                     <flux:button
                                         wire:click="closeMusicSearchModal"
@@ -530,7 +530,7 @@
 
                                 <x-mary-tab name="suggestions" label="Énekek hozzáadása énekrendből">
                                     <div class="space-y-4">
-                                        <livewire:suggestions-content :criteria="[
+                                        <livewire:suggestions-content lazy :criteria="[
                                             'name' => $musicPlan->celebration_name,
                                             'season' => $musicPlan->celebrations->first()?->season,
                                             'week' => $musicPlan->celebrations->first()?->week,

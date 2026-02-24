@@ -1,2 +1,5 @@
 .env
-./storage
+./storage/debugbar
+./storage/framework
+./storage/logs
+./storage/pail

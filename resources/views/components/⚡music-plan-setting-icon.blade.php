@@ -29,6 +29,6 @@ new class extends Component
             <flux:icon name="genre_other" />
             @break
         @default
-            <flux:icon name="musical-note" class="h-10 w-10" variant="outline" />
+            <flux:icon name="list-music" class="h-10 w-10" variant="outline" />
     @endswitch
 </div>

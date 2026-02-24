@@ -82,9 +82,9 @@
                     <div>
 
                         <x-mary-choices placeholder="Láthatóság" single wire:model.live="filter" :options="[
-                            ['id' => 'all', 'name' => __('All'), 'icon' => 'o-globe-alt'],
-                            ['id' => 'public', 'name' => __('Public'), 'icon' => 'o-eye'],
-                            ['id' => 'private', 'name' => __('Private'), 'icon' => 'o-eye-slash'],
+                            ['id' => 'all', 'name' => __('All'), 'icon' => 'lucide.layers'],
+                            ['id' => 'public', 'name' => __('Public'), 'icon' => 'lucide.globe'],
+                            ['id' => 'private', 'name' => __('Private'), 'icon' => 'lucide.globe-lock'],
                             ['id' => 'mine', 'name' => __('My items'), 'icon' => 'o-user'],
                         ]">
                             @scope('item', $option)
@@ -260,9 +260,9 @@
                                 <flux:table.cell>
                                     <div class="flex items-center gap-2">
                                         @if ($music->is_private)
-                                        <flux:icon name="eye-slash" class="h-5 w-5 text-gqray-500 dark:text-gray-400" :title="__('Private')" />
+                                        <flux:icon name="globe-lock" class="h-5 w-5 text-gqray-500 dark:text-gray-400" :title="__('Private')" />
                                         @else
-                                        <flux:icon name="eye" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Public')" />
+                                        <flux:icon name="globe" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Public')" />
                                         @endif
                                     </div>
                                 </flux:table.cell>
