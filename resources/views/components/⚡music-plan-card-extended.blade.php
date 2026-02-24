@@ -34,7 +34,7 @@ new class extends Component
     {
         $user = Auth::user();
         $assignmentsByPivot = $this->musicPlan->musicAssignments()
-            ->with(['music.collections', 'scopes'])
+            ->with(['music.collections', 'music.authors', 'scopes'])
             ->orderBy('music_plan_slot_plan_id')
             ->orderBy('music_sequence')
             ->get()
@@ -94,20 +94,22 @@ new class extends Component
                     </div>
                 </div>
             </div>
-            <div class="gap-2">
+            <div class="flex items-center gap-2 flex-shrink-0">
                 @if($showOpenButton)
                     @auth
                         <x-user-badge :user="$musicPlan->user" />
                     @endauth
-                <div class="flex justify-end mt-2">
-                    <a href="{{ route('music-plan-view', ['musicPlan' => $musicPlan]) }}" target="_blank" class="inline-block">
-                        <flux:button size="xs" variant="outline" color="blue" icon="eye">
-                            Megtekintés
-                        </flux:button>
-                    </a>
-                </div>
-
                 @endif
+                <div class="flex items-center gap-1.5">
+                    <a href="{{ route('music-plan-view', ['musicPlan' => $musicPlan]) }}" target="_blank" class="inline-block">
+                        <flux:button size="xs" variant="outline" color="blue" icon="eye"></flux:button>
+                    </a>
+                    @if($isOwner)
+                    <a href="{{ route('music-plan-editor', ['musicPlan' => $musicPlan]) }}" class="inline-block">
+                        <flux:button size="xs" variant="outline" color="amber" icon="pencil"></flux:button>
+                    </a>
+                    @endif
+                </div>
             </div>
 
         </div>
@@ -190,7 +192,7 @@ new class extends Component
                             <div class="text-xs flex items-start justify-between gap-2">
                                 <div class="flex-1 min-w-0">
                                     @if(!empty($assignment['scope_label']))
-                                    <flux:badge color="zinc" size="xs" class="mb-0.5">{{ $assignment['scope_label'] }}</flux:badge>
+                                    <flux:badge color="zinc" size="sm" class="mb-0.5">{{ $assignment['scope_label'] }}</flux:badge>
                                     @endif
                                     <div class="text-gray-700 dark:text-gray-300 font-medium truncate">
                                         {{ $assignment['music']->title }}
@@ -200,6 +202,24 @@ new class extends Component
                                         {{ Str::limit($assignment['music']->subtitle, 50) }}
                                     </div>
                                     @endif
+                                    
+                                    <!-- Collections and Authors badges -->
+                                    @if($assignment['music']->collections->isNotEmpty() || $assignment['music']->authors->isNotEmpty())
+                                    <div class="flex flex-wrap gap-1 mt-1">
+                                        @foreach($assignment['music']->collections as $collection)
+                                        <flux:badge color="blue" size="sm">
+                                            {{ $collection->abbreviation ?? Str::limit($collection->title, 8) }}
+                                            @if($collection->pivot->order_number)
+                                            {{ $collection->pivot->order_number }}
+                                            @endif
+                                        </flux:badge>
+                                        @endforeach
+                                        @foreach($assignment['music']->authors as $author)
+                                        <flux:badge color="purple" size="sm">{{ $author->name }}</flux:badge>
+                                        @endforeach
+                                    </div>
+                                    @endif
+                                    
                                     @if(!empty($assignment['notes']))
                                     <div class="text-gray-500 dark:text-gray-500 italic line-clamp-1">
                                         {{ Str::limit($assignment['notes'], 50) }}

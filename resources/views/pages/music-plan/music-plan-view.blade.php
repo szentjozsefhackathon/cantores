@@ -215,6 +215,7 @@ new #[Layout('layouts::app.main')] class extends Component
                     <flux:button variant="outline" color="zinc" icon="arrow-left" href="{{ route('home') }}">
                         Vissza a kezdőlapra
                     </flux:button>
+                    <livewire:music-plan-share-modal :music-plan="$musicPlan" />
                     <form method="POST" action="{{ route('music-plans.copy', $musicPlan) }}" class="inline">
                         @csrf
                         <flux:button type="submit" variant="outline" color="blue" icon="clipboard-copy">
