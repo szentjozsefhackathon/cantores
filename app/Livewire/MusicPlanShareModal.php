@@ -9,7 +9,7 @@ use Livewire\Component;
 
 class MusicPlanShareModal extends Component
 {
-    public MusicPlan $musicPlan;
+    public int $musicPlanId;
 
     public bool $showModal = false;
 
@@ -22,7 +22,7 @@ class MusicPlanShareModal extends Component
             abort(403);
         }
 
-        $this->musicPlan = $musicPlan;
+        $this->musicPlanId = $musicPlan->id;
     }
 
     public function openModal(): void
@@ -44,14 +44,15 @@ class MusicPlanShareModal extends Component
     private function generateShareText(): string
     {
         $user = Auth::user();
-        $assignmentsByPivot = $this->musicPlan->musicAssignments()
+        $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
+        $assignmentsByPivot = $musicPlan->musicAssignments()
             ->with(['music.collections', 'music.authors', 'scopes'])
             ->orderBy('music_plan_slot_plan_id')
             ->orderBy('music_sequence')
             ->get()
             ->groupBy('music_plan_slot_plan_id');
 
-        $planSlots = $this->musicPlan->slots()
+        $planSlots = $musicPlan->slots()
             ->visibleToUser($user)
             ->withPivot('id', 'sequence')
             ->orderBy('music_plan_slot_plan.sequence')
@@ -81,14 +82,14 @@ class MusicPlanShareModal extends Component
             ->values()
             ->all();
 
-        $firstCelebration = $this->musicPlan->celebrations->first();
+        $firstCelebration = $musicPlan->celebrations->first();
 
-        $text = '🎵 '.($this->musicPlan->celebration_name ?? 'Énekrend')."\n";
+        $text = '🎵 '.($musicPlan->celebration_name ?? 'Énekrend')."\n";
         $text .= "═══════════════════════════════════════\n\n";
 
         // Date and liturgical info
-        if ($this->musicPlan->actual_date) {
-            $text .= '📅 Dátum: '.$this->musicPlan->actual_date->translatedFormat('Y. F j.')."\n";
+        if ($musicPlan->actual_date) {
+        $text .= '📅 Dátum: '.$musicPlan->actual_date->translatedFormat('Y. F j.')."\n";
         }
 
         if ($firstCelebration && $firstCelebration->year_letter) {
@@ -107,8 +108,8 @@ class MusicPlanShareModal extends Component
             $text .= "\n";
         }
 
-        if ($this->musicPlan->day_name) {
-            $text .= '📖 Nap: '.$this->musicPlan->day_name."\n";
+        if ($musicPlan->day_name) {
+            $text .= '📖 Nap: '.$musicPlan->day_name."\n";
         }
 
         $text .= "\n";
@@ -175,16 +176,17 @@ class MusicPlanShareModal extends Component
 
         // Footer
         $text .= "═══════════════════════════════════════\n";
-        if ($this->musicPlan->user) {
-            $text .= 'Készítette: '.$this->musicPlan->user->name."\n";
+        if ($musicPlan->user) {
+            $text .= 'Készítette: '.$musicPlan->user->name."\n";
         }
-        $text .= 'Létrehozva: '.$this->musicPlan->created_at->translatedFormat('Y. m. d.')."\n";
+        $text .= 'Létrehozva: '.$musicPlan->created_at->translatedFormat('Y. m. d.')."\n";
 
         return $text;
     }
 
     public function render()
     {
+        
         return view('music-plan-share-modal');
     }
 }

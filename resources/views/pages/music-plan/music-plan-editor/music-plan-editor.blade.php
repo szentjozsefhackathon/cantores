@@ -575,7 +575,10 @@
                     <livewire:music-plan-share-modal :music-plan="$musicPlan" />
                     <form method="POST" action="{{ route('music-plans.copy', $musicPlan) }}" class="inline">
                         @csrf
-                        <flux:button type="submit" variant="outline" color="blue" icon="clipboard-copy">
+                        <flux:button type="submit" variant="outline" color="blue" icon="clipboard-copy"
+                            wire:confirm="{{ __('Are you sure you want to copy this music plan?') }}"
+
+                        >
                             Másolat készítése
                         </flux:button>
                     </form>
