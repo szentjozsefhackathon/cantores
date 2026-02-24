@@ -22,7 +22,7 @@ test('music tag has correct icon and color for type', function () {
         'type' => MusicTagType::Instrument->value,
     ]);
 
-    expect($tag->icon())->toBe('music');
+    expect($tag->icon())->toBe('piano');
     expect($tag->color())->toBe('blue');
     expect($tag->typeLabel())->toBe(__('Instrument'));
 });

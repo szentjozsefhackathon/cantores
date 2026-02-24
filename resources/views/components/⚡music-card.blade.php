@@ -88,7 +88,7 @@ new class extends Component
                         class="!p-1"
                     />
                 @endcan
-                <div class="hidden sm:flex flex-col items-center gap-1">
+                <div class="flex flex-col items-center gap-1">
                 @foreach($music->genres as $genre)
                     <flux:icon name="{{ $genre->icon() }}" class="h-5 w-5 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
                 @endforeach
