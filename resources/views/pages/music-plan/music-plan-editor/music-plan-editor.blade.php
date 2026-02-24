@@ -161,7 +161,7 @@
                             </div>
 
                             <!-- Slot Search Component -->
-                            <livewire:music-plan-editor.slot-search lazy :music-plan="$musicPlan" />
+                            <livewire:music-plan-editor.slot-search defer :music-plan="$musicPlan" />
 
                             @if($showMusicSearchModal)
                             <!-- Music Search Modal -->
@@ -245,7 +245,7 @@
 
                             @forelse($planSlots as $slot)
                             <flux:card wire:key="slot-{{ $slot['pivot_id'] }}" class="p-2 {{ count($slot['assignments']) > 0 ? 'border-4' : '' }}">
-                                <div class="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
+                                <div class="grid grid-cols-1 gap-4 grid-cols-[1fr_auto]">
                                     <!-- Left column: sequence, name/description, and assignments -->
                                     <div class="space-y-4">
                                         <!-- First row: sequence and name/description -->
@@ -332,7 +332,7 @@
                                                     @endif
                                                 </div>
                                                 <div class="flex flex-col gap-2">
-                                                    <livewire:music-card :music="App\Models\Music::find($assignment['music_id'])" wire:loading />
+                                                    <livewire:music-card defer :music="App\Models\Music::find($assignment['music_id'])" wire:loading />
                                                     <div class="text-sm">
                                                     <x-mary-choices
                                                         placeholder="Címkék"
@@ -381,20 +381,7 @@
                                                         @if(empty($scope['type']) || empty($scope['number']))
                                                         <div class="flex gap-2 items-center">
                                                             <div class="flex-1">
-                                                                <flux:field variant="inline" class="mb-0">
-                                                                    <flux:label class="text-xs">Részlet szám</flux:label>
-                                                                    <flux:input
-                                                                        type="number"
-                                                                        min="1"
-                                                                        wire:model="assignmentScopes.{{ $assignment['id'] }}.{{ $index }}.number"
-                                                                        placeholder="pl. 1"
-                                                                        class="w-full"
-                                                                        size="sm" />
-                                                                </flux:field>
-                                                            </div>
-                                                            <div class="flex-1">
-                                                                <flux:field variant="inline" class="mb-0">
-                                                                    <flux:label class="text-xs">Részlet típus</flux:label>
+                                                                <flux:field variant="inline" class="mb-0">                                                                    
                                                                     <flux:select
                                                                         wire:model="assignmentScopes.{{ $assignment['id'] }}.{{ $index }}.type"
                                                                         placeholder="Válassz..."
@@ -405,6 +392,17 @@
                                                                         <flux:select.option value="{{ $option['value'] }}">{{ $option['label'] }}</flux:select.option>
                                                                         @endforeach
                                                                     </flux:select>
+                                                                </flux:field>
+                                                            </div>
+                                                            <div class="flex-1">
+                                                                <flux:field variant="inline" class="mb-0">
+                                                                    <flux:input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        wire:model="assignmentScopes.{{ $assignment['id'] }}.{{ $index }}.number"
+                                                                        placeholder="Szám, pl. 1"
+                                                                        class="w-full"
+                                                                        size="sm" />
                                                                 </flux:field>
                                                             </div>
                                                             <div class="pt-5 flex gap-1">
@@ -524,7 +522,7 @@
                             <x-mary-tabs class="mb-8" wire:model="activeTemplateTab" wire:key="template-tabs">
                                 <x-mary-tab name="template" label="Énekrend sablon">
                                     <div class="space-y-4">
-                                        <livewire:music-plan-editor.music-plan-template :templates="$availableTemplates" :musicPlan="$musicPlan" wire:key="template-component" />
+                                        <livewire:music-plan-editor.music-plan-template lazy :templates="$availableTemplates" :musicPlan="$musicPlan" wire:key="template-component" />
                                     </div>
                                 </x-mary-tab>
 
@@ -594,7 +592,7 @@
                 <flux:modal wire:model.self="showCelebrationSelector" title="Liturgikus ünnep kiválasztása" class="md:w-2xl">
                     <div class="flex flex-col gap-4">
                     <livewire:liturgical-info selectable />
-
+    
                     <div class="flex">
                         <flux:spacer />
                         <flux:button

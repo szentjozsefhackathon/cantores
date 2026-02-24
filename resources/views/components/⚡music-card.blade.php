@@ -26,6 +26,17 @@ new class extends Component
 }
 ?>
 
+@placeholder
+<flux:skeleton.group animate="shimmer" class="flex items-center gap-4">
+    <flux:skeleton class="size-10 rounded-full" />
+    <div class="flex-1">
+        <flux:skeleton.line />
+        <flux:skeleton.line class="w-1/2" />
+    </div>
+</flux:skeleton.group>
+@endplaceholder
+
+
 <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden max-w-[355px]">
     <!-- Header with title and custom ID -->
     <div class="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -55,7 +66,7 @@ new class extends Component
                     </div>
             </div>
             <div class="flex items-center gap-1">
-                <div class="flex-col items-center gap-1">
+                <div class="flex flex-col items-center gap-1">
                 @can('view', $music)
                     <flux:button
                         variant="ghost"
