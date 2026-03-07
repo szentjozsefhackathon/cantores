@@ -12,6 +12,8 @@ Route::view('dashboard', 'dashboard')
 
 Route::view('/about', 'pages.about')->name('about');
 
+Route::view('/guide', 'pages.guide')->name('guide');
+
 Route::view('/terms', 'pages.terms')->name('terms');
 Route::view('/privacy', 'pages.privacy')->name('privacy');
 

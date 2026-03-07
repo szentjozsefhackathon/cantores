@@ -31,12 +31,12 @@
                             <flux:button variant="primary" icon="home">{{ __('Dashboard') }}</flux:button>
                         </a>
                         
-                        <div class="flex items-center">
-                            <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="scale-75">
-                                <flux:radio value="light" icon="sun" aria-label="Light mode"></flux:radio>
-                                <flux:radio value="dark" icon="moon" aria-label="Dark mode"></flux:radio>
-                                <flux:radio value="system" icon="computer-desktop" aria-label="System preference"></flux:radio>
-                            </flux:radio.group>
+                        <div class="flex items-center" x-data="{ cycle() { const s = ['light','dark','system']; $flux.appearance = s[(s.indexOf($flux.appearance) + 1) % 3]; } }">
+                            <flux:button variant="ghost" square @click="cycle()" aria-label="Toggle appearance">
+                                <flux:icon x-show="$flux.appearance === 'light'" name="sun" variant="mini" />
+                                <flux:icon x-show="$flux.appearance === 'dark'" name="moon" variant="mini" />
+                                <flux:icon x-show="$flux.appearance === 'system'" name="computer-desktop" variant="mini" />
+                            </flux:button>
                         </div>
                     @else
                         <a href="{{ url('/about') }}" class="text-accent hover:underline font-medium text-sm">
@@ -60,12 +60,12 @@
                                 {{ __('Register') }}
                             </a>
                             
-                            <div class="flex items-center">
-                                <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="scale-75">
-                                    <flux:radio value="light" icon="sun" aria-label="Light mode"></flux:radio>
-                                    <flux:radio value="dark" icon="moon" aria-label="Dark mode"></flux:radio>
-                                    <flux:radio value="system" icon="computer-desktop" aria-label="System preference"></flux:radio>
-                                </flux:radio.group>
+                            <div class="flex items-center" x-data="{ cycle() { const s = ['light','dark','system']; $flux.appearance = s[(s.indexOf($flux.appearance) + 1) % 3]; } }">
+                                <flux:button variant="ghost" square @click="cycle()" aria-label="Toggle appearance">
+                                    <flux:icon x-show="$flux.appearance === 'light'" name="sun" variant="mini" />
+                                    <flux:icon x-show="$flux.appearance === 'dark'" name="moon" variant="mini" />
+                                    <flux:icon x-show="$flux.appearance === 'system'" name="computer-desktop" variant="mini" />
+                                </flux:button>
                             </div>
                         @endif
                     @endauth

@@ -16,17 +16,16 @@
     <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
         <flux:sidebar.header>
             <x-app-logo :sidebar="true" href="{{ route('home') }}" wire:navigate />
+            <!-- Dark Mode Switcher -->
+            <div x-data="{ cycle() { const s = ['light','dark','system']; $flux.appearance = s[(s.indexOf($flux.appearance) + 1) % 3]; } }">
+                <flux:button variant="ghost" square @click="cycle()" aria-label="Toggle appearance">
+                    <flux:icon x-show="$flux.appearance === 'light'" name="sun" variant="mini" />
+                    <flux:icon x-show="$flux.appearance === 'dark'" name="moon" variant="mini" />
+                    <flux:icon x-show="$flux.appearance === 'system'" name="computer-desktop" variant="mini" />
+                </flux:button>
+            </div>
             <flux:sidebar.collapse class="lg:hidden" />
         </flux:sidebar.header>
-
-        <!-- Dark Mode Switcher -->
-        <div>
-            <flux:radio.group x-data variant="segmented" x-model="$flux.appearance" class="w-full">
-                <flux:radio value="light" icon="sun" aria-label="Light mode"></flux:radio>
-                <flux:radio value="dark" icon="moon" aria-label="Dark mode"></flux:radio>
-                <flux:radio value="system" icon="computer-desktop" aria-label="System preference"></flux:radio>
-            </flux:radio.group>
-        </div>
 
         <!-- Genre Selector -->
         <div>
@@ -91,6 +90,10 @@
                 {{ __('Admin') }}
             </flux:sidebar.item>
             @endif
+
+            <flux:sidebar.item icon="information-circle" :href="route('guide')" :current="request()->routeIs('guide')" wire:navigate>
+                Útmutató
+            </flux:sidebar.item>
 
             <flux:sidebar.item
                 icon="envelope"
