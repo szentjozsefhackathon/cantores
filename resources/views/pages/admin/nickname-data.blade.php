@@ -2,16 +2,19 @@
 
 use App\Models\City;
 use App\Models\FirstName;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination;
 
 new class extends Component
 {
     use WithFileUploads;
+    use WithPagination;
 
-    public $cities;
+    public string $searchCities = '';
 
-    public $firstNames;
+    public string $searchFirstNames = '';
 
     public $selectedCities = [];
 
@@ -21,18 +24,39 @@ new class extends Component
 
     public $csvFileFirstNames;
 
-    public function mount()
+    public bool $showDeleteUnusedCitiesModal = false;
+
+    public bool $showDeleteUnusedFirstNamesModal = false;
+
+    public function updatedSearchCities(): void
     {
-        $this->loadData();
+        $this->resetPage('citiesPage');
+        $this->selectedCities = [];
     }
 
-    public function loadData()
+    public function updatedSearchFirstNames(): void
     {
-        $this->cities = City::allCached();
-        $this->firstNames = FirstName::allCached();
+        $this->resetPage('firstNamesPage');
+        $this->selectedFirstNames = [];
     }
 
-    public function uploadCitiesCsv()
+    public function getCitiesProperty()
+    {
+        return City::query()
+            ->when($this->searchCities, fn ($q, $s) => $q->where('name', 'ilike', "%{$s}%"))
+            ->orderBy('name')
+            ->paginate(50, pageName: 'citiesPage');
+    }
+
+    public function getFirstNamesProperty()
+    {
+        return FirstName::query()
+            ->when($this->searchFirstNames, fn ($q, $s) => $q->where('name', 'ilike', "%{$s}%"))
+            ->orderBy('name')
+            ->paginate(50, pageName: 'firstNamesPage');
+    }
+
+    public function uploadCitiesCsv(): void
     {
         $this->validate([
             'csvFileCities' => 'required|file|mimes:csv,txt|max:1024',
@@ -41,39 +65,31 @@ new class extends Component
         $path = $this->csvFileCities->getRealPath();
         $file = fopen($path, 'r');
 
-        $inserted = 0;
-        $skipped = 0;
-
+        $names = [];
         while (($line = fgetcsv($file)) !== false) {
             $name = trim($line[0] ?? '');
-            if (empty($name)) {
-                continue;
+            if (! empty($name)) {
+                $names[] = $name;
             }
-
-            // Skip if already exists
-            $exists = City::where('name', $name)->exists();
-            if ($exists) {
-                $skipped++;
-
-                continue;
-            }
-
-            City::create(['name' => $name]);
-            $inserted++;
         }
-
         fclose($file);
 
+        $existing = City::whereIn('name', $names)->pluck('name')->all();
+        $toInsert = array_values(array_unique(array_filter($names, fn ($n) => ! in_array($n, $existing))));
+
+        $now = now();
+        City::insert(array_map(fn ($n) => ['name' => $n, 'created_at' => $now, 'updated_at' => $now], $toInsert));
+
         $this->csvFileCities = null;
-        $this->loadData();
+        $this->resetPage('citiesPage');
 
         session()->flash('message', __('Cities CSV uploaded: :inserted inserted, :skipped skipped.', [
-            'inserted' => $inserted,
-            'skipped' => $skipped,
+            'inserted' => count($toInsert),
+            'skipped' => count($names) - count($toInsert),
         ]));
     }
 
-    public function uploadFirstNamesCsv()
+    public function uploadFirstNamesCsv(): void
     {
         $this->validate([
             'csvFileFirstNames' => 'required|file|mimes:csv,txt|max:1024',
@@ -82,47 +98,38 @@ new class extends Component
         $path = $this->csvFileFirstNames->getRealPath();
         $file = fopen($path, 'r');
 
-        $inserted = 0;
-        $skipped = 0;
-
+        $rows = [];
         while (($line = fgetcsv($file)) !== false) {
             $name = trim($line[0] ?? '');
             if (empty($name)) {
                 continue;
             }
-
-            $exists = FirstName::where('name', $name)->exists();
-            if ($exists) {
-                $skipped++;
-
-                continue;
-            }
-
             $gender = trim($line[1] ?? '');
             $allowedGenders = ['male', 'female'];
-            if (! in_array(strtolower($gender), $allowedGenders)) {
-                $gender = null;
-            }
-
-            FirstName::create([
-                'name' => $name,
-                'gender' => $gender,
-            ]);
-            $inserted++;
+            $rows[$name] = in_array(strtolower($gender), $allowedGenders) ? strtolower($gender) : null;
         }
-
         fclose($file);
 
+        $existing = FirstName::whereIn('name', array_keys($rows))->pluck('name')->all();
+        $toInsert = array_filter($rows, fn ($g, $n) => ! in_array($n, $existing), ARRAY_FILTER_USE_BOTH);
+
+        $now = now();
+        FirstName::insert(array_map(
+            fn ($n, $g) => ['name' => $n, 'gender' => $g, 'created_at' => $now, 'updated_at' => $now],
+            array_keys($toInsert),
+            array_values($toInsert)
+        ));
+
         $this->csvFileFirstNames = null;
-        $this->loadData();
+        $this->resetPage('firstNamesPage');
 
         session()->flash('message', __('First names CSV uploaded: :inserted inserted, :skipped skipped.', [
-            'inserted' => $inserted,
-            'skipped' => $skipped,
+            'inserted' => count($toInsert),
+            'skipped' => count($rows) - count($toInsert),
         ]));
     }
 
-    public function deleteSelectedCities()
+    public function deleteSelectedCities(): void
     {
         if (empty($this->selectedCities)) {
             return;
@@ -130,12 +137,12 @@ new class extends Component
 
         City::whereIn('id', $this->selectedCities)->delete();
         $this->selectedCities = [];
-        $this->loadData();
+        $this->resetPage('citiesPage');
 
         session()->flash('message', __('Selected cities deleted.'));
     }
 
-    public function deleteSelectedFirstNames()
+    public function deleteSelectedFirstNames(): void
     {
         if (empty($this->selectedFirstNames)) {
             return;
@@ -143,44 +150,88 @@ new class extends Component
 
         FirstName::whereIn('id', $this->selectedFirstNames)->delete();
         $this->selectedFirstNames = [];
-        $this->loadData();
+        $this->resetPage('firstNamesPage');
 
         session()->flash('message', __('Selected first names deleted.'));
     }
 
-    public function getSelectedCitiesAllProperty()
+    public function getUnusedCitiesCountProperty(): int
     {
-        if (empty($this->cities)) {
+        return City::query()
+            ->whereNotIn('id', DB::table('users')->select('city_id')->whereNotNull('city_id'))
+            ->count();
+    }
+
+    public function getUnusedFirstNamesCountProperty(): int
+    {
+        return FirstName::query()
+            ->whereNotIn('id', DB::table('users')->select('first_name_id')->whereNotNull('first_name_id'))
+            ->count();
+    }
+
+    public function deleteUnusedCities(): void
+    {
+        City::query()
+            ->whereNotIn('id', DB::table('users')->select('city_id')->whereNotNull('city_id'))
+            ->delete();
+
+        $this->showDeleteUnusedCitiesModal = false;
+        $this->selectedCities = [];
+        $this->resetPage('citiesPage');
+
+        session()->flash('message', __('Unused cities deleted.'));
+    }
+
+    public function deleteUnusedFirstNames(): void
+    {
+        FirstName::query()
+            ->whereNotIn('id', DB::table('users')->select('first_name_id')->whereNotNull('first_name_id'))
+            ->delete();
+
+        $this->showDeleteUnusedFirstNamesModal = false;
+        $this->selectedFirstNames = [];
+        $this->resetPage('firstNamesPage');
+
+        session()->flash('message', __('Unused first names deleted.'));
+    }
+
+    public function getSelectedCitiesAllProperty(): bool
+    {
+        $pageIds = $this->cities->pluck('id')->toArray();
+        if (empty($pageIds)) {
             return false;
         }
 
-        return count($this->selectedCities) === $this->cities->count();
+        return count(array_intersect($this->selectedCities, $pageIds)) === count($pageIds);
     }
 
-    public function setSelectedCitiesAllProperty($value)
+    public function setSelectedCitiesAllProperty(bool $value): void
     {
+        $pageIds = $this->cities->pluck('id')->toArray();
         if ($value) {
-            $this->selectedCities = $this->cities->pluck('id')->toArray();
+            $this->selectedCities = array_values(array_unique(array_merge($this->selectedCities, $pageIds)));
         } else {
-            $this->selectedCities = [];
+            $this->selectedCities = array_values(array_diff($this->selectedCities, $pageIds));
         }
     }
 
-    public function getSelectedFirstNamesAllProperty()
+    public function getSelectedFirstNamesAllProperty(): bool
     {
-        if (empty($this->firstNames)) {
+        $pageIds = $this->firstNames->pluck('id')->toArray();
+        if (empty($pageIds)) {
             return false;
         }
 
-        return count($this->selectedFirstNames) === $this->firstNames->count();
+        return count(array_intersect($this->selectedFirstNames, $pageIds)) === count($pageIds);
     }
 
-    public function setSelectedFirstNamesAllProperty($value)
+    public function setSelectedFirstNamesAllProperty(bool $value): void
     {
+        $pageIds = $this->firstNames->pluck('id')->toArray();
         if ($value) {
-            $this->selectedFirstNames = $this->firstNames->pluck('id')->toArray();
+            $this->selectedFirstNames = array_values(array_unique(array_merge($this->selectedFirstNames, $pageIds)));
         } else {
-            $this->selectedFirstNames = [];
+            $this->selectedFirstNames = array_values(array_diff($this->selectedFirstNames, $pageIds));
         }
     }
 };
@@ -203,7 +254,14 @@ new class extends Component
                     <flux:button variant="danger" wire:click="deleteSelectedCities" :disabled="empty($selectedCities)">
                         {{ __('Delete Selected') }}
                     </flux:button>
+                    <flux:button variant="danger" wire:click="$set('showDeleteUnusedCitiesModal', true)" :disabled="$this->unusedCitiesCount === 0">
+                        {{ __('Delete Unused') }} ({{ $this->unusedCitiesCount }})
+                    </flux:button>
                 </div>
+            </div>
+
+            <div class="mb-3">
+                <flux:input wire:model.live.debounce.300ms="searchCities" placeholder="{{ __('Search cities...') }}" icon="magnifying-glass" clearable />
             </div>
 
             <div class="border rounded-lg overflow-hidden">
@@ -218,8 +276,8 @@ new class extends Component
                         <flux:table.column>{{ __('Updated At') }}</flux:table.column>
                     </flux:table.columns>
                     <flux:table.rows>
-                        @forelse ($cities as $city)
-                            <flux:table.row>
+                        @forelse ($this->cities as $city)
+                            <flux:table.row wire:key="city-{{ $city->id }}">
                                 <flux:table.cell>
                                     <flux:checkbox wire:model.live="selectedCities" value="{{ $city->id }}" />
                                 </flux:table.cell>
@@ -238,6 +296,9 @@ new class extends Component
                     </flux:table.rows>
                 </flux:table>
             </div>
+            <div class="mt-4">
+                {{ $this->cities->links() }}
+            </div>
             <p class="mt-2 text-sm text-gray-600">{{ __('CSV must contain a single column with city names. Existing names are skipped.') }}</p>
         </div>
 
@@ -255,7 +316,14 @@ new class extends Component
                     <flux:button variant="danger" wire:click="deleteSelectedFirstNames" :disabled="empty($selectedFirstNames)">
                         {{ __('Delete Selected') }}
                     </flux:button>
+                    <flux:button variant="danger" wire:click="$set('showDeleteUnusedFirstNamesModal', true)" :disabled="$this->unusedFirstNamesCount === 0">
+                        {{ __('Delete Unused') }} ({{ $this->unusedFirstNamesCount }})
+                    </flux:button>
                 </div>
+            </div>
+
+            <div class="mb-3">
+                <flux:input wire:model.live.debounce.300ms="searchFirstNames" placeholder="{{ __('Search first names...') }}" icon="magnifying-glass" clearable />
             </div>
 
             <div class="border rounded-lg overflow-hidden">
@@ -271,8 +339,8 @@ new class extends Component
                         <flux:table.column>{{ __('Updated At') }}</flux:table.column>
                     </flux:table.columns>
                     <flux:table.rows>
-                        @forelse ($firstNames as $firstName)
-                            <flux:table.row>
+                        @forelse ($this->firstNames as $firstName)
+                            <flux:table.row wire:key="firstname-{{ $firstName->id }}">
                                 <flux:table.cell>
                                     <flux:checkbox wire:model.live="selectedFirstNames" value="{{ $firstName->id }}" />
                                 </flux:table.cell>
@@ -292,8 +360,35 @@ new class extends Component
                     </flux:table.rows>
                 </flux:table>
             </div>
+            <div class="mt-4">
+                {{ $this->firstNames->links() }}
+            </div>
             <p class="mt-2 text-sm text-gray-600">{{ __('CSV must contain two columns: first name and gender (male/female). Gender is optional. Existing names are skipped.') }}</p>
         </div>
     </div>
+
+    <flux:modal wire:model="showDeleteUnusedCitiesModal" size="sm">
+        <flux:heading>{{ __('Delete Unused Cities') }}</flux:heading>
+        <flux:subheading>
+            {{ __('This will permanently delete :count cities not assigned to any user. This action cannot be undone.', ['count' => $this->unusedCitiesCount]) }}
+        </flux:subheading>
+        <flux:separator />
+        <div class="flex gap-2">
+            <flux:button variant="danger" wire:click="deleteUnusedCities">{{ __('Delete') }}</flux:button>
+            <flux:button variant="ghost" wire:click="$set('showDeleteUnusedCitiesModal', false)">{{ __('Cancel') }}</flux:button>
+        </div>
+    </flux:modal>
+
+    <flux:modal wire:model="showDeleteUnusedFirstNamesModal" size="sm">
+        <flux:heading>{{ __('Delete Unused First Names') }}</flux:heading>
+        <flux:subheading>
+            {{ __('This will permanently delete :count first names not assigned to any user. This action cannot be undone.', ['count' => $this->unusedFirstNamesCount]) }}
+        </flux:subheading>
+        <flux:separator />
+        <div class="flex gap-2">
+            <flux:button variant="danger" wire:click="deleteUnusedFirstNames">{{ __('Delete') }}</flux:button>
+            <flux:button variant="ghost" wire:click="$set('showDeleteUnusedFirstNamesModal', false)">{{ __('Cancel') }}</flux:button>
+        </div>
+    </flux:modal>
 
 </x-pages::admin.layout>
