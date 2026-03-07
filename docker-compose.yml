@@ -28,7 +28,7 @@ services:
     ports:
       - "${APP_EXTERNAL_PORT:-8080}:80"
       - "${XDEBUG_EXTERNAL_PORT:-9003}:9003"
-      - "5173:5173" # This is for vite, it is not configurable, only together with vite.config.js
+      - "${VITE_EXTERNAL_PORT:-5173}:5173"
     depends_on:
       app_dev_prepopulate:
         condition: service_completed_successfully
@@ -53,7 +53,7 @@ services:
     ports:
       - "${POSTGRES_EXTERNAL_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U homestead -d bible"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE} -p 5432"]
       start_period: 1m
       interval: 10s
       timeout: 5s
