@@ -92,7 +92,7 @@ new class extends Component
                 'celebrations',
                 'musicAssignments.music' => fn($q) => $q->visibleTo($user),
                 'musicAssignments.music.collections' => fn($q) => $q->visibleTo($user),
-                'musicAssignments.musicPlanSlot' => fn($q) => $q->visibleToUser($user),
+                'musicAssignments.musicPlanSlotPlan.musicPlanSlot' => fn($q) => $q->visibleToUser($user),
             ])
             ->withCount('celebrations');
 
@@ -138,7 +138,7 @@ new class extends Component
 
             // Iterate through assignments
             foreach ($musicPlan->musicAssignments as $assignment) {
-                $slot = $assignment->musicPlanSlot;
+                $slot = $assignment->musicPlanSlotPlan?->musicPlanSlot;
                 if (! $slot) {
                     continue;
                 }

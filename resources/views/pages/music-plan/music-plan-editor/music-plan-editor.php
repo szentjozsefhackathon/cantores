@@ -705,7 +705,7 @@ new class extends Component
 
         $currentSlotPlanId = $assignment->music_plan_slot_plan_id;
 
-        DB::transaction(function () use ($assignment, $targetSlotPlanId, $currentSlotPlanId) {
+        DB::transaction(function () use ($assignment, $targetSlotPlan, $targetSlotPlanId, $currentSlotPlanId) {
             // Get the max music_sequence in the target slot
             $maxMusicSequence = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $targetSlotPlanId)
                 ->max('music_sequence');
@@ -717,6 +717,7 @@ new class extends Component
             // Update the assignment to the new slot
             $assignment->update([
                 'music_plan_slot_plan_id' => $targetSlotPlanId,
+                'music_plan_slot_id' => $targetSlotPlan->music_plan_slot_id,
                 'music_sequence' => $newMusicSequence,
             ]);
 
