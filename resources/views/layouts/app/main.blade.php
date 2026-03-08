@@ -13,11 +13,22 @@
     <body class="min-h-screen bg-white antialiased dark:bg-linear-to-b dark:from-neutral-950 dark:to-neutral-900">
         <header class="w-full lg:max-w-4xl mx-auto flex items-center justify-between text-sm mb-6">
             <div class="flex items-center gap-4">
-                <flux:brand name="Cantores.hu" {{ $attributes }}>
-                    <x-slot name="logo" class="flex aspect-square size-8 items-center justify-center rounded-md text-accent-foreground">
-                        <x-app-logo-icon class="fill-current text-white dark:text-black" />
-                    </x-slot>
-                </flux:brand>
+                {{-- Mobile: icon only --}}
+                <div class="lg:hidden">
+                    <flux:brand {{ $attributes }}>
+                        <x-slot name="logo" class="flex aspect-square size-8 items-center justify-center rounded-md text-accent-foreground">
+                            <x-app-logo-icon class="fill-current text-white dark:text-black" />
+                        </x-slot>
+                    </flux:brand>
+                </div>
+                {{-- Desktop: icon + name --}}
+                <div class="hidden lg:block">
+                    <flux:brand name="Cantores.hu" {{ $attributes }}>
+                        <x-slot name="logo" class="flex aspect-square size-8 items-center justify-center rounded-md text-accent-foreground">
+                            <x-app-logo-icon class="fill-current text-white dark:text-black" />
+                        </x-slot>
+                    </flux:brand>
+                </div>
             </div>
             @if (Route::has('login'))
                 <!-- Desktop navigation (hidden on mobile) -->
@@ -72,7 +83,12 @@
                 </nav>
         
                 <!-- Mobile hamburger menu (visible on mobile) -->
-                <div class="lg:hidden">
+                <div class="lg:hidden flex items-center gap-2">
+                    @auth
+                        <a href="{{ url('/dashboard') }}">
+                            <flux:button variant="primary" icon="home" size="sm">Irányítópult</flux:button>
+                        </a>
+                    @endauth
                     <flux:dropdown align="end">
                         <flux:button variant="ghost" square icon="bars-3" aria-label="Menu" />
                         <flux:menu>

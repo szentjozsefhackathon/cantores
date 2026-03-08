@@ -17,8 +17,8 @@ test('registration screen can be rendered', function () {
     $response = $this->get(route('register'));
 
     $response->assertOk();
-    $response->assertSee(__('Select a city'));
-    $response->assertSee(__('Select a first name'));
+    $response->assertSee(__('Nickname'));
+    $response->assertSee(__('Random nickname'));
 });
 
 test('new users can register', function () {

@@ -89,44 +89,20 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::twoFactorChallengeView(fn () => view('pages::auth.two-factor-challenge'));
         Fortify::confirmPasswordView(fn () => view('pages::auth.confirm-password'));
         Fortify::registerView(function () {
-            $cities = \App\Models\City::allCached();
-            $firstNames = \App\Models\FirstName::allCached();
-
-            // Get used combinations
-            $usedCombinations = \App\Models\User::select('city_id', 'first_name_id')
-                ->get()
-                ->map(fn ($user) => $user->city_id.'_'.$user->first_name_id)
-                ->toArray();
-
-            // Find a random available combination
-            $selectedCityId = null;
-            $selectedFirstNameId = null;
-            $availableCombinations = [];
-
-            foreach ($cities as $city) {
-                foreach ($firstNames as $firstName) {
-                    $key = $city->id.'_'.$firstName->id;
-                    if (! in_array($key, $usedCombinations)) {
-                        $availableCombinations[] = ['city_id' => $city->id, 'first_name_id' => $firstName->id];
-                    }
-                }
-            }
-
-            if (! empty($availableCombinations)) {
-                $random = $availableCombinations[array_rand($availableCombinations)];
-                $selectedCityId = $random['city_id'];
-                $selectedFirstNameId = $random['first_name_id'];
-            } else {
-                // If all combinations are used, fallback to random city and first name
-                $selectedCityId = $cities->isNotEmpty() ? $cities->random()->id : null;
-                $selectedFirstNameId = $firstNames->isNotEmpty() ? $firstNames->random()->id : null;
-            }
+            $pick = \Illuminate\Support\Facades\DB::selectOne('
+                SELECT c.id AS city_id, fn.id AS first_name_id
+                FROM cities c
+                CROSS JOIN first_names fn
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM users u WHERE u.city_id = c.id AND u.first_name_id = fn.id
+                )
+                ORDER BY RANDOM()
+                LIMIT 1
+            ');
 
             return view('pages::auth.register', [
-                'cities' => $cities,
-                'firstNames' => $firstNames,
-                'selectedCityId' => old('city_id', $selectedCityId),
-                'selectedFirstNameId' => old('first_name_id', $selectedFirstNameId),
+                'selectedCityId' => old('city_id', $pick?->city_id),
+                'selectedFirstNameId' => old('first_name_id', $pick?->first_name_id),
             ]);
         });
         Fortify::resetPasswordView(fn () => view('pages::auth.reset-password'));
