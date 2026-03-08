@@ -29,9 +29,33 @@
 
         <!-- Genre Selector -->
         <div>
-            <flux:text class="text-sm text-neutral-500 dark:text-neutral-400">
-                Műfaj
-            </flux:text>
+            <div class="flex items-center gap-1">
+                <flux:text class="text-sm text-neutral-500 dark:text-neutral-400">
+                    Műfaj
+                </flux:text>
+                <flux:dropdown position="right" align="start">
+                    <flux:button variant="ghost" square class="size-5! text-neutral-400 dark:text-neutral-500" aria-label="Műfajok leírása">
+                        <flux:icon name="information-circle" variant="mini" class="size-4!" />
+                    </flux:button>
+                    <flux:menu class="w-56 p-3">
+                        <flux:text class="mb-2 text-xs font-semibold">Műfaj ikonok</flux:text>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <flux:icon name="organist" class="size-4 shrink-0 text-blue-500" />
+                                <flux:text class="text-xs">{{ __('Organist') }} - Gregorián, népénekes stb.</flux:text>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <flux:icon name="guitar" class="size-4 shrink-0 text-green-500" />
+                                <flux:text class="text-xs">{{ __('Guitarist') }} - Gitáros, könnyűzenei stb.</flux:text>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <flux:icon name="landmark" variant="mini" class="size-4 shrink-0 text-neutral-500 dark:text-neutral-400" />
+                                <flux:text class="text-xs">{{ __('Other') }} - Egyéb, szimfonikus zenekar stb.</flux:text>
+                            </div>
+                        </div>
+                    </flux:menu>
+                </flux:dropdown>
+            </div>
             <div>
                 <livewire:genre-selector />
             </div>
