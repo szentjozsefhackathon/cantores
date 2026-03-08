@@ -168,12 +168,10 @@
                         <flux:table.columns>
                             <flux:table.column></flux:table.column>
                             <flux:table.column>{{ __('Title') }}</flux:table.column>
-                            <flux:table.column>{{ __('Collections') }}</flux:table.column>
-                            <flux:table.column>{{ __('Authors') }}</flux:table.column>
-                            <flux:table.column>{{ __('Custom ID') }}</flux:table.column>
-                            <flux:table.column>{{ __('Genres') }}</flux:table.column>
+                            <flux:table.column>{{ __('Collection') }}</flux:table.column>
+                            <flux:table.column>{{ __('Genre') }}</flux:table.column>
                             <flux:table.column>{{ __('Tags') }}</flux:table.column>
-                            <flux:table.column>{{ __('Privacy') }}</flux:table.column>
+                            <flux:table.column><flux:icon name="globe" class="h-4 w-4" /></flux:table.column>
                             <flux:table.column>{{ __('Actions') }}</flux:table.column>
                         </flux:table.columns>
 
@@ -196,6 +194,16 @@
                                         @if ($music->subtitle)
                                         <div class="text-sm text-gray-600 dark:text-gray-400">{{ $music->subtitle }}</div>
                                         @endif
+                                        @if ($music->authors->isNotEmpty())
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                            {{ $music->authors->pluck('name')->join(', ') }}
+                                        </div>
+                                        @endif
+                                        @if ($music->custom_id)
+                                        <div class="font-mono text-xs text-gray-400 dark:text-gray-500">
+                                            {{ $music->custom_id }}
+                                        </div>
+                                        @endif
                                     </div>
                                 </flux:table.cell>
 
@@ -209,27 +217,6 @@
                                         <span class="text-gray-400 dark:text-gray-500 text-sm">{{ __('None') }}</span>
                                         @endforelse
                                     </div>
-                                </flux:table.cell>
-
-                                <flux:table.cell>
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        @forelse ($music->authors as $author)
-                                        <flux:badge size="sm">
-                                            {{ $author->name }}
-                                        </flux:badge>
-                                        @empty
-                                        <span class="text-gray-400 dark:text-gray-500 text-sm">{{ __('None') }}</span>
-                                        @endforelse
-                                    </div>
-                                </flux:table.cell>
-
-                                <flux:table.cell>
-                                    @if ($music->custom_id)
-                                    <div class="font-mono text-sm text-gray-600 dark:text-gray-400">
-                                        {{ $music->custom_id }}
-                                    </div>
-                                    @else
-                                    @endif
                                 </flux:table.cell>
 
                                 <flux:table.cell>
