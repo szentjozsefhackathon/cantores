@@ -4,6 +4,7 @@ use App\Concerns\HasMusicSearchScopes;
 use App\Models\Author;
 use App\Models\Collection;
 use App\Models\Music;
+use App\Models\MusicTag;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\On;
@@ -27,6 +28,8 @@ return new class extends Component
     public string $authorFilter = '';
 
     public string $authorFreeText = '';
+
+    public array $tagFilters = [];
 
     public bool $selectable = false;
 
@@ -88,6 +91,14 @@ return new class extends Component
     }
 
     /**
+     * Reset pagination when tag filters change.
+     */
+    public function updatingTagFilters(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
      * Handle genre change event.
      */
     #[On('genre-changed')]
@@ -102,6 +113,14 @@ return new class extends Component
     public function selectMusic($musicId): void
     {
         $this->dispatch("music-selected{$this->source}", musicId: (int) $musicId);
+    }
+
+    /**
+     * Get available tags for the filter.
+     */
+    public function getTagsProperty()
+    {
+        return MusicTag::orderBy('name')->get();
     }
 
     /**
