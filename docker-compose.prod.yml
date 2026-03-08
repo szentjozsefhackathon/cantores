@@ -3,6 +3,7 @@ name: creshu-prod
 services:
   traefik:
     image: traefik:v3.3
+    mem_limit: 160m
     env_file:
       - path: ./.env.prod      
     command:
@@ -45,6 +46,7 @@ services:
     restart: "no"
   app:
     image: creshu-app-prod
+    mem_limit: 768m
     build:
       context: .
       dockerfile: Dockerfile.prod
@@ -80,6 +82,7 @@ services:
       - internal
   database:
     image: pgvector/pgvector:pg17
+    mem_limit: 512m
     env_file:
       - ./.env.prod # for the database credentials
     networks:
@@ -95,8 +98,9 @@ services:
       retries: 3      
   memcached:
     image: memcached:1.6
+    mem_limit: 128m
     command:
-      - --memory-limit=128
+      - --memory-limit=96
     networks:
       - internal
 volumes:
