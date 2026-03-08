@@ -29,6 +29,17 @@ new #[Layout('layouts::app.main')] class extends Component
 
     public string $activeTab = 'music';
 
+    public function boot(): void
+    {
+        if (! isset($this->celebrationsWithScores)) {
+            $this->celebrationsWithScores = collect();
+        }
+
+        if (! isset($this->musicPlans)) {
+            $this->musicPlans = collect();
+        }
+    }
+
     public string $activePartTab = 'part-0';
 
     public string $activePart2Tab = 'part2-0';

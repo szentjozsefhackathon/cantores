@@ -25,6 +25,17 @@ new class extends Component
 
     public string $activeTab = 'music';
 
+    public function boot(): void
+    {
+        if (! isset($this->celebrationsWithScores)) {
+            $this->celebrationsWithScores = collect();
+        }
+
+        if (! isset($this->musicPlans)) {
+            $this->musicPlans = collect();
+        }
+    }
+
     public ?int $musicPlanId = null;
 
     public function mount(array $criteria = [], ?int $musicPlanId = null): void
