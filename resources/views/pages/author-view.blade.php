@@ -1,16 +1,5 @@
 <div class="py-8">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <!-- Back button -->
-        <div class="mb-6">
-            <flux:button
-                variant="ghost"
-                icon="arrow-left"
-                :href="route('music-plans')"
-                tag="a"
-            >
-                {{ __('Back to Music Plans') }}
-            </flux:button>
-        </div>
 
         <flux:card class="p-5">
             <div class="flex items-center justify-between gap-4 mb-6">
@@ -107,9 +96,6 @@
                     {{ __('Edit Author') }}
                 </flux:button>
             @endcan
-            <flux:button variant="outline" color="zinc" icon="arrow-left" href="{{ route('music-plans') }}">
-                {{ __('Back to Music Plans') }}
-            </flux:button>
         </div>
         @endauth
     </div>

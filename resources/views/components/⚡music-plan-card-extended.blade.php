@@ -154,7 +154,6 @@ new class extends Component
         <!-- Private notes (owner only) -->
         @if($isOwner && $musicPlan->private_notes)
         <div class="pt-1 border-t border-gray-200 dark:border-gray-700">
-            <flux:heading size="xs" class="text-neutral-600 dark:text-neutral-400 mb-0.5">Privát megjegyzéseid</flux:heading>
             <flux:text class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
                 {{ Str::limit($musicPlan->private_notes, 150) }}
             </flux:text>

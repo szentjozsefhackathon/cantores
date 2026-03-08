@@ -1,6 +1,6 @@
 <div class="py-8">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <flux:card class="p-5">
+        <flux:card class="p-2 lg:p-4">
             <!-- Header -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div class="flex items-center gap-4">
@@ -100,7 +100,7 @@
                             </div>
 
                             <!-- Music plans for this celebration -->
-                            <div class="p-6">
+                            <div class="p-1 md:p-4">
                                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                     @foreach($celebration->musicPlans as $plan)
                                         <livewire:music-plan-card-extended :musicPlan="$plan" :key="$plan->id" />
