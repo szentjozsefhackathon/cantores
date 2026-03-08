@@ -160,9 +160,9 @@ test('cancels URL editing', function () {
 
 test('requires authorization to add URL', function () {
     $otherUser = User::factory()->create();
-    $this->actingAs($otherUser);
 
-    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
+    Livewire::actingAs($otherUser)
+        ->test('pages::editor.music-editor', ['music' => $this->music])
         ->set('newUrlLabel', 'sheet_music')
         ->set('newUrl', 'https://example.com/music.pdf')
         ->call('addUrl')
@@ -181,10 +181,10 @@ test('requires authorization to edit URL', function () {
 
 test('requires authorization to delete URL', function () {
     $otherUser = User::factory()->create();
-    $this->actingAs($otherUser);
     $url = MusicUrl::factory()->create(['music_id' => $this->music->id]);
 
-    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
+    Livewire::actingAs($otherUser)
+        ->test('pages::editor.music-editor', ['music' => $this->music])
         ->call('deleteUrl', $url->id)
         ->assertForbidden();
 });

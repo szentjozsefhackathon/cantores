@@ -24,7 +24,23 @@ services:
       - letsencrypt:/letsencrypt
     networks:
       - traefik
-      - default
+  migrator:
+    image: creshu-app-prod
+    user: "33:33" # www-data
+    mem_limit: 256m
+    env_file:
+      - path: ./.env.prod
+        required: false
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - internal
+    entrypoint: []
+    command: php artisan migrate -n --force
+    restart: "no"
   app:
     image: creshu-app-prod
     build:
@@ -34,7 +50,7 @@ services:
         - GIT_COMMIT_HASH=${GIT_COMMIT_HASH:-}
     # Use this when building: GIT_COMMIT_HASH=$(git rev-parse HEAD) docker compose ...
     env_file:
-      - path: ./.creshu.prod # write your customizations here - these are used as environment variables, not from the file inside the container
+      - path: ./.env.prod # write your customizations here - these are used as environment variables, not from the file inside the container
         required: false
     volumes:
       - storage:/var/www/html/storage
@@ -42,26 +58,29 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     labels:
       - traefik.enable=true
       - traefik.http.routers.myapp.rule=Host(`${APP_DOMAIN}`) || Host(`www.${APP_DOMAIN}`)
       - traefik.http.services.myapp.loadbalancer.server.port=80
       - traefik.http.middlewares.mywwwredirect.redirectregex.regex=^https://www\.(.*)
       - traefik.http.middlewares.mywwwredirect.redirectregex.replacement=https://$${1}
-      - traefik.http.routers.myapp.middlewares=mywwwredirect,hsts
-      - traefik.http.middlewares.myapp.compress=true
+      - traefik.http.routers.myapp.middlewares=mywwwredirect,hsts,compress
+      - traefik.http.routers.myapp.priority=10
+      - traefik.http.middlewares.compress.compress=true
       - traefik.http.middlewares.hsts.headers.stsSeconds=31536000
       - traefik.http.middlewares.hsts.headers.stsIncludeSubdomains=true
-      - traefik.http.middlewares.hsts.headers.stsPreload=true
-      
+      - traefik.http.middlewares.hsts.headers.stsPreload=true      
     networks:
       - traefik
+      - internal
   database:
     image: pgvector/pgvector:pg17
     env_file:
-      - ./.creshu.prod # for the database credentials
+      - ./.env.prod # for the database credentials
     networks:
-      - traefik
+      - internal
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./docker/database:/docker-entrypoint-initdb.d
@@ -76,10 +95,11 @@ services:
     command:
       - --memory-limit=128
     networks:
-      - traefik
+      - internal
 volumes:
   db-data:
   storage:
   letsencrypt:
 networks:
   traefik:
+  internal:

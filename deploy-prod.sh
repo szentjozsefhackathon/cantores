@@ -18,6 +18,22 @@ DEPLOY_USER=${DEPLOY_USER:-deploy}
 DEPLOY_REMOTE_PATH=${DEPLOY_REMOTE_PATH:-/tmp/}
 SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/deploy}
 
+# Parse command line arguments
+EXEC=0
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -e|--exec)
+            EXEC=1
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [-e|--exec]"
+            exit 1
+            ;;
+    esac
+done
+
 # Get git short hash for filename
 if git rev-parse --git-dir > /dev/null 2>&1; then
     GIT_SHORT_HASH=$(git rev-parse --short HEAD)
@@ -51,25 +67,46 @@ if [ -f "$SSH_KEY_PATH" ]; then
 fi
 SSH_TARGET="$DEPLOY_USER@$DEPLOY_SERVER"
 
-# 1. Upload the Docker image
-echo "1. Uploading Docker image..."
+# 1. Check if remote directory exists, create if needed
+echo "1. Checking remote directory..."
+$SSH_CMD "$SSH_TARGET" "mkdir -p $DEPLOY_REMOTE_PATH"
+
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to create remote directory!"
+    exit 1
+fi
+echo "   ✅ Remote directory ready: $DEPLOY_REMOTE_PATH"
+
+# 2. Upload the Docker image (only if not already present with same size)
+echo "2. Uploading Docker image..."
 SCP_CMD="scp -P $DEPLOY_PORT"
 if [ -f "$SSH_KEY_PATH" ]; then
     SCP_CMD="$SCP_CMD -i $SSH_KEY_PATH"
 fi
 
-echo "   Executing: $SCP_CMD $LOCAL_FILE_PATH $SSH_TARGET:$DEPLOY_REMOTE_PATH"
-$SCP_CMD "$LOCAL_FILE_PATH" "$SSH_TARGET:$DEPLOY_REMOTE_PATH"
+# Get local file size
+LOCAL_FILE_SIZE=$(stat -f%z "$LOCAL_FILE_PATH" 2>/dev/null || stat -c%s "$LOCAL_FILE_PATH" 2>/dev/null)
 
-if [ $? -ne 0 ]; then
-    echo "❌ Upload failed!"
-    exit 1
-fi
-echo "   ✅ Upload successful"
-
-# 2. Load Docker image on server
-echo "2. Loading Docker image on server..."
+# Check if remote file exists and compare sizes
 REMOTE_FILE_PATH="$DEPLOY_REMOTE_PATH/$FILE_NAME"
+REMOTE_FILE_SIZE=$($SSH_CMD "$SSH_TARGET" "if [ -f $REMOTE_FILE_PATH ]; then stat -f%z $REMOTE_FILE_PATH 2>/dev/null || stat -c%s $REMOTE_FILE_PATH 2>/dev/null; else echo '0'; fi")
+
+if [ "$LOCAL_FILE_SIZE" = "$REMOTE_FILE_SIZE" ] && [ "$REMOTE_FILE_SIZE" != "0" ]; then
+    echo "   ℹ️  File already uploaded (same name and size: $REMOTE_FILE_SIZE bytes)"
+    echo "   Skipping upload..."
+else
+    echo "   Uploading: $LOCAL_FILE_PATH ($LOCAL_FILE_SIZE bytes)"
+    $SCP_CMD "$LOCAL_FILE_PATH" "$SSH_TARGET:$DEPLOY_REMOTE_PATH"
+
+    if [ $? -ne 0 ]; then
+        echo "❌ Upload failed!"
+        exit 1
+    fi
+    echo "   ✅ Upload successful"
+fi
+
+# 3. Load Docker image on server
+echo "3. Loading Docker image on server..."
 $SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker load -i $FILE_NAME"
 
 if [ $? -ne 0 ]; then
@@ -78,8 +115,8 @@ if [ $? -ne 0 ]; then
 fi
 echo "   ✅ Docker image loaded"
 
-# 3. Check for .env.prod on server
-echo "3. Checking for environment configuration..."
+# 4. Check for .env.prod on server
+echo "4. Checking for environment configuration..."
 ENV_CHECK=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && if [ -f .env.prod ]; then echo 'exists'; else echo 'missing'; fi")
 
 if [ "$ENV_CHECK" = "missing" ]; then
@@ -89,8 +126,8 @@ if [ "$ENV_CHECK" = "missing" ]; then
     echo "     scp -P $DEPLOY_PORT .env.prod $SSH_TARGET:$DEPLOY_REMOTE_PATH/"
 fi
 
-# 4. Check for docker-compose.prod.yml on server
-echo "4. Ensuring docker-compose.prod.yml exists on server..."
+# 5. Check for docker-compose.prod.yml on server
+echo "5. Ensuring docker-compose.prod.yml is up to date on server..."
 COMPOSE_CHECK=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && if [ -f docker-compose.prod.yml ]; then echo 'exists'; else echo 'missing'; fi")
 
 if [ "$COMPOSE_CHECK" = "missing" ]; then
@@ -98,27 +135,83 @@ if [ "$COMPOSE_CHECK" = "missing" ]; then
     $SCP_CMD "docker-compose.prod.yml" "$SSH_TARGET:$DEPLOY_REMOTE_PATH/"
     echo "   ✅ docker-compose.prod.yml uploaded"
 else
-    echo "   ✅ docker-compose.prod.yml already exists"
+    # Compare local and remote checksums
+    LOCAL_CHECKSUM=$(md5sum docker-compose.prod.yml | awk '{print $1}')
+    REMOTE_CHECKSUM=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && md5sum docker-compose.prod.yml | awk '{print \$1}'")
+    
+    if [ "$LOCAL_CHECKSUM" != "$REMOTE_CHECKSUM" ]; then
+        echo "   ⚠️  Local docker-compose.prod.yml differs from remote version"
+        echo "   Local checksum:  $LOCAL_CHECKSUM"
+        echo "   Remote checksum: $REMOTE_CHECKSUM"
+        echo
+        read -p "   Upload and use local version? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo "   Uploading docker-compose.prod.yml..."
+            $SCP_CMD "docker-compose.prod.yml" "$SSH_TARGET:$DEPLOY_REMOTE_PATH/"
+            echo "   ✅ docker-compose.prod.yml uploaded"
+        else
+            echo "   ❌ Deployment aborted: docker-compose.prod.yml mismatch"
+            exit 1
+        fi
+    else
+        echo "   ✅ docker-compose.prod.yml is up to date"
+    fi
 fi
 
-# 5. Stop and remove existing containers
-echo "5. Stopping existing containers..."
-$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true"
-echo "   ✅ Existing containers stopped"
+# 6. Restart app services (keep traefik running to minimise downtime)
+echo "6. Restarting app services (traefik kept running)..."
 
-# 6. Start new containers with .env.prod
-echo "6. Starting new containers with .env.prod..."
-$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && APP_DOMAIN=cantores.hu docker compose -f docker-compose.prod.yml --env-file .env.prod up -d"
+# Put application into maintenance mode before fiddling with the services to prevent errors for users during the transition. If app container isn't running, just continue with the deploy.
+echo "   Putting application into maintenance mode..."
+$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml exec -T app php artisan down 2>/dev/null || echo '   ℹ️  App container not running or already in maintenance mode'"
+
+# Bring up infrastructure services first (database, redis, sphinx) if not already running
+$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && APP_DOMAIN=cantores.hu docker compose -f docker-compose.prod.yml --env-file .env.prod up -d database memcached"
+
+# Stop only the app-layer containers so traefik keeps serving (returns 502 briefly, not 404)
+$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml stop app 2>/dev/null || true"
+$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml rm -f app 2>/dev/null || true"
+
+# Run migrations before starting app-layer services
+$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && APP_DOMAIN=cantores.hu docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm --no-deps migrator"
+
+if [ $? -ne 0 ]; then
+    echo "❌ Migrations failed! Aborting deployment."
+    exit 1
+fi
+echo "   ✅ Migrations complete"
+
+$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && APP_DOMAIN=cantores.hu docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps app"
 
 if [ $? -ne 0 ]; then
     echo "❌ Docker compose up failed!"
-    echo "   Check logs with: ssh -p $DEPLOY_PORT $SSH_TARGET 'cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml logs'"
+    echo "   Check logs with: ssh -p $DEPLOY_PORT $SSH_TARGET 'cd $DEPLOY_REMOTE_PATH && docker compose logs'"
     exit 1
 fi
+
+# Remove orphaned containers from previous deploys (but not traefik)
+$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && APP_DOMAIN=cantores.hu docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans 2>/dev/null || true"
+
 echo "   ✅ Containers started successfully"
 
-# 7. Verify services are running
-echo "7. Verifying services..."
+# Bring application out of maintenance mode
+echo "   Bringing application out of maintenance mode..."
+for i in {1..10}; do
+    if $SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml exec -T app php artisan up 2>/dev/null"; then
+        echo "   ✅ Maintenance mode disabled"
+        break
+    else
+        if [ $i -eq 10 ]; then
+            echo "   ⚠️  Failed to disable maintenance mode after 10 attempts"
+        else
+            sleep 3
+        fi
+    fi
+done
+
+# 8. Verify services are running
+echo "8. Verifying services..."
 sleep 5
 SERVICES=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml ps --services")
 echo "   Running services:"
@@ -126,6 +219,13 @@ for service in $SERVICES; do
     STATUS=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml ps $service --format '{{.Status}}'")
     echo "   - $service: $STATUS"
 done
+
+if [ $EXEC -eq 1 ]; then
+    echo
+    echo "=== Executing into container app ==="
+    SSH_TTY_CMD="$SSH_CMD -t"
+    $SSH_TTY_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml exec app bash"
+fi
 
 echo
 echo "=== Deployment Complete ==="
