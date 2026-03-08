@@ -89,7 +89,7 @@ class MusicPlanShareModal extends Component
 
         // Date and liturgical info
         if ($musicPlan->actual_date) {
-        $text .= '📅 Dátum: '.$musicPlan->actual_date->translatedFormat('Y. F j.')."\n";
+            $text .= '📅 Dátum: '.$musicPlan->actual_date->translatedFormat('Y. F j.')."\n";
         }
 
         if ($firstCelebration && $firstCelebration->year_letter) {
@@ -177,7 +177,7 @@ class MusicPlanShareModal extends Component
         // Footer
         $text .= "═══════════════════════════════════════\n";
         if ($musicPlan->user) {
-            $text .= 'Készítette: '.$musicPlan->user->name."\n";
+            $text .= 'Készítette: '.$musicPlan->user->display_name."\n";
         }
         $text .= 'Létrehozva: '.$musicPlan->created_at->translatedFormat('Y. m. d.')."\n";
 
@@ -186,7 +186,7 @@ class MusicPlanShareModal extends Component
 
     public function render()
     {
-        
+
         return view('music-plan-share-modal');
     }
 }
