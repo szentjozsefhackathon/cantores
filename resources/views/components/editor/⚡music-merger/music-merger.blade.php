@@ -82,27 +82,46 @@
 
     <!-- Compare button (when both selected) -->
     @if ($leftMusic && $rightMusic)
-    <div class="mt-8 text-center">
-        <flux:button
-            variant="primary"
-            icon="compare"
-            wire:click="compare">
-            {{ __('Compare & Merge') }}
-        </flux:button>
-        <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+    <div class="mt-8 flex flex-col items-center gap-3">
+        <div class="flex items-center gap-3">
+            <flux:button
+                variant="primary"
+                icon="compare"
+                wire:click="compare">
+                {{ __('Compare & Merge') }}
+            </flux:button>
+            <flux:button
+                variant="ghost"
+                icon="arrows-right-left"
+                wire:click="swapMusic"
+                :title="__('Swap left and right')">
+                {{ __('Swap') }}
+            </flux:button>
+        </div>
+        <div class="text-sm text-gray-600 dark:text-gray-400">
             {{ __('Left music will be updated with merged data. Right music will be deleted after merge.') }}
         </div>
     </div>
     @endif
     @else
     <!-- Comparison Phase: Three-column layout -->
-    <div class="mb-6">
+    <div class="mb-6 flex items-center gap-3">
         <flux:button
             variant="ghost"
             icon="arrow-left"
             wire:click="resetSelection">
             {{ __('Back to selection') }}
         </flux:button>
+        <flux:button
+            variant="ghost"
+            icon="arrows-right-left"
+            wire:click="swapMusic"
+            :title="__('Swap source and target: right music will be kept, left will be deleted')">
+            {{ __('Swap Direction') }}
+        </flux:button>
+        <span class="text-sm text-gray-500 dark:text-gray-400">
+            {{ __('Keeping: :title (right will be deleted)', ['title' => $leftMusic->title]) }}
+        </span>
     </div>
 
     <div class="grid grid-cols-2 gap-6">

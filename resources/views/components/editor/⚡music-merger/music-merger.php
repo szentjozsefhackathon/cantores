@@ -149,6 +149,7 @@ return new class extends Component
 
         $this->leftMusicId = $musicId;
         $this->leftMusic = $music;
+        $this->left = $musicId;
         $this->checkComparisonReady();
     }
 
@@ -166,7 +167,22 @@ return new class extends Component
 
         $this->rightMusicId = $musicId;
         $this->rightMusic = $music;
+        $this->right = $musicId;
         $this->checkComparisonReady();
+    }
+
+    /**
+     * Swap left and right music pieces.
+     */
+    public function swapMusic(): void
+    {
+        [$this->leftMusicId, $this->rightMusicId] = [$this->rightMusicId, $this->leftMusicId];
+        [$this->leftMusic, $this->rightMusic] = [$this->rightMusic, $this->leftMusic];
+        [$this->left, $this->right] = [$this->right, $this->left];
+
+        if ($this->showComparison) {
+            $this->compare();
+        }
     }
 
     /**
