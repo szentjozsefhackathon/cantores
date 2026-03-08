@@ -21,6 +21,7 @@ class MusicImport extends Model
         'music_id',
         'abbreviation',
         'label',
+        'merge_suggestion',
     ];
 
     /**

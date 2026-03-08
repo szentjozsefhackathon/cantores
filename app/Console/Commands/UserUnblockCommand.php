@@ -12,7 +12,7 @@ class UserUnblockCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'user:unblock {email : The email of the user to unblock}';
+    protected $signature = 'cantores:user-unblock {email : The email of the user to unblock}';
 
     /**
      * The console command description.

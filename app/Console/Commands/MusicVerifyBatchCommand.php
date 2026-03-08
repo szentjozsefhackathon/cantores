@@ -14,7 +14,7 @@ class MusicVerifyBatchCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'music:verify-batch 
+    protected $signature = 'cantores:music-verify-batch 
                             {import_batch_number : The import batch number to verify}
                             {--verifier= : ID or email of the user who will be marked as verifier (default: system)}
                             {--force : Skip confirmation prompt}

@@ -36,7 +36,7 @@ DTX;
     BulkImport::where('collection', $collection)->delete();
 
     // Run the command
-    $this->artisan('dtx:convert', ['collection' => $collection])
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection])
         ->expectsOutput("Downloading DTX file from: {$url}")
         ->expectsOutput('DTX file saved to: '.storage_path("app/private/dtximport/{$collection}.dtx"))
         ->expectsOutput('Stored 2 songs in bulk_imports table for collection \''.$collection.'\'.')
@@ -89,7 +89,7 @@ DTX;
     ]);
 
     // Run the command
-    $this->artisan('dtx:convert', ['collection' => $collection])->assertSuccessful();
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection])->assertSuccessful();
 
     // Should have only the new record, old one deleted
     $records = BulkImport::where('collection', $collection)->get();
@@ -130,7 +130,7 @@ DTX;
 
     BulkImport::where('collection', $collection)->delete();
 
-    $this->artisan('dtx:convert', ['collection' => $collection, '--title' => true])
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection, '--title' => true])
         ->assertSuccessful();
 
     $records = BulkImport::where('collection', $collection)->orderBy('piece')->get();
@@ -169,7 +169,7 @@ test('dtx convert command handles missing file', function () {
         $url => Http::response('Not Found', 404),
     ]);
 
-    $this->artisan('dtx:convert', ['collection' => $collection])
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection])
         ->expectsOutput("Downloading DTX file from: {$url}")
         ->expectsOutput('HTTP error: 404 - Not Found')
         ->assertFailed();
@@ -191,7 +191,7 @@ DTX;
         $url => Http::response($dtxContent, 200),
     ]);
 
-    $this->artisan('dtx:convert', ['collection' => $collection])
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection])
         ->expectsOutput("Downloading DTX file from: {$url}")
         ->expectsOutput('DTX file saved to: '.storage_path("app/private/dtximport/{$collection}.dtx"))
         ->expectsOutput('No songs found in DTX file.')
@@ -230,7 +230,7 @@ DTX;
     ]);
 
     // Run command
-    $this->artisan('dtx:convert', ['collection' => $collection])->assertSuccessful();
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection])->assertSuccessful();
 
     // Verify records have batch number 4 (max + 1)
     $records = BulkImport::where('collection', $collection)->get();
@@ -244,7 +244,7 @@ DTX;
     Http::fake([
         $url2 => Http::response($dtxContent, 200),
     ]);
-    $this->artisan('dtx:convert', ['collection' => $collection2])->assertSuccessful();
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection2])->assertSuccessful();
 
     $records2 = BulkImport::where('collection', $collection2)->get();
     expect($records2)->toHaveCount(2);
@@ -282,7 +282,7 @@ DTX;
         $url => Http::response($dtxContent, 200),
     ]);
 
-    $this->artisan('dtx:convert', ['collection' => $collection])->assertSuccessful();
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection])->assertSuccessful();
 
     $records = BulkImport::where('collection', $collection)->get();
     expect($records)->toHaveCount(1);

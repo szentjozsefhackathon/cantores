@@ -14,7 +14,7 @@ class DtxConvert extends Command
      *
      * @var string
      */
-    protected $signature = 'dtx:convert {collection : The collection name (e.g., szvu)} {--title : Use ienek as title and leave reference empty} {--csv : Use CSV file instead of DTX}';
+    protected $signature = 'cantores:dtx-convert {collection : The collection name (e.g., szvu)} {--title : Use ienek as title and leave reference empty} {--csv : Use CSV file instead of DTX}';
 
     /**
      * The console command description.

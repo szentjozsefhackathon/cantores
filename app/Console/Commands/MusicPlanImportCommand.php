@@ -15,11 +15,20 @@ use Illuminate\Console\Command;
 class MusicPlanImportCommand extends Command
 {
     /**
+     * Maps short abbreviations used in import data to canonical collection abbreviations.
+     *
+     * @var array<string, string>
+     */
+    private const ABBREVIATION_MAP = [
+        'H' => 'SZVU',
+    ];
+
+    /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'musicplan:import {file : Path to the markdown file to import}';
+    protected $signature = 'cantores:musicplan-import {file : Path to the markdown file to import}';
 
     /**
      * The console command description.
@@ -307,10 +316,13 @@ class MusicPlanImportCommand extends Command
 
         // Extract the abbreviation and any label
         $label = null;
-        if (preg_match('/^([A-Z]+\d+)\s+(.+)$/u', $abbreviation, $matches)) {
+        if (preg_match('/^([\p{L}]+\d+)\s+(.+)$/u', $abbreviation, $matches)) {
             $abbreviation = $matches[1];
             $label = $matches[2];
         }
+
+        // Detect merge suggestion: slash-separated means two references for the same music
+        $mergeSuggestion = str_contains($abbreviation, '/') ? $abbreviation : null;
 
         // Try to find matching Music records
         $musics = $this->findMusicsByAbbreviation($abbreviation);
@@ -323,6 +335,7 @@ class MusicPlanImportCommand extends Command
                 'music_id' => null,
                 'abbreviation' => $abbreviation,
                 'label' => $label,
+                'merge_suggestion' => $mergeSuggestion,
             ]);
         } else {
             // Create import record for each found music
@@ -333,14 +346,33 @@ class MusicPlanImportCommand extends Command
                     'music_id' => $music->id,
                     'abbreviation' => $abbreviation,
                     'label' => $label,
+                    'merge_suggestion' => $mergeSuggestion,
                 ]);
             }
         }
     }
 
     /**
+     * Expand a short abbreviation to its canonical form using ABBREVIATION_MAP.
+     * E.g. "H" -> "SZVU", so "H23" becomes "SZVU23".
+     */
+    private function expandAbbreviation(string $abbr): string
+    {
+        // Extract letter prefix and numeric suffix
+        if (! preg_match('/^(\p{L}+)(\d+)$/u', $abbr, $matches)) {
+            return $abbr;
+        }
+
+        $prefix = $matches[1];
+        $number = $matches[2];
+
+        return (self::ABBREVIATION_MAP[$prefix] ?? $prefix).$number;
+    }
+
+    /**
      * Find Music records by abbreviation.
-     * Handles formats like "ÉE281" or "Ho132/ÉE182".
+     * Handles formats like "ÉE281", "Ho132/ÉE182", or "H23" (expanded to "SZVU23").
+     * Supports Unicode collection abbreviations (e.g. "ÉE").
      *
      * @return array<int, Music>
      */
@@ -348,14 +380,17 @@ class MusicPlanImportCommand extends Command
     {
         $musics = [];
 
-        // Handle slash-separated abbreviations like "Ho132/ÉE182"
+        // Handle slash-separated abbreviations like "Ho132/ÉE182" or "ÉE267/H23"
         $parts = explode('/', $abbreviation);
 
         foreach ($parts as $part) {
             $part = trim($part);
 
-            // Parse collection abbreviation and order number
-            if (preg_match('/^([A-Z]+)(\d+)$/', $part, $matches)) {
+            // Expand known short abbreviations (e.g. H -> SZVU)
+            $part = $this->expandAbbreviation($part);
+
+            // Parse collection abbreviation and order number (Unicode-aware)
+            if (preg_match('/^(\p{L}+)(\d+)$/u', $part, $matches)) {
                 $collectionAbbr = $matches[1];
                 $orderNumber = $matches[2];
 

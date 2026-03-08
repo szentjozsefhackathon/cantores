@@ -12,7 +12,7 @@ class UserBlockCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'user:block {email : The email of the user to block}';
+    protected $signature = 'cantores:user-block {email : The email of the user to block}';
 
     /**
      * The console command description.
