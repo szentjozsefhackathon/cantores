@@ -117,6 +117,28 @@ test('regular abbreviation without slash has no merge suggestion', function () {
     expect($musicImport->merge_suggestion)->toBeNull();
 });
 
+test('slash-separated abbreviation where both entries refer to the same music does not set merge suggestion', function () {
+    $eeCollection = Collection::where('abbreviation', 'ÉE')->firstOrFail();
+    $szCollection = Collection::factory()->create(['abbreviation' => 'SZVU']);
+
+    // Both ÉE267 and Ho23 point to the SAME Music record — merge is already done
+    $music = Music::factory()->create();
+    $eeCollection->music()->attach($music->id, ['order_number' => '267']);
+    $szCollection->music()->attach($music->id, ['order_number' => '23']);
+
+    $file = makeMusicPlanMarkdown(['Ének'], [['Márc. 1. VASÁRNAP', 'ÉE267/Ho23']]);
+    $this->tempFiles[] = $file;
+
+    $this->artisan('cantores:musicplan-import', ['file' => $file])
+        ->assertSuccessful();
+
+    // Only one MusicImport should be created (deduplicated), with no merge suggestion
+    $imports = MusicImport::where('abbreviation', 'ÉE267/Ho23')->get();
+    expect($imports)->toHaveCount(1);
+    expect($imports->first()->music_id)->toBe($music->id);
+    expect($imports->first()->merge_suggestion)->toBeNull();
+});
+
 test('primary abbreviation followed by parenthesised alternatives creates separate low-priority records', function () {
     $mgCollection = Collection::factory()->create(['abbreviation' => 'MG']);
     $eeCollection = Collection::where('abbreviation', 'ÉE')->firstOrFail();

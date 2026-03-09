@@ -455,11 +455,13 @@ class MusicPlanImportCommand extends Command
             return;
         }
 
-        // Detect merge suggestion: slash-separated means two references for the same music
-        $mergeSuggestion = str_contains($abbreviation, '/') ? $abbreviation : null;
-
         // Try to find matching Music records
         $musics = $this->findMusicsByAbbreviation($abbreviation);
+
+        // Detect merge suggestion: slash-separated means two references for the same music.
+        // If exactly one unique music is found, both collection entries already point to the
+        // same Music record (merge already done), so no suggestion is needed.
+        $mergeSuggestion = str_contains($abbreviation, '/') && count($musics) !== 1 ? $abbreviation : null;
 
         $flagsValue = empty($flags) ? null : array_values($flags);
 
@@ -550,7 +552,7 @@ class MusicPlanImportCommand extends Command
                         'music_id' => $musicId,
                         'slot_import_id' => $slotImport->id,
                         'flags' => $flagsValue,
-                        'merge_suggestion' => str_contains($abbr, '/') ? $abbr : null,
+                        'merge_suggestion' => str_contains($abbr, '/') && count($musics) !== 1 ? $abbr : null,
                     ]);
                     $isFirst = false;
                 } else {
@@ -560,7 +562,7 @@ class MusicPlanImportCommand extends Command
                         'music_id' => $musicId,
                         'abbreviation' => $abbr,
                         'label' => null,
-                        'merge_suggestion' => str_contains($abbr, '/') ? $abbr : null,
+                        'merge_suggestion' => str_contains($abbr, '/') && count($musics) !== 1 ? $abbr : null,
                         'flags' => $flagsValue,
                     ]);
                 }
@@ -867,7 +869,7 @@ class MusicPlanImportCommand extends Command
             }
         }
 
-        return array_unique($musics, SORT_REGULAR);
+        return collect($musics)->unique('id')->values()->all();
     }
 
     /**
@@ -914,7 +916,8 @@ class MusicPlanImportCommand extends Command
             }
         }
 
-        // Remove duplicates
-        return array_unique($musics, SORT_REGULAR);
+        // Remove duplicates (deduplicate by music ID to handle the case where
+        // both collection entries of a slash-notation point to the same Music record)
+        return collect($musics)->unique('id')->values()->all();
     }
 }

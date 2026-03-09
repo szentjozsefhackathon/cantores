@@ -91,6 +91,38 @@ class MusicPlanImports extends Component
     }
 
     /**
+     * Navigate to the music merger page for the given merge suggestion.
+     * Looks up the two distinct Music IDs referenced by the slash-separated suggestion
+     * within the currently selected import.
+     */
+    public function navigateToMerge(int $musicImportId): void
+    {
+        if (! $this->selectedImportId) {
+            return;
+        }
+
+        $musicImport = MusicImport::find($musicImportId);
+
+        if (! $musicImport?->merge_suggestion) {
+            return;
+        }
+
+        $musicIds = MusicImport::whereNotNull('music_id')
+            ->where('merge_suggestion', $musicImport->merge_suggestion)
+            ->where(function ($q): void {
+                $q->whereHas('musicPlanImportItem', fn ($q) => $q->where('music_plan_import_id', $this->selectedImportId))
+                    ->orWhereHas('slotImport', fn ($q) => $q->where('music_plan_import_id', $this->selectedImportId));
+            })
+            ->pluck('music_id')
+            ->unique()
+            ->values();
+
+        if ($musicIds->count() >= 2) {
+            $this->redirectRoute('music-merger', ['left' => $musicIds[0], 'right' => $musicIds[1]]);
+        }
+    }
+
+    /**
      * Render the component.
      */
     public function render(): View

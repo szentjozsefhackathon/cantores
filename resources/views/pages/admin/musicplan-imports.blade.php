@@ -264,10 +264,23 @@
                                             @endif
                                             @if ($music->merge_suggestion)
                                                 <div class="mt-2 rounded bg-blue-50 dark:bg-blue-900/30 px-2 py-1">
-                                                    <p class="text-xs font-medium text-blue-700 dark:text-blue-300">
-                                                        {{ __('Merge suggestion') }}:
-                                                    </p>
-                                                    <p class="text-xs text-blue-600 dark:text-blue-400">{{ $music->merge_suggestion }}</p>
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div>
+                                                            <p class="text-xs font-medium text-blue-700 dark:text-blue-300">
+                                                                {{ __('Merge suggestion') }}:
+                                                            </p>
+                                                            <p class="text-xs text-blue-600 dark:text-blue-400">{{ $music->merge_suggestion }}</p>
+                                                        </div>
+                                                        <flux:button
+                                                            size="xs"
+                                                            variant="ghost"
+                                                            icon="arrow-path"
+                                                            wire:click="navigateToMerge({{ $music->id }})"
+                                                            :title="__('Open in Music Merger')"
+                                                        >
+                                                            {{ __('Merge') }}
+                                                        </flux:button>
+                                                    </div>
                                                 </div>
                                             @endif
                                         </div>
