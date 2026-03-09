@@ -7,7 +7,7 @@
         <flux:field>
             <flux:input
                 type="search"
-                wire:model.live="search"
+                wire:model.live.debounce.400ms="search"
                 :placeholder="__('Title, subtitle, etc.')" />
         </flux:field>
     </div>
@@ -17,7 +17,7 @@
         <flux:field>
             <flux:input
                 type="search"
-                wire:model.live="collectionFreeText"
+                wire:model.live.debounce.400ms="collectionFreeText"
                 :placeholder="__('Abbreviation, order number, etc.')" />
         </flux:field>
     </div>
@@ -39,7 +39,7 @@
         <flux:field>
             <flux:input
                 type="search"
-                wire:model.live="authorFreeText"
+                wire:model.live.debounce.400ms="authorFreeText"
                 :placeholder="__('Author name...')" />
         </flux:field>
     </div>
