@@ -10,25 +10,30 @@ trait HasVisibilityScoping
 {
     public function scopePublic(Builder $query): Builder
     {
-        return $query->where($this->getVisibilityField(), $this->getVisibilityPublicValue());
+        $table = $this->getTable();
+
+        return $query->where("{$table}.{$this->getVisibilityField()}", $this->getVisibilityPublicValue());
     }
 
     public function scopePrivate(Builder $query): Builder
     {
-        return $query->where($this->getVisibilityField(), ! $this->getVisibilityPublicValue());
+        $table = $this->getTable();
+
+        return $query->where("{$table}.{$this->getVisibilityField()}", ! $this->getVisibilityPublicValue());
     }
 
     public function scopeVisibleTo(Builder $query, ?User $user = null): Builder
     {
         $userId = $user?->id;
+        $table = $this->getTable();
 
         if (! $userId) {
             return $this->scopePublic($query);
         }
 
-        return $query->where(function (Builder $q) use ($userId) {
-            $q->where($this->getVisibilityField(), $this->getVisibilityPublicValue())
-                ->orWhere($this->getOwnerField(), $userId);
+        return $query->where(function (Builder $q) use ($userId, $table) {
+            $q->where("{$table}.{$this->getVisibilityField()}", $this->getVisibilityPublicValue())
+                ->orWhere("{$table}.{$this->getOwnerField()}", $userId);
         });
     }
 

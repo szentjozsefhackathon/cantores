@@ -8,7 +8,7 @@ use Livewire\Livewire;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
-    $this->music = Music::factory()->create(['user_id' => $this->user->id]);
+    $this->music = Music::factory()->create(['user_id' => $this->user->id, 'is_private' => false]);
     $this->actingAs($this->user);
 });
 
@@ -160,6 +160,7 @@ test('cancels URL editing', function () {
 
 test('requires authorization to add URL', function () {
     $otherUser = User::factory()->create();
+    $otherUser->syncRoles([]); // Remove contributor role so user has no content.edit.own permission
 
     Livewire::actingAs($otherUser)
         ->test('pages::editor.music-editor', ['music' => $this->music])

@@ -27,7 +27,12 @@ class MusicFactory extends Factory
             'title' => $this->faker->words(3, true),
             'custom_id' => $this->faker->optional()->regexify('[A-Z]{3} \d{3}[a-z]?'),
             'user_id' => \App\Models\User::factory(),
-            'is_private' => $this->faker->boolean(20), // 20% private
+            'is_private' => false,
         ];
+    }
+
+    public function private(): static
+    {
+        return $this->state(['is_private' => true]);
     }
 }

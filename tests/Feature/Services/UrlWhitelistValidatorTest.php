@@ -2,11 +2,9 @@
 
 use App\Models\WhitelistRule;
 use App\Services\UrlWhitelistValidator;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $this->seed = false;
     $this->validator = new UrlWhitelistValidator;
 });
 

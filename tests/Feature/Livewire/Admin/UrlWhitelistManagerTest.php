@@ -168,7 +168,7 @@ test('deletes whitelist rule', function () {
         ->assertSet('showDeleteModal', false)
         ->assertDispatched('notify');
 
-    $this->assertSoftDeleted('whitelist_rules', ['id' => $rule->id]);
+    $this->assertModelMissing('whitelist_rules', ['id' => $rule->id]);
 });
 
 test('bulk activates selected rules', function () {
@@ -212,8 +212,8 @@ test('bulk deletes selected rules', function () {
         ->assertDispatched('notify')
         ->assertSet('selectedRules', []);
 
-    $this->assertSoftDeleted('whitelist_rules', ['id' => $rule1->id]);
-    $this->assertSoftDeleted('whitelist_rules', ['id' => $rule2->id]);
+    $this->assertModelMissing('whitelist_rules', ['id' => $rule1->id]);
+    $this->assertModelMissing('whitelist_rules', ['id' => $rule2->id]);
 });
 
 test('tests URL against whitelist rules', function () {
