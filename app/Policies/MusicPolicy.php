@@ -84,7 +84,7 @@ class MusicPolicy
 
     /**
      * Check if user can attach a relation to music.
-     * Adding new relations is always allowed with content.edit.published.
+     * Any authenticated user with content.edit.own can add relations to any music.
      */
     public function attachRelation(User $user, Music $music, string $relationType): bool
     {
@@ -93,7 +93,7 @@ class MusicPolicy
         }
 
         return $user->hasPermissionTo('content.edit.published') ||
-               ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id);
+               $user->hasPermissionTo('content.edit.own');
     }
 
     /**
@@ -126,7 +126,7 @@ class MusicPolicy
      * Check if user can update a verified relation (collection, author, URL, tag).
      * Verified relations on published music require content.edit.verified permission.
      */
-    public function updateVerifiedRelation(User $user, Music $music, string $relationType, ?int $relationId = null): bool
+    public function updateVerifiedRelation(User $user, Music $music, string $relationType, ?int $relationId = null, ?int $relationOwnerUserId = null): bool
     {
         if ($user === null) {
             return false;
@@ -143,7 +143,12 @@ class MusicPolicy
             return $user->hasPermissionTo('content.edit.verified');
         }
 
-        // For non-verified relations, allow with content.edit.published or content.edit.own
+        // Allow if the user is the owner of this relation
+        if ($relationOwnerUserId !== null && $user->id === $relationOwnerUserId) {
+            return true;
+        }
+
+        // For non-verified relations, allow with content.edit.published or content.edit.own + music ownership
         return $user->hasPermissionTo('content.edit.published') ||
                ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id);
     }
@@ -171,8 +176,9 @@ class MusicPolicy
     /**
      * Check if user can edit or delete a verified relation.
      * Verified relations require content.edit.verified permission.
+     * The relation owner can always edit/delete their own non-verified relations.
      */
-    public function editOrDeleteVerifiedRelation(User $user, Music $music, string $relationType, ?int $relationId = null): bool
+    public function editOrDeleteVerifiedRelation(User $user, Music $music, string $relationType, ?int $relationId = null, ?int $relationOwnerUserId = null): bool
     {
         if ($user === null) {
             return false;
@@ -189,7 +195,12 @@ class MusicPolicy
             return $user->hasPermissionTo('content.edit.verified');
         }
 
-        // For non-verified relations, allow with content.edit.published or content.edit.own
+        // Allow if the user is the owner of this relation
+        if ($relationOwnerUserId !== null && $user->id === $relationOwnerUserId) {
+            return true;
+        }
+
+        // For non-verified relations, allow with content.edit.published or content.edit.own + music ownership
         return $user->hasPermissionTo('content.edit.published') ||
                ($user->hasPermissionTo('content.edit.own') && $music->user_id === $user->id);
     }

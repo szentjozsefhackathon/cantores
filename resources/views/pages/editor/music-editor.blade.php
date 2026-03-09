@@ -118,7 +118,7 @@ new class extends Component
      */
     public function addRelatedMusic(): void
     {
-        $this->authorize('update', $this->music);
+        $this->authorize('attachRelation', [$this->music, 'related_music']);
 
         $validated = $this->validate([
             'selectedRelatedMusicId' => ['required', 'integer', 'exists:musics,id'],
@@ -147,6 +147,7 @@ new class extends Component
 
         $this->music->relatedMusic()->attach($validated['selectedRelatedMusicId'], [
             'relationship_type' => $validated['selectedRelationshipType'],
+            'user_id' => Auth::id(),
         ]);
 
         // Refresh the relationship
@@ -167,8 +168,10 @@ new class extends Component
      */
     public function removeRelatedMusic(int $relatedMusicId): void
     {
-        $this->authorize('update', $this->music);
-        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'related_music', $relatedMusicId]);
+        $relatedPivot = $this->music->relatedMusic()->wherePivot('related_music_id', $relatedMusicId)->first();
+        $relationOwnerUserId = $relatedPivot?->pivot?->user_id;
+
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'related_music', $relatedMusicId, $relationOwnerUserId]);
 
         $this->music->relatedMusic()->detach($relatedMusicId);
 
@@ -282,7 +285,7 @@ new class extends Component
      */
     public function addCollection(): void
     {
-        $this->authorize('update', $this->music);
+        $this->authorize('attachRelation', [$this->music, 'collection']);
 
         $validated = $this->validate([
             'selectedCollectionId' => ['required', 'integer', 'exists:collections,id'],
@@ -298,6 +301,7 @@ new class extends Component
         }
 
         $this->music->collections()->attach($validated['selectedCollectionId'], [
+            'user_id' => Auth::id(),
             'page_number' => $validated['pageNumber'],
             'order_number' => $validated['orderNumber'],
         ]);
@@ -318,8 +322,10 @@ new class extends Component
      */
     public function removeCollection(int $collectionId): void
     {
-        $this->authorize('update', $this->music);
-        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'collection', $collectionId]);
+        $collection = $this->music->collections()->where('collection_id', $collectionId)->first();
+        $relationOwnerUserId = $collection?->pivot?->user_id;
+
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'collection', $collectionId, $relationOwnerUserId]);
 
         $this->music->collections()->detach($collectionId);
         $this->music->load('collections');
@@ -332,7 +338,7 @@ new class extends Component
      */
     public function addAuthor(): void
     {
-        $this->authorize('update', $this->music);
+        $this->authorize('attachRelation', [$this->music, 'author']);
 
         $validated = $this->validate([
             'selectedAuthorId' => ['required', 'integer', 'exists:authors,id'],
@@ -345,7 +351,9 @@ new class extends Component
             return;
         }
 
-        $this->music->authors()->attach($validated['selectedAuthorId']);
+        $this->music->authors()->attach($validated['selectedAuthorId'], [
+            'user_id' => Auth::id(),
+        ]);
 
         // Refresh the authors relationship
         $this->music->load('authors');
@@ -361,8 +369,10 @@ new class extends Component
      */
     public function removeAuthor(int $authorId): void
     {
-        $this->authorize('update', $this->music);
-        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'author', $authorId]);
+        $author = $this->music->authors()->where('author_id', $authorId)->first();
+        $relationOwnerUserId = $author?->pivot?->user_id;
+
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'author', $authorId, $relationOwnerUserId]);
 
         $this->music->authors()->detach($authorId);
         $this->music->load('authors');
@@ -375,7 +385,7 @@ new class extends Component
      */
     public function addUrl(): void
     {
-        $this->authorize('update', $this->music);
+        $this->authorize('attachRelation', [$this->music, 'url']);
 
         $validated = $this->validate([
             'newUrlLabel' => ['required', 'string', Rule::in(array_column(\App\MusicUrlLabel::cases(), 'value'))],
@@ -384,6 +394,7 @@ new class extends Component
 
         // Create the URL
         $this->music->urls()->create([
+            'user_id' => Auth::id(),
             'label' => $validated['newUrlLabel'],
             'url' => $validated['newUrl'],
         ]);
@@ -403,14 +414,13 @@ new class extends Component
      */
     public function editUrl(int $urlId): void
     {
-        $this->authorize('update', $this->music);
-        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'url', $urlId]);
-
         $url = $this->music->urls()->find($urlId);
 
         if (!$url) {
             return;
         }
+
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'url', $urlId, $url->user_id]);
 
         $this->editingUrlId = $urlId;
         $this->editingUrlLabel = $url->label;
@@ -422,20 +432,19 @@ new class extends Component
      */
     public function updateUrl(): void
     {
-        $this->authorize('update', $this->music);
-        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'url', $this->editingUrlId]);
-
-        $validated = $this->validate([
-            'editingUrlLabel' => ['required', 'string', Rule::in(array_column(\App\MusicUrlLabel::cases(), 'value'))],
-            'editingUrl' => ['required', 'string', 'url', new \App\Rules\WhitelistedUrl()],
-        ]);
-
         $url = $this->music->urls()->find($this->editingUrlId);
 
         if (!$url) {
             $this->cancelEditUrl();
             return;
         }
+
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'url', $this->editingUrlId, $url->user_id]);
+
+        $validated = $this->validate([
+            'editingUrlLabel' => ['required', 'string', Rule::in(array_column(\App\MusicUrlLabel::cases(), 'value'))],
+            'editingUrl' => ['required', 'string', 'url', new \App\Rules\WhitelistedUrl()],
+        ]);
 
         $url->update([
             'label' => $validated['editingUrlLabel'],
@@ -456,8 +465,8 @@ new class extends Component
      */
     public function deleteUrl(int $urlId): void
     {
-        $this->authorize('update', $this->music);
-        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'url', $urlId]);
+        $url = $this->music->urls()->find($urlId);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'url', $urlId, $url?->user_id]);
 
         $this->music->urls()->where('id', $urlId)->delete();
         $this->music->load('urls');
@@ -480,10 +489,10 @@ new class extends Component
      */
     public function editCollection(int $collectionId): void
     {
-        $this->authorize('update', $this->music);
-        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'collection', $collectionId]);
-
         $collection = $this->music->collections()->where('collection_id', $collectionId)->first();
+        $relationOwnerUserId = $collection?->pivot?->user_id;
+
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'collection', $collectionId, $relationOwnerUserId]);
 
         if (!$collection) {
             return;
@@ -500,8 +509,10 @@ new class extends Component
      */
     public function updateCollection(): void
     {
-        $this->authorize('update', $this->music);
-        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'collection', $this->editingCollectionId]);
+        $collection = $this->music->collections()->where('collection_id', $this->editingCollectionId)->first();
+        $relationOwnerUserId = $collection?->pivot?->user_id;
+
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'collection', $this->editingCollectionId, $relationOwnerUserId]);
 
         $validated = $this->validate([
             'editingPageNumber' => ['nullable', 'integer', 'min:1'],

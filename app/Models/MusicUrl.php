@@ -19,6 +19,7 @@ class MusicUrl extends Model implements Auditable
      */
     protected $fillable = [
         'music_id',
+        'user_id',
         'url',
         'label',
     ];
@@ -29,6 +30,14 @@ class MusicUrl extends Model implements Auditable
     public function music(): BelongsTo
     {
         return $this->belongsTo(Music::class);
+    }
+
+    /**
+     * Get the user who added this URL.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**

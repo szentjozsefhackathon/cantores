@@ -69,7 +69,7 @@ class Music extends Model implements Auditable
     {
         return $this->belongsToMany(Collection::class, 'music_collection')
             ->using(MusicCollection::class)
-            ->withPivot(['page_number', 'order_number'])
+            ->withPivot(['user_id', 'page_number', 'order_number'])
             ->withTimestamps();
     }
 
@@ -79,6 +79,8 @@ class Music extends Model implements Auditable
     public function authors(): BelongsToMany
     {
         return $this->belongsToMany(Author::class, 'author_music')
+            ->using(AuthorMusic::class)
+            ->withPivot(['user_id'])
             ->withTimestamps();
     }
 
@@ -104,7 +106,8 @@ class Music extends Model implements Auditable
     public function relatedMusic(): BelongsToMany
     {
         return $this->belongsToMany(Music::class, 'music_related', 'music_id', 'related_music_id')
-            ->withPivot('relationship_type')
+            ->using(MusicRelated::class)
+            ->withPivot(['relationship_type', 'user_id'])
             ->withTimestamps();
     }
 

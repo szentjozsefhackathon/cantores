@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class MusicCollection extends Pivot
+class MusicRelated extends Pivot
 {
     /**
      * The table associated with the model.
      *
      * @var string
      */
-    protected $table = 'music_collection';
+    protected $table = 'music_related';
 
     /**
      * Indicates if the IDs are auto-incrementing.
@@ -27,29 +28,16 @@ class MusicCollection extends Pivot
      */
     protected $fillable = [
         'music_id',
-        'collection_id',
+        'related_music_id',
+        'relationship_type',
         'user_id',
-        'page_number',
-        'order_number',
     ];
 
     /**
-     * Get the user who added this collection relation.
+     * Get the user who added this relation.
      */
-    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'page_number' => 'integer',
-        ];
     }
 }
