@@ -190,19 +190,38 @@ new #[Layout('layouts::app.main')] class extends Component
                 @if (isset($celebrationDetails['parts']) && is_array($celebrationDetails['parts']))
                     <x-mary-tabs wire:model="activePartTab">
                         @foreach ($celebrationDetails['parts'] as $partIndex => $part)
-                            <x-mary-tab name="part-{{ $partIndex }}" label="{{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}">
-                                <div class="rounded-2xl border border-zinc-200 bg-amber-50/80 dark:bg-zinc-900 p-4 dark:border-zinc-800 p-2 font-serif shadow-lg">
-                                    <div class="grid grid-cols-1 gap-2 text-sm ">
-                                        <div>
-                                            <flux:heading class="inline" >{{ $part['ref'] ?? '' }}</flux:heading>
-                                            <flux:text class="inline">{!! $this->sanitize($part['teaser'] ?? '') !!}</flux:text>
+                            @if (isset($part[0]) && is_array($part[0]))
+                                @foreach ($part as $subIndex => $subPart)
+                                    @php $subLabel = ($subPart['short_title'] ?? 'Rész') . (isset($subPart['cause']) ? ' (' . $subPart['cause'] . ')' : ''); @endphp
+                                    <x-mary-tab name="part-{{ $partIndex }}-{{ $subIndex }}" label="{{ $subLabel }}">
+                                        <div class="rounded-2xl border border-zinc-200 bg-amber-50/80 dark:bg-zinc-900 p-4 dark:border-zinc-800 p-2 font-serif shadow-lg">
+                                            <div class="grid grid-cols-1 gap-2 text-sm ">
+                                                <div>
+                                                    <flux:heading class="inline">{{ $subPart['ref'] ?? '' }}</flux:heading>
+                                                    <flux:text class="inline">{!! $this->sanitize($subPart['teaser'] ?? '') !!}</flux:text>
+                                                </div>
+                                                <div>{{ $subPart['title'] ?? '' }}</div>
+                                                <div>{!! $this->sanitize($subPart['text'] ?? '') !!}</div>
+                                                <div>{{ $subPart['ending'] ?? '' }}</div>
+                                            </div>
                                         </div>
-                                        <div>{{ $part['title'] ?? '' }}</div>
-                                        <div>{!! $this->sanitize($part['text'] ?? '') !!}</div>
-                                        <div>{{ $part['ending'] ?? '' }}</div>
+                                    </x-mary-tab>
+                                @endforeach
+                            @else
+                                <x-mary-tab name="part-{{ $partIndex }}" label="{{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}">
+                                    <div class="rounded-2xl border border-zinc-200 bg-amber-50/80 dark:bg-zinc-900 p-4 dark:border-zinc-800 p-2 font-serif shadow-lg">
+                                        <div class="grid grid-cols-1 gap-2 text-sm ">
+                                            <div>
+                                                <flux:heading class="inline">{{ $part['ref'] ?? '' }}</flux:heading>
+                                                <flux:text class="inline">{!! $this->sanitize($part['teaser'] ?? '') !!}</flux:text>
+                                            </div>
+                                            <div>{{ $part['title'] ?? '' }}</div>
+                                            <div>{!! $this->sanitize($part['text'] ?? '') !!}</div>
+                                            <div>{{ $part['ending'] ?? '' }}</div>
+                                        </div>
                                     </div>
-                                </div>
-                            </x-mary-tab>
+                                </x-mary-tab>
+                            @endif
                         @endforeach
                     </x-mary-tabs>
                 @else
