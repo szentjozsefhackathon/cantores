@@ -113,16 +113,12 @@ test('detaching slot from plan deletes assignments only for that plan', function
     // Create assignments in both plans
     $assignment1 = MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot1->id,
-        'music_plan_id' => $musicPlan1->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
 
     $assignment2 = MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot2->id,
-        'music_plan_id' => $musicPlan2->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
@@ -165,8 +161,6 @@ test('hard deleting slot with assignments is prevented by foreign key constraint
 
     MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
@@ -200,8 +194,6 @@ test('soft deleting slot does not delete assignments', function () {
 
     $assignment = MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
@@ -240,8 +232,6 @@ test('scope fields can be set and retrieved', function () {
 
     $assignment = MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
@@ -270,8 +260,6 @@ test('scope fields can be set and retrieved', function () {
     // Test nullable scope (no scopes)
     $assignment2 = MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 2,
     ]);

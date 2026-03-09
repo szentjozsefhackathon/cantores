@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 /**
  * Class MusicPlanSlotAssignment
@@ -18,17 +19,13 @@ class MusicPlanSlotAssignment extends Model
 
     /**
      * The attributes that are mass assignable.
-     * IMPORTANT: music_plan_slot_plan_id identifies the specific slot instance within the music plan,
-     * while music_sequence is identifying the position of the music within the slot.
-     * This allows for multiple tracks to be assigned to the same slot in a specific order.
-     * The music_plan_id and music_plan_slot_id are kept for compatibility and referential integrity.
+     * music_plan_slot_plan_id identifies the specific slot occurrence within the music plan,
+     * while music_sequence identifies the position of the music track within that slot occurrence.
      *
      * @var list<string>
      */
     protected $fillable = [
         'music_plan_slot_plan_id',
-        'music_plan_id',
-        'music_plan_slot_id',
         'music_id',
         'music_sequence',
         'notes',
@@ -70,19 +67,33 @@ class MusicPlanSlotAssignment extends Model
     }
 
     /**
-     * Get the music plan that owns this assignment.
+     * Get the music plan for this assignment (via MusicPlanSlotPlan).
      */
-    public function musicPlan(): BelongsTo
+    public function musicPlan(): HasOneThrough
     {
-        return $this->belongsTo(MusicPlan::class);
+        return $this->hasOneThrough(
+            MusicPlan::class,
+            MusicPlanSlotPlan::class,
+            'id',                      // PK on MusicPlanSlotPlan matched by local key below
+            'id',                      // PK on MusicPlan
+            'music_plan_slot_plan_id', // local key on this model
+            'music_plan_id'            // key on MusicPlanSlotPlan pointing to MusicPlan
+        );
     }
 
     /**
-     * Get the music plan slot that owns this assignment.
+     * Get the music plan slot for this assignment (via MusicPlanSlotPlan).
      */
-    public function musicPlanSlot(): BelongsTo
+    public function musicPlanSlot(): HasOneThrough
     {
-        return $this->belongsTo(MusicPlanSlot::class);
+        return $this->hasOneThrough(
+            MusicPlanSlot::class,
+            MusicPlanSlotPlan::class,
+            'id',                      // PK on MusicPlanSlotPlan matched by local key below
+            'id',                      // PK on MusicPlanSlot
+            'music_plan_slot_plan_id', // local key on this model
+            'music_plan_slot_id'       // key on MusicPlanSlotPlan pointing to MusicPlanSlot
+        );
     }
 
     /**
@@ -125,7 +136,7 @@ class MusicPlanSlotAssignment extends Model
      */
     public function scopeForMusicPlan($query, MusicPlan $musicPlan): void
     {
-        $query->where('music_plan_id', $musicPlan->id);
+        $query->whereHas('musicPlanSlotPlan', fn ($q) => $q->where('music_plan_id', $musicPlan->id));
     }
 
     /**
@@ -133,6 +144,6 @@ class MusicPlanSlotAssignment extends Model
      */
     public function scopeForSlot($query, MusicPlanSlot $slot): void
     {
-        $query->where('music_plan_slot_id', $slot->id);
+        $query->whereHas('musicPlanSlotPlan', fn ($q) => $q->where('music_plan_slot_id', $slot->id));
     }
 }

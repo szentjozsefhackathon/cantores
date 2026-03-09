@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class MusicPlan extends Model
 {
@@ -129,26 +130,17 @@ class MusicPlan extends Model
     }
 
     /**
-     * Get the music assignments for this plan.
+     * Get the music assignments for this plan (via the slot plan pivot).
      */
-    public function musicAssignments(): HasMany
-    {
-        return $this->hasMany(MusicPlanSlotAssignment::class);
-    }
-
-    /**
-     * Get the music items assigned to this plan (through assignments).
-     * This is a convenience method that goes through the MusicPlanSlotAssignment model.
-     */
-    public function assignedMusic(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    public function musicAssignments(): HasManyThrough
     {
         return $this->hasManyThrough(
-            Music::class,
             MusicPlanSlotAssignment::class,
-            'music_plan_id', // Foreign key on MusicPlanSlotAssignment table
-            'id', // Foreign key on Music table
-            'id', // Local key on MusicPlan table
-            'music_id' // Foreign key on MusicPlanSlotAssignment table
+            MusicPlanSlotPlan::class,
+            'music_plan_id',           // FK on music_plan_slot_plan referencing music_plans.id
+            'music_plan_slot_plan_id', // FK on music_plan_slot_assignments referencing music_plan_slot_plan.id
+            'id',                      // local key on music_plans
+            'id'                       // local key on music_plan_slot_plan
         );
     }
 
@@ -282,12 +274,7 @@ class MusicPlan extends Model
     {
         $slotId = $slot instanceof MusicPlanSlot ? $slot->id : $slot;
 
-        // Delete all music assignments for this slot in this plan
-        $this->musicAssignments()
-            ->where('music_plan_slot_id', $slotId)
-            ->delete();
-
-        // Detach the slot from the plan
+        // Detach the slot; the cascadeOnDelete FK on music_plan_slot_assignments deletes assignments
         $this->slots()->detach($slotId);
     }
 
@@ -296,10 +283,7 @@ class MusicPlan extends Model
      */
     public function detachAllSlots(): void
     {
-        // Delete all music assignments for this plan
-        $this->musicAssignments()->delete();
-
-        // Detach all slots from the plan
+        // Detach all slots; the cascadeOnDelete FK on music_plan_slot_assignments deletes assignments
         $this->slots()->detach();
     }
 
@@ -427,8 +411,6 @@ class MusicPlan extends Model
 
                     $newAssignment = MusicPlanSlotAssignment::create([
                         'music_plan_slot_plan_id' => $newPivotId,
-                        'music_plan_id' => $newPlan->id,
-                        'music_plan_slot_id' => $slotId,
                         'music_id' => $assignment->music_id,
                         'music_sequence' => $assignment->music_sequence,
                         'notes' => $assignment->notes,

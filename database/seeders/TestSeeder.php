@@ -150,18 +150,24 @@ class TestSeeder extends Seeder
                 'description' => 'Opening hymn for the celebration',
             ]);
 
+            // Attach slot to plan (creates the pivot row in music_plan_slot_plan)
+            $musicPlan->slots()->attach($slot->id, ['sequence' => 1]);
+
+            $pivotId = \Illuminate\Support\Facades\DB::table('music_plan_slot_plan')
+                ->where('music_plan_id', $musicPlan->id)
+                ->where('music_plan_slot_id', $slot->id)
+                ->value('id');
+
             // Assign music to the slot in the plan
-            MusicPlanSlotAssignment::factory()->create([
-                'music_plan_id' => $musicPlan->id,
-                'music_plan_slot_id' => $slot->id,
+            MusicPlanSlotAssignment::create([
+                'music_plan_slot_plan_id' => $pivotId,
                 'music_id' => $music1->id,
                 'music_sequence' => 1,
                 'notes' => 'Traditional setting',
             ]);
 
-            MusicPlanSlotAssignment::factory()->create([
-                'music_plan_id' => $musicPlan->id,
-                'music_plan_slot_id' => $slot->id,
+            MusicPlanSlotAssignment::create([
+                'music_plan_slot_plan_id' => $pivotId,
                 'music_id' => $music2->id,
                 'music_sequence' => 2,
                 'notes' => 'Congregational hymn',

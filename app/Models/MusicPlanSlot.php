@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -61,26 +61,17 @@ class MusicPlanSlot extends Model
     }
 
     /**
-     * Get the music assignments for this slot.
+     * Get the music assignments for this slot (across all plans, via MusicPlanSlotPlan).
      */
-    public function musicAssignments(): HasMany
-    {
-        return $this->hasMany(MusicPlanSlotAssignment::class);
-    }
-
-    /**
-     * Get the music items assigned to this slot (through assignments).
-     * This is a convenience method that goes through the MusicPlanSlotAssignment model.
-     */
-    public function assignedMusic(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    public function musicAssignments(): HasManyThrough
     {
         return $this->hasManyThrough(
-            Music::class,
             MusicPlanSlotAssignment::class,
-            'music_plan_slot_id', // Foreign key on MusicPlanSlotAssignment table
-            'id', // Foreign key on Music table
-            'id', // Local key on MusicPlanSlot table
-            'music_id' // Foreign key on MusicPlanSlotAssignment table
+            MusicPlanSlotPlan::class,
+            'music_plan_slot_id',      // FK on music_plan_slot_plan referencing music_plan_slots.id
+            'music_plan_slot_plan_id', // FK on music_plan_slot_assignments referencing music_plan_slot_plan.id
+            'id',                      // local key on music_plan_slots
+            'id'                       // local key on music_plan_slot_plan
         );
     }
 

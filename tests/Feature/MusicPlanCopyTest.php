@@ -122,8 +122,6 @@ test('copied music plan includes all music assignments', function () {
 
     MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
         'notes' => 'Test notes',
@@ -155,8 +153,6 @@ test('copied music plan includes assignment flags', function () {
 
     $assignment = MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
@@ -188,8 +184,6 @@ test('copied music plan includes assignment scopes', function () {
 
     $assignment = MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
@@ -313,16 +307,12 @@ test('copied published plan excludes private music', function () {
 
     MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $publicMusic->id,
         'music_sequence' => 1,
     ]);
 
     MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $privateMusic->id,
         'music_sequence' => 2,
     ]);

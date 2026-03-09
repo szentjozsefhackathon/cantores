@@ -226,6 +226,7 @@ new class extends Component
                 return $a['music_sequence'] <=> $b['music_sequence']; // ascending
             });
         }
+        unset($slotData); // Break the reference to avoid corrupting the last element in subsequent loops
 
         // Return map with slot name as key for easy display
         $result = [];

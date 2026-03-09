@@ -63,8 +63,6 @@ test('slot assignments respect sequence numbers and music attachments', function
     // Attach 'Music 1' to 'Slot 1' first occurrence (pivot1)
     MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot1->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot1->id,
         'music_id' => $music1->id,
         'music_sequence' => 1,
     ]);
@@ -130,16 +128,12 @@ test('multiple music attachments per slot occurrence with ordering', function ()
     // Attach 'Music 1' to 'Slot 1' (sequence 1)
     MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot1->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot1->id,
         'music_id' => $music1->id,
         'music_sequence' => 1,
     ]);
     // Also attach 'Music 2' to this slot in the plan (sequence 1)
     MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot1->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot1->id,
         'music_id' => $music2->id,
         'music_sequence' => 2,
     ]);
@@ -147,16 +141,12 @@ test('multiple music attachments per slot occurrence with ordering', function ()
     // Attach 'Music 2' to 'Slot 1' (sequence 3)
     MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot3->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot1->id,
         'music_id' => $music2->id,
         'music_sequence' => 1,
     ]);
     // Also attach 'Music 1' to this slot in the plan (sequence 3)
     MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot3->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot1->id,
         'music_id' => $music1->id,
         'music_sequence' => 2,
     ]);
