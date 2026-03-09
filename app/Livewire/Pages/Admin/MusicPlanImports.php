@@ -3,10 +3,13 @@
 namespace App\Livewire\Pages\Admin;
 
 use App\Models\BulkImport;
+use App\Models\Music;
 use App\Models\MusicImport;
 use App\Models\MusicPlanImport;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -120,6 +123,167 @@ class MusicPlanImports extends Component
         if ($musicIds->count() >= 2) {
             $this->redirectRoute('music-merger', ['left' => $musicIds[0], 'right' => $musicIds[1]]);
         }
+    }
+
+    /**
+     * Automatically merge all suggestions for the selected import without user interaction.
+     * For each unique merge suggestion, the lower music ID is kept (left) and the higher is deleted (right).
+     * Collections are merged with left's pivot data taking precedence on conflict.
+     * Genres, URLs, and related music are unioned.
+     */
+    public function mergeAllSuggestions(): void
+    {
+        if (! $this->selectedImportId) {
+            return;
+        }
+
+        $importId = $this->selectedImportId;
+
+        $baseQuery = fn () => MusicImport::query()
+            ->where(function ($q) use ($importId): void {
+                $q->whereHas('musicPlanImportItem', fn ($q) => $q->where('music_plan_import_id', $importId))
+                    ->orWhereHas('slotImport', fn ($q) => $q->where('music_plan_import_id', $importId));
+            });
+
+        $suggestions = $baseQuery()
+            ->whereNotNull('merge_suggestion')
+            ->whereNotNull('music_id')
+            ->select('merge_suggestion')
+            ->distinct()
+            ->pluck('merge_suggestion');
+
+        $mergedCount = 0;
+
+        foreach ($suggestions as $suggestion) {
+            $musicIds = $baseQuery()
+                ->whereNotNull('music_id')
+                ->where('merge_suggestion', $suggestion)
+                ->pluck('music_id')
+                ->unique()
+                ->sort()
+                ->values();
+
+            if ($musicIds->count() < 2) {
+                continue;
+            }
+
+            $leftMusic = Music::with(['collections', 'genres', 'urls', 'relatedMusic'])->find($musicIds[0]);
+            $rightMusic = Music::with(['collections', 'genres', 'urls', 'relatedMusic'])->find($musicIds[1]);
+
+            if (! $leftMusic || ! $rightMusic) {
+                continue;
+            }
+
+            $this->authorize('update', $leftMusic);
+            $this->authorize('update', $rightMusic);
+            $this->authorize('delete', $rightMusic);
+
+            // Resolve title and other simple fields (prefer left, fall back to right)
+            $mergedTitle = $leftMusic->title ?? $rightMusic->title;
+            $mergedSubtitle = $leftMusic->subtitle ?? $rightMusic->subtitle;
+            $mergedCustomId = $leftMusic->custom_id ?? $rightMusic->custom_id;
+            // When is_private differs, default to public
+            $mergedIsPrivate = ($leftMusic->is_private === $rightMusic->is_private)
+                ? (bool) $leftMusic->is_private
+                : false;
+
+            // Merge collections (union, left pivot wins on conflict)
+            $collectionMap = [];
+            foreach ($leftMusic->collections as $collection) {
+                $collectionMap[$collection->id] = [
+                    'id' => $collection->id,
+                    'page_number' => $collection->pivot->page_number ?? null,
+                    'order_number' => $collection->pivot->order_number ?? null,
+                ];
+            }
+            foreach ($rightMusic->collections as $collection) {
+                if (! isset($collectionMap[$collection->id])) {
+                    $collectionMap[$collection->id] = [
+                        'id' => $collection->id,
+                        'page_number' => $collection->pivot->page_number ?? null,
+                        'order_number' => $collection->pivot->order_number ?? null,
+                    ];
+                }
+            }
+
+            // Merge genres (union)
+            $mergedGenreIds = $leftMusic->genres
+                ->merge($rightMusic->genres)
+                ->unique('id')
+                ->pluck('id')
+                ->toArray();
+
+            // Merge URLs (union from both, recreated)
+            $mergedUrls = $leftMusic->urls->map(fn ($u) => ['url' => $u->url, 'label' => $u->label])
+                ->concat($rightMusic->urls->map(fn ($u) => ['url' => $u->url, 'label' => $u->label]))
+                ->unique('url')
+                ->values();
+
+            // Merge related music (union)
+            $mergedRelatedMusicIds = $leftMusic->relatedMusic
+                ->merge($rightMusic->relatedMusic)
+                ->unique('id')
+                ->reject(fn ($m) => $m->id === $rightMusic->id) // exclude the one being deleted
+                ->pluck('id')
+                ->toArray();
+
+            DB::transaction(function () use (
+                $leftMusic, $rightMusic,
+                $mergedTitle, $mergedSubtitle, $mergedCustomId, $mergedIsPrivate,
+                $collectionMap, $mergedGenreIds, $mergedUrls, $mergedRelatedMusicIds,
+                $importId, $suggestion,
+            ): void {
+                $leftMusic->update([
+                    'title' => $mergedTitle,
+                    'subtitle' => $mergedSubtitle,
+                    'custom_id' => $mergedCustomId,
+                    'is_private' => $mergedIsPrivate,
+                    'user_id' => Auth::id(),
+                ]);
+
+                $leftMusic->collections()->detach();
+                foreach ($collectionMap as $collectionId => $pivotData) {
+                    $leftMusic->collections()->attach($collectionId, [
+                        'page_number' => $pivotData['page_number'],
+                        'order_number' => $pivotData['order_number'],
+                    ]);
+                }
+
+                $leftMusic->genres()->sync($mergedGenreIds);
+
+                $leftMusic->urls()->delete();
+                foreach ($mergedUrls as $urlData) {
+                    $leftMusic->urls()->create([
+                        'url' => $urlData['url'],
+                        'label' => $urlData['label'] ?? null,
+                    ]);
+                }
+
+                $leftMusic->relatedMusic()->sync($mergedRelatedMusicIds);
+
+                // Migrate music plan slot assignments
+                DB::table('music_plan_slot_assignments')
+                    ->where('music_id', $rightMusic->id)
+                    ->update(['music_id' => $leftMusic->id]);
+
+                // Update MusicImport records pointing to the deleted music
+                MusicImport::where('music_id', $rightMusic->id)->update(['music_id' => $leftMusic->id]);
+
+                // Clear merge_suggestion for resolved records
+                MusicImport::where('merge_suggestion', $suggestion)
+                    ->where(function ($q) use ($importId): void {
+                        $q->whereHas('musicPlanImportItem', fn ($q) => $q->where('music_plan_import_id', $importId))
+                            ->orWhereHas('slotImport', fn ($q) => $q->where('music_plan_import_id', $importId));
+                    })
+                    ->update(['merge_suggestion' => null]);
+
+                $rightMusic->delete();
+            });
+
+            $mergedCount++;
+        }
+
+        $this->dispatch('merge-all-complete', count: $mergedCount);
     }
 
     /**

@@ -204,14 +204,26 @@
                                 <flux:icon name="musical-note" class="h-4 w-4" />
                                 {{ __('Music Imports') }} ({{ $musicImports->total() }})
                             </h4>
-                            <div class="flex items-center gap-1">
-                                @if ($unmatchedCount > 0)
-                                    <flux:badge color="orange" size="sm">{{ $unmatchedCount }} {{ __('no match') }}</flux:badge>
-                                @endif
-                                @if ($suggestionCount > 0)
-                                    <flux:badge color="blue" size="sm">{{ $suggestionCount }} {{ __('suggestions') }}</flux:badge>
-                                @endif
-                            </div>
+                        <div class="flex items-center gap-1">
+                            @if ($unmatchedCount > 0)
+                                <flux:badge color="orange" size="sm">{{ $unmatchedCount }} {{ __('no match') }}</flux:badge>
+                            @endif
+                            @if ($suggestionCount > 0)
+                                <flux:badge color="blue" size="sm">{{ $suggestionCount }} {{ __('suggestions') }}</flux:badge>
+                                <flux:button
+                                    size="xs"
+                                    variant="filled"
+                                    icon="arrow-path"
+                                    wire:click="mergeAllSuggestions"
+                                    wire:confirm="{{ __('This will automatically merge all suggestions. Are you sure?') }}"
+                                    wire:loading.attr="disabled"
+                                    wire:target="mergeAllSuggestions"
+                                >
+                                    <span wire:loading.remove wire:target="mergeAllSuggestions">{{ __('Merge all') }}</span>
+                                    <span wire:loading wire:target="mergeAllSuggestions">{{ __('Merging…') }}</span>
+                                </flux:button>
+                            @endif
+                        </div>
                         </div>
 
                         <!-- Filter Tabs -->
