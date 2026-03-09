@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Admin;
 
 use App\Models\BulkImport;
+use App\Models\MusicImport;
 use App\Models\MusicPlanImport;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -24,6 +25,9 @@ class MusicPlanImports extends Component
 
     // Selection
     public ?int $selectedImportId = null;
+
+    // Music import filter: 'all' | 'unmatched' | 'suggestions'
+    public string $musicImportFilter = 'all';
 
     /**
      * Mount the component.
@@ -60,6 +64,11 @@ class MusicPlanImports extends Component
      */
     public function selectImport(int $importId): void
     {
+        if ($this->selectedImportId !== $importId) {
+            $this->resetPage('musicPage');
+            $this->musicImportFilter = 'all';
+        }
+
         $this->selectedImportId = $importId;
     }
 
@@ -69,6 +78,16 @@ class MusicPlanImports extends Component
     public function deselectImport(): void
     {
         $this->selectedImportId = null;
+        $this->musicImportFilter = 'all';
+    }
+
+    /**
+     * Set the music import filter.
+     */
+    public function setMusicImportFilter(string $filter): void
+    {
+        $this->musicImportFilter = $filter;
+        $this->resetPage('musicPage');
     }
 
     /**
@@ -85,7 +104,8 @@ class MusicPlanImports extends Component
             ->when($this->sourceFileFilter, function ($query, $sourceFile) {
                 $query->where('source_file', $sourceFile);
             })
-            ->with(['importItems', 'slotImports'])
+            ->withCount(['importItems', 'slotImports'])
+            ->with(['importItems' => fn ($q) => $q->withCount('musicImports')])
             ->orderBy($this->sortBy, $this->sortDirection)
             ->paginate(20);
 
@@ -97,23 +117,34 @@ class MusicPlanImports extends Component
         $importItems = collect();
         $slotImports = collect();
         $musicImports = collect();
+        $unmatchedCount = 0;
+        $suggestionCount = 0;
 
         if ($this->selectedImportId) {
-            $selectedImport = MusicPlanImport::with([
-                'importItems.musicImports',
-                'slotImports.musicImports',
-            ])->find($this->selectedImportId);
+            $selectedImport = MusicPlanImport::find($this->selectedImportId);
 
             if ($selectedImport) {
-                $importItems = $selectedImport->importItems;
-                $slotImports = $selectedImport->slotImports;
-                $musicImports = $selectedImport->importItems
-                    ->flatMap(fn ($item) => $item->musicImports)
-                    ->merge(
-                        $selectedImport->slotImports
-                            ->flatMap(fn ($slot) => $slot->musicImports)
-                    )
-                    ->unique('id');
+                $importItems = $selectedImport->importItems()->withCount('musicImports')->get();
+                $slotImports = $selectedImport->slotImports()->withCount('musicImports')->get();
+
+                $baseQuery = fn () => MusicImport::query()
+                    ->where(function ($q) use ($selectedImport): void {
+                        $q->whereHas('musicPlanImportItem', fn ($q) => $q->where('music_plan_import_id', $selectedImport->id))
+                            ->orWhereHas('slotImport', fn ($q) => $q->where('music_plan_import_id', $selectedImport->id));
+                    });
+
+                $unmatchedCount = $baseQuery()->whereNull('music_id')->count();
+                $suggestionCount = $baseQuery()->whereNotNull('merge_suggestion')->count();
+
+                $musicImportQuery = $baseQuery()->with(['slotImport', 'music', 'musicPlanImportItem']);
+
+                if ($this->musicImportFilter === 'unmatched') {
+                    $musicImportQuery->whereNull('music_id');
+                } elseif ($this->musicImportFilter === 'suggestions') {
+                    $musicImportQuery->whereNotNull('merge_suggestion');
+                }
+
+                $musicImports = $musicImportQuery->paginate(20, ['*'], 'musicPage');
             }
         }
 
@@ -126,6 +157,8 @@ class MusicPlanImports extends Component
             'importItems' => $importItems,
             'slotImports' => $slotImports,
             'musicImports' => $musicImports,
+            'unmatchedCount' => $unmatchedCount,
+            'suggestionCount' => $suggestionCount,
         ]);
     }
 }

@@ -22,6 +22,16 @@ class MusicImport extends Model
         'abbreviation',
         'label',
         'merge_suggestion',
+        'flags',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'flags' => 'array',
     ];
 
     /**

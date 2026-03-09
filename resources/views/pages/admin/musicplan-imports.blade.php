@@ -78,16 +78,16 @@
                             </flux:table.cell>
                             
                             <flux:table.cell>
-                                <div class="font-medium">{{ $import->importItems->count() }}</div>
+                                <div class="font-medium">{{ $import->import_items_count }}</div>
                             </flux:table.cell>
                             
                             <flux:table.cell>
-                                <div class="font-medium">{{ $import->slotImports->count() }}</div>
+                                <div class="font-medium">{{ $import->slot_imports_count }}</div>
                             </flux:table.cell>
                             
                             <flux:table.cell>
                                 <div class="font-medium">
-                                    {{ $import->importItems->sum(fn($item) => $item->musicImports->count()) }}
+                                    {{ $import->importItems->sum('music_imports_count') }}
                                 </div>
                             </flux:table.cell>
                             
@@ -165,7 +165,7 @@
                                         {{ $item->celebration_date?->format('Y-m-d') ?? __('No date') }}
                                     </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                        {{ $item->musicImports->count() }} {{ __('music imports') }}
+                                        {{ $item->music_imports_count }} {{ __('music imports') }}
                                     </p>
                                 </flux:card>
                             @empty
@@ -188,7 +188,7 @@
                                         {{ __('Column') }}: {{ $slot->column_number }}
                                     </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                        {{ $slot->musicImports->count() }} {{ __('music imports') }}
+                                        {{ $slot->music_imports_count }} {{ __('music imports') }}
                                     </p>
                                 </flux:card>
                             @empty
@@ -199,36 +199,97 @@
 
                     <!-- Music Imports -->
                     <div>
-                        <h4 class="font-semibold mb-3 flex items-center gap-2">
-                            <flux:icon name="musical-note" class="h-4 w-4" />
-                            {{ __('Music Imports') }} ({{ $musicImports->count() }})
-                        </h4>
-                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold flex items-center gap-2">
+                                <flux:icon name="musical-note" class="h-4 w-4" />
+                                {{ __('Music Imports') }} ({{ $musicImports->total() }})
+                            </h4>
+                            <div class="flex items-center gap-1">
+                                @if ($unmatchedCount > 0)
+                                    <flux:badge color="orange" size="sm">{{ $unmatchedCount }} {{ __('no match') }}</flux:badge>
+                                @endif
+                                @if ($suggestionCount > 0)
+                                    <flux:badge color="blue" size="sm">{{ $suggestionCount }} {{ __('suggestions') }}</flux:badge>
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Filter Tabs -->
+                        <div class="flex gap-2 mb-3">
+                            <flux:button
+                                size="sm"
+                                :variant="$musicImportFilter === 'all' ? 'primary' : 'ghost'"
+                                wire:click="setMusicImportFilter('all')"
+                            >
+                                {{ __('All') }}
+                            </flux:button>
+                            <flux:button
+                                size="sm"
+                                :variant="$musicImportFilter === 'unmatched' ? 'primary' : 'ghost'"
+                                wire:click="setMusicImportFilter('unmatched')"
+                            >
+                                {{ __('No Match') }} ({{ $unmatchedCount }})
+                            </flux:button>
+                            <flux:button
+                                size="sm"
+                                :variant="$musicImportFilter === 'suggestions' ? 'primary' : 'ghost'"
+                                wire:click="setMusicImportFilter('suggestions')"
+                            >
+                                {{ __('Merge Suggestions') }} ({{ $suggestionCount }})
+                            </flux:button>
+                        </div>
+
+                        <div class="space-y-2">
                             @forelse ($musicImports as $music)
-                                <flux:card class="p-3 text-sm">
-                                    <p class="font-medium">{{ $music->abbreviation ?? $music->label ?? __('N/A') }}</p>
-                                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                                        {{ __('Label') }}: {{ $music->label ?? __('N/A') }}
-                                    </p>
-                                    @if ($music->slotImport)
-                                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                            📍 {{ __('Slot') }}: {{ $music->slotImport->name }}
-                                        </p>
-                                    @endif
-                                    @if ($music->music_id)
-                                        <p class="text-xs text-green-600 dark:text-green-400 mt-1">
-                                            ✓ {{ __('Music found') }}
-                                        </p>
-                                    @else
-                                        <p class="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                                            ⚠ {{ __('Music not found') }}
-                                        </p>
-                                    @endif
+                                <flux:card
+                                    class="p-3 text-sm"
+                                    :class="$music->music_id ? '' : 'border-orange-300 dark:border-orange-700'"
+                                >
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-medium">{{ $music->abbreviation ?? $music->label ?? __('N/A') }}</p>
+                                            @if ($music->label && $music->abbreviation && $music->label !== $music->abbreviation)
+                                                <p class="text-xs text-gray-600 dark:text-gray-400">
+                                                    {{ __('Label') }}: {{ $music->label }}
+                                                </p>
+                                            @endif
+                                            @if ($music->slotImport)
+                                                <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                                    📍 {{ __('Slot') }}: {{ $music->slotImport->name }}
+                                                </p>
+                                            @elseif ($music->musicPlanImportItem)
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    📅 {{ $music->musicPlanImportItem->celebration_info }}
+                                                </p>
+                                            @endif
+                                            @if ($music->merge_suggestion)
+                                                <div class="mt-2 rounded bg-blue-50 dark:bg-blue-900/30 px-2 py-1">
+                                                    <p class="text-xs font-medium text-blue-700 dark:text-blue-300">
+                                                        {{ __('Merge suggestion') }}:
+                                                    </p>
+                                                    <p class="text-xs text-blue-600 dark:text-blue-400">{{ $music->merge_suggestion }}</p>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <div class="shrink-0">
+                                            @if ($music->music_id)
+                                                <flux:badge color="green" size="sm">✓ {{ __('Matched') }}</flux:badge>
+                                            @else
+                                                <flux:badge color="orange" size="sm">⚠ {{ __('No match') }}</flux:badge>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </flux:card>
                             @empty
                                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('No music imports') }}</p>
                             @endforelse
                         </div>
+
+                        @if ($musicImports->hasPages())
+                            <div class="mt-4">
+                                {{ $musicImports->links() }}
+                            </div>
+                        @endif
                     </div>
             </div>
         @endif

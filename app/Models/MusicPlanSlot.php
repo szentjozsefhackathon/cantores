@@ -29,6 +29,7 @@ class MusicPlanSlot extends Model
     protected $fillable = [
         'name',
         'description',
+        'special',
         'priority',
         'music_plan_id',
         'user_id',
@@ -163,6 +164,18 @@ class MusicPlanSlot extends Model
     public function isGlobal(): bool
     {
         return ! $this->is_custom;
+    }
+
+    /**
+     * Scope to filter slots by their special occasion/location tag.
+     */
+    public function scopeSpecial(Builder $query, ?string $special = null): Builder
+    {
+        if ($special !== null) {
+            return $query->where('special', $special);
+        }
+
+        return $query->whereNotNull('special');
     }
 
     /**
