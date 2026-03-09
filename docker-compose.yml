@@ -27,7 +27,6 @@ services:
       - creshu-network
     ports:
       - "${APP_EXTERNAL_PORT:-8080}:80"
-      - "${XDEBUG_EXTERNAL_PORT:-9003}:9003"
       - "${VITE_EXTERNAL_PORT:-5173}:5173"
     depends_on:
       app_dev_prepopulate:
