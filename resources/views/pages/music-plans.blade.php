@@ -4,15 +4,22 @@ namespace App\Livewire\Pages;
 
 use App\Facades\GenreContext;
 use App\Models\MusicPlan;
-use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Livewire\Attributes\Layout;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-new #[Layout('layouts::app.main')] class extends Component
+new class extends Component
 {
+    public function rendering(View $view): void
+    {
+        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
+
+        $view->layout($layout);
+    }
+
     use WithPagination;
 
     public string $search = '';

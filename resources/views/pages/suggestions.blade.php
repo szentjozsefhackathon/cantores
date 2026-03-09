@@ -9,12 +9,18 @@ use App\Services\CelebrationSearchService;
 use App\Services\LiturgicalInfoService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Layout;
-use Livewire\Attributes\On;
+use Illuminate\View\View;
 use Livewire\Component;
 
-new #[Layout('layouts::app.main')] class extends Component
+new class extends Component
 {
+    public function rendering(View $view): void
+    {
+        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
+
+        $view->layout($layout);
+    }
+
     /** @var array<string, mixed> */
     public array $criteria = [];
 

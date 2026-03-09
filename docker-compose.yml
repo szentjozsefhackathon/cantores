@@ -27,7 +27,7 @@ services:
       - creshu-network
     ports:
       - "${APP_EXTERNAL_PORT:-8080}:80"
-      - "${VITE_EXTERNAL_PORT:-5173}:5173"
+      - "${VITE_EXTERNAL_PORT:-5173}:${VITE_EXTERNAL_PORT:-5173}"
     depends_on:
       app_dev_prepopulate:
         condition: service_completed_successfully
