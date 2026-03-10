@@ -27,7 +27,6 @@ yarn-error.log
 .env.deploy
 .editorconfig
 /.devcontainer
-/.github
 
 AGENTS.md
 boost.json
