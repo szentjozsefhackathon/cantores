@@ -15,7 +15,7 @@ A szolgáltatás a Szent József Hackathon keretében önkéntes fejlesztők ál
 **Regisztráció során:**
 
 - E‑mail cím – a bejelentkezéshez és a szolgáltatással kapcsolatos fontos értesítések küldéséhez szükséges.
-- Becenév – a város és egy keresztnév kombinációjából automatikusan generált, más felhasználók számára látható azonosító.
+- Becenév – a város és egy keresztnév kombinációjából automatikusan generált, a honlap látogatói számára látható azonosító.
 - Jelszó – titkosított formában tároljuk.
 
 **A platform használata során opcionálisan megadható adatok:**

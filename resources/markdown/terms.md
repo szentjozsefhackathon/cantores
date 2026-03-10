@@ -5,7 +5,7 @@ A szolgáltatás használatával Ön elfogadja ezeket a feltételeket.
 
 ## 1. Általános rendelkezések
 
-A Cantores.hu egy ingyenes, önkéntes alapon működő platform magyar katolikus kántorok számára.
+A Cantores.hu egy ingyenes, önkéntes alapon működő platform énekrendek összeállítására és megosztására.
 A szolgáltatást „jelen állapotában" nyújtjuk, garanciák nélkül. Az oldal fenntartója nem vállal felelősséget
 a szolgáltatás megszakadása, adatvesztés, vagy más hátrányos következményekért.
 
@@ -26,9 +26,8 @@ mások szerzői jogait és személyiségi jogait megsértve nem feltölteni. A p
 
 ## 4. Adatvédelem
 
-Az Ön e‑mail címét és a platformon megadott nem személyes adatokat (pl. becenév, város, énekrendek)
-kizárólag a szolgáltatás működtetése céljából dolgozzuk fel.
-**Harmadik félnek (reklámpartnereknek, értékesítőknek) semmilyen adatot nem adunk át.**
+Az Ön e‑mail címét és a platformon megadott adatokat (pl. becenév, város, énekrendek) kizárólag a szolgáltatás működtetése céljából dolgozzuk fel.
+**Harmadik félnek semmilyen adatot nem adunk át.**
 Az adatokat a magyar és az érvényes uniós adatvédelmi jogszabályoknak megfelelően kezeljük.
 Részletes információkért tekintse meg az [Adatvédelmi nyilatkozatot](/privacy).
 

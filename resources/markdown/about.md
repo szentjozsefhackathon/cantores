@@ -1,6 +1,6 @@
 # Üdvözlünk a Cantores.hu oldalon!
 
-A Cantores.hu egy magyar katolikus kántoroknak szóló platform, amely elsősorban az énekrendek, illetve a liturgia zenei anyagának összeállításában segít.
+A Cantores.hu egy kántoroknak és más érdeklődőknek szóló platform, amely elsősorban az énekrendek, illetve a liturgia zenei anyagának összeállításában segít.
 
 ## A honlap főbb funkciói
 
@@ -22,9 +22,7 @@ Minden magyar kántornak, kórusvezetőnek, liturgikus szolgálattevőnek, zené
 
 Nagyon ügyelünk arra, hogy személyes adatokat ne osszunk meg. Az énekrendek megosztása teljesen opcionális, és csak a regisztrált felhasználók által megosztott énekrendek jelennek meg a javaslatok között. Mindenki maga döntheti el, hogy szeretné-e megosztani az énekrendjét, vagy sem. Az énekrendek megosztása nélkül is használhatod a honlapot, de minél többen osztják meg az énekrendjeiket, annál jobb javaslatokat tudunk adni mindenki számára.
 
-A regisztráció során megadott név és város alapján generálunk egy becenevet, amelyet a honlapon használsz. Ez a becenév csak akkor jelenik meg mások számára, ha te megosztod az énekrendedet. Sem a valódi nevedet, sem az elérhetőségeidet nem jelenítjük meg nyilvánosan.
-
-Ha mégis szeretnéd, hogy az énekrended, egy-egy ünnephez javasolt énekek stb. a valódi neveddel együtt jelenjenek meg, akkor ezt külön jelezheted a Beállításokban, de ekkor is csak regisztrált felhasználók, belépés után láthatják a neved.
+A regisztráció során megadott név és város alapján generálunk egy becenevet, amelyet a honlapon használsz. Ez a becenév csak akkor jelenik meg mások számára, ha valamilyen tartalmat (énekrendet, zeneművet, gyűjteményt vagy szerzőt) megosztasz. Sem a valódi nevedet, sem az elérhetőségeidet nem jelenítjük meg nyilvánosan.
 
 ## Tölthetek le innen énekeket, kottákat, vagy egyéb anyagokat?
 
