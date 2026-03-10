@@ -109,7 +109,7 @@
                 <flux:table.cell>
                     @if ($mode === 'manage')
                         <div class="flex items-center gap-2">
-                            @can('update', $music)
+                            @can('content.edit.own')
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
@@ -124,13 +124,15 @@
                                 icon="history"
                                 wire:click="showAuditLog({{ $music->id }})"
                                 :title="__('View Audit Log')" />
-                            <flux:button
-                                variant="ghost"
-                                size="sm"
-                                icon="trash"
-                                wire:click="delete({{ $music->id }})"
-                                wire:confirm="{{ __('Are you sure you want to delete this music piece? This will remove it from all collections and music plans.') }}"
-                                :title="__('Delete')" />
+                            @can('content.edit.published')
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="trash"
+                                    wire:click="delete({{ $music->id }})"
+                                    wire:confirm="{{ __('Are you sure you want to delete this music piece? This will remove it from all collections and music plans.') }}"
+                                    :title="__('Delete')" />
+                            @endcan
                         </div>
                     @elseif ($mode === 'select' && $this->selectable)
                         <flux:button
