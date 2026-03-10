@@ -32,23 +32,25 @@ new class extends Component
 
     public function updatingTab(): void
     {
-        $this->resetPage();
+        $this->resetPage('liturgicalPage');
+        $this->resetPage('customPage');
     }
 
     public function updatingLiturgicalSearch(): void
     {
-        $this->resetPage();
+        $this->resetPage('liturgicalPage');
     }
 
     public function updatingCustomSearch(): void
     {
-        $this->resetPage();
+        $this->resetPage('customPage');
     }
 
     #[On('genre-changed')]
     public function onGenreChanged(): void
     {
-        $this->resetPage();
+        $this->resetPage('liturgicalPage');
+        $this->resetPage('customPage');
     }
 
     /**
@@ -105,7 +107,7 @@ new class extends Component
                 $q->whereNull('celebrations.is_custom')
                     ->orWhere('celebrations.is_custom', false);
             })
-            ->paginate(12);
+            ->paginate(12, ['*'], 'liturgicalPage');
     }
 
     /**
@@ -115,7 +117,7 @@ new class extends Component
     {
         return $this->baseQuery($this->customSearch)
             ->where('celebrations.is_custom', true)
-            ->paginate(12);
+            ->paginate(12, ['*'], 'customPage');
     }
 }
 ?>
@@ -126,21 +128,13 @@ new class extends Component
             <!-- Header -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div class="flex items-center gap-4">
-                    <flux:icon name="musical-note" class="h-10 w-10 text-blue-600 dark:text-blue-400" variant="outline" />
+                    <flux:icon name="list-music" class="h-10 w-10 text-blue-600 dark:text-blue-400" variant="outline" />
                     <div>
-                        <flux:heading size="xl">Közzétett énekrendek</flux:heading>
+                        <flux:heading size="xl">Közzétett énekrendek <flux:icon name="globe" variant="mini" class="inline" /></flux:heading>
                         <flux:text class="text-neutral-600 dark:text-neutral-400">
                             Itt találod az összes nyilvános énekrendet
                         </flux:text>
                     </div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <flux:button
-                        href="{{ route('home') }}"
-                        variant="outline"
-                        icon="arrow-left">
-                        Vissza
-                    </flux:button>
                 </div>
             </div>
 
