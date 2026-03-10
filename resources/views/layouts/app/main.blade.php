@@ -33,6 +33,10 @@
             @if (Route::has('login'))
                 <!-- Desktop navigation (hidden on mobile) -->
                 <nav class="hidden lg:flex items-center gap-4">
+                    <a href="{{ route('music-database') }}" class="text-accent hover:underline font-medium text-sm">
+                        <flux:icon name="music" class="inline" variant="mini"></flux:icon>
+                        Énekadatbázis
+                    </a>
                     <a href="{{ route('music-plans') }}" class="text-accent hover:underline font-medium text-sm">
                         <flux:icon name="list-music" class="inline" variant="mini"></flux:icon>
                         Énekrendek
@@ -95,7 +99,10 @@
                             <flux:menu.item href="{{ url('/about') }}" icon="information-circle">
                                 Rólunk
                             </flux:menu.item>
-                            <flux:menu.item href="{{ route('music-plans') }}" icon="music">
+                            <flux:menu.item href="{{ route('music-database') }}" icon="music">
+                                Énekadatbázis
+                            </flux:menu.item>
+                            <flux:menu.item href="{{ route('music-plans') }}" icon="list-music">
                                 Énekrendek
                             </flux:menu.item>
                             

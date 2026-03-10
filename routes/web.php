@@ -14,6 +14,10 @@ Route::view('/about', 'pages.about')->name('about');
 
 Route::view('/guide', 'pages.guide')->name('guide');
 
+// Music database landing page (public)
+Route::livewire('/music-database', 'pages::music-database')
+    ->name('music-database');
+
 Route::view('/terms', 'pages.terms')->name('terms');
 Route::view('/privacy', 'pages.privacy')->name('privacy');
 
