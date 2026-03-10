@@ -13,6 +13,12 @@
                 <flux:navbar.item icon="layout-grid" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                     {{ __('Dashboard') }}
                 </flux:navbar.item>
+                <flux:navbar.item icon="music" :href="route('music-database')" :current="request()->routeIs('music-database')" wire:navigate>
+                    Énekadatbázis
+                </flux:navbar.item>
+                <flux:navbar.item icon="list-music" :href="route('music-plans')" :current="request()->routeIs('music-plans')" wire:navigate>
+                    Énekrendek
+                </flux:navbar.item>
             </flux:navbar>
 
             <flux:spacer />
@@ -55,6 +61,12 @@
                 <flux:sidebar.group>
                     <flux:sidebar.item icon="layout-grid" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard')  }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="music" :href="route('music-database')" :current="request()->routeIs('music-database')" wire:navigate>
+                        Énekadatbázis
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="list-music" :href="route('music-plans')" :current="request()->routeIs('music-plans')" wire:navigate>
+                        Énekrendek
                     </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>

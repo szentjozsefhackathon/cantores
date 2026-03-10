@@ -93,17 +93,19 @@
                             <flux:button variant="primary" icon="home" size="sm">Irányítópult</flux:button>
                         </a>
                     @endauth
+                    <a href="{{ route('music-database') }}" class="text-accent hover:underline font-medium text-sm">
+                        <flux:icon name="music" class="inline" variant="mini"></flux:icon>
+                        Énekadatbázis
+                    </a>
+                    <a href="{{ route('music-plans') }}" class="text-accent hover:underline font-medium text-sm">
+                        <flux:icon name="list-music" class="inline" variant="mini"></flux:icon>
+                        Énekrendek
+                    </a>
                     <flux:dropdown align="end">
                         <flux:button variant="ghost" square icon="bars-3" aria-label="Menu" />
                         <flux:menu>
                             <flux:menu.item href="{{ url('/about') }}" icon="information-circle">
                                 Rólunk
-                            </flux:menu.item>
-                            <flux:menu.item href="{{ route('music-database') }}" icon="music">
-                                Énekadatbázis
-                            </flux:menu.item>
-                            <flux:menu.item href="{{ route('music-plans') }}" icon="list-music">
-                                Énekrendek
                             </flux:menu.item>
                             
                             <flux:menu.separator />

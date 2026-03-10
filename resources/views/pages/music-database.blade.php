@@ -282,9 +282,9 @@ new class extends Component
             <div class="flex items-start gap-4">
                 <flux:icon name="information-circle" class="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
                 <div>
-                    <flux:heading size="sm" class="text-amber-800! dark:text-amber-300!">Bejelentkezés szükséges a böngészéshez</flux:heading>
+                    <flux:heading size="sm" class="text-amber-800! dark:text-amber-300!">Bejelentkezés szükséges a szerkesztéshez</flux:heading>
                     <p class="mt-1 text-sm text-amber-700 dark:text-amber-400">
-                        A zeneművek, gyűjtemények és szerzők listájának böngészéséhez, illetve az adatbázis szerkesztéséhez kérjük, jelentkezz be vagy regisztrálj!
+                        A zeneművek, gyűjtemények és szerzők adatbázisának szerkesztéséhez, saját énekrendek készítéséhez, vagy hibajelzéshez kérjük, jelentkezz be vagy regisztrálj!
                     </p>
                     <div class="mt-3 flex items-center gap-2">
                         <a href="{{ route('login') }}">
