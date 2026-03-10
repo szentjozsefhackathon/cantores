@@ -1,4 +1,13 @@
 {
     "(p.:page)": "(p.:page)",
-    "Edit Music": "Edit Music"
+    "Edit Music": "Edit Music",
+    "Blocked": "Blocked",
+    "Active": "Active",
+    "Block": "Block",
+    "Unblock": "Unblock",
+    "User has been blocked.": "User has been blocked.",
+    "User has been unblocked.": "User has been unblocked.",
+    "You cannot block yourself.": "You cannot block yourself.",
+    "Are you sure you want to block this user?": "Are you sure you want to block this user?",
+    "Are you sure you want to unblock this user?": "Are you sure you want to unblock this user?"
 }

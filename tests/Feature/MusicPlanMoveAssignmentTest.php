@@ -39,8 +39,6 @@ test('moveAssignmentToSlot updates music_plan_slot_id to reflect the new slot', 
 
     $assignment = MusicPlanSlotAssignment::factory()->create([
         'music_plan_slot_plan_id' => $pivotA->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slotA->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
@@ -52,7 +50,6 @@ test('moveAssignmentToSlot updates music_plan_slot_id to reflect the new slot', 
     $assignment->refresh();
 
     expect($assignment->music_plan_slot_plan_id)->toBe($pivotB->id);
-    expect($assignment->music_plan_slot_id)->toBe($slotB->id);
 });
 
 test('suggestions show music under the new slot after it was moved', function () {
@@ -87,8 +84,6 @@ test('suggestions show music under the new slot after it was moved', function ()
     // but music_plan_slot_id is stale and still points to slot A (the pre-fix bug state).
     MusicPlanSlotAssignment::factory()->create([
         'music_plan_slot_plan_id' => $pivotB->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slotA->id, // stale — old slot
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);

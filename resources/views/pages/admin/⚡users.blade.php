@@ -1,27 +1,65 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
 {
+    use AuthorizesRequests;
 
     public $users;
 
-    public function mount() {
+    public function mount(): void
+    {
+        $this->authorize('system.maintain');
         $this->loadUsers();
     }
 
-    public function openRolesModal($userId) {
+    public function openRolesModal(int $userId): void
+    {
         $this->dispatch('openUserRolesModal', userId: $userId);
     }
 
+    public function blockUser(int $userId): void
+    {
+        $user = User::findOrFail($userId);
+
+        if ($user->id === Auth::id()) {
+            $this->dispatch('error', message: __('You cannot block yourself.'));
+
+            return;
+        }
+
+        $user->update([
+            'blocked' => true,
+            'blocked_at' => now(),
+        ]);
+
+        $this->dispatch('success', message: __('User has been blocked.'));
+        $this->loadUsers();
+    }
+
+    public function unblockUser(int $userId): void
+    {
+        $user = User::findOrFail($userId);
+
+        $user->update([
+            'blocked' => false,
+            'blocked_at' => null,
+        ]);
+
+        $this->dispatch('success', message: __('User has been unblocked.'));
+        $this->loadUsers();
+    }
+
     #[On('refresh-users')]
-    public function loadUsers() {
+    public function loadUsers(): void
+    {
         $this->users = User::with('roles')->latest()->get();
     }
-    
 };
 ?>
 
@@ -35,6 +73,7 @@ new class extends Component
                 <flux:table.column>{{ __('Display Name') }}</flux:table.column>
                 <flux:table.column>{{ __('Roles') }}</flux:table.column>
                 <flux:table.column>{{ __('Email Verified') }}</flux:table.column>
+                <flux:table.column>{{ __('Blocked') }}</flux:table.column>
                 <flux:table.column>{{ __('Created At') }}</flux:table.column>
                 <flux:table.column>{{ __('Updated At') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
@@ -60,21 +99,54 @@ new class extends Component
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>{{ $user->email_verified_at ? $user->email_verified_at->format('Y-m-d H:i') : __('Not verified') }}</flux:table.cell>
+                        <flux:table.cell>
+                            @if($user->blocked)
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                    {{ __('Blocked') }}
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    {{ __('Active') }}
+                                </span>
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell>{{ $user->created_at->format('Y-m-d H:i') }}</flux:table.cell>
                         <flux:table.cell>{{ $user->updated_at->format('Y-m-d H:i') }}</flux:table.cell>
                         <flux:table.cell>
-                            <flux:button
-                                size="sm"
-                                variant="outline"
-                                wire:click="openRolesModal({{ $user->id }})"
-                            >
-                                {{ __('Edit Roles') }}
-                            </flux:button>
+                            <div class="flex gap-2">
+                                <flux:button
+                                    size="sm"
+                                    variant="outline"
+                                    wire:click="openRolesModal({{ $user->id }})"
+                                >
+                                    {{ __('Edit Roles') }}
+                                </flux:button>
+                                @if($user->blocked)
+                                    <flux:button
+                                        size="sm"
+                                        variant="filled"
+                                        wire:click="unblockUser({{ $user->id }})"
+                                        wire:confirm="{{ __('Are you sure you want to unblock this user?') }}"
+                                    >
+                                        {{ __('Unblock') }}
+                                    </flux:button>
+                                @else
+                                    <flux:button
+                                        size="sm"
+                                        variant="danger"
+                                        wire:click="blockUser({{ $user->id }})"
+                                        wire:confirm="{{ __('Are you sure you want to block this user?') }}"
+                                        :disabled="$user->id === auth()->id()"
+                                    >
+                                        {{ __('Block') }}
+                                    </flux:button>
+                                @endif
+                            </div>
                         </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="9" class="text-center">{{ __('No users found.') }}</flux:table.cell>
+                        <flux:table.cell colspan="10" class="text-center">{{ __('No users found.') }}</flux:table.cell>
                     </flux:table.row>
                 @endforelse
             </flux:table.rows>
