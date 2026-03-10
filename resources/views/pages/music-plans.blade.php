@@ -22,14 +22,25 @@ new class extends Component
 
     use WithPagination;
 
-    public string $search = '';
+    public string $liturgicalSearch = '';
 
-    public function mount(): void
+    public string $customSearch = '';
+
+    public string $tab = 'liturgical';
+
+    public function mount(): void {}
+
+    public function updatingTab(): void
     {
-        $this->search = request()->query('search', '');
+        $this->resetPage();
     }
 
-    public function updatingSearch(): void
+    public function updatingLiturgicalSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingCustomSearch(): void
     {
         $this->resetPage();
     }
@@ -41,9 +52,9 @@ new class extends Component
     }
 
     /**
-     * Build the query for fetching published music plans.
+     * Build a base query for fetching published music plans.
      */
-    protected function getMusicPlansQuery()
+    protected function baseQuery(string $search = '')
     {
         $query = MusicPlan::query()
             ->where('is_private', false)
@@ -55,7 +66,6 @@ new class extends Component
         // Filter by current genre if set
         $genreId = GenreContext::getId();
         if ($genreId !== null) {
-            // Show plans that belong to the current genre OR have no genre (belongs to all)
             $query->where(function ($q) use ($genreId) {
                 $q->whereNull('genre_id')
                     ->orWhere('genre_id', $genreId);
@@ -63,12 +73,12 @@ new class extends Component
         }
 
         // Search filter
-        if ($this->search) {
-            $query->where(function ($q) {
-                $q->whereHas('celebration', function ($celebrationQuery) {
-                    $celebrationQuery->where('name', 'ilike', "%{$this->search}%")
-                        ->orWhere('season_text', 'ilike', "%{$this->search}%")
-                        ->orWhere('year_letter', 'ilike', "%{$this->search}%");
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('celebration', function ($celebrationQuery) use ($search) {
+                    $celebrationQuery->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('season_text', 'ilike', "%{$search}%")
+                        ->orWhere('year_letter', 'ilike', "%{$search}%");
                 });
             });
         }
@@ -86,11 +96,26 @@ new class extends Component
     }
 
     /**
-     * Get the paginated music plans.
+     * Get paginated liturgical (non-custom) music plans.
      */
-    public function getMusicPlansProperty(): LengthAwarePaginator
+    public function getLiturgicalPlansProperty(): LengthAwarePaginator
     {
-        return $this->getMusicPlansQuery()->paginate(12);
+        return $this->baseQuery($this->liturgicalSearch)
+            ->where(function ($q) {
+                $q->whereNull('celebrations.is_custom')
+                    ->orWhere('celebrations.is_custom', false);
+            })
+            ->paginate(12);
+    }
+
+    /**
+     * Get paginated custom celebration music plans.
+     */
+    public function getCustomPlansProperty(): LengthAwarePaginator
+    {
+        return $this->baseQuery($this->customSearch)
+            ->where('celebrations.is_custom', true)
+            ->paginate(12);
     }
 }
 ?>
@@ -110,59 +135,96 @@ new class extends Component
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <flux:button 
-                        href="{{ route('home') }}" 
-                        variant="outline" 
+                    <flux:button
+                        href="{{ route('home') }}"
+                        variant="outline"
                         icon="arrow-left">
                         Vissza
                     </flux:button>
                 </div>
             </div>
 
-            <!-- Search and filters -->
-            <div class="mb-6">
-                <div class="flex flex-col md:flex-row gap-4">
-                    <div class="flex-1">
-                        <flux:field>
-                            <flux:label>Keresés énekrendek között</flux:label>
-                            <flux:input 
-                                type="search" 
-                                wire:model.live="search" 
-                                placeholder="Keresés ünnep neve, időszak vagy liturgikus év szerint..." 
-                                icon="magnifying-glass" />
-                        </flux:field>
+            <!-- Tabs -->
+            <x-mary-tabs wire:model="tab">
+                <x-mary-tab name="liturgical" label="Liturgikus ünnepek" icon="o-calendar-days">
+                    <div class="flex flex-col md:flex-row gap-4 mb-6">
+                        <div class="flex-1">
+                            <flux:field>
+                                <flux:label>Keresés énekrendek között</flux:label>
+                                <flux:input
+                                    type="search"
+                                    wire:model.live.debounce.500ms="liturgicalSearch"
+                                    placeholder="Keresés ünnep neve vagy időszak szerint..."
+                                    icon="magnifying-glass" />
+                            </flux:field>
+                        </div>
+                        <div class="flex items-end">
+                            <flux:badge color="blue" size="lg" class="px-4 py-2">
+                                <flux:icon name="musical-note" class="h-4 w-4 mr-2" variant="mini" />
+                                {{ $this->liturgicalPlans->total() }} énekrend
+                            </flux:badge>
+                        </div>
                     </div>
-                    <div class="flex items-end">
-                        <flux:badge color="blue" size="lg" class="px-4 py-2">
-                            <flux:icon name="musical-note" class="h-4 w-4 mr-2" variant="mini" />
-                            {{ $this->musicPlans->total() }} énekrend
-                        </flux:badge>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Music plans grid -->
-            @if($this->musicPlans->isEmpty())
-                <flux:callout variant="secondary" icon="musical-note" class="border-dashed">
-                    <flux:callout.heading>Nincsenek közzétett énekrendek</flux:callout.heading>
-                    <flux:callout.text>
-                        Jelenleg nincs elérhető nyilvános énekrend. Próbálj meg más keresési feltételeket megadni.
-                    </flux:callout.text>
-                </flux:callout>
-            @else
-                <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    @foreach($this->musicPlans as $plan)
+                    @if($this->liturgicalPlans->isEmpty())
+                    <flux:callout variant="secondary" icon="musical-note" class="border-dashed">
+                        <flux:callout.heading>Nincsenek közzétett énekrendek</flux:callout.heading>
+                        <flux:callout.text>
+                            Jelenleg nincs elérhető nyilvános liturgikus énekrend. Próbálj meg más keresési feltételeket megadni.
+                        </flux:callout.text>
+                    </flux:callout>
+                    @else
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        @foreach($this->liturgicalPlans as $plan)
                         <livewire:music-plan-card :musicPlan="$plan" :key="$plan->id" readonly="true" />
-                    @endforeach
-                </div>
-
-                <!-- Pagination -->
-                @if($this->musicPlans->hasPages())
-                    <div class="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-800">
-                        {{ $this->musicPlans->links() }}
+                        @endforeach
                     </div>
-                @endif
-            @endif
+                    @if($this->liturgicalPlans->hasPages())
+                    <div class="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-800">
+                        {{ $this->liturgicalPlans->links() }}
+                    </div>
+                    @endif
+                    @endif
+                </x-mary-tab>
+                <x-mary-tab name="custom" label="Egyéni ünnepek" icon="o-star">
+                    <div class="flex flex-col md:flex-row gap-4 mb-6">
+                        <div class="flex-1">
+                            <flux:field>
+                                <flux:label>Keresés énekrendek között</flux:label>
+                                <flux:input
+                                    type="search"
+                                    wire:model.live.debounce.500ms="customSearch"
+                                    placeholder="Keresés ünnep neve vagy időszak szerint..." 
+                                    icon="magnifying-glass" />
+                            </flux:field>
+                        </div>
+                        <div class="flex items-end">
+                            <flux:badge color="blue" size="lg" class="px-4 py-2">
+                                <flux:icon name="musical-note" class="h-4 w-4 mr-2" variant="mini" />
+                                {{ $this->customPlans->total() }} énekrend
+                            </flux:badge>
+                        </div>
+                    </div>
+                    @if($this->customPlans->isEmpty())
+                    <flux:callout variant="secondary" icon="musical-note" class="border-dashed">
+                        <flux:callout.heading>Nincsenek közzétett énekrendek</flux:callout.heading>
+                        <flux:callout.text>
+                            Jelenleg nincs elérhető nyilvános egyéni énekrend. Próbálj meg más keresési feltételeket megadni.
+                        </flux:callout.text>
+                    </flux:callout>
+                    @else
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        @foreach($this->customPlans as $plan)
+                        <livewire:music-plan-card :musicPlan="$plan" :key="$plan->id" readonly="true" />
+                        @endforeach
+                    </div>
+                    @if($this->customPlans->hasPages())
+                    <div class="mt-8 pt-6 border-t border-neutral-200 dark:border-neutral-800">
+                        {{ $this->customPlans->links() }}
+                    </div>
+                    @endif
+                    @endif
+                </x-mary-tab>
+            </x-mary-tabs>
         </flux:card>
     </div>
 </div>
