@@ -56,13 +56,14 @@
         </flux:field>
     </div>
 
+    @auth
     {{-- Visibility filter --}}
     <div>
         <x-mary-choices placeholder="{{ __('Visibility') }}" single wire:model.live="filter" :options="array_filter([
             ['id' => 'all', 'name' => __('All'), 'icon' => 'lucide.layers'],
             ['id' => 'public', 'name' => __('Public'), 'icon' => 'lucide.globe'],
             ['id' => 'private', 'name' => __('Private'), 'icon' => 'lucide.globe-lock'],
-            auth()->check() ? ['id' => 'mine', 'name' => __('My items'), 'icon' => 'o-user'] : null,
+            ['id' => 'mine', 'name' => __('My items'), 'icon' => 'o-user'],
         ])">
             @scope('item', $option)
                 <x-mary-list-item :item="$option">
@@ -73,6 +74,7 @@
             @endscope
         </x-mary-choices>
     </div>
+    @endauth
 
     {{-- Tag filter – AND logic: music must have ALL selected tags (2 cols on lg) --}}
     <div class="lg:col-span-2 text-sm">

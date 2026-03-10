@@ -14,7 +14,9 @@
         <flux:table.column>{{ __('Collection') }}</flux:table.column>
         <flux:table.column>{{ __('Genre') }}</flux:table.column>
         <flux:table.column>{{ __('Tags') }}</flux:table.column>
+        @auth
         <flux:table.column><flux:icon name="globe" class="h-4 w-4" /></flux:table.column>
+        @endauth
         <flux:table.column>{{ __('Actions') }}</flux:table.column>
     </flux:table.columns>
 
@@ -94,6 +96,7 @@
                     </div>
                 </flux:table.cell>
 
+                @auth
                 {{-- Privacy --}}
                 <flux:table.cell>
                     <div class="flex items-center gap-2">
@@ -104,20 +107,31 @@
                         @endif
                     </div>
                 </flux:table.cell>
+                @endauth
 
                 {{-- Actions column --}}
                 <flux:table.cell>
                     @if ($mode === 'manage')
                         <div class="flex items-center gap-2">
-                            @can('content.edit.own')
+                            @auth
+                                @can('content.edit.own')
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="pencil"
+                                        :href="route('music-editor', ['music' => $music->id])"
+                                        tag="a"
+                                        :title="__('Edit')" />
+                                @endcan
+                            @else
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
-                                    icon="pencil"
-                                    :href="route('music-editor', ['music' => $music->id])"
+                                    icon="eye"
+                                    :href="route('music-view', ['music' => $music->id])"
                                     tag="a"
-                                    :title="__('Edit')" />
-                            @endcan
+                                    :title="__('View')" />
+                            @endauth
                             <flux:button
                                 variant="ghost"
                                 size="sm"
@@ -148,7 +162,7 @@
             </flux:table.row>
         @empty
             <flux:table.row>
-                <flux:table.cell colspan="7" class="text-center">
+                <flux:table.cell :colspan="($mode === 'manage' ? 1 : 0) + 5 + (auth()->check() ? 1 : 0)" class="text-center">
                     <div class="py-8 text-center">
                         <flux:icon name="folder-open" class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
                         <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No music pieces found') }}</h3>

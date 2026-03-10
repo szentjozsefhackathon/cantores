@@ -47,7 +47,9 @@
             <flux:table.columns>
                 <flux:table.column sortable :sorted="$sortBy === 'name'" :direction="$sortDirection" wire:click="sort('name')">{{ __('Name') }}</flux:table.column>
                 <flux:table.column>{{ __('Music Pieces') }}</flux:table.column>
+                @auth
                 <flux:table.column>{{ __('Privacy') }}</flux:table.column>
+                @endauth
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
             </flux:table.columns>
             
@@ -66,6 +68,7 @@
                             </div>
                         </flux:table.cell>
                         
+                        @auth
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
                                 @if ($author->is_private)
@@ -77,6 +80,7 @@
                                 @endif
                             </div>
                         </flux:table.cell>
+                        @endauth
                         
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
@@ -97,6 +101,7 @@
                                     :title="__('View Audit Log')"
                                 />
                                 
+                                @can('delete', $author)
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
@@ -105,6 +110,7 @@
                                     wire:confirm="{{ __('Are you sure you want to delete this author? This can only be done if no music pieces are assigned to it.') }}"
                                     :title="__('Delete')"
                                 />
+                                @endcan
                                 
                                 <flux:button
                                     variant="ghost"
