@@ -4,6 +4,7 @@ use App\Enums\MusicScopeType;
 use App\Models\MusicAssignmentFlag;
 use App\Models\MusicPlan;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -75,7 +76,8 @@ new class extends Component
     /**
      * Get flag options for Mary UI choices.
      */
-    public function getFlagOptionsProperty(): array
+    #[Computed]
+    public function flagOptions(): array
     {
         return MusicAssignmentFlag::all()->map(function ($flag) {
             return [
@@ -90,7 +92,8 @@ new class extends Component
     /**
      * Get scope type options for dropdown.
      */
-    public function getScopeTypeOptionsProperty(): array
+    #[Computed]
+    public function scopeTypeOptions(): array
     {
         return collect(MusicScopeType::cases())->map(function ($type) {
             return [
@@ -140,65 +143,90 @@ new class extends Component
 
     private function loadPlanSlots(): void
     {
-        $this->planSlots = $this->musicPlan->slots()
+        $slots = $this->musicPlan->slots()
             ->withPivot('id', 'sequence')
             ->orderBy('music_plan_slot_plan.sequence')
+            ->get();
+
+        // Load all assignments for all slot-plan instances in one query (avoids N+1)
+        $pivotIds = $slots->map(fn ($slot) => $slot->pivot->id)->toArray();
+
+        $allAssignments = \App\Models\MusicPlanSlotAssignment::whereIn('music_plan_slot_plan_id', $pivotIds)
+            ->orderBy('music_sequence')
+            ->with(['music.collections', 'music.tags', 'music.genres', 'flags', 'scopes'])
             ->get()
-            ->map(function ($slot) {
-                // Load assignments for this slot instance in this plan (filter by pivot id)
-                $assignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slot->pivot->id)
-                    ->orderBy('music_sequence')
-                    ->with(['music', 'flags', 'scopes'])
-                    ->get()
-                    ->map(function ($assignment) {
-                        // create the flag array for this slot's assignments
-                        $this->flags[$assignment->id] = $assignment->flags->pluck('id')->toArray();
+            ->groupBy('music_plan_slot_plan_id');
 
-                        // Build database scopes (type as enum value)
-                        $dbScopes = $assignment->scopes->map(function ($scope) {
-                            return [
-                                'type' => $scope->scope_type?->value,
-                                'number' => $scope->scope_number,
-                            ];
-                        })->toArray();
+        $user = auth()->user();
 
-                        // Get existing scopes (may include placeholders)
-                        $existingScopes = $this->assignmentScopes[$assignment->id] ?? [];
+        $this->planSlots = $slots->map(function ($slot) use ($allAssignments, $user) {
+            $assignments = ($allAssignments->get($slot->pivot->id) ?? collect())
+                ->map(function ($assignment) use ($user) {
+                    // create the flag array for this slot's assignments
+                    $this->flags[$assignment->id] = $assignment->flags->pluck('id')->toArray();
 
-                        // Filter placeholders (type or number null)
-                        $placeholders = array_filter($existingScopes, fn ($scope) => $scope['type'] === null || $scope['number'] === null);
-
-                        // Merge: database scopes first, then placeholders
-                        $mergedScopes = array_merge($dbScopes, $placeholders);
-
-                        // Update assignmentScopes
-                        $this->assignmentScopes[$assignment->id] = $mergedScopes;
-
+                    // Build database scopes (type as enum value)
+                    $dbScopes = $assignment->scopes->map(function ($scope) {
                         return [
-                            'id' => $assignment->id,
-                            'music_id' => $assignment->music_id,
-                            'music_title' => $assignment->music->title,
-                            'music_subtitle' => $assignment->music->subtitle,
-                            'music_custom_id' => $assignment->music->custom_id,
-                            'music_sequence' => $assignment->music_sequence,
-                            'notes' => $assignment->notes,
-                            'scopes' => $mergedScopes,
-                            'scope_label' => $assignment->scope_label,
+                            'type' => $scope->scope_type?->value,
+                            'number' => $scope->scope_number,
                         ];
-                    })
-                    ->toArray();
+                    })->toArray();
 
-                return [
-                    'id' => $slot->id,
-                    'pivot_id' => $slot->pivot->id,
-                    'name' => $slot->name,
-                    'description' => $slot->description,
-                    'sequence' => $slot->pivot->sequence,
-                    'is_custom' => $slot->is_custom,
-                    'assignments' => $assignments,
-                ];
-            })
-            ->toArray();
+                    // Get existing scopes (may include placeholders)
+                    $existingScopes = $this->assignmentScopes[$assignment->id] ?? [];
+
+                    // Filter placeholders (type or number null)
+                    $placeholders = array_filter($existingScopes, fn ($scope) => $scope['type'] === null || $scope['number'] === null);
+
+                    // Merge: database scopes first, then placeholders
+                    $mergedScopes = array_merge($dbScopes, $placeholders);
+
+                    // Update assignmentScopes
+                    $this->assignmentScopes[$assignment->id] = $mergedScopes;
+
+                    $music = $assignment->music;
+
+                    return [
+                        'id' => $assignment->id,
+                        'music_id' => $assignment->music_id,
+                        'music_title' => $music->title,
+                        'music_subtitle' => $music->subtitle,
+                        'music_custom_id' => $music->custom_id,
+                        'music_is_private' => $music->is_private,
+                        'music_sequence' => $assignment->music_sequence,
+                        'notes' => $assignment->notes,
+                        'scopes' => $mergedScopes,
+                        'scope_label' => $assignment->scope_label,
+                        'music_collections' => $music->collections->map(fn ($c) => [
+                            'abbreviation' => $c->abbreviation,
+                            'title' => $c->title,
+                            'order_number' => $c->pivot->order_number,
+                            'page_number' => $c->pivot->page_number,
+                        ])->toArray(),
+                        'music_tags' => $music->tags->map(fn ($t) => [
+                            'name' => $t->name,
+                            'icon' => $t->icon(),
+                        ])->toArray(),
+                        'music_genres' => $music->genres->map(fn ($g) => [
+                            'icon' => $g->icon(),
+                        ])->toArray(),
+                        'can_view_music' => $user === null ? (! $music->is_private) : $user->can('view', $music),
+                        'can_edit_music' => $user !== null && $user->can('update', $music),
+                    ];
+                })
+                ->toArray();
+
+            return [
+                'id' => $slot->id,
+                'pivot_id' => $slot->pivot->id,
+                'name' => $slot->name,
+                'description' => $slot->description,
+                'sequence' => $slot->pivot->sequence,
+                'is_custom' => $slot->is_custom,
+                'assignments' => $assignments,
+            ];
+        })->toArray();
     }
 
     private function loadExistingSlotIds(): void

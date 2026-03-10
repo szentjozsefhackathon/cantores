@@ -332,7 +332,7 @@
                                                     @endif
                                                 </div>
                                                 <div class="flex flex-col gap-2">
-                                                    <livewire:music-card defer :music="App\Models\Music::find($assignment['music_id'])" wire:loading />
+                                                    <x-music-card-static :assignment="$assignment" />
                                                     <div class="text-sm">
                                                     <x-mary-choices
                                                         placeholder="Címkék"
