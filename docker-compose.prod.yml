@@ -42,7 +42,7 @@ services:
     networks:
       - internal
     entrypoint: []
-    command: php artisan migrate -n --force && php artisan optimize
+    command: ["/bin/sh", "-c", "php artisan migrate -n --force && php artisan optimize"]
     restart: "no"
   app:
     image: creshu-app-prod
