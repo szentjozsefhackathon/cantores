@@ -147,6 +147,14 @@
                                     wire:confirm="{{ __('Are you sure you want to delete this music piece? This will remove it from all collections and music plans.') }}"
                                     :title="__('Delete')" />
                             @endcan
+                            @auth
+                            <flux:button
+                                variant="ghost"
+                                size="sm"
+                                icon="flag"
+                                wire:click="dispatch('openErrorReportModal', { resourceId: {{ $music->id }}, resourceType: 'music' })"
+                                :title="__('Report Error')" />
+                            @endauth
                         </div>
                     @elseif ($mode === 'select' && $this->selectable)
                         <flux:button

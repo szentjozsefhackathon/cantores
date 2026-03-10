@@ -210,4 +210,6 @@
         </div>
     </flux:modal>
 
+    <livewire:error-report />
+
 </div>

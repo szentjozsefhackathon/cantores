@@ -84,6 +84,7 @@
                         
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
+                            @auth
                             @can('update', $author)                                
                                 <flux:button
                                     variant="ghost"
@@ -93,6 +94,16 @@
                                     :title="__('Edit')"
                                 />
                             @endcan
+                            @else
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="eye"
+                                    :href="route('author-view', ['author' => $author->id])"
+                                    tag="a"
+                                    :title="__('View')"
+                                />
+                            @endauth
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
@@ -112,6 +123,7 @@
                                 />
                                 @endcan
                                 
+                                @auth
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
@@ -119,6 +131,7 @@
                                     wire:click="dispatch('openErrorReportModal', { resourceId: {{ $author->id }}, resourceType: 'author' })"
                                     :title="__('Report Error')"
                                 />
+                                @endauth
                             </div>
                         </flux:table.cell>
                     </flux:table.row>
