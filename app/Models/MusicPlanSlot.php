@@ -16,6 +16,44 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int|null $music_plan_id The plan this custom slot belongs to (null for global slots)
  * @property int|null $user_id The owner of this custom slot (null for global slots)
  * @property bool $is_custom Whether this is a custom slot (true) or global slot (false)
+ * @property int $id
+ * @property string|null $name
+ * @property string|null $description
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property \Carbon\CarbonImmutable|null $deleted_at
+ * @property string|null $special
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicAssignments
+ * @property-read int|null $music_assignments_count
+ * @property-read \App\Models\MusicPlan|null $musicPlan
+ * @property-read \App\Models\User|null $owner
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanTemplate> $templates
+ * @property-read int|null $templates_count
+ * @method static Builder<static>|MusicPlanSlot active()
+ * @method static Builder<static>|MusicPlanSlot custom()
+ * @method static \Database\Factories\MusicPlanSlotFactory factory($count = null, $state = [])
+ * @method static Builder<static>|MusicPlanSlot forPlan(\App\Models\MusicPlan|int $plan)
+ * @method static Builder<static>|MusicPlanSlot global()
+ * @method static Builder<static>|MusicPlanSlot newModelQuery()
+ * @method static Builder<static>|MusicPlanSlot newQuery()
+ * @method static Builder<static>|MusicPlanSlot onlyTrashed()
+ * @method static Builder<static>|MusicPlanSlot query()
+ * @method static Builder<static>|MusicPlanSlot special(?string $special = null)
+ * @method static Builder<static>|MusicPlanSlot visibleToUser(\App\Models\User|int|null $user = null)
+ * @method static Builder<static>|MusicPlanSlot whereCreatedAt($value)
+ * @method static Builder<static>|MusicPlanSlot whereDeletedAt($value)
+ * @method static Builder<static>|MusicPlanSlot whereDescription($value)
+ * @method static Builder<static>|MusicPlanSlot whereId($value)
+ * @method static Builder<static>|MusicPlanSlot whereIsCustom($value)
+ * @method static Builder<static>|MusicPlanSlot whereMusicPlanId($value)
+ * @method static Builder<static>|MusicPlanSlot whereName($value)
+ * @method static Builder<static>|MusicPlanSlot wherePriority($value)
+ * @method static Builder<static>|MusicPlanSlot whereSpecial($value)
+ * @method static Builder<static>|MusicPlanSlot whereUpdatedAt($value)
+ * @method static Builder<static>|MusicPlanSlot whereUserId($value)
+ * @method static Builder<static>|MusicPlanSlot withTrashed(bool $withTrashed = true)
+ * @method static Builder<static>|MusicPlanSlot withoutTrashed()
+ * @mixin \Eloquent
  */
 class MusicPlanSlot extends Model
 {

@@ -7,6 +7,31 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use OwenIt\Auditing\Contracts\Auditable;
 
+/**
+ * @property int $id
+ * @property int $music_id
+ * @property string $url
+ * @property string|null $label
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property int|null $user_id
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
+ * @property-read int|null $audits_count
+ * @property-read \App\Models\Music $music
+ * @property-read \App\Models\User|null $user
+ * @method static \Database\Factories\MusicUrlFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereLabel($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereMusicId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereUrl($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereUserId($value)
+ * @mixin \Eloquent
+ */
 class MusicUrl extends Model implements Auditable
 {
     use HasFactory;

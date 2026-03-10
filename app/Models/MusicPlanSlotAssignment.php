@@ -10,8 +10,39 @@ use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 /**
  * Class MusicPlanSlotAssignment
- *
+ * 
  * Represents an assignment of a music track to a specific slot within a music plan.
+ *
+ * @property int $id
+ * @property int $music_id
+ * @property string|null $notes
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property int $music_sequence
+ * @property int $music_plan_slot_plan_id
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicAssignmentFlag> $flags
+ * @property-read int|null $flags_count
+ * @property-read string $scope_label
+ * @property-read \App\Models\Music $music
+ * @property-read \App\Models\MusicPlan|null $musicPlan
+ * @property-read \App\Models\MusicPlanSlot|null $musicPlanSlot
+ * @property-read \App\Models\MusicPlanSlotPlan $musicPlanSlotPlan
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignmentScope> $scopes
+ * @property-read int|null $scopes_count
+ * @method static \Database\Factories\MusicPlanSlotAssignmentFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment forMusicPlan(\App\Models\MusicPlan $musicPlan)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment forSlot(\App\Models\MusicPlanSlot $slot)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereMusicId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereMusicPlanSlotPlanId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereMusicSequence($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereNotes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereUpdatedAt($value)
+ * @mixin \Eloquent
  */
 class MusicPlanSlotAssignment extends Model
 {

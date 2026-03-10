@@ -7,6 +7,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property string|null $gender
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName whereGender($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class FirstName extends Model
 {
     /**

@@ -13,6 +13,59 @@ use Laravel\Scout\Attributes\SearchUsingFullText;
 use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
 
+/**
+ * @property int $id
+ * @property string $title
+ * @property string|null $custom_id
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property int|null $user_id
+ * @property string|null $subtitle
+ * @property bool $is_private
+ * @property int|null $import_batch_number
+ * @property string|null $titles
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
+ * @property-read int|null $audits_count
+ * @property-read \App\Models\MusicRelated|\App\Models\MusicCollection|\App\Models\AuthorMusic|null $pivot
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Author> $authors
+ * @property-read int|null $authors_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Collection> $collections
+ * @property-read int|null $collections_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Genre> $genres
+ * @property-read int|null $genres_count
+ * @property-read bool $is_verified
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicPlanSlotAssignments
+ * @property-read int|null $music_plan_slot_assignments_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Music> $relatedMusic
+ * @property-read int|null $related_music_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicTag> $tags
+ * @property-read int|null $tags_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicUrl> $urls
+ * @property-read int|null $urls_count
+ * @property-read \App\Models\User|null $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicVerification> $verifications
+ * @property-read int|null $verifications_count
+ * @method static \Database\Factories\MusicFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music forCurrentGenre()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music private()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music public()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music visibleTo(?\App\Models\User $user = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereCustomId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereImportBatchNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereIsPrivate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereSubtitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereTitles($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Music withVisibleRelation(string $relation, ?\App\Models\User $user = null)
+ * @mixin \Eloquent
+ */
 class Music extends Model implements Auditable
 {
     use HasFactory;

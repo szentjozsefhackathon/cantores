@@ -10,6 +10,48 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property bool $is_private
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property int|null $genre_id
+ * @property string|null $private_notes
+ * @property int|null $celebration_id
+ * @property-read \App\Models\Celebration|null $celebration
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlot> $customSlots
+ * @property-read int|null $custom_slots_count
+ * @property-read \App\Models\Genre|null $genre
+ * @property-read \Illuminate\Support\Carbon|null $actual_date
+ * @property-read string|null $celebration_name
+ * @property-read string $day_name
+ * @property-read string|null $setting
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicAssignments
+ * @property-read int|null $music_assignments_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlot> $slots
+ * @property-read int|null $slots_count
+ * @property-read \App\Models\User $user
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan byGenre($genre)
+ * @method static \Database\Factories\MusicPlanFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan forCurrentGenre()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan private()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan public()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan visibleTo(?\App\Models\User $user = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan whereCelebrationId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan whereGenreId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan whereIsPrivate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan wherePrivateNotes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan withVisibleRelation(string $relation, ?\App\Models\User $user = null)
+ * @mixin \Eloquent
+ */
 class MusicPlan extends Model
 {
     use HasFactory;

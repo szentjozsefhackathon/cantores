@@ -7,6 +7,50 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $celebration_key
+ * @property \Carbon\CarbonImmutable $actual_date
+ * @property string $name
+ * @property int|null $season
+ * @property string|null $season_text
+ * @property int|null $week
+ * @property int|null $day
+ * @property string|null $readings_code
+ * @property string|null $year_letter
+ * @property string|null $year_parity
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property int|null $user_id
+ * @property bool $is_custom
+ * @property-read string $day_name
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlan> $musicPlans
+ * @property-read int|null $music_plans_count
+ * @property-read \App\Models\User|null $user
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration custom()
+ * @method static \Database\Factories\CelebrationFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration forUser($user)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration liturgical()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereActualDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereCelebrationKey($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereDay($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereIsCustom($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereReadingsCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereSeason($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereSeasonText($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereWeek($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereYearLetter($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereYearParity($value)
+ * @mixin \Eloquent
+ */
 class Celebration extends Model
 {
     use HasFactory;

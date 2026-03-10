@@ -11,6 +11,43 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use OwenIt\Auditing\Contracts\Auditable;
 
+/**
+ * @property int $id
+ * @property string $title
+ * @property string|null $abbreviation
+ * @property string|null $author
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property int|null $user_id
+ * @property bool $is_private
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
+ * @property-read int|null $audits_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Genre> $genres
+ * @property-read int|null $genres_count
+ * @property-read \App\Models\MusicCollection|null $pivot
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $music
+ * @property-read int|null $music_count
+ * @property-read \App\Models\User|null $user
+ * @method static \Database\Factories\CollectionFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection forCurrentGenre()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection private()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection public()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection search(string $search)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection visibleTo(?\App\Models\User $user = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereAbbreviation($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereAuthor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereIsPrivate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection withVisibleRelation(string $relation, ?\App\Models\User $user = null)
+ * @mixin \Eloquent
+ */
 class Collection extends Model implements Auditable
 {
     use HasFactory;

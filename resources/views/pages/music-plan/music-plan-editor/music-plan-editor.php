@@ -690,7 +690,7 @@ new class extends Component
         $this->authorize('update', $this->musicPlan);
 
         $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
-        if (! $assignment || $assignment->music_plan_id !== $this->musicPlan->id) {
+        if (! $assignment || $assignment->musicPlan->id !== $this->musicPlan->id) {
             return;
         }
 

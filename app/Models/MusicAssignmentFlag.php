@@ -6,6 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicPlanSlotAssignments
+ * @property-read int|null $music_plan_slot_assignments_count
+ * @method static \Database\Factories\MusicAssignmentFlagFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class MusicAssignmentFlag extends Model
 {
     /** @use HasFactory<\Database\Factories\MusicAssignmentFlagFactory> */

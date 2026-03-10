@@ -9,6 +9,36 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/**
+ * @property int $id
+ * @property NotificationType $type
+ * @property string $message
+ * @property int|null $reporter_id
+ * @property int|null $notifiable_id
+ * @property string|null $notifiable_type
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property-read string|null $resource_title
+ * @property-read string $resource_type
+ * @property-read Model|\Eloquent|null $notifiable
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $recipients
+ * @property-read int|null $recipients_count
+ * @property-read \App\Models\User|null $reporter
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification errorReports()
+ * @method static \Database\Factories\NotificationFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereMessage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereNotifiableId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereNotifiableType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereReporterId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class Notification extends Model
 {
     use HasFactory;

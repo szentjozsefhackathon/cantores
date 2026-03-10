@@ -7,6 +7,24 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property MusicTagType $type
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $music
+ * @property-read int|null $music_count
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag whereType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class MusicTag extends Model
 {
     /** @use HasFactory<\Database\Factories\MusicTagFactory> */

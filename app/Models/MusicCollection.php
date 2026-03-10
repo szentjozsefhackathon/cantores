@@ -4,6 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
+/**
+ * @property int $id
+ * @property int $music_id
+ * @property int $collection_id
+ * @property int|null $page_number
+ * @property string|null $order_number
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property int|null $user_id
+ * @property-read \App\Models\User|null $user
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection whereCollectionId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection whereMusicId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection whereOrderNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection wherePageNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection whereUserId($value)
+ * @mixin \Eloquent
+ */
 class MusicCollection extends Pivot
 {
     /**

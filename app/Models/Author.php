@@ -13,6 +13,35 @@ use Laravel\Scout\Attributes\SearchUsingFullText;
 use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property int|null $user_id
+ * @property bool $is_private
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
+ * @property-read int|null $audits_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $music
+ * @property-read int|null $music_count
+ * @property-read \App\Models\User|null $user
+ * @method static \Database\Factories\AuthorFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author private()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author public()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author search(string $search)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author visibleTo(?\App\Models\User $user = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author whereIsPrivate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Author withVisibleRelation(string $relation, ?\App\Models\User $user = null)
+ * @mixin \Eloquent
+ */
 class Author extends Model implements Auditable
 {
     use HasFactory;

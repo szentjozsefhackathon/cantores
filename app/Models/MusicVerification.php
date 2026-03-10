@@ -6,6 +6,39 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $music_id
+ * @property int|null $verifier_id
+ * @property string $field_name
+ * @property int|null $pivot_reference
+ * @property string $status
+ * @property string|null $notes
+ * @property \Carbon\CarbonImmutable|null $verified_at
+ * @property \Carbon\CarbonImmutable|null $created_at
+ * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property-read \App\Models\Music $music
+ * @property-read \App\Models\User|null $verifier
+ * @method static \Database\Factories\MusicVerificationFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification forField(string $fieldName)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification pending()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification rejected()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification verified()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereFieldName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereMusicId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereNotes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification wherePivotReference($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereVerifiedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereVerifierId($value)
+ * @mixin \Eloquent
+ */
 class MusicVerification extends Model
 {
     use HasFactory;
