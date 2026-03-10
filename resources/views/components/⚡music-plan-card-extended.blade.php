@@ -118,7 +118,7 @@ new class extends Component
     <!-- Liturgical details -->
     <div class="p-3 space-y-2">
         @php
-        $firstCelebration = $musicPlan->celebrations->first();
+        $firstCelebration = $musicPlan->celebration;
         @endphp
 
         <!-- Liturgical year and season info -->

@@ -61,7 +61,7 @@
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
                         @php
-                        $firstCelebration = $musicPlan->celebrations->first();
+                        $firstCelebration = $musicPlan->celebration;
                         @endphp
                         <flux:text class="text-base font-semibold">{{ $firstCelebration?->year_letter ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:text>
                     </div>
@@ -530,12 +530,12 @@
                                     <div class="space-y-4">
                                         <livewire:suggestions-content lazy :criteria="[
                                             'name' => $musicPlan->celebration_name,
-                                            'season' => $musicPlan->celebrations->first()?->season,
-                                            'week' => $musicPlan->celebrations->first()?->week,
-                                            'day' => $musicPlan->celebrations->first()?->day,
-                                            'readings_code' => $musicPlan->celebrations->first()?->readings_code,
-                                            'year_letter' => $musicPlan->celebrations->first()?->year_letter,
-                                            'year_parity' => $musicPlan->celebrations->first()?->year_parity,
+                                            'season' => $musicPlan->celebration?->season,
+                                            'week' => $musicPlan->celebration?->week,
+                                            'day' => $musicPlan->celebration?->day,
+                                            'readings_code' => $musicPlan->celebration?->readings_code,
+                                            'year_letter' => $musicPlan->celebration?->year_letter,
+                                            'year_parity' => $musicPlan->celebration?->year_parity,
                                         ]" :musicPlanId="$musicPlan->id" wire:key="suggestions-component" />
                                     </div>
                                 </x-mary-tab>

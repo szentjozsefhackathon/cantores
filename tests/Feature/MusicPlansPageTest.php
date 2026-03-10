@@ -13,7 +13,8 @@ test('music-plans page loads for guests', function () {
 test('music-plans page shows published plans', function () {
     $celebration = Celebration::factory()->create(['name' => 'Test Celebration']);
     $publishedPlan = MusicPlan::factory()->create(['is_private' => false]);
-    $publishedPlan->celebrations()->attach($celebration);
+    $publishedPlan->celebration()->associate($celebration);
+    $publishedPlan->save();
     $unpublishedPlan = MusicPlan::factory()->create(['is_private' => true]);
 
     $response = $this->get('/music-plans');
@@ -26,7 +27,8 @@ test('music-plans page shows published plans', function () {
 test('music-plans page includes plans attached to custom celebrations', function () {
     $celebration = Celebration::factory()->create(['is_custom' => true]);
     $plan = MusicPlan::factory()->create(['is_private' => false]);
-    $plan->celebrations()->attach($celebration);
+    $plan->celebration()->associate($celebration);
+    $plan->save();
 
     $response = $this->get('/music-plans');
 
@@ -39,9 +41,11 @@ test('music-plans page search filters by celebration name', function () {
     $celebration2 = Celebration::factory()->create(['name' => 'Christmas Day']);
 
     $plan1 = MusicPlan::factory()->create(['is_private' => false]);
-    $plan1->celebrations()->attach($celebration1);
+    $plan1->celebration()->associate($celebration1);
+    $plan1->save();
     $plan2 = MusicPlan::factory()->create(['is_private' => false]);
-    $plan2->celebrations()->attach($celebration2);
+    $plan2->celebration()->associate($celebration2);
+    $plan2->save();
 
     $response = $this->get('/music-plans?search=Easter');
 

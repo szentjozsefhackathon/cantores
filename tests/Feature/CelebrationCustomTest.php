@@ -65,22 +65,28 @@ test('custom celebration can be attached to music plan', function () {
     $celebration = Celebration::factory()->custom()->create(['user_id' => $this->user->id]);
     $musicPlan = MusicPlan::factory()->create(['user_id' => $this->user->id]);
 
-    $musicPlan->celebrations()->attach($celebration);
+    $musicPlan->celebration()->associate($celebration);
+    $musicPlan->save();
 
-    expect($musicPlan->celebrations)->toHaveCount(1)
-        ->and($musicPlan->customCelebrations)->toHaveCount(1)
-        ->and($musicPlan->liturgicalCelebrations)->toHaveCount(0);
+    $musicPlan->refresh();
+    expect($musicPlan->celebration)->not->toBeNull()
+        ->and($musicPlan->celebration->is_custom)->toBeTrue()
+        ->and($musicPlan->hasCustomCelebrations())->toBeTrue()
+        ->and($musicPlan->firstCustomCelebration()?->id)->toBe($celebration->id);
 });
 
 test('liturgical celebration can be attached to music plan', function () {
     $celebration = Celebration::factory()->liturgical()->create();
     $musicPlan = MusicPlan::factory()->create(['user_id' => $this->user->id]);
 
-    $musicPlan->celebrations()->attach($celebration);
+    $musicPlan->celebration()->associate($celebration);
+    $musicPlan->save();
 
-    expect($musicPlan->celebrations)->toHaveCount(1)
-        ->and($musicPlan->liturgicalCelebrations)->toHaveCount(1)
-        ->and($musicPlan->customCelebrations)->toHaveCount(0);
+    $musicPlan->refresh();
+    expect($musicPlan->celebration)->not->toBeNull()
+        ->and($musicPlan->celebration->is_custom)->toBeFalse()
+        ->and($musicPlan->hasCustomCelebrations())->toBeFalse()
+        ->and($musicPlan->firstCustomCelebration())->toBeNull();
 });
 
 test('music plan can create custom celebration', function () {
@@ -100,8 +106,10 @@ test('music plan hasCustomCelebrations returns false when no custom celebrations
     $musicPlan = MusicPlan::factory()->create(['user_id' => $this->user->id]);
     $liturgicalCelebration = Celebration::factory()->liturgical()->create();
 
-    $musicPlan->celebrations()->attach($liturgicalCelebration);
+    $musicPlan->celebration()->associate($liturgicalCelebration);
+    $musicPlan->save();
 
+    $musicPlan->refresh();
     expect($musicPlan->hasCustomCelebrations())->toBeFalse();
 });
 

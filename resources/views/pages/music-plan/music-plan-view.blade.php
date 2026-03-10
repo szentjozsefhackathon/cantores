@@ -124,7 +124,7 @@ new #[Layout('layouts::app.main')] class extends Component
                     <div>
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
                         @php
-                        $firstCelebration = $musicPlan->celebrations->first();
+                        $firstCelebration = $musicPlan->celebration;
                         @endphp
                         <flux:text class="text-base font-semibold">{{ $firstCelebration?->year_letter ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:text>
                     </div>

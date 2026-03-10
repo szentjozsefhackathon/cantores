@@ -138,16 +138,13 @@ new class extends Component
         $genreId = GenreContext::getId();
 
         // Get music plans that have at least one of the celebrations
-        $query = MusicPlan::whereHas('celebrations', function ($q) use ($celebrationIds) {
-            $q->whereIn('celebrations.id', $celebrationIds);
-        })
+        $query = MusicPlan::whereIn('celebration_id', $celebrationIds)
             ->with([
-                'celebrations',
+                'celebration',
                 'musicAssignments.music' => fn ($q) => $q->visibleTo($user),
                 'musicAssignments.music.collections' => fn ($q) => $q->visibleTo($user),
                 'musicAssignments.musicPlanSlot' => fn ($q) => $q->visibleToUser($user),
-            ])
-            ->withCount('celebrations');
+            ]);
 
         // Filter by genre: include plans that belong to the current genre OR have no genre
         if ($genreId !== null) {

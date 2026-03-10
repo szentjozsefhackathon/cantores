@@ -49,7 +49,7 @@ new class extends Component
 
             <!-- Liturgical details -->
             @php
-                $firstCelebration = $musicPlan->celebrations->first();
+                $firstCelebration = $musicPlan->celebration;
             @endphp
             <div class="flex flex-row gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
                 @if($firstCelebration && ($firstCelebration->year_letter || $firstCelebration->year_parity))

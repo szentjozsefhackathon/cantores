@@ -67,8 +67,8 @@ test('copied music plan includes all celebrations', function () {
     $this->actingAs($user)->post(route('music-plans.copy', $musicPlan));
 
     $copiedPlan = MusicPlan::where('id', '!=', $musicPlan->id)->latest()->first();
-    expect($copiedPlan->celebrations()->count())->toBe(1);
-    expect($copiedPlan->celebrations()->first()->name)->toBe('Test Celebration');
+    expect($copiedPlan->celebration)->not->toBeNull();
+    expect($copiedPlan->celebration->name)->toBe('Test Celebration');
 });
 
 test('copied music plan includes all slots', function () {

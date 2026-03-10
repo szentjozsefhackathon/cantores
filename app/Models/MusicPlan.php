@@ -56,32 +56,11 @@ class MusicPlan extends Model
     }
 
     /**
-     * Get the celebrations for this music plan.
+     * Get the celebration for this music plan.
      */
-    public function celebrations(): BelongsToMany
+    public function celebration(): BelongsTo
     {
-        return $this->belongsToMany(Celebration::class, 'celebration_music_plan')
-            ->withTimestamps();
-    }
-
-    /**
-     * Get the liturgical celebrations (non-custom) for this music plan.
-     */
-    public function liturgicalCelebrations(): BelongsToMany
-    {
-        return $this->belongsToMany(Celebration::class, 'celebration_music_plan')
-            ->where('is_custom', false)
-            ->withTimestamps();
-    }
-
-    /**
-     * Get the custom celebrations for this music plan.
-     */
-    public function customCelebrations(): BelongsToMany
-    {
-        return $this->belongsToMany(Celebration::class, 'celebration_music_plan')
-            ->where('is_custom', true)
-            ->withTimestamps();
+        return $this->belongsTo(Celebration::class);
     }
 
     /**
@@ -224,9 +203,8 @@ class MusicPlan extends Model
      */
     public function getDayNameAttribute(): string
     {
-        $firstCelebration = $this->celebrations->first();
-        if ($firstCelebration) {
-            return $firstCelebration->day_name;
+        if ($this->celebration) {
+            return $this->celebration->day_name;
         }
 
         return '-';
@@ -238,9 +216,7 @@ class MusicPlan extends Model
      */
     public function getCelebrationNameAttribute(): ?string
     {
-        $firstCelebration = $this->celebrations->first();
-
-        return $firstCelebration?->name;
+        return $this->celebration?->name;
     }
 
     /**
@@ -249,9 +225,7 @@ class MusicPlan extends Model
      */
     public function getActualDateAttribute(): ?\Illuminate\Support\Carbon
     {
-        $firstCelebration = $this->celebrations->first();
-
-        $date = $firstCelebration?->actual_date;
+        $date = $this->celebration?->actual_date;
         if ($date === null) {
             return null;
         }
@@ -315,7 +289,8 @@ class MusicPlan extends Model
             'user_id' => $this->user_id,
         ]);
 
-        $this->celebrations()->attach($celebration);
+        $this->celebration()->associate($celebration);
+        $this->save();
 
         return $celebration;
     }
@@ -325,7 +300,7 @@ class MusicPlan extends Model
      */
     public function hasCustomCelebrations(): bool
     {
-        return $this->customCelebrations()->exists();
+        return $this->celebration !== null && $this->celebration->is_custom;
     }
 
     /**
@@ -333,7 +308,9 @@ class MusicPlan extends Model
      */
     public function firstCustomCelebration(): ?Celebration
     {
-        return $this->customCelebrations()->first();
+        $celebration = $this->celebration;
+
+        return ($celebration !== null && $celebration->is_custom) ? $celebration : null;
     }
 
     /**
@@ -355,9 +332,10 @@ class MusicPlan extends Model
                 'private_notes' => $isPublishedCopy ? null : $this->private_notes,
             ]);
 
-            // Copy all celebrations (both custom and liturgical)
-            foreach ($this->celebrations as $celebration) {
-                $newPlan->celebrations()->attach($celebration);
+            // Copy celebration
+            if ($this->celebration_id !== null) {
+                $newPlan->celebration()->associate($this->celebration_id);
+                $newPlan->save();
             }
 
             // Get all slots with their sequence and pivot ID

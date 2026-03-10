@@ -210,10 +210,11 @@ new class extends Component
     {
         $this->authorize('delete', $this->musicPlan);
 
-        // Delete custom celebrations attached to this music plan
-        $this->musicPlan->customCelebrations()->each(function ($celebration) {
-            $celebration->delete();
-        });
+        // Delete custom celebration if present
+        $customCelebration = $this->musicPlan->firstCustomCelebration();
+        if ($customCelebration !== null) {
+            $customCelebration->delete();
+        }
 
         $this->musicPlan->delete();
 
@@ -764,10 +765,13 @@ new class extends Component
     {
         $this->authorize('update', $this->musicPlan);
 
-        // Detach all existing celebrations
-        $this->musicPlan->celebrations()->detach();
+        // Delete old custom celebration if present (it would become an orphan)
+        $oldCelebration = $this->musicPlan->celebration;
+        if ($oldCelebration !== null && $oldCelebration->is_custom) {
+            $oldCelebration->delete();
+        }
 
-        // Create a new custom celebration
+        // Create a new custom celebration (also sets celebration_id on the plan)
         $celebration = $this->musicPlan->createCustomCelebration(
             'Egyedi ünnep',
             now()
@@ -820,11 +824,9 @@ new class extends Component
 
         $celebration = \App\Models\Celebration::findOrFail($celebrationId);
 
-        // Detach all existing celebrations
-        $this->musicPlan->celebrations()->detach();
-
-        // Attach the selected liturgical celebration
-        $this->musicPlan->celebrations()->attach($celebration);
+        // Associate the selected liturgical celebration
+        $this->musicPlan->celebration()->associate($celebration);
+        $this->musicPlan->save();
 
         // Reset component state
         $this->showCelebrationSelector = false;

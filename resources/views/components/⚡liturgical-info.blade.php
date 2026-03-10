@@ -107,8 +107,9 @@ new class extends Component
             'is_private' => true,
         ]);
 
-        // Attach celebration
-        $musicPlan->celebrations()->attach($celebration->id);
+        // Associate celebration with the new music plan
+        $musicPlan->celebration()->associate($celebration);
+        $musicPlan->save();
 
         // Redirect to MusicPlanEditor page with the created plan
         $this->redirectRoute('music-plan-editor', ['musicPlan' => $musicPlan->id]);
@@ -171,7 +172,7 @@ new class extends Component
         // Get music plans through the relationship
         $query = $celebration->musicPlans()
             ->where('user_id', $user->id)
-            ->with(['user', 'genre', 'celebrations']);
+            ->with(['user', 'genre', 'celebration']);
 
         // Filter by current genre
         $genreId = GenreContext::getId();
@@ -209,7 +210,7 @@ new class extends Component
         // Get published music plans
         $query = $celebration->musicPlans()
             ->where('is_private', false)
-            ->with(['user', 'genre', 'celebrations']);
+            ->with(['user', 'genre', 'celebration']);
 
         // Exclude the authenticated user's own plans (if logged in)
         if ($user) {
@@ -261,9 +262,7 @@ new class extends Component
         $user = Auth::user();
         $genreId = GenreContext::getId();
 
-        $query = MusicPlan::whereHas('celebrations', function ($q) use ($celebrationIds) {
-            $q->whereIn('celebrations.id', $celebrationIds);
-        });
+        $query = MusicPlan::whereIn('celebration_id', $celebrationIds);
 
         // Filter by genre: include plans that belong to the current genre OR have no genre
         if ($genreId !== null) {

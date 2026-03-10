@@ -75,7 +75,8 @@ test('suggestions show music under the new slot after it was moved', function ()
         'user_id' => $user->id,
         'is_private' => false,
     ]);
-    $musicPlan->celebrations()->attach($celebration);
+    $musicPlan->celebration()->associate($celebration);
+    $musicPlan->save();
 
     $pivotA = attachSlotToPlanForMoveTest($musicPlan, $slotA, 1);
     $pivotB = attachSlotToPlanForMoveTest($musicPlan, $slotB, 2);

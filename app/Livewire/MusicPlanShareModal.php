@@ -82,7 +82,7 @@ class MusicPlanShareModal extends Component
             ->values()
             ->all();
 
-        $firstCelebration = $musicPlan->celebrations->first();
+        $firstCelebration = $musicPlan->celebration;
 
         $text = '🎵 '.($musicPlan->celebration_name ?? 'Énekrend')."\n";
         $text .= "═══════════════════════════════════════\n\n";

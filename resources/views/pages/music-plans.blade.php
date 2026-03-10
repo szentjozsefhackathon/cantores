@@ -47,7 +47,10 @@ new class extends Component
     {
         $query = MusicPlan::query()
             ->where('is_private', false)
-            ->orderBy('created_at', 'desc');
+            ->leftJoin('celebrations', 'celebrations.id', '=', 'music_plans.celebration_id')
+            ->orderBy('celebrations.actual_date', 'desc')
+            ->orderBy('music_plans.created_at', 'desc')
+            ->select('music_plans.*');
 
         // Filter by current genre if set
         $genreId = GenreContext::getId();
@@ -62,8 +65,7 @@ new class extends Component
         // Search filter
         if ($this->search) {
             $query->where(function ($q) {
-                // Search through celebrations relationship
-                $q->whereHas('celebrations', function ($celebrationQuery) {
+                $q->whereHas('celebration', function ($celebrationQuery) {
                     $celebrationQuery->where('name', 'ilike', "%{$this->search}%")
                         ->orWhere('season_text', 'ilike', "%{$this->search}%")
                         ->orWhere('year_letter', 'ilike', "%{$this->search}%");
@@ -73,7 +75,7 @@ new class extends Component
 
         // Eager load relationships for performance
         $query->with([
-            'celebrations',
+            'celebration',
             'user',
             'genre',
             'musicAssignments.music',

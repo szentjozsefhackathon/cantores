@@ -85,16 +85,13 @@ new class extends Component
         $genreId = GenreContext::getId();
 
         // Get music plans that have at least one of the celebrations
-        $query = MusicPlan::whereHas('celebrations', function ($q) use ($celebrationIds) {
-            $q->whereIn('celebrations.id', $celebrationIds);
-        })
+        $query = MusicPlan::whereIn('celebration_id', $celebrationIds)
             ->with([
-                'celebrations',
+                'celebration',
                 'musicAssignments.music' => fn($q) => $q->visibleTo($user),
                 'musicAssignments.music.collections' => fn($q) => $q->visibleTo($user),
                 'musicAssignments.musicPlanSlotPlan.musicPlanSlot' => fn($q) => $q->visibleToUser($user),
-            ])
-            ->withCount('celebrations');
+            ]);
 
         // Filter by genre: include plans that belong to the current genre OR have no genre
         if ($genreId !== null) {
@@ -126,12 +123,10 @@ new class extends Component
         $genreId = GenreContext::getId();
 
         foreach ($this->musicPlans as $musicPlan) {
-            // Determine the celebration score for this plan (highest score among its celebrations?)
-            // We'll compute the max score of celebrations that are in our list.
-            $planCelebrationIds = $musicPlan->celebrations->pluck('id')->toArray();
+            // Determine the celebration score for this plan.
             $maxScore = 0;
             foreach ($this->celebrationsWithScores as $item) {
-                if (in_array($item['celebration']->id, $planCelebrationIds)) {
+                if ($item['celebration']->id === $musicPlan->celebration_id) {
                     $maxScore = max($maxScore, $item['score']);
                 }
             }
