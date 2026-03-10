@@ -89,9 +89,8 @@ Route::livewire('/my-music-plans', \App\Livewire\Pages\MyMusicPlans::class)
 Route::livewire('/music-plans', 'pages::music-plans')
     ->name('music-plans');
 
-// Music Library - Editor routes (accessible to all authenticated users)
+// Music Library - Editor routes (browseable by guests, edit actions require auth)
 Route::livewire('/collections', \App\Livewire\Pages\Editor\Collections::class)
-    ->middleware(['auth', 'verified'])
     ->name('collections');
 
 // Public read-only collection view
@@ -99,7 +98,6 @@ Route::livewire('/collection/{collection}/view', \App\Livewire\Pages\CollectionV
     ->name('collection-view');
 
 Route::livewire('/authors', \App\Livewire\Pages\Editor\Authors::class)
-    ->middleware(['auth', 'verified'])
     ->name('authors');
 
 // Public read-only author view
@@ -107,7 +105,6 @@ Route::livewire('/author/{author}/view', \App\Livewire\Pages\AuthorView::class)
     ->name('author-view');
 
 Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
-    ->middleware(['auth', 'verified'])
     ->name('musics');
 
 Route::livewire('/music/{music}', 'pages::editor.music-editor')

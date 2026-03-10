@@ -11,6 +11,7 @@ use App\Models\Music;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -66,6 +67,12 @@ class Musics extends Component
      * Selected music IDs for merging.
      */
     public array $selectedMusicIds = [];
+
+    public function rendering(IlluminateView $view): void
+    {
+        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
+        $view->layout($layout);
+    }
 
     /**
      * Mount the component.

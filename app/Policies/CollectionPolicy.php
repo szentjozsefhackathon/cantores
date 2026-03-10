@@ -12,9 +12,8 @@ class CollectionPolicy
      */
     public function viewAny(?User $user): bool
     {
-        // All authenticated users can view collections (they are community-maintained)
-        // Guests can view public collections via individual pages, but not listing
-        return $user !== null;
+        // Collections list is publicly browseable by guests and authenticated users
+        return true;
     }
 
     /**

@@ -29,12 +29,14 @@
                 <!-- Table header / meta row -->
                 <div class="flex flex-col gap-2 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-center gap-2">
+                        @auth
                         <flux:button
                             variant="primary"
                             icon="plus"
                             wire:click="create">
                             {{ __('Create Music Piece') }}
                         </flux:button>
+                        @endauth
                         @can('mergeAny', \App\Models\Music::class)
                         <flux:button
                             variant="filled"

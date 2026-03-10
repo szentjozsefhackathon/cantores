@@ -12,9 +12,8 @@ class MusicPolicy
      */
     public function viewAny(?User $user): bool
     {
-        // All authenticated users can view music (they are community-maintained)
-        // Guests can view public music via individual pages, but not listing
-        return $user !== null;
+        // Music list is publicly browseable by guests and authenticated users
+        return true;
     }
 
     /**

@@ -30,6 +30,7 @@
                     />
                 </flux:field>
                 
+                @auth
                 <flux:button
                     variant="primary"
                     icon="plus"
@@ -37,6 +38,7 @@
                 >
                     {{ __('Create Collection') }}
                 </flux:button>
+                @endauth
             </div>
 
         <!-- Collections Table -->

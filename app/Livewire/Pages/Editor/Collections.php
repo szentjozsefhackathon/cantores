@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -48,6 +49,12 @@ class Collections extends Component
     public string $filter = 'visible'; // 'visible', 'all', 'public', 'private', 'mine'
 
     public bool $isPrivate = false;
+
+    public function rendering(IlluminateView $view): void
+    {
+        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
+        $view->layout($layout);
+    }
 
     /**
      * Mount the component.

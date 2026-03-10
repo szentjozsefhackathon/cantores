@@ -12,9 +12,8 @@ class AuthorPolicy
      */
     public function viewAny(?User $user): bool
     {
-        // All authenticated users can view authors (they are community-maintained)
-        // Guests can view public authors via individual pages, but not listing
-        return $user !== null;
+        // Authors list is publicly browseable by guests and authenticated users
+        return true;
     }
 
     /**

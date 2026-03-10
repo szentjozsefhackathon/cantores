@@ -31,6 +31,7 @@
                 />
             </flux:field>
             
+            @auth
             <flux:button
                 variant="primary"
                 icon="plus"
@@ -38,6 +39,7 @@
             >
                 {{ __('Create Author') }}
             </flux:button>
+            @endauth
         </div>
 
         <!-- Authors Table -->
