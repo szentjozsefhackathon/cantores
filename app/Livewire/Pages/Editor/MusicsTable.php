@@ -31,6 +31,8 @@ class MusicsTable extends Component
 
     public array $selectedMusicIds = [];
 
+    public bool $filtersRendered = false;
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -123,8 +125,12 @@ class MusicsTable extends Component
                 ->paginate(10);
         }
 
+        $renderFilters = ! $this->filtersRendered;
+        $this->filtersRendered = true;
+
         return view('livewire.pages.editor.musics-table', [
             'musics' => $musics,
+            'renderFilters' => $renderFilters,
         ]);
     }
 }

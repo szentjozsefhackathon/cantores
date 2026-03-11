@@ -8,7 +8,10 @@
             <flux:input
                 type="search"
                 wire:model.live.debounce.500ms="search"
-                :placeholder="__('Title, subtitle, etc.')" />
+                :placeholder="__('Title, subtitle, etc.')" 
+                autocomplete="off"
+                />
+                
         </flux:field>
     </div>
 
