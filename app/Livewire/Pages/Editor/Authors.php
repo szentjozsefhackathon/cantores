@@ -6,11 +6,9 @@ use App\Models\Author;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
 use Livewire\WithPagination;
-use OwenIt\Auditing\Models\Audit;
 
 class Authors extends Component
 {
@@ -20,17 +18,7 @@ class Authors extends Component
 
     public bool $showCreateModal = false;
 
-    public bool $showEditModal = false;
-
-    public bool $showAuditModal = false;
-
-    public ?Author $editingAuthor = null;
-
-    public ?Author $auditingAuthor = null;
-
-    public $audits = [];
-
-    // Form fields
+    // Form fields for create modal
     public string $name = '';
 
     public string $sortBy = 'name';
@@ -85,12 +73,7 @@ class Authors extends Component
     {
         $authors = Author::visibleTo(Auth::user())
             ->when($this->search, function ($query, $search) {
-                // Use Scout full-text search if search is not empty
-                if (config('scout.driver') === 'database' && ! empty($search)) {
-                    $query->whereFullText('name', $search, ['language' => 'hungarian']);
-                } else {
-                    $query->where('name', 'ilike', "%{$search}%");
-                }
+                $query->where('name', 'ilike', "%{$search}%");
             })
             ->when($this->filter === 'public', function ($query) {
                 $query->public();
@@ -121,33 +104,6 @@ class Authors extends Component
     }
 
     /**
-     * Show the edit modal.
-     */
-    public function edit(Author $author): void
-    {
-        $this->authorize('update', $author);
-        $this->editingAuthor = $author;
-        $this->name = $author->name;
-        $this->isPrivate = $author->is_private;
-        $this->showEditModal = true;
-    }
-
-    /**
-     * Show the audit log modal.
-     */
-    public function showAuditLog(Author $author): void
-    {
-        // Any logged-in user can view audit logs
-        $this->authorize('view', $author);
-        $this->auditingAuthor = $author;
-        $this->audits = $author->audits()
-            ->with(['user.city', 'user.firstName'])
-            ->latest()
-            ->get();
-        $this->showAuditModal = true;
-    }
-
-    /**
      * Store a new author.
      */
     public function store(): void
@@ -159,7 +115,7 @@ class Authors extends Component
             'isPrivate' => ['boolean'],
         ]);
 
-        $author = Author::create([
+        Author::create([
             ...$validated,
             'user_id' => Auth::id(),
             'is_private' => $validated['isPrivate'] ?? false,
@@ -171,36 +127,12 @@ class Authors extends Component
     }
 
     /**
-     * Update the editing author.
-     */
-    public function update(): void
-    {
-        $this->authorize('update', $this->editingAuthor);
-
-        $validated = $this->validate([
-            'name' => $this->getNameValidationRule($this->editingAuthor),
-            'isPrivate' => ['boolean'],
-        ]);
-
-        $this->editingAuthor->update([
-            ...$validated,
-            'is_private' => $validated['isPrivate'] ?? false,
-        ]);
-
-        $this->showEditModal = false;
-        $this->resetForm();
-        $this->editingAuthor = null;
-        $this->dispatch('author-updated');
-    }
-
-    /**
      * Delete an author.
      */
     public function delete(Author $author): void
     {
         $this->authorize('delete', $author);
 
-        // Check if author has any music assigned
         if ($author->music()->count() > 0) {
             $this->dispatch('error', message: __('Cannot delete author that has music assigned to it.'));
 
@@ -215,23 +147,17 @@ class Authors extends Component
      * Get the appropriate validation rule for the name field.
      * Only enforces uniqueness for public authors.
      */
-    private function getNameValidationRule(?Author $author = null): array
+    private function getNameValidationRule(): array
     {
         $rules = ['required', 'string', 'max:255'];
 
-        // Add a closure that checks uniqueness only for public authors
-        $rules[] = function ($attribute, $value, $fail) use ($author) {
-            // Check if the author is being made public
-            // $this->isPrivate should be set from the form data at validation time
+        $rules[] = function ($attribute, $value, $fail) {
             if ($this->isPrivate === false) {
-                $query = Author::where('name', $value)
-                    ->where('is_private', false);
+                $exists = Author::where('name', $value)
+                    ->where('is_private', false)
+                    ->exists();
 
-                if ($author) {
-                    $query->where('id', '!=', $author->id);
-                }
-
-                if ($query->exists()) {
+                if ($exists) {
                     $fail(__('An author with this name already exists in the public library.'));
                 }
             }
