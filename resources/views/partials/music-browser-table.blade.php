@@ -15,7 +15,7 @@
         <flux:table.column>{{ __('Genre') }}</flux:table.column>
         <flux:table.column>{{ __('Tags') }}</flux:table.column>
         @auth
-        <flux:table.column><flux:icon name="globe" class="h-4 w-4" /></flux:table.column>
+        <flux:table.column><svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg></flux:table.column>
         @endauth
         <flux:table.column>{{ __('Actions') }}</flux:table.column>
     </flux:table.columns>
@@ -37,7 +37,7 @@
                     <div>
                         <div class="font-medium max-w-80 text-wrap">
                             @if ($music->is_verified)
-                                <flux:icon name="check" variant="solid" class="inline h-5 w-5 text-green-500" />
+                                @svg('heroicon-s-check', 'inline h-5 w-5 text-green-500')
                             @endif
                             {{ $music->title }}
                         </div>
@@ -61,9 +61,7 @@
                 <flux:table.cell>
                     <div class="flex flex-wrap items-center gap-2">
                         @forelse ($music->collections as $collection)
-                            <flux:badge size="sm">
-                                {{ $collection->formatWithPivot($collection->pivot) }}
-                            </flux:badge>
+                            <span class="inline-flex items-center font-medium whitespace-nowrap text-xs py-1 rounded-md px-2 text-zinc-700 dark:text-zinc-200 bg-zinc-400/15 dark:bg-zinc-400/40">{{ $collection->formatWithPivot($collection->pivot) }}</span>
                         @empty
                             <span class="text-gray-400 dark:text-gray-500 text-sm">{{ __('None') }}</span>
                         @endforelse
@@ -101,9 +99,9 @@
                 <flux:table.cell>
                     <div class="flex items-center gap-2">
                         @if ($music->is_private)
-                            <flux:icon name="globe-lock" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Private')" />
+                            <svg title="{{ __('Private') }}" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.686 15A14.5 14.5 0 0 1 12 22a14.5 14.5 0 0 1 0-20 10 10 0 1 0 9.542 13" /><path d="M2 12h8.5" /><path d="M20 6V4a2 2 0 1 0-4 0v2" /><rect width="8" height="5" x="14" y="6" rx="1" /></svg>
                         @else
-                            <flux:icon name="globe" class="h-5 w-5 text-gray-500 dark:text-gray-400" :title="__('Public')" />
+                            <svg title="{{ __('Public') }}" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg>
                         @endif
                     </div>
                 </flux:table.cell>
@@ -172,7 +170,7 @@
             <flux:table.row>
                 <flux:table.cell :colspan="($mode === 'manage' ? 1 : 0) + 5 + (auth()->check() ? 1 : 0)" class="text-center">
                     <div class="py-8 text-center">
-                        <flux:icon name="folder-open" class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                        @svg('heroicon-o-folder-open', 'mx-auto h-12 w-12 text-gray-400 dark:text-gray-500')
                         <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No music pieces found') }}</h3>
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Get started by creating a new music piece.') }}</p>
                     </div>
