@@ -603,9 +603,8 @@ new class extends Component
                         </flux:button>
                         @else
                         <flux:text class="text-sm text-neutral-500 dark:text-neutral-400 italic text-center py-1">
-                            Még nincsenek javaslatok.
+                            Még nincsenek énekjavaslatok.
                         </flux:text>
-                        @endif
                         <flux:button
                             wire:click="openSuggestions({{ $loop->index }})"
                             size="sm"
@@ -613,6 +612,7 @@ new class extends Component
                             class="w-full">
                             Ünnep részletei
                         </flux:button>
+                        @endif
                     @endif
                     </div>
                 </div>

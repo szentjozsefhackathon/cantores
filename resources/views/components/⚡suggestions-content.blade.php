@@ -320,8 +320,7 @@ new class extends Component
 <div>
     @if ($celebrationsWithScores->isEmpty())
     <flux:callout color="amber" icon="information-circle" class="mt-8">
-        <flux:callout.heading>Nincs találat</flux:callout.heading>
-        <flux:callout.text>A megadott kritériumokhoz nem található kapcsolódó ünnep. Próbálj meg más keresési feltételeket megadni.</flux:callout.text>
+        <flux:callout.text>Még nincs elég sok énekrend az adatbázisunkban, hogy énekeket tudjunk ajánlani.</flux:callout.text>
     </flux:callout>
     @else
     <!-- Tabs navigation with mary-ui -->
