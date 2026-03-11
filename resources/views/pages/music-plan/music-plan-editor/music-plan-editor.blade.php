@@ -169,7 +169,7 @@
                                 :is-first="$loop->first"
                                 :is-last="$loop->last"
                                 :total-slots="$this->planSlots->count()"
-                                wire:key="slot-{{ $slotPlan->id }}" />
+                                wire:key="slot-{{ $slotPlan->id }}-{{ $slotPlan->sequence }}" />
                             @empty
                             <flux:callout variant="secondary" icon="musical-note">
                                 Ehhez az énekrendhez még nem adtál elemeket.

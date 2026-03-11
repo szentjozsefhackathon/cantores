@@ -84,6 +84,30 @@ new class extends Component
             ->get();
     }
 
+    public function placeholder(): string
+    {
+        return <<<'BLADE'
+        <flux:card class="p-2">
+            <div class="grid grid-cols-[1fr_auto] gap-4">
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4">
+                        <flux:skeleton class="size-10 shrink-0 rounded-full" />
+                        <div class="flex-1 space-y-2 pt-1">
+                            <flux:skeleton class="h-4 w-40" />
+                            <flux:skeleton class="h-3 w-64" />
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <flux:skeleton class="size-6 rounded" />
+                    <flux:skeleton class="size-6 rounded" />
+                    <flux:skeleton class="size-6 rounded" />
+                </div>
+            </div>
+        </flux:card>
+        BLADE;
+    }
+
     public function mount(): void
     {
         $this->slotPlan->loadMissing('musicPlanSlot');
@@ -421,7 +445,8 @@ new class extends Component
     {
         $this->authorize('update', $this->slotPlan->musicPlan);
 
-        $allSlots = MusicPlanSlotPlan::where('music_plan_id', $this->slotPlan->music_plan_id)
+        $allSlots = MusicPlanSlotPlan::whereHas('musicPlanSlot')
+            ->where('music_plan_id', $this->slotPlan->music_plan_id)
             ->orderBy('sequence')
             ->get();
 
