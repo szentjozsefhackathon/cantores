@@ -16,6 +16,10 @@ trait HasMusicSearchScopes
     {
         if ($searching) {
             $words = preg_split('/\s+/', trim($this->search), -1, PREG_SPLIT_NO_EMPTY);
+            $searching = ! empty($words);
+        }
+
+        if ($searching) {
 
             // Scout has already added its conditions as a grouped where() on $query.
             // We need to OR the ilike fallback into that same group, then AND the

@@ -9,15 +9,15 @@
     <flux:table.columns>
         @if ($mode === 'manage')
             @can('mergeAny', \App\Models\Music::class)
-                <flux:table.column></flux:table.column>
+                <flux:table.column class="hidden sm:table-cell"></flux:table.column>
             @endcan
         @endif
         <flux:table.column>{{ __('Title') }}</flux:table.column>
         <flux:table.column>{{ __('Collection') }}</flux:table.column>
-        <flux:table.column>{{ __('Genre') }}</flux:table.column>
-        <flux:table.column>{{ __('Tags') }}</flux:table.column>
+        <flux:table.column class="hidden sm:table-cell">{{ __('Genre') }}</flux:table.column>
+        <flux:table.column class="hidden sm:table-cell">{{ __('Tags') }}</flux:table.column>
         @auth
-        <flux:table.column><svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg></flux:table.column>
+        <flux:table.column class="hidden sm:table-cell"><svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg></flux:table.column>
         @endauth
         <flux:table.column>{{ __('Actions') }}</flux:table.column>
     </flux:table.columns>
@@ -28,7 +28,7 @@
                 {{-- Checkbox (manage + can merge only) --}}
                 @if ($mode === 'manage')
                     @can('mergeAny', \App\Models\Music::class)
-                        <flux:table.cell>
+                        <flux:table.cell class="hidden sm:table-cell">
                             <flux:checkbox
                                 wire:click="toggleSelection({{ $music->id }})"
                                 :checked="in_array($music->id, $this->selectedMusicIds)" />
@@ -36,7 +36,7 @@
                     @endcan
                 @endif
 
-                {{-- Title --}}
+                {{-- Title (+ genre/tags/privacy on mobile) --}}
                 <flux:table.cell>
                     <div>
                         <div class="font-medium max-w-80 text-wrap">
@@ -58,6 +58,27 @@
                                 {{ $music->custom_id }}
                             </div>
                         @endif
+
+                        {{-- Genre + tags + privacy (mobile only) --}}
+                        <div class="mt-1 flex flex-wrap items-center gap-1 sm:hidden">
+                            @foreach ($music->genres as $genre)
+                                <flux:icon
+                                    name="{{ $genre->icon() }}"
+                                    class="h-4 w-4 text-gray-500 dark:text-gray-400"
+                                    :title="$genre->label()" />
+                            @endforeach
+                            @foreach ($music->tags as $tag)
+                                <div class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                                    <flux:icon :name="$tag->icon()" class="h-3 w-3" />
+                                    <span>{{ $tag->name }}</span>
+                                </div>
+                            @endforeach
+                            @auth
+                                @if ($music->is_private)
+                                    <svg title="{{ __('Private') }}" class="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.686 15A14.5 14.5 0 0 1 12 22a14.5 14.5 0 0 1 0-20 10 10 0 1 0 9.542 13" /><path d="M2 12h8.5" /><path d="M20 6V4a2 2 0 1 0-4 0v2" /><rect width="8" height="5" x="14" y="6" rx="1" /></svg>
+                                @endif
+                            @endauth
+                        </div>
                     </div>
                 </flux:table.cell>
 
@@ -72,8 +93,8 @@
                     </div>
                 </flux:table.cell>
 
-                {{-- Genres --}}
-                <flux:table.cell>
+                {{-- Genres (desktop only) --}}
+                <flux:table.cell class="hidden sm:table-cell">
                     <div class="flex items-center gap-2">
                         @forelse ($music->genres as $genre)
                             <flux:icon
@@ -85,8 +106,8 @@
                     </div>
                 </flux:table.cell>
 
-                {{-- Tags --}}
-                <flux:table.cell>
+                {{-- Tags (desktop only) --}}
+                <flux:table.cell class="hidden sm:table-cell">
                     <div class="flex flex-wrap items-center gap-2">
                         @forelse ($music->tags as $tag)
                             <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
@@ -99,8 +120,8 @@
                 </flux:table.cell>
 
                 @auth
-                {{-- Privacy --}}
-                <flux:table.cell>
+                {{-- Privacy (desktop only) --}}
+                <flux:table.cell class="hidden sm:table-cell">
                     <div class="flex items-center gap-2">
                         @if ($music->is_private)
                             <svg title="{{ __('Private') }}" class="h-5 w-5 text-gray-500 dark:text-gray-400 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.686 15A14.5 14.5 0 0 1 12 22a14.5 14.5 0 0 1 0-20 10 10 0 1 0 9.542 13" /><path d="M2 12h8.5" /><path d="M20 6V4a2 2 0 1 0-4 0v2" /><rect width="8" height="5" x="14" y="6" rx="1" /></svg>
@@ -134,12 +155,14 @@
                                     tag="a"
                                     :title="__('View')" />
                             @endauth
-                            <flux:button
-                                variant="ghost"
-                                size="sm"
-                                icon="history"
-                                x-on:click="$dispatch('show-music-audit-log', { musicId: {{ $music->id }} })"
-                                :title="__('View Audit Log')" />
+                            <div class="hidden sm:block">
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="history"
+                                    x-on:click="$dispatch('show-music-audit-log', { musicId: {{ $music->id }} })"
+                                    :title="__('View Audit Log')" />
+                            </div>
                             @can('content.edit.published')
                                 <flux:button
                                     variant="ghost"
@@ -172,7 +195,7 @@
             </flux:table.row>
         @empty
             <flux:table.row>
-                <flux:table.cell :colspan="($mode === 'manage' && auth()->user()?->can('mergeAny', \App\Models\Music::class) ? 1 : 0) + 5 + (auth()->check() ? 1 : 0)" class="text-center">
+                <flux:table.cell colspan="10" class="text-center">
                     <div class="py-8 text-center">
                         @svg('heroicon-o-folder-open', 'mx-auto h-12 w-12 text-gray-400 dark:text-gray-500')
                         <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No music pieces found') }}</h3>

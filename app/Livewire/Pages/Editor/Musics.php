@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class Musics extends Component
@@ -41,6 +42,7 @@ class Musics extends Component
         return view('pages.editor.musics');
     }
 
+    #[On('open-create-music-modal')]
     public function create(): void
     {
         $this->authorize('create', Music::class);

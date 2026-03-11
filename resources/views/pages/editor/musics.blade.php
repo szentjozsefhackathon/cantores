@@ -1,4 +1,4 @@
-<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
+<div class="mx-auto w-full px-1 sm:px-6 lg:px-8">
     <!-- Action messages -->
     <div class="mb-4 flex justify-end">
         <x-action-message on="music-deleted">
@@ -8,17 +8,6 @@
     </div>
 
     <div class="space-y-6">
-        <div class="flex justify-end">
-            @auth
-            <flux:button
-                variant="primary"
-                icon="plus"
-                wire:click="create">
-                {{ __('Create Music Piece') }}
-            </flux:button>
-            @endauth
-        </div>
-
         <livewire:pages.editor.musics-table />
     </div>
 
