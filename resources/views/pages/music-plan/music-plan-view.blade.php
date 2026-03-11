@@ -90,9 +90,8 @@ new #[Layout('layouts::app.main')] class extends Component
             <div class="flex items-center gap-4 mb-4">
                 <livewire:music-plan-setting-icon :genreId="$musicPlan->genre_id" />
                 <flux:heading size="xl">Énekrend</flux:heading>
-                @auth
-                    <x-user-badge :user="$musicPlan->user" />
-                @endauth
+                <x-user-badge :user="$musicPlan->user" />
+
                 @if($musicPlan->actual_date)
                 <div class="flex">
                 <flux:icon name="external-link" />
@@ -108,29 +107,29 @@ new #[Layout('layouts::app.main')] class extends Component
                 <!-- Combined info grid -->
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Ünnep neve</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1 inline">Ünnep: 
+                            <flux:text class="text-base font-semibold inline">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
+
+                        </flux:heading>
+                        
                     </div>
                     <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Dátum</flux:heading>
-                        <flux:text class="text-base font-semibold">
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1 inline">Dátum: 
+                        <flux:text class="text-base font-semibold inline">
                             @if($musicPlan->actual_date)
                             {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
                             @else
                             –
                             @endif
                         </flux:text>
+                        </flux:heading>
                     </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Liturgikus év</flux:heading>
                         @php
                         $firstCelebration = $musicPlan->celebration;
                         @endphp
-                        <flux:text class="text-base font-semibold">{{ $firstCelebration?->year_letter ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:text>
-                    </div>
                     <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">Időszak, hét, nap</flux:heading>
                         <div class="flex flex-row gap-2">
+                            <flux:badge color="zinc">{{ $firstCelebration?->year_letter . ' év' ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:badge>                            
                             <flux:badge color="blue" size="sm">{{ $firstCelebration?->season_text ?? '–' }}</flux:badge>
                             <flux:badge color="green" size="sm">{{ $firstCelebration?->week ?? '–' }}.hét</flux:badge>
                             <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>

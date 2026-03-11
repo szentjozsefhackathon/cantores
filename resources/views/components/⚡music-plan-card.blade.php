@@ -53,33 +53,25 @@ new class extends Component
             @endphp
             <div class="flex flex-row gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
                 @if($firstCelebration && ($firstCelebration->year_letter || $firstCelebration->year_parity))
-                <div>
-                    <flux:text class="text-base font-semibold">
+                    <flux:text class="text-base font-semibold" size="sm">
                         {{ $firstCelebration->year_letter ?? '–' }} 
                         @if($firstCelebration->year_parity)
                         ({{ $firstCelebration->year_parity }})
-                        @endif
+                        @endif év
                     </flux:text>
-                </div>
                 @endif
 
                 @if($firstCelebration && $firstCelebration->season_text)
-                <div>
-                    <flux:text class="text-base font-semibold">{{ $firstCelebration->season_text }}</flux:text>
-                </div>
+                    <flux:text class="text-base font-semibold" size="sm">{{ $firstCelebration->season_text }}</flux:text>
                 @endif
 
                 @if($firstCelebration && ($firstCelebration->week || $musicPlan->day_name))
-                <div>
-                    <div class="flex flex-row gap-2">
                         @if($firstCelebration->week)
                         <flux:badge color="green" size="sm">{{ $firstCelebration->week }}. hét</flux:badge>
                         @endif
                         @if($musicPlan->day_name)
                         <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
                         @endif
-                    </div>
-                </div>
                 @endif
             </div>
 
@@ -87,29 +79,11 @@ new class extends Component
             <div class="flex items-center justify-between pt-3 border-t border-neutral-100 dark:border-neutral-800">
                 <div class="flex items-center gap-4">
                     <div class="flex items-center gap-2">
-                        <flux:icon name="musical-note" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
                         <flux:text class="text-sm">
                             {{ $musicPlan->musicAssignments()->count() }} elem
                         </flux:text>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <flux:icon name="calendar-days" class="h-4 w-4 text-neutral-500" variant="mini" />
-                        <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">
-                            {{ $musicPlan->created_at->translatedFormat('Y. m. d. H:i') }}
-                        </flux:text>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    @if($musicPlan->actual_date)
-                    <flux:icon name="external-link" class="h-3 w-3" variant="mini" />                    
-                        <flux:link 
-                            href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}"
-                            target="_blank" 
-                            class="text-xs"
-                            onclick="event.stopPropagation()">
-                            Igenaptár
-                        </flux:link>
-                    @endif
+                    <x-user-badge :user="$musicPlan->user" />
                 </div>
             </div>
         </div>
