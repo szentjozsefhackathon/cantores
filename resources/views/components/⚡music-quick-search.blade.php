@@ -141,9 +141,9 @@ new class extends Component
     <div
         x-show="open"
         x-transition:enter="transition ease-out duration-100"
-        x-transition:enter-start="opacity-0 -translate-y-1"
+        x-transition:enter-start="opacity-0 translate-y-1"
         x-transition:enter-end="opacity-100 translate-y-0"
-        class="absolute z-50 w-full mt-1.5 bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 shadow-xl overflow-hidden"
+        class="absolute z-50 w-full bottom-full mb-1.5 bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 shadow-xl overflow-hidden"
     >
         @forelse($this->results as $music)
         <a
