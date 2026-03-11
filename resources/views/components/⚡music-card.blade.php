@@ -58,10 +58,10 @@ new class extends Component
                         </span>
                         @endif
                         @foreach($music->collections as $collection)
-                            <livewire:collection-badge :collection="$collection" />
+                            <x-collection-badge :collection="$collection" />
                         @endforeach
                         @foreach($music->tags as $tag)
-                            <livewire:music-tag-badge :tag="$tag" />
+                            <x-music-tag-badge :tag="$tag" />
                         @endforeach
                     </div>
             </div>

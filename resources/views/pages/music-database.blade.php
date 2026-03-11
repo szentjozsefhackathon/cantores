@@ -221,10 +221,12 @@ new class extends Component
                                 @endif
                             </div>
                             @if ($firstCollection = $music->collections->first())
+                            @can('view', $firstCollection)
                                 <span class="hidden shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 sm:inline dark:bg-zinc-700 dark:text-gray-400">
                                     {{ $firstCollection->abbreviation ?? $firstCollection->title }}
                                 </span>
                             @endif
+                            @endcan
                             <flux:icon name="chevron-right" variant="mini" class="h-4 w-4 shrink-0 text-gray-300 group-hover:text-indigo-400 dark:text-gray-600 transition" />
                         </a>
                     @endforeach

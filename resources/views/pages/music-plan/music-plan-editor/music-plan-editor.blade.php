@@ -161,7 +161,7 @@
                             </div>
 
                             <!-- Slot Search Component -->
-                            <livewire:music-plan-editor.slot-search defer :music-plan="$musicPlan" />
+                            <livewire:music-plan-editor.slot-search :music-plan="$musicPlan" />
 
                             @forelse($this->planSlots as $slotPlan)
                             <livewire:music-plan-editor.slot-plan
@@ -182,7 +182,7 @@
                             <x-mary-tabs class="mb-8" wire:model="activeTemplateTab" wire:key="template-tabs">
                                 <x-mary-tab name="template" label="Énekrend sablon">
                                     <div class="space-y-4">
-                                        <livewire:music-plan-editor.music-plan-template lazy :templates="$availableTemplates" :musicPlan="$musicPlan" wire:key="template-component" />
+                                        <livewire:music-plan-editor.music-plan-template :templates="$availableTemplates" :musicPlan="$musicPlan" wire:key="template-component" />
                                     </div>
                                 </x-mary-tab>
 

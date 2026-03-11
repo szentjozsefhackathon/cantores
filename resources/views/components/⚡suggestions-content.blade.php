@@ -306,6 +306,17 @@ new class extends Component
 };
 ?>
 
+@placeholder
+<flux:skeleton.group animate="shimmer" class="flex items-center gap-4">
+    <div class="flex flex-col gap-2 w-full">
+        <flux:skeleton.line />
+        <flux:skeleton.line />
+        <flux:skeleton.line />
+        <flux:skeleton.line />
+    </div>
+</flux:skeleton.group>
+@endplaceholder
+
 <div>
     @if ($celebrationsWithScores->isEmpty())
     <flux:callout color="amber" icon="information-circle" class="mt-8">
