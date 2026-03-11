@@ -8,24 +8,15 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
-use Livewire\WithPagination;
 
 class Authors extends Component
 {
-    use AuthorizesRequests, WithPagination;
-
-    public string $search = '';
+    use AuthorizesRequests;
 
     public bool $showCreateModal = false;
 
     // Form fields for create modal
     public string $name = '';
-
-    public string $sortBy = 'name';
-
-    public string $sortDirection = 'asc';
-
-    public string $filter = 'visible'; // 'visible', 'all', 'public', 'private', 'mine'
 
     public bool $isPrivate = false;
 
@@ -44,53 +35,11 @@ class Authors extends Component
     }
 
     /**
-     * Reset pagination when search changes.
-     */
-    public function updatingSearch(): void
-    {
-        $this->resetPage();
-    }
-
-    /**
-     * Sort the table by a column.
-     */
-    public function sort(string $column): void
-    {
-        if ($this->sortBy === $column) {
-            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            $this->sortBy = $column;
-            $this->sortDirection = 'asc';
-        }
-
-        $this->resetPage();
-    }
-
-    /**
      * Render the component.
      */
     public function render(): View
     {
-        $authors = Author::visibleTo(Auth::user())
-            ->when($this->search, function ($query, $search) {
-                $query->where('name', 'ilike', "%{$search}%");
-            })
-            ->when($this->filter === 'public', function ($query) {
-                $query->public();
-            })
-            ->when($this->filter === 'private', function ($query) {
-                $query->private();
-            })
-            ->when($this->filter === 'mine', function ($query) {
-                $query->where('user_id', Auth::id());
-            })
-            ->withCount('music')
-            ->orderBy($this->sortBy, $this->sortDirection)
-            ->paginate(10);
-
-        return view('pages.editor.authors', [
-            'authors' => $authors,
-        ]);
+        return view('pages.editor.authors');
     }
 
     /**
@@ -124,23 +73,6 @@ class Authors extends Component
         $this->showCreateModal = false;
         $this->resetForm();
         $this->dispatch('author-created');
-    }
-
-    /**
-     * Delete an author.
-     */
-    public function delete(Author $author): void
-    {
-        $this->authorize('delete', $author);
-
-        if ($author->music()->count() > 0) {
-            $this->dispatch('error', message: __('Cannot delete author that has music assigned to it.'));
-
-            return;
-        }
-
-        $author->delete();
-        $this->dispatch('author-deleted');
     }
 
     /**
