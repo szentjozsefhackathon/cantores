@@ -323,6 +323,7 @@ new class extends Component
 
         // Build criteria to pass to suggestions page
         $criteria = [
+            'date' => $celebrationData['dateISO'] ?? null,
             'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
             'season' => isset($celebrationData['season']) ? (int) $celebrationData['season'] : null,
             'week' => isset($celebrationData['week']) ? (int) $celebrationData['week'] : null,

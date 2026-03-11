@@ -70,31 +70,42 @@ new class extends Component
         $celebrationIds = $related->pluck('id')->toArray();
         $this->musicPlans = $this->fetchMusicPlans($celebrationIds);
 
-        // Fetch celebration details from external API for the first celebration (highest score)
+        // Fetch celebration details from external API based on the requested date
         $this->fetchCelebrationDetails();
     }
 
     /**
      * Fetch celebration details from the external API using the caching service.
+     * Uses the date and name from the request criteria to get the exact celebration
+     * as returned by the LiturgicalInfo service — no scoring involved.
      */
     protected function fetchCelebrationDetails(): void
     {
-        if ($this->celebrationsWithScores->isEmpty()) {
+        $date = $this->criteria['date'] ?? null;
+        $name = $this->criteria['name'] ?? null;
+
+        if (! $date) {
             return;
         }
 
-        // Get the first celebration (highest score)
-        $firstCelebration = $this->celebrationsWithScores->first()['celebration'];
-        $date = $firstCelebration->actual_date->format('Y-m-d');
-
         $service = app(LiturgicalInfoService::class);
-        $celebrationData = $service->findCelebration(
-            $date,
-            $firstCelebration->name,
-            $firstCelebration->actual_date->format('Y-m-d')
-        );
+        $celebrations = $service->getCelebrations($date);
 
-        $this->celebrationDetails = $celebrationData;
+        if (empty($celebrations)) {
+            return;
+        }
+
+        // If we have a name, find the exact match; otherwise use the first celebration
+        if ($name) {
+            foreach ($celebrations as $celebration) {
+                if (($celebration['name'] ?? $celebration['title'] ?? null) === $name) {
+                    $this->celebrationDetails = $celebration;
+                    return;
+                }
+            }
+        }
+
+        $this->celebrationDetails = $celebrations[0];
     }
 
 
@@ -110,6 +121,7 @@ new class extends Component
 
         // Build criteria from the celebration model (same as openSuggestions in liturgical-info)
         $criteria = [
+            'date' => $celebration->actual_date?->format('Y-m-d'),
             'name' => $celebration->name,
             'season' => $celebration->season,
             'week' => $celebration->week,
