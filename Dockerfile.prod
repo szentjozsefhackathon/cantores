@@ -68,4 +68,6 @@ RUN chown -R www-data:www-data storage
 
 # PHP and Apache settings
 RUN cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
+RUN echo "opcache.jit=tracing" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+ && echo "opcache.jit_buffer_size=128M" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 RUN a2enmod rewrite headers
