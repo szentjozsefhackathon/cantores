@@ -18,9 +18,13 @@ ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/relea
 RUN install-php-extensions gd gmp memcached pdo_pgsql pdo_mysql xdebug zip pcntl bcmath intl
 COPY docker/sites-available/000-default.conf.dev /etc/apache2/sites-available/000-default.conf
 
-RUN echo "xdebug.mode=debug,develop" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
-    && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
-    && echo "xdebug.log=/tmp/xdebug.log" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+RUN echo "xdebug.mode=debug,develop,profile" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.start_with_request=trigger" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.trigger_value=profile_me" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.log=/tmp/xdebug.log" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.output_dir=/tmp/xdebug-profiles" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.profiler_output_name=cachegrind.out.%p.%t" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && mkdir -p /tmp/xdebug-profiles && chmod 777 /tmp/xdebug-profiles
 
 RUN a2enmod rewrite headers
 
@@ -33,7 +37,10 @@ RUN chown -R laravel:laravel .
 USER laravel
 
 ENV NVM_DIR /home/laravel/.nvm
+ENV PATH "/home/laravel/.local/bin:${PATH}"
+
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash \
     && . $NVM_DIR/nvm.sh \
     && nvm install 22 \
-    && nvm use 22
+    && nvm use 22 \
+    && curl -fsSL https://claude.ai/install.sh | bash

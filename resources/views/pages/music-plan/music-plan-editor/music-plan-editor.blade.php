@@ -21,7 +21,7 @@
                         @if($musicPlan->hasCustomCelebrations() && $isEditingCelebration)
                         <flux:field>
                             <flux:input
-                                wire:model.live="celebrationName"
+                                wire:model="celebrationName"
                                 placeholder="Ünnep neve" />
                         </flux:field>
                         @else
@@ -44,7 +44,7 @@
                         <flux:field>
                             <flux:input
                                 type="date"
-                                wire:model.live="celebrationDate" />
+                                wire:model="celebrationDate" />
                         </flux:field>
                         @else
                         <flux:text class="text-base font-semibold">
@@ -209,7 +209,7 @@
                     <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">Privát megjegyzések (csak neked látható)</flux:heading>
                     <flux:field>
                         <flux:textarea
-                            wire:model.live="privateNotes"
+                            wire:model="privateNotes"
                             placeholder="Írj ide privát megjegyzéseket az énekrenddel kapcsolatban (pl. emlékeztetők, gondolatok)..."
                             rows="4"
                             class="w-full" />

@@ -23,6 +23,8 @@ services:
       - .:/var/www/html
       - .devcontainer/.bash_history:/home/laravel/.bash_history
       - .devcontainer/.ssh:/home/laravel/.ssh
+      - claude-home:/home/laravel/.claude
+      - xdebug-profiles:/tmp/xdebug-profiles
     networks:
       - creshu-network
     ports:
@@ -144,9 +146,19 @@ services:
       - qdrant_storage:/qdrant/storage
     networks:
       - creshu-network
+  webgrind:
+    image: jokkedk/webgrind:latest
+    ports:
+      - "${WEBGRIND_EXTERNAL_PORT:-8081}:80"
+    volumes:
+      - xdebug-profiles:/tmp
+    networks:
+      - creshu-network
 volumes:
   db-data:
   db-testing-data:
-  qdrant_storage:  
+  qdrant_storage:
+  xdebug-profiles:
+  claude-home:  
 networks:
   creshu-network:

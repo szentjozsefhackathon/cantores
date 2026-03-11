@@ -364,15 +364,4 @@ new class extends Component
         $this->dispatch('slots-updated', message: 'Privát megjegyzések mentve.');
     }
 
-    public function updatedCelebrationName(): void
-    {
-        // Auto-save disabled - saving only via explicit button click
-        // No action needed
-    }
-
-    public function updatedCelebrationDate(): void
-    {
-        // Auto-save disabled - saving only via explicit button click
-        // No action needed
-    }
 };
