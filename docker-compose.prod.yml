@@ -36,6 +36,7 @@ services:
         required: false
     volumes:
       - storage:/var/www/html/storage
+      - cache:/var/www/html/bootstrap/cache
     depends_on:
       database:
         condition: service_healthy
@@ -58,6 +59,7 @@ services:
         required: false
     volumes:
       - storage:/var/www/html/storage
+      - cache:/var/www/html/bootstrap/cache
       - ./import:/var/www/html/import:ro
     depends_on:
       database:
@@ -107,6 +109,7 @@ volumes:
   db-data:
   storage:
   letsencrypt:
+  cache:
 networks:
   traefik:
   internal:
