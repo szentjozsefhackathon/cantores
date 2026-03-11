@@ -37,12 +37,15 @@ new class extends Component
 @endplaceholder
 
 
-<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden max-w-[355px]">
+<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden max-w-[355px] relative group transition-shadow hover:shadow-md">
+    @can('view', $music)
+    <a href="{{ route('music-view', $music) }}" class="absolute inset-0 z-0" aria-label="{{ $music->title }}"></a>
+    @endcan
     <!-- Header with title and custom ID -->
     <div class="p-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 flex-1">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 ">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                      {{ $music->title }}
                 </h3>
                 @if($music->subtitle)
@@ -65,18 +68,8 @@ new class extends Component
                         @endforeach
                     </div>
             </div>
-            <div class="flex items-center gap-1">
+            <div class="relative z-10 flex items-center gap-1">
                 <div class="flex flex-col items-center gap-1">
-                @can('view', $music)
-                    <flux:button
-                        variant="ghost"
-                        size="sm"
-                        icon="eye"
-                        :href="route('music-view', $music)"
-                        :title="__('View')"
-                        class="!p-1"
-                    />
-                @endcan
                 @can('update', $music)
                     <flux:button
                         variant="ghost"
@@ -94,7 +87,6 @@ new class extends Component
                 @endforeach
                 </div>
                 </div>
-                
             </div>
         </div>
     </div>
