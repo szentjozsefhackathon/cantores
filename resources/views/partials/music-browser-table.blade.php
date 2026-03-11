@@ -136,7 +136,7 @@
                                 variant="ghost"
                                 size="sm"
                                 icon="history"
-                                wire:click="showAuditLog({{ $music->id }})"
+                                x-on:click="$dispatch('show-music-audit-log', { musicId: {{ $music->id }} })"
                                 :title="__('View Audit Log')" />
                             @can('content.edit.published')
                                 <flux:button
