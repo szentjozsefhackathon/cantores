@@ -8,7 +8,9 @@
 <flux:table :paginate="$musics">
     <flux:table.columns>
         @if ($mode === 'manage')
-            <flux:table.column></flux:table.column>
+            @can('mergeAny', \App\Models\Music::class)
+                <flux:table.column></flux:table.column>
+            @endcan
         @endif
         <flux:table.column>{{ __('Title') }}</flux:table.column>
         <flux:table.column>{{ __('Collection') }}</flux:table.column>
@@ -23,13 +25,15 @@
     <flux:table.rows>
         @forelse ($musics as $music)
             <flux:table.row>
-                {{-- Checkbox (manage only) --}}
+                {{-- Checkbox (manage + can merge only) --}}
                 @if ($mode === 'manage')
-                    <flux:table.cell>
-                        <flux:checkbox
-                            wire:click="toggleSelection({{ $music->id }})"
-                            :checked="in_array($music->id, $this->selectedMusicIds)" />
-                    </flux:table.cell>
+                    @can('mergeAny', \App\Models\Music::class)
+                        <flux:table.cell>
+                            <flux:checkbox
+                                wire:click="toggleSelection({{ $music->id }})"
+                                :checked="in_array($music->id, $this->selectedMusicIds)" />
+                        </flux:table.cell>
+                    @endcan
                 @endif
 
                 {{-- Title --}}
@@ -168,7 +172,7 @@
             </flux:table.row>
         @empty
             <flux:table.row>
-                <flux:table.cell :colspan="($mode === 'manage' ? 1 : 0) + 5 + (auth()->check() ? 1 : 0)" class="text-center">
+                <flux:table.cell :colspan="($mode === 'manage' && auth()->user()?->can('mergeAny', \App\Models\Music::class) ? 1 : 0) + 5 + (auth()->check() ? 1 : 0)" class="text-center">
                     <div class="py-8 text-center">
                         @svg('heroicon-o-folder-open', 'mx-auto h-12 w-12 text-gray-400 dark:text-gray-500')
                         <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No music pieces found') }}</h3>

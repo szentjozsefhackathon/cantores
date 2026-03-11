@@ -42,12 +42,8 @@ trait HasMusicSearchScopes
             );
         }
 
-        // Apply visibility and privacy scopes (AND-ed with the search group above)
-        $query = $query
-            ->visibleTo(Auth::user())
-            ->when($this->filter === 'public', fn ($q) => $q->public())
-            ->when($this->filter === 'private', fn ($q) => $q->private())
-            ->when($this->filter === 'mine', fn ($q) => $q->where('user_id', Auth::id()));
+        // Apply visibility scope
+        $query = $query->visibleTo(Auth::user());
 
         // Collections: keep your existing ilike logic; no full-text index required
         $query = $query

@@ -19,8 +19,6 @@ return new class extends Component
 
     public string $search = '';
 
-    public string $filter = 'all';
-
     public string $collectionFilter = '';
 
     public string $collectionFreeText = '';
@@ -53,10 +51,6 @@ return new class extends Component
     /**
      * Reset pagination when filter changes.
      */
-    public function updatingFilter(): void
-    {
-        $this->resetPage();
-    }
 
     /**
      * Reset pagination when collection filter changes.

@@ -28,8 +28,6 @@ class MusicsTable extends Component
 
     public string $authorFreeText = '';
 
-    public string $filter = 'all';
-
     public array $tagFilters = [];
 
     public array $selectedMusicIds = [];

@@ -1,7 +1,7 @@
 <div class="mx-auto p-4 sm:p-6">
     <!-- Filters card -->
     <div wire:ignore class="rounded-2xl border p-4 shadow-sm sm:p-5">
-        <h2 class="text-base font-semibold">Zeneművek keresése</h2>
+        <h2 class="text-base font-semibold">Zeneművek</h2>
         @if($renderFilters)
             @include('partials.music-browser-filters')
         @endif
