@@ -22,8 +22,11 @@ new class extends Component
 
     public bool $selectable = false;
 
-    public function mount(bool $selectable = false): void
+    public bool $welcome = false;
+
+    public function mount(bool $selectable = false, bool $welcome = false): void
     {
+        $this->welcome = $welcome;
         $selectable = $selectable;
         $this->date = Carbon::now()->format('Y-m-d');
         $this->fetchLiturgicalInfo();
@@ -346,20 +349,18 @@ new class extends Component
             <div class="flex items-center gap-4">
                 <flux:icon name="book-open-text" class="h-10 w-10" variant="outline" />
                 <div>
+                    @if($welcome)
+                    <flux:heading size="xl" class="text-white">Liturgikus énekrendek</flux:heading>
+                    <flux:text class="text-blue-100">Nézd meg, mások mit énekelnek — vagy állítsd össze és oszd meg a saját énekrendedet!</flux:text>
+                    @else
                     <flux:heading size="xl" class="text-white">Liturgikus naptár és énekrendek</flux:heading>
-                    <flux:text class="hidden md:block text-blue-100">Énekrendek összeállítása, keresése és megosztása</flux:text>
-                    <div class="pt-1 dark:border-neutral-800 hidden md:block">
-                        <flux:text class="text-xs text-neutral-600 dark:text-neutral-400 text-white/80">
-                            Adatforrás: <a href="https://szentjozsefhackathon.github.io/napi-lelki-batyu/" class="hover:underline">Szt. József Hackathon Napi Lelki Batyu</a>
-                        </flux:text>
-                    </div>
+                    @endif
 
                 </div>
             </div>
             <div class="flex flex-col gap-2">
                 <div class="flex items-end gap-2">
                     <flux:field class="mb-0">
-                        <flux:label class="text-white/90 text-sm font-medium">Dátum kiválasztása</flux:label>
                         <flux:input
                             type="date"
                             wire:model.live="date"
@@ -470,50 +471,32 @@ new class extends Component
             @endphp
             <flux:card class="celebration-card p-0 overflow-hidden border-l-4 {{ $colorTextColor }} hover:shadow-lg transition-shadow duration-300">
                 <div class="p-5 space-y-4">
-                    <!-- Title with icon -->
-                    <div class="flex items-start justify-between">
-                        <flux:heading size="md" class="flex-1" >
-                            {{ $celebration['name'] ?? 'No title' }}
-                        </flux:heading>
+                    <!-- Title with badges -->
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex-1">
+                            <flux:heading size="md" class="inline leading-snug">{{ $celebration['name'] ?? 'No title' }}</flux:heading>
+                            @if (isset($celebration['yearLetter']))
+                                <flux:badge color="blue" size="sm" class="ml-1.5 align-middle">{{ $celebration['yearLetter'] }}</flux:badge>
+                            @endif
+                            @if (isset($celebration['yearParity']))
+                                <flux:badge color="zinc" size="sm" class="ml-1 align-middle">{{ $celebration['yearParity'] }}</flux:badge>
+                            @endif
+                        </div>
                         @if (isset($celebration['celebrationType']))
-                            <flux:icon name="tag" class="h-4 w-4 text-amber-600 dark:text-amber-400 mr-1" variant="mini" />
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            <flux:icon name="tag" class="h-4 w-4 text-amber-600 dark:text-amber-400" variant="mini" />
                             <flux:text class="text-sm font-medium">{{ $celebration['celebrationType'] }}</flux:text>
-                        @endif
-
-                    </div>
-
-                    <!-- Celebration details grid -->
-                    <div class="grid grid-cols-3 gap-2">
-                        @if (isset($celebration['yearLetter']))
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="document-text" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
-                            <div>
-                                <flux:badge color="blue" size="sm" class="mt-1">
-                                    {{ $celebration['yearLetter'] }}
-                                    {{ $celebration['yearParity'] }}
-                                </flux:badge>
-                            </div>
-                        </div>
-                        @endif
-
-                        @if (isset($celebration['seasonText']))
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="clock" class="h-4 w-4 text-emerald-600 dark:text-emerald-400" variant="mini" />
-                            <div>
-                                <flux:text class="text-sm font-medium">{{ $celebration['seasonText'] }}</flux:text>
-                            </div>
-                        </div>
-                        @endif
-
-                        @if (isset($celebration['colorText']))
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="swatch" class="h-4 w-4 text-rose-600 dark:text-rose-400" variant="mini" />
-                            <div>
-                                <flux:text class="text-sm font-medium">{{ $celebration['colorText'] }}</flux:text>
-                            </div>
                         </div>
                         @endif
                     </div>
+
+                    <!-- Season info -->
+                    @if (isset($celebration['seasonText']))
+                    <div class="flex items-center gap-2">
+                        <flux:icon name="clock" class="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" variant="mini" />
+                        <flux:text class="text-sm font-medium">{{ $celebration['seasonText'] }}</flux:text>
+                    </div>
+                    @endif
 
                     @auth
                     @php
@@ -559,7 +542,7 @@ new class extends Component
                     @endphp
                     <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
-                            Közzétett énekrendek:
+                            Más kántorok ezt énekelték:
                         </flux:heading>
                         @if($publishedPlans->isNotEmpty())
                         <div class="space-y-2">

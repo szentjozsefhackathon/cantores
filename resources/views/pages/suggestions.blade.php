@@ -174,6 +174,12 @@ new class extends Component
         <flux:text>
             Kapcsolódó ünnepek alapján generált énekjavaslatok szekciók szerint. A javaslatok relevanciája a kapcsolódás erősségétől függ.
         </flux:text>
+        <div class="pt-1 dark:border-neutral-800 hidden md:block">
+            <flux:text class="text-xs text-neutral-600 dark:text-neutral-400 text-white/80">
+                Adatforrás: <a href="https://szentjozsefhackathon.github.io/napi-lelki-batyu/" class="hover:underline">Szt. József Hackathon Napi Lelki Batyu</a>
+            </flux:text>
+        </div>
+
     </div>
 
     <!-- Celebration details section -->
