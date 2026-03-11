@@ -4,10 +4,10 @@ use App\Concerns\ProfileValidationRules;
 use App\Models\City;
 use App\Models\FirstName;
 use App\Models\User;
+use App\Services\NicknameService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -112,25 +112,10 @@ new class extends Component {
      */
     public function randomizeNickname(): void
     {
-        $currentUserId = Auth::id();
+        $pair = app(NicknameService::class)->randomPairExcluding(Auth::id());
 
-        $pick = DB::selectOne('
-            SELECT c.id AS city_id, fn.id AS first_name_id
-            FROM cities c
-            CROSS JOIN first_names fn
-            WHERE NOT EXISTS (
-                SELECT 1 FROM users u
-                WHERE u.city_id = c.id
-                  AND u.first_name_id = fn.id
-                  AND u.id != ?
-            )
-            ORDER BY RANDOM()
-            LIMIT 1
-        ', [$currentUserId]);
-
-        if ($pick) {
-            $this->cityId = $pick->city_id;
-            $this->firstNameId = $pick->first_name_id;
+        if ($pair) {
+            [$this->cityId, $this->firstNameId] = $pair;
         }
     }
 

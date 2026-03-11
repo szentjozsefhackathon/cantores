@@ -15,6 +15,13 @@ new class extends Component
 }
 ?>
 
-<flux:tooltip content="{{ $collection->title }} {{ $collection->pivot->page_number ? __('(p.:page)', ['page' => $collection->pivot->page_number]) : '' }}">
-<flux:badge size="sm">{{ $collection->abbreviation ?? $collection->title }} {{ $collection->pivot->order_number }}</flux:badge>
-</flux:tooltip>
+<div>
+@can('view', $collection)
+    <flux:tooltip content="{{ $collection->title }} {{ $collection->pivot->page_number ? __('(p.:page)', ['page' => $collection->pivot->page_number]) : '' }}">
+    <flux:badge color="{{ $collection->is_private ? 'zinc' : 'green' }}" size="lg">
+        {{ $collection->is_private ? __('Private') : __('Public') }}
+    </flux:badge>
+    <flux:badge size="sm">{{ $collection->abbreviation ?? $collection->title }} {{ $collection->pivot->order_number }}</flux:badge>    
+    </flux:tooltip>    
+@endcan
+</div>

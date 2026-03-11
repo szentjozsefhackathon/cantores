@@ -26,8 +26,8 @@ class CollectionPolicy
             return true;
         }
 
-        // Private collections can only be viewed by owner or admin
-        return $user !== null && ($user->is_admin || $collection->user_id === $user->id);
+        // Private collections can only be viewed by its owner.
+        return $user !== null && $collection->user_id === $user->id;
     }
 
     /**
