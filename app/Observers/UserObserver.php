@@ -2,7 +2,9 @@
 
 namespace App\Observers;
 
+use App\Mail\NewUserRegistered;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 
 class UserObserver
 {
@@ -12,6 +14,10 @@ class UserObserver
     public function created(User $user): void
     {
         $user->assignRole('contributor');
+
+        if (config('app.notify_admin_on_new_user_registration') && ($adminEmail = config('admin.email'))) {
+            Mail::to($adminEmail)->queue(new NewUserRegistered($user));
+        }
     }
 
     /**
