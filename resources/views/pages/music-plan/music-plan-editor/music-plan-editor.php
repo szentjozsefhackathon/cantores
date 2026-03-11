@@ -44,6 +44,7 @@ new class extends Component
     public function planSlots(): \Illuminate\Database\Eloquent\Collection
     {
         return MusicPlanSlotPlan::with('musicPlanSlot')
+            ->whereHas('musicPlanSlot')
             ->where('music_plan_id', $this->musicPlan->id)
             ->orderBy('sequence')
             ->get();
