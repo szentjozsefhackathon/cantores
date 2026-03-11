@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -15,10 +16,12 @@ class MusicsTable extends Component
 {
     use AuthorizesRequests, HasMusicSearchScopes, WithPagination;
 
+    #[Url(as: 'search')]
     public string $search = '';
 
     public string $collectionFilter = '';
 
+    #[Url(as: 'collection')]
     public string $collectionFreeText = '';
 
     public string $authorFilter = '';

@@ -125,5 +125,6 @@ return [
 
     'only_admin_login' => env('APP_ONLY_ADMIN_LOGIN', false),
     'block_new_users' => env('APP_BLOCK_NEW_USERS', false),
+    'notify_admin_on_new_user_registration' => env('APP_NOTIFY_ADMIN_ON_NEW_USER_REGISTRATION', false)
 
 ];

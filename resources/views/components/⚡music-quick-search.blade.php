@@ -11,6 +11,37 @@ new class extends Component
     public string $query = '';
 
     #[Computed]
+    public function searchUrl(): string
+    {
+        $q     = trim($this->query);
+        $words = preg_split('/\s+/', $q, -1, PREG_SPLIT_NO_EMPTY);
+
+        $params = [];
+
+        // Detect collection abbreviation word (same logic as results())
+        $matchedCollection = Collection::where(function ($cq) use ($words) {
+            foreach ($words as $word) {
+                $cq->orWhere('abbreviation', $word);
+            }
+        })->first();
+
+        if ($matchedCollection) {
+            $params['collection'] = $matchedCollection->abbreviation;
+            $titleWords = array_values(
+                array_filter($words, fn ($w) => $w !== $matchedCollection->abbreviation)
+            );
+        } else {
+            $titleWords = $words;
+        }
+
+        if ($titleWords) {
+            $params['search'] = implode(' ', $titleWords);
+        }
+
+        return route('musics', $params);
+    }
+
+    #[Computed]
     public function results(): SupportCollection
     {
         $q = trim($this->query);
@@ -142,7 +173,7 @@ new class extends Component
         @endforelse
 
         <a
-            href="{{ route('musics') }}"
+            href="{{ $this->searchUrl }}"
             wire:navigate
             class="flex items-center gap-2 px-4 py-2.5 border-t border-gray-100 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900/50 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-zinc-700 transition"
         >
