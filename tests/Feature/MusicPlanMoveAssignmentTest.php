@@ -44,7 +44,7 @@ test('moveAssignmentToSlot updates music_plan_slot_id to reflect the new slot', 
     ]);
 
     Livewire::actingAs($user)
-        ->test('pages::music-plan.music-plan-editor', ['musicPlan' => $musicPlan])
+        ->test('music-plan-editor.slot-plan', ['slotPlan' => $pivotA, 'isFirst' => true, 'isLast' => false, 'totalSlots' => 2])
         ->call('moveAssignmentToSlot', $assignment->id, $pivotB->id);
 
     $assignment->refresh();

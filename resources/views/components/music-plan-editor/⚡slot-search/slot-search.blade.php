@@ -78,7 +78,7 @@
     </div>
 
     <!-- All Slots Modal -->
-    <flux:modal wire:model="showAllSlotsModal" size="lg">
+    <flux:modal name="all-slots-modal" wire:close="closeAllSlotsModal" size="lg">
         <flux:heading size="lg">{{ __('All Available Slots') }}</flux:heading>
 
         <div class="mt-4 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
@@ -121,11 +121,11 @@
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
-            <flux:button
-                wire:click="closeAllSlotsModal"
-                variant="outline">
-                {{ __('Close') }}
-            </flux:button>
+            <flux:modal.close>
+                <flux:button variant="outline">
+                    {{ __('Close') }}
+                </flux:button>
+            </flux:modal.close>
             <flux:button
                 wire:click="openCreateSlotModal"
                 variant="primary"
@@ -136,7 +136,7 @@
     </flux:modal>
 
     <!-- Create Custom Slot Modal -->
-    <flux:modal wire:model="showCreateSlotModal" size="md">
+    <flux:modal name="create-slot-modal" wire:close="closeCreateSlotModal" size="md">
         <flux:heading size="lg">{{ __('Create Custom Slot') }}</flux:heading>
 
         <div class="mt-6 space-y-4">
@@ -160,11 +160,11 @@
         </div>
 
         <div class="mt-8 flex justify-end gap-3">
-            <flux:button
-                wire:click="closeCreateSlotModal"
-                variant="outline">
-                {{ __('Cancel') }}
-            </flux:button>
+            <flux:modal.close>
+                <flux:button variant="outline">
+                    {{ __('Cancel') }}
+                </flux:button>
+            </flux:modal.close>
             <flux:button
                 wire:click="createCustomSlot"
                 variant="primary"

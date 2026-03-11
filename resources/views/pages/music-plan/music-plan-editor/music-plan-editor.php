@@ -1,9 +1,7 @@
 <?php
 
-use App\Enums\MusicScopeType;
-use App\Models\MusicAssignmentFlag;
 use App\Models\MusicPlan;
-use Illuminate\Support\Facades\DB;
+use App\Models\MusicPlanSlotPlan;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -14,25 +12,11 @@ new class extends Component
 
     public array $availableTemplates = [];
 
-    public array $planSlots = [];
-
-    public array $existingSlotIds = [];
-
     public ?int $genreId = null;
 
     public bool $isPublished = false;
 
-    public ?int $selectedSlotForMusic = null;
-
-    public bool $showMusicSearchModal = false;
-
-    public array $slotAssignments = [];
-
     public ?string $celebrationName = null;
-
-    public ?int $assignmentToMove = null;
-
-    public bool $showMoveAssignmentModal = false;
 
     public ?string $celebrationDate = null;
 
@@ -48,60 +32,21 @@ new class extends Component
 
     public string $celebrationSearch = '';
 
-    /** An array of flags by [assignmentId] */
-    public array $flags = [];
-
-    /** An array of scopes by [assignmentId] => [['type' => string|null, 'number' => int|null], ...] */
-    public array $assignmentScopes = [];
-
-    public bool $showCreateSlotModal = false;
-
     public string $activeTemplateTab = 'template';
 
-    public string $newSlotName = '';
-
-    public string $newSlotDescription = '';
-
-    public array $newSlotCustomColumns = [];
-
-    /** @var int|null The ID of the slot being edited, null if not editing */
-    public ?int $editingSlotId = null;
-
-    /** @var string The temporary name for the slot being edited */
-    public string $editingSlotName = '';
-
-    /** @var string The temporary description for the slot being edited */
-    public string $editingSlotDescription = '';
-
     /**
-     * Get flag options for Mary UI choices.
+     * The ordered list of MusicPlanSlotPlan pivot records for this plan.
+     * Recomputed fresh on every render — no stale state to manage.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, MusicPlanSlotPlan>
      */
     #[Computed]
-    public function flagOptions(): array
+    public function planSlots(): \Illuminate\Database\Eloquent\Collection
     {
-        return MusicAssignmentFlag::all()->map(function ($flag) {
-            return [
-                'id' => $flag->id,
-                'name' => $flag->label(),
-                'icon' => 's-'.$flag->icon(),
-                'color' => $flag->color(),
-            ];
-        })->toArray();
-    }
-
-    /**
-     * Get scope type options for dropdown.
-     */
-    #[Computed]
-    public function scopeTypeOptions(): array
-    {
-        return collect(MusicScopeType::cases())->map(function ($type) {
-            return [
-                'value' => $type->value,
-                'label' => $type->label(),
-                'abbreviation' => $type->abbreviation(),
-            ];
-        })->toArray();
+        return MusicPlanSlotPlan::with('musicPlanSlot')
+            ->where('music_plan_id', $this->musicPlan->id)
+            ->orderBy('sequence')
+            ->get();
     }
 
     public function mount($musicPlan = null): void
@@ -137,101 +82,6 @@ new class extends Component
 
         // Load data for both new and existing plans
         $this->loadAvailableTemplates();
-        $this->loadPlanSlots();
-        $this->loadExistingSlotIds();
-    }
-
-    private function loadPlanSlots(): void
-    {
-        $slots = $this->musicPlan->slots()
-            ->withPivot('id', 'sequence')
-            ->orderBy('music_plan_slot_plan.sequence')
-            ->get();
-
-        // Load all assignments for all slot-plan instances in one query (avoids N+1)
-        $pivotIds = $slots->map(fn ($slot) => $slot->pivot->id)->toArray();
-
-        $allAssignments = \App\Models\MusicPlanSlotAssignment::whereIn('music_plan_slot_plan_id', $pivotIds)
-            ->orderBy('music_sequence')
-            ->with(['music.collections', 'music.tags', 'music.genres', 'flags', 'scopes'])
-            ->get()
-            ->groupBy('music_plan_slot_plan_id');
-
-        $user = auth()->user();
-
-        $this->planSlots = $slots->map(function ($slot) use ($allAssignments, $user) {
-            $assignments = ($allAssignments->get($slot->pivot->id) ?? collect())
-                ->map(function ($assignment) use ($user) {
-                    // create the flag array for this slot's assignments
-                    $this->flags[$assignment->id] = $assignment->flags->pluck('id')->toArray();
-
-                    // Build database scopes (type as enum value)
-                    $dbScopes = $assignment->scopes->map(function ($scope) {
-                        return [
-                            'type' => $scope->scope_type?->value,
-                            'number' => $scope->scope_number,
-                        ];
-                    })->toArray();
-
-                    // Get existing scopes (may include placeholders)
-                    $existingScopes = $this->assignmentScopes[$assignment->id] ?? [];
-
-                    // Filter placeholders (type or number null)
-                    $placeholders = array_filter($existingScopes, fn ($scope) => $scope['type'] === null || $scope['number'] === null);
-
-                    // Merge: database scopes first, then placeholders
-                    $mergedScopes = array_merge($dbScopes, $placeholders);
-
-                    // Update assignmentScopes
-                    $this->assignmentScopes[$assignment->id] = $mergedScopes;
-
-                    $music = $assignment->music;
-
-                    return [
-                        'id' => $assignment->id,
-                        'music_id' => $assignment->music_id,
-                        'music_title' => $music->title,
-                        'music_subtitle' => $music->subtitle,
-                        'music_custom_id' => $music->custom_id,
-                        'music_is_private' => $music->is_private,
-                        'music_sequence' => $assignment->music_sequence,
-                        'notes' => $assignment->notes,
-                        'scopes' => $mergedScopes,
-                        'scope_label' => $assignment->scope_label,
-                        'music_collections' => $music->collections->map(fn ($c) => [
-                            'abbreviation' => $c->abbreviation,
-                            'title' => $c->title,
-                            'order_number' => $c->pivot->order_number,
-                            'page_number' => $c->pivot->page_number,
-                        ])->toArray(),
-                        'music_tags' => $music->tags->map(fn ($t) => [
-                            'name' => $t->name,
-                            'icon' => $t->icon(),
-                        ])->toArray(),
-                        'music_genres' => $music->genres->map(fn ($g) => [
-                            'icon' => $g->icon(),
-                        ])->toArray(),
-                        'can_view_music' => $user === null ? (! $music->is_private) : $user->can('view', $music),
-                        'can_edit_music' => $user !== null && $user->can('update', $music),
-                    ];
-                })
-                ->toArray();
-
-            return [
-                'id' => $slot->id,
-                'pivot_id' => $slot->pivot->id,
-                'name' => $slot->name,
-                'description' => $slot->description,
-                'sequence' => $slot->pivot->sequence,
-                'is_custom' => $slot->is_custom,
-                'assignments' => $assignments,
-            ];
-        })->toArray();
-    }
-
-    private function loadExistingSlotIds(): void
-    {
-        $this->existingSlotIds = $this->musicPlan->slots()->pluck('music_plan_slot_id')->toArray();
     }
 
     public function delete(): void
@@ -276,27 +126,33 @@ new class extends Component
             ->toArray();
     }
 
+    /**
+     * Re-render the parent so the planSlots computed property reflects the new list.
+     * The slot-plan child components are independent — they manage their own data.
+     */
+    #[On('slot-list-changed')]
+    public function onSlotListChanged(): void
+    {
+        // Computed planSlots will refresh automatically on re-render.
+    }
+
     #[On('slot-added')]
     public function onSlotAdded(string $slotName): void
     {
-        $this->loadExistingSlotIds();
-        $this->loadPlanSlots();
         $this->dispatch('slots-updated', message: $slotName.' hozzáadva.');
     }
 
     #[On('slot-created')]
     public function onSlotCreated(string $slotName): void
     {
-        $this->loadExistingSlotIds();
-        $this->loadPlanSlots();
         $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slotName);
     }
 
     #[On('music-added-from-suggestions')]
-    public function onMusicAddedFromSuggestions(int $musicId, string $slotName): void
+    public function onMusicAddedFromSuggestions(int $musicId, string $slotName, ?int $slotPlanId = null): void
     {
-        $this->loadExistingSlotIds();
-        $this->loadPlanSlots();
+        // If a new slot was created, the parent re-renders and mounts a new slot-plan child.
+        // If an existing slot was updated, the child refreshes itself via slot-assignments-refreshed.
         $this->dispatch('slots-updated', message: 'Zene hozzáadva: '.$slotName);
     }
 
@@ -305,16 +161,12 @@ new class extends Component
     {
         $this->authorize('update', $this->musicPlan);
 
-        // Get existing slots for this plan to determine next sequence
         $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
 
         $this->musicPlan->slots()->attach($slotId, [
-            'sequence' => $sequence,
+            'sequence' => $existingSlots + 1,
         ]);
 
-        $this->loadExistingSlotIds();
-        $this->loadPlanSlots();
         $this->dispatch('slots-updated', message: 'Elem hozzáadva.');
     }
 
@@ -340,13 +192,7 @@ new class extends Component
             $addedCount++;
         }
 
-        if ($addedCount > 0) {
-            $this->loadExistingSlotIds();
-            $this->loadPlanSlots();
-        }
-
         $this->dispatch('slots-updated', message: $addedCount.' elem hozzáadva a sablonból.');
-
     }
 
     #[On('add-default-slots-from-template')]
@@ -373,95 +219,7 @@ new class extends Component
             }
         }
 
-        if ($addedCount > 0) {
-            $this->loadExistingSlotIds();
-            $this->loadPlanSlots();
-        }
-
         $this->dispatch('slots-updated', message: $addedCount.' elem hozzáadva a sablonból.');
-    }
-
-    public function moveSlotUp(int $pivotId): void
-    {
-        $this->reorderSlot($pivotId, 'up');
-    }
-
-    public function moveSlotDown(int $pivotId): void
-    {
-        $this->reorderSlot($pivotId, 'down');
-    }
-
-    public function deleteSlot(int $pivotId): void
-    {
-        $this->authorize('update', $this->musicPlan);
-
-        $pivot = DB::table('music_plan_slot_plan')->where('id', $pivotId)->first();
-
-        if (! $pivot) {
-            return;
-        }
-
-        $deletedSequence = $pivot->sequence;
-        $musicPlanId = $pivot->music_plan_id;
-
-        DB::transaction(function () use ($pivotId, $deletedSequence, $musicPlanId) {
-            // First, delete all music assignments for this slot instance in this plan
-            DB::table('music_plan_slot_assignments')
-                ->where('music_plan_slot_plan_id', $pivotId)
-                ->delete();
-
-            // Then delete the slot from the plan
-            DB::table('music_plan_slot_plan')->where('id', $pivotId)->delete();
-
-            // Decrement sequence for all later slots in the same plan
-            DB::table('music_plan_slot_plan')
-                ->where('music_plan_id', $musicPlanId)
-                ->where('sequence', '>', $deletedSequence)
-                ->decrement('sequence');
-        });
-
-        $this->loadExistingSlotIds();
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Elem eltávolítva.');
-    }
-
-    private function reorderSlot(int $pivotId, string $direction): void
-    {
-        $slots = $this->musicPlan->slots()
-            ->withPivot('id', 'sequence')
-            ->orderBy('music_plan_slot_plan.sequence')
-            ->get();
-
-        $currentIndex = $slots->search(fn ($slot) => $slot->pivot->id === $pivotId);
-
-        if ($currentIndex === false) {
-            return;
-        }
-
-        $targetIndex = $direction === 'up' ? $currentIndex - 1 : $currentIndex + 1;
-
-        if ($targetIndex < 0 || $targetIndex >= $slots->count()) {
-            return;
-        }
-
-        $currentSlot = $slots[$currentIndex];
-        $targetSlot = $slots[$targetIndex];
-
-        DB::transaction(function () use ($currentSlot, $targetSlot) {
-            $this->updatePivotSequence($currentSlot->pivot->id, $targetSlot->pivot->sequence);
-            $this->updatePivotSequence($targetSlot->pivot->id, $currentSlot->pivot->sequence);
-        });
-
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Elem sorrendje frissítve.');
-    }
-
-    private function updatePivotSequence(int $pivotId, int $sequence): void
-    {
-        $this->musicPlan->slots()
-            ->newPivotStatement()
-            ->where('id', $pivotId)
-            ->update(['sequence' => $sequence]);
     }
 
     public function updatedIsPublished(): void
@@ -469,296 +227,6 @@ new class extends Component
         $this->authorize('update', $this->musicPlan);
         $this->musicPlan->is_private = ! $this->isPublished;
         $this->musicPlan->save();
-    }
-
-    public function startEditingSlot(int $slotId): void
-    {
-        $slot = \App\Models\MusicPlanSlot::find($slotId);
-
-        if (! $slot || ! $slot->is_custom) {
-            return;
-        }
-
-        $this->authorize('update', $slot);
-
-        $this->editingSlotId = $slotId;
-        $this->editingSlotName = $slot->name;
-        $this->editingSlotDescription = $slot->description ?? '';
-    }
-
-    public function cancelEditingSlot(): void
-    {
-        $this->editingSlotId = null;
-        $this->editingSlotName = '';
-        $this->editingSlotDescription = '';
-    }
-
-    public function saveEditedSlot(): void
-    {
-        if (! $this->editingSlotId) {
-            return;
-        }
-
-        $slot = \App\Models\MusicPlanSlot::find($this->editingSlotId);
-
-        if (! $slot || ! $slot->is_custom) {
-            return;
-        }
-
-        $this->authorize('update', $slot);
-
-        $validated = $this->validate([
-            'editingSlotName' => ['required', 'string', 'max:255'],
-            'editingSlotDescription' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $slot->update([
-            'name' => $validated['editingSlotName'],
-            'description' => $validated['editingSlotDescription'] ?? '',
-        ]);
-
-        $this->cancelEditingSlot();
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Elem frissítve: '.$slot->name);
-    }
-
-    public function openMusicSearchModal(int $pivotId): void
-    {
-        $this->selectedSlotForMusic = $pivotId;
-        $this->showMusicSearchModal = true;
-    }
-
-    public function closeMusicSearchModal(): void
-    {
-        $this->showMusicSearchModal = false;
-        $this->selectedSlotForMusic = null;
-    }
-
-    #[On('music-selected')]
-    public function assignMusicToSlot(int $musicId): void
-    {
-        $this->authorize('update', $this->musicPlan);
-
-        if (! $this->selectedSlotForMusic) {
-            return;
-        }
-
-        // Get the pivot row to identify the slot instance
-        $pivot = DB::table('music_plan_slot_plan')->where('id', $this->selectedSlotForMusic)->first();
-        if (! $pivot) {
-            return;
-        }
-
-        // Determine next music_sequence within this slot instance
-        $maxMusicSequence = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $this->selectedSlotForMusic)
-            ->max('music_sequence');
-        $musicSequence = ($maxMusicSequence ?: 0) + 1;
-
-        \App\Models\MusicPlanSlotAssignment::create([
-            'music_plan_slot_plan_id' => $this->selectedSlotForMusic,
-            'music_plan_id' => $pivot->music_plan_id,
-            'music_plan_slot_id' => $pivot->music_plan_slot_id,
-            'music_id' => (int) $musicId,
-            'music_sequence' => $musicSequence,
-        ]);
-
-        $this->loadPlanSlots();
-        $this->closeMusicSearchModal();
-        $this->dispatch('slots-updated', message: 'Zene hozzáadva az elemhez.');
-    }
-
-    public function removeAssignment(int $assignmentId): void
-    {
-        $this->authorize('update', $this->musicPlan);
-
-        // remove from flags
-        unset($this->flags[$assignmentId]);
-
-        $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
-        if ($assignment && $assignment->music_plan_id === $this->musicPlan->id) {
-            $slotPlanId = $assignment->music_plan_slot_plan_id;
-            $deletedSequence = $assignment->music_sequence;
-
-            DB::transaction(function () use ($assignment, $slotPlanId, $deletedSequence) {
-                $assignment->delete();
-
-                // Shift down sequences of remaining assignments in the same slot instance
-                \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slotPlanId)
-                    ->where('music_sequence', '>', $deletedSequence)
-                    ->decrement('music_sequence');
-            });
-
-            $this->loadPlanSlots();
-            $this->dispatch('slots-updated', message: 'Zene eltávolítva.');
-        }
-    }
-
-    public function syncFlags(int $assignmentId): void
-    {
-        $this->authorize('update', $this->musicPlan);
-
-        $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
-        if (! $assignment || $assignment->music_plan_id !== $this->musicPlan->id) {
-            return;
-        }
-
-        $selectedFlagIds = $this->flags[$assignmentId] ?? [];
-        $assignment->flags()->sync($selectedFlagIds);
-    }
-
-    public function updateScope(int $assignmentId, ?int $scopeNumber, ?string $scopeType): void
-    {
-        $this->authorize('update', $this->musicPlan);
-
-        $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
-        if (! $assignment || $assignment->music_plan_id !== $this->musicPlan->id) {
-            return;
-        }
-
-        // Sync all scopes from assignmentScopes
-        $scopes = $this->assignmentScopes[$assignmentId] ?? [];
-        $assignment->scopes()->delete();
-        foreach ($scopes as $scope) {
-            if (! empty($scope['type']) && ! empty($scope['number'])) {
-                $assignment->scopes()->create([
-                    'scope_type' => $scope['type'],
-                    'scope_number' => $scope['number'],
-                ]);
-            }
-        }
-
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Scope updated.');
-    }
-
-    public function addScope(int $assignmentId): void
-    {
-        if (! isset($this->assignmentScopes[$assignmentId])) {
-            $this->assignmentScopes[$assignmentId] = [];
-        }
-        $this->assignmentScopes[$assignmentId][] = ['type' => null, 'number' => null];
-        // Do NOT call updateScope here – placeholder stays in memory until filled
-    }
-
-    public function removeScope(int $assignmentId, int $index): void
-    {
-        if (isset($this->assignmentScopes[$assignmentId][$index])) {
-            array_splice($this->assignmentScopes[$assignmentId], $index, 1);
-            $this->updateScope($assignmentId, null, null);
-        }
-    }
-
-    public function saveScope(int $assignmentId, int $index): void
-    {
-        $this->updateScope($assignmentId, null, null);
-    }
-
-    public function moveAssignmentUp(int $assignmentId): void
-    {
-        $this->reorderAssignment($assignmentId, 'up');
-    }
-
-    public function moveAssignmentDown(int $assignmentId): void
-    {
-        $this->reorderAssignment($assignmentId, 'down');
-    }
-
-    private function reorderAssignment(int $assignmentId, string $direction): void
-    {
-        $this->authorize('update', $this->musicPlan);
-
-        $assignment = \App\Models\MusicPlanSlotAssignment::with('musicPlanSlotPlan')->find($assignmentId);
-        if (! $assignment || $assignment->musicPlanSlotPlan->music_plan_id !== $this->musicPlan->id) {
-            return;
-        }
-
-        // Get all assignments for the same slot instance (same music_plan_slot_plan_id)
-        $assignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $assignment->music_plan_slot_plan_id)
-            ->orderBy('music_sequence')
-            ->get();
-
-        $currentIndex = $assignments->search(fn ($a) => $a->id === $assignmentId);
-        if ($currentIndex === false) {
-            return;
-        }
-
-        $targetIndex = $direction === 'up' ? $currentIndex - 1 : $currentIndex + 1;
-        if ($targetIndex < 0 || $targetIndex >= $assignments->count()) {
-            return;
-        }
-
-        $current = $assignments[$currentIndex];
-        $target = $assignments[$targetIndex];
-
-        DB::transaction(function () use ($current, $target) {
-            $currentSequence = $current->music_sequence;
-            $targetSequence = $target->music_sequence;
-            $current->update(['music_sequence' => $targetSequence]);
-            $target->update(['music_sequence' => $currentSequence]);
-        });
-
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Zene sorrendje frissítve.');
-    }
-
-    public function openMoveAssignmentModal(int $assignmentId): void
-    {
-        $this->assignmentToMove = $assignmentId;
-        $this->showMoveAssignmentModal = true;
-    }
-
-    public function closeMoveAssignmentModal(): void
-    {
-        $this->showMoveAssignmentModal = false;
-        $this->assignmentToMove = null;
-    }
-
-    public function moveAssignmentToSlot(int $assignmentId, int $targetSlotPlanId): void
-    {
-        $this->authorize('update', $this->musicPlan);
-
-        $assignment = \App\Models\MusicPlanSlotAssignment::find($assignmentId);
-        if (! $assignment || $assignment->musicPlan->id !== $this->musicPlan->id) {
-            return;
-        }
-
-        // Verify target slot exists and belongs to this plan
-        $targetSlotPlan = DB::table('music_plan_slot_plan')
-            ->where('id', $targetSlotPlanId)
-            ->where('music_plan_id', $this->musicPlan->id)
-            ->first();
-
-        if (! $targetSlotPlan) {
-            return;
-        }
-
-        $currentSlotPlanId = $assignment->music_plan_slot_plan_id;
-
-        DB::transaction(function () use ($assignment, $targetSlotPlan, $targetSlotPlanId, $currentSlotPlanId) {
-            // Get the max music_sequence in the target slot
-            $maxMusicSequence = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $targetSlotPlanId)
-                ->max('music_sequence');
-            $newMusicSequence = ($maxMusicSequence ?: 0) + 1;
-
-            // Get the deleted sequence from current slot
-            $deletedSequence = $assignment->music_sequence;
-
-            // Update the assignment to the new slot
-            $assignment->update([
-                'music_plan_slot_plan_id' => $targetSlotPlanId,
-                'music_plan_slot_id' => $targetSlotPlan->music_plan_slot_id,
-                'music_sequence' => $newMusicSequence,
-            ]);
-
-            // Shift down sequences of remaining assignments in the old slot instance
-            \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $currentSlotPlanId)
-                ->where('music_sequence', '>', $deletedSequence)
-                ->decrement('music_sequence');
-        });
-
-        $this->closeMoveAssignmentModal();
-        $this->loadPlanSlots();
-        $this->dispatch('slots-updated', message: 'Zene áthelyezve másik elembe.');
     }
 
     public function toggleCelebrationEditing(): void
@@ -882,11 +350,6 @@ new class extends Component
     public function updatedCelebrationSearch(): void
     {
         $this->loadAvailableCelebrations();
-    }
-
-    public function updatedFlags($value, $key)
-    {
-        $this->syncFlags((int) $key);
     }
 
     public function savePrivateNotes(): void

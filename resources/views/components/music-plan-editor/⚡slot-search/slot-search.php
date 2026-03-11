@@ -17,15 +17,11 @@ new class extends Component
 
     public ?int $selectedSlotId = null;
 
-    public bool $showAllSlotsModal = false;
-
     public array $allSlots = [];
 
     public bool $filterExcludeExisting = true;
 
     public array $existingSlotIds = [];
-
-    public bool $showCreateSlotModal = false;
 
     public string $newSlotName = '';
 
@@ -135,26 +131,24 @@ new class extends Component
             })
             ->toArray();
 
-        $this->showAllSlotsModal = true;
+        $this->modal('all-slots-modal')->show();
     }
 
     public function closeAllSlotsModal(): void
     {
-        $this->showAllSlotsModal = false;
         $this->allSlots = [];
     }
 
     public function openCreateSlotModal(): void
     {
-        $this->showCreateSlotModal = true;
         $this->newSlotName = '';
         $this->newSlotDescription = '';
         $this->resetValidation();
+        $this->modal('create-slot-modal')->show();
     }
 
     public function closeCreateSlotModal(): void
     {
-        $this->showCreateSlotModal = false;
         $this->resetValidation();
     }
 
@@ -179,7 +173,7 @@ new class extends Component
             'sequence' => $sequence,
         ]);
 
-        $this->closeCreateSlotModal();
+        $this->modal('create-slot-modal')->close();
         $this->loadExistingSlotIds();
         $this->dispatch('slot-created', slotName: $slot->name);
     }

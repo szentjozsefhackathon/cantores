@@ -258,6 +258,7 @@ new class extends Component
             ->where('music_plan_slot_id', $slot->id)
             ->first();
 
+        $isNewSlot = false;
         $slotPlanId = null;
         if ($existingSlotPlan) {
             $slotPlanId = $existingSlotPlan->id;
@@ -274,6 +275,7 @@ new class extends Component
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+            $isNewSlot = true;
         }
 
         // Determine next music_sequence within this slot instance
@@ -290,8 +292,16 @@ new class extends Component
             'music_sequence' => $musicSequence,
         ]);
 
-        // Dispatch event to notify the music plan editor
-        $this->dispatch('music-added-from-suggestions', musicId: $musicId, slotName: $slotName);
+        // If a new slot was created, tell the parent to re-render its slot list.
+        if ($isNewSlot) {
+            $this->dispatch('slot-list-changed');
+        }
+
+        // Tell the specific slot-plan child to refresh its assignments.
+        $this->dispatch('slot-assignments-refreshed', pivotId: $slotPlanId);
+
+        // Notify the editor for the status message (includes slotPlanId for parent).
+        $this->dispatch('music-added-from-suggestions', musicId: $musicId, slotName: $slotName, slotPlanId: $slotPlanId);
     }
 };
 ?>
