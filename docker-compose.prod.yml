@@ -105,6 +105,26 @@ services:
       - --memory-limit=96
     networks:
       - internal
+  queue:
+    image: creshu-app-prod
+    user: "33:33" # www-data
+    mem_limit: 160m
+    env_file:
+      - path: ./.env.prod
+        required: false
+    volumes:
+      - storage:/var/www/html/storage
+      - cache:/var/www/html/bootstrap/cache
+    depends_on:
+      database:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - internal
+    entrypoint: []
+    command: ["/bin/sh", "-c", "php artisan queue:work --sleep=15 --tries=3 --timeout=60"]
+    restart: unless-stopped
 volumes:
   db-data:
   storage:

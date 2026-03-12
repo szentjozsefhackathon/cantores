@@ -154,6 +154,24 @@ services:
       - xdebug-profiles:/tmp
     networks:
       - creshu-network
+  queue:
+    image: creshu-app-dev
+    env_file:
+      - path: ./.env.docker
+        required: false
+    environment:
+      - XDEBUG_CONFIG="mode=off"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      database:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - creshu-network
+    command: php artisan queue:work --sleep=15 --tries=3 --timeout=60
+    restart: unless-stopped
 volumes:
   db-data:
   db-testing-data:
