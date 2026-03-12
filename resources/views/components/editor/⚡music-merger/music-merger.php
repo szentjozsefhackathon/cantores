@@ -89,7 +89,7 @@ return new class extends Component
             'userId' => Auth::id(),
         ]);
 
-        $music = Music::with(['collections', 'genres', 'urls', 'relatedMusic'])
+        $music = Music::with(['collections', 'genres', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
 
@@ -141,7 +141,7 @@ return new class extends Component
     #[On('music-selected.mergeLeftMusic')]
     public function assignToLeftMusic(int $musicId): void
     {
-        $music = Music::with(['collections', 'genres', 'urls', 'relatedMusic'])
+        $music = Music::with(['collections', 'genres', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
 
@@ -159,7 +159,7 @@ return new class extends Component
     #[On('music-selected.mergeRightMusic')]
     public function assignToRightMusic(int $musicId): void
     {
-        $music = Music::with(['collections', 'genres', 'urls', 'relatedMusic'])
+        $music = Music::with(['collections', 'genres', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
 
@@ -288,9 +288,9 @@ return new class extends Component
             ->values()
             ->toArray();
 
-        // Related music (union)
-        $this->mergedRelatedMusic = $this->leftMusic->relatedMusic
-            ->merge($this->rightMusic->relatedMusic)
+        // Related music (union of both directions)
+        $this->mergedRelatedMusic = $this->leftMusic->allMusicRelations()
+            ->merge($this->rightMusic->allMusicRelations())
             ->unique('id')
             ->values()
             ->toArray();
@@ -432,10 +432,20 @@ return new class extends Component
                 ]);
             }
 
-            // Update related music
-            $this->leftMusic->relatedMusic()->sync(
-                collect($this->mergedRelatedMusic)->pluck('id')->toArray()
-            );
+            // Update related music (delete and re-create to avoid inverse duplicates)
+            \App\Models\MusicRelation::forMusic($this->leftMusic->id)->delete();
+            foreach ($this->mergedRelatedMusic as $relatedData) {
+                $relatedMusicId = $relatedData['id'] ?? $relatedData->id;
+                // Skip self-relations
+                if ($relatedMusicId !== $this->leftMusic->id) {
+                    \App\Models\MusicRelation::create([
+                        'music_id' => $this->leftMusic->id,
+                        'related_music_id' => $relatedMusicId,
+                        'relationship_type' => $relatedData['relationship_type'] ?? $relatedData->relationship_type,
+                        'user_id' => Auth::id(),
+                    ]);
+                }
+            }
 
             // Update music plan slot assignments from right to left
             \DB::table('music_plan_slot_assignments')

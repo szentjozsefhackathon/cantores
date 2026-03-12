@@ -102,8 +102,10 @@ class TestSeeder extends Seeder
         }
 
         // Create related music (variations) if not already related
-        if (! $music1->relatedMusic()->where('related_music_id', $music3->id)->exists()) {
-            $music1->relatedMusic()->attach($music3, [
+        if (! \App\Models\MusicRelation::between($music1->id, $music3->id)->exists()) {
+            \App\Models\MusicRelation::create([
+                'music_id' => $music1->id,
+                'related_music_id' => $music3->id,
                 'relationship_type' => 'variation',
             ]);
         }

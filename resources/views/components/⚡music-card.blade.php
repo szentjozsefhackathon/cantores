@@ -10,7 +10,7 @@ new class extends Component
 
     public function mount(Music $music): void
     {
-        $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'relatedMusic']);
+        $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music']);
     }
 
     #[On('music-updated')]
@@ -21,7 +21,7 @@ new class extends Component
     #[On('tag-removed')]
     public function refreshMusic(): void
     {
-        $this->music->refresh()->load(['collections', 'tags', 'authors', 'urls', 'relatedMusic']);
+        $this->music->refresh()->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music']);
     }
 }
 ?>
@@ -91,7 +91,7 @@ new class extends Component
         </div>
     </div>
 
-    @if($music->authors->isNotEmpty() || $music->urls->isNotEmpty() || $music->relatedMusic->isNotEmpty())
+    @if($music->authors->isNotEmpty() || $music->urls->isNotEmpty() || $music->allMusicRelations()->isNotEmpty())
     <div class="px-4 py-3 space-y-2">
         @if($music->authors->isNotEmpty())
         <div class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -120,18 +120,19 @@ new class extends Component
         </div>
         @endif
 
-        @if($music->relatedMusic->isNotEmpty())
+        @if($music->allMusicRelations()->isNotEmpty())
         <div class="flex items-start gap-2">
             <flux:icon name="link" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
             <div class="flex flex-wrap gap-1">
-                @foreach($music->relatedMusic as $related)
-                    @can('view', $related)
-                    <a href="{{ route('music-view', $related) }}"
+                @foreach($music->allMusicRelations() as $relation)
+                @php $partner = $relation->partnerFor($music); @endphp
+                    @can('view', $partner)
+                    <a href="{{ route('music-view', $partner) }}"
                        class="relative z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
-                        {{ $related->title }}
-                        @if($related->pivot->relationship_type)
-                            <span class="text-gray-400">({{ $related->pivot->relationship_type }})</span>
+                        {{ $partner->title }}
+                        @if($relation->relationship_type)
+                            <span class="text-gray-400">({{ $relation->relationship_type }})</span>
                         @endif
                     </a>
                     @endcan

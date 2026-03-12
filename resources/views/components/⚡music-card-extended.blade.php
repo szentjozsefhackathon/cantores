@@ -16,8 +16,10 @@ new class extends Component
             'genres',
             'urls',
             'tags',
-            'relatedMusic.authors',
-            'relatedMusic.collections',
+            'directMusicRelations.relatedMusic.authors',
+            'directMusicRelations.relatedMusic.collections',
+            'inverseMusicRelations.music.authors',
+            'inverseMusicRelations.music.collections',
         ]);
     }
 
@@ -35,8 +37,10 @@ new class extends Component
             'genres',
             'urls',
             'tags',
-            'relatedMusic.authors',
-            'relatedMusic.collections',
+            'directMusicRelations.relatedMusic.authors',
+            'directMusicRelations.relatedMusic.collections',
+            'inverseMusicRelations.music.authors',
+            'inverseMusicRelations.music.collections',
         ]);
     }
 }
@@ -137,25 +141,26 @@ new class extends Component
         @endif
 
         <!-- Related Music -->
-        @if($music->relatedMusic->isNotEmpty())
+        @if($music->allMusicRelations()->isNotEmpty())
         <div>
             <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Related Music') }}</flux:heading>
             <div class="space-y-2">
-                @foreach($music->relatedMusic as $related)
+                @foreach($music->allMusicRelations() as $relation)
+                @php $partner = $relation->partnerFor($music); @endphp
                     <div class="flex flex-col p-1.5 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800">
                         <div class="flex items-center justify-between">
                             <div class="flex-1 min-w-0">
-                                <a href="{{ route('music-view', $related) }}" class="font-medium text-sm text-gray-900 dark:text-gray-100 hover:underline">
-                                    {{ $related->title }}
+                                <a href="{{ route('music-view', $partner) }}" class="font-medium text-sm text-gray-900 dark:text-gray-100 hover:underline">
+                                    {{ $partner->title }}
                                 </a>
-                                @if($related->subtitle)
-                                    <div class="text-xs text-gray-600 dark:text-gray-400">{{ $related->subtitle }}</div>
+                                @if($partner->subtitle)
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">{{ $partner->subtitle }}</div>
                                 @endif
                                 <div class="mt-1 flex flex-wrap items-center gap-1">
-                                    @foreach($related->authors as $author)
+                                    @foreach($partner->authors as $author)
                                         <flux:badge color="gray" size="xs">{{ $author->name }}</flux:badge>
                                     @endforeach
-                                    @foreach($related->collections as $collection)
+                                    @foreach($partner->collections as $collection)
                                         <flux:badge size="xs" color="zinc">
                                             {{ $collection->abbreviation ?? $collection->title }} {{ $collection->pivot->order_number }}
                                         </flux:badge>
@@ -163,7 +168,7 @@ new class extends Component
                                 </div>
                             </div>
                             <div class="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                {{ \App\MusicRelationshipType::from($related->pivot->relationship_type)->name }}
+                                {{ \App\MusicRelationshipType::from($relation->relationship_type)->name }}
                             </div>
                         </div>
                     </div>

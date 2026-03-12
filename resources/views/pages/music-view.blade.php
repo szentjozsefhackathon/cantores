@@ -140,21 +140,22 @@
                 @endif
 
                 <!-- Related Music -->
-                @if($music->relatedMusic->isNotEmpty())
+                @if($music->allMusicRelations()->isNotEmpty())
                 <div>
                     <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Related Music') }}</flux:heading>
                     <div class="space-y-3">
-                        @foreach($music->relatedMusic as $related)
-                            <a href="{{ route('music-view', $related) }}" class="block">
+                        @foreach($music->allMusicRelations() as $relation)
+                        @php $partner = $relation->partnerFor($music); @endphp
+                            <a href="{{ route('music-view', $partner) }}" class="block">
                                 <div class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                     <div>
-                                        <flux:text class="font-medium">{{ $related->title }}</flux:text>
-                                        @if($related->subtitle)
-                                            <flux:text class="text-sm text-gray-500 dark:text-gray-400">{{ $related->subtitle }}</flux:text>
+                                        <flux:text class="font-medium">{{ $partner->title }}</flux:text>
+                                        @if($partner->subtitle)
+                                            <flux:text class="text-sm text-gray-500 dark:text-gray-400">{{ $partner->subtitle }}</flux:text>
                                         @endif
                                     </div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ \App\MusicRelationshipType::from($related->pivot->relationship_type)->name }}
+                                        {{ \App\MusicRelationshipType::from($relation->relationship_type)->name }}
                                     </div>
                                 </div>
                             </a>

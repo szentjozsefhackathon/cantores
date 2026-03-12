@@ -56,7 +56,8 @@ class MusicVerifier extends Component
             'genres',
             'urls',
             'authors',
-            'relatedMusic',
+            'directMusicRelations.relatedMusic',
+            'inverseMusicRelations.music',
             'tags',
             'verifications' => function ($query) {
                 $query->where('verifier_id', Auth::id())->orWhere('status', 'pending');
@@ -196,13 +197,14 @@ class MusicVerifier extends Component
         }
 
         // Related music
-        foreach ($this->music->relatedMusic as $index => $related) {
+        foreach ($this->music->allMusicRelations() as $index => $relation) {
+            $partner = $relation->partnerFor($this->music);
             $fields[] = [
                 'type' => 'relation',
                 'name' => 'related_music',
                 'label' => __('Related Music').' '.($index + 1),
-                'value' => $related->title,
-                'pivot_reference' => $related->id,
+                'value' => $partner->title,
+                'pivot_reference' => $relation->id,
             ];
         }
 
@@ -247,7 +249,7 @@ class MusicVerifier extends Component
     #[On('music-selected.verifyMusic')]
     public function selectMusic(int $musicId): void
     {
-        $music = Music::with(['collections', 'genres', 'urls', 'authors', 'relatedMusic'])
+        $music = Music::with(['collections', 'genres', 'urls', 'authors', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
 

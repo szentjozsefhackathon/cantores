@@ -25,7 +25,7 @@ class MusicView extends Component
             abort(403);
         }
 
-        $this->music = $music->load(['collections', 'authors', 'genres', 'urls', 'relatedMusic', 'tags']);
+        $this->music = $music->load(['collections', 'authors', 'genres', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music', 'tags']);
     }
 
     public function render()

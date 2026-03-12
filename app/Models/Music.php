@@ -26,7 +26,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property string|null $titles
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
  * @property-read int|null $audits_count
- * @property-read \App\Models\MusicRelated|\App\Models\MusicCollection|\App\Models\AuthorMusic|null $pivot
+ * @property-read \App\Models\MusicRelation|\App\Models\MusicCollection|\App\Models\AuthorMusic|null $pivot
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Author> $authors
  * @property-read int|null $authors_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Collection> $collections
@@ -36,8 +36,10 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property-read bool $is_verified
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicPlanSlotAssignments
  * @property-read int|null $music_plan_slot_assignments_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, Music> $relatedMusic
- * @property-read int|null $related_music_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicRelation> $directMusicRelations
+ * @property-read int|null $direct_music_relations_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicRelation> $inverseMusicRelations
+ * @property-read int|null $inverse_music_relations_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicTag> $tags
  * @property-read int|null $tags_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicUrl> $urls
@@ -154,14 +156,28 @@ class Music extends Model implements Auditable
     }
 
     /**
-     * Get the related music items (variations).
+     * Get the direct relations (where this music is the first side).
      */
-    public function relatedMusic(): BelongsToMany
+    public function directMusicRelations(): HasMany
     {
-        return $this->belongsToMany(Music::class, 'music_related', 'music_id', 'related_music_id')
-            ->using(MusicRelated::class)
-            ->withPivot(['relationship_type', 'user_id'])
-            ->withTimestamps();
+        return $this->hasMany(MusicRelation::class, 'music_id');
+    }
+
+    /**
+     * Get the inverse relations (where this music is the second side).
+     */
+    public function inverseMusicRelations(): HasMany
+    {
+        return $this->hasMany(MusicRelation::class, 'related_music_id');
+    }
+
+    /**
+     * Get all music relations (both directions) as a collection.
+     * This is not a true Eloquent relationship, but a merged collection.
+     */
+    public function allMusicRelations(): \Illuminate\Support\Collection
+    {
+        return $this->directMusicRelations->merge($this->inverseMusicRelations);
     }
 
     /**

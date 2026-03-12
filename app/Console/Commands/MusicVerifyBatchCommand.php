@@ -64,7 +64,8 @@ class MusicVerifyBatchCommand extends Command
                 'urls',
                 'genres',
                 'tags',
-                'relatedMusic',
+                'directMusicRelations.relatedMusic',
+                'inverseMusicRelations.music',
                 'verifications' => function ($query) use ($verifier) {
                     $query->where('verifier_id', $verifier?->id);
                 },
@@ -208,8 +209,8 @@ class MusicVerifyBatchCommand extends Command
         }
 
         // Related music
-        foreach ($music->relatedMusic as $related) {
-            if ($this->createVerification($music, 'related_music', $related->id, $verifier, $dryRun)) {
+        foreach ($music->allMusicRelations() as $relation) {
+            if ($this->createVerification($music, 'related_music', $relation->id, $verifier, $dryRun)) {
                 $created++;
             } else {
                 $skipped++;

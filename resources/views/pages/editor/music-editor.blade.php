@@ -136,26 +136,21 @@ new class extends Component
         }
 
         // Check if relation already exists (in either direction)
-        $existing = $this->music->relatedMusic()
-            ->wherePivot('related_music_id', $validated['selectedRelatedMusicId'])
-            ->exists();
-        $existingReverse = Music::where('id', $validated['selectedRelatedMusicId'])
-            ->first()
-            ?->relatedMusic()
-            ->wherePivot('related_music_id', $this->music->id)
-            ->exists() ?? false;
-        if ($existing || $existingReverse) {
+        $existing = \App\Models\MusicRelation::between($this->music->id, $validated['selectedRelatedMusicId'])->exists();
+        if ($existing) {
             $this->dispatch('error', __('This music piece is already related.'));
             return;
         }
 
-        $this->music->relatedMusic()->attach($validated['selectedRelatedMusicId'], [
+        \App\Models\MusicRelation::create([
+            'music_id' => $this->music->id,
+            'related_music_id' => $validated['selectedRelatedMusicId'],
             'relationship_type' => $validated['selectedRelationshipType'],
             'user_id' => Auth::id(),
         ]);
 
-        // Refresh the relationship
-        $this->music->load('relatedMusic');
+        // Refresh the relationships
+        $this->music->load(['directMusicRelations.relatedMusic', 'inverseMusicRelations.music']);
 
         // Reset form fields
         $this->selectedRelatedMusicId = null;
@@ -169,18 +164,23 @@ new class extends Component
 
     /**
      * Remove a related music piece.
+     *
+     * @param int $relationId The ID of the MusicRelation record
      */
-    public function removeRelatedMusic(int $relatedMusicId): void
+    public function removeRelatedMusic(int $relationId): void
     {
-        $relatedPivot = $this->music->relatedMusic()->wherePivot('related_music_id', $relatedMusicId)->first();
-        $relationOwnerUserId = $relatedPivot?->pivot?->user_id;
+        $relation = \App\Models\MusicRelation::findOrFail($relationId);
+
+        // Get the related music ID for authorization
+        $relatedMusicId = $relation->music_id === $this->music->id ? $relation->related_music_id : $relation->music_id;
+        $relationOwnerUserId = $relation->user_id;
 
         $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'related_music', $relatedMusicId, $relationOwnerUserId]);
 
-        $this->music->relatedMusic()->detach($relatedMusicId);
+        $relation->delete();
 
-        // Refresh the relationship
-        $this->music->load('relatedMusic');
+        // Refresh the relationships
+        $this->music->load(['directMusicRelations.relatedMusic', 'inverseMusicRelations.music']);
 
         $this->dispatch('related-music-removed');
     }
@@ -192,7 +192,7 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->authorize('view', $music);
-        $this->music = $music->load(['collections', 'genres', 'authors', 'urls', 'relatedMusic', 'tags']);
+        $this->music = $music->load(['collections', 'genres', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music', 'tags']);
         $this->title = $music->title;
         $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
@@ -1123,7 +1123,7 @@ new class extends Component
             <flux:heading size="md" class="md:size-lg">{{ __('Related Music') }}</flux:heading>
             <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Manage related music pieces (variations, arrangements, etc.).') }}</flux:text>
 
-            @if($music->relatedMusic->count())
+            @if($music->allMusicRelations()->isNotEmpty())
             <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-56 overflow-y-auto mb-4">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
@@ -1134,18 +1134,19 @@ new class extends Component
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                        @foreach($music->relatedMusic as $related)
+                        @foreach($music->allMusicRelations() as $relation)
+                        @php $partner = $relation->partnerFor($music); @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                             <td class="px-3 py-2 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">
                                 <div class="max-w-sm text-wrap">
-                                    <div class="font-medium line-clamp-1">{{ $related->title }}</div>
-                                    @if ($related->subtitle)
-                                    <div class="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{{ $related->subtitle }}</div>
+                                    <div class="font-medium line-clamp-1">{{ $partner->title }}</div>
+                                    @if ($partner->subtitle)
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{{ $partner->subtitle }}</div>
                                     @endif
                                 </div>
                             </td>
                             <td class="px-3 py-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
-                                {{ \App\MusicRelationshipType::from($related->pivot->relationship_type)->name }}
+                                {{ \App\MusicRelationshipType::from($relation->relationship_type)->name }}
                             </td>
                             <td class="px-3 py-2 text-xs md:text-sm">
                                 <div class="flex items-center gap-1">
@@ -1153,7 +1154,7 @@ new class extends Component
                                         variant="ghost"
                                         size="sm"
                                         icon="trash"
-                                        wire:click="removeRelatedMusic({{ $related->id }})"
+                                        wire:click="removeRelatedMusic({{ $relation->id }})"
                                         wire:confirm="{{ __('Are you sure you want to remove this related music?') }}"
                                         :title="__('Remove')" />
                                 </div>
