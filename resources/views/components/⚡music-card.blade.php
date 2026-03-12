@@ -53,7 +53,7 @@ new class extends Component
     <div class="p-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 flex-1">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                      {{ $music->title }}
                 </h3>
                 @if($music->subtitle)

@@ -227,7 +227,10 @@ new class extends Component
         $result = [];
         foreach ($slotMap as $slotData) {
             $slot = $slotData['slot'];
-            $result[$slot->name] = $slotData['musics'];
+            $result[$slot->name] = [
+                'slot' => $slot,
+                'musics' => $slotData['musics'],
+            ];
         }
 
         return $result;
@@ -335,44 +338,57 @@ new class extends Component
     @endplaceholder
 
             <div class="space-y-10" role="tabpanel" id="music-panel" aria-labelledby="music-tab">
-                @forelse ($slotMusicMap as $slotName => $musics)
-                <div class="relative" wire:key="slotMusicMap-{{ $slotName }}">
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex flex-row items-center gap-3">
-                            <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">{{ $slotName }}</flux:heading>
-                            <flux:text class="text-gray-600 dark:text-gray-400">
-                                ({{ count($musics) }} javaslat)
-                            </flux:text>
-                        </div>
-                        <flux:badge color="blue" size="lg" class="font-semibold">
-                            {{ $loop->iteration }}/{{ count($slotMusicMap) }}
-                        </flux:badge>
-                    </div>
-
-                    <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4 sm:gap-5">
-                        @foreach ($musics as $musicItem)
-                        @php
-                        $music = $musicItem['music'];
-                        $score = $musicItem['celebration_score'];
-                        $sequence = $musicItem['music_sequence'];
-                        $collectionInfo = $musicItem['collection_info'];
-                        @endphp
-                        <div class="relative" wire:key="slotMusicMap-{{ $slotName }}-{{ $music->id }}">
-                            <livewire:music-card :music="$music" />
-                            @if($musicPlanId)
-                            <div class="absolute top-2 right-2">
-                                <flux:button
-                                    wire:click="addMusicToMusicPlan({{ $music->id }}, '{{ $slotName }}')"
-                                    wire:loading.attr="disabled"
-                                    wire:loading.class="opacity-50 cursor-not-allowed"
-                                    icon="plus"
-                                    variant="primary"
-                                    size="sm"
-                                    title="Zene hozzáadása az énekrendhez" />
+                @forelse ($slotMusicMap as $slotName => $slotData)
+                @php
+                    $slot = $slotData['slot'];
+                    $musics = $slotData['musics'];
+                @endphp
+                <div class="relative rounded-lg border-2 border-gray-200 dark:border-gray-700 {{ $loop->odd ? 'bg-gray-50 dark:bg-gray-900/50' : 'bg-white dark:bg-gray-800/50' }}" wire:key="slotMusicMap-{{ $slotName }}">
+                    <div class="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700 rounded-t-[calc(0.5rem-2px)]">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <flux:heading size="lg" class="text-gray-900 dark:text-gray-100">{{ $slotName }}</flux:heading>
+                                <flux:text class="hidden sm:inline text-gray-600 dark:text-gray-400 text-sm">
+                                    ({{ count($musics) }} javaslat)
+                                </flux:text>
+                                @if($slot->description)
+                                <flux:text class="text-gray-500 dark:text-gray-500 text-xs">
+                                    {{ $slot->description }}
+                                </flux:text>
+                                @endif
                             </div>
-                            @endif
+                            <flux:badge color="blue" size="sm" class="font-semibold">
+                                {{ $loop->iteration }}/{{ count($slotMusicMap) }}
+                            </flux:badge>
                         </div>
-                        @endforeach
+                    </div>
+                    <div class="p-6">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                            @foreach ($musics as $musicItem)
+                            @php
+                            $music = $musicItem['music'];
+                            $score = $musicItem['celebration_score'];
+                            $sequence = $musicItem['music_sequence'];
+                            $collectionInfo = $musicItem['collection_info'];
+                            @endphp
+                            <div class="relative" wire:key="slotMusicMap-{{ $slotName }}-{{ $music->id }}">
+                                <livewire:music-card :music="$music" />
+                                @if($musicPlanId)
+                                <div class="absolute top-2 right-2">
+                                    <flux:button
+                                        wire:click="addMusicToMusicPlan({{ $music->id }}, '{{ $slotName }}')"
+                                        wire:loading.attr="disabled"
+                                        wire:loading.class="opacity-50 cursor-not-allowed"
+                                        icon="plus"
+                                        variant="primary"
+                                        size="sm"
+                                        title="Zene hozzáadása az énekrendhez" />
+                                </div>
+                                @endif
+                            </div>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
                 @empty
