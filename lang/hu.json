@@ -159,7 +159,7 @@
     "Related Music": "Kapcsolódó zeneművek",
     "External Links": "Külső hivatkozások",
     "Page": "Oldal",
-    "Order": "Sorrend",
+    "Order": "Sorszám",
     "No external links available for this music piece.": "Ehhez a zeneműhöz nem állnak rendelkezésre külső hivatkozások.",
     "Edit Music Piece": "Zenemű szerkesztése",
 
@@ -425,7 +425,8 @@
     "Left Music": "Bal zenemű",
     "Right Music": "Jobb zenemű",
     "Page:": "Oldal:",
-    "Order:": "Sorrend:",
+    "Page #": "Oldal",
+    "Order #": "Sorszám",
     "No collections": "Nincs gyűjtemény",
     "Merged Result": "Összevont eredmény",
     "Conflicts Detected": "Ütközések észlelve",
