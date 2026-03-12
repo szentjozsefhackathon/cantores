@@ -145,7 +145,7 @@
                 <flux:button
                     wire:click="create"
                     variant="primary"
-                    wire:loading >
+                    wire:loading.attr="disabled">
                     Létrehozás
                 </flux:button>
             </div>
@@ -170,7 +170,7 @@
                 <flux:button
                     wire:click="confirmCreate"
                     variant="primary"
-                    wire:loading>
+                    wire:loading.attr="disabled">
                     Mégis létrehozás
                 </flux:button>
             </div>

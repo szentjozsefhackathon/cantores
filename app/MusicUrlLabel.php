@@ -9,6 +9,7 @@ enum MusicUrlLabel: string
     case Video = 'video';
     case Text = 'text';
     case Information = 'information';
+    case Other = 'other';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum MusicUrlLabel: string
             self::Video => __('Video'),
             self::Text => __('Text'),
             self::Information => __('Information'),
+            self::Other => __('Other')
         };
     }
 }

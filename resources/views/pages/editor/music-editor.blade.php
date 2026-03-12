@@ -68,6 +68,10 @@ new class extends Component
 
     public \Illuminate\Support\Collection $whitelistRules;
 
+    // Auto-save state
+    public bool $isSaving = false;
+    public bool $isSaved = false;
+
     // Author multi-searchable
 
     // Options list
@@ -221,10 +225,13 @@ new class extends Component
      */
     public function render(): View
     {
-        $collections = Collection::orderBy('title')->limit(100)->get();
+        $collections = Collection::visibleTo(Auth::user())
+            ->orderBy('title')
+            ->limit(256)
+            ->get();
         $authors = Author::visibleTo(Auth::user())
             ->orderBy('name')
-            ->limit(100)
+            ->limit(1024)
             ->get();
 
         return view('pages.editor.music-editor', [
@@ -240,7 +247,7 @@ new class extends Component
     public function update(): void
     {
         $this->authorize('update', $this->music);
-          
+
         $validated = $this->validate([
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
@@ -278,6 +285,31 @@ new class extends Component
         $this->music->genres()->sync($validated['selectedGenres'] ?? []);
 
         $this->dispatch('music-updated');
+    }
+
+    /**
+     * Auto-save the music piece (called on field changes).
+     */
+    #[\Livewire\Attributes\Locked]
+    public function autoSave(): void
+    {
+        $this->isSaving = true;
+        $this->isSaved = false;
+
+        try {
+            $this->update();
+            $this->isSaved = true;
+            $this->isSaving = false;
+        } catch (\Exception) {
+            // Silently fail - validation errors will be shown in the form
+            $this->isSaving = false;
+        }
+    }
+
+    public function clearSavedIndicator(): void
+    {
+        $this->isSaved = false;
+        $this->isSaving = false;
     }
 
     /**
@@ -568,10 +600,10 @@ new class extends Component
 };
 ?>
 
-<div class="py-8">
-    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+<div class="py-4 md:py-8">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header with back button -->
-        <div class="mb-6">
+        <div class="mb-4">
             <flux:button
                 variant="ghost"
                 icon="arrow-left"
@@ -581,10 +613,21 @@ new class extends Component
             </flux:button>
         </div>
 
-        <flux:card class="p-5">
-            <div class="flex items-center justify-between gap-4 mb-6">
-                <div>
-                    <flux:heading size="xl">{{ __('Edit Music Piece') }}</flux:heading>
+        <flux:card class="p-4 md:p-5">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+                <div class="flex items-center gap-2">
+                    <flux:heading size="lg" class="md:size-xl">{{ __('Edit Music Piece') }}</flux:heading>
+                    <div class="flex items-center gap-1" wire:key="save-indicator">
+                        <div wire:loading wire:target="autoSave" class="inline">
+                            <svg class="w-4 h-4 animate-spin text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                        @if($isSaved)
+                            <flux:icon name="check-circle" class="w-4 h-4 text-green-500" />
+                        @endif
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -619,8 +662,8 @@ new class extends Component
             </div>
 
             <!-- Edit Form -->
-            <div class="space-y-6">
-                <div class="grid grid-cols-3 gap-6">
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <flux:field required>
                         <flux:label class="flex items-center gap-2">
                             {{ __('Title') }}
@@ -628,6 +671,7 @@ new class extends Component
                         </flux:label>
                         <flux:input
                             wire:model="title"
+                            wire:input.debounce.1500ms="autoSave"
                             :placeholder="__('Enter music piece title')"
                             :readonly="!Auth::user()?->can('updateField', [$music, 'title'])" />
                         <flux:error name="title" />
@@ -640,6 +684,7 @@ new class extends Component
                         </flux:label>
                         <flux:input
                             wire:model="subtitle"
+                            wire:input.debounce.1500ms="autoSave"
                             :placeholder="__('Enter subtitle')"
                             :readonly="!Auth::user()?->can('updateField', [$music, 'subtitle'])" />
                         <flux:error name="subtitle" />
@@ -652,31 +697,49 @@ new class extends Component
                         </flux:label>
                         <flux:input
                             wire:model="customId"
+                            wire:input.debounce.1500ms="autoSave"
                             :placeholder="__('Enter custom ID')"
                             :readonly="!Auth::user()?->can('updateField', [$music, 'custom_id'])" />
                         <flux:error name="customId" />
                     </flux:field>
-
                 </div>
-                <div class="gap-4 flex">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Genre Selection -->
                     <div>
                         <flux:field>
-                            <flux:label>{{ __('Genres') }}
+                            <flux:label class="flex items-center gap-2">{{ __('Genres') }}
                                 <livewire:verification-icon fieldName="genre" :music="$music" />
                             </flux:label>
-                            <flux:description>{{ __('Select one or more genres that apply to this music piece.') }}</flux:description>
+                            <flux:description class="text-xs md:text-sm">{{ __('Select one or more genres that apply to this music piece.') }}</flux:description>
                             <div class="space-y-2">
-                                <flux:checkbox.group variant="cards">
-                                    @foreach($this->genres() as $genre)
-                                    <flux:checkbox
-                                        variant="cards"
-                                        wire:model="selectedGenres"
-                                        value="{{ $genre->id }}"
-                                        :label="$genre->label()"
-                                        :icon="$genre->icon()" />
-                                    @endforeach
-                                </flux:checkbox.group>
+                                <!-- Small screens: icon buttons only -->
+                                <div class="md:hidden">
+                                    <flux:checkbox.group variant="buttons">
+                                        @foreach($this->genres() as $genre)
+                                        <flux:checkbox
+                                            wire:model="selectedGenres"
+                                            wire:change="autoSave"
+                                            value="{{ $genre->id }}"
+                                            label=""
+                                            :icon="$genre->icon()"
+                                            :title="$genre->label()" />
+                                        @endforeach
+                                    </flux:checkbox.group>
+                                </div>
+                                <!-- Medium screens and up: icon + label buttons -->
+                                <div class="hidden md:block">
+                                    <flux:checkbox.group variant="buttons">
+                                        @foreach($this->genres() as $genre)
+                                        <flux:checkbox
+                                            wire:model="selectedGenres"
+                                            wire:change="autoSave"
+                                            value="{{ $genre->id }}"
+                                            :label="$genre->label()"
+                                            :icon="$genre->icon()" />
+                                        @endforeach
+                                    </flux:checkbox.group>
+                                </div>
                                 <flux:error name="selectedGenres" />
                             </div>
                         </flux:field>
@@ -685,25 +748,27 @@ new class extends Component
                     <div>
                         <flux:field>
                             <flux:label>{{ __('Privacy') }}</flux:label>
-                            <flux:description>{{ __('Private music pieces are only visible to you. Public music pieces are visible to all users.') }}</flux:description>
+                            <flux:description class="text-xs md:text-sm">{{ __('Private music pieces are only visible to you. Public music pieces are visible to all users.') }}</flux:description>
                             <flux:checkbox
                                 wire:model="isPrivate"
+                                wire:change="autoSave"
                                 :label="__('Make this music piece private')"
                                 :disabled="!$music->is_private && !Auth::user()?->can('changePublishedToPrivate', $music)" />
                             <flux:error name="isPrivate" />
                         </flux:field>
                     </div>
-
                 </div>
+
                 <!-- Save Button -->
-                <div class="flex justify-end items-center gap-4">
+                <div class="flex justify-end items-center gap-4 pt-2">
                     <x-action-message on="music-updated">
                         {{ __('Saved.') }}
                     </x-action-message>
                     <flux:button
                         variant="primary"
                         wire:click="update"
-                        wire:loading.attr="disabled">
+                        wire:loading.attr="disabled"
+                        size="sm" class="md:size-md">
                         {{ __('Save Changes') }}
                     </flux:button>
                 </div>
@@ -711,35 +776,35 @@ new class extends Component
         </flux:card>
 
         <!-- Music Tags -->
-        <flux:card class="p-5 mt-6">
-            <flux:heading size="lg">{{ __('Music Tags') }}</flux:heading>
-            <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Assign tags to categorize this music piece by type, instrument, season, and more.') }}</flux:text>
+        <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
+            <flux:heading size="md" class="md:size-lg">{{ __('Music Tags') }}</flux:heading>
+            <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Assign tags to categorize this music piece by type, instrument, season, and more.') }}</flux:text>
 
             <livewire:music-tag-selector :music="$music" />
         </flux:card>
 
         <!-- Collection Connections -->
-        <flux:card class="p-5 mt-6">
-            <flux:heading size="lg" class="flex items-center gap-2">
+        <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
+            <flux:heading size="md" class="md:size-lg flex items-center gap-2">
                 {{ __('Collection Connections') }}
             </flux:heading>
-            <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage collections this music piece belongs to.') }}</flux:text>
+            <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Manage collections this music piece belongs to.') }}</flux:text>
 
             @if($music->collections->count())
-            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-56 overflow-y-auto mb-4">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Collection') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Order Number') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Page Number') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Collection') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">{{ __('Order Number') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">{{ __('Page Number') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                         @foreach($music->collections as $collection)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <td class="px-3 py-2 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">
                                 <div class="flex items-center gap-2">
                                     <livewire:verification-icon fieldName="collection" :music="$music" :pivotReference="$collection->id" />
 
@@ -749,14 +814,14 @@ new class extends Component
                                     @endif
                                 </div>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td class="px-3 py-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
                                 {{ $collection->pivot->order_number ?? '-' }}
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td class="px-3 py-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
                                 {{ $collection->pivot->page_number ?? '-' }}
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm">
-                                <div class="flex items-center gap-2">
+                            <td class="px-3 py-2 text-xs md:text-sm">
+                                <div class="flex items-center gap-1">
                                     <flux:button
                                         variant="ghost"
                                         size="sm"
@@ -778,10 +843,10 @@ new class extends Component
                 </table>
             </div>
             @else
-            <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
-                <flux:icon name="folder-open" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
-                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No collections attached') }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece is not attached to any collections yet.') }}</p>
+            <div class="text-center py-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-4">
+                <flux:icon name="folder-open" class="mx-auto h-6 w-6 text-gray-400 dark:text-gray-500" />
+                <h3 class="mt-1 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No collections attached') }}</h3>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ __('This music piece is not attached to any collections yet.') }}</p>
             </div>
             @endif
 
@@ -796,13 +861,13 @@ new class extends Component
             </div>
 
             <!-- Add Collection Form -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <flux:heading size="sm">{{ __('Add Collection') }}</flux:heading>
-                <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Assign this music piece to a new collection with page and order numbers.') }}</flux:text>
+                <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-3">{{ __('Assign this music piece to a new collection with page and order numbers.') }}</flux:text>
 
-                <div class="space-y-4">
-                    <div class="flex gap-4">
-                        <flux:field required class="flex-1">
+                <div class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <flux:field required class="sm:col-span-2">
                             <flux:label>{{ __('Collection') }}</flux:label>
                             <flux:select
                                 wire:model="selectedCollectionId">
@@ -813,24 +878,25 @@ new class extends Component
                             </flux:select>
                             <flux:error name="selectedCollectionId" />
                         </flux:field>
-                        <flux:field class="w-32">
+                        <flux:field>
                             <flux:label>{{ __('Order Number') }}</flux:label>
-                            <flux:input wire:model="orderNumber" :placeholder="__('Order number')" />
+                            <flux:input wire:model="orderNumber" :placeholder="__('Order #')" />
                             <flux:error name="orderNumber" />
                         </flux:field>
 
-                        <flux:field class="w-32">
+                        <flux:field>
                             <flux:label>{{ __('Page Number') }}</flux:label>
-                            <flux:input type="number" wire:model="pageNumber" :placeholder="__('Page number')" min="1" />
+                            <flux:input type="number" wire:model="pageNumber" :placeholder="__('Page #')" min="1" />
                             <flux:error name="pageNumber" />
                         </flux:field>
                     </div>
 
-                    <div class="flex justify-end items-center gap-4">
+                    <div class="flex justify-end items-center gap-2">
                         <flux:button
                             variant="primary"
                             wire:click="addCollection"
-                            wire:loading.attr="disabled">
+                            wire:loading.attr="disabled"
+                            size="sm">
                             {{ __('Add Collection') }}
                         </flux:button>
                         <x-action-message on="collection-added">
@@ -842,32 +908,32 @@ new class extends Component
         </flux:card>
 
         <!-- Author Connections -->
-        <flux:card class="p-5 mt-6">
-            <flux:heading size="lg" class="flex items-center gap-2">
+        <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
+            <flux:heading size="md" class="md:size-lg flex items-center gap-2">
                 {{ __('Author Connections') }}
             </flux:heading>
-            <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage authors of this music piece.') }}</flux:text>
+            <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Manage authors of this music piece.') }}</flux:text>
 
             @if($music->authors->count())
-            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-56 overflow-y-auto mb-4">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Author') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Author') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                         @foreach($music->authors as $author)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <td class="px-3 py-2 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">
                                 <div class="flex items-center gap-2">
                                     {{ $author->name }}
                                     <livewire:verification-icon :fieldName="'author'" :music="$music" :pivotReference="$author->id" />
                                 </div>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm">
-                                <div class="flex items-center gap-2">
+                            <td class="px-3 py-2 text-xs md:text-sm">
+                                <div class="flex items-center gap-1">
                                     <flux:button
                                         variant="ghost"
                                         size="sm"
@@ -883,10 +949,10 @@ new class extends Component
                 </table>
             </div>
             @else
-            <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
-                <flux:icon name="user" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
-                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No authors attached') }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece has no authors assigned yet.') }}</p>
+            <div class="text-center py-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-4">
+                <flux:icon name="user" class="mx-auto h-6 w-6 text-gray-400 dark:text-gray-500" />
+                <h3 class="mt-1 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No authors attached') }}</h3>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ __('This music piece has no authors assigned yet.') }}</p>
             </div>
             @endif
 
@@ -901,46 +967,50 @@ new class extends Component
             </div>
 
             <!-- Add Author Form -->
-            <div class="flex items-end gap-4">
-                <div class="flex-1">
-                    <x-mary-choices
-                        label="Szerző kiválasztása"
-                        wire:model="selectedAuthorId"
-                        :options="$authorsSearchable"
-                        placeholder="Keresés..."
-                        search-function="searchAuthor"
-                        no-result-text="Nincs találat"
-                        single
-                        searchable />
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+                    <div class="flex-1 w-full">
+                        <x-mary-choices
+                            label="Szerző kiválasztása"
+                            wire:model="selectedAuthorId"
+                            :options="$authorsSearchable"
+                            placeholder="Keresés..."
+                            search-function="searchAuthor"
+                            no-result-text="Nincs találat"
+                            single
+                            searchable />
+                    </div>
+                    <flux:button
+                        variant="primary"
+                        wire:click="addAuthor"
+                        wire:loading.attr="disabled"
+                        size="sm"
+                        class="w-full sm:w-auto">
+                        {{ __('Add Author') }}
+                    </flux:button>
                 </div>
-                <flux:button
-                    variant="primary"
-                    wire:click="addAuthor"
-                    wire:loading.attr="disabled">
-                    {{ __('Add Author') }}
-                </flux:button>
             </div>
         </flux:card>
 
         <!-- URL Connections -->
-        <flux:card class="p-5 mt-6">
-            <flux:heading size="lg">{{ __('URL Connections') }}</flux:heading>
-            <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage external URLs related to this music piece (sheet music, audio, video, etc.).') }}</flux:text>
+        <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
+            <flux:heading size="md" class="md:size-lg">{{ __('URL Connections') }}</flux:heading>
+            <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Manage external URLs related to this music piece (sheet music, audio, video, etc.).') }}</flux:text>
 
             @if($music->urls->count())
-            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-56 overflow-y-auto mb-4">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Label') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('URL') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Label') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">{{ __('URL') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                         @foreach($music->urls as $url)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <td class="px-3 py-2 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">
                                 <div class="flex items-center gap-2">
                                     @switch($url->label)
                                     @case('sheet_music')
@@ -973,13 +1043,13 @@ new class extends Component
                                     @endif
                                 </div>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td class="px-3 py-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell truncate">
                                 <a href="{{ $url->url }}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs block">
                                     {{ $url->url }}
                                 </a>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm">
-                                <div class="flex items-center gap-2">
+                            <td class="px-3 py-2 text-xs md:text-sm">
+                                <div class="flex items-center gap-1">
                                     @if($editingUrlId === $url->id)
                                     <flux:button
                                         variant="ghost"
@@ -1014,13 +1084,13 @@ new class extends Component
                         </tr>
                         @if($editingUrlId === $url->id)
                         <tr class="bg-gray-50 dark:bg-gray-800">
-                            <td colspan="3" class="px-4 py-4">
-                                <div class="space-y-4">
-                                    <div class="grid grid-cols-2 gap-4">
+                            <td colspan="3" class="px-3 py-3">
+                                <div class="space-y-3">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <flux:field required>
                                             <flux:label>{{ __('Label') }}</flux:label>
                                             <flux:select wire:model="editingUrlLabel">
-                                                <option value="">{{ __('Select a label') }}</option>
+                                                <option value="">{{ __('Select a URL type') }}</option>
                                                 @foreach(\App\MusicUrlLabel::cases() as $label)
                                                 <flux:select.option value="{{ $label->value }}">{{ __(ucfirst(str_replace('_', ' ', $label->value))) }}</flux:select.option>
                                                 @endforeach
@@ -1041,12 +1111,6 @@ new class extends Component
                     </tbody>
                 </table>
             </div>
-            @else
-            <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
-                <flux:icon name="globe" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
-                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No URLs attached') }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece has no external URLs yet.') }}</p>
-            </div>
             @endif
 
             <!-- URL action messages -->
@@ -1063,20 +1127,22 @@ new class extends Component
             </div>
 
             <!-- Add URL Form -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <flux:heading size="sm">{{ __('Add URL') }}</flux:heading>
-                <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Add a new external URL for this music piece. URLs must be whitelisted.') }}</flux:text>
-                <flux:icon name="shield-check" class="h-5 w-5 text-green-500 inline" />
-                @foreach($whitelistRules as $rule)
-                <flux:text class="inline text-sm mb-2">{{ $rule->pattern }}</flux:text>
-                @endforeach
+                <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-3">{{ __('Add a new external URL for this music piece. URLs must be whitelisted.') }}</flux:text>
+                <div class="mb-3">
+                    <flux:icon name="shield-check" class="h-4 w-4 text-green-500 inline" />
+                    @foreach($whitelistRules as $rule)
+                    <flux:text class="inline text-xs md:text-sm mb-2">{{ $rule->pattern }}</flux:text>
+                    @endforeach
+                </div>
 
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <flux:field required>
-                            <flux:label>{{ __('Label') }}</flux:label>
+                            <flux:label>{{ __('URL type') }}</flux:label>
                             <flux:select wire:model="newUrlLabel">
-                                <option value="">{{ __('Select a label') }}</option>
+                                <option value="">{{ __('Select a URL type') }}</option>
                                 @foreach(\App\MusicUrlLabel::cases() as $label)
                                 <flux:select.option value="{{ $label->value }}">{{ __(ucfirst(str_replace('_', ' ', $label->value))) }}</flux:select.option>
                                 @endforeach
@@ -1090,11 +1156,12 @@ new class extends Component
                         </flux:field>
                     </div>
 
-                    <div class="flex justify-end items-center gap-4">
+                    <div class="flex justify-end items-center gap-2">
                         <flux:button
                             variant="primary"
                             wire:click="addUrl"
-                            wire:loading.attr="disabled">
+                            wire:loading.attr="disabled"
+                            size="sm">
                             {{ __('Add URL') }}
                         </flux:button>
                     </div>
@@ -1103,36 +1170,36 @@ new class extends Component
         </flux:card>
 
         <!-- Related Music Connections -->
-        <flux:card class="p-5 mt-6">
-            <flux:heading size="lg">{{ __('Related Music') }}</flux:heading>
-            <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Manage related music pieces (variations, arrangements, etc.).') }}</flux:text>
+        <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
+            <flux:heading size="md" class="md:size-lg">{{ __('Related Music') }}</flux:heading>
+            <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Manage related music pieces (variations, arrangements, etc.).') }}</flux:text>
 
             @if($music->relatedMusic->count())
-            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto mb-6">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-56 overflow-y-auto mb-4">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Music Piece') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Relationship Type') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Music Piece') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">{{ __('Relationship Type') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                         @foreach($music->relatedMusic as $related)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                                <div class="max-w-80 text-wrap">
-                                    <div class="font-medium">{{ $related->title }}</div>
+                            <td class="px-3 py-2 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <div class="max-w-sm text-wrap">
+                                    <div class="font-medium line-clamp-1">{{ $related->title }}</div>
                                     @if ($related->subtitle)
-                                    <div class="text-sm text-gray-600 dark:text-gray-400">{{ $related->subtitle }}</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{{ $related->subtitle }}</div>
                                     @endif
                                 </div>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td class="px-3 py-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
                                 {{ \App\MusicRelationshipType::from($related->pivot->relationship_type)->name }}
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm">
-                                <div class="flex items-center gap-2">
+                            <td class="px-3 py-2 text-xs md:text-sm">
+                                <div class="flex items-center gap-1">
                                     <flux:button
                                         variant="ghost"
                                         size="sm"
@@ -1147,12 +1214,6 @@ new class extends Component
                     </tbody>
                 </table>
             </div>
-            @else
-            <div class="text-center py-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg mb-6">
-                <flux:icon name="music" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />
-                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No related music') }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('This music piece has no related music yet.') }}</p>
-            </div>
             @endif
 
             <!-- Related music action messages -->
@@ -1166,15 +1227,13 @@ new class extends Component
             </div>
 
             <!-- Add Related Music Button -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                <flux:heading size="sm">{{ __('Add Related Music') }}</flux:heading>
-                <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Search for a music piece and select a relationship type.') }}</flux:text>
-
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 pb-4">
                 <div class="flex justify-end">
                     <flux:button
                         variant="primary"
                         wire:click="openRelatedMusicSearchModal"
-                        icon="plus">
+                        icon="plus"
+                        size="sm">
                         {{ __('Add Related Music') }}
                     </flux:button>
                 </div>
@@ -1184,12 +1243,12 @@ new class extends Component
 
     <!-- Related Music Search Modal -->
     @if($showRelatedMusicSearchModal)
-    <flux:modal wire:model="showRelatedMusicSearchModal" class="max-w-4xl">
-        <flux:heading size="lg">{{ __('Add Related Music') }}</flux:heading>
-        <flux:text class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('Select a relationship type and search for a music piece. Click the Select button on a music to add it as related.') }}</flux:text>
+    <flux:modal wire:model="showRelatedMusicSearchModal" class="max-w-3xl">
+        <flux:heading size="md">{{ __('Add Related Music') }}</flux:heading>
+        <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Select a relationship type and search for a music piece. Click the Select button on a music to add it as related.') }}</flux:text>
 
         <!-- Relationship type selection -->
-        <flux:field required class="mb-6">
+        <flux:field required class="mb-4">
             <flux:label>{{ __('Relationship Type') }}</flux:label>
             <flux:select wire:model="selectedRelationshipType">
                 <option value="">{{ __('Select a relationship type') }}</option>
@@ -1201,16 +1260,17 @@ new class extends Component
         </flux:field>
 
         <!-- Music search component -->
-        <livewire:music-search selectable="true" source=".relatedMusic" />
+        <livewire:music-search selectable="true" source=".relatedMusic" wire:key="relatedMusicSearch" />
 
         <!-- Hidden field for selected music ID -->
         <input type="hidden" wire:model="selectedRelatedMusicId" />
         <flux:error name="selectedRelatedMusicId" />
 
-        <div class="mt-6 flex justify-end">
+        <div class="mt-4 flex justify-end">
             <flux:button
                 wire:click="closeRelatedMusicSearchModal"
-                variant="outline">
+                variant="outline"
+                size="sm">
                 {{ __('Close') }}
             </flux:button>
         </div>
@@ -1219,51 +1279,51 @@ new class extends Component
 
     <!-- Audit Log Modal -->
     @if($showAuditModal)
-    <flux:modal wire:model="showAuditModal" max-width="4xl">
-        <flux:heading size="lg">{{ __('Audit Log') }}</flux:heading>
-        <flux:subheading>
+    <flux:modal wire:model="showAuditModal" max-width="3xl">
+        <flux:heading size="md">{{ __('Audit Log') }}</flux:heading>
+        <flux:subheading class="text-xs md:text-sm">
             {{ __('Music Piece:') }} {{ $music->title }}
         </flux:subheading>
 
-        <div class="mt-6">
+        <div class="mt-4">
             @if(count($audits))
             <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-xs md:text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Event') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Changes') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('When') }}</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Who') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Event') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">{{ __('Changes') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('When') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">{{ __('Who') }}</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                         @foreach($audits as $audit)
                         <tr>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                            <td class="px-3 py-2 whitespace-nowrap text-xs md:text-sm font-medium">
                                 @switch($audit->event)
                                 @case('created')
-                                <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
+                                <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
                                     {{ __('Created') }}
                                 </span>
                                 @break
                                 @case('updated')
-                                <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
                                     {{ __('Updated') }}
                                 </span>
                                 @break
                                 @case('deleted')
-                                <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-300">
+                                <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-300">
                                     {{ __('Deleted') }}
                                 </span>
                                 @break
                                 @default
-                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-900 dark:text-gray-300">
                                     {{ $audit->event }}
                                 </span>
                                 @endswitch
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                            <td class="px-3 py-2 text-xs md:text-sm text-gray-700 dark:text-gray-300 hidden sm:table-cell">
                                 @if($audit->event === 'created')
                                 {{ __('Music piece was created.') }}
                                 @elseif($audit->event === 'deleted')
@@ -1281,20 +1341,20 @@ new class extends Component
                                 }
                                 @endphp
                                 @if(count($changes))
-                                <ul class="list-disc list-inside space-y-1">
+                                <ul class="list-disc list-inside space-y-0.5">
                                     @foreach($changes as $change)
                                     <li class="text-xs">{{ $change }}</li>
                                     @endforeach
                                 </ul>
                                 @else
-                                <span class="text-gray-400 dark:text-gray-500">{{ __('No field changes recorded') }}</span>
+                                <span class="text-gray-400 dark:text-gray-500 text-xs">{{ __('No field changes recorded') }}</span>
                                 @endif
                                 @endif
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                {{ $audit->created_at->translatedFormat('Y-m-d H:i:s') }}
+                            <td class="px-3 py-2 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                                {{ $audit->created_at->translatedFormat('m-d H:i') }}
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td class="px-3 py-2 whitespace-nowrap text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
                                 @if($audit->user)
                                 {{ $audit->user->display_name }}
                                 @else
@@ -1307,18 +1367,19 @@ new class extends Component
                 </table>
             </div>
             @else
-            <div class="text-center py-8">
-                <flux:icon name="logs" class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No audit logs found') }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('No changes have been recorded for this music piece yet.') }}</p>
+            <div class="text-center py-6">
+                <flux:icon name="logs" class="mx-auto h-10 w-10 text-gray-400 dark:text-gray-500" />
+                <h3 class="mt-2 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('No audit logs found') }}</h3>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('No changes have been recorded for this music piece yet.') }}</p>
             </div>
             @endif
         </div>
 
-        <div class="mt-6 flex justify-end">
+        <div class="mt-4 flex justify-end">
             <flux:button
                 variant="ghost"
-                wire:click="$set('showAuditModal', false)">
+                wire:click="$set('showAuditModal', false)"
+                size="sm">
                 {{ __('Close') }}
             </flux:button>
         </div>
@@ -1328,12 +1389,12 @@ new class extends Component
     @if($showEditModal)
     <!-- Edit Collection Modal -->
     <flux:modal wire:model="showEditModal" max-width="lg">
-        <flux:heading size="lg">{{ __('Edit Collection Connection') }}</flux:heading>
-        <flux:subheading>
+        <flux:heading size="md">{{ __('Edit Collection Connection') }}</flux:heading>
+        <flux:subheading class="text-xs md:text-sm">
             {{ __('Update page and order numbers for this collection.') }}
         </flux:subheading>
 
-        <div class="mt-6 space-y-4">
+        <div class="mt-4 space-y-3">
             <flux:field>
                 <flux:label>{{ __('Order Number') }}</flux:label>
                 <flux:input
@@ -1352,16 +1413,18 @@ new class extends Component
             </flux:field>
         </div>
 
-        <div class="mt-6 flex justify-end gap-3">
+        <div class="mt-4 flex justify-end gap-2">
             <flux:button
                 variant="ghost"
-                wire:click="$set('showEditModal', false)">
+                wire:click="$set('showEditModal', false)"
+                size="sm">
                 {{ __('Cancel') }}
             </flux:button>
             <flux:button
                 variant="primary"
                 wire:click="updateCollection"
-                wire:loading.attr="disabled">
+                wire:loading.attr="disabled"
+                size="sm">
                 {{ __('Save Changes') }}
             </flux:button>
         </div>
@@ -1371,3 +1434,16 @@ new class extends Component
     <!-- Error Report Component -->
     <livewire:error-report />
 </div>
+
+@script
+<script>
+    Alpine.watch(() => $wire.isSaved, (value) => {
+        if (value) {
+            // Clear the saved indicator after 2 seconds
+            setTimeout(() => {
+                $wire.clearSavedIndicator();
+            }, 2000);
+        }
+    });
+</script>
+@endscript

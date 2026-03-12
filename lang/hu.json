@@ -373,13 +373,16 @@
     "URL Connections": "URL-kapcsolatok",
     "Manage external URLs related to this music piece (sheet music, audio, video, etc.).": "Kezeld a zeneműhöz kapcsolódó külső URL-eket (kotta, hang, videó stb.).",
     "Label": "Felirat",
+    "URL type": "URL típusa",
     "URL": "URL",
     "Sheet Music": "Kotta",
+    "Sheet music": "Kotta",
     "Audio": "Hang",
     "Video": "Videó",
     "Text": "Szöveg",
     "Information": "Információ",
     "Select a label": "Válassz feliratot",
+    "Select a URL type": "Válassz URL típust",
     "https://example.com": "https://example.com",
     "No URLs attached": "Nincs csatolt URL",
     "This music piece has no external URLs yet.": "Ehhez a zeneműhöz még nincs külső URL.",
@@ -628,5 +631,6 @@
     "First name": "Keresztnév",
     "Tags (all selected required)": "Címkék (mindegyik egyezzen)",
     "Abbreviation, order number, etc.": "Rövidítés, sorszám",
-    "Author name...": "Szerző neve..."
+    "Author name...": "Szerző neve...",
+    "Select": "Kiválasztás"
 }
