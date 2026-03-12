@@ -70,6 +70,12 @@ class MusicsTable extends Component
         $this->resetPage();
     }
 
+    #[On('musicCreated')]
+    public function onMusicCreated(): void
+    {
+        $this->resetPage();
+    }
+
     public function toggleSelection(int $musicId): void
     {
         if (in_array($musicId, $this->selectedMusicIds)) {

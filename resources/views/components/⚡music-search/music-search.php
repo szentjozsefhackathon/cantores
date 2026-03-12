@@ -102,6 +102,15 @@ return new class extends Component
     }
 
     /**
+     * Handle music created event to refresh the table.
+     */
+    #[On('musicCreated')]
+    public function onMusicCreated(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
      * Emit event when a music is selected.
      */
     public function selectMusic($musicId): void

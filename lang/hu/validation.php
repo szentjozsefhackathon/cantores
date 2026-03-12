@@ -107,5 +107,13 @@ return [
         // Egyedi szabályok
     ],
 
-    'attributes' => [],
+    'attributes' => [
+        'title' => 'Cím',
+        'subtitle' => 'Alcím',
+        'selectedAuthorId' => 'Szerző',
+        'selectedCollectionId' => 'Gyűjtemény',
+        'orderNumber' => 'Sorszám',
+        'pageNumber' => 'Oldalszám',
+        'selectedGenres' => 'Műfajok',
+    ],
 ];
