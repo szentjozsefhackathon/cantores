@@ -1,19 +1,24 @@
-<x-mail::message>
-# {{ __('New user registered') }}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>{{ __('New user registered') }}</h1>
 
-{{ __('A new user has registered on the platform.') }}
+    <p>{{ __('A new user has registered on the platform.') }}</p>
 
-<x-mail::table>
-| | |
-|:--|:--|
-| **{{ __('Name') }}** | {{ $user->name }} |
-| **{{ __('Email') }}** | {{ $user->email }} |
-| **{{ __('Registered at') }}** | {{ $user->created_at->format('Y-m-d H:i') }} |
-</x-mail::table>
+    <table border="1" cellpadding="8" style="border-collapse: collapse;">
+        <tr>
+            <td><strong>{{ __('Registered at') }}</strong></td>
+            <td>{{ $user->created_at->format('Y-m-d H:i') }}</td>
+        </tr>
+    </table>
 
-<x-mail::button :url="route('admin.users')">
-{{ __('View users') }}
-</x-mail::button>
+    <p>
+        <a href="{{ route('admin.users') }}">{{ __('View users') }}</a>
+    </p>
 
-{{ config('app.name') }}
-</x-mail::message>
+    <p>{{ config('app.name') }}</p>
+</body>
+</html>

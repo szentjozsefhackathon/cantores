@@ -1,4 +1,4 @@
-<div class="mx-auto p-2 sm:p-6">
+<div class="mx-auto w-full p-2 sm:p-6">
     <!-- Filters card -->
     <div wire:ignore class="rounded-2xl border p-3 shadow-sm sm:p-5">
         <div class="flex items-center justify-between">

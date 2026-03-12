@@ -18,7 +18,7 @@ class NewUserRegistered extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: __('New user registered: :name', ['name' => $this->user->name]),
+            subject: __('New user registered'),
         );
     }
 
