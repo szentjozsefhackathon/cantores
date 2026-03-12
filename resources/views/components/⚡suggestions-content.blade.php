@@ -125,9 +125,11 @@ new class extends Component
         foreach ($this->musicPlans as $musicPlan) {
             // Determine the celebration score for this plan.
             $maxScore = 0;
+            $relatedCelebration = null;
             foreach ($this->celebrationsWithScores as $item) {
                 if ($item['celebration']->id === $musicPlan->celebration_id) {
                     $maxScore = max($maxScore, $item['score']);
+                    $relatedCelebration = $item['celebration'];
                 }
             }
 
@@ -190,6 +192,7 @@ new class extends Component
                             'celebration_score' => $maxScore,
                             'music_sequence' => $assignment->music_sequence ?? 0,
                             'collection_info' => $collectionInfo,
+                            'celebration' => $relatedCelebration,
                         ];
                     }
                     // else keep existing
@@ -201,6 +204,7 @@ new class extends Component
                         'celebration_score' => $maxScore,
                         'music_sequence' => $assignment->music_sequence ?? 0,
                         'collection_info' => $collectionInfo,
+                        'celebration' => $relatedCelebration,
                     ];
                 }
             }
@@ -337,6 +341,13 @@ new class extends Component
         </div>
     @endplaceholder
 
+            <!-- Relevance Score Explanation -->
+            <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div class="text-sm text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                    <span class="text-yellow-500">★-★★★★</span><span class="text-xs opacity-90">A csillagok száma mutatja, hogy az ünnephez mennyire illeszkedő énekrendből származik a javaslat.</span>
+                </div>
+            </div>
+
             <div class="space-y-10" role="tabpanel" id="music-panel" aria-labelledby="music-tab">
                 @forelse ($slotMusicMap as $slotName => $slotData)
                 @php
@@ -371,9 +382,10 @@ new class extends Component
                             $score = $musicItem['celebration_score'];
                             $sequence = $musicItem['music_sequence'];
                             $collectionInfo = $musicItem['collection_info'];
+                            $celebration = $musicItem['celebration'];
                             @endphp
                             <div class="relative" wire:key="slotMusicMap-{{ $slotName }}-{{ $music->id }}">
-                                <livewire:music-card :music="$music" />
+                                <livewire:music-card :music="$music" :score="$score" />
                                 @if($musicPlanId)
                                 <div class="absolute top-2 right-2">
                                     <flux:button

@@ -7,10 +7,12 @@ use Livewire\Attributes\On;
 new class extends Component
 {
     public Music $music;
+    public ?int $score = null;
 
-    public function mount(Music $music): void
+    public function mount(Music $music, ?int $score = null): void
     {
         $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music']);
+        $this->score = $score;
     }
 
     #[On('music-updated')]
@@ -43,6 +45,17 @@ new class extends Component
     @can('view', $music)
     <a href="{{ route('music-view', $music) }}" class="absolute inset-0 z-0" aria-label="{{ $music->title }}"></a>
     @endcan
+    <!-- Relevance score stars -->
+    @if($score !== null)
+        @php
+            $stars = $score >= 17 ? 4 : ($score >= 11 ? 3 : ($score >= 6 ? 2 : 1));
+        @endphp
+        <div class="absolute top-1 right-1 flex flex-row gap-0.5 pointer-events-none" title="Relevancia: {{ $score }} pont">
+            @for ($i = 0; $i < $stars; $i++)
+                <flux:icon name="star" class="h-3 w-3 fill-amber-400 text-amber-400" />
+            @endfor
+        </div>
+    @endif
     <!-- Bottom right corner rounded rectangle with genre icons -->
     <div class="absolute bottom-0 right-0 pointer-events-none flex items-center justify-center gap-1 px-2 py-1 rounded-tl-md bg-gray-200/30 dark:bg-gray-700/30 backdrop-blur-sm">
         @foreach($music->genres as $genre)

@@ -46,6 +46,17 @@ class CelebrationSearchService
 
         $allCelebrations = $query->get();
 
+        // Cast numeric criteria to integers for proper type comparison
+        if (isset($criteria['season'])) {
+            $criteria['season'] = (int) $criteria['season'];
+        }
+        if (isset($criteria['week'])) {
+            $criteria['week'] = (int) $criteria['week'];
+        }
+        if (isset($criteria['day'])) {
+            $criteria['day'] = (int) $criteria['day'];
+        }
+
         $scored = $allCelebrations->map(function (Celebration $celebration) use ($criteria) {
             $score = $this->computeScore($celebration, $criteria);
             $celebration->score = $score;
