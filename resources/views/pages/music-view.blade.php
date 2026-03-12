@@ -155,7 +155,7 @@
                                         @endif
                                     </div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ \App\MusicRelationshipType::from($relation->relationship_type)->name }}
+                                        {{ \App\MusicRelationshipType::from($relation->relationship_type)->label() }}
                                     </div>
                                 </div>
                             </a>

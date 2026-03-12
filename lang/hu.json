@@ -633,5 +633,11 @@
     "Tags (all selected required)": "Címkék (mindegyik egyezzen)",
     "Abbreviation, order number, etc.": "Rövidítés, sorszám",
     "Author name...": "Szerző neve...",
-    "Select": "Kiválasztás"
+    "Select": "Kiválasztás",
+
+    "Variation": "Variáció",
+    "Arrangement": "Feldolgozás",
+    "Accompaniment": "Kíséret",
+    "Contrafact": "Kontrafaktum",
+    "Connected": "Összetartozó"
 }

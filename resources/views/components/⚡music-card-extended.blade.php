@@ -168,7 +168,7 @@ new class extends Component
                                 </div>
                             </div>
                             <div class="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                {{ \App\MusicRelationshipType::from($relation->relationship_type)->name }}
+                                {{ \App\MusicRelationshipType::from($relation->relationship_type)->label() }}
                             </div>
                         </div>
                     </div>

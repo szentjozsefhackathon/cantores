@@ -9,5 +9,12 @@
     "User has been unblocked.": "User has been unblocked.",
     "You cannot block yourself.": "You cannot block yourself.",
     "Are you sure you want to block this user?": "Are you sure you want to block this user?",
-    "Are you sure you want to unblock this user?": "Are you sure you want to unblock this user?"
+    "Are you sure you want to unblock this user?": "Are you sure you want to unblock this user?",
+
+    "Variation": "Variation",
+    "Arrangement": "Arrangement",
+    "Accompaniment": "Accompaniment",
+    "Contrafact": "Contrafact",
+    "Connected": "Connected",
+    "Other": "Other"
 }

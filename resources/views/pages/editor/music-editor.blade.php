@@ -1146,7 +1146,7 @@ new class extends Component
                                 </div>
                             </td>
                             <td class="px-3 py-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
-                                {{ \App\MusicRelationshipType::from($relation->relationship_type)->name }}
+                                {{ \App\MusicRelationshipType::from($relation->relationship_type)->label() }}
                             </td>
                             <td class="px-3 py-2 text-xs md:text-sm">
                                 <div class="flex items-center gap-1">
@@ -1203,7 +1203,7 @@ new class extends Component
             <flux:select wire:model="selectedRelationshipType">
                 <option value="">{{ __('Select a relationship type') }}</option>
                 @foreach(\App\MusicRelationshipType::cases() as $type)
-                <flux:select.option value="{{ $type->value }}">{{ __(ucfirst($type->value)) }}</flux:select.option>
+                <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
                 @endforeach
             </flux:select>
             <flux:error name="selectedRelationshipType" />
