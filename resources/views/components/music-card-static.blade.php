@@ -1,6 +1,12 @@
 @props(['assignment'])
 
-<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden max-w-[355px]">
+<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden max-w-[355px] relative">
+    <!-- Bottom right corner rounded rectangle with genre icons -->
+    <div class="absolute bottom-0 right-0 pointer-events-none flex items-center justify-center gap-1 px-2 py-1 rounded-tl-md bg-gray-200/30 dark:bg-gray-700/30 backdrop-blur-sm">
+        @foreach($assignment['music_genres'] as $genre)
+            <flux:icon :name="$genre['icon']" class="h-4 w-4 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
+        @endforeach
+    </div>
     <!-- Header with title and custom ID -->
     <div class="p-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-start justify-between gap-3">
@@ -56,13 +62,55 @@
                             class="!p-1"
                         />
                     @endif
-                    <div class="flex flex-col items-center gap-1">
-                        @foreach($assignment['music_genres'] as $genre)
-                            <flux:icon :name="$genre['icon']" class="h-5 w-5 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
-                        @endforeach
-                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    @if((isset($assignment['music_authors']) && !empty($assignment['music_authors'])) || (isset($assignment['music_urls']) && !empty($assignment['music_urls'])) || (isset($assignment['music_relations']) && !empty($assignment['music_relations'])))
+    <div class="px-4 py-3 space-y-2">
+        @if(isset($assignment['music_authors']) && !empty($assignment['music_authors']))
+        <div class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <flux:icon name="users" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
+            <div class="flex flex-wrap gap-1">
+                @foreach($assignment['music_authors'] as $author)
+                    <span>{{ $author['name'] ?? $author }}@unless($loop->last),@endunless</span>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        @if(isset($assignment['music_urls']) && !empty($assignment['music_urls']))
+        <div class="flex items-start gap-2">
+            <flux:icon name="arrow-top-right-on-square" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
+            <div class="flex flex-wrap gap-2">
+                @foreach($assignment['music_urls'] as $url)
+                    <a href="{{ $url['url'] ?? $url }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                       title="{{ $url['label'] ?? ($url['url'] ?? $url) }}"
+                    >{{ $url['label'] ?? ($url['url'] ?? $url) }}</a>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        @if(isset($assignment['music_relations']) && !empty($assignment['music_relations']))
+        <div class="flex items-start gap-2">
+            <flux:icon name="link" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
+            <div class="flex flex-wrap gap-1">
+                @foreach($assignment['music_relations'] as $relation)
+                    <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                        {{ $relation['title'] ?? $relation }}
+                        @if(isset($relation['relationship_type']))
+                            <span class="text-gray-400">({{ $relation['relationship_type'] }})</span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+    </div>
+    @endif
 </div>

@@ -37,10 +37,18 @@ new class extends Component
 @endplaceholder
 
 
-<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden max-w-[355px] relative group transition-shadow hover:shadow-md">
+<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden max-w-[355px] relative group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl"
+     style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.12);"
+>
     @can('view', $music)
     <a href="{{ route('music-view', $music) }}" class="absolute inset-0 z-0" aria-label="{{ $music->title }}"></a>
     @endcan
+    <!-- Bottom right corner rounded rectangle with genre icons -->
+    <div class="absolute bottom-0 right-0 pointer-events-none flex items-center justify-center gap-1 px-2 py-1 rounded-tl-md bg-gray-200/30 dark:bg-gray-700/30 backdrop-blur-sm">
+        @foreach($music->genres as $genre)
+            <flux:icon name="{{ $genre->icon() }}" class="h-4 w-4 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
+        @endforeach
+    </div>
     <!-- Header with title and custom ID -->
     <div class="p-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-start justify-between gap-3">
@@ -81,11 +89,6 @@ new class extends Component
                         class="!p-1"
                     />
                 @endcan
-                <div class="flex flex-col items-center gap-1">
-                @foreach($music->genres as $genre)
-                    <flux:icon name="{{ $genre->icon() }}" class="h-5 w-5 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
-                @endforeach
-                </div>
                 </div>
             </div>
         </div>
