@@ -49,6 +49,11 @@ trait HasMusicSearchScopes
         // Apply visibility scope
         $query = $query->visibleTo(Auth::user());
 
+        // Apply own musics filter if enabled
+        if (property_exists($this, 'filterOwnMusics') && $this->filterOwnMusics) {
+            $query = $query->where('user_id', Auth::id());
+        }
+
         // Collections: keep your existing ilike logic; no full-text index required
         $query = $query
             ->when($this->collectionFilter !== '', function ($q) {
@@ -111,7 +116,11 @@ trait HasMusicSearchScopes
 
         // Only order by title when NOT using Scout search (keep relevance rank when searching)
         if (! $searching) {
-            $query->orderBy('title');
+            if (property_exists($this, 'filterOwnMusics') && $this->filterOwnMusics) {
+                $query->orderBy('updated_at', 'desc');
+            } else {
+                $query->orderBy('title');
+            }
         }
 
         return $query;

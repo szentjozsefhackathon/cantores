@@ -31,6 +31,8 @@ return new class extends Component
 
     public bool $selectable = false;
 
+    public bool $filterOwnMusics = false;
+
     /**
      * Mount the component.
      */
@@ -88,6 +90,14 @@ return new class extends Component
      * Reset pagination when tag filters change.
      */
     public function updatingTagFilters(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when own musics filter changes.
+     */
+    public function updatingFilterOwnMusics(): void
     {
         $this->resetPage();
     }

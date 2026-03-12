@@ -65,7 +65,7 @@
             <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                 {{ __('Dashboard') }}
             </flux:sidebar.item>
-            <flux:sidebar.item icon="music" :href="route('music-database')" :current="request()->routeIs('music-database')" wire:navigate>
+            <flux:sidebar.item icon="circle-stack" :href="route('music-database')" :current="request()->routeIs('music-database')" wire:navigate>
                 Énektár
             </flux:sidebar.item>
             <flux:sidebar.group heading="Énekrend">

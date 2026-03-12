@@ -34,6 +34,8 @@ class MusicsTable extends Component
 
     public bool $filtersRendered = false;
 
+    public bool $filterOwnMusics = false;
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -60,6 +62,11 @@ class MusicsTable extends Component
     }
 
     public function updatingTagFilters(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingFilterOwnMusics(): void
     {
         $this->resetPage();
     }

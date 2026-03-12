@@ -3,25 +3,31 @@
     <div wire:ignore class="rounded-2xl border p-3 shadow-sm sm:p-5">
         <div class="flex items-center justify-between">
             <h2 class="text-base font-semibold">Zeneművek</h2>
-            @auth
-            @can('create', \App\Models\Music::class)
-            <div class="sm:hidden">
-                <flux:button
-                    variant="primary"
-                    icon="plus"
-                    wire:click="$dispatch('open-create-music-modal')"
-                    title="{{ __('Create Music Piece') }}" />
+            <div class="flex items-center gap-4">
+                <flux:field variant="inline">
+                    <flux:checkbox wire:model.live="filterOwnMusics" wire:loading.attr="disabled" />
+                    <flux:label>Saját</flux:label>
+                </flux:field>
+                @auth
+                @can('create', \App\Models\Music::class)
+                <div class="sm:hidden">
+                    <flux:button
+                        variant="primary"
+                        icon="plus"
+                        wire:click="$dispatch('open-create-music-modal')"
+                        title="{{ __('Create Music Piece') }}" />
+                </div>
+                <div class="hidden sm:block">
+                    <flux:button
+                        variant="primary"
+                        icon="plus"
+                        wire:click="$dispatch('open-create-music-modal')">
+                        {{ __('Create Music Piece') }}
+                    </flux:button>
+                </div>
+                @endcan
+                @endauth
             </div>
-            <div class="hidden sm:block">
-                <flux:button
-                    variant="primary"
-                    icon="plus"
-                    wire:click="$dispatch('open-create-music-modal')">
-                    {{ __('Create Music Piece') }}
-                </flux:button>
-            </div>
-            @endcan
-            @endauth
         </div>
         @if($renderFilters)
             @include('partials.music-browser-filters')
