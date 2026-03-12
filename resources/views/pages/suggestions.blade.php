@@ -135,7 +135,7 @@ new class extends Component
         $criteria = array_filter($criteria, fn ($value) => $value !== null);
 
         // Redirect to suggestions page with new criteria
-        $this->redirectRoute('suggestions', $criteria);
+        $this->redirectRoute('suggestions', $criteria, navigate: true);
     }
 
     /**

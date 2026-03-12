@@ -563,7 +563,7 @@ new class extends Component
 
         $this->music->delete();
 
-        $this->redirectRoute('musics');
+        $this->redirectRoute('musics', navigate: true);
     }
 };
 ?>

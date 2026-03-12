@@ -137,7 +137,7 @@ new class extends Component
         $musicPlan->save();
 
         // Redirect to MusicPlanEditor page with the created plan
-        $this->redirectRoute('music-plan-editor', ['musicPlan' => $musicPlan->id]);
+        $this->redirectRoute('music-plan-editor', ['musicPlan' => $musicPlan->id], navigate: true);
     }
 
     public function selectCelebration(int $celebrationIndex): void
@@ -338,7 +338,7 @@ new class extends Component
 
         // Store criteria in session or pass as query parameters
         // For now, we'll redirect to suggestions page with query parameters
-        $this->redirectRoute('suggestions', $criteria);
+        $this->redirectRoute('suggestions', $criteria, navigate: true);
     }
 };
 ?>

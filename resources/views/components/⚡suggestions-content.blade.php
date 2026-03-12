@@ -326,6 +326,14 @@ new class extends Component
     <!-- Tabs navigation with mary-ui -->
     <x-mary-tabs wire:model="activeTab" class="mb-8">
         <x-mary-tab name="music" icon="o-musical-note" label="Énekjavaslatok ({{ count($slotMusicMap) }})">
+            @island(defer: true)
+                @placeholder
+        <!-- Loading indicator -->
+        <div class="animate-pulse">
+            <div class="h-32 bg-gray-200 rounded"></div>
+        </div>
+    @endplaceholder
+
             <div class="space-y-10" role="tabpanel" id="music-panel" aria-labelledby="music-tab">
                 @forelse ($slotMusicMap as $slotName => $musics)
                 <div class="relative" wire:key="slotMusicMap-{{ $slotName }}">
@@ -374,9 +382,19 @@ new class extends Component
                 </flux:callout>
                 @endforelse
             </div>
+            @endisland
+
         </x-mary-tab>
 
         <x-mary-tab name="plans" icon="lucide.list-music" label="Énekrendek ({{ $musicPlans->count() }})">
+                        @island(defer: true)
+                @placeholder
+        <!-- Loading indicator -->
+        <div class="animate-pulse">
+            <div class="h-32 bg-gray-200 rounded"></div>
+        </div>
+    @endplaceholder
+
             <div class="space-y-5" role="tabpanel" id="plans-panel" aria-labelledby="plans-tab">
                 @foreach ($musicPlans as $plan)
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4" wire:key="musicPlanSuggestion-{{ $plan->id }}">
@@ -386,6 +404,7 @@ new class extends Component
                 </div>
                 @endforeach
             </div>
+            @endisland
         </x-mary-tab>
     </x-mary-tabs>
     @endif
