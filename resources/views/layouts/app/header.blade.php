@@ -14,7 +14,7 @@
                     {{ __('Dashboard') }}
                 </flux:navbar.item>
                 <flux:navbar.item icon="music" :href="route('music-database')" :current="request()->routeIs('music-database')" wire:navigate>
-                    Énekadatbázis
+                    Énektár
                 </flux:navbar.item>
                 <flux:navbar.item icon="list-music" :href="route('music-plans')" :current="request()->routeIs('music-plans')" wire:navigate>
                     Énekrendek
@@ -63,7 +63,7 @@
                         {{ __('Dashboard')  }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="music" :href="route('music-database')" :current="request()->routeIs('music-database')" wire:navigate>
-                        Énekadatbázis
+                        Énektár
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="list-music" :href="route('music-plans')" :current="request()->routeIs('music-plans')" wire:navigate>
                         Énekrendek

@@ -585,9 +585,9 @@ new class extends Component
                             wire:click="createMusicPlan({{ $loop->index }})"
                             variant="filled"
                             size="sm"
-                            icon="musical-note"
+                            icon="list-music-add"
                             class="w-full">
-                            Énekrend létrehozása
+                            Új énekrend
                         </flux:button>
                     @endauth
                         @php

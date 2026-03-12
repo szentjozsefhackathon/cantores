@@ -66,7 +66,7 @@
                 {{ __('Dashboard') }}
             </flux:sidebar.item>
             <flux:sidebar.item icon="music" :href="route('music-database')" :current="request()->routeIs('music-database')" wire:navigate>
-                Énekadatbázis
+                Énektár
             </flux:sidebar.item>
             <flux:sidebar.group heading="Énekrend">
                 <flux:sidebar.item icon="list-music" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>

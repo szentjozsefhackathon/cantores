@@ -8,7 +8,7 @@
                     <div class="rounded-2xl bg-linear-to-br from-indigo-600 to-purple-700 dark:from-indigo-800 dark:to-purple-900 p-6 shadow-xl">
                         <div class="mb-4 flex items-center justify-between gap-2">
                             <div>
-                                <flux:heading size="lg" class="text-white!">Énekadatbázis</flux:heading>
+                                <flux:heading size="lg" class="text-white!">Énektár</flux:heading>
                                 <flux:text class="text-indigo-200 text-sm">Keress cím, alcím vagy énekeskönyv alapján. Pl. "Szent vagy", "ÉE 540", "Ő az Úr DÚR"</flux:text>
                             </div>
                             <a href="{{ route('music-database') }}" wire:navigate>

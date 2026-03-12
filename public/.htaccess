@@ -1,3 +1,16 @@
+SetEnvIf Request_URI "^/build/assets/" vite_asset
+
+<IfModule mod_headers.c>
+    # Vite build assets have content-hashed filenames — safe to cache for 1 year
+    Header set Cache-Control "public, max-age=31536000, immutable" env=vite_asset
+
+    # Do not cache HTML or PHP responses
+    <FilesMatch "\.(html|php)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

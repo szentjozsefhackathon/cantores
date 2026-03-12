@@ -35,7 +35,7 @@
                 <nav class="hidden lg:flex items-center gap-4">
                     <a href="{{ route('music-database') }}" class="text-accent hover:underline font-medium text-sm">
                         <flux:icon name="music" class="inline" variant="mini"></flux:icon>
-                        Énekadatbázis
+                        Énektár
                     </a>
                     <a href="{{ route('music-plans') }}" class="text-accent hover:underline font-medium text-sm">
                         <flux:icon name="list-music" class="inline" variant="mini"></flux:icon>
@@ -95,7 +95,7 @@
                     @endauth
                     <a href="{{ route('music-database') }}" class="text-accent hover:underline font-medium text-sm">
                         <flux:icon name="music" class="inline" variant="mini"></flux:icon>
-                        Énekadatbázis
+                        Énektár
                     </a>
                     <a href="{{ route('music-plans') }}" class="text-accent hover:underline font-medium text-sm">
                         <flux:icon name="list-music" class="inline" variant="mini"></flux:icon>
