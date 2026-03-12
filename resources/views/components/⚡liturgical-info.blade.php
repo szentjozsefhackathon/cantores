@@ -432,7 +432,7 @@ new class extends Component
             </x-slot>
         </flux:callout>
         @elseif (empty($celebrations))
-        <flux:callout color="zinc" icon="calendar-x-mark" class="border-zinc-200 dark:border-zinc-800">
+        <flux:callout color="zinc" class="border-zinc-200 dark:border-zinc-800">
             <flux:callout.heading>No Celebrations Found</flux:callout.heading>
             <flux:callout.text>There are no liturgical celebrations recorded for the selected date.</flux:callout.text>
             <x-slot name="actions">
