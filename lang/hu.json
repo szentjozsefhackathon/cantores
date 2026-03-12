@@ -616,12 +616,17 @@
     "The selected slot does not exist.": "A kiválasztott hely nem létezik.",
     "Use Last Name, First Name format for Non-Hungarian authors (e.g., Bach, Johann Sebastian).": "Használd a Vezetéknév, Keresztnév formátumot nem magyar szerzők esetén (pl. Bach, Johann Sebastian).",
     "Blocked": "Tiltott",
-    "Active": "Aktív",
     "Block": "Tiltás",
     "Unblock": "Tiltás feloldása",
     "User has been blocked.": "A felhasználó le lett tiltva.",
     "User has been unblocked.": "A felhasználó tiltása feloldva.",
     "You cannot block yourself.": "Saját magadat nem tilthatod le.",
     "Are you sure you want to block this user?": "Biztosan le szeretnéd tiltani ezt a felhasználót?",
-    "Are you sure you want to unblock this user?": "Biztosan fel szeretnéd oldani a felhasználó tiltását?"
+    "Are you sure you want to unblock this user?": "Biztosan fel szeretnéd oldani a felhasználó tiltását?",
+    "Change": "Módosítás",
+    "City": "Város",
+    "First name": "Keresztnév",
+    "Tags (all selected required)": "Címkék (mindegyik egyezzen)",
+    "Abbreviation, order number, etc.": "Rövidítés, sorszám",
+    "Author name...": "Szerző neve..."
 }

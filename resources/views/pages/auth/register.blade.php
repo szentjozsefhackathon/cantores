@@ -56,6 +56,7 @@
                     autocomplete="new-password"
                     :placeholder="__('Password')"
                     viewable />
+                <flux:text size="sm">{{ __('Legalább 8 karakter hosszú jelszót adj meg.') }}</flux:text>
             </flux:field>
 
             <!-- Confirm Password -->
@@ -73,6 +74,13 @@
             @error('cf-turnstile-response')
             <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
             @enderror
+
+            <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                {{ __('Fiók létrehozásával elfogadod az') }}
+                <flux:link :href="route('terms')" wire:navigate>{{ __('Általános Szerződési Feltételeket') }}</flux:link>
+                {{ __('és az') }}
+                <flux:link :href="route('privacy')" wire:navigate>{{ __('Adatvédelmi Tájékoztatót') }}</flux:link>.
+            </p>
 
             <div class="flex items-center justify-end">
                 <flux:button type="submit" variant="primary" class="w-full" data-test="register-user-button">
