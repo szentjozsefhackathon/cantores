@@ -82,11 +82,14 @@
                 @endif
 
                 <!-- Authors -->
-                @if($music->authors->isNotEmpty())
+                @php
+                    $visibleAuthors = $music->authors->filter(fn($author) => auth()->user() ? auth()->user()->can('view', $author) : !$author->is_private);
+                @endphp
+                @if($visibleAuthors->isNotEmpty())
                 <div>
                     <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Authors') }}</flux:heading>
                     <div class="flex flex-wrap gap-2">
-                        @foreach($music->authors as $author)
+                        @foreach($visibleAuthors as $author)
                             <a href="{{ route('author-view', $author) }}" class="inline-block">
                                 <flux:badge color="purple" size="sm" class="hover:bg-purple-600 transition-colors flex items-center gap-1">
                                     {{ $author->name }}
@@ -99,11 +102,14 @@
                 @endif
 
                 <!-- Collections -->
-                @if($music->collections->isNotEmpty())
+                @php
+                    $visibleCollections = $music->collections->filter(fn($collection) => auth()->user() ? auth()->user()->can('view', $collection) : !$collection->is_private);
+                @endphp
+                @if($visibleCollections->isNotEmpty())
                 <div>
                     <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Collections') }}</flux:heading>
                     <div class="space-y-3">
-                        @foreach($music->collections as $collection)
+                        @foreach($visibleCollections as $collection)
                             <a href="{{ route('collection-view', $collection) }}" class="block">
                                 <div class="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                     <div class="flex items-center gap-2">

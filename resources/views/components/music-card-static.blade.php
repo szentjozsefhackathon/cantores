@@ -47,6 +47,7 @@
                             size="sm"
                             icon="eye"
                             :href="route('music-view', $assignment['music_id'])"
+                            target="_blank"
                             :title="__('View')"
                             class="!p-1"
                         />

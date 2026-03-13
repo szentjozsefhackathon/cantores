@@ -193,14 +193,24 @@
                             @endauth
                         </div>
                     @elseif ($mode === 'select' && $this->selectable)
-                        <flux:button
-                            variant="ghost"
-                            size="sm"
-                            icon="plus"
-                            wire:click="selectMusic({{ $music->id }})"
-                            wire:loading.attr="disabled"
-                            wire:loading.class="opacity-50 cursor-not-allowed"
-                            :title="__('Select')" />
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                            <flux:button
+                                variant="ghost"
+                                size="sm"
+                                icon="eye"
+                                :href="route('music-view', ['music' => $music->id])"
+                                tag="a"
+                                target="_blank"
+                                :title="__('View')" />
+                            <flux:button
+                                variant="ghost"
+                                size="sm"
+                                icon="plus"
+                                wire:click="selectMusic({{ $music->id }})"
+                                wire:loading.attr="disabled"
+                                wire:loading.class="opacity-50 cursor-not-allowed"
+                                :title="__('Select')" />
+                        </div>
                     @endif
                 </flux:table.cell>
             </flux:table.row>
