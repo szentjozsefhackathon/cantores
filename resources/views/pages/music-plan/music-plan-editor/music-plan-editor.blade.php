@@ -165,6 +165,7 @@
 
                             @forelse($this->planSlots as $slotPlan)
                             <livewire:music-plan-editor.slot-plan
+                                defer
                                 :slot-plan="$slotPlan"
                                 :is-first="$loop->first"
                                 :is-last="$loop->last"
