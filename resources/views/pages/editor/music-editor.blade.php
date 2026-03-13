@@ -600,23 +600,24 @@ new class extends Component
 };
 ?>
 
-<div class="py-4 md:py-8">
+<div class="py-4 md:py-8" x-data="{ showPreview: false }">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header with back button -->
-        <div class="mb-4">
-            <flux:button
-                variant="ghost"
-                icon="arrow-left"
-                :href="route('musics')"
-                tag="a">
-                {{ __('Back to Music List') }}
-            </flux:button>
+        <!-- Music Card Preview -->
+        <div class="mb-4" :class="{ 'hidden': !showPreview && window.innerWidth < 768, 'md:block': true }" x-transition>
+            <livewire:music-card :music="$music" />
         </div>
 
         <flux:card class="p-4 md:p-5">
             <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
                 <div class="flex items-center gap-2">
                     <flux:heading size="lg" class="md:size-xl">{{ __('Edit Music Piece') }}</flux:heading>
+                    <flux:button
+                        variant="ghost"
+                        size="sm"
+                        icon="music-card-icon"
+                        @click="showPreview = !showPreview"
+                        class="md:hidden"
+                        :title="__('Preview')" />
                     <div class="flex items-center gap-1" wire:key="save-indicator">
                         <div wire:loading wire:target="autoSave" class="inline">
                             <svg class="w-4 h-4 animate-spin text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -869,6 +870,7 @@ new class extends Component
                                 variant="primary"
                                 wire:click="addCollection"
                                 wire:loading.attr="disabled"
+                                icon="plus"
                                 size="sm">
                                 {{ __('Add Collection') }}
                             </flux:button>
@@ -934,6 +936,7 @@ new class extends Component
                         variant="primary"
                         wire:click="addAuthor"
                         wire:loading.attr="disabled"
+                        icon="plus"
                         size="sm"
                         class="w-full sm:w-auto">
                         {{ __('Add Author') }}
@@ -1035,8 +1038,8 @@ new class extends Component
                         <tr class="bg-gray-50 dark:bg-gray-800">
                             <td colspan="3" class="px-3 py-3">
                                 <div class="space-y-3">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <flux:field required>
+                                    <div class="flex flex-col md:flex-row gap-3">
+                                        <flux:field required class="flex-[1]">
                                             <flux:label>{{ __('Label') }}</flux:label>
                                             <flux:select wire:model="editingUrlLabel">
                                                 <option value="">{{ __('Select a URL type') }}</option>
@@ -1046,11 +1049,26 @@ new class extends Component
                                             </flux:select>
                                             <flux:error name="editingUrlLabel" />
                                         </flux:field>
-                                        <flux:field required>
+                                        <flux:field required class="flex-[2]">
                                             <flux:label>{{ __('URL') }}</flux:label>
                                             <flux:input wire:model="editingUrl" :placeholder="__('https://example.com')" />
                                             <flux:error name="editingUrl" />
                                         </flux:field>
+                                        <div class="flex items-end gap-2 flex-none">
+                                            <flux:button
+                                                variant="primary"
+                                                wire:click="updateUrl"
+                                                wire:loading.attr="disabled"
+                                                size="sm">
+                                                {{ __('Update URL') }}
+                                            </flux:button>
+                                            <flux:button
+                                                variant="ghost"
+                                                wire:click="cancelEditingUrl"
+                                                size="sm">
+                                                {{ __('Cancel') }}
+                                            </flux:button>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -1080,8 +1098,8 @@ new class extends Component
                 <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-3">{{ __('Add a new external URL for this music piece. URLs must be whitelisted.') }}</flux:text>
 
                 <div class="space-y-3">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <flux:field required>
+                    <div class="flex flex-col md:flex-row gap-3">
+                        <flux:field required class="flex-[1]">
                             <flux:label>{{ __('URL type') }}</flux:label>
                             <flux:select wire:model="newUrlLabel">
                                 <option value="">{{ __('Select a URL type') }}</option>
@@ -1091,7 +1109,7 @@ new class extends Component
                             </flux:select>
                             <flux:error name="newUrlLabel" />
                         </flux:field>
-                        <flux:field required>
+                        <flux:field required class="flex-[2]">
                             <flux:label>{{ __('URL') }}</flux:label>
                             <flux:tooltip toggleable>
                                 <button class="inline-flex gap-1 text-xs text-green-600 dark:text-green-400 hover:underline cursor-pointer font-medium px-2 py-1 translate-y-0.5">
@@ -1110,16 +1128,16 @@ new class extends Component
                             <flux:input wire:model="newUrl" :placeholder="__('https://example.com')" />
                             <flux:error name="newUrl" />
                         </flux:field>
-                    </div>
-
-                    <div class="flex justify-end items-center gap-2">
-                        <flux:button
-                            variant="primary"
-                            wire:click="addUrl"
-                            wire:loading.attr="disabled"
-                            size="sm">
-                            {{ __('Add URL') }}
-                        </flux:button>
+                        <div class="flex items-end gap-2 flex-none">
+                            <flux:button
+                                variant="primary"
+                                wire:click="addUrl"
+                                wire:loading.attr="disabled"
+                                icon="plus"
+                                size="sm">
+                                {{ __('Add URL') }}
+                            </flux:button>
+                        </div>
                     </div>
                 </div>
             </div>
