@@ -47,5 +47,5 @@ $strokeWidth = match ($variant) {
   <ellipse cx="11" cy="17" rx="1.5" ry="2" fill="currentColor" />
   <path d="M12.5 17V8" />
   <path d="M7.5 6Q9.5 7 12.5 8" />
-  <rect x="1" y="2" width="22" height="20" rx="2" />
+  <rect x="1" y="2" width="22" height="20" rx="4" />
 </svg>

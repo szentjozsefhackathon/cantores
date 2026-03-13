@@ -19,7 +19,7 @@
         @auth
         <flux:table.column class="hidden sm:table-cell"><svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg></flux:table.column>
         @endauth
-        <flux:table.column>{{ __('Actions') }}</flux:table.column>
+        <flux:table.column></flux:table.column>
     </flux:table.columns>
 
     <flux:table.rows>
@@ -148,7 +148,13 @@
                 {{-- Actions column --}}
                 <flux:table.cell>
                     @if ($mode === 'manage')
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                            <flux:button
+                                variant="ghost"
+                                size="sm"
+                                icon="music-card-icon"
+                                x-on:click="$dispatch('show-music-card-modal', { musicId: {{ $music->id }} })"
+                                :title="__('Quick View')" />
                             @auth
                                 @can('content.edit.own')
                                     <flux:button
@@ -159,14 +165,6 @@
                                         tag="a"
                                         :title="__('Edit')" />
                                 @endcan
-                            @else
-                                <flux:button
-                                    variant="ghost"
-                                    size="sm"
-                                    icon="eye"
-                                    :href="route('music-view', ['music' => $music->id])"
-                                    tag="a"
-                                    :title="__('View')" />
                             @endauth
                             <div class="hidden sm:block">
                                 <flux:button

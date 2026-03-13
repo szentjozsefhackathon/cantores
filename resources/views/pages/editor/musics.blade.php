@@ -55,6 +55,7 @@
         </div>
     </flux:modal>
 
+    <livewire:pages.editor.music-card-modal />
     <livewire:pages.editor.music-audit-modal />
     <livewire:error-report />
 </div>
