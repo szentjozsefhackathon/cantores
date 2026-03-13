@@ -129,7 +129,7 @@ new class extends Component
 
         $dbAssignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $this->slotPlan->id)
             ->orderBy('music_sequence')
-            ->with(['music.collections', 'music.tags', 'music.genres', 'flags', 'scopes'])
+            ->with(['music.collections', 'music.tags', 'music.genres', 'music.authors', 'flags', 'scopes'])
             ->get();
 
         $this->assignments = $dbAssignments->map(function ($assignment) use ($user) {
@@ -173,6 +173,9 @@ new class extends Component
                 ])->toArray(),
                 'music_genres' => $music->genres->map(fn ($g) => [
                     'icon' => $g->icon(),
+                ])->toArray(),
+                'music_authors' => $music->authors->map(fn ($a) => [
+                    'name' => $a->name,
                 ])->toArray(),
                 'can_view_music' => $user === null ? (! $music->is_private) : $user->can('view', $music),
                 'can_edit_music' => $user !== null && $user->can('update', $music),

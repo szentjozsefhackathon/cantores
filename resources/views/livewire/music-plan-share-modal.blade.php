@@ -3,7 +3,7 @@
         wire:click="openModal"
         variant="outline"
         color="blue"
-        icon="document-text">
+        icon="file-text">
         Megosztás
     </flux:button>
 

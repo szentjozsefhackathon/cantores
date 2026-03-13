@@ -122,7 +122,7 @@
                     <flux:table.row>
                         <flux:table.cell colspan="5" class="text-center py-8">
                             <div class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-                                <flux:icon name="document-text" class="h-12 w-12 mb-2 opacity-50" />
+                                <flux:icon name="file-text" class="h-12 w-12 mb-2 opacity-50" />
                                 <p class="text-lg font-medium">{{ __('No templates found') }}</p>
                                 <p class="text-sm mt-1">
                                     @if ($search)

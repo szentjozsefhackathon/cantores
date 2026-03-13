@@ -1,6 +1,6 @@
 @props(['assignment'])
 
-<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden max-w-[355px] relative">
+<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden flex-1 relative">
     <!-- Bottom right corner rounded rectangle with genre icons -->
     <div class="absolute bottom-0 right-0 pointer-events-none flex items-center justify-center gap-1 px-2 py-1 rounded-tl-md bg-gray-200/30 dark:bg-gray-700/30 backdrop-blur-sm">
         @foreach($assignment['music_genres'] as $genre)
@@ -11,7 +11,7 @@
     <div class="p-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 flex-1">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     {{ $assignment['music_title'] }}
                 </h3>
                 @if($assignment['music_subtitle'])

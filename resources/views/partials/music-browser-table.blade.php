@@ -53,6 +53,19 @@
                                 {{ $music->authors->pluck('name')->join(', ') }}
                             </div>
                         @endif
+
+                        @if ($music->urls->isNotEmpty())
+                            <div class="mt-1 flex items-center gap-1">
+                                @foreach ($music->urls->unique('label') as $url)
+                                    @php
+                                        $urlType = \App\Enums\MusicUrlType::tryFromLabel($url->label);
+                                    @endphp
+                                    @if ($urlType)
+                                        <flux:icon :name="$urlType->icon()" class="h-5 w-5 {{ $urlType->color() }}" :title="$urlType->label()" />
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endif
                         @if ($music->custom_id)
                             <div class="font-mono text-xs text-gray-400 dark:text-gray-500">
                                 {{ $music->custom_id }}

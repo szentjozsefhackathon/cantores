@@ -179,7 +179,7 @@
                                         'information' => 'zinc',
                                     ];
                                     $labelIcons = [
-                                        'sheet_music' => 'document-text',
+                                        'sheet_music' => 'file-text',
                                         'audio' => 'music',
                                         'video' => 'video-camera',
                                         'text' => 'book-open',

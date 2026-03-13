@@ -108,7 +108,7 @@ trait HasMusicSearchScopes
 
         $query = $query
             ->forCurrentGenre()
-            ->with(['genres', 'collections', 'authors', 'tags'])
+            ->with(['genres', 'collections', 'authors', 'tags', 'urls'])
             ->withCount('collections')
             ->withCount(['verifications as verified_verifications_count' => function ($q) {
                 $q->where('status', 'verified');
