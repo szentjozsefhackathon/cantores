@@ -195,7 +195,7 @@
     </div>
 
     <!-- Modals outside main content for single root -->
-    <flux:modal wire:model="showCreateModal" max-width="md">
+    <flux:modal name="create-collection" max-width="md">
         <flux:heading size="lg">{{ __('Create Collection') }}</flux:heading>
 
         <div class="mt-2 space-y-4">
@@ -255,12 +255,9 @@
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
-            <flux:button
-                variant="ghost"
-                wire:click="$set('showCreateModal', false)"
-            >
-                {{ __('Cancel') }}
-            </flux:button>
+            <flux:modal.close>
+                <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+            </flux:modal.close>
             <flux:button
                 variant="primary"
                 wire:click="store"
@@ -270,7 +267,7 @@
         </div>
     </flux:modal>
 
-    <flux:modal wire:model="showAuditModal" max-width="4xl">
+    <flux:modal name="audit-collection" max-width="4xl">
         <flux:heading size="lg">{{ __('Audit Log') }}</flux:heading>
         <flux:subheading>
             {{ __('Collection:') }} {{ $auditingCollection->title ?? '' }}
@@ -367,16 +364,13 @@
         </div>
 
         <div class="mt-6 flex justify-end">
-            <flux:button
-                variant="ghost"
-                wire:click="$set('showAuditModal', false)"
-            >
-                {{ __('Close') }}
-            </flux:button>
+            <flux:modal.close>
+                <flux:button variant="ghost">{{ __('Close') }}</flux:button>
+            </flux:modal.close>
         </div>
     </flux:modal>
 
-    <flux:modal wire:model="showEditModal" max-width="md">
+    <flux:modal name="edit-collection" max-width="md">
         <flux:heading size="lg">{{ __('Edit Collection') }}</flux:heading>
 
         <div class="mt-2 space-y-4">
@@ -437,12 +431,9 @@
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
-            <flux:button
-                variant="ghost"
-                wire:click="$set('showEditModal', false)"
-            >
-                {{ __('Cancel') }}
-            </flux:button>
+            <flux:modal.close>
+                <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+            </flux:modal.close>
             <flux:button
                 variant="primary"
                 wire:click="update"

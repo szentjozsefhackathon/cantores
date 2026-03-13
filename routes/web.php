@@ -89,9 +89,13 @@ Route::livewire('/my-music-plans', \App\Livewire\Pages\MyMusicPlans::class)
 Route::livewire('/music-plans', 'pages::music-plans')
     ->name('music-plans');
 
-// Music Library - Editor routes (browseable by guests, edit actions require auth)
-Route::livewire('/collections', \App\Livewire\Pages\Editor\Collections::class)
+// Collections landing page (public)
+Route::livewire('/collections', 'pages::collections-landing')
     ->name('collections');
+
+// Collections editor (browseable by guests, edit actions require auth)
+Route::livewire('/collections/editor', \App\Livewire\Pages\Editor\Collections::class)
+    ->name('collections-editor');
 
 // Public read-only collection view
 Route::livewire('/collection/{collection}/view', \App\Livewire\Pages\CollectionView::class)

@@ -100,7 +100,7 @@
         @auth
         <div class="mt-6 flex flex-col sm:flex-row gap-3">
             @can('update', $collection)
-                <flux:button variant="primary" icon="pencil" :href="route('collections')">
+                <flux:button variant="primary" icon="pencil" :href="route('collections-editor')">
                     {{ __('Edit Collection') }}
                 </flux:button>
             @endcan

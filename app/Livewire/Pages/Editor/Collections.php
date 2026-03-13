@@ -21,12 +21,6 @@ class Collections extends Component
 
     public string $search = '';
 
-    public bool $showCreateModal = false;
-
-    public bool $showEditModal = false;
-
-    public bool $showAuditModal = false;
-
     public ?Collection $editingCollection = null;
 
     public ?Collection $auditingCollection = null;
@@ -147,7 +141,7 @@ class Collections extends Component
         if ($genreId) {
             $this->selectedGenres = [$genreId];
         }
-        $this->showCreateModal = true;
+        $this->modal('create-collection')->show();
     }
 
     /**
@@ -162,7 +156,7 @@ class Collections extends Component
         $this->author = $collection->author;
         $this->isPrivate = $collection->is_private;
         $this->selectedGenres = $collection->genres->pluck('id')->toArray();
-        $this->showEditModal = true;
+        $this->modal('edit-collection')->show();
     }
 
     /**
@@ -177,7 +171,7 @@ class Collections extends Component
             ->with(['user.city', 'user.firstName'])
             ->latest()
             ->get();
-        $this->showAuditModal = true;
+        $this->modal('audit-collection')->show();
     }
 
     /**
@@ -205,7 +199,7 @@ class Collections extends Component
         // Attach selected genres (empty array will detach all)
         $collection->genres()->sync($validated['selectedGenres'] ?? []);
 
-        $this->showCreateModal = false;
+        $this->modal('create-collection')->close();
         $this->resetForm();
         $this->dispatch('collection-created');
     }
@@ -234,7 +228,7 @@ class Collections extends Component
         // Sync selected genres (empty array will detach all)
         $this->editingCollection->genres()->sync($validated['selectedGenres'] ?? []);
 
-        $this->showEditModal = false;
+        $this->modal('edit-collection')->close();
         $this->resetForm();
         $this->editingCollection = null;
         $this->dispatch('collection-updated');
