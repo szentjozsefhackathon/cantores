@@ -32,8 +32,6 @@ new class extends Component
     /** @var array<int, array<int, array{type: string|null, number: int|null}>> */
     public array $assignmentScopes = [];
 
-    public bool $showMusicSearchModal = false;
-
     public ?int $assignmentToMove = null;
 
     public bool $showMoveAssignmentModal = false;
@@ -330,25 +328,15 @@ new class extends Component
     // Music search modal (adds music to this slot)
     // -------------------------------------------------------------------------
 
-    public function openMusicSearchModal(): void
+    public function getListeners(): array
     {
-        $this->showMusicSearchModal = true;
+        return [
+            "music-selected-slot-{$this->slotPlan->id}" => 'assignMusicToSlot',
+        ];
     }
 
-    public function closeMusicSearchModal(): void
-    {
-        $this->showMusicSearchModal = false;
-    }
-
-    #[On('music-selected')]
     public function assignMusicToSlot(int $musicId): void
     {
-        // Each slot-plan instance receives this event; only the one whose modal
-        // is currently open should act on it.
-        if (! $this->showMusicSearchModal) {
-            return;
-        }
-
         $this->authorize('update', $this->slotPlan->musicPlan);
 
         $maxMusicSequence = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $this->slotPlan->id)
@@ -362,7 +350,7 @@ new class extends Component
         ]);
 
         $this->loadAssignments();
-        $this->closeMusicSearchModal();
+        $this->js("Flux.modal('music-search-{$this->slotPlan->id}').close()");
         $this->dispatch('slots-updated', message: 'Zene hozzáadva az elemhez.');
     }
 

@@ -230,9 +230,7 @@
                 size="xs" />
             <div class="border-b border-neutral-300 dark:border-neutral-700 w-6"></div>
             <flux:button
-                wire:click="openMusicSearchModal"
-                wire:loading.attr="disabled"
-                wire:loading.class="opacity-50 cursor-not-allowed"
+                x-on:click="$flux.modal('music-search-{{ $slotPlan->id }}').show()"
                 icon="plus"
                 variant="outline"
                 size="xs"
@@ -261,11 +259,11 @@
     </div>
 </flux:card>
 
-<flux:modal wire:model="showMusicSearchModal" class="max-w-4xl">
-    <livewire:music-search lazy selectable="true" wire:key="music-search-{{ $slotPlan->id }}" />
+<flux:modal :name="'music-search-'.$slotPlan->id" class="max-w-4xl">
+    <livewire:music-search lazy selectable="true" :source="'-slot-'.$slotPlan->id" wire:key="music-search-{{ $slotPlan->id }}" />
     <div class="mt-6 flex justify-end">
         <flux:button
-            wire:click="closeMusicSearchModal"
+            x-on:click="$flux.modal('music-search-{{ $slotPlan->id }}').close()"
             variant="outline">
             Bezárás
         </flux:button>

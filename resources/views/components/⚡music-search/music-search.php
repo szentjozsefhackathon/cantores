@@ -7,6 +7,7 @@ use App\Models\Music;
 use App\Models\MusicTag;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -131,7 +132,8 @@ return new class extends Component
     /**
      * Get available tags for the filter.
      */
-    public function getTagsProperty()
+    #[Computed]
+    public function tags()
     {
         return MusicTag::orderBy('name')->get();
     }
@@ -140,7 +142,8 @@ return new class extends Component
      * Pre-computed tag options for the mary-choices component.
      * Avoids calling icon() and label() methods during template rendering.
      */
-    public function getTagOptionsProperty()
+    #[Computed]
+    public function tagOptions()
     {
         return $this->tags->map(fn ($tag) => [
             'id' => $tag->id,
@@ -152,7 +155,8 @@ return new class extends Component
     /**
      * Tag lookup by ID to avoid firstWhere() in loops.
      */
-    public function getTagsByIdProperty()
+    #[Computed]
+    public function tagsById()
     {
         return $this->tags->keyBy('id');
     }
