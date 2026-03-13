@@ -643,5 +643,7 @@
     "Contrafact": "Kontrafaktum",
     "Connected": "Összetartozó",
 
-    "Loading": "Betöltés"
+    "Loading": "Betöltés",
+    "Error report submitted successfully.": "Hibajelentés elküldve.",
+    "Delete collection": "Gyűjtemény törlése"
 }

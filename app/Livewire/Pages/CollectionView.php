@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages;
 
 use App\Models\Collection;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
@@ -12,7 +13,7 @@ use Livewire\WithPagination;
 #[Layout('layouts::app.main')]
 class CollectionView extends Component
 {
-    use WithPagination;
+    use AuthorizesRequests, WithPagination;
 
     public Collection $collection;
 
@@ -36,6 +37,21 @@ class CollectionView extends Component
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function delete(): void
+    {
+        $this->authorize('delete', $this->collection);
+
+        if ($this->collection->music()->count() > 0) {
+            $this->dispatch('error', message: __('Cannot delete collection that has music assigned to it.'));
+
+            return;
+        }
+
+        $this->collection->delete();
+
+        $this->redirect(route('collections'), navigate: true);
     }
 
     public function render()

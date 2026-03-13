@@ -6,6 +6,11 @@
                 <div>
                     <flux:heading size="xl">{{ __('Collection Details') }}</flux:heading>
                     <flux:subheading>{{ $collection->title }}</flux:subheading>
+                    @auth
+                    <flux:button variant="ghost" icon="flag" wire:click="dispatch('openErrorReportModal', { resourceId: {{ $collection->id }}, resourceType: 'collection' })">
+                        {{ __('Report an Issue') }}
+                    </flux:button>
+                    @endauth
                 </div>
                 
                 <!-- Privacy badge -->
@@ -104,7 +109,17 @@
                     {{ __('Edit Collection') }}
                 </flux:button>
             @endcan
+
+            @can('delete', $collection)
+                <flux:button variant="danger" icon="trash"
+                    wire:click="delete"
+                    wire:confirm="{{ __('Are you sure you want to delete this collection? This can only be done if no music pieces are assigned to it.') }}">
+                    {{ __('Delete Collection') }}
+                </flux:button>
+            @endcan
         </div>
         @endauth
     </div>
+
+<livewire:error-report />
 </div>
