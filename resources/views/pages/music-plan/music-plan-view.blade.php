@@ -87,15 +87,15 @@ new #[Layout('layouts::app.main')] class extends Component
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
         <flux:card class="p-5">
-            <div class="flex items-center gap-4 mb-4">
+            <div class="flex flex-wrap items-center gap-4 mb-4">
                 <livewire:music-plan-setting-icon :genreId="$musicPlan->genre_id" />
                 <flux:heading size="xl">Énekrend</flux:heading>
                 <x-user-badge :user="$musicPlan->user" />
 
                 @if($musicPlan->actual_date)
-                <div class="flex">
-                <flux:icon name="external-link" />
-                <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
+                <div class="flex items-center gap-1">
+                <flux:icon name="external-link" class="h-3 w-3" variant="mini" />
+                <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank" class="text-xs">
                     Igenaptár
                 </flux:link>
                 </div>
@@ -214,6 +214,11 @@ new #[Layout('layouts::app.main')] class extends Component
                     <flux:button variant="outline" color="zinc" icon="arrow-left" href="{{ route('home') }}">
                         Vissza a kezdőlapra
                     </flux:button>
+                    @if($isOwner)
+                    <flux:button variant="outline" color="blue" icon="pencil" href="{{ route('music-plan-editor', $musicPlan) }}">
+                        Énekrend szerkesztése
+                    </flux:button>
+                    @endif
                     <livewire:music-plan-share-modal :music-plan="$musicPlan" />
                     <form method="POST" action="{{ route('music-plans.copy', $musicPlan) }}" class="inline">
                         @csrf

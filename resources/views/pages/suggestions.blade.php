@@ -222,7 +222,31 @@ new class extends Component
                                                     <flux:text class="inline">{!! $this->sanitize($subPart['teaser'] ?? '') !!}</flux:text>
                                                 </div>
                                                 <div>{{ $subPart['title'] ?? '' }}</div>
-                                                <div>{!! $this->sanitize($subPart['text'] ?? '') !!}</div>
+                                                <div
+                                                    x-data="{ expanded: false }"
+                                                    class="text-sm"
+                                                >
+                                                    @php
+                                                        $fullText = $this->sanitize($subPart['text'] ?? '');
+                                                        $truncated = mb_strlen($fullText) > 100 ? mb_substr($fullText, 0, 100) . '...' : $fullText;
+                                                        $needsExpand = mb_strlen($fullText) > 100;
+                                                    @endphp
+                                                    <span x-show="!expanded">
+                                                        {!! $truncated !!}
+                                                    </span>
+                                                    <span x-show="expanded" style="display: none;">
+                                                        {!! $fullText !!}
+                                                    </span>
+                                                    @if($needsExpand)
+                                                        <button
+                                                            @click="expanded = !expanded"
+                                                            class="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium"
+                                                        >
+                                                            <span x-show="!expanded">{{ __('Bővebben') }}</span>
+                                                            <span x-show="expanded" style="display: none;">{{ __('Összecsukás') }}</span>
+                                                        </button>
+                                                    @endif
+                                                </div>
                                                 <div>{{ $subPart['ending'] ?? '' }}</div>
                                             </div>
                                         </div>
@@ -237,7 +261,31 @@ new class extends Component
                                                 <flux:text class="inline">{!! $this->sanitize($part['teaser'] ?? '') !!}</flux:text>
                                             </div>
                                             <div>{{ $part['title'] ?? '' }}</div>
-                                            <div>{!! $this->sanitize($part['text'] ?? '') !!}</div>
+                                            <div
+                                                x-data="{ expanded: false }"
+                                                class="text-sm"
+                                            >
+                                                @php
+                                                    $fullText = $this->sanitize($part['text'] ?? '');
+                                                    $truncated = mb_strlen($fullText) > 100 ? mb_substr($fullText, 0, 100) . '...' : $fullText;
+                                                    $needsExpand = mb_strlen($fullText) > 100;
+                                                @endphp
+                                                <span x-show="!expanded">
+                                                    {!! $truncated !!}
+                                                </span>
+                                                <span x-show="expanded" style="display: none;">
+                                                    {!! $fullText !!}
+                                                </span>
+                                                @if($needsExpand)
+                                                    <button
+                                                        @click="expanded = !expanded"
+                                                        class="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium"
+                                                    >
+                                                        <span x-show="!expanded">{{ __('Bővebben') }}</span>
+                                                        <span x-show="expanded" style="display: none;">{{ __('Összecsukás') }}</span>
+                                                    </button>
+                                                @endif
+                                            </div>
                                             <div>{{ $part['ending'] ?? '' }}</div>
                                         </div>
                                     </div>

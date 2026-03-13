@@ -141,8 +141,8 @@
                         </flux:field>
                         <div class="flex items-center">
                             @if($musicPlan->actual_date)
-                            <flux:icon name="external-link" class="mr-1" />
-                            <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank">
+                            <flux:icon name="external-link" class="h-4 w-4" />
+                            <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank" class="text-sm">
                                 Igenaptár
                             </flux:link>
                             @endif
