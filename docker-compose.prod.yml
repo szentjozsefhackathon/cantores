@@ -2,10 +2,11 @@ name: creshu-prod
 
 services:
   traefik:
-    image: traefik:v3.3
-    mem_limit: 160m
+    image: traefik:v3.6
+    restart: unless-stopped
+    mem_limit: 192m
     env_file:
-      - path: ./.env.prod      
+      - path: ./.env.prod
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
@@ -47,7 +48,8 @@ services:
     restart: "no"
   app:
     image: creshu-app-prod
-    mem_limit: 768m
+    restart: unless-stopped
+    mem_limit: 1024m
     build:
       context: .
       dockerfile: Dockerfile.prod
@@ -84,7 +86,8 @@ services:
       - internal
   database:
     image: pgvector/pgvector:pg17
-    mem_limit: 512m
+    restart: unless-stopped
+    mem_limit: 1280m
     env_file:
       - ./.env.prod # for the database credentials
     networks:
@@ -100,15 +103,16 @@ services:
       retries: 3      
   memcached:
     image: memcached:1.6
-    mem_limit: 128m
+    restart: unless-stopped
+    mem_limit: 256m
     command:
-      - --memory-limit=96
+      - --memory-limit=224
     networks:
       - internal
   queue:
     image: creshu-app-prod
     user: "33:33" # www-data
-    mem_limit: 160m
+    mem_limit: 256m
     env_file:
       - path: ./.env.prod
         required: false
