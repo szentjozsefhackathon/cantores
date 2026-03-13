@@ -58,7 +58,7 @@
                             <div class="mt-1 flex items-center gap-1">
                                 @foreach ($music->urls->unique('label') as $url)
                                     @php
-                                        $urlType = \App\Enums\MusicUrlType::tryFromLabel($url->label);
+                                        $urlType = \App\MusicUrlLabel::tryFromLabel($url->label);
                                     @endphp
                                     @if ($urlType)
                                         <flux:icon :name="$urlType->icon()" class="h-5 w-5 {{ $urlType->color() }}" :title="$urlType->label()" />

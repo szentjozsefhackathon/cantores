@@ -1,0 +1,1 @@
+This folder will be mapped as a volume on the host, you can assume it exists for importing files
