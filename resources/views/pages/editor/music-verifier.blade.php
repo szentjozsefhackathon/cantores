@@ -101,119 +101,104 @@
             </flux:button>
         </div>
 
-        <!-- Fields verification table -->
-        <div class="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            {{ __('Field / Relation') }}
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            {{ __('Current Value') }}
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            {{ __('Status') }}
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            {{ __('Notes') }}
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            {{ __('Actions') }}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                    @foreach ($verifiableFields as $field)
-                    @php
-                        $key = $field['name'] . ':' . ($field['pivot_reference'] ?? '0');
-                        $status = $fieldStatuses[$key] ?? 'pending';
-                        $notes = $fieldNotes[$key] ?? '';
-                    @endphp
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {{ $field['label'] }}
-                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ $field['type'] === 'field' ? __('Field') : __('Relation') }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                            @if (is_array($field['value']))
-                                @foreach ($field['value'] as $k => $v)
-                                    <div><span class="font-medium">{{ __(ucfirst($k)) }}:</span> {{ $v ?? '-' }}</div>
-                                @endforeach
-                            @elseif (is_bool($field['value']))
-                                {{ $field['value'] ? __('Yes') : __('No') }}
-                            @else
-                                {{ $field['value'] ?? __('Empty') }}
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            @switch($status)
-                                @case('verified')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300">
-                                        <flux:icon name="check-circle" class="h-3 w-3 mr-1" />
-                                        {{ __('Verified') }}
-                                    </span>
-                                    @break
-                                @case('rejected')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300">
-                                        <flux:icon name="x-circle" class="h-3 w-3 mr-1" />
-                                        {{ __('Rejected') }}
-                                    </span>
-                                    @break
-                                @default
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300">
-                                        <flux:icon name="clock" class="h-3 w-3 mr-1" />
-                                        {{ __('Pending') }}
-                                    </span>
-                            @endswitch
-                        </td>
-                        <td class="px-6 py-4">
-                            <flux:input
-                                wire:model.live="fieldNotes.{{ $key }}"
-                                size="sm"
-                                :placeholder="__('Add notes...')"
-                                class="w-full" />
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div class="flex flex-wrap gap-2">
-                                <flux:button
-                                    variant="primary" color="green"
-                                    size="sm"
-                                    icon="check-circle"
-                                    wire:click="verifyField('{{ $field['name'] }}', {{ $field['pivot_reference'] ?? 'null' }}, 'verified', $fieldNotes['{{ $key }}'] ?? '')"
-                                    :disabled="$status === 'verified'"
-                                    wire:loading.attr="disabled"
-                                    wire:loading.class="opacity-50 cursor-not-allowed">
-                                    <span>{{ __('Verify') }}</span>
-                                </flux:button>
-                                <flux:button
-                                    variant="danger"
-                                    size="sm"
-                                    icon="x-circle"
-                                    wire:click="verifyField('{{ $field['name'] }}', {{ $field['pivot_reference'] ?? 'null' }}, 'rejected', $fieldNotes['{{ $key }}'] ?? '')"
-                                    :disabled="$status === 'rejected'"
-                                    wire:loading.attr="disabled"
-                                    wire:loading.class="opacity-50 cursor-not-allowed">
-                                    <span>{{ __('Reject') }}</span>
-                                </flux:button>
-                                <flux:button
-                                    variant="outline"
-                                    size="sm"
-                                    icon="trash"
-                                    wire:click="unverifyField('{{ $field['name'] }}', {{ $field['pivot_reference'] ?? 'null' }})"
-                                    :disabled="$status === 'pending'"
-                                    wire:loading.attr="disabled"
-                                    wire:loading.class="opacity-50 cursor-not-allowed">
-                                    <span>{{ __('Unverify') }}</span>
-                                </flux:button>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        <!-- Fields verification cards -->
+        <div class="space-y-4">
+            @foreach ($verifiableFields as $field)
+            @php
+                $key = $field['name'] . ':' . ($field['pivot_reference'] ?? '0');
+                $status = $fieldStatuses[$key] ?? 'pending';
+                $notes = $fieldNotes[$key] ?? '';
+            @endphp
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-900">
+                <!-- Field header -->
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                        <h3 class="font-medium text-gray-900 dark:text-gray-100">{{ $field['label'] }}</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {{ $field['type'] === 'field' ? __('Field') : __('Relation') }}
+                        </p>
+                    </div>
+                    @switch($status)
+                        @case('verified')
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 shrink-0">
+                                <flux:icon name="check-circle" class="h-3 w-3 mr-1" />
+                                {{ __('Verified') }}
+                            </span>
+                            @break
+                        @case('rejected')
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300 shrink-0">
+                                <flux:icon name="x-circle" class="h-3 w-3 mr-1" />
+                                {{ __('Rejected') }}
+                            </span>
+                            @break
+                        @default
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300 shrink-0">
+                                <flux:icon name="clock" class="h-3 w-3 mr-1" />
+                                {{ __('Pending') }}
+                            </span>
+                    @endswitch
+                </div>
+
+                <!-- Current value -->
+                <div class="mb-4">
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Current Value') }}</label>
+                    <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded text-sm text-gray-700 dark:text-gray-300">
+                        @if (is_array($field['value']))
+                            @foreach ($field['value'] as $k => $v)
+                                <div><span class="font-medium">{{ __(ucfirst($k)) }}:</span> {{ $v ?? '-' }}</div>
+                            @endforeach
+                        @elseif (is_bool($field['value']))
+                            {{ $field['value'] ? __('Yes') : __('No') }}
+                        @else
+                            {{ $field['value'] ?? __('Empty') }}
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="mb-4">
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Notes') }}</label>
+                    <flux:input
+                        wire:model.live="fieldNotes.{{ $key }}"
+                        size="sm"
+                        :placeholder="__('Add notes...')" />
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-wrap gap-2">
+                    <flux:button
+                        variant="primary" color="green"
+                        size="sm"
+                        icon="check-circle"
+                        wire:click="verifyField('{{ $field['name'] }}', {{ $field['pivot_reference'] ?? 'null' }}, 'verified', $fieldNotes['{{ $key }}'] ?? '')"
+                        :disabled="$status === 'verified'"
+                        wire:loading.attr="disabled"
+                        wire:loading.class="opacity-50 cursor-not-allowed">
+                        {{ __('Verify') }}
+                    </flux:button>
+                    <flux:button
+                        variant="danger"
+                        size="sm"
+                        icon="x-circle"
+                        wire:click="verifyField('{{ $field['name'] }}', {{ $field['pivot_reference'] ?? 'null' }}, 'rejected', $fieldNotes['{{ $key }}'] ?? '')"
+                        :disabled="$status === 'rejected'"
+                        wire:loading.attr="disabled"
+                        wire:loading.class="opacity-50 cursor-not-allowed">
+                        {{ __('Reject') }}
+                    </flux:button>
+                    <flux:button
+                        variant="outline"
+                        size="sm"
+                        icon="trash"
+                        wire:click="unverifyField('{{ $field['name'] }}', {{ $field['pivot_reference'] ?? 'null' }})"
+                        :disabled="$status === 'pending'"
+                        wire:loading.attr="disabled"
+                        wire:loading.class="opacity-50 cursor-not-allowed">
+                        {{ __('Unverify') }}
+                    </flux:button>
+                </div>
+            </div>
+            @endforeach
         </div>
 
         <!-- Summary -->
