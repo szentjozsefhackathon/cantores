@@ -73,6 +73,13 @@ new class extends Component
 };
 ?>
 
+@placeholder
+    <div>
+        <flux:skeleton class="w-full h-72 max-w-md rounded-lg" />
+    </div>
+@endplaceholder
+
+
 <div {{ $attributes->merge(['class' => 'max-w-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden']) }}>
     <!-- Header with icon and title -->
     <div class="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -83,23 +90,22 @@ new class extends Component
                     <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                         {{ $musicPlan->celebration_name ?? '–' }}
                     </h3>
+
                     <div class="flex flex-wrap items-center gap-1 text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                         @if($musicPlan->actual_date)
                         <span>{{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}</span>
                         @endif
                         <span class="flex items-center gap-0.5">
                             <flux:icon name="{{ !$musicPlan->is_private ? 'globe' : 'globe-lock' }}" class="h-3 w-3" variant="mini" />
-                            {{ !$musicPlan->is_private ? 'Közzétéve' : 'Privát' }}
+                            {{ !$musicPlan->is_private ? 'Publikus' : 'Privát' }}
+                            @if($isOwner)
+                                <x-user-badge :user="$musicPlan->user" class="ml-1" />
+                            @endif
                         </span>
                     </div>
                 </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-                @if($showOpenButton)
-                    @auth
-                        <x-user-badge :user="$musicPlan->user" />
-                    @endauth
-                @endif
                 <div class="flex items-center gap-1.5">
                     <a href="{{ route('music-plan-view', ['musicPlan' => $musicPlan]) }}" target="_blank" class="inline-block">
                         <flux:button size="xs" variant="outline" color="blue" icon="eye"></flux:button>
@@ -125,7 +131,6 @@ new class extends Component
         <div class="flex flex-wrap items-center gap-2 text-xs">
             @if($firstCelebration && ($firstCelebration->year_letter || $firstCelebration->year_parity))
             <div>
-                <span class="text-neutral-600 dark:text-neutral-400">Liturgikus év:</span>
                 <span class="font-semibold text-gray-900 dark:text-gray-100">
                     {{ $firstCelebration->year_letter ?? '–' }}
                     @if($firstCelebration->year_parity)
@@ -137,17 +142,16 @@ new class extends Component
 
             @if($firstCelebration && $firstCelebration->season_text)
             <div>
-                <span class="text-neutral-600 dark:text-neutral-400">Időszak:</span>
                 <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $firstCelebration->season_text }}</span>
             </div>
             @endif
 
             @if($firstCelebration && $firstCelebration->week)
-            <flux:badge color="green" size="xs">{{ $firstCelebration->week }}. hét</flux:badge>
+            <flux:badge color="green" size="sm">{{ $firstCelebration->week }}. hét</flux:badge>
             @endif
 
             @if($musicPlan->day_name)
-            <flux:badge color="purple" size="xs">{{ $musicPlan->day_name }}</flux:badge>
+            <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
             @endif
         </div>
 
@@ -162,11 +166,6 @@ new class extends Component
 
         <!-- Plan slots summary -->
         <div class="pt-1 border-t border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-1.5">
-                <flux:heading size="xs" class="text-neutral-600 dark:text-neutral-400">Énekrend elemei</flux:heading>
-                <flux:badge color="zinc" size="xs">{{ count($planSlots) }}</flux:badge>
-            </div>
-
             @if(!empty($planSlots))
             <div class="space-y-1.5 max-h-48 overflow-y-auto">
                 @foreach($planSlots as $slot)
@@ -201,7 +200,7 @@ new class extends Component
                                         {{ Str::limit($assignment['music']->subtitle, 50) }}
                                     </div>
                                     @endif
-                                    
+
                                     <!-- Collections and Authors badges -->
                                     @if($assignment['music']->collections->isNotEmpty() || $assignment['music']->authors->isNotEmpty())
                                     <div class="flex flex-wrap gap-1 mt-1">
@@ -218,7 +217,7 @@ new class extends Component
                                         @endforeach
                                     </div>
                                     @endif
-                                    
+
                                     @if(!empty($assignment['notes']))
                                     <div class="text-gray-500 dark:text-gray-500 italic line-clamp-1">
                                         {{ Str::limit($assignment['notes'], 50) }}

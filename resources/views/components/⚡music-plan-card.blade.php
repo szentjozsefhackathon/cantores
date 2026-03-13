@@ -38,7 +38,7 @@ new class extends Component
                             <span class="flex items-center gap-1">
                                 <flux:icon name="{{ !$musicPlan->is_private ? 'globe' : 'globe-lock' }}" class="h-3 w-3" variant="mini" />
                                 <span class="hidden md:inline">
-                                    {{ !$musicPlan->is_private ? 'Közzétéve' : 'Privát' }}
+                                    {{ !$musicPlan->is_private ? 'Publikus' : 'Privát' }}
                                 </span>
                             </span>
                         </div>

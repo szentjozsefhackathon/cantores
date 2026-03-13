@@ -313,17 +313,6 @@ new class extends Component
 };
 ?>
 
-@placeholder
-<flux:skeleton.group animate="shimmer" class="flex items-center gap-4">
-    <div class="flex flex-col gap-2 w-full">
-        <flux:skeleton.line />
-        <flux:skeleton.line />
-        <flux:skeleton.line />
-        <flux:skeleton.line />
-    </div>
-</flux:skeleton.group>
-@endplaceholder
-
 <div>
     @if ($celebrationsWithScores->isEmpty())
     <flux:callout color="amber" icon="information-circle" class="mt-8">
@@ -334,12 +323,16 @@ new class extends Component
     <x-mary-tabs wire:model="activeTab" class="mb-8">
         <x-mary-tab name="music" icon="o-musical-note" label="Énekjavaslatok ({{ count($slotMusicMap) }})">
             @island(defer: true)
-                @placeholder
-        <!-- Loading indicator -->
-        <div class="animate-pulse">
-            <div class="h-32 bg-gray-200 rounded"></div>
-        </div>
-    @endplaceholder
+            @placeholder
+            <flux:skeleton.group animate="shimmer" class="flex items-center gap-4">
+                <div class="flex flex-col gap-2 w-full">
+                    <flux:skeleton.line />
+                    <flux:skeleton.line />
+                    <flux:skeleton.line />
+                    <flux:skeleton.line />
+                </div>
+            </flux:skeleton.group>
+            @endplaceholder
 
             <!-- Relevance Score Explanation -->
             <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
@@ -351,8 +344,8 @@ new class extends Component
             <div class="space-y-10" role="tabpanel" id="music-panel" aria-labelledby="music-tab">
                 @forelse ($slotMusicMap as $slotName => $slotData)
                 @php
-                    $slot = $slotData['slot'];
-                    $musics = $slotData['musics'];
+                $slot = $slotData['slot'];
+                $musics = $slotData['musics'];
                 @endphp
                 <div class="relative rounded-lg border-2 border-gray-200 dark:border-gray-700 {{ $loop->odd ? 'bg-gray-50 dark:bg-gray-900/50' : 'bg-white dark:bg-gray-800/50' }}" wire:key="slotMusicMap-{{ $slotName }}">
                     <div class="bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700 rounded-t-[calc(0.5rem-2px)]">
@@ -415,24 +408,15 @@ new class extends Component
         </x-mary-tab>
 
         <x-mary-tab name="plans" icon="lucide.list-music" label="Énekrendek ({{ $musicPlans->count() }})">
-                        @island(defer: true)
-                @placeholder
-        <!-- Loading indicator -->
-        <div class="animate-pulse">
-            <div class="h-32 bg-gray-200 rounded"></div>
-        </div>
-    @endplaceholder
-
             <div class="space-y-5" role="tabpanel" id="plans-panel" aria-labelledby="plans-tab">
                 @foreach ($musicPlans as $plan)
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4" wire:key="musicPlanSuggestion-{{ $plan->id }}">
                     <div class="flex-1">
-                        <livewire:music-plan-card-extended :musicPlan="$plan" class="max-w-full" :showOpenButton="true" :musicPlanId="$musicPlanId" />
+                        <livewire:music-plan-card-extended lazy :musicPlan="$plan" class="max-w-full" :showOpenButton="true" :musicPlanId="$musicPlanId" />
                     </div>
                 </div>
                 @endforeach
             </div>
-            @endisland
         </x-mary-tab>
     </x-mary-tabs>
     @endif
