@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
@@ -36,6 +37,12 @@ new class extends Component
     private function loadExistingSlotIds(): void
     {
         $this->existingSlotIds = $this->musicPlan->slots()->pluck('music_plan_slot_id')->toArray();
+    }
+
+    #[On('slot-list-changed')]
+    public function onSlotListChanged(): void
+    {
+        $this->loadExistingSlotIds();
     }
 
     public function updatedSlotSearch(string $value): void

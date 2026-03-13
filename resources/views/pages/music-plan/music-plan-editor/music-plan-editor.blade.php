@@ -204,7 +204,19 @@
                     </div>
                 </div>
 
-                                <!-- Private notes -->
+                <!-- Shared music search modal -->
+                <flux:modal name="music-search-shared" class="max-w-4xl">
+                    <livewire:music-search lazy selectable="true" source="-editor" wire:key="music-search-shared" />
+                    <div class="mt-6 flex justify-end">
+                        <flux:button
+                            x-on:click="$flux.modal('music-search-shared').close()"
+                            variant="outline">
+                            Bezárás
+                        </flux:button>
+                    </div>
+                </flux:modal>
+
+                <!-- Private notes -->
                 <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800">
                     <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">Privát megjegyzések (csak neked látható)</flux:heading>
                     <flux:field>

@@ -230,7 +230,7 @@
                 size="xs" />
             <div class="border-b border-neutral-300 dark:border-neutral-700 w-6"></div>
             <flux:button
-                x-on:click="$flux.modal('music-search-{{ $slotPlan->id }}').show()"
+                x-on:click="$wire.dispatch('open-music-search', { slotPlanId: {{ $slotPlan->id }} })"
                 icon="plus"
                 variant="outline"
                 size="xs"
@@ -258,17 +258,6 @@
         </div>
     </div>
 </flux:card>
-
-<flux:modal :name="'music-search-'.$slotPlan->id" class="max-w-4xl">
-    <livewire:music-search lazy selectable="true" :source="'-slot-'.$slotPlan->id" wire:key="music-search-{{ $slotPlan->id }}" />
-    <div class="mt-6 flex justify-end">
-        <flux:button
-            x-on:click="$flux.modal('music-search-{{ $slotPlan->id }}').close()"
-            variant="outline">
-            Bezárás
-        </flux:button>
-    </div>
-</flux:modal>
 
 <flux:modal wire:model="showMoveAssignmentModal" size="md">
     <flux:heading size="lg">Zene áthelyezése másik elembe</flux:heading>

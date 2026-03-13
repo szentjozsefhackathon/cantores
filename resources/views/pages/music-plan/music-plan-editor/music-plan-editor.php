@@ -34,6 +34,8 @@ new class extends Component
 
     public string $activeTemplateTab = 'template';
 
+    public ?int $activeSlotPlanId = null;
+
     /**
      * The ordered list of MusicPlanSlotPlan pivot records for this plan.
      * Recomputed fresh on every render — no stale state to manage.
@@ -147,6 +149,41 @@ new class extends Component
     public function onSlotCreated(string $slotName): void
     {
         $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slotName);
+    }
+
+    #[On('open-music-search')]
+    public function openMusicSearch(int $slotPlanId): void
+    {
+        $this->activeSlotPlanId = $slotPlanId;
+        $this->js("Flux.modal('music-search-shared').show()");
+    }
+
+    #[On('music-selected-editor')]
+    public function onMusicSelectedEditor(int $musicId): void
+    {
+        if (! $this->activeSlotPlanId) {
+            return;
+        }
+
+        $this->authorize('update', $this->musicPlan);
+
+        $slotPlan = MusicPlanSlotPlan::where('id', $this->activeSlotPlanId)
+            ->where('music_plan_id', $this->musicPlan->id)
+            ->firstOrFail();
+
+        $maxSequence = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slotPlan->id)
+            ->max('music_sequence');
+
+        \App\Models\MusicPlanSlotAssignment::create([
+            'music_plan_slot_plan_id' => $slotPlan->id,
+            'music_id' => $musicId,
+            'music_sequence' => ($maxSequence ?: 0) + 1,
+        ]);
+
+        $this->js("Flux.modal('music-search-shared').close()");
+        $this->dispatch('slot-assignments-refreshed', pivotId: $slotPlan->id);
+        $this->dispatch('slots-updated', message: 'Zene hozzáadva az elemhez.');
+        $this->activeSlotPlanId = null;
     }
 
     #[On('music-added-from-suggestions')]

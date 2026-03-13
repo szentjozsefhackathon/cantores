@@ -325,36 +325,6 @@ new class extends Component
     }
 
     // -------------------------------------------------------------------------
-    // Music search modal (adds music to this slot)
-    // -------------------------------------------------------------------------
-
-    public function getListeners(): array
-    {
-        return [
-            "music-selected-slot-{$this->slotPlan->id}" => 'assignMusicToSlot',
-        ];
-    }
-
-    public function assignMusicToSlot(int $musicId): void
-    {
-        $this->authorize('update', $this->slotPlan->musicPlan);
-
-        $maxMusicSequence = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $this->slotPlan->id)
-            ->max('music_sequence');
-        $musicSequence = ($maxMusicSequence ?: 0) + 1;
-
-        \App\Models\MusicPlanSlotAssignment::create([
-            'music_plan_slot_plan_id' => $this->slotPlan->id,
-            'music_id' => (int) $musicId,
-            'music_sequence' => $musicSequence,
-        ]);
-
-        $this->loadAssignments();
-        $this->js("Flux.modal('music-search-{$this->slotPlan->id}').close()");
-        $this->dispatch('slots-updated', message: 'Zene hozzáadva az elemhez.');
-    }
-
-    // -------------------------------------------------------------------------
     // Move assignment to another slot
     // -------------------------------------------------------------------------
 
