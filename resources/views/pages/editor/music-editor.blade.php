@@ -625,7 +625,7 @@ new class extends Component
                             </svg>
                         </div>
                         @if($isSaved)
-                            <flux:icon name="check-circle" class="w-4 h-4 text-green-500" />
+                        <flux:icon name="check-circle" class="w-4 h-4 text-green-500" />
                         @endif
                     </div>
                 </div>
@@ -864,18 +864,18 @@ new class extends Component
                             <flux:input type="number" wire:model="pageNumber" :placeholder="__('Page #')" min="1" />
                             <flux:error name="pageNumber" />
                         </flux:field>
-                    <div class="flex items-end gap-2 flex-none">
-                        <flux:button
-                            variant="primary"
-                            wire:click="addCollection"
-                            wire:loading.attr="disabled"
-                            size="sm">
-                            {{ __('Add Collection') }}
-                        </flux:button>
-                        <x-action-message on="collection-added">
-                            {{ __('Collection added.') }}
-                        </x-action-message>
-                    </div>
+                        <div class="flex items-end gap-2 flex-none">
+                            <flux:button
+                                variant="primary"
+                                wire:click="addCollection"
+                                wire:loading.attr="disabled"
+                                size="sm">
+                                {{ __('Add Collection') }}
+                            </flux:button>
+                            <x-action-message on="collection-added">
+                                {{ __('Collection added.') }}
+                            </x-action-message>
+                        </div>
 
                     </div>
 
@@ -945,7 +945,6 @@ new class extends Component
         <!-- URL Connections -->
         <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
             <flux:heading size="md" class="md:size-lg">{{ __('URL Connections') }}</flux:heading>
-            <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Manage external URLs related to this music piece (sheet music, audio, video, etc.).') }}</flux:text>
 
             @if($music->urls->count())
             <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-56 overflow-y-auto mb-4">
@@ -1079,12 +1078,6 @@ new class extends Component
             <!-- Add URL Form -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-3">{{ __('Add a new external URL for this music piece. URLs must be whitelisted.') }}</flux:text>
-                <div class="mb-3">
-                    <flux:icon name="shield-check" class="h-4 w-4 text-green-500 inline" />
-                    @foreach($whitelistRules as $rule)
-                    <flux:text class="inline text-xs md:text-sm mb-2">{{ $rule->pattern }}</flux:text>
-                    @endforeach
-                </div>
 
                 <div class="space-y-3">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1100,6 +1093,20 @@ new class extends Component
                         </flux:field>
                         <flux:field required>
                             <flux:label>{{ __('URL') }}</flux:label>
+                            <flux:tooltip toggleable>
+                                <button class="inline-flex gap-1 text-xs text-green-600 dark:text-green-400 hover:underline cursor-pointer font-medium px-2 py-1 translate-y-0.5">
+                                    <flux:icon name="shield-check" class="h-4 w-4" />
+                                    {{ __('Show approved') }}
+                                </button>
+                                <x-slot name="content">
+                                    <div class="text-xs space-y-1">
+                                        <div class="font-semibold mb-2">{{ __('Whitelisted URL patterns:') }}</div>
+                                        @foreach($whitelistRules as $rule)
+                                        <div class="text-gray-200">{{ $rule->pattern }}</div>
+                                        @endforeach
+                                    </div>
+                                </x-slot>
+                            </flux:tooltip>
                             <flux:input wire:model="newUrl" :placeholder="__('https://example.com')" />
                             <flux:error name="newUrl" />
                         </flux:field>
