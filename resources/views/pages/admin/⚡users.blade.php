@@ -140,6 +140,7 @@ new class extends Component
                 <flux:table.column>{{ __('Display Name') }}</flux:table.column>
                 <flux:table.column>{{ __('Roles') }}</flux:table.column>
                 <flux:table.column>{{ __('Email Verified') }}</flux:table.column>
+                <flux:table.column>{{ __('Last Login') }}</flux:table.column>
                 <flux:table.column>{{ __('Blocked') }}</flux:table.column>
                 <flux:table.column>{{ __('Created At') }}</flux:table.column>
                 <flux:table.column>{{ __('Updated At') }}</flux:table.column>
@@ -166,6 +167,7 @@ new class extends Component
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>{{ $user->email_verified_at ? $user->email_verified_at->format('Y-m-d H:i') : __('Not verified') }}</flux:table.cell>
+                        <flux:table.cell>{{ $user->last_login_at ? $user->last_login_at->format('Y-m-d H:i') : '-' }}</flux:table.cell>
                         <flux:table.cell>
                             @if($user->blocked)
                                 <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
@@ -222,7 +224,7 @@ new class extends Component
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="10" class="text-center">{{ __('No users found.') }}</flux:table.cell>
+                        <flux:table.cell colspan="11" class="text-center">{{ __('No users found.') }}</flux:table.cell>
                     </flux:table.row>
                 @endforelse
             </flux:table.rows>

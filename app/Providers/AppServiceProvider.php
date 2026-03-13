@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Listeners\UpdateLastLoginAt;
 use App\Models\Author;
 use App\Models\City;
 use App\Models\Collection;
@@ -17,8 +18,10 @@ use App\Observers\GenreObserver;
 use App\Observers\MusicObserver;
 use App\Observers\UserObserver;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -49,6 +52,8 @@ class AppServiceProvider extends ServiceProvider
         Music::observe(MusicObserver::class);
         Author::observe(AuthorObserver::class);
         User::observe(UserObserver::class);
+
+        Event::listen(Login::class, UpdateLastLoginAt::class);
     }
 
     /**

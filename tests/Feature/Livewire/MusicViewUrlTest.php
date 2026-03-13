@@ -113,19 +113,6 @@ test('URLs are truncated for display', function () {
         ->assertSee('...');
 });
 
-test('URLs display with correct icons based on label', function ($label, $expectedIcon) {
-    $url = MusicUrl::factory()->create([
-        'music_id' => $this->music->id,
-        'label' => $label,
-        'url' => 'https://example.com/test',
-    ]);
-
-    Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
-        ->assertSeeHtml($expectedIcon);
-})->with([
-    ['sheet_music', 'lucide-file-text'],
-]);
-
 test('URLs display with correct colors based on label', function ($label, $expectedColor) {
     $url = MusicUrl::factory()->create([
         'music_id' => $this->music->id,

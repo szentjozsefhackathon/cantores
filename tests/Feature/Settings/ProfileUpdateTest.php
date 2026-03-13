@@ -57,7 +57,11 @@ test('user can delete their account', function () {
         ->assertHasNoErrors()
         ->assertRedirect('/');
 
-    expect($user->fresh())->toBeNull();
+    $user->refresh();
+    expect($user)->not->toBeNull();
+    expect($user->name)->toEqual('Deleted User');
+    expect($user->email)->toEqual('deleted-'.$user->id.'@example.com');
+    expect($user->blocked)->toBeTrue();
     expect(auth()->check())->toBeFalse();
 });
 

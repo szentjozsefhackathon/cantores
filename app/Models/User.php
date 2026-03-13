@@ -47,6 +47,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spatie\Permission\Models\Role> $roles
  * @property-read int|null $roles_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Notification> $unreadNotifications
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User blocked()
  * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newModelQuery()
@@ -73,6 +74,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutPermission($permissions)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutRole($roles, ?string $guard = null)
+ *
  * @mixin \Eloquent
  */
 class User extends Authenticatable implements MustVerifyEmail
@@ -94,6 +96,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'current_genre_id',
         'blocked',
         'blocked_at',
+        'last_login_at',
     ];
 
     /**
@@ -120,6 +123,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'blocked' => 'boolean',
             'blocked_at' => 'datetime',
+            'last_login_at' => 'datetime',
         ];
     }
 
