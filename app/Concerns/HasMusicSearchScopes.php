@@ -108,6 +108,7 @@ trait HasMusicSearchScopes
 
         $query = $query
             ->forCurrentGenre()
+            ->select(['id', 'title', 'subtitle', 'custom_id', 'user_id', 'is_private'])
             ->with(['genres', 'collections', 'authors', 'tags', 'urls'])
             ->withCount('collections')
             ->withCount(['verifications as verified_verifications_count' => function ($q) {
@@ -145,5 +146,21 @@ trait HasMusicSearchScopes
         return Author::visibleTo(Auth::user())
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * Authors keyed by ID for efficient lookups in templates.
+     */
+    public function getAuthorsByIdProperty()
+    {
+        return $this->authors->keyBy('id');
+    }
+
+    /**
+     * Collections keyed by ID for efficient lookups in templates.
+     */
+    public function getCollectionsByIdProperty()
+    {
+        return $this->collections->keyBy('id');
     }
 }

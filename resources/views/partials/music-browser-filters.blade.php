@@ -52,11 +52,7 @@
                 <x-mary-choices
                     placeholder="{{ __('Tags (all selected required)') }}"
                     wire:model.live="tagFilters"
-                    :options="$this->tags->map(fn ($tag) => [
-                        'id' => $tag->id,
-                        'name' => $tag->name . ($tag->type ? ' (' . $tag->type->label() . ')' : ''),
-                        'icon' => $tag->icon(),
-                    ])->toArray()">
+                    :options="$this->tagOptions">
                     @scope('item', $option)
                         <x-mary-list-item :item="$option">
                             <x-slot:avatar>
@@ -66,7 +62,7 @@
                     @endscope
                     @scope('selection', $selectedTags)
                         @foreach ($selectedTags as $tagId)
-                            @php $tag = $this->tags->firstWhere('id', $tagId); @endphp
+                            @php $tag = $this->tagsById->get($tagId); @endphp
                             @if ($tag)
                                 <div class="inline">
                                     <flux:icon :name="$tag->icon()" class="h-4 w-4 inline" />

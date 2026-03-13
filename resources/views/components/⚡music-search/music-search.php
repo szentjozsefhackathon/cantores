@@ -137,6 +137,27 @@ return new class extends Component
     }
 
     /**
+     * Pre-computed tag options for the mary-choices component.
+     * Avoids calling icon() and label() methods during template rendering.
+     */
+    public function getTagOptionsProperty()
+    {
+        return $this->tags->map(fn ($tag) => [
+            'id' => $tag->id,
+            'name' => $tag->name . ($tag->type ? ' (' . $tag->type->label() . ')' : ''),
+            'icon' => $tag->icon(),
+        ])->toArray();
+    }
+
+    /**
+     * Tag lookup by ID to avoid firstWhere() in loops.
+     */
+    public function getTagsByIdProperty()
+    {
+        return $this->tags->keyBy('id');
+    }
+
+    /**
      * Render the component.
      */
     public function render(): View
