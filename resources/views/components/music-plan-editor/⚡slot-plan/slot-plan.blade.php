@@ -229,15 +229,14 @@
                 variant="outline"
                 size="xs" />
             <div class="border-b border-neutral-300 dark:border-neutral-700 w-6"></div>
-            <flux:modal.trigger name="music-search-{{ $slotPlan->id }}">
-                <flux:button
-                    wire:loading.attr="disabled"
-                    wire:loading.class="opacity-50 cursor-not-allowed"
-                    icon="plus"
-                    variant="outline"
-                    size="xs"
-                    title="Zene hozzáadása" />
-            </flux:modal.trigger>
+            <flux:button
+                wire:click="openMusicSearchModal"
+                wire:loading.attr="disabled"
+                wire:loading.class="opacity-50 cursor-not-allowed"
+                icon="plus"
+                variant="outline"
+                size="xs"
+                title="Zene hozzáadása" />
             @if($slotPlan->musicPlanSlot->is_custom)
             <flux:button
                 wire:click="startEditingSlot"
@@ -262,11 +261,11 @@
     </div>
 </flux:card>
 
-<flux:modal name="music-search-{{ $slotPlan->id }}" class="max-w-4xl">
+<flux:modal wire:model="showMusicSearchModal" class="max-w-4xl">
     <livewire:music-search lazy selectable="true" wire:key="music-search-{{ $slotPlan->id }}" />
     <div class="mt-6 flex justify-end">
         <flux:button
-            x-on:click="$flux.modal('music-search-{{ $slotPlan->id }}').close()"
+            wire:click="closeMusicSearchModal"
             variant="outline">
             Bezárás
         </flux:button>
