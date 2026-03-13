@@ -8,11 +8,13 @@ new class extends Component
 {
     public Music $music;
     public ?int $score = null;
+    public ?string $scope_label = null;
 
-    public function mount(Music $music, ?int $score = null): void
+    public function mount(Music $music, ?int $score = null, ?string $scope_label = null): void
     {
         $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music']);
         $this->score = $score;
+        $this->scope_label = $scope_label;
     }
 
     #[On('music-updated')]
@@ -76,6 +78,9 @@ new class extends Component
                 @endif
 
                     <div class="mt-1 flex flex-wrap gap-1">
+                        @if(!empty($scope_label))
+                        <flux:badge color="amber" size="sm">{{ $scope_label }}</flux:badge>
+                        @endif
                         @if($music->custom_id)
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             {{ $music->custom_id }}

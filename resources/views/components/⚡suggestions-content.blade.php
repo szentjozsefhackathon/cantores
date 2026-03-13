@@ -91,6 +91,7 @@ new class extends Component
                 'musicAssignments.music' => fn($q) => $q->visibleTo($user),
                 'musicAssignments.music.collections' => fn($q) => $q->visibleTo($user),
                 'musicAssignments.musicPlanSlotPlan.musicPlanSlot' => fn($q) => $q->visibleToUser($user),
+                'musicAssignments.scopes',
             ]);
 
         // Filter by genre: include plans that belong to the current genre OR have no genre
@@ -193,6 +194,7 @@ new class extends Component
                             'music_sequence' => $assignment->music_sequence ?? 0,
                             'collection_info' => $collectionInfo,
                             'celebration' => $relatedCelebration,
+                            'scope_label' => $assignment->scope_label,
                         ];
                     }
                     // else keep existing
@@ -205,6 +207,7 @@ new class extends Component
                         'music_sequence' => $assignment->music_sequence ?? 0,
                         'collection_info' => $collectionInfo,
                         'celebration' => $relatedCelebration,
+                        'scope_label' => $assignment->scope_label,
                     ];
                 }
             }
@@ -378,7 +381,7 @@ new class extends Component
                             $celebration = $musicItem['celebration'];
                             @endphp
                             <div class="relative" wire:key="slotMusicMap-{{ $slotName }}-{{ $music->id }}">
-                                <livewire:music-card :music="$music" :score="$score" />
+                                <livewire:music-card :music="$music" :score="$score" :scope_label="$musicItem['scope_label']" />
                                 @if($musicPlanId)
                                 <div class="absolute top-2 right-2">
                                     <flux:button
