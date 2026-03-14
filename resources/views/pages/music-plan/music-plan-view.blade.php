@@ -6,10 +6,10 @@ use App\Models\MusicPlan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
-use Livewire\Attributes\Layout;
+use Illuminate\View\View;
 use Livewire\Component;
 
-new #[Layout('layouts::app.main')] class extends Component
+new class extends Component
 {
     public MusicPlan $musicPlan;
     public array $planSlots = [];
@@ -38,6 +38,32 @@ new #[Layout('layouts::app.main')] class extends Component
 
         // Load plan slots
         $this->loadPlanSlots();
+    }
+
+    public function rendering(View $view): void
+    {
+        $celebration = $this->musicPlan->celebration_name;
+        $date = $this->musicPlan->actual_date?->translatedFormat('Y. F j.');
+
+        $title = $celebration ?? 'Énekrend';
+        if ($date) {
+            $title .= ' – ' . $date;
+        }
+
+        $description = 'Liturgikus énekrend';
+        if ($celebration) {
+            $description .= ': ' . $celebration;
+        }
+        if ($date) {
+            $description .= ' (' . $date . ')';
+        }
+        $description .= '. Javasolt énekek és énekrendek a Cantores.hu-n.';
+
+        $view->layout('layouts::app.main', [
+            'title'       => $title,
+            'description' => $description,
+            'noindex'     => $this->musicPlan->is_private,
+        ]);
     }
 
     private function loadPlanSlots(): void

@@ -1,4 +1,7 @@
-<x-layouts::app.main>
+<x-layouts::app.main
+    title="Liturgikus énekrendek és énekek egységes adatbázisa | Cantores.hu"
+    description="Kereshető liturgikus énektár automatikus énekajánló motorral. A rendszer a naptári naphoz illő énekeket javasol – keress énekeket az egységes adatbázisban, és állítsd össze saját énekrendedet."
+>
 
     <div class="flex items-center justify-center w-full transition-opacity opacity-100 duration-750 lg:grow starting:opacity-0">
             <main class="flex w-full flex-col-reverse lg:max-w-4xl lg:flex-row">

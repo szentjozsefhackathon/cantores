@@ -15,7 +15,10 @@ new class extends Component
     public function rendering(View $view): void
     {
         $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-        $view->layout($layout);
+        $view->layout($layout, [
+            'title'       => 'Énektár',
+            'description' => 'Kereshető adatbázis liturgikus énekekkel, gyűjteményekkel és szerzőkkel. Találd meg a liturgiába illő éneket cím, szerző vagy liturgikus jellemzők alapján.',
+        ]);
     }
 
     #[Computed]
@@ -257,7 +260,7 @@ new class extends Component
                     </div>
                     <flux:heading size="lg" class="mt-4 text-white!">Keresés az adatbázisban</flux:heading>
                     <p class="mt-1 text-sm text-indigo-200">
-                        Cím, szöveg, gyűjtemény vagy szerző alapján keresd meg a liturgiába illő éneket.
+                        Cím, gyűjtemény, szerző vagy liturgikus jellemzők alapján keresd meg a liturgiába illő éneket.
                     </p>
                     <div class="mt-4">
                         <a href="{{ route('musics') }}" wire:navigate>

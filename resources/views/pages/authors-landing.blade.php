@@ -28,7 +28,10 @@ new class extends Component
     public function rendering(View $view): void
     {
         $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-        $view->layout($layout);
+        $view->layout($layout, [
+            'title'       => 'Szerzők',
+            'description' => 'Fedezd fel a liturgikus énekek szerzőit: zeneszerzők, szövegírók és gyűjtemény-szerkesztők adatai a Cantores.hu Énektárában.',
+        ]);
     }
 
     public function updatingSearch(): void

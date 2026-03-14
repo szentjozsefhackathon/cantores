@@ -6,11 +6,9 @@ use App\Models\Music;
 use App\Models\MusicPlan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('layouts::app.main')]
 class MusicView extends Component
 {
     use WithPagination;
@@ -40,8 +38,16 @@ class MusicView extends Component
             ->with(['celebration', 'user'])
             ->paginate(12);
 
+        $authors = $this->music->authors->pluck('name')->join(', ');
+        $description = $authors
+            ? "Liturgikus zenemű: {$this->music->title} – {$authors}. Részletek, gyűjtemények és kapcsolódó énekek a Cantores.hu Énektárában."
+            : "Liturgikus zenemű: {$this->music->title}. Részletek, gyűjtemények és kapcsolódó énekek a Cantores.hu Énektárában.";
+
         return view('pages.music-view', [
             'musicPlans' => $musicPlans,
+        ])->layout('layouts::app.main', [
+            'title'       => $this->music->title,
+            'description' => $description,
         ]);
     }
 }

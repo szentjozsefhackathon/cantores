@@ -6,12 +6,10 @@ use App\Models\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('layouts::app.main')]
 class CollectionView extends Component
 {
     use AuthorizesRequests, WithPagination;
@@ -65,8 +63,15 @@ class CollectionView extends Component
     {
         $musics = $this->getMusicsQuery()->paginate(12);
 
+        $musicCount = $this->collection->music()->count();
+        $abbr = $this->collection->abbreviation ? " ({$this->collection->abbreviation})" : '';
+        $description = "Gyűjtemény: {$this->collection->title}{$abbr}. {$musicCount} zenemű érhető el ebből a liturgikus gyűjteményből a Cantores.hu Énektárában.";
+
         return view('pages.collection-view', [
             'musics' => $musics,
+        ])->layout('layouts::app.main', [
+            'title'       => $this->collection->title,
+            'description' => $description,
         ]);
     }
 

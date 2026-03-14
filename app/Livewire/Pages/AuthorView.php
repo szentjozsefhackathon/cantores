@@ -6,12 +6,10 @@ use App\Models\Author;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('layouts::app.main')]
 class AuthorView extends Component
 {
     use AuthorizesRequests, WithPagination;
@@ -68,8 +66,14 @@ class AuthorView extends Component
     {
         $musics = $this->getMusicsQuery()->paginate(12);
 
+        $musicCount = $this->author->music()->count();
+        $description = "Szerző: {$this->author->name}. {$musicCount} zenemű érhető el tőle a Cantores.hu liturgikus Énektárában.";
+
         return view('pages.author-view', [
             'musics' => $musics,
+        ])->layout('layouts::app.main', [
+            'title'       => $this->author->name,
+            'description' => $description,
         ]);
     }
 

@@ -34,7 +34,10 @@ new class extends Component
     public function rendering(View $view): void
     {
         $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-        $view->layout($layout);
+        $view->layout($layout, [
+            'title'       => 'Gyűjtemények',
+            'description' => 'Böngéssz liturgikus énekeskönyvek, kottagyűjtemények és dallamtárak között. Fedezd fel a gyűjteményeket az Énektárban.',
+        ]);
     }
 
     public function updatingSearch(): void
