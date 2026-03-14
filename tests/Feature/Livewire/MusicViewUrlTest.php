@@ -3,6 +3,7 @@
 use App\Models\Music;
 use App\Models\MusicUrl;
 use App\Models\User;
+use App\MusicUrlLabel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
@@ -113,21 +114,16 @@ test('URLs are truncated for display', function () {
         ->assertSee('...');
 });
 
-test('URLs display with correct colors based on label', function ($label, $expectedColor) {
+test('URLs display with correct colors based on label', function (MusicUrlLabel $label) {
     $url = MusicUrl::factory()->create([
         'music_id' => $this->music->id,
-        'label' => $label,
+        'label' => $label->value,
         'url' => 'https://example.com/test',
     ]);
 
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
-        ->assertSeeHtml('text-'.$expectedColor.'-500');
-})->with([
-    ['audio', 'green'],
-    ['video', 'purple'],
-    ['text', 'amber'],
-    ['information', 'zinc'],
-]);
+        ->assertSeeHtml($label->color());
+})->with(MusicUrlLabel::cases());
 
 test('multiple URLs are displayed in grid layout', function () {
     MusicUrl::factory()->count(5)->create(['music_id' => $this->music->id]);

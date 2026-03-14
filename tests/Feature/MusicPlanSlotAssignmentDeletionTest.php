@@ -239,14 +239,14 @@ test('scope fields can be set and retrieved', function () {
     // Add a scope
     $assignment->scopes()->create([
         'scope_number' => 2,
-        'scope_type' => MusicScopeType::VERSE,
+        'scope_type' => MusicScopeType::STANZA,
     ]);
 
     $freshAssignment = MusicPlanSlotAssignment::with('scopes')->find($assignment->id);
     expect($freshAssignment->scopes)->toHaveCount(1);
     expect($freshAssignment->scopes->first()->scope_number)->toBe(2);
-    expect($freshAssignment->scopes->first()->scope_type)->toBe(MusicScopeType::VERSE);
-    expect($freshAssignment->scope_label)->toBe(__('Verse').' 2');
+    expect($freshAssignment->scopes->first()->scope_type)->toBe(MusicScopeType::STANZA);
+    expect($freshAssignment->scope_label)->toBe(__('Stanza').' 2');
 
     // Test multiple scopes
     $assignment->scopes()->create([
@@ -255,7 +255,7 @@ test('scope fields can be set and retrieved', function () {
     ]);
     $freshAssignment->refresh();
     expect($freshAssignment->scopes)->toHaveCount(2);
-    expect($freshAssignment->scope_label)->toBe(__('Verse').' 2, '.__('Movement').' 3');
+    expect($freshAssignment->scope_label)->toBe(__('Stanza').' 2, '.__('Movement').' 3');
 
     // Test nullable scope (no scopes)
     $assignment2 = MusicPlanSlotAssignment::create([

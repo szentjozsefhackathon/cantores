@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
             port: port,
 
             watch: {
-                ignored: ['**/storage/framework/views/**', '**/vendor/**']
+                ignored: ['**/storage/**', '**/vendor/**']
             },
         },
     };
