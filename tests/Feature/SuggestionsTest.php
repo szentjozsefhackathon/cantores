@@ -38,10 +38,8 @@ test('suggestions page loads with criteria', function () {
         ->where('music_plan_slot_id', $slot->id)
         ->first();
 
-    $assignment = MusicPlanSlotAssignment::factory()->create([
+    MusicPlanSlotAssignment::factory()->create([
         'music_plan_slot_plan_id' => $pivot->id,
-        'music_plan_id' => $musicPlan->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
@@ -57,7 +55,7 @@ test('suggestions page loads with criteria', function () {
         'year_parity' => 'I',
     ]));
 
-    $response->assertOk();
+    $response->assertSuccessful();
     $response->assertSee('Énekrend javaslatok');
     $response->assertSee('Test Celebration');
 });
@@ -70,8 +68,8 @@ test('suggestions page shows no results when no matches', function () {
         'name' => 'Non-existent',
     ]));
 
-    $response->assertOk();
-    $response->assertSee('Nincs találat');
+    $response->assertSuccessful();
+    $response->assertSee('Még nincs elég sok énekrend az adatbázisunkban');
 });
 
 test('suggestions button appears when related celebrations exist', function () {
@@ -107,10 +105,8 @@ test('same music appears only once per slot in suggestions', function () {
         ->where('music_plan_slot_id', $slot->id)
         ->first();
 
-    $assignment1 = MusicPlanSlotAssignment::factory()->create([
+    MusicPlanSlotAssignment::factory()->create([
         'music_plan_slot_plan_id' => $pivotModel1->id,
-        'music_plan_id' => $musicPlan1->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
@@ -123,10 +119,8 @@ test('same music appears only once per slot in suggestions', function () {
         ->where('music_plan_slot_id', $slot->id)
         ->first();
 
-    $assignment2 = MusicPlanSlotAssignment::factory()->create([
+    MusicPlanSlotAssignment::factory()->create([
         'music_plan_slot_plan_id' => $pivotModel2->id,
-        'music_plan_id' => $musicPlan2->id,
-        'music_plan_slot_id' => $slot->id,
         'music_id' => $music->id,
         'music_sequence' => 2,
     ]);
@@ -142,7 +136,7 @@ test('same music appears only once per slot in suggestions', function () {
         'year_parity' => 'I',
     ]));
 
-    $response->assertOk();
+    $response->assertSuccessful();
     // The music should appear only once in the slot
     // We can't easily assert the count from the rendered HTML, but we can test the underlying logic
     // by checking that the slotMusicMap contains only one entry for that slot.

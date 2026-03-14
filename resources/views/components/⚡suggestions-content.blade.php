@@ -296,8 +296,6 @@ new class extends Component
         // Create the assignment
         \App\Models\MusicPlanSlotAssignment::create([
             'music_plan_slot_plan_id' => $slotPlanId,
-            'music_plan_id' => $musicPlan->id,
-            'music_plan_slot_id' => $slot->id,
             'music_id' => $musicId,
             'music_sequence' => $musicSequence,
         ]);
