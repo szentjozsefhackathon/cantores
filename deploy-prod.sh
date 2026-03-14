@@ -162,7 +162,7 @@ fi
 # 6. Copy import directory contents to server
 echo "6. Syncing import directory to server..."
 $SSH_CMD "$SSH_TARGET" "mkdir -p $DEPLOY_REMOTE_PATH/import"
-$SCP_CMD -r "import/." "$SSH_TARGET:$DEPLOY_REMOTE_PATH/import/"
+$SCP_CMD -r import/* "$SSH_TARGET:$DEPLOY_REMOTE_PATH/import/"
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to sync import directory!"
