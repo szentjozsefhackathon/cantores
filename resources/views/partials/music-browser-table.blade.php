@@ -40,16 +40,21 @@
                 <flux:table.cell>
                     <div>
                         <div class="font-medium max-w-80 text-wrap">
-                            @if ($music->is_verified)
-                                @svg('heroicon-s-check', 'inline h-5 w-5 text-green-500')
-                            @endif
                             @can('view', $music)
                                 <a href="{{ route('music-view', $music) }}" class="inline-flex items-center gap-0.5 hover:underline group">
                                     {{ $music->title }}
+                                    @if ($music->is_verified)
+                                        @svg('heroicon-s-check', 'inline h-2.5 w-2.5 text-green-500 shrink-0')
+                                    @endif
                                     @svg('heroicon-s-chevron-right', 'h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity')
                                 </a>
                             @else
-                                {{ $music->title }}
+                                <span class="inline-flex items-center gap-0.5">
+                                    {{ $music->title }}
+                                    @if ($music->is_verified)
+                                        @svg('heroicon-s-check', 'inline h-2.5 w-2.5 text-green-500 shrink-0')
+                                    @endif
+                                </span>
                             @endcan
                         </div>
                         @if ($music->subtitle)

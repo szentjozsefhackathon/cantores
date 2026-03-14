@@ -4,7 +4,7 @@
             <!-- Header -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div class="flex items-center gap-4">
-                    <flux:icon name="musical-note" class="h-10 w-10 text-blue-600 dark:text-blue-400" variant="outline" />
+                    <flux:icon name="list-music" class="h-10 w-10 text-blue-600 dark:text-blue-400" variant="outline" />
                     <div>
                         <flux:heading size="xl">Énekrendjeim</flux:heading>
                         <flux:text class="text-neutral-600 dark:text-neutral-400">
