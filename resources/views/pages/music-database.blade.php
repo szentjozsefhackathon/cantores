@@ -61,38 +61,30 @@ new class extends Component
 <div>
     {{-- Hero Section --}}
     <div class="relative overflow-hidden bg-linear-to-br from-blue-600 via-indigo-700 to-purple-800 dark:from-blue-900 dark:via-indigo-900 dark:to-purple-950">
-        <div class="absolute inset-0 opacity-10 pointer-events-none">
-            <div class="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white blur-3xl"></div>
-            <div class="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-white blur-3xl"></div>
-        </div>
-        <div class="relative mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-            <div class="text-center">
-                <div class="mb-4 flex justify-center">
-                    <div class="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm text-white backdrop-blur-sm">
-                        <flux:icon name="list-music" variant="mini" class="h-4 w-4" />
-                        Cantores.hu
+        <div class="relative mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
+                        <flux:icon name="list-music" class="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white sm:text-2xl">Liturgikus énekek adatbázisa</h1>
+                        <p class="text-sm text-blue-200">Kereshető adatbázis liturgikus énekekkel, gyűjteményekkel és szerzőkkel</p>
                     </div>
                 </div>
-                <h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                    Liturgikus énekek és<br class="hidden sm:block" />
-                    zeneművek adatbázisa
-                </h1>
-                <p class="mx-auto mt-6 max-w-2xl text-lg text-blue-100 dark:text-blue-200">
-                    Kereshető, közösség által gondozott adatbázis liturgikus énekekkel, gyűjteményekkel és szerzőkkel.
-                </p>
-                <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 shrink-0">
                     <a href="{{ route('musics') }}" wire:navigate>
-                        <flux:button variant="primary" icon="music" class="bg-white! text-indigo-700! hover:bg-blue-50! font-semibold shadow-lg">
-                            Zeneművek böngészése
+                        <flux:button size="sm" variant="ghost" icon="music" class="border-white/30! text-white! hover:bg-white/10!">
+                            Zeneművek
                         </flux:button>
                     </a>
                     <a href="{{ route('collections') }}" wire:navigate>
-                        <flux:button variant="ghost" icon="folder" class="border-white/30! text-white! hover:bg-white/10!">
+                        <flux:button size="sm" variant="ghost" icon="folder" class="border-white/30! text-white! hover:bg-white/10!">
                             Gyűjtemények
                         </flux:button>
                     </a>
                     <a href="{{ route('authors') }}" wire:navigate>
-                        <flux:button variant="ghost" icon="users" class="border-white/30! text-white! hover:bg-white/10!">
+                        <flux:button size="sm" variant="ghost" icon="users" class="border-white/30! text-white! hover:bg-white/10!">
                             Szerzők
                         </flux:button>
                     </a>
