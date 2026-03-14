@@ -62,7 +62,7 @@ services:
     volumes:
       - storage:/var/www/html/storage
       - cache:/var/www/html/bootstrap/cache
-      - ./import:/var/www/html/import:ro
+      - ./import:/var/www/html/import
     depends_on:
       database:
         condition: service_healthy

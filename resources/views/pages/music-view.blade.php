@@ -173,35 +173,15 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             @foreach($music->urls as $url)
                                 @php
-                                    $labelColors = [
-                                        'sheet_music' => 'blue',
-                                        'audio' => 'green',
-                                        'video' => 'purple',
-                                        'text' => 'amber',
-                                        'information' => 'zinc',
-                                    ];
-                                    $labelIcons = [
-                                        'sheet_music' => 'file-text',
-                                        'audio' => 'music',
-                                        'video' => 'video-camera',
-                                        'text' => 'book-open',
-                                        'information' => 'information-circle',
-                                    ];
-                                    $labelTranslations = [
-                                        'sheet_music' => __('Sheet Music'),
-                                        'audio' => __('Audio'),
-                                        'video' => __('Video'),
-                                        'text' => __('Text'),
-                                        'information' => __('Information'),
-                                    ];
-                                    $color = $labelColors[$url->label] ?? 'zinc';
-                                    $icon = $labelIcons[$url->label] ?? 'external-link';
-                                    $labelText = $labelTranslations[$url->label] ?? ucfirst(str_replace('_', ' ', $url->label));
+                                    $urlLabel = \App\MusicUrlLabel::tryFrom($url->label);
+                                    $color = $urlLabel?->color() ?? 'text-gray-500';
+                                    $icon = $urlLabel?->icon() ?? 'link';
+                                    $labelText = $urlLabel?->label() ?? ucfirst(str_replace('_', ' ', $url->label ?? ''));
                                 @endphp
                                 <a href="{{ $url->url }}" target="_blank" rel="noopener noreferrer" class="block">
                                     <flux:card class="p-4 hover:shadow-md transition-shadow" variant="outline">
                                         <div class="flex items-start gap-3">
-                                            <flux:icon :name="$icon" class="h-5 w-5 text-{{ $color }}-500 shrink-0 mt-0.5" />
+                                            <flux:icon :name="$icon" class="h-5 w-5 {{ $color }} shrink-0 mt-0.5" />
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex items-center gap-2">
                                                     <flux:text class="font-medium text-sm truncate">{{ $labelText }}</flux:text>
