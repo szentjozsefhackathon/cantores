@@ -170,6 +170,23 @@
                 </div>
                 @endif
 
+                <!-- Music Plans -->
+                @if($musicPlans->isNotEmpty())
+                <div>
+                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Music Plans') }}</flux:heading>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                        @foreach($musicPlans as $plan)
+                            <livewire:music-plan-card :musicPlan="$plan" :key="$plan->id" readonly="true" />
+                        @endforeach
+                    </div>
+                    @if($musicPlans->hasPages())
+                    <div class="mt-4">
+                        {{ $musicPlans->links() }}
+                    </div>
+                    @endif
+                </div>
+                @endif
+
                 <!-- URLs -->
                 <div>
                     <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('External Links') }}</flux:heading>
