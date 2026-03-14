@@ -69,6 +69,24 @@ new class extends Component
         $this->fetchLiturgicalInfo();
     }
 
+    public function importantLinks(): array
+    {
+        return [
+            [
+                'key' => 'igenaptar',
+                'label' => 'Igenaptár',
+                'href' => sprintf('https://igenaptar.katolikus.hu/nap/index.php?holnap=%s', $this->date),
+                'icon' => 'calendar-days',
+            ],
+            [
+                'key' => 'direktorium',
+                'label' => 'Direktórium',
+                'href' => 'https://www.liturgia.hu/direktorium/',
+                'icon' => 'book-open-text',
+            ],
+        ];
+    }
+
     public function nextDay(): void
     {
         $this->date = Carbon::parse($this->date)->addDay()->format('Y-m-d');
@@ -457,12 +475,20 @@ new class extends Component
                 <flux:text size="lg">
                     {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('Y. F j., l') }}
                 </flux:text>
-                <div class="flex items-center">
-                    <flux:icon name="external-link" class="h-3 w-3 mr-1" variant="mini" />
-                    <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $date }}" target="_blank" class="text-xs">
-                        Igenaptár
-                    </flux:link>
-                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                @foreach ($this->importantLinks() as $link)
+                <flux:link
+                    wire:key="important-link-{{ $link['key'] }}"
+                    href="{{ $link['href'] }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-blue-500 dark:hover:text-blue-300">
+                    <flux:icon name="{{ $link['icon'] }}" class="h-3.5 w-3.5" variant="mini" />
+                    {{ $link['label'] }}
+                </flux:link>
+                @endforeach
             </div>
         </div>
 
