@@ -75,6 +75,21 @@ new class extends Component
         $this->fetchLiturgicalInfo();
     }
 
+    public function previousDay(): void
+    {
+        $this->date = Carbon::parse($this->date)->subDay()->format('Y-m-d');
+        $this->fetchLiturgicalInfo();
+    }
+
+    public function previousSunday(): void
+    {
+        $current = Carbon::parse($this->date);
+        $daysSinceSunday = $current->dayOfWeek === Carbon::SUNDAY ? 7 : $current->dayOfWeek;
+
+        $this->date = $current->subDays($daysSinceSunday)->format('Y-m-d');
+        $this->fetchLiturgicalInfo();
+    }
+
     public function nextSunday(): void
     {
         $current = Carbon::parse($this->date);
@@ -367,6 +382,13 @@ new class extends Component
 
             <div class="flex flex-col gap-2">
                 <div class="flex items-end gap-2">
+                    <flux:button
+                        wire:click="today"
+                        variant="outline"
+                        icon="calendar"
+                        icon:variant="mini">
+                        Ma
+                    </flux:button>
                     <flux:field class="mb-0">
                         <flux:input
                             type="date"
@@ -376,31 +398,52 @@ new class extends Component
                             max="{{ Carbon::now()->addYears(1)->format('Y-m-d') }}"
                             min="{{ Carbon::now()->subYears(10)->format('Y-m-d') }}" />
                     </flux:field>
-                    <flux:button
-                        wire:click="today"
-                        variant="outline"
-                        icon="calendar"
-                        icon:variant="mini">
-                        Ma
-                    </flux:button>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <flux:button
-                        wire:click="nextDay"
-                        variant="outline"
-                        size="sm"
-                        icon="arrow-right"
-                        icon:variant="mini">
-                        Következő nap
-                    </flux:button>
-                    <flux:button
-                        wire:click="nextSunday"
-                        variant="outline"
-                        size="sm"
-                        icon="forward"
-                        icon:variant="mini">
-                        Következő vasárnap
-                    </flux:button>
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center gap-2">
+                        <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70">Előző/következő nap</flux:text>
+                        <div class="flex flex-wrap gap-2">
+                            <flux:button
+                                square
+                                wire:click="previousDay"
+                                variant="outline"
+                                size="sm"
+                                icon="arrow-left"
+                                icon:variant="mini"
+                                title="Előző nap"
+                                aria-label="Előző nap" />
+                            <flux:button
+                                square
+                                wire:click="nextDay"
+                                variant="outline"
+                                size="sm"
+                                icon="arrow-right"
+                                icon:variant="mini"
+                                title="Következő nap"
+                                aria-label="Következő nap" />
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70">Előző/következő vasárnap</flux:text>
+                        <flux:button
+                            square
+                            wire:click="previousSunday"
+                            variant="outline"
+                            size="sm"
+                            icon="backward"
+                            icon:variant="mini"
+                            title="Előző vasárnap"
+                            aria-label="Előző vasárnap" />
+                        <flux:button
+                            square
+                            wire:click="nextSunday"
+                            variant="outline"
+                            size="sm"
+                            icon="forward"
+                            icon:variant="mini"
+                            title="Következő vasárnap"
+                            aria-label="Következő vasárnap" />
+                    </div>
                 </div>
             </div>
         </div>
