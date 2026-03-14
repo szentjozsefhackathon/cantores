@@ -17,6 +17,12 @@ class Musics extends Component
 
     public bool $showCreateModal = false;
 
+    public bool $showAuditModal = false;
+
+    public ?Music $auditingMusic = null;
+
+    public $audits = [];
+
     // Form fields for create modal
     public string $title = '';
 
@@ -77,6 +83,36 @@ class Musics extends Component
         $this->showCreateModal = false;
         $this->resetForm();
         $this->redirectRoute('music-editor', ['music' => $music->id]);
+    }
+
+    public function edit(Music $music): void
+    {
+        $this->authorize('update', $music);
+
+        $this->redirectRoute('music-editor', ['music' => $music->id]);
+    }
+
+    public function delete(Music $music): void
+    {
+        $this->authorize('delete', $music);
+
+        $music->delete();
+
+        $this->dispatch('music-deleted');
+    }
+
+    public function showAuditLog(Music $music): void
+    {
+        $this->authorize('view', $music);
+
+        $this->auditingMusic = $music;
+        $this->audits = $music->audits()
+            ->with(['user.city', 'user.firstName'])
+            ->latest()
+            ->get();
+        $this->showAuditModal = true;
+
+        $this->dispatch('show-music-audit-log', musicId: $music->id);
     }
 
     private function resetForm(): void

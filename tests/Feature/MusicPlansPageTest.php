@@ -2,6 +2,7 @@
 
 use App\Models\Celebration;
 use App\Models\MusicPlan;
+use Livewire\Livewire;
 
 test('music-plans page loads for guests', function () {
     $response = $this->get('/music-plans');
@@ -47,11 +48,20 @@ test('music-plans page search filters by celebration name', function () {
     $plan2->celebration()->associate($celebration2);
     $plan2->save();
 
-    $response = $this->get('/music-plans?search=Easter');
+    // The search is a Livewire reactive property (wire:model.live), not a URL query param.
+    // Use Livewire::test() and set() to trigger the filter properly.
+    // The search filter is a Livewire reactive property, not a URL query param.
+    // After set(), Livewire morphs existing child components in place rather than
+    // re-rendering them, so the child card HTML isn't in the updated response.
+    // Test the filtering data directly via the component instance instead.
+    $component = Livewire::test('pages::music-plans')
+        ->set('liturgicalSearch', 'Easter');
 
-    $response->assertOk();
-    $response->assertSee('Easter Sunday');
-    $response->assertDontSee('Christmas Day');
+    $plans = $component->instance()->liturgicalPlans;
+
+    expect($plans->pluck('celebration_id')->all())->toContain($celebration1->id);
+    expect($plans->pluck('celebration_id')->all())->not->toContain($celebration2->id);
+
 });
 
 test('music-plans page paginates results', function () {

@@ -1,7 +1,7 @@
 <?php
 
 use App\Enums\MusicTagType;
-use App\Livewire\Pages\Editor\Musics;
+use App\Livewire\Pages\Editor\MusicsTable;
 use App\Models\Music;
 use App\Models\MusicTag;
 use App\Models\User;
@@ -42,7 +42,7 @@ test('tag filter with AND logic returns only music with all selected tags', func
     $musicWithTag2Only->tags()->attach($tag2);
 
     // Test: Filter by tag1 only
-    Livewire::test(Musics::class)
+    Livewire::test(MusicsTable::class)
         ->set('tagFilters', [$tag1->id])
         ->assertSee($musicWithTag1Only->title)
         ->assertSee($musicWithTag1And2->title)
@@ -50,7 +50,7 @@ test('tag filter with AND logic returns only music with all selected tags', func
         ->assertDontSee($musicWithTag2Only->title);
 
     // Test: Filter by tag1 AND tag2 (AND logic)
-    Livewire::test(Musics::class)
+    Livewire::test(MusicsTable::class)
         ->set('tagFilters', [$tag1->id, $tag2->id])
         ->assertSee($musicWithTag1And2->title)
         ->assertSee($musicWithAllTags->title)
@@ -58,7 +58,7 @@ test('tag filter with AND logic returns only music with all selected tags', func
         ->assertDontSee($musicWithTag2Only->title);
 
     // Test: Filter by tag1 AND tag2 AND tag3 (AND logic)
-    Livewire::test(Musics::class)
+    Livewire::test(MusicsTable::class)
         ->set('tagFilters', [$tag1->id, $tag2->id, $tag3->id])
         ->assertSee($musicWithAllTags->title)
         ->assertDontSee($musicWithTag1Only->title)
@@ -66,7 +66,7 @@ test('tag filter with AND logic returns only music with all selected tags', func
         ->assertDontSee($musicWithTag2Only->title);
 
     // Test: Empty filter shows all
-    Livewire::test(Musics::class)
+    Livewire::test(MusicsTable::class)
         ->set('tagFilters', [])
         ->assertSee($musicWithTag1Only->title)
         ->assertSee($musicWithTag1And2->title)
@@ -80,16 +80,18 @@ test('tag filter works with other filters', function () {
         'type' => MusicTagType::PartOfMass->value,
     ]);
 
-    $publicMusic = Music::factory()->create(['user_id' => $this->user->id, 'is_private' => false]);
-    $publicMusic->tags()->attach($tag);
+    $otherUser = User::factory()->create();
 
-    $privateMusic = Music::factory()->create(['user_id' => $this->user->id, 'is_private' => true]);
-    $privateMusic->tags()->attach($tag);
+    $ownMusic = Music::factory()->create(['user_id' => $this->user->id]);
+    $ownMusic->tags()->attach($tag);
 
-    // Filter by tag and public visibility
-    Livewire::test(Musics::class)
+    $otherMusic = Music::factory()->create(['user_id' => $otherUser->id, 'is_private' => false]);
+    $otherMusic->tags()->attach($tag);
+
+    // Filter by tag and own musics — should only show current user's music
+    Livewire::test(MusicsTable::class)
         ->set('tagFilters', [$tag->id])
-        ->set('filter', 'public')
-        ->assertSee($publicMusic->title)
-        ->assertDontSee($privateMusic->title);
+        ->set('filterOwnMusics', true)
+        ->assertSee($ownMusic->title)
+        ->assertDontSee($otherMusic->title);
 });

@@ -88,7 +88,7 @@ test('suggestions show music under the new slot after it was moved', function ()
         'music_sequence' => 1,
     ]);
 
-    $response = $this->actingAs($user)->get('/suggestions?'.http_build_query([
+    $criteria = [
         'name' => 'Move Test Celebration',
         'season' => 1,
         'week' => 1,
@@ -96,10 +96,19 @@ test('suggestions show music under the new slot after it was moved', function ()
         'readings_code' => 'MOVETEST',
         'year_letter' => 'A',
         'year_parity' => 'I',
-    ]));
+    ];
 
-    $response->assertOk();
+    // Test the suggestions-content component directly, because the music tab uses
+    // @island(defer: true) which only loads its content via a subsequent wire:init
+    // request — the music titles are not present in the initial HTTP response.
+    $component = Livewire::actingAs($user)
+        ->test('suggestions-content', ['criteria' => $criteria]);
+
+    $slotMusicMap = $component->get('slotMusicMap');
+
     // The music should appear under "New Slot" (resolved via musicPlanSlotPlan), not "Old Slot"
-    $response->assertSee('New Slot');
-    $response->assertSee('Moved Song');
+    expect($slotMusicMap)->toHaveKey('New Slot');
+    expect($slotMusicMap)->not->toHaveKey('Old Slot');
+    expect($slotMusicMap['New Slot']['musics'])->toHaveCount(1);
+    expect($slotMusicMap['New Slot']['musics'][0]['music']->title)->toBe('Moved Song');
 });
