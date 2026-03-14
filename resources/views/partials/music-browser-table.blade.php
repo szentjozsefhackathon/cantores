@@ -43,7 +43,14 @@
                             @if ($music->is_verified)
                                 @svg('heroicon-s-check', 'inline h-5 w-5 text-green-500')
                             @endif
-                            {{ $music->title }}
+                            @can('view', $music)
+                                <a href="{{ route('music-view', $music) }}" class="inline-flex items-center gap-0.5 hover:underline group">
+                                    {{ $music->title }}
+                                    @svg('heroicon-s-chevron-right', 'h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity')
+                                </a>
+                            @else
+                                {{ $music->title }}
+                            @endcan
                         </div>
                         @if ($music->subtitle)
                             <div class="text-sm text-gray-600 dark:text-gray-400">{{ $music->subtitle }}</div>
