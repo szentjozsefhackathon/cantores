@@ -71,13 +71,21 @@
     @if((isset($assignment['music_authors']) && !empty($assignment['music_authors'])) || (isset($assignment['music_urls']) && !empty($assignment['music_urls'])) || (isset($assignment['music_relations']) && !empty($assignment['music_relations'])))
     <div class="px-4 py-3 space-y-2">
         @if(isset($assignment['music_authors']) && !empty($assignment['music_authors']))
-        <div class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <flux:icon name="users" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
-            <div class="flex flex-wrap gap-1">
-                @foreach($assignment['music_authors'] as $author)
-                    <span>{{ $author['name'] ?? $author }}@unless($loop->last),@endunless</span>
-                @endforeach
-            </div>
+        <div class="flex flex-wrap gap-2">
+            @foreach($assignment['music_authors'] as $author)
+                @php $authorName = $author['name'] ?? $author; $authorThumb = $author['avatar_thumb_url'] ?? null; @endphp
+                <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                    @if($authorThumb)
+                        <img src="{{ $authorThumb }}" alt="{{ $authorName }}"
+                             class="w-5 h-5 rounded object-cover shrink-0" />
+                    @else
+                        <div class="w-5 h-5 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                            <flux:icon name="user" class="w-3 h-3 text-gray-400 dark:text-gray-500" />
+                        </div>
+                    @endif
+                    <span class="text-xs font-medium">{{ $authorName }}</span>
+                </div>
+            @endforeach
         </div>
         @endif
 

@@ -223,9 +223,14 @@ new class extends Component
                         <a href="{{ route('author-view', $author) }}" wire:navigate
                            class="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800/80 dark:hover:border-indigo-600 min-h-24">
                             <div class="flex items-start gap-3 h-full">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/50">
-                                    <flux:icon name="user" class="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                                </div>
+                                    @if($author->avatarThumbUrl())
+                                    <img src="{{ $author->avatarThumbUrl() }}" alt="{{ $author->name }}"
+                                         class="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                                @else
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/50">
+                                        <flux:icon name="user" class="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                    </div>
+                                @endif
                                 <div class="min-w-0 flex-1">
                                     <div class="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 line-clamp-2">
                                         {{ $author->name }}

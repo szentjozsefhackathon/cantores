@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use OwenIt\Auditing\Contracts\Auditable;
 
@@ -65,6 +66,8 @@ class Collection extends Model implements Auditable
         'author',
         'user_id',
         'is_private',
+        'cover',
+        'photo_license',
     ];
 
     /**
@@ -77,6 +80,30 @@ class Collection extends Model implements Auditable
         return [
             'is_private' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the URL for the full-size cover image (256×256).
+     */
+    public function coverUrl(): ?string
+    {
+        if (! $this->cover) {
+            return null;
+        }
+
+        return Storage::disk('public')->url("collections/{$this->id}/cover.jpg");
+    }
+
+    /**
+     * Get the URL for the thumbnail cover image (64×64).
+     */
+    public function coverThumbUrl(): ?string
+    {
+        if (! $this->cover) {
+            return null;
+        }
+
+        return Storage::disk('public')->url("collections/{$this->id}/cover_thumb.jpg");
     }
 
     /**

@@ -68,6 +68,15 @@ class AuthorPolicy
     }
 
     /**
+     * Determine whether the user can upload/delete an avatar for the author.
+     * Requires the content.edit.verified permission (editor role) or admin.
+     */
+    public function uploadAvatar(User $user, Author $author): bool
+    {
+        return $user !== null && ($user->is_admin || $user->hasPermissionTo('content.edit.verified'));
+    }
+
+    /**
      * Determine whether the user can restore the model.
      */
     public function restore(User $user, Author $author): bool

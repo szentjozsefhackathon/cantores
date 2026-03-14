@@ -3,14 +3,18 @@
 namespace App\Livewire\Pages\Editor;
 
 use App\Models\Author;
+use App\Services\AuthorAvatarService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class AuthorEditModal extends Component
 {
     use AuthorizesRequests;
+    use WithFileUploads;
 
     public bool $show = false;
 
@@ -21,6 +25,17 @@ class AuthorEditModal extends Component
     public bool $isPrivate = false;
 
     public bool $canChangePrivacy = false;
+
+    public bool $canUploadAvatar = false;
+
+    public ?string $currentAvatarUrl = null;
+
+    public string $photoLicense = '';
+
+    #[Validate(['nullable', 'image', 'max:2048', 'mimes:jpg,jpeg,png,gif,webp'])]
+    public $photo = null;
+
+    public string $cropAlign = 'top';
 
     /**
      * Open the modal for the given author.
@@ -35,6 +50,11 @@ class AuthorEditModal extends Component
         $this->name = $author->name;
         $this->isPrivate = $author->is_private;
         $this->canChangePrivacy = Gate::check('changePrivacy', $author);
+        $this->canUploadAvatar = Gate::check('uploadAvatar', $author);
+        $this->currentAvatarUrl = $author->avatarUrl();
+        $this->photoLicense = $author->photo_license ?? '';
+        $this->photo = null;
+        $this->cropAlign = 'top';
         $this->show = true;
     }
 
@@ -57,7 +77,56 @@ class AuthorEditModal extends Component
         ]);
 
         $this->show = false;
-        $this->reset(['authorId', 'name', 'isPrivate', 'canChangePrivacy']);
+        $this->reset(['authorId', 'name', 'isPrivate', 'canChangePrivacy', 'canUploadAvatar', 'currentAvatarUrl', 'photo', 'photoLicense', 'cropAlign']);
+        $this->dispatch('author-updated');
+    }
+
+    /**
+     * Upload an avatar image for the author.
+     */
+    public function uploadAvatar(AuthorAvatarService $service): void
+    {
+        $author = Author::findOrFail($this->authorId);
+        $this->authorize('uploadAvatar', $author);
+
+        $this->validateOnly('photo', [
+            'photo' => ['required', 'image', 'max:2048', 'mimes:jpg,jpeg,png,gif,webp'],
+        ]);
+
+        $service->store($author, $this->photo, $this->cropAlign);
+
+        $this->photo = null;
+        $this->currentAvatarUrl = $author->fresh()->avatarUrl();
+        $this->dispatch('author-updated');
+    }
+
+    /**
+     * Save the photo license string.
+     */
+    public function savePhotoLicense(): void
+    {
+        $author = Author::findOrFail($this->authorId);
+        $this->authorize('uploadAvatar', $author);
+
+        $this->validateOnly('photoLicense', [
+            'photoLicense' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $author->update(['photo_license' => $this->photoLicense ?: null]);
+        $this->dispatch('author-updated');
+    }
+
+    /**
+     * Delete the author's avatar.
+     */
+    public function deleteAvatar(AuthorAvatarService $service): void
+    {
+        $author = Author::findOrFail($this->authorId);
+        $this->authorize('uploadAvatar', $author);
+
+        $service->delete($author);
+
+        $this->currentAvatarUrl = null;
         $this->dispatch('author-updated');
     }
 

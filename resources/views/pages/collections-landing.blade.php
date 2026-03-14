@@ -203,9 +203,14 @@ new class extends Component
                         <a href="{{ route('collection-view', $collection) }}" wire:navigate
                            class="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800/80 dark:hover:border-emerald-600">
                             <div class="flex items-start gap-3">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/50">
-                                    <flux:icon name="folder" class="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                                </div>
+                                @if($collection->coverThumbUrl())
+                                    <img src="{{ $collection->coverThumbUrl() }}" alt="{{ $collection->title }}"
+                                         class="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                                @else
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/50">
+                                        <flux:icon name="folder" class="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                    </div>
+                                @endif
                                 <div class="min-w-0 flex-1">
                                     <div class="font-semibold text-gray-900 group-hover:text-emerald-600 dark:text-gray-100 dark:group-hover:text-emerald-400 truncate">
                                         {{ $collection->title }}

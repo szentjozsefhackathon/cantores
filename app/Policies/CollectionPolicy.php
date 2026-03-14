@@ -59,6 +59,15 @@ class CollectionPolicy
     }
 
     /**
+     * Determine whether the user can upload/delete a cover image for the collection.
+     * Requires the content.edit.verified permission (editor role) or admin.
+     */
+    public function uploadCover(User $user, Collection $collection): bool
+    {
+        return $user !== null && ($user->is_admin || $user->hasPermissionTo('content.edit.verified'));
+    }
+
+    /**
      * Determine whether the user can restore the model.
      */
     public function restore(User $user, Collection $collection): bool

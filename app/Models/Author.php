@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Attributes\SearchUsingFullText;
 use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
@@ -58,6 +59,8 @@ class Author extends Model implements Auditable
         'name',
         'user_id',
         'is_private',
+        'avatar',
+        'photo_license',
     ];
 
     /**
@@ -70,6 +73,30 @@ class Author extends Model implements Auditable
         return [
             'is_private' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the URL for the full-size avatar (256×256).
+     */
+    public function avatarUrl(): ?string
+    {
+        if (! $this->avatar) {
+            return null;
+        }
+
+        return Storage::disk('public')->url("authors/{$this->id}/avatar.jpg");
+    }
+
+    /**
+     * Get the URL for the thumbnail avatar (64×64).
+     */
+    public function avatarThumbUrl(): ?string
+    {
+        if (! $this->avatar) {
+            return null;
+        }
+
+        return Storage::disk('public')->url("authors/{$this->id}/avatar_thumb.jpg");
     }
 
     /**

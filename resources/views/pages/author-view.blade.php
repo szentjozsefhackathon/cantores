@@ -3,11 +3,34 @@
 
         <flux:card class="p-5">
             <div class="flex items-center justify-between gap-4 mb-6">
-                <div>
-                    <flux:heading size="xl">{{ __('Author Details') }}</flux:heading>
-                    <flux:subheading>{{ $author->name }}</flux:subheading>
+                <div class="flex items-center gap-4">
+                    <!-- Avatar -->
+                    @if($author->avatarUrl())
+                        <div class="relative shrink-0" x-data="{ open: false }">
+                            <img src="{{ $author->avatarUrl() }}" alt="{{ $author->name }}"
+                                 class="w-24 h-24 rounded-xl object-cover {{ $author->photo_license ? 'cursor-pointer' : '' }}"
+                                 @if($author->photo_license) @click="open = !open" title="{{ __('Click to view license') }}" @endif
+                            />
+                            @if($author->photo_license)
+                            <div x-show="open" x-transition x-cloak
+                                 @click.outside="open = false"
+                                 class="absolute top-full left-0 mt-1 z-20 w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-3">
+                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{{ __('Photo license') }}</p>
+                                <p class="text-sm text-gray-800 dark:text-gray-200">{{ $author->photo_license }}</p>
+                            </div>
+                            @endif
+                        </div>
+                    @else
+                        <div class="w-24 h-24 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                            <flux:icon name="user" class="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                        </div>
+                    @endif
+                    <div>
+                        <flux:heading size="xl">{{ __('Author Details') }}</flux:heading>
+                        <flux:subheading>{{ $author->name }}</flux:subheading>
+                    </div>
                 </div>
-                
+
                 <!-- Privacy badge -->
                 <flux:badge color="{{ $author->is_private ? 'zinc' : 'green' }}" size="lg">
                     {{ $author->is_private ? __('Private') : __('Public') }}

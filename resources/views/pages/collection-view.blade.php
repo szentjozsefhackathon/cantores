@@ -3,14 +3,20 @@
 
         <flux:card class="p-5">
             <div class="flex items-center justify-between gap-4 mb-6">
-                <div>
-                    <flux:heading size="xl">{{ __('Collection Details') }}</flux:heading>
-                    <flux:subheading>{{ $collection->title }}</flux:subheading>
-                    @auth
-                    <flux:button variant="ghost" icon="flag" wire:click="dispatch('openErrorReportModal', { resourceId: {{ $collection->id }}, resourceType: 'collection' })">
-                        {{ __('Report an Issue') }}
-                    </flux:button>
-                    @endauth
+                <div class="flex items-start gap-4">
+                    @if($collection->coverUrl())
+                        <img src="{{ $collection->coverUrl() }}" alt="{{ $collection->title }}"
+                             class="w-20 h-20 shrink-0 rounded-xl object-cover shadow-sm" />
+                    @endif
+                    <div>
+                        <flux:heading size="xl">{{ __('Collection Details') }}</flux:heading>
+                        <flux:subheading>{{ $collection->title }}</flux:subheading>
+                        @auth
+                        <flux:button variant="ghost" icon="flag" wire:click="dispatch('openErrorReportModal', { resourceId: {{ $collection->id }}, resourceType: 'collection' })">
+                            {{ __('Report an Issue') }}
+                        </flux:button>
+                        @endauth
+                    </div>
                 </div>
                 
                 <!-- Privacy badge -->
@@ -96,6 +102,12 @@
                             <flux:icon name="pencil" class="h-4 w-4 text-gray-500" />
                             <span class="text-gray-700 dark:text-gray-300">{{ __('Updated') }}: {{ $collection->updated_at->translatedFormat('Y-m-d') }}</span>
                         </div>
+                        @if($collection->photo_license)
+                        <div class="flex items-center gap-2">
+                            <flux:icon name="camera" class="h-4 w-4 text-gray-500" />
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Cover license') }}: {{ $collection->photo_license }}</span>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>

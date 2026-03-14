@@ -4,14 +4,19 @@ namespace App\Livewire\Pages\Editor;
 
 use App\Models\Collection;
 use App\Models\Genre;
+use App\Services\CollectionCoverService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class CollectionEditModal extends Component
 {
     use AuthorizesRequests;
+    use WithFileUploads;
 
     public bool $show = false;
 
@@ -26,6 +31,17 @@ class CollectionEditModal extends Component
     public bool $isPrivate = false;
 
     public array $selectedGenres = [];
+
+    public bool $canUploadCover = false;
+
+    public ?string $currentCoverUrl = null;
+
+    public string $photoLicense = '';
+
+    #[Validate(['nullable', 'image', 'max:2048', 'mimes:jpg,jpeg,png,gif,webp'])]
+    public $photo = null;
+
+    public string $cropAlign = 'top';
 
     /**
      * Open the modal for the given collection.
@@ -42,6 +58,11 @@ class CollectionEditModal extends Component
         $this->author = $collection->author;
         $this->isPrivate = $collection->is_private;
         $this->selectedGenres = $collection->genres->pluck('id')->toArray();
+        $this->canUploadCover = Gate::check('uploadCover', $collection);
+        $this->currentCoverUrl = $collection->coverUrl();
+        $this->photoLicense = $collection->photo_license ?? '';
+        $this->photo = null;
+        $this->cropAlign = 'top';
         $this->show = true;
     }
 
@@ -70,7 +91,56 @@ class CollectionEditModal extends Component
         $collection->genres()->sync($validated['selectedGenres'] ?? []);
 
         $this->show = false;
-        $this->reset(['collectionId', 'title', 'abbreviation', 'author', 'isPrivate', 'selectedGenres']);
+        $this->reset(['collectionId', 'title', 'abbreviation', 'author', 'isPrivate', 'selectedGenres', 'canUploadCover', 'currentCoverUrl', 'photo', 'photoLicense', 'cropAlign']);
+        $this->dispatch('collection-updated');
+    }
+
+    /**
+     * Upload a cover image for the collection.
+     */
+    public function uploadCover(CollectionCoverService $service): void
+    {
+        $collection = Collection::findOrFail($this->collectionId);
+        $this->authorize('uploadCover', $collection);
+
+        $this->validateOnly('photo', [
+            'photo' => ['required', 'image', 'max:2048', 'mimes:jpg,jpeg,png,gif,webp'],
+        ]);
+
+        $service->store($collection, $this->photo, $this->cropAlign);
+
+        $this->photo = null;
+        $this->currentCoverUrl = $collection->fresh()->coverUrl();
+        $this->dispatch('collection-updated');
+    }
+
+    /**
+     * Save the photo license string.
+     */
+    public function savePhotoLicense(): void
+    {
+        $collection = Collection::findOrFail($this->collectionId);
+        $this->authorize('uploadCover', $collection);
+
+        $this->validateOnly('photoLicense', [
+            'photoLicense' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $collection->update(['photo_license' => $this->photoLicense ?: null]);
+        $this->dispatch('collection-updated');
+    }
+
+    /**
+     * Delete the collection's cover image.
+     */
+    public function deleteCover(CollectionCoverService $service): void
+    {
+        $collection = Collection::findOrFail($this->collectionId);
+        $this->authorize('uploadCover', $collection);
+
+        $service->delete($collection);
+
+        $this->currentCoverUrl = null;
         $this->dispatch('collection-updated');
     }
 

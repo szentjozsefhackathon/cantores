@@ -25,7 +25,17 @@
             @forelse ($authors as $author)
                 <flux:table.row>
                     <flux:table.cell>
-                        <div class="font-medium">{{ $author->name }}</div>
+                        <div class="flex items-center gap-2">
+                            @if($author->avatarThumbUrl())
+                                <img src="{{ $author->avatarThumbUrl() }}" alt="{{ $author->name }}"
+                                     class="w-8 h-8 rounded-lg object-cover shrink-0" />
+                            @else
+                                <div class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                                    <flux:icon name="user" class="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                </div>
+                            @endif
+                            <div class="font-medium">{{ $author->name }}</div>
+                        </div>
                     </flux:table.cell>
 
                     <flux:table.cell>

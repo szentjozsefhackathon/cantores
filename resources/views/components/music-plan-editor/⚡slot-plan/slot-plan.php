@@ -173,7 +173,9 @@ new class extends Component
                     'icon' => $g->icon(),
                 ])->toArray(),
                 'music_authors' => $music->authors->map(fn ($a) => [
+                    'id' => $a->id,
                     'name' => $a->name,
+                    'avatar_thumb_url' => $a->avatarThumbUrl(),
                 ])->toArray(),
                 'can_view_music' => $user === null ? (! $music->is_private) : $user->can('view', $music),
                 'can_edit_music' => $user !== null && $user->can('update', $music),
