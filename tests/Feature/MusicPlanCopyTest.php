@@ -189,7 +189,7 @@ test('copied music plan includes assignment scopes', function () {
     ]);
 
     $assignment->scopes()->create([
-        'scope_type' => 'verse',
+        'scope_type' => 'stanza',
         'scope_number' => 1,
     ]);
 
@@ -200,7 +200,7 @@ test('copied music plan includes assignment scopes', function () {
 
     expect($copiedAssignment->scopes()->count())->toBe(1);
     $scope = $copiedAssignment->scopes()->first();
-    expect($scope->scope_type->value)->toBe('verse');
+    expect($scope->scope_type->value)->toBe('stanza');
     expect($scope->scope_number)->toBe(1);
 });
 

@@ -55,8 +55,8 @@ it('prevents publishing private author when public author with same name exists'
     $privateAuthor = Author::factory()->create(['name' => 'Existing Author', 'is_private' => true, 'user_id' => $user->id]);
 
     // Try to update the private author to public (should fail)
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
-        ->call('edit', $privateAuthor)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorEditModal::class)
+        ->call('open', $privateAuthor->id)
         ->set('isPrivate', false)
         ->call('update')
         ->assertHasErrors(['name']);
@@ -73,8 +73,8 @@ it('allows updating private author while staying private even with duplicate pub
     $privateAuthor = Author::factory()->create(['name' => 'Existing Author', 'is_private' => true, 'user_id' => $user->id]);
 
     // Try to update the private author (change name but stay private) - should be allowed
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
-        ->call('edit', $privateAuthor)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorEditModal::class)
+        ->call('open', $privateAuthor->id)
         ->set('name', 'Existing Author Updated')
         ->set('isPrivate', true)
         ->call('update')
@@ -90,8 +90,8 @@ it('prevents updating public author to duplicate another public author name', fu
     $secondAuthor = Author::factory()->create(['name' => 'Second Author', 'is_private' => false, 'user_id' => $user->id]);
 
     // Try to update second author to have same name as first (should fail)
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
-        ->call('edit', $secondAuthor)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorEditModal::class)
+        ->call('open', $secondAuthor->id)
         ->set('name', 'First Author')
         ->set('isPrivate', false)
         ->call('update')
@@ -139,7 +139,7 @@ it('prevents deleting author with music assigned', function () {
     $music = Music::factory()->create(['user_id' => $user->id]);
     $author->music()->attach($music->id);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
         ->call('delete', $author)
         ->assertDispatched('error');
 
@@ -152,7 +152,7 @@ it('allows deleting author without assignments', function () {
 
     $author = Author::factory()->create(['user_id' => $user->id]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
         ->call('delete', $author)
         ->assertDispatched('author-deleted');
 
@@ -165,11 +165,11 @@ it('shows audit log modal for author', function () {
 
     $author = Author::factory()->create(['user_id' => $user->id]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
-        ->call('showAuditLog', $author)
-        ->assertSet('showAuditModal', true)
-        ->assertSet('auditingAuthor.id', $author->id)
-        ->assertCount('audits', 0);
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorAuditModal::class)
+        ->call('open', $author->id)
+        ->assertSet('show', true)
+        ->assertSet('authorId', $author->id)
+        ->assertViewHas('audits', fn ($audits) => $audits->count() === 0);
 });
 
 it('loads audits for author', function () {
@@ -194,11 +194,11 @@ it('loads audits for author', function () {
         'updated_at' => now(),
     ]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
-        ->call('showAuditLog', $author)
-        ->assertSet('showAuditModal', true)
-        ->assertSet('auditingAuthor.id', $author->id)
-        ->assertCount('audits', 1);
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorAuditModal::class)
+        ->call('open', $author->id)
+        ->assertSet('show', true)
+        ->assertSet('authorId', $author->id)
+        ->assertViewHas('audits', fn ($audits) => $audits->count() === 1);
 });
 
 it('searches authors using full-text search', function () {
@@ -217,7 +217,7 @@ it('searches authors using full-text search', function () {
     ]);
 
     // Search for "John"
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
         ->set('search', 'John')
         ->assertSee('John Doe')
         ->assertDontSee('Jane Smith');
@@ -233,27 +233,27 @@ it('filters authors by visibility', function () {
     $myPrivateAuthor = Author::factory()->create(['user_id' => $user->id, 'is_private' => true]);
 
     // Default filter 'visible' should show public and my private
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
         ->assertSee($publicAuthor->name)
         ->assertSee($myPrivateAuthor->name)
         ->assertDontSee($privateAuthor->name);
 
     // Filter 'public' should only show public
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
         ->set('filter', 'public')
         ->assertSee($publicAuthor->name)
         ->assertDontSee($privateAuthor->name)
         ->assertDontSee($myPrivateAuthor->name);
 
     // Filter 'private' should only show private (including mine)
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
         ->set('filter', 'private')
         ->assertSee($myPrivateAuthor->name)
         ->assertDontSee($privateAuthor->name)
         ->assertDontSee($publicAuthor->name);
 
     // Filter 'mine' should only show mine
-    Livewire::test(\App\Livewire\Pages\Editor\Authors::class)
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
         ->set('filter', 'mine')
         ->assertSee($myPrivateAuthor->name)
         ->assertDontSee($privateAuthor->name)

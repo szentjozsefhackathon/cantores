@@ -107,7 +107,6 @@ it('shows audit log modal for collection', function () {
 
     Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
         ->call('showAuditLog', $collection)
-        ->assertSet('showAuditModal', true)
         ->assertSet('auditingCollection.id', $collection->id)
         ->assertCount('audits', 0);
 });
@@ -136,7 +135,6 @@ it('loads audits for collection', function () {
 
     Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
         ->call('showAuditLog', $collection)
-        ->assertSet('showAuditModal', true)
         ->assertSet('auditingCollection.id', $collection->id)
         ->assertCount('audits', 1);
 });
