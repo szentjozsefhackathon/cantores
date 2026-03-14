@@ -13,15 +13,13 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <form action="{{ route('music-plans.store') }}" method="POST" class="inline">
-                        @csrf
-                        <flux:button
-                            type="submit"
-                            variant="primary"
-                            icon="plus">
-                            Új énekrend
-                        </flux:button>
-                    </form>
+                    <flux:button
+                        wire:click="createMusicPlan"
+                        wire:confirm="Létrehozol új énekrendet? ({{ \App\Facades\GenreContext::getId() ? \App\Facades\GenreContext::label() : 'Műfaj nélkül' }})"
+                        variant="primary"
+                        icon="plus">
+                        Új énekrend
+                    </flux:button>
                 </div>
             </div>
 

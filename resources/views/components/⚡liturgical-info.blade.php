@@ -589,6 +589,7 @@ new class extends Component
                             @auth
                             <flux:button
                                 wire:click="createMusicPlan({{ $loop->index }})"
+                                wire:confirm="Létrehozol új énekrendet? ({{ GenreContext::getId() ? GenreContext::label() : 'Műfaj nélkül' }})"
                                 variant="filled"
                                 size="sm"
                                 icon="list-music-add"

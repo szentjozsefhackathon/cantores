@@ -25,6 +25,19 @@ class MyMusicPlans extends Component
         $this->resetPage();
     }
 
+    public function createMusicPlan(): void
+    {
+        $musicPlan = \App\Models\MusicPlan::create([
+            'user_id' => \Illuminate\Support\Facades\Auth::id(),
+            'is_private' => true,
+            'genre_id' => GenreContext::getId(),
+        ]);
+
+        $musicPlan->createCustomCelebration('Egyedi ünnep');
+
+        $this->redirectRoute('music-plan-editor', ['musicPlan' => $musicPlan->id], navigate: true);
+    }
+
     #[On('genre-changed')]
     public function onGenreChanged(): void
     {
