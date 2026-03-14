@@ -325,6 +325,18 @@ new class extends Component
     <!-- Tabs navigation with mary-ui -->
     <x-mary-tabs wire:model="activeTab" class="mb-8">
         <x-mary-tab name="music" icon="o-musical-note" label="Énekjavaslatok ({{ count($slotMusicMap) }})">
+            @island(defer: true, always: true)
+            @placeholder
+            <flux:skeleton.group animate="shimmer" class="flex items-center gap-4">
+                <div class="flex flex-col gap-2 w-full">
+                    <flux:skeleton.line />
+                    <flux:skeleton.line />
+                    <flux:skeleton.line />
+                    <flux:skeleton.line />
+                </div>
+            </flux:skeleton.group>
+            @endplaceholder
+
             <!-- Relevance Score Explanation -->
             <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
                 <div class="text-sm text-amber-900 dark:text-amber-100 flex items-center gap-2">
@@ -394,6 +406,7 @@ new class extends Component
                 </flux:callout>
                 @endforelse
             </div>
+            @endisland
 
         </x-mary-tab>
 
