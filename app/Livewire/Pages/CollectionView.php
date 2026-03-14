@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -18,6 +19,12 @@ class CollectionView extends Component
     public Collection $collection;
 
     public string $search = '';
+
+    #[On('collection-updated')]
+    public function refreshCollection(): void
+    {
+        $this->collection = $this->collection->fresh();
+    }
 
     public function mount($collection): void
     {

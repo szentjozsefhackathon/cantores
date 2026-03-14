@@ -83,7 +83,7 @@
                 <flux:sidebar.item icon="folder" :href="route('collections')" :current="request()->routeIs('collections')" wire:navigate>
                     {{ __('Collections') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="users" :href="route('authors')" :current="request()->routeIs('authors')" wire:navigate>
+                <flux:sidebar.item icon="users" :href="route('authors')" :current="request()->routeIs('authors', 'authors-editor')" wire:navigate>
                     {{ __('Authors') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>

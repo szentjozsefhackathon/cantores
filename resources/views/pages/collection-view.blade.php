@@ -105,7 +105,7 @@
         @auth
         <div class="mt-6 flex flex-col sm:flex-row gap-3">
             @can('update', $collection)
-                <flux:button variant="primary" icon="pencil" :href="route('collections-editor')">
+                <flux:button variant="primary" icon="pencil" wire:click="$dispatch('edit-collection', { collectionId: {{ $collection->id }} })">
                     {{ __('Edit Collection') }}
                 </flux:button>
             @endcan
@@ -120,6 +120,12 @@
         </div>
         @endauth
     </div>
+
+<livewire:pages.editor.collection-edit-modal />
+
+    <x-action-message on="collection-updated">
+        {{ __('Collection updated.') }}
+    </x-action-message>
 
 <livewire:error-report />
 </div>

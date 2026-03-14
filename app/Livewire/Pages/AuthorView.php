@@ -3,20 +3,24 @@
 namespace App\Livewire\Pages;
 
 use App\Models\Author;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Layout('layouts::app.main')]
 class AuthorView extends Component
 {
-    use WithPagination;
+    use AuthorizesRequests, WithPagination;
 
     public Author $author;
 
     public string $search = '';
+
+    public int $renderKey = 0;
 
     public function mount($author): void
     {
@@ -31,6 +35,28 @@ class AuthorView extends Component
         }
 
         $this->author = $author;
+    }
+
+    #[On('author-updated')]
+    public function refreshAuthor(): void
+    {
+        $this->author = $this->author->fresh();
+        $this->renderKey++;
+    }
+
+    public function delete(): void
+    {
+        $this->authorize('delete', $this->author);
+
+        if ($this->author->music()->count() > 0) {
+            $this->dispatch('error', message: __('Cannot delete author that has music assigned to it.'));
+
+            return;
+        }
+
+        $this->author->delete();
+
+        $this->redirect(route('authors'), navigate: true);
     }
 
     public function updatingSearch(): void

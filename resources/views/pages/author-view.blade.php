@@ -52,7 +52,7 @@
                     @if($musics->isNotEmpty())
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                             @foreach($musics as $music)
-                                <livewire:music-card :music="$music" :key="'music-card-'.$music->id" />
+                                <livewire:music-card :music="$music" :key="'music-card-'.$music->id.'-'.$renderKey" />
                             @endforeach
                         </div>
 
@@ -92,11 +92,24 @@
         @auth
         <div class="mt-6 flex flex-col sm:flex-row gap-3">
             @can('update', $author)
-                <flux:button variant="primary" icon="pencil" :href="route('authors')">
+                <flux:button variant="primary" icon="pencil" wire:click="$dispatch('edit-author', { authorId: {{ $author->id }} })">
                     {{ __('Edit Author') }}
+                </flux:button>
+            @endcan
+            @can('delete', $author)
+                <flux:button variant="danger" icon="trash"
+                    wire:click="delete"
+                    wire:confirm="{{ __('Are you sure you want to delete this author? This can only be done if no music pieces are assigned to it.') }}">
+                    {{ __('Delete Author') }}
                 </flux:button>
             @endcan
         </div>
         @endauth
     </div>
+
+    <livewire:pages.editor.author-edit-modal />
+
+    <x-action-message on="author-updated">
+        {{ __('Author updated.') }}
+    </x-action-message>
 </div>

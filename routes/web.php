@@ -101,8 +101,13 @@ Route::livewire('/collections/editor', \App\Livewire\Pages\Editor\Collections::c
 Route::livewire('/collection/{collection}/view', \App\Livewire\Pages\CollectionView::class)
     ->name('collection-view');
 
-Route::livewire('/authors', \App\Livewire\Pages\Editor\Authors::class)
+// Authors landing page (public)
+Route::livewire('/authors', 'pages::authors-landing')
     ->name('authors');
+
+// Authors editor (browseable by guests, edit actions require auth)
+Route::livewire('/authors/editor', \App\Livewire\Pages\Editor\Authors::class)
+    ->name('authors-editor');
 
 // Public read-only author view
 Route::livewire('/author/{author}/view', \App\Livewire\Pages\AuthorView::class)

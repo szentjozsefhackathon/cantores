@@ -126,59 +126,7 @@ new class extends Component
 
     <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8 space-y-16">
 
-        {{-- Collections Section --}}
-        @if ($this->collections->isNotEmpty())
-        <section>
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <flux:heading size="xl" class="flex items-center gap-2">
-                        <flux:icon name="folder" class="h-6 w-6 text-indigo-500" />
-                        Gyűjtemények
-                    </flux:heading>
-                    <flux:subheading class="mt-1">Liturgikus énekeskönyvek és kottagyűjtemények</flux:subheading>
-                </div>
-                <a href="{{ route('collections') }}" wire:navigate class="shrink-0">
-                    <flux:button variant="ghost" icon-trailing="arrow-right" size="sm">
-                        Összes gyűjtemény
-                    </flux:button>
-                </a>
-            </div>
-
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach ($this->collections as $collection)
-                    <a href="{{ route('collection-view', $collection) }}" wire:navigate
-                       class="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800/80 dark:hover:border-indigo-600">
-                        <div class="flex items-start gap-3">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/50">
-                                <flux:icon name="folder" class="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <div class="font-semibold text-gray-900 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 truncate">
-                                    {{ $collection->title }}
-                                </div>
-                                @if ($collection->abbreviation)
-                                    <div class="mt-0.5 text-xs font-mono text-gray-500 dark:text-gray-400">{{ $collection->abbreviation }}</div>
-                                @endif
-                                <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                                    <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
-                                        {{ $collection->music_count }} zenemű
-                                    </span>
-                                    @foreach ($collection->genres as $genre)
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-zinc-700 dark:text-gray-300">
-                                            <flux:icon name="{{ $genre->icon() }}" variant="mini" class="h-3 w-3" />
-                                            {{ $genre->label() }}
-                                        </span>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-        </section>
-        @endif
-
-        {{-- Recent Music Section --}}
+            {{-- Recent Music Section --}}
         @if ($this->recentMusics->isNotEmpty())
         <section>
             <div class="flex items-center justify-between mb-6">
@@ -231,6 +179,58 @@ new class extends Component
                         </a>
                     @endforeach
                 </div>
+            </div>
+        </section>
+        @endif
+
+        {{-- Collections Section --}}
+        @if ($this->collections->isNotEmpty())
+        <section>
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <flux:heading size="xl" class="flex items-center gap-2">
+                        <flux:icon name="folder" class="h-6 w-6 text-indigo-500" />
+                        Gyűjtemények
+                    </flux:heading>
+                    <flux:subheading class="mt-1">Liturgikus énekeskönyvek és kottagyűjtemények</flux:subheading>
+                </div>
+                <a href="{{ route('collections') }}" wire:navigate class="shrink-0">
+                    <flux:button variant="ghost" icon-trailing="arrow-right" size="sm">
+                        Összes gyűjtemény
+                    </flux:button>
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach ($this->collections as $collection)
+                    <a href="{{ route('collection-view', $collection) }}" wire:navigate
+                       class="group block rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800/80 dark:hover:border-indigo-600">
+                        <div class="flex items-start gap-3">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/50">
+                                <flux:icon name="folder" class="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="font-semibold text-gray-900 group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400 truncate">
+                                    {{ $collection->title }}
+                                </div>
+                                @if ($collection->abbreviation)
+                                    <div class="mt-0.5 text-xs font-mono text-gray-500 dark:text-gray-400">{{ $collection->abbreviation }}</div>
+                                @endif
+                                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                                    <span class="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+                                        {{ $collection->music_count }} zenemű
+                                    </span>
+                                    @foreach ($collection->genres as $genre)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-zinc-700 dark:text-gray-300">
+                                            <flux:icon name="{{ $genre->icon() }}" variant="mini" class="h-3 w-3" />
+                                            {{ $genre->label() }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                @endforeach
             </div>
         </section>
         @endif
