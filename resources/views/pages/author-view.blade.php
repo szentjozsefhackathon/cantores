@@ -2,58 +2,35 @@
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
         <flux:card class="p-5">
-            <div class="flex items-center justify-between gap-4 mb-6">
-                <div class="flex items-center gap-4">
-                    <!-- Avatar -->
-                    @if($author->avatarUrl())
-                        <div class="relative shrink-0" x-data="{ open: false }">
-                            <img src="{{ $author->avatarUrl() }}" alt="{{ $author->name }}"
-                                 class="w-24 h-24 rounded-xl object-cover {{ $author->photo_license ? 'cursor-pointer' : '' }}"
-                                 @if($author->photo_license) @click="open = !open" title="{{ __('Click to view license') }}" @endif
-                            />
-                            @if($author->photo_license)
-                            <div x-show="open" x-transition x-cloak
-                                 @click.outside="open = false"
-                                 class="absolute top-full left-0 mt-1 z-20 w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-3">
-                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{{ __('Photo license') }}</p>
-                                <p class="text-sm text-gray-800 dark:text-gray-200">{{ $author->photo_license }}</p>
-                            </div>
-                            @endif
+            <div class="flex items-center gap-4 mb-6">
+                <!-- Avatar -->
+                @if($author->avatarUrl())
+                    <div class="relative shrink-0" x-data="{ open: false }">
+                        <img src="{{ $author->avatarUrl() }}" alt="{{ $author->name }}"
+                             class="w-24 h-24 rounded-xl object-cover {{ $author->photo_license ? 'cursor-pointer' : '' }}"
+                             @if($author->photo_license) @click="open = !open" title="{{ __('Click to view license') }}" @endif
+                        />
+                        @if($author->photo_license)
+                        <div x-show="open" x-transition x-cloak
+                             @click.outside="open = false"
+                             class="absolute top-full left-0 mt-1 z-20 w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-3">
+                            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{{ __('Photo license') }}</p>
+                            <p class="text-sm text-gray-800 dark:text-gray-200">{{ $author->photo_license }}</p>
                         </div>
-                    @else
-                        <div class="w-24 h-24 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                            <flux:icon name="user" class="w-12 h-12 text-gray-400 dark:text-gray-500" />
-                        </div>
-                    @endif
-                    <div>
-                        <flux:heading size="xl">{{ __('Author Details') }}</flux:heading>
-                        <flux:subheading>{{ $author->name }}</flux:subheading>
+                        @endif
                     </div>
+                @else
+                    <div class="w-24 h-24 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                        <flux:icon name="user" class="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                    </div>
+                @endif
+                <div>
+                    <flux:heading size="xl">{{ $author->name }}</flux:heading>
+                    <flux:subheading>{{ $author->music()->count() }} {{ __('music pieces') }}</flux:subheading>
                 </div>
-
-                <!-- Privacy badge -->
-                <flux:badge color="{{ $author->is_private ? 'zinc' : 'green' }}" size="lg">
-                    {{ $author->is_private ? __('Private') : __('Public') }}
-                </flux:badge>
             </div>
 
             <div class="space-y-6">
-                <!-- Basic info -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Music Pieces') }}</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $author->music()->count() }}</flux:text>
-                    </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Created by') }}</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $author->user?->display_name ?? '–' }}</flux:text>
-                    </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('ID') }}</flux:heading>
-                        <flux:text class="text-base font-semibold">#{{ $author->id }}</flux:text>
-                    </div>
-                </div>
-
                 <!-- Music pieces by this author -->
                 <div>
                     <div class="flex items-center justify-between mb-4">
@@ -94,20 +71,17 @@
                     @endif
                 </div>
 
-                <!-- Additional info -->
-                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Additional Information') }}</flux:heading>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="calendar" class="h-4 w-4 text-gray-500" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ __('Created') }}: {{ $author->created_at->translatedFormat('Y-m-d') }}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="pencil" class="h-4 w-4 text-gray-500" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ __('Updated') }}: {{ $author->updated_at->translatedFormat('Y-m-d') }}</span>
-                        </div>
-                    </div>
-                </div>
+            </div>
+
+            <!-- Status bar -->
+            <div class="mt-6 pt-3 border-t border-neutral-200 dark:border-neutral-700 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
+                <flux:badge color="{{ $author->is_private ? 'zinc' : 'green' }}" size="sm">
+                    {{ $author->is_private ? __('Private') : __('Public') }}
+                </flux:badge>
+                <span class="font-mono">#{{ $author->id }}</span>
+                <span>{{ __('Created by') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $author->user?->display_name ?? '–' }}</span></span>
+                <span>{{ __('Created') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $author->created_at->translatedFormat('Y-m-d') }}</span></span>
+                <span>{{ __('Updated') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $author->updated_at->translatedFormat('Y-m-d') }}</span></span>
             </div>
         </flux:card>
 

@@ -206,7 +206,7 @@ new class extends Component
                                      class="h-10 w-10 shrink-0 rounded-lg object-cover" />
                             @else
                                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/50">
-                                    <flux:icon name="folder" class="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                    <flux:icon name="book-open" class="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                                 </div>
                             @endif
                             <div class="min-w-0 flex-1">

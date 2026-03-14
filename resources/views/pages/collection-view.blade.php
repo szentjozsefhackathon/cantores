@@ -2,46 +2,35 @@
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
         <flux:card class="p-5">
-            <div class="flex items-center justify-between gap-4 mb-6">
-                <div class="flex items-start gap-4">
-                    @if($collection->coverUrl())
-                        <img src="{{ $collection->coverUrl() }}" alt="{{ $collection->title }}"
-                             class="w-20 h-20 shrink-0 rounded-xl object-cover shadow-sm" />
-                    @endif
-                    <div>
-                        <flux:heading size="xl">{{ __('Collection Details') }}</flux:heading>
-                        <flux:subheading>{{ $collection->title }}</flux:subheading>
-                        @auth
-                        <flux:button variant="ghost" icon="flag" wire:click="dispatch('openErrorReportModal', { resourceId: {{ $collection->id }}, resourceType: 'collection' })">
-                            {{ __('Report an Issue') }}
-                        </flux:button>
-                        @endauth
+            <div class="flex items-start gap-4 mb-6">
+                @if($collection->coverUrl())
+                    <img src="{{ $collection->coverUrl() }}" alt="{{ $collection->title }}"
+                         class="w-20 h-20 shrink-0 rounded-xl object-cover shadow-sm" />
+                @else
+                    <div class="w-20 h-20 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                        <flux:icon name="book-open" class="w-10 h-10 text-gray-400 dark:text-gray-500" />
                     </div>
+                @endif
+                <div>
+                    <flux:heading size="xl">{{ $collection->title }}</flux:heading>
+                    <flux:subheading>
+                        @if($collection->abbreviation && $collection->publisher)
+                            {{ $collection->abbreviation }} &middot; {{ $collection->publisher }}
+                        @elseif($collection->abbreviation)
+                            {{ $collection->abbreviation }}
+                        @elseif($collection->publisher)
+                            {{ $collection->publisher }}
+                        @endif
+                    </flux:subheading>
+                    @auth
+                    <flux:button variant="ghost" icon="flag" wire:click="dispatch('openErrorReportModal', { resourceId: {{ $collection->id }}, resourceType: 'collection' })">
+                        {{ __('Report an Issue') }}
+                    </flux:button>
+                    @endauth
                 </div>
-                
-                <!-- Privacy badge -->
-                <flux:badge color="{{ $collection->is_private ? 'zinc' : 'green' }}" size="lg">
-                    {{ $collection->is_private ? __('Private') : __('Public') }}
-                </flux:badge>
             </div>
 
             <div class="space-y-6">
-                <!-- Basic info -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Abbreviation') }}</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $collection->abbreviation ?? '–' }}</flux:text>
-                    </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Publisher') }}</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $collection->publisher ?? '–' }}</flux:text>
-                    </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Created by') }}</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $collection->user?->display_name ?? '–' }}</flux:text>
-                    </div>
-                </div>
-
                 <!-- Description -->
                 @if($collection->description)
                 <div>
@@ -90,26 +79,20 @@
                     @endif
                 </div>
 
-                <!-- Additional info -->
-                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Additional Information') }}</flux:heading>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="calendar" class="h-4 w-4 text-gray-500" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ __('Created') }}: {{ $collection->created_at->translatedFormat('Y-m-d') }}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="pencil" class="h-4 w-4 text-gray-500" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ __('Updated') }}: {{ $collection->updated_at->translatedFormat('Y-m-d') }}</span>
-                        </div>
-                        @if($collection->photo_license)
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="camera" class="h-4 w-4 text-gray-500" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ __('Cover license') }}: {{ $collection->photo_license }}</span>
-                        </div>
-                        @endif
-                    </div>
-                </div>
+            </div>
+
+            <!-- Status bar -->
+            <div class="mt-6 pt-3 border-t border-neutral-200 dark:border-neutral-700 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
+                <flux:badge color="{{ $collection->is_private ? 'zinc' : 'green' }}" size="sm">
+                    {{ $collection->is_private ? __('Private') : __('Public') }}
+                </flux:badge>
+                <span class="font-mono">#{{ $collection->id }}</span>
+                <span>{{ __('Created by') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $collection->user?->display_name ?? '–' }}</span></span>
+                <span>{{ __('Created') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $collection->created_at->translatedFormat('Y-m-d') }}</span></span>
+                <span>{{ __('Updated') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $collection->updated_at->translatedFormat('Y-m-d') }}</span></span>
+                @if($collection->photo_license)
+                    <span>{{ __('Cover license') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $collection->photo_license }}</span></span>
+                @endif
             </div>
         </flux:card>
 

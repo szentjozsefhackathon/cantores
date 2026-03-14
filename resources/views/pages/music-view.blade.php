@@ -7,40 +7,19 @@
         </div>
 
         <flux:card class="p-5">
-            <div class="flex items-center justify-between gap-4 mb-6">
-                <div>
-                    <flux:heading size="xl">{{ __('Music Piece Details') }}</flux:heading>
-                    <flux:subheading>{{ $music->title }}</flux:subheading>
-                    @auth
-                    <flux:button variant="ghost" icon="flag" wire:click="dispatch('openErrorReportModal', { resourceId: {{ $music->id }}, resourceType: 'music' })">
-                        {{ __('Report an Issue') }}
-                    </flux:button>
-                    @endauth
-                </div>
-                
-                <!-- Privacy badge -->
-                <flux:badge color="{{ $music->is_private ? 'zinc' : 'green' }}" size="lg">
-                    {{ $music->is_private ? __('Private') : __('Public') }}
-                </flux:badge>
+            <div class="mb-6">
+                <flux:heading size="xl">{{ $music->title }}</flux:heading>
+                @if($music->subtitle)
+                    <flux:subheading>{{ $music->subtitle }}</flux:subheading>
+                @endif
+                @auth
+                <flux:button variant="ghost" icon="flag" wire:click="dispatch('openErrorReportModal', { resourceId: {{ $music->id }}, resourceType: 'music' })">
+                    {{ __('Report an Issue') }}
+                </flux:button>
+                @endauth
             </div>
 
             <div class="space-y-6">
-                <!-- Basic info -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Custom ID') }}</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $music->custom_id ?? '–' }}</flux:text>
-                    </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Subtitle') }}</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $music->subtitle ?? '–' }}</flux:text>
-                    </div>
-                    <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1">{{ __('Created by') }}</flux:heading>
-                        <flux:text class="text-base font-semibold">{{ $music->user?->display_name ?? '–' }}</flux:text>
-                    </div>
-                </div>
-
                 <!-- Genres -->
                 @if($music->genres->isNotEmpty())
                 <div>
@@ -252,20 +231,20 @@
                     @endif
                 </div>
 
-                <!-- Additional info -->
-                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Additional Information') }}</flux:heading>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="calendar" class="h-4 w-4 text-gray-500" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ __('Created') }}: {{ $music->created_at->translatedFormat('Y-m-d') }}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="pencil" class="h-4 w-4 text-gray-500" />
-                            <span class="text-gray-700 dark:text-gray-300">{{ __('Updated') }}: {{ $music->updated_at->translatedFormat('Y-m-d') }}</span>
-                        </div>
-                    </div>
-                </div>
+            </div>
+
+            <!-- Status bar -->
+            <div class="mt-6 pt-3 border-t border-neutral-200 dark:border-neutral-700 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
+                <flux:badge color="{{ $music->is_private ? 'zinc' : 'green' }}" size="sm">
+                    {{ $music->is_private ? __('Private') : __('Public') }}
+                </flux:badge>
+                <span class="font-mono">#{{ $music->id }}</span>
+                @if($music->custom_id)
+                    <span>{{ __('Custom ID') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $music->custom_id }}</span></span>
+                @endif
+                <span>{{ __('Created by') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $music->user?->display_name ?? '–' }}</span></span>
+                <span>{{ __('Created') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $music->created_at->translatedFormat('Y-m-d') }}</span></span>
+                <span>{{ __('Updated') }}: <span class="text-neutral-700 dark:text-neutral-300">{{ $music->updated_at->translatedFormat('Y-m-d') }}</span></span>
             </div>
         </flux:card>
 
