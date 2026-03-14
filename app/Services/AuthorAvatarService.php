@@ -20,31 +20,51 @@ class AuthorAvatarService
             throw new \RuntimeException('Could not create image from uploaded file.');
         }
 
+        $hash = substr(md5($imageData), 0, 8);
+
         $large = $this->cropAndResize($source, self::AVATAR_SIZE, $verticalAlign);
         $thumb = $this->cropAndResize($source, self::THUMB_SIZE, $verticalAlign);
 
         imagedestroy($source);
 
+        $this->deleteFiles($author);
+
         Storage::disk('public')->put(
-            "authors/{$author->id}/avatar.jpg",
+            "authors/{$author->id}/avatar_{$hash}.jpg",
             $this->gdToJpeg($large)
         );
         Storage::disk('public')->put(
-            "authors/{$author->id}/avatar_thumb.jpg",
+            "authors/{$author->id}/avatar_thumb_{$hash}.jpg",
             $this->gdToJpeg($thumb)
         );
 
         imagedestroy($large);
         imagedestroy($thumb);
 
-        $author->update(['avatar' => "authors/{$author->id}"]);
+        $author->update(['avatar' => $hash]);
     }
 
     public function delete(Author $author): void
     {
-        Storage::disk('public')->delete("authors/{$author->id}/avatar.jpg");
-        Storage::disk('public')->delete("authors/{$author->id}/avatar_thumb.jpg");
+        $this->deleteFiles($author);
         $author->update(['avatar' => null]);
+    }
+
+    private function deleteFiles(Author $author): void
+    {
+        if (! $author->avatar) {
+            return;
+        }
+
+        if (str_contains($author->avatar, '/')) {
+            // Legacy format: avatar stored as "authors/{id}"
+            Storage::disk('public')->delete("authors/{$author->id}/avatar.jpg");
+            Storage::disk('public')->delete("authors/{$author->id}/avatar_thumb.jpg");
+        } else {
+            $hash = $author->avatar;
+            Storage::disk('public')->delete("authors/{$author->id}/avatar_{$hash}.jpg");
+            Storage::disk('public')->delete("authors/{$author->id}/avatar_thumb_{$hash}.jpg");
+        }
     }
 
     private function cropAndResize(\GdImage $source, int $size, string $verticalAlign = 'top'): \GdImage

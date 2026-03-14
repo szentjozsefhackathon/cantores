@@ -84,7 +84,11 @@ class Author extends Model implements Auditable
             return null;
         }
 
-        return Storage::disk('public')->url("authors/{$this->id}/avatar.jpg");
+        if (str_contains($this->avatar, '/')) {
+            return Storage::disk('public')->url("authors/{$this->id}/avatar.jpg");
+        }
+
+        return Storage::disk('public')->url("authors/{$this->id}/avatar_{$this->avatar}.jpg");
     }
 
     /**
@@ -96,7 +100,11 @@ class Author extends Model implements Auditable
             return null;
         }
 
-        return Storage::disk('public')->url("authors/{$this->id}/avatar_thumb.jpg");
+        if (str_contains($this->avatar, '/')) {
+            return Storage::disk('public')->url("authors/{$this->id}/avatar_thumb.jpg");
+        }
+
+        return Storage::disk('public')->url("authors/{$this->id}/avatar_thumb_{$this->avatar}.jpg");
     }
 
     /**

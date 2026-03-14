@@ -20,31 +20,51 @@ class CollectionCoverService
             throw new \RuntimeException('Could not create image from uploaded file.');
         }
 
+        $hash = substr(md5($imageData), 0, 8);
+
         $large = $this->cropAndResize($source, self::COVER_SIZE, $verticalAlign);
         $thumb = $this->cropAndResize($source, self::THUMB_SIZE, $verticalAlign);
 
         imagedestroy($source);
 
+        $this->deleteFiles($collection);
+
         Storage::disk('public')->put(
-            "collections/{$collection->id}/cover.jpg",
+            "collections/{$collection->id}/cover_{$hash}.jpg",
             $this->gdToJpeg($large)
         );
         Storage::disk('public')->put(
-            "collections/{$collection->id}/cover_thumb.jpg",
+            "collections/{$collection->id}/cover_thumb_{$hash}.jpg",
             $this->gdToJpeg($thumb)
         );
 
         imagedestroy($large);
         imagedestroy($thumb);
 
-        $collection->update(['cover' => "collections/{$collection->id}"]);
+        $collection->update(['cover' => $hash]);
     }
 
     public function delete(Collection $collection): void
     {
-        Storage::disk('public')->delete("collections/{$collection->id}/cover.jpg");
-        Storage::disk('public')->delete("collections/{$collection->id}/cover_thumb.jpg");
+        $this->deleteFiles($collection);
         $collection->update(['cover' => null]);
+    }
+
+    private function deleteFiles(Collection $collection): void
+    {
+        if (! $collection->cover) {
+            return;
+        }
+
+        if (str_contains($collection->cover, '/')) {
+            // Legacy format: cover stored as "collections/{id}"
+            Storage::disk('public')->delete("collections/{$collection->id}/cover.jpg");
+            Storage::disk('public')->delete("collections/{$collection->id}/cover_thumb.jpg");
+        } else {
+            $hash = $collection->cover;
+            Storage::disk('public')->delete("collections/{$collection->id}/cover_{$hash}.jpg");
+            Storage::disk('public')->delete("collections/{$collection->id}/cover_thumb_{$hash}.jpg");
+        }
     }
 
     private function cropAndResize(\GdImage $source, int $size, string $verticalAlign = 'top'): \GdImage

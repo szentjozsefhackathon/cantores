@@ -1,8 +1,12 @@
 SetEnvIf Request_URI "^/build/assets/" vite_asset
+SetEnvIf Request_URI "^/storage/(authors|collections)/" media_upload
 
 <IfModule mod_headers.c>
     # Vite build assets have content-hashed filenames — safe to cache for 1 year
     Header set Cache-Control "public, max-age=31536000, immutable" env=vite_asset
+
+    # Author and collection avatars/covers — cache for 1 day
+    Header set Cache-Control "public, max-age=86400" env=media_upload
 
     # Do not cache HTML or PHP responses
     <FilesMatch "\.(html|php)$">

@@ -91,7 +91,11 @@ class Collection extends Model implements Auditable
             return null;
         }
 
-        return Storage::disk('public')->url("collections/{$this->id}/cover.jpg");
+        if (str_contains($this->cover, '/')) {
+            return Storage::disk('public')->url("collections/{$this->id}/cover.jpg");
+        }
+
+        return Storage::disk('public')->url("collections/{$this->id}/cover_{$this->cover}.jpg");
     }
 
     /**
@@ -103,7 +107,11 @@ class Collection extends Model implements Auditable
             return null;
         }
 
-        return Storage::disk('public')->url("collections/{$this->id}/cover_thumb.jpg");
+        if (str_contains($this->cover, '/')) {
+            return Storage::disk('public')->url("collections/{$this->id}/cover_thumb.jpg");
+        }
+
+        return Storage::disk('public')->url("collections/{$this->id}/cover_thumb_{$this->cover}.jpg");
     }
 
     /**
