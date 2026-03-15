@@ -179,6 +179,7 @@ class ImportDurCommand extends Command
             // Sync URLs
             $this->syncUrl($music->id, MusicUrlLabel::SheetMusic->value, $song['pdf'] ?? null, $userId);
             $this->syncUrl($music->id, MusicUrlLabel::Text->value, $song['txt'] ?? null, $userId);
+            $this->syncUrl($music->id, MusicUrlLabel::Audio->value, ($song['zene'] ?: null) ?? null, $userId);
 
             // Attach tags
             $rawTags = array_merge($song['csoport'] ?? [], $song['csoport_2'] ?? []);
