@@ -53,7 +53,7 @@ new class extends Component
     public function recentMusics(): \Illuminate\Support\Collection
     {
         return Music::public()
-            ->with(['authors', 'collections'])
+            ->with(['authors', 'collections', 'genres'])
             ->latest()
             ->limit(8)
             ->get();
@@ -147,6 +147,8 @@ new class extends Component
                             <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg {{ $music->is_verified ? 'bg-green-100 dark:bg-green-900/30' : 'bg-indigo-50 dark:bg-indigo-900/30' }}">
                                 @if ($music->is_verified)
                                     <flux:icon name="check" variant="solid" class="h-4 w-4 text-green-500 dark:text-green-400" />
+                                @elseif ($firstGenre = $music->genres->first())
+                                    <flux:icon name="{{ $firstGenre->icon() }}" variant="mini" class="h-4 w-4 text-indigo-400" :title="$firstGenre->label()" />
                                 @else
                                     <flux:icon name="music" variant="mini" class="h-4 w-4 text-indigo-400" />
                                 @endif

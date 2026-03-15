@@ -154,7 +154,7 @@ new class extends Component
                 <div class="flex flex-col items-center py-6 text-center">
                     <flux:icon name="users" class="mb-2 h-6 w-6 text-indigo-400" />
                     <span class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 sm:text-3xl">{!! number_format($this->authorCount, 0, ',', '&nbsp;') !!}</span>
-                    <span class="mt-1 text-sm text-gray-600 dark:text-gray-400">nyilvános szerző</span>
+                    <span class="mt-1 text-sm text-gray-600 dark:text-gray-400"> szerző</span>
                 </div>
                 <div class="flex flex-col items-center py-6 text-center">
                     <flux:icon name="music" class="mb-2 h-6 w-6 text-indigo-400" />

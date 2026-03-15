@@ -124,7 +124,7 @@ new class extends Component
             <div class="flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
-                        <flux:icon name="folder" class="h-5 w-5 text-white" />
+                        <flux:icon name="book-open" class="h-5 w-5 text-white" />
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-white sm:text-2xl">Liturgikus gyűjtemények</h1>
@@ -152,9 +152,9 @@ new class extends Component
         <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-2 divide-x divide-gray-200 dark:divide-zinc-700">
                 <div class="flex flex-col items-center py-6 text-center">
-                    <flux:icon name="folder" class="mb-2 h-6 w-6 text-emerald-400" />
+                    <flux:icon name="book-open" class="mb-2 h-6 w-6 text-emerald-400" />
                     <span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 sm:text-3xl">{!! number_format($this->collectionCount, 0, ',', '&nbsp;') !!}</span>
-                    <span class="mt-1 text-sm text-gray-600 dark:text-gray-400">nyilvános gyűjtemény</span>
+                    <span class="mt-1 text-sm text-gray-600 dark:text-gray-400"> gyűjtemény</span>
                 </div>
                 <div class="flex flex-col items-center py-6 text-center">
                     <flux:icon name="music" class="mb-2 h-6 w-6 text-emerald-400" />
@@ -244,7 +244,7 @@ new class extends Component
                 </div>
             </section>
         @else
-            <flux:callout variant="secondary" icon="folder">
+            <flux:callout variant="secondary" icon="book-open">
                 @if ($this->search)
                     Nincs találat a keresésre. Próbálj más kifejezést!
                 @else
