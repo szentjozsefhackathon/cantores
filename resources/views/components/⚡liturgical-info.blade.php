@@ -230,7 +230,8 @@ new class extends Component
         // Get music plans through the relationship
         $query = $celebration->musicPlans()
             ->where('user_id', $user->id)
-            ->with(['user', 'genre', 'celebration']);
+            ->with(['user', 'genre', 'celebration'])
+            ->withCount(['slots', 'musicAssignments']);
 
         // Filter by current genre
         $genreId = GenreContext::getId();
@@ -268,7 +269,8 @@ new class extends Component
         // Get published music plans
         $query = $celebration->musicPlans()
             ->where('is_private', false)
-            ->with(['user', 'genre', 'celebration']);
+            ->with(['user', 'genre', 'celebration'])
+            ->withCount(['slots', 'musicAssignments']);
 
         // Exclude the authenticated user's own plans (if logged in)
         if ($user) {
@@ -419,7 +421,6 @@ new class extends Component
                 </div>
                 <div class="flex flex-col gap-2">
                     <div class="flex items-center gap-2">
-                        <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70">Előző/következő nap</flux:text>
                         <div class="flex flex-wrap gap-2">
                             <flux:button
                                 square
@@ -430,6 +431,9 @@ new class extends Component
                                 icon:variant="mini"
                                 title="Előző nap"
                                 aria-label="Előző nap" />
+                            <div class="flex items-center justify-center self-center">
+                                <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70 text-center">Előző/következő nap</flux:text>
+                            </div>
                             <flux:button
                                 square
                                 wire:click="nextDay"
@@ -442,7 +446,6 @@ new class extends Component
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70">Előző/következő vasárnap</flux:text>
                         <flux:button
                             square
                             wire:click="previousSunday"
@@ -452,6 +455,8 @@ new class extends Component
                             icon:variant="mini"
                             title="Előző vasárnap"
                             aria-label="Előző vasárnap" />
+                        <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70 self-center text-center">Előző/következő vasárnap</flux:text>
+
                         <flux:button
                             square
                             wire:click="nextSunday"
@@ -588,20 +593,28 @@ new class extends Component
                                 <a
                                     href="{{ route('music-plan-editor', ['musicPlan' => $plan->id]) }}"
                                     class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
-                                    <div class="flex items-center gap-3">
-                                        <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
-                                        <div>
-                                            <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
-                                                {{ $plan->actual_date->translatedFormat('Y. m. d.') }}
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" variant="mini" />
+                                        <div class="min-w-0">
+                                            <x-user-badge :user="$plan->user" />
+                                            <div class="flex items-center gap-2 mt-0.5">
+                                                <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
+                                                    {{ $plan->slots_count }} rész · {{ $plan->music_assignments_count }} zenemű
+                                                </flux:text>
                                                 @if(!$plan->is_private)
-                                                <flux:icon name="globe" class="inline" />
+                                                <flux:icon name="globe" class="h-3 w-3 text-neutral-400 inline" variant="mini" />
                                                 @else
-                                                <flux:icon name="globe-lock" class="inline" />
+                                                <flux:icon name="globe-lock" class="h-3 w-3 text-neutral-400 inline" variant="mini" />
                                                 @endif
+                                            </div>
+                                            @if($plan->private_notes)
+                                            <flux:text class="text-xs text-neutral-400 dark:text-neutral-500 italic truncate max-w-48 mt-0.5">
+                                                {{ \Illuminate\Support\Str::limit($plan->private_notes, 50) }}
                                             </flux:text>
+                                            @endif
                                         </div>
                                     </div>
-                                    <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600" variant="mini" />
+                                    <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600 shrink-0" variant="mini" />
                                 </a>
                                 @endforeach
                             </div>
@@ -626,13 +639,16 @@ new class extends Component
                                 <a
                                     href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
                                     class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
-                                    <div class="flex items-center gap-3">
-                                        <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400" variant="mini" />
-                                        <div>
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" variant="mini" />
+                                        <div class="min-w-0">
                                             <x-user-badge :user="$plan->user" />
+                                            <flux:text class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                                {{ $plan->slots_count }} rész · {{ $plan->music_assignments_count }} zenemű
+                                            </flux:text>
                                         </div>
                                     </div>
-                                    <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600" variant="mini" />
+                                    <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600 shrink-0" variant="mini" />
                                 </a>
                                 @endforeach
                             </div>
