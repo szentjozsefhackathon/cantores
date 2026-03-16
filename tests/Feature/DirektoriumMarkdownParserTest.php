@@ -353,6 +353,32 @@ it('extracts Zsolozsma heading with kötet info', function () {
     expect($result['cleaned_markdown'])->not->toContain('Zsolozsma');
 });
 
+it('transforms fehér vagy into *v.* *fehér* in cleaned markdown', function () {
+    $markdown = '*fehér vagy* **Szent Miklósról:** püspökök miséje, saját kollekta.';
+
+    $result = $this->parser->parse($markdown);
+
+    expect($result['cleaned_markdown'])->toContain('*v.* *fehér* **Szent Miklósról:**');
+    expect($result['cleaned_markdown'])->not->toContain('*fehér vagy*');
+});
+
+it('transforms viola vagy into *v.* *viola* in cleaned markdown', function () {
+    $markdown = '*viola vagy* **Köznapi mise:** saját kollekta.';
+
+    $result = $this->parser->parse($markdown);
+
+    expect($result['cleaned_markdown'])->toContain('*v.* *viola* **Köznapi mise:**');
+});
+
+it('removes GY/V codes from evening mass heading', function () {
+    $markdown = "*viola* **Esti szentmise: GY0 V0**\n\nMinden adventi II. vasárnapjáról.";
+
+    $result = $this->parser->parse($markdown);
+
+    expect($result['cleaned_markdown'])->toContain('**Esti szentmise:**');
+    expect($result['cleaned_markdown'])->not->toContain('GY0 V0');
+});
+
 it('strips day abbreviation from end of title', function () {
     $markdown = '**URUNK SZÜLETÉSÉNEK HÍRÜLADÁSA — FÜ SZE**';
 

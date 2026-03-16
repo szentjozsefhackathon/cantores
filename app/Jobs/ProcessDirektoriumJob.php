@@ -19,7 +19,7 @@ class ProcessDirektoriumJob implements ShouldQueue
      * Number of pages to send to Claude in one batch.
      * Smaller batches = more accurate, larger = faster and cheaper.
      */
-    private const PAGES_PER_BATCH = 2;
+    private const PAGES_PER_BATCH = 4;
 
     public int $timeout = 3600; // 1 hour – PDF processing can be slow
 
@@ -27,8 +27,8 @@ class ProcessDirektoriumJob implements ShouldQueue
 
     public function __construct(
         public readonly DirektoriumEdition $edition,
-        public readonly int $startPage = 1,
-        public readonly ?int $endPage = null,
+        public readonly int $startPage = 28,
+        public readonly ?int $endPage = 171,
     ) {}
 
     public function handle(): void

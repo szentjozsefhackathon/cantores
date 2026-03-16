@@ -61,6 +61,14 @@ class DirektoriumMarkdownParser
             $cleaned
         );
 
+        // Remove GY/V codes from evening mass heading – they would be misidentified as the day's main codes
+        // e.g. "*viola* **Esti szentmise: GY0 V0**" → "*viola* **Esti szentmise:**"
+        $cleaned = preg_replace(
+            '/(\*\*Esti szentmise:?)\s+GY[012]\s+V[012]\*\*/u',
+            '$1**',
+            $cleaned
+        );
+
         // Extract and remove Zsolozsma week heading (rendered as H1/H3 from PDF)
         // e.g. ### **Zsolozsma II. zsh.** or # **Zsolozsma I. kötet, I. zsh.**
         if (preg_match('/^#{1,6}\s+\*\*Zsolozsma\s+(.+?)\*\*\s*$/mu', $cleaned, $zsoMatch)) {
@@ -168,6 +176,14 @@ class DirektoriumMarkdownParser
         }
 
         // === CLEANUP ===
+
+        // Transform "*color vagy*" alternative mass marker into "*v.* *color*"
+        // e.g. "*fehér vagy* **Szent Miklósról:**" → "*v.* *fehér* **Szent Miklósról:**"
+        $cleaned = preg_replace(
+            '/\*('.$colorsJoined.')\s+vagy\*/u',
+            '*v.* *$1*',
+            $cleaned
+        );
 
         // Remove bold standalone day numbers like **15.** or **2.**
         $cleaned = preg_replace('/\*\*\d+\.\*\*/u', '', $cleaned);
