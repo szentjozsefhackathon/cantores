@@ -353,6 +353,19 @@ it('extracts Zsolozsma heading with kötet info', function () {
     expect($result['cleaned_markdown'])->not->toContain('Zsolozsma');
 });
 
+it('extracts GY/V codes from bold mixed-case title with trailing annotations', function () {
+    $markdown = "**SZŰZ MÁRIA, ISTEN ANYJA (Újév) GY0 V0 — FÜ — parancsolt ünnep!**\n\n**ZSO:** Szűz Máriáról.";
+
+    $result = $this->parser->parse($markdown);
+
+    expect($result['funeral_mass_code'])->toBe('GY0');
+    expect($result['votive_mass_code'])->toBe('V0');
+    expect($result['rank_code'])->toBe('FÜ');
+    expect($result['celebration_title'])->toBe('SZŰZ MÁRIA, ISTEN ANYJA (Újév)');
+    expect($result['cleaned_markdown'])->toContain('**ZSO:**');
+    expect($result['cleaned_markdown'])->not->toContain('GY0 V0');
+});
+
 it('transforms fehér vagy into *v.* *fehér* in cleaned markdown', function () {
     $markdown = '*fehér vagy* **Szent Miklósról:** püspökök miséje, saját kollekta.';
 

@@ -123,7 +123,7 @@ class ProcessDirektoriumJob implements ShouldQueue
         // Later batches win via upsert — they have more context and produce more complete entries.
         $processedPages = 0;
 
-        for ($first = $rangeStart; $first <= $rangeEnd; $first += self::PAGES_PER_BATCH) {
+        for ($first = $rangeStart; $first <= $rangeEnd; ) {
             $last = min($first + self::PAGES_PER_BATCH, $rangeEnd);
 
             // Build clean text without page markers — page markers confuse the AI into
@@ -148,6 +148,12 @@ class ProcessDirektoriumJob implements ShouldQueue
             $this->edition->update(['processed_pages' => $processedPages]);
 
             Log::info('Direktorium: batch done', ['pages' => "$first-$last", 'progress' => "$processedPages/$rangeEnd"]);
+
+            if ($last >= $rangeEnd) {
+                break;
+            }
+
+            $first = $last; // overlap: next batch starts at this batch's last page
         }
 
         // Only delete old entries after all batches succeed – preserves data if job fails mid-way.
@@ -180,7 +186,7 @@ class ProcessDirektoriumJob implements ShouldQueue
         ]);
 
         $response = $client->messages->create(
-            maxTokens: 8096,
+            maxTokens: 20000,
             messages: [['role' => 'user', 'content' => $prompt]],
             model: 'claude-haiku-4-5-20251001',
             temperature: 0.5,

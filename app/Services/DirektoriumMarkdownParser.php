@@ -134,6 +134,27 @@ class DirektoriumMarkdownParser
             $cleaned = preg_replace('/'.preg_quote($koznapMatch[0], '/').'/', '', $cleaned, 1);
         }
 
+        // Broad fallback: any bold block containing GY/V codes with arbitrary trailing content
+        // Handles mixed-case titles like **SZŰZ MÁRIA, ISTEN ANYJA (Újév) GY0 V0 — FÜ — parancsolt ünnep!**
+        if (! $result['funeral_mass_code']) {
+            $broadPattern = '/\*\*([^*]+?)\s+(GY[012])\s+(V[012])([^*]*)\*\*/u';
+            if (preg_match($broadPattern, $cleaned, $broadMatch)) {
+                $result['funeral_mass_code'] = $broadMatch[2];
+                $result['votive_mass_code'] = $broadMatch[3];
+
+                if (! $result['celebration_title']) {
+                    $result['celebration_title'] = trim($broadMatch[1]);
+                }
+
+                // Extract rank code from trailing content (e.g. "— FÜ — parancsolt ünnep!")
+                if (! $result['rank_code'] && preg_match('/—\s*(FÜ|Ü|E|e)(?:\s|—|$)/u', $broadMatch[4], $rankMatch)) {
+                    $result['rank_code'] = $rankMatch[1];
+                }
+
+                $cleaned = preg_replace('/'.preg_quote($broadMatch[0], '/').'/', '', $cleaned, 1);
+            }
+        }
+
         // Extract pro populo: **† MISE:** or **†\s*MISE:**
         if (preg_match('/\*\*†\s*MISE:\*\*/u', $cleaned)) {
             $result['is_pro_populo'] = true;
