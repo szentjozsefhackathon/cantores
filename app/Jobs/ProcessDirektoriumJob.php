@@ -167,7 +167,10 @@ class ProcessDirektoriumJob implements ShouldQueue
                     ->orWhere('created_at', '<', $this->edition->processing_started_at);
             })
             ->when(! $isFullReprocess, function ($q) use ($rangeStart, $rangeEnd) {
-                $q->whereBetween('pdf_page_start', [$rangeStart, $rangeEnd]);
+                // Use exclusive lower bound: rangeStart is the overlap page shared with the previous batch.
+                // Entries starting there were produced by the prior batch and won't be re-produced here.
+                $q->where('pdf_page_start', '>', $rangeStart)
+                    ->where('pdf_page_start', '<=', $rangeEnd);
             })
             ->delete();
     }
