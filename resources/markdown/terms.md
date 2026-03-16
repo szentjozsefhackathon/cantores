@@ -11,12 +11,14 @@ a szolgáltatás megszakadása, adatvesztés, vagy más hátrányos következmé
 
 ## 2. Regisztráció és fiók
 
-A szolgáltatás használatához regisztráció szükséges. Regisztráció során egy e‑mail cím megadása kötelező,
-amelyet kizárólag a bejelentkezéshez és a szolgáltatással kapcsolatos fontos értesítések küldéséhez használunk.
-**Személyes adatot (pl. valódi név, lakcím, telefonszám) nem tárolunk.**
+A szolgáltatás nagy része regisztráció nélkül is elérhető. Regisztráció szükséges azonban a közösség által
+karbantartott adatok (pl. zeneművek, gyűjtemények, szerzők) módosításához, valamint énekrendek létrehozásához
+és megosztásához. Regisztráció során egy e‑mail cím megadása kötelező,
+amelyet kizárólag a bejelentkezéshez és a szolgáltatással kapcsolatos fontos értesítések küldéséhez használunk. **Személyes adatot nem kezelünk.**
 
-A felhasználó bármikor törölheti a fiókját, amely során a rendszer az Önhöz kapcsolódó összes adatot véglegesen eltávolítja.
-A törlés után a helyreállítás nem lehetséges.
+A felhasználó bármikor törölheti a fiókját, amely során a rendszer a felhasználóhoz kapcsolódó összes személyes adatot véglegesen eltávolítja.
+A törlés után a helyreállítás nem lehetséges. Az adatok integritásának megőrzése érdekében azonban a felhasználó által
+megosztott (közzétett) tartalmak (pl. zeneművek, gyűjtemények, szerzők) anonimizált formában a rendszerben maradhatnak.
 
 ## 3. Tartalom és viselkedés
 
@@ -43,7 +45,13 @@ A platform fenntartója semmilyen körülmények között nem felelős közvetle
 amely a szolgáltatás használatából vagy használatának képtelenségéből ered. A felhasználó saját felelősségére
 használja a rendszert.
 
-## 7. Egyéb rendelkezések
+## 7. Fiókok felfüggesztése és törlése
+
+A platform adminisztrátorai jogosultak bármely felhasználói fiókot – indoklás és előzetes értesítés nélkül –
+felfüggeszteni vagy véglegesen törölni. Ez a jog különösen, de nem kizárólagosan vonatkozik a visszaélésszerű,
+szabályokat sértő vagy a közösség számára káros magatartásra. 
+
+## 8. Egyéb rendelkezések
 
 A jelen feltételek a magyar jog szerint értelmezendők. A felhasználói jogvitákra a magyar bíróságok illetékessége terjed ki.
 A feltételek időről időre frissülhetnek; a változások közzététele a weboldalon történik, és a közzététel pillanatától hatályosak.
