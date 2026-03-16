@@ -127,7 +127,7 @@ services:
     networks:
       - internal
     entrypoint: []
-    command: ["/bin/sh", "-c", "php artisan queue:work --sleep=15 --tries=3 --timeout=60"]
+    command: ["/bin/sh", "-c", "php artisan queue:work --sleep=15 --tries=3 --timeout=3600"]
     restart: unless-stopped
 volumes:
   db-data:

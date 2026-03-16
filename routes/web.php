@@ -156,3 +156,16 @@ Route::livewire('/notifications', \App\Livewire\Pages\Notifications::class)
 Route::livewire('/contact', 'contact-us')
     ->middleware(['auth', 'verified'])
     ->name('contact');
+
+// Direktórium PDF page serving (auth-protected – copyright)
+Route::get('/direktorium/{edition}/page/{page}', function (\App\Models\DirektoriumEdition $edition, int $page) {
+    abort_if(! \Illuminate\Support\Facades\Storage::disk('private')->exists($edition->file_path), 404);
+    abort_if($edition->total_pages && ($page < 1 || $page > $edition->total_pages), 404);
+
+    $fullPath = \Illuminate\Support\Facades\Storage::disk('private')->path($edition->file_path);
+
+    return response()->file($fullPath, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline',
+    ]);
+})->middleware(['auth', 'verified'])->name('direktorium.page');

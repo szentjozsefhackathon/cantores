@@ -78,13 +78,12 @@ new class extends Component
                 'href' => sprintf('https://igenaptar.katolikus.hu/nap/index.php?holnap=%s', $this->date),
                 'icon' => 'calendar-days',
             ],
-            [
-                'key' => 'direktorium',
-                'label' => 'Direktórium',
-                'href' => 'https://www.liturgia.hu/direktorium/',
-                'icon' => 'book-open-text',
-            ],
         ];
+    }
+
+    public function openDirektorium(): void
+    {
+        $this->dispatch('open-direktorium', date: $this->date);
     }
 
     public function nextDay(): void
@@ -378,6 +377,7 @@ new class extends Component
 };
 ?>
 
+<div>
 <flux:card class="liturgical-info p-0 overflow-hidden border-0 shadow-xl dark:shadow-neutral-900/30">
     <!-- Header with gradient -->
     <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-indigo-900 dark:to-fuchsia-950 p-6 text-gray-800 dark:text-white">
@@ -494,6 +494,13 @@ new class extends Component
                     {{ $link['label'] }}
                 </flux:link>
                 @endforeach
+
+                <button
+                    wire:click="openDirektorium"
+                    class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-blue-500 dark:hover:text-blue-300">
+                    <flux:icon name="book-open-text" class="h-3.5 w-3.5" variant="mini" />
+                    Direktórium
+                </button>
             </div>
         </div>
 
@@ -714,3 +721,6 @@ new class extends Component
             @endif
         </div>
 </flux:card>
+
+<livewire:direktorium-modal />
+</div>

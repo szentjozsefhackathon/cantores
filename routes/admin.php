@@ -11,6 +11,9 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->group(functio
     Route::livewire('music-plan-templates', \App\Livewire\Pages\Admin\MusicPlanTemplates::class)->name('admin.music-plan-templates');
     Route::livewire('music-plan-templates/{template}/slots', \App\Livewire\Pages\Admin\MusicPlanTemplateSlots::class)->name('admin.music-plan-template-slots');
 
+    // Direktórium
+    Route::livewire('direktorium', \App\Livewire\Pages\Admin\DirektoriumEditions::class)->name('admin.direktorium');
+
     // Bulk Imports
     Route::livewire('bulk-imports', \App\Livewire\Pages\Admin\BulkImports::class)->name('admin.bulk-imports');
 

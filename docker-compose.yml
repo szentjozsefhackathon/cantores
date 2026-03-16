@@ -170,7 +170,7 @@ services:
         condition: service_completed_successfully
     networks:
       - creshu-network
-    command: php artisan queue:work --sleep=15 --tries=3 --timeout=60
+    command: php artisan queue:work --sleep=15 --tries=3 --timeout=3600
     restart: unless-stopped
 volumes:
   db-data:

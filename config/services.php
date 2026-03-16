@@ -40,4 +40,12 @@ return [
         'secret' => env('TURNSTILE_SECRET_KEY', '0x00000000000000000000AA'),
     ],
 
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+    ],
+
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+    ],
+
 ];
