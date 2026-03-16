@@ -369,7 +369,8 @@ new class extends Component
                     </div>
                     <div class="p-6">
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                        <div class="@container/musicgrid">
+                        <div class="grid grid-cols-1 @md/musicgrid:grid-cols-2 @2xl/musicgrid:grid-cols-3 gap-4 sm:gap-5">
                             @foreach ($musics as $musicItem)
                             @php
                             $music = $musicItem['music'];
@@ -378,22 +379,23 @@ new class extends Component
                             $collectionInfo = $musicItem['collection_info'];
                             $celebration = $musicItem['celebration'];
                             @endphp
-                            <div class="relative" wire:key="slotMusicMap-{{ $slotName }}-{{ $music->id }}">
-                                <livewire:music-card :music="$music" :score="$score" :scope_label="$musicItem['scope_label']" />
-                                @if($musicPlanId)
-                                <div class="absolute top-2 right-2">
-                                    <flux:button
-                                        wire:click="addMusicToMusicPlan({{ $music->id }}, '{{ $slotName }}')"
-                                        wire:loading.attr="disabled"
-                                        wire:loading.class="opacity-50 cursor-not-allowed"
-                                        icon="plus"
-                                        variant="primary"
-                                        size="sm"
-                                        title="Zene hozzáadása az énekrendhez" />
+                            <div class="flex items-start gap-2" wire:key="slotMusicMap-{{ $slotName }}-{{ $music->id }}">
+                                <div class="flex-1 min-w-0">
+                                    <livewire:music-card :music="$music" :score="$score" :scope_label="$musicItem['scope_label']" />
                                 </div>
+                                @if($musicPlanId)
+                                <flux:button
+                                    wire:click="addMusicToMusicPlan({{ $music->id }}, '{{ $slotName }}')"
+                                    wire:loading.attr="disabled"
+                                    wire:loading.class="opacity-50 cursor-not-allowed"
+                                    icon="plus"
+                                    variant="primary"
+                                    size="xs"
+                                    title="Zene hozzáadása az énekrendhez" />
                                 @endif
                             </div>
                             @endforeach
+                        </div>
                         </div>
                     </div>
                 </div>
