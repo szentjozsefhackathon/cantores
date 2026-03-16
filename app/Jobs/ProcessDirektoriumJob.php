@@ -61,13 +61,31 @@ class ProcessDirektoriumJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
 
-            $this->edition->update([
-                'processing_status' => DirektoriumProcessingStatus::Failed,
-                'processing_error' => $e->getMessage(),
-            ]);
+            $this->markAsFailed($e->getMessage());
 
             throw $e;
         }
+    }
+
+    public function failed(?\Throwable $exception): void
+    {
+        $message = $exception?->getMessage() ?? 'A queue worker váratlanul leállt a feldolgozás közben.';
+
+        $this->markAsFailed($message);
+    }
+
+    private function markAsFailed(string $message): void
+    {
+        $edition = $this->edition->fresh();
+
+        if (! $edition || $edition->processing_status === DirektoriumProcessingStatus::Completed) {
+            return;
+        }
+
+        $edition->update([
+            'processing_status' => DirektoriumProcessingStatus::Failed,
+            'processing_error' => $message,
+        ]);
     }
 
     /**

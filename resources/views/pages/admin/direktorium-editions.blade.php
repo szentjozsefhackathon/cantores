@@ -141,6 +141,17 @@
                                     </div>
                                 @endif
 
+                                @if ($edition->processing_status === DirektoriumProcessingStatus::Processing)
+                                    <flux:button
+                                        wire:click="markAsFailed({{ $edition->id }})"
+                                        wire:confirm="A beragadt feldolgozást lezárod hibásként? Ez nem állítja le a queue workert, csak feloldja ezt a kiadást újrafeldolgozáshoz."
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="x-circle">
+                                        Beragadt job lezárása
+                                    </flux:button>
+                                @endif
+
                                 @if (!$edition->is_current && $edition->processing_status === DirektoriumProcessingStatus::Completed)
                                     <flux:button
                                         wire:click="markAsCurrent({{ $edition->id }})"

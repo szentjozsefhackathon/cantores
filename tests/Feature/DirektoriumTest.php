@@ -1,10 +1,15 @@
 <?php
 
+use App\Enums\DirektoriumProcessingStatus;
 use App\Jobs\ProcessDirektoriumJob;
+use App\Livewire\Pages\Admin\DirektoriumEditions;
 use App\Models\DirektoriumEdition;
 use App\Models\DirektoriumEntry;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 test('direktorium entry stores and retrieves structured data correctly', function () {
     $edition = DirektoriumEdition::create([
@@ -239,4 +244,48 @@ test('partial cleanup keeps entries updated during current run', function () {
     expect(DirektoriumEntry::query()->find($updatedThisRun->id))->not->toBeNull()
         ->and(DirektoriumEntry::query()->find($staleInRange->id))->toBeNull()
         ->and(DirektoriumEntry::query()->find($boundaryPage->id))->not->toBeNull();
+});
+
+test('admin can manually unlock a stale direktorium processing run from the ui', function () {
+    $admin = User::factory()->create();
+    $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    $admin->assignRole($adminRole);
+
+    $edition = DirektoriumEdition::create([
+        'year' => 2025,
+        'original_filename' => 'direktorium-2025.pdf',
+        'file_path' => 'direktorium/2025/direktorium-2025.pdf',
+        'processing_status' => DirektoriumProcessingStatus::Processing,
+        'processing_started_at' => now()->subHour(),
+        'processed_pages' => 42,
+        'total_pages' => 180,
+        'is_current' => false,
+    ]);
+
+    Livewire::actingAs($admin)
+        ->test(DirektoriumEditions::class)
+        ->call('markAsFailed', $edition->id);
+
+    expect($edition->fresh()->processing_status)->toBe(DirektoriumProcessingStatus::Failed)
+        ->and($edition->fresh()->processing_error)->toContain('kézzel leállítottad')
+        ->and($edition->fresh()->processing_completed_at)->not->toBeNull();
+});
+
+test('direktorium job failed hook marks stuck processing editions as failed', function () {
+    $edition = DirektoriumEdition::create([
+        'year' => 2025,
+        'original_filename' => 'direktorium-2025.pdf',
+        'file_path' => 'direktorium/2025/direktorium-2025.pdf',
+        'processing_status' => DirektoriumProcessingStatus::Processing,
+        'processing_started_at' => now()->subMinutes(10),
+        'processed_pages' => 12,
+        'total_pages' => 180,
+        'is_current' => false,
+    ]);
+
+    $job = new ProcessDirektoriumJob($edition);
+    $job->failed(new RuntimeException('Queue worker crashed'));
+
+    expect($edition->fresh()->processing_status)->toBe(DirektoriumProcessingStatus::Failed)
+        ->and($edition->fresh()->processing_error)->toBe('Queue worker crashed');
 });

@@ -65,9 +65,28 @@ class DirektoriumEditions extends Component
             'processing_status' => DirektoriumProcessingStatus::Pending,
             'processed_pages' => 0,
             'processing_error' => null,
+            'processing_started_at' => null,
+            'processing_completed_at' => null,
         ]);
 
         ProcessDirektoriumJob::dispatch($edition, $startPage, $endPage);
+    }
+
+    public function markAsFailed(int $editionId): void
+    {
+        $this->authorize('system.maintain');
+
+        $edition = DirektoriumEdition::findOrFail($editionId);
+
+        if ($edition->processing_status !== DirektoriumProcessingStatus::Processing) {
+            return;
+        }
+
+        $edition->update([
+            'processing_status' => DirektoriumProcessingStatus::Failed,
+            'processing_error' => 'A feldolgozást kézzel leállítottad, mert a job beragadt.',
+            'processing_completed_at' => now(),
+        ]);
     }
 
     public function updateSourceUrl(int $editionId, string $url): void
