@@ -34,6 +34,9 @@
                 <flux:navlist.item :href="route('admin.direktorium')" wire:navigate :current="request()->routeIs('admin.direktorium')">
                     {{ __('Direktórium') }}
                 </flux:navlist.item>
+                <flux:navlist.item :href="route('admin.direktorium.entries')" wire:navigate :current="request()->routeIs('admin.direktorium.entries')">
+                    {{ __('Direktórium bejegyzések') }}
+                </flux:navlist.item>
             </flux:navlist.group>
 
         </flux:navlist>

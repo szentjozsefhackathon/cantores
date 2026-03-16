@@ -1,6 +1,11 @@
 @php use App\Enums\DirektoriumProcessingStatus; @endphp
 <x-pages::admin.layout :heading="__('Direktórium')" :subheading="__('PDF feltöltés és AI feldolgozás')">
     <div class="space-y-8">
+        <div class="flex justify-end">
+            <flux:button variant="ghost" icon="table-cells" :href="route('admin.direktorium.entries')" wire:navigate>
+                Bejegyzések böngészése
+            </flux:button>
+        </div>
 
         {{-- Upload new edition --}}
         <flux:card class="space-y-4">
@@ -127,12 +132,19 @@
 
                             <div class="flex flex-wrap gap-2">
                                 @if (in_array($edition->processing_status, [DirektoriumProcessingStatus::Pending, DirektoriumProcessingStatus::Failed, DirektoriumProcessingStatus::Completed]))
-                                    <div x-data="{ start: 1, end: '' }" class="flex flex-wrap items-center gap-2">
+                                    <div
+                                        x-data="{
+                                            start: 1,
+                                            end: '',
+                                            confirmMessage: @js($edition->processing_status === DirektoriumProcessingStatus::Completed
+                                                ? 'Újrafeldolgozod a megadott oldalakat? Ez API-költséggel jár.'
+                                                : 'Elindítod az AI feldolgozást? Ez eltarthat néhány percig és API-költséggel jár.')
+                                        }"
+                                        class="flex flex-wrap items-center gap-2">
                                         <flux:input type="number" x-model="start" min="1" placeholder="Kezdő oldal" class="w-28" size="sm" />
                                         <flux:input type="number" x-model="end" min="1" placeholder="Utolsó oldal" class="w-28" size="sm" />
                                         <flux:button
-                                            x-on:click="$wire.process({{ $edition->id }}, start, end || null)"
-                                            wire:confirm="{{ $edition->processing_status === DirektoriumProcessingStatus::Completed ? 'Újrafeldolgozod a megadott oldalakat? Ez API-költséggel jár.' : 'Elindítod az AI feldolgozást? Ez eltarthat néhány percig és API-költséggel jár.' }}"
+                                            x-on:click="if (window.confirm(confirmMessage)) { $wire.process({{ $edition->id }}, Number(start), end || null) }"
                                             variant="{{ $edition->processing_status === DirektoriumProcessingStatus::Completed ? 'ghost' : 'primary' }}"
                                             size="sm"
                                             icon="{{ $edition->processing_status === DirektoriumProcessingStatus::Completed ? 'arrow-path' : 'cpu-chip' }}">
@@ -160,6 +172,17 @@
                                         size="sm"
                                         icon="check-circle">
                                         Beállítás aktívnak
+                                    </flux:button>
+                                @endif
+
+                                @if ($edition->entries_count > 0)
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="table-cells"
+                                        :href="route('admin.direktorium.entries', ['editionFilter' => $edition->id])"
+                                        wire:navigate>
+                                        Bejegyzések
                                     </flux:button>
                                 @endif
 

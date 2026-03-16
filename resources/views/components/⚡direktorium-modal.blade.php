@@ -118,7 +118,7 @@ new class extends Component
 
                     $vLabels = [
                         'V0' => 'Votív és rituális mise nem mondható',
-                        'V1' => 'Rituális mise mondható, votív mise ordinárius engedélyével',
+                        'V1' => 'Rituális mise mondható, votív mise engedéllyel',
                         'V2' => 'Votív és rituális mise mondható',
                     ];
                 @endphp

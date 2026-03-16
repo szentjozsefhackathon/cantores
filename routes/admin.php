@@ -13,6 +13,7 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->group(functio
 
     // Direktórium
     Route::livewire('direktorium', \App\Livewire\Pages\Admin\DirektoriumEditions::class)->name('admin.direktorium');
+    Route::livewire('direktorium/entries', \App\Livewire\Pages\Admin\DirektoriumEntries::class)->name('admin.direktorium.entries');
 
     // Bulk Imports
     Route::livewire('bulk-imports', \App\Livewire\Pages\Admin\BulkImports::class)->name('admin.bulk-imports');

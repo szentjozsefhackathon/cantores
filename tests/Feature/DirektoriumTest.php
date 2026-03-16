@@ -3,6 +3,7 @@
 use App\Enums\DirektoriumProcessingStatus;
 use App\Jobs\ProcessDirektoriumJob;
 use App\Livewire\Pages\Admin\DirektoriumEditions;
+use App\Livewire\Pages\Admin\DirektoriumEntries;
 use App\Models\DirektoriumEdition;
 use App\Models\DirektoriumEntry;
 use App\Models\User;
@@ -271,6 +272,28 @@ test('admin can manually unlock a stale direktorium processing run from the ui',
         ->and($edition->fresh()->processing_completed_at)->not->toBeNull();
 });
 
+test('admin direktorium process action asks for confirmation in the ui', function () {
+    $admin = User::factory()->create();
+    $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    $admin->assignRole($adminRole);
+
+    DirektoriumEdition::create([
+        'year' => 2025,
+        'original_filename' => 'direktorium-2025.pdf',
+        'file_path' => 'direktorium/2025/direktorium-2025.pdf',
+        'processing_status' => DirektoriumProcessingStatus::Pending,
+        'processed_pages' => 0,
+        'total_pages' => 180,
+        'is_current' => false,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.direktorium'))
+        ->assertSuccessful()
+        ->assertSee('window.confirm(confirmMessage)', false)
+        ->assertSee('Feldolgozás indítása');
+});
+
 test('direktorium job failed hook marks stuck processing editions as failed', function () {
     $edition = DirektoriumEdition::create([
         'year' => 2025,
@@ -288,4 +311,118 @@ test('direktorium job failed hook marks stuck processing editions as failed', fu
 
     expect($edition->fresh()->processing_status)->toBe(DirektoriumProcessingStatus::Failed)
         ->and($edition->fresh()->processing_error)->toBe('Queue worker crashed');
+});
+
+test('admin can browse direktorium entries in the admin table', function () {
+    $admin = User::factory()->create();
+    $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    $admin->assignRole($adminRole);
+
+    $edition = DirektoriumEdition::create([
+        'year' => 2026,
+        'original_filename' => 'direktorium-2026.md',
+        'file_path' => 'direktorium/2026/direktorium-2026.md',
+        'processing_status' => DirektoriumProcessingStatus::Completed,
+        'is_current' => true,
+        'total_pages' => 200,
+        'processed_pages' => 200,
+    ]);
+
+    DirektoriumEntry::create([
+        'direktorium_edition_id' => $edition->id,
+        'entry_date' => '2026-03-19',
+        'markdown_text' => '**SZENT JÓZSEF GY1 V0 — Ü**\n*fehér*\nOlv.: Mt 1,16',
+        'pdf_page_start' => 77,
+        'pdf_page_end' => 77,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.direktorium.entries'))
+        ->assertSuccessful()
+        ->assertSee('Direktórium bejegyzések')
+        ->assertSee('SZENT JÓZSEF')
+        ->assertSee('direktorium-2026.md');
+});
+
+test('direktorium entries admin table trims long full text previews', function () {
+    $admin = User::factory()->create();
+    $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    $admin->assignRole($adminRole);
+
+    $edition = DirektoriumEdition::create([
+        'year' => 2026,
+        'original_filename' => 'direktorium-2026.md',
+        'file_path' => 'direktorium/2026/direktorium-2026.md',
+        'processing_status' => DirektoriumProcessingStatus::Completed,
+        'is_current' => true,
+        'total_pages' => 200,
+        'processed_pages' => 200,
+    ]);
+
+    $fullText = 'Ez egy nagyon hosszu direktoriumi bejegyzes, amelyet a tablazatban csak rovid elonezetkent kell megjeleniteni, hogy a sor ne nyuljon tul hosszan es a teljes szoveg ne foglaljon el tul sok helyet.';
+    $trimmedPreview = \Illuminate\Support\Str::limit(\Illuminate\Support\Str::squish($fullText), 100);
+
+    DirektoriumEntry::create([
+        'direktorium_edition_id' => $edition->id,
+        'entry_date' => '2026-03-20',
+        'markdown_text' => $fullText,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.direktorium.entries'))
+        ->assertSuccessful()
+        ->assertSee($trimmedPreview)
+        ->assertDontSee($fullText);
+});
+
+test('direktorium entries admin page filters by selected edition', function () {
+    $admin = User::factory()->create();
+    $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    $admin->assignRole($adminRole);
+
+    $olderEdition = DirektoriumEdition::create([
+        'year' => 2025,
+        'original_filename' => 'direktorium-2025.md',
+        'file_path' => 'direktorium/2025/direktorium-2025.md',
+        'processing_status' => DirektoriumProcessingStatus::Completed,
+        'is_current' => false,
+        'total_pages' => 180,
+        'processed_pages' => 180,
+    ]);
+
+    $currentEdition = DirektoriumEdition::create([
+        'year' => 2026,
+        'original_filename' => 'direktorium-2026.md',
+        'file_path' => 'direktorium/2026/direktorium-2026.md',
+        'processing_status' => DirektoriumProcessingStatus::Completed,
+        'is_current' => true,
+        'total_pages' => 200,
+        'processed_pages' => 200,
+    ]);
+
+    DirektoriumEntry::create([
+        'direktorium_edition_id' => $olderEdition->id,
+        'entry_date' => '2025-12-24',
+        'markdown_text' => '**OLDER ENTRY**\n*viola*',
+    ]);
+
+    DirektoriumEntry::create([
+        'direktorium_edition_id' => $currentEdition->id,
+        'entry_date' => '2026-01-06',
+        'markdown_text' => '**CURRENT ENTRY**\n*fehér*',
+    ]);
+
+    Livewire::actingAs($admin)
+        ->test(DirektoriumEntries::class)
+        ->set('editionFilter', (string) $currentEdition->id)
+        ->assertSee('CURRENT ENTRY')
+        ->assertDontSee('OLDER ENTRY');
+});
+
+test('non admin users cannot access direktorium entries admin page', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.direktorium.entries'))
+        ->assertForbidden();
 });
