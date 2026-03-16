@@ -8,8 +8,6 @@ use Livewire\Component;
 
 new class extends Component
 {
-    public bool $show = false;
-
     public string $date = '';
 
     /** @var \Illuminate\Database\Eloquent\Collection<int, DirektoriumEntry> */
@@ -28,13 +26,7 @@ new class extends Component
     public function open(string $date): void
     {
         $this->date = $date;
-        $this->show = true;
         $this->loadEntries();
-    }
-
-    public function close(): void
-    {
-        $this->show = false;
     }
 
     private function loadEntries(): void
@@ -63,7 +55,7 @@ new class extends Component
 };
 ?>
 
-<flux:modal wire:model="show" name="direktorium" class="w-full max-w-3xl">
+<flux:modal name="direktorium" class="w-full max-w-3xl">
     <div class="space-y-5">
         {{-- Header --}}
         <div class="flex items-start justify-between gap-4">
@@ -77,6 +69,11 @@ new class extends Component
             </div>
         </div>
 
+        <div wire:loading class="text-center py-12">
+            <flux:icon.loading class="h-12 w-12 mx-auto text-blue-600" />
+        </div>
+
+        <div wire:loading.remove>
         @if ($entries->isEmpty())
             <flux:callout color="zinc" icon="information-circle">
                 <flux:callout.heading>Nincs adat erre a napra</flux:callout.heading>
@@ -185,9 +182,12 @@ new class extends Component
                 @endif
             @endforeach
         @endif
+        </div>{{-- end wire:loading.remove --}}
 
         <div class="flex justify-end pt-2">
-            <flux:button wire:click="close" variant="ghost">Bezárás</flux:button>
+            <flux:modal.close>
+                <flux:button variant="ghost">Bezárás</flux:button>
+            </flux:modal.close>
         </div>
     </div>
 </flux:modal>

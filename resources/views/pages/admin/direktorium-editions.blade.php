@@ -7,6 +7,21 @@
             </flux:button>
         </div>
 
+        <flux:card class="space-y-4">
+            <div class="space-y-1">
+                <flux:heading size="md">Feldolgozási menetrend</flux:heading>
+                <flux:text class="text-sm text-neutral-500">Minden új Direktórium kiadásnál ezt a sorrendet kövesd.</flux:text>
+            </div>
+
+            <ol class="list-decimal space-y-2 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
+                <li>Először alakítsd át a PDF-et Markdownná a <code class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs dark:bg-zinc-800">marker-pdf.sh</code> script segítségével.</li>
+                <li>Töltsd fel a létrejött <code class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs dark:bg-zinc-800">.md</code> fájlt az alábbi űrlapon.</li>
+                <li>Az első és utolsó oldalszám megadásával indíts feldolgozást, először kisebb szakaszon.</li>
+                <li>Ha az eredmény rendben van, adj hozzá több oldalt és futtasd újra a feldolgozást.</li>
+                <li>Ha valami félremegy, állíts be másik kezdő és záró oldalt, majd csak azt a szakaszt dolgozd fel újra. Ez különösen a húsvéti napok körül lehet hasznos.</li>
+            </ol>
+        </flux:card>
+
         {{-- Upload new edition --}}
         <flux:card class="space-y-4">
             <flux:heading size="md">Új kiadás feltöltése</flux:heading>

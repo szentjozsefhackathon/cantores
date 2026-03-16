@@ -81,11 +81,6 @@ new class extends Component
         ];
     }
 
-    public function openDirektorium(): void
-    {
-        $this->dispatch('open-direktorium', date: $this->date);
-    }
-
     public function nextDay(): void
     {
         $this->date = Carbon::parse($this->date)->addDay()->format('Y-m-d');
@@ -496,7 +491,7 @@ new class extends Component
                 @endforeach
 
                 <button
-                    wire:click="openDirektorium"
+                    x-on:click="$dispatch('open-direktorium', { date: '{{ $date }}' }); $flux.modal('direktorium').show()"
                     class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-blue-500 dark:hover:text-blue-300">
                     <flux:icon name="book-open-text" class="h-3.5 w-3.5" variant="mini" />
                     Direktórium

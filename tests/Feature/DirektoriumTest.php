@@ -290,6 +290,8 @@ test('admin direktorium process action asks for confirmation in the ui', functio
     $this->actingAs($admin)
         ->get(route('admin.direktorium'))
         ->assertSuccessful()
+        ->assertSee('Feldolgozási menetrend')
+        ->assertSee('marker-pdf.sh')
         ->assertSee('window.confirm(confirmMessage)', false)
         ->assertSee('Feldolgozás indítása');
 });
