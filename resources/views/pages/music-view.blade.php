@@ -231,12 +231,9 @@
         <!-- Actions (only for authenticated users) -->
         @auth
         <div class="mt-6 flex flex-col sm:flex-row gap-3">
-            @can('update', $music)
-                <flux:button variant="primary" icon="pencil" :href="route('music-editor', $music)">
-                    {{ __('Edit Music Piece') }}
-                </flux:button>
-            @endcan
-
+            <flux:button variant="primary" icon="pencil" :href="route('music-editor', $music)">
+                {{ __('Edit Music Piece') }}
+            </flux:button>
         </div>
         @endauth
     </div>

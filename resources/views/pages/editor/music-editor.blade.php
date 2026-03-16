@@ -724,7 +724,8 @@ new class extends Component
                                             value="{{ $genre->id }}"
                                             label=""
                                             :icon="$genre->icon()"
-                                            :title="$genre->label()" />
+                                            :title="$genre->label()"
+                                            :disabled="!Auth::user()?->can('update', $music)" />
                                         @endforeach
                                     </flux:checkbox.group>
                                 </div>
@@ -737,7 +738,8 @@ new class extends Component
                                             wire:change="autoSave"
                                             value="{{ $genre->id }}"
                                             :label="$genre->label()"
-                                            :icon="$genre->icon()" />
+                                            :icon="$genre->icon()"
+                                            :disabled="!Auth::user()?->can('update', $music)" />
                                         @endforeach
                                     </flux:checkbox.group>
                                 </div>
