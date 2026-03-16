@@ -123,7 +123,7 @@ class ProcessDirektoriumJob implements ShouldQueue
         // Later batches win via upsert — they have more context and produce more complete entries.
         $processedPages = 0;
 
-        for ($first = $rangeStart; $first <= $rangeEnd; ) {
+        for ($first = $rangeStart; $first <= $rangeEnd;) {
             $last = min($first + self::PAGES_PER_BATCH, $rangeEnd);
 
             // Build clean text without page markers — page markers confuse the AI into
@@ -156,15 +156,20 @@ class ProcessDirektoriumJob implements ShouldQueue
             $first = $last; // overlap: next batch starts at this batch's last page
         }
 
-        // Only delete old entries after all batches succeed – preserves data if job fails mid-way.
-        // When reprocessing a partial range, only delete old entries within that page range
-        // so entries from other pages are left untouched.
+        $this->deleteStaleEntries($rangeStart, $rangeEnd, $totalPages);
+    }
+
+    private function deleteStaleEntries(int $rangeStart, int $rangeEnd, int $totalPages): void
+    {
+        // Only delete entries that were not touched during the current run.
+        // Existing rows updated via upsert keep their original created_at value, so updated_at is the
+        // reliable signal for whether this job superseded them.
         $isFullReprocess = $rangeStart === 1 && $rangeEnd === $totalPages;
 
         $this->edition->entries()
             ->where(function ($q) {
-                $q->whereNull('created_at')
-                    ->orWhere('created_at', '<', $this->edition->processing_started_at);
+                $q->whereNull('updated_at')
+                    ->orWhere('updated_at', '<', $this->edition->processing_started_at);
             })
             ->when(! $isFullReprocess, function ($q) use ($rangeStart, $rangeEnd) {
                 // Use exclusive lower bound: rangeStart is the overlap page shared with the previous batch.

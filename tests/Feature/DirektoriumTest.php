@@ -3,6 +3,7 @@
 use App\Jobs\ProcessDirektoriumJob;
 use App\Models\DirektoriumEdition;
 use App\Models\DirektoriumEntry;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Storage;
 
 test('direktorium entry stores and retrieves structured data correctly', function () {
@@ -182,4 +183,60 @@ test('process direktorium job saves anthropic prompt to debug storage', function
 
     expect($path)->toBe("direktorium/debug/edition-{$edition->id}/batch-3-4-prompt.txt")
         ->and(Storage::disk('local')->get($path))->toBe('test anthropic prompt');
+});
+
+test('partial cleanup keeps entries updated during current run', function () {
+    $startedAt = CarbonImmutable::parse('2026-03-16 10:00:00');
+    $runUpdatedAt = $startedAt->addMinute();
+    $previousRunAt = $startedAt->subDay();
+
+    $edition = DirektoriumEdition::create([
+        'year' => 2025,
+        'original_filename' => 'direktorium-2025.pdf',
+        'file_path' => 'direktorium/2025/direktorium-2025.pdf',
+        'processing_status' => 'processing',
+        'processing_started_at' => $startedAt,
+        'is_current' => false,
+        'total_pages' => 180,
+        'processed_pages' => 88,
+    ]);
+
+    $updatedThisRun = DirektoriumEntry::create([
+        'direktorium_edition_id' => $edition->id,
+        'entry_date' => '2025-03-27',
+        'markdown_text' => 'Updated during this run',
+        'pdf_page_start' => 87,
+        'pdf_page_end' => 87,
+        'created_at' => $previousRunAt,
+        'updated_at' => $runUpdatedAt,
+    ]);
+
+    $staleInRange = DirektoriumEntry::create([
+        'direktorium_edition_id' => $edition->id,
+        'entry_date' => '2025-03-28',
+        'markdown_text' => 'Stale entry in range',
+        'pdf_page_start' => 88,
+        'pdf_page_end' => 88,
+        'created_at' => $previousRunAt,
+        'updated_at' => $previousRunAt,
+    ]);
+
+    $boundaryPage = DirektoriumEntry::create([
+        'direktorium_edition_id' => $edition->id,
+        'entry_date' => '2025-03-26',
+        'markdown_text' => 'Boundary page fragment',
+        'pdf_page_start' => 86,
+        'pdf_page_end' => 86,
+        'created_at' => $previousRunAt,
+        'updated_at' => $previousRunAt,
+    ]);
+
+    $job = new ProcessDirektoriumJob($edition, 86, 88);
+    $method = new ReflectionMethod(ProcessDirektoriumJob::class, 'deleteStaleEntries');
+    $method->setAccessible(true);
+    $method->invoke($job, 86, 88, 180);
+
+    expect(DirektoriumEntry::query()->find($updatedThisRun->id))->not->toBeNull()
+        ->and(DirektoriumEntry::query()->find($staleInRange->id))->toBeNull()
+        ->and(DirektoriumEntry::query()->find($boundaryPage->id))->not->toBeNull();
 });
