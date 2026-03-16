@@ -82,14 +82,15 @@
                 <flux:input
                     type="search"
                     wire:model.live.debounce.500ms="collectionFreeText"
-                    :placeholder="__('Abbreviation, order number, etc.')" />
+                    :placeholder="__('Abbreviation, order number, etc.')"
+                    autocomplete="off" />
             </flux:field>
         </div>
 
         {{-- Collection dropdown --}}
         <div x-show="active === 'collection-select'" class="sm:!block">
             <flux:field>
-                <flux:select wire:model.live="collectionFilter">
+                <flux:select wire:model.live="collectionFilter" autocomplete="off">
                     <option value="">{{ __('All Collections') }}</option>
                     @foreach ($this->collections as $collection)
                         <option value="{{ $collection->title }}">{{ $collection->title }} ({{ $collection->abbreviation }})</option>
@@ -104,14 +105,15 @@
                 <flux:input
                     type="search"
                     wire:model.live.debounce.500ms="authorFreeText"
-                    :placeholder="__('Author name...')" />
+                    :placeholder="__('Author name...')"
+                    autocomplete="off" />
             </flux:field>
         </div>
 
         {{-- Author dropdown --}}
         <div x-show="active === 'author-select'" class="sm:!block">
             <flux:field>
-                <flux:select wire:model.live="authorFilter">
+                <flux:select wire:model.live="authorFilter" autocomplete="off">
                     <option value="">{{ __('All Authors') }}</option>
                     @foreach ($this->authors as $author)
                         <option value="{{ $author->name }}">{{ $author->name }}</option>
