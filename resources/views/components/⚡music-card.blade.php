@@ -162,7 +162,7 @@ new class extends Component
                     >
                         {{ $partner->title }}
                         @if($relation->relationship_type)
-                            <span class="text-gray-400">({{ $relation->relationship_type }})</span>
+                            <span class="text-gray-400">({{ \App\MusicRelationshipType::from($relation->relationship_type)->label() }})</span>
                         @endif
                     </a>
                     @endcan

@@ -9,6 +9,7 @@ enum MusicRelationshipType: string
     case Accompaniment = 'accompaniment';
     case Contrafact = 'contrafact';
     case Connected = 'connected';
+    case Duplicate = 'duplicate';
     case Other = 'other';
 
     public function label(): string

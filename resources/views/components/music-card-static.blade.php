@@ -113,7 +113,7 @@
                     <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                         {{ $relation['title'] ?? $relation }}
                         @if(isset($relation['relationship_type']))
-                            <span class="text-gray-400">({{ $relation['relationship_type'] }})</span>
+                            <span class="text-gray-400">({{ \App\MusicRelationshipType::from($relation['relationship_type'])->label() }})</span>
                         @endif
                     </div>
                 @endforeach
