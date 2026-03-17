@@ -59,7 +59,12 @@
                 @forelse ($collections as $collection)
                     <flux:table.row>
                         <flux:table.cell>
-                            <div class="font-medium">{{ $collection->title }}</div>
+                            <div class="font-medium flex items-center gap-1">
+                                {{ $collection->title }}
+                                @if ($collection->is_verified)
+                                    @svg('heroicon-s-check', 'inline h-3 w-3 text-green-500 shrink-0')
+                                @endif
+                            </div>
                         </flux:table.cell>
                         
                         <flux:table.cell>
@@ -156,6 +161,17 @@
                                     wire:click="delete({{ $collection->id }})"
                                     wire:confirm="{{ __('Are you sure you want to delete this collection? This can only be done if no music pieces are assigned to it.') }}"
                                     :title="__('Delete')"
+                                />
+                                @endcan
+
+                                @can('verify', $collection)
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    :icon="$collection->is_verified ? 'shield-check' : 'shield-exclamation'"
+                                    wire:click="verify({{ $collection->id }})"
+                                    wire:confirm="{{ $collection->is_verified ? __('Remove verification from this collection?') : __('Mark this collection as verified?') }}"
+                                    :title="$collection->is_verified ? __('Verified — click to unverify') : __('Unverified — click to verify')"
                                 />
                                 @endcan
                                 

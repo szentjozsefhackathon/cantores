@@ -3,7 +3,10 @@
 use App\Models\Author;
 use App\Models\Music;
 use App\Models\User;
+use App\Policies\AuthorPolicy;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 it('prevents duplicate public authors', function () {
     $user = User::factory()->create();
@@ -258,4 +261,98 @@ it('filters authors by visibility', function () {
         ->assertSee($myPrivateAuthor->name)
         ->assertDontSee($privateAuthor->name)
         ->assertDontSee($publicAuthor->name);
+});
+
+// --- Verification tests ---
+
+it('owner cannot delete a verified author', function () {
+    $policy = new AuthorPolicy;
+    $owner = User::factory()->create();
+    $author = Author::factory()->create(['user_id' => $owner->id, 'is_verified' => true]);
+
+    expect($policy->delete($owner, $author))->toBeFalse();
+});
+
+it('admin can delete a verified author', function () {
+    $policy = new AuthorPolicy;
+    Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+    $author = Author::factory()->create(['is_verified' => true]);
+
+    expect($policy->delete($admin, $author))->toBeTrue();
+});
+
+it('owner can delete their own unverified author', function () {
+    $policy = new AuthorPolicy;
+    $owner = User::factory()->create();
+    $author = Author::factory()->create(['user_id' => $owner->id, 'is_verified' => false]);
+
+    expect($policy->delete($owner, $author))->toBeTrue();
+});
+
+it('owner cannot update a verified author', function () {
+    $policy = new AuthorPolicy;
+    $owner = User::factory()->create();
+    $author = Author::factory()->create(['user_id' => $owner->id, 'is_verified' => true]);
+
+    expect($policy->update($owner, $author))->toBeFalse();
+});
+
+it('editor with content.edit.verified can update a verified author', function () {
+    $policy = new AuthorPolicy;
+    $permission = Permission::firstOrCreate(['name' => 'content.edit.verified', 'guard_name' => 'web']);
+    $editor = User::factory()->create();
+    $editor->givePermissionTo($permission);
+    $author = Author::factory()->create(['is_verified' => true]);
+
+    expect($policy->update($editor, $author))->toBeTrue();
+});
+
+it('editor can verify an author', function () {
+    $policy = new AuthorPolicy;
+    $permission = Permission::firstOrCreate(['name' => 'content.edit.verified', 'guard_name' => 'web']);
+    $editor = User::factory()->create();
+    $editor->givePermissionTo($permission);
+    $author = Author::factory()->create(['is_verified' => false]);
+
+    expect($policy->verify($editor, $author))->toBeTrue();
+});
+
+it('regular user cannot verify an author', function () {
+    $policy = new AuthorPolicy;
+    $user = User::factory()->create();
+    $author = Author::factory()->create();
+
+    expect($policy->verify($user, $author))->toBeFalse();
+});
+
+it('verifying an author toggles is_verified via Livewire', function () {
+    $permission = Permission::firstOrCreate(['name' => 'content.edit.verified', 'guard_name' => 'web']);
+    $editor = User::factory()->create();
+    $editor->givePermissionTo($permission);
+    $this->actingAs($editor);
+
+    $author = Author::factory()->create(['is_verified' => false]);
+
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
+        ->call('verify', $author)
+        ->assertHasNoErrors();
+
+    expect($author->fresh()->is_verified)->toBeTrue();
+});
+
+it('un-verifying an author toggles is_verified back via Livewire', function () {
+    $permission = Permission::firstOrCreate(['name' => 'content.edit.verified', 'guard_name' => 'web']);
+    $editor = User::factory()->create();
+    $editor->givePermissionTo($permission);
+    $this->actingAs($editor);
+
+    $author = Author::factory()->create(['is_verified' => true]);
+
+    Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
+        ->call('verify', $author)
+        ->assertHasNoErrors();
+
+    expect($author->fresh()->is_verified)->toBeFalse();
 });

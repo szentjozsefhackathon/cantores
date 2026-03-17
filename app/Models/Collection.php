@@ -21,6 +21,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property int|null $user_id
  * @property bool $is_private
+ * @property bool $is_verified
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
  * @property-read int|null $audits_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Genre> $genres
@@ -29,6 +30,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $music
  * @property-read int|null $music_count
  * @property-read \App\Models\User|null $user
+ *
  * @method static \Database\Factories\CollectionFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection forCurrentGenre()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection newModelQuery()
@@ -47,6 +49,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection whereUserId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection withVisibleRelation(string $relation, ?\App\Models\User $user = null)
+ *
  * @mixin \Eloquent
  */
 class Collection extends Model implements Auditable
@@ -66,6 +69,7 @@ class Collection extends Model implements Auditable
         'author',
         'user_id',
         'is_private',
+        'is_verified',
         'cover',
         'photo_license',
     ];
@@ -79,6 +83,7 @@ class Collection extends Model implements Auditable
     {
         return [
             'is_private' => 'boolean',
+            'is_verified' => 'boolean',
         ];
     }
 

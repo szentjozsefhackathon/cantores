@@ -19,6 +19,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property string $name
  * @property int|null $user_id
  * @property bool $is_private
+ * @property bool $is_verified
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
@@ -26,6 +27,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $music
  * @property-read int|null $music_count
  * @property-read \App\Models\User|null $user
+ *
  * @method static \Database\Factories\AuthorFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Author newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Author newQuery()
@@ -41,6 +43,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Author whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Author whereUserId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Author withVisibleRelation(string $relation, ?\App\Models\User $user = null)
+ *
  * @mixin \Eloquent
  */
 class Author extends Model implements Auditable
@@ -59,6 +62,7 @@ class Author extends Model implements Auditable
         'name',
         'user_id',
         'is_private',
+        'is_verified',
         'avatar',
         'photo_license',
     ];
@@ -72,6 +76,7 @@ class Author extends Model implements Auditable
     {
         return [
             'is_private' => 'boolean',
+            'is_verified' => 'boolean',
         ];
     }
 

@@ -53,6 +53,17 @@ class AuthorsTable extends Component
         $this->dispatch('author-deleted');
     }
 
+    /**
+     * Toggle the verification status of an author.
+     */
+    public function verify(Author $author): void
+    {
+        $this->authorize('verify', $author);
+
+        $author->update(['is_verified' => ! $author->is_verified]);
+        $this->dispatch('author-updated');
+    }
+
     #[On('author-created')]
     #[On('author-updated')]
     public function refresh(): void {}

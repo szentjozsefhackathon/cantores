@@ -44,6 +44,11 @@ class AuthorPolicy
      */
     public function update(User $user, Author $author): bool
     {
+        // Verified authors require content.edit.verified permission
+        if ($author->is_verified) {
+            return $user !== null && ($user->is_admin || $user->hasPermissionTo('content.edit.verified'));
+        }
+
         // Only the owner or admin can update authors
         return $user !== null && ($user->is_admin || $author->user_id === $user->id);
     }
@@ -62,9 +67,23 @@ class AuthorPolicy
      */
     public function delete(User $user, Author $author): bool
     {
+        // Verified authors can only be deleted by admins
+        if ($author->is_verified) {
+            return $user !== null && $user->is_admin;
+        }
+
         // Only the owner or admin can delete authors
         // Additional checks for music assignments are done in the controller/component
         return $user !== null && ($user->is_admin || $author->user_id === $user->id);
+    }
+
+    /**
+     * Determine whether the user can verify (or un-verify) the author.
+     * Requires the content.edit.verified permission (editor role) or admin.
+     */
+    public function verify(User $user, Author $author): bool
+    {
+        return $user !== null && ($user->is_admin || $user->hasPermissionTo('content.edit.verified'));
     }
 
     /**

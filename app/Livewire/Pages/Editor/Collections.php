@@ -253,6 +253,17 @@ class Collections extends Component
     }
 
     /**
+     * Toggle the verification status of a collection.
+     */
+    public function verify(Collection $collection): void
+    {
+        $this->authorize('verify', $collection);
+
+        $collection->update(['is_verified' => ! $collection->is_verified]);
+        $this->dispatch('collection-updated');
+    }
+
+    /**
      * Reset form fields.
      */
     private function resetForm(): void

@@ -34,7 +34,12 @@
                                     <flux:icon name="user" class="w-4 h-4 text-gray-400 dark:text-gray-500" />
                                 </div>
                             @endif
-                            <div class="font-medium">{{ $author->name }}</div>
+                            <div class="font-medium flex items-center gap-1">
+                                {{ $author->name }}
+                                @if ($author->is_verified)
+                                    @svg('heroicon-s-check', 'inline h-3 w-3 text-green-500 shrink-0')
+                                @endif
+                            </div>
                         </div>
                     </flux:table.cell>
 
@@ -98,6 +103,17 @@
                                 wire:click="delete({{ $author->id }})"
                                 wire:confirm="{{ __('Are you sure you want to delete this author? This can only be done if no music pieces are assigned to it.') }}"
                                 :title="__('Delete')"
+                            />
+                            @endcan
+
+                            @can('verify', $author)
+                            <flux:button
+                                variant="ghost"
+                                size="sm"
+                                :icon="$author->is_verified ? 'shield-check' : 'shield-exclamation'"
+                                wire:click="verify({{ $author->id }})"
+                                wire:confirm="{{ $author->is_verified ? __('Remove verification from this author?') : __('Mark this author as verified?') }}"
+                                :title="$author->is_verified ? __('Verified — click to unverify') : __('Unverified — click to verify')"
                             />
                             @endcan
 

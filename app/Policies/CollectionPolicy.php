@@ -44,6 +44,11 @@ class CollectionPolicy
      */
     public function update(User $user, Collection $collection): bool
     {
+        // Verified collections require content.edit.verified permission
+        if ($collection->is_verified) {
+            return $user !== null && ($user->is_admin || $user->hasPermissionTo('content.edit.verified'));
+        }
+
         // Only the owner or admin can update collections
         return $user !== null && ($user->is_admin || $collection->user_id === $user->id);
     }
@@ -53,9 +58,23 @@ class CollectionPolicy
      */
     public function delete(User $user, Collection $collection): bool
     {
+        // Verified collections can only be deleted by admins
+        if ($collection->is_verified) {
+            return $user !== null && $user->is_admin;
+        }
+
         // Only the owner or admin can delete collections
         // Additional checks for music assignments are done in the controller/component
         return $user !== null && ($user->is_admin || $collection->user_id === $user->id);
+    }
+
+    /**
+     * Determine whether the user can verify (or un-verify) the collection.
+     * Requires the content.edit.verified permission (editor role) or admin.
+     */
+    public function verify(User $user, Collection $collection): bool
+    {
+        return $user !== null && ($user->is_admin || $user->hasPermissionTo('content.edit.verified'));
     }
 
     /**
