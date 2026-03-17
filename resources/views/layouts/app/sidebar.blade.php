@@ -92,6 +92,9 @@
             <flux:sidebar.item icon="combine" :href="route('music-merger')" :current="request()->routeIs('music-merge')" wire:navigate>
                 Énekek egyesítése
             </flux:sidebar.item>
+            <flux:sidebar.item icon="copy" :href="route('duplicate-merger')" :current="request()->routeIs('duplicate-merger')" wire:navigate>
+                Duplikátumok egyesítése
+            </flux:sidebar.item>
             <flux:sidebar.item icon="check-circle" :href="route('music-verifier')" :current="request()->routeIs('music-verifier')" wire:navigate>
                 Énekek ellenőrzése
             </flux:sidebar.item>

@@ -133,6 +133,11 @@ Route::livewire('/editor/musics/merge', 'editor.music-merger')
     ->middleware(['auth', 'verified'])
     ->name('music-merger');
 
+// Duplicate music merging tool
+Route::livewire('/editor/musics/duplicates', 'editor.duplicate-merger')
+    ->middleware(['auth', 'verified'])
+    ->name('duplicate-merger');
+
 // Music verification tool
 Route::livewire('/editor/musics/verify', \App\Livewire\Pages\Editor\MusicVerifier::class)
     ->middleware(['auth', 'verified'])
