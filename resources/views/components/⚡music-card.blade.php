@@ -45,7 +45,7 @@ new class extends Component
      style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.12);"
 >
     @can('view', $music)
-    <a href="{{ route('music-view', $music) }}" class="absolute inset-0 z-0" aria-label="{{ $music->title }}"></a>
+    <a href="{{ route('music-view', $music) }}" class="absolute inset-0 z-0" aria-label="{{ $music->title }}" wire:navigate></a>
     @endcan
     <!-- Relevance score stars -->
     @if($score !== null)
@@ -102,7 +102,7 @@ new class extends Component
                         size="sm"
                         icon="pencil"
                         :href="route('music-editor', $music)"
-                        target="_blank"
+                        wire:navigate
                         :title="__('Edit')"
                         class="!p-1"
                     />
@@ -119,6 +119,7 @@ new class extends Component
             @foreach($music->authors as $author)
                 <a href="{{ route('author-view', $author) }}"
                    class="relative z-10 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
+                   wire:navigate
                 >
                     @if($author->avatarThumbUrl())
                         <img src="{{ $author->avatarThumbUrl() }}" alt="{{ $author->name }}"
@@ -160,6 +161,7 @@ new class extends Component
                     <div class="relative z-10 inline-flex flex-col gap-1">
                         <a href="{{ route('music-view', $partner) }}"
                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                           wire:navigate
                         >
                             {{ $partner->title }}
                             @if($relation->relationship_type)

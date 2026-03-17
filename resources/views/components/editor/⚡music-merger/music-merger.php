@@ -43,6 +43,8 @@ return new class extends Component
 
     public array $mergedRelatedMusic = [];
 
+    public array $mergedTags = [];
+
     // Editable merged fields
     public string $mergedTitle = '';
 
@@ -89,7 +91,7 @@ return new class extends Component
             'userId' => Auth::id(),
         ]);
 
-        $music = Music::with(['collections', 'genres', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
+        $music = Music::with(['collections', 'genres', 'urls', 'tags', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
 
@@ -141,7 +143,7 @@ return new class extends Component
     #[On('music-selected.mergeLeftMusic')]
     public function assignToLeftMusic(int $musicId): void
     {
-        $music = Music::with(['collections', 'genres', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
+        $music = Music::with(['collections', 'genres', 'urls', 'tags', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
 
@@ -159,7 +161,7 @@ return new class extends Component
     #[On('music-selected.mergeRightMusic')]
     public function assignToRightMusic(int $musicId): void
     {
-        $music = Music::with(['collections', 'genres', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
+        $music = Music::with(['collections', 'genres', 'urls', 'tags', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
 
@@ -288,9 +290,12 @@ return new class extends Component
             ->values()
             ->toArray();
 
-        // Related music (union of both directions)
-        $this->mergedRelatedMusic = $this->leftMusic->allMusicRelations()
-            ->merge($this->rightMusic->allMusicRelations())
+        // Related music (union of both directions, deduplicated by related music id)
+        $this->mergedRelatedMusic = $this->mergeRelatedMusic();
+
+        // Tags (union - same tag should appear only once)
+        $this->mergedTags = $this->leftMusic->tags
+            ->merge($this->rightMusic->tags)
             ->unique('id')
             ->values()
             ->toArray();
@@ -367,6 +372,50 @@ return new class extends Component
     }
 
     /**
+     * Merge related music from both sides, deduplicating by music id.
+     */
+    private function mergeRelatedMusic(): array
+    {
+        $relatedMap = [];
+
+        // Process left music relations
+        foreach ($this->leftMusic->allMusicRelations() as $relation) {
+            $partner = $relation->partnerFor($this->leftMusic);
+            // Skip if partner is the right music (will be deleted after merge)
+            if ($partner->id === $this->rightMusic->id) {
+                continue;
+            }
+            $key = $partner->id;
+            $relatedMap[$key] = [
+                'music' => $partner,
+                'relationship_type' => $relation->relationship_type,
+                'source' => 'left',
+            ];
+        }
+
+        // Process right music relations
+        foreach ($this->rightMusic->allMusicRelations() as $relation) {
+            $partner = $relation->partnerFor($this->rightMusic);
+            // Skip if partner is the left music (self-relation after merge)
+            if ($partner->id === $this->leftMusic->id) {
+                continue;
+            }
+            $key = $partner->id;
+            // Only add if not already added from left side
+            if (! isset($relatedMap[$key])) {
+                $relatedMap[$key] = [
+                    'music' => $partner,
+                    'relationship_type' => $relation->relationship_type,
+                    'source' => 'right',
+                ];
+            }
+            // If already exists, keep the left side's relationship type (or resolve conflict if needed)
+        }
+
+        return array_values($relatedMap);
+    }
+
+    /**
      * Check if two values differ (considering null/empty).
      */
     private function valuesDiffer($left, $right): bool
@@ -435,8 +484,9 @@ return new class extends Component
             // Update related music (delete and re-create to avoid inverse duplicates)
             \App\Models\MusicRelation::forMusic($this->leftMusic->id)->delete();
             foreach ($this->mergedRelatedMusic as $relatedData) {
-                $relatedMusicId = $relatedData['id'] ?? $relatedData->id;
-                // Skip self-relations
+                $relatedMusic = $relatedData['music'] ?? $relatedData->music;
+                $relatedMusicId = $relatedMusic['id'] ?? $relatedMusic->id;
+                // Skip self-relations (should not happen due to filtering in mergeRelatedMusic)
                 if ($relatedMusicId !== $this->leftMusic->id) {
                     \App\Models\MusicRelation::create([
                         'music_id' => $this->leftMusic->id,
@@ -446,6 +496,11 @@ return new class extends Component
                     ]);
                 }
             }
+
+            // Update tags (sync)
+            $this->leftMusic->tags()->sync(
+                collect($this->mergedTags)->pluck('id')->toArray()
+            );
 
             // Update music plan slot assignments from right to left
             \DB::table('music_plan_slot_assignments')
