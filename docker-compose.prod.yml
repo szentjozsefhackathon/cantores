@@ -129,6 +129,21 @@ services:
     entrypoint: []
     command: ["/bin/sh", "-c", "php artisan queue:work --sleep=15 --tries=3 --timeout=3600"]
     restart: unless-stopped
+  maintenance:
+    image: nginx:alpine
+    mem_limit: 32m
+    volumes:
+      - ./docker/maintenance:/usr/share/nginx/html:ro
+      - ./docker/maintenance/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.maintenance.rule=Host(`${APP_DOMAIN}`) || Host(`www.${APP_DOMAIN}`)
+      - traefik.http.routers.maintenance.priority=1
+      - traefik.http.services.maintenance.loadbalancer.server.port=80
+    restart: unless-stopped
+
 volumes:
   db-data:
   storage:
