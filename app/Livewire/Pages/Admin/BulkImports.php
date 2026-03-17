@@ -141,6 +141,16 @@ class BulkImports extends Component
                         \Log::info("Added tag '{$import->tag}' to existing music: {$import->piece} (reference: {$import->reference}) in collection ID {$this->selectedCollectionId}");
                     }
                 }
+
+                // Handle related field if present (even for existing music)
+                if (! empty($import->related)) {
+                    $relationAdded = $this->handleRelatedField($existingMusic, $import->related);
+                    if ($relationAdded) {
+                        $relationAddedCount++;
+                        \Log::info("Added relation for existing music: {$import->piece} (reference: {$import->reference}) in collection ID {$this->selectedCollectionId}");
+                    }
+                }
+
                 \Log::info("Skipping import: {$import->piece} (reference: {$import->reference}) - already exists in collection ID {$this->selectedCollectionId}");
                 $skippedCount++;
 
@@ -275,16 +285,15 @@ class BulkImports extends Component
         // Check if relation already exists (either direction)
         $existingRelation = MusicRelation::between($music->id, $relatedMusic->id)->first();
         if ($existingRelation) {
-            \Log::info("Relation already exists between music ID {$music->id} and {$relatedMusic->id} for related field '{$related}'");
-
-            return false;
+            \Log::info("Relation already exists between music ID {$music->id} and {$relatedMusic->id} for related field '{$related}' - removing it");
+            $existingRelation->delete();
         }
 
-        // Create relation with type "Other"
+        // Create relation with type "Duplicate"
         MusicRelation::create([
             'music_id' => $music->id,
             'related_music_id' => $relatedMusic->id,
-            'relationship_type' => \App\MusicRelationshipType::Other->value,
+            'relationship_type' => \App\MusicRelationshipType::Duplicate->value,
             'user_id' => Auth::id(),
         ]);
 

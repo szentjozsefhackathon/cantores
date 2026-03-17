@@ -12,7 +12,7 @@ new class extends Component
 
     public function mount(Music $music, ?int $score = null, ?string $scope_label = null): void
     {
-        $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music']);
+        $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections']);
         $this->score = $score;
         $this->scope_label = $scope_label;
     }
@@ -25,7 +25,7 @@ new class extends Component
     #[On('tag-removed')]
     public function refreshMusic(): void
     {
-        $this->music->refresh()->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music']);
+        $this->music->refresh()->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections']);
     }
 }
 ?>
@@ -157,14 +157,23 @@ new class extends Component
                 @foreach($music->allMusicRelations() as $relation)
                 @php $partner = $relation->partnerFor($music); @endphp
                     @can('view', $partner)
-                    <a href="{{ route('music-view', $partner) }}"
-                       class="relative z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                    >
-                        {{ $partner->title }}
-                        @if($relation->relationship_type)
-                            <span class="text-gray-400">({{ \App\MusicRelationshipType::from($relation->relationship_type)->label() }})</span>
+                    <div class="relative z-10 inline-flex flex-col gap-1">
+                        <a href="{{ route('music-view', $partner) }}"
+                           class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            {{ $partner->title }}
+                            @if($relation->relationship_type)
+                                <span class="text-gray-400">({{ \App\MusicRelationshipType::from($relation->relationship_type)->label() }})</span>
+                            @endif
+                        </a>
+                        @if($partner->collections->isNotEmpty())
+                            <div class="flex flex-wrap gap-0.5 pl-2">
+                                @foreach($partner->collections as $collection)
+                                    <x-collection-badge :collection="$collection" />
+                                @endforeach
+                            </div>
                         @endif
-                    </a>
+                    </div>
                     @endcan
                 @endforeach
             </div>
