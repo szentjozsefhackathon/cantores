@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $recipients
  * @property-read int|null $recipients_count
  * @property-read \App\Models\User|null $reporter
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification errorReports()
  * @method static \Database\Factories\NotificationFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification newModelQuery()
@@ -37,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereReporterId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereType($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Notification whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class Notification extends Model

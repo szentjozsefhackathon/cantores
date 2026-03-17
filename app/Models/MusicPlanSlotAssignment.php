@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 /**
  * Class MusicPlanSlotAssignment
- * 
+ *
  * Represents an assignment of a music track to a specific slot within a music plan.
  *
  * @property int $id
@@ -29,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\HasOneThrough;
  * @property-read \App\Models\MusicPlanSlotPlan $musicPlanSlotPlan
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignmentScope> $scopes
  * @property-read int|null $scopes_count
+ *
  * @method static \Database\Factories\MusicPlanSlotAssignmentFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment forMusicPlan(\App\Models\MusicPlan $musicPlan)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment forSlot(\App\Models\MusicPlanSlot $slot)
@@ -42,6 +43,7 @@ use Illuminate\Database\Eloquent\Relations\HasOneThrough;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereMusicSequence($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereNotes($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignment whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class MusicPlanSlotAssignment extends Model

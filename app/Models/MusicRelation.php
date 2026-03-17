@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read \App\Models\Music $music
  * @property-read \App\Models\Music $relatedMusic
  * @property-read \App\Models\User|null $user
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicRelation newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicRelation newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicRelation query()
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicRelation whereUserId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicRelation forMusic(int|Music $music)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicRelation between(int $id1, int $id2)
+ *
  * @mixin \Eloquent
  */
 class MusicRelation extends Model
@@ -95,6 +97,7 @@ class MusicRelation extends Model
     public function scopeForMusic(Builder $query, int|Music $music): Builder
     {
         $id = $music instanceof Music ? $music->id : $music;
+
         return $query->where('music_id', $id)->orWhere('related_music_id', $id);
     }
 

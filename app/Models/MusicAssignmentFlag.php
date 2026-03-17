@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicPlanSlotAssignments
  * @property-read int|null $music_plan_slot_assignments_count
+ *
  * @method static \Database\Factories\MusicAssignmentFlagFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag newQuery()
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicAssignmentFlag whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class MusicAssignmentFlag extends Model

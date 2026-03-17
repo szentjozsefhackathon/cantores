@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Carbon\CarbonImmutable|null $deleted_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlot> $slots
  * @property-read int|null $slots_count
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanTemplate active()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanTemplate newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanTemplate newQuery()
@@ -32,6 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanTemplate withSlots()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanTemplate withTrashed(bool $withTrashed = true)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanTemplate withoutTrashed()
+ *
  * @mixin \Eloquent
  */
 class MusicPlanTemplate extends Model

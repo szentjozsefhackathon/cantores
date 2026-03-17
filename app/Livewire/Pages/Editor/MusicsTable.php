@@ -6,7 +6,6 @@ use App\Concerns\HasMusicSearchScopes;
 use App\Models\Music;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -136,7 +135,7 @@ class MusicsTable extends Component
     {
         return $this->tags->map(fn ($tag) => [
             'id' => $tag->id,
-            'name' => $tag->name . ($tag->type ? ' (' . $tag->type->label() . ')' : ''),
+            'name' => $tag->name.($tag->type ? ' ('.$tag->type->label().')' : ''),
             'icon' => $tag->icon(),
         ])->toArray();
     }

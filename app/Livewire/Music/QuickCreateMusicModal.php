@@ -177,5 +177,4 @@ class QuickCreateMusicModal extends Component
     {
         $this->checkAndCreate();
     }
-
 }

@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -30,6 +29,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read \App\Models\User|null $owner
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanTemplate> $templates
  * @property-read int|null $templates_count
+ *
  * @method static Builder<static>|MusicPlanSlot active()
  * @method static Builder<static>|MusicPlanSlot custom()
  * @method static \Database\Factories\MusicPlanSlotFactory factory($count = null, $state = [])
@@ -54,6 +54,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @method static Builder<static>|MusicPlanSlot whereUserId($value)
  * @method static Builder<static>|MusicPlanSlot withTrashed(bool $withTrashed = true)
  * @method static Builder<static>|MusicPlanSlot withoutTrashed()
+ *
  * @mixin \Eloquent
  */
 class MusicPlanSlot extends Model

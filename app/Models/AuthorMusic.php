@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property int|null $user_id
  * @property-read \App\Models\User|null $user
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|AuthorMusic newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|AuthorMusic newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|AuthorMusic query()
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|AuthorMusic whereMusicId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|AuthorMusic whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|AuthorMusic whereUserId($value)
+ *
  * @mixin \Eloquent
  */
 class AuthorMusic extends Pivot

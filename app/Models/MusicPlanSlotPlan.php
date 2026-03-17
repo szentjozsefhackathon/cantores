@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read int|null $music_assignments_count
  * @property-read \App\Models\MusicPlan $musicPlan
  * @property-read \App\Models\MusicPlanSlot $musicPlanSlot
+ *
  * @method static \Database\Factories\MusicPlanSlotPlanFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotPlan newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotPlan newQuery()
@@ -28,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotPlan whereMusicPlanSlotId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotPlan whereSequence($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotPlan whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class MusicPlanSlotPlan extends Model

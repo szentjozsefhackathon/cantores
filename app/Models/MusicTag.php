@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $music
  * @property-read int|null $music_count
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag query()
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag whereType($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicTag whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class MusicTag extends Model

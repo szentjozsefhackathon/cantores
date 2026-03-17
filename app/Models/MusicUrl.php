@@ -19,6 +19,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property-read int|null $audits_count
  * @property-read \App\Models\Music $music
  * @property-read \App\Models\User|null $user
+ *
  * @method static \Database\Factories\MusicUrlFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl newQuery()
@@ -30,6 +31,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereUrl($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicUrl whereUserId($value)
+ *
  * @mixin \Eloquent
  */
 class MusicUrl extends Model implements Auditable

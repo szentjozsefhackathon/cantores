@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property int|null $user_id
  * @property-read \App\Models\User|null $user
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection query()
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection wherePageNumber($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicCollection whereUserId($value)
+ *
  * @mixin \Eloquent
  */
 class MusicCollection extends Pivot

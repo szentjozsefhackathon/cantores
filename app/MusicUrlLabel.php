@@ -13,7 +13,7 @@ enum MusicUrlLabel: string
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::SheetMusic => __('Sheet Music'),
             self::Audio => __('Audio'),
             self::Video => __('Video'),
@@ -25,7 +25,7 @@ enum MusicUrlLabel: string
 
     public function icon(): string
     {
-        return match($this) {
+        return match ($this) {
             self::SheetMusic => 'file-music',
             self::Audio => 'speaker-wave',
             self::Video => 'video-camera',
@@ -37,7 +37,7 @@ enum MusicUrlLabel: string
 
     public function color(): string
     {
-        return match($this) {
+        return match ($this) {
             self::SheetMusic => 'text-purple-500',
             self::Audio => 'text-amber-500',
             self::Video => 'text-red-500',

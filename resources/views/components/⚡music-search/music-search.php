@@ -147,7 +147,7 @@ return new class extends Component
     {
         return $this->tags->map(fn ($tag) => [
             'id' => $tag->id,
-            'name' => $tag->name . ($tag->type ? ' (' . $tag->type->label() . ')' : ''),
+            'name' => $tag->name.($tag->type ? ' ('.$tag->type->label().')' : ''),
             'icon' => $tag->icon(),
         ])->toArray();
     }

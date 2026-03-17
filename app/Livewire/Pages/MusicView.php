@@ -46,7 +46,7 @@ class MusicView extends Component
         return view('pages.music-view', [
             'musicPlans' => $musicPlans,
         ])->layout('layouts::app.main', [
-            'title'       => $this->music->title,
+            'title' => $this->music->title,
             'description' => $description,
         ]);
     }

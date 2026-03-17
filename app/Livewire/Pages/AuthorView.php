@@ -72,7 +72,7 @@ class AuthorView extends Component
         return view('pages.author-view', [
             'musics' => $musics,
         ])->layout('layouts::app.main', [
-            'title'       => $this->author->name,
+            'title' => $this->author->name,
             'description' => $description,
         ]);
     }

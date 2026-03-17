@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlot> $slots
  * @property-read int|null $slots_count
  * @property-read \App\Models\User $user
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan byGenre($genre)
  * @method static \Database\Factories\MusicPlanFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan forCurrentGenre()
@@ -50,6 +51,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan whereUserId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan withVisibleRelation(string $relation, ?\App\Models\User $user = null)
+ *
  * @mixin \Eloquent
  */
 class MusicPlan extends Model

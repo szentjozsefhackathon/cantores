@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\MusicPlanSlotAssignment $assignment
  * @property-read string $label
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignmentScope newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignmentScope newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignmentScope query()
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignmentScope whereScopeNumber($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignmentScope whereScopeType($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlanSlotAssignmentScope whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class MusicPlanSlotAssignmentScope extends Model

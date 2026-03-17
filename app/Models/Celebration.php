@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlan> $musicPlans
  * @property-read int|null $music_plans_count
  * @property-read \App\Models\User|null $user
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration custom()
  * @method static \Database\Factories\CelebrationFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration forUser($user)
@@ -49,6 +50,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereWeek($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereYearLetter($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration whereYearParity($value)
+ *
  * @mixin \Eloquent
  */
 class Celebration extends Model

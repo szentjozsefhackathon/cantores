@@ -6,6 +6,7 @@ use App\Enums\MusicTagType;
 use App\Models\BulkImport;
 use App\Models\Collection;
 use App\Models\Music;
+use App\Models\MusicRelation;
 use App\Models\MusicTag;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -122,6 +123,7 @@ class BulkImports extends Component
         $createdCount = 0;
         $skippedCount = 0;
         $tagAddedCount = 0;
+        $relationAddedCount = 0;
 
         foreach ($imports as $import) {
             // Check if a music already exists in the selected collection with the same order_number (reference)
@@ -174,6 +176,14 @@ class BulkImports extends Component
                 $this->attachTagToMusic($music, $import->tag);
             }
 
+            // Handle related field if present
+            if (! empty($import->related)) {
+                $relationAdded = $this->handleRelatedField($music, $import->related);
+                if ($relationAdded) {
+                    $relationAddedCount++;
+                }
+            }
+
             $createdCount++;
         }
 
@@ -187,6 +197,10 @@ class BulkImports extends Component
 
         if ($tagAddedCount > 0) {
             $message .= ' '.__('Added :tag_added tags to existing music.', ['tag_added' => $tagAddedCount]);
+        }
+
+        if ($relationAddedCount > 0) {
+            $message .= ' '.__('Added :relation_added relations.', ['relation_added' => $relationAddedCount]);
         }
 
         session()->flash('message', $message);
@@ -217,6 +231,64 @@ class BulkImports extends Component
 
         // Attach tag to music
         $music->tags()->attach($tag->id);
+
+        return true;
+    }
+
+    /**
+     * Handle the "related" field by looking up a music in a collection by abbreviation and order number.
+     * Returns true if a relation was created, false otherwise.
+     */
+    private function handleRelatedField(Music $music, string $related): bool
+    {
+        // Parse the related field: format "ÉE 553" -> abbreviation "ÉE", orderNumber "553"
+        $parts = explode(' ', trim($related), 2);
+        if (count($parts) !== 2) {
+            \Log::info("Could not parse related field '{$related}' for music ID {$music->id}");
+
+            return false;
+        }
+
+        $abbreviation = trim($parts[0]);
+        $orderNumber = trim($parts[1]);
+
+        // Find collection with matching abbreviation
+        $collection = Collection::where('abbreviation', $abbreviation)->first();
+        if (! $collection) {
+            \Log::info("No collection found with abbreviation '{$abbreviation}' for related field '{$related}'");
+
+            return false;
+        }
+
+        // Find music in that collection with matching order_number
+        $relatedMusic = Music::whereHas('collections', function ($query) use ($collection, $orderNumber) {
+            $query->where('collections.id', $collection->id)
+                ->where('music_collection.order_number', $orderNumber);
+        })->first();
+
+        if (! $relatedMusic) {
+            \Log::info("No music found in collection '{$abbreviation}' with order number '{$orderNumber}' for related field '{$related}'");
+
+            return false;
+        }
+
+        // Check if relation already exists (either direction)
+        $existingRelation = MusicRelation::between($music->id, $relatedMusic->id)->first();
+        if ($existingRelation) {
+            \Log::info("Relation already exists between music ID {$music->id} and {$relatedMusic->id} for related field '{$related}'");
+
+            return false;
+        }
+
+        // Create relation with type "Other"
+        MusicRelation::create([
+            'music_id' => $music->id,
+            'related_music_id' => $relatedMusic->id,
+            'relationship_type' => \App\MusicRelationshipType::Other->value,
+            'user_id' => Auth::id(),
+        ]);
+
+        \Log::info("Created relation between music ID {$music->id} and {$relatedMusic->id} for related field '{$related}'");
 
         return true;
     }

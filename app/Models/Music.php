@@ -47,6 +47,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property-read \App\Models\User|null $user
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicVerification> $verifications
  * @property-read int|null $verifications_count
+ *
  * @method static \Database\Factories\MusicFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Music forCurrentGenre()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Music newModelQuery()
@@ -66,6 +67,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Music whereUserId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Music withVisibleRelation(string $relation, ?\App\Models\User $user = null)
+ *
  * @mixin \Eloquent
  */
 class Music extends Model implements Auditable

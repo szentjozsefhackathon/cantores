@@ -400,5 +400,4 @@ new class extends Component
 
         $this->dispatch('slots-updated', message: 'Privát megjegyzések mentve.');
     }
-
 };

@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Cache;
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property string|null $gender
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName query()
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Cache;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FirstName whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class FirstName extends Model

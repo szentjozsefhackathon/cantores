@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 class CollectionCoverService
 {
     const COVER_SIZE = 256;
+
     const THUMB_SIZE = 64;
 
     public function store(Collection $collection, UploadedFile $file, string $verticalAlign = 'top'): void
@@ -76,7 +77,7 @@ class CollectionCoverService
         $srcY = match ($verticalAlign) {
             'center' => intval(($srcH - $srcMin) / 2),
             'bottom' => $srcH - $srcMin,
-            default  => 0,
+            default => 0,
         };
 
         $dest = imagecreatetruecolor($size, $size);
@@ -89,6 +90,7 @@ class CollectionCoverService
     {
         ob_start();
         imagejpeg($image, null, 90);
+
         return ob_get_clean();
     }
 }

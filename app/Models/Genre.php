@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Cache;
  * @property-read int|null $music_plans_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
  * @property-read int|null $users_count
+ *
  * @method static \Database\Factories\GenreFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Genre newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Genre newQuery()
@@ -30,6 +31,7 @@ use Illuminate\Support\Facades\Cache;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Genre whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Genre whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Genre whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class Genre extends Model

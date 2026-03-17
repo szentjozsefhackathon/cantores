@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\Music $music
  * @property-read \App\Models\User|null $verifier
+ *
  * @method static \Database\Factories\MusicVerificationFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification forField(string $fieldName)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification newModelQuery()
@@ -37,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereVerifiedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicVerification whereVerifierId($value)
+ *
  * @mixin \Eloquent
  */
 class MusicVerification extends Model

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
  * @property string $name
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|City newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|City newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|City query()
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Cache;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|City whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|City whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|City whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class City extends Model

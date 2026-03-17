@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property string|null $deleted_at
  * @property-read string $pattern
+ *
  * @method static Builder<static>|WhitelistRule active()
  * @method static \Database\Factories\WhitelistRuleFactory factory($count = null, $state = [])
  * @method static Builder<static>|WhitelistRule forHostname(string $hostname)
@@ -34,6 +35,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static Builder<static>|WhitelistRule wherePathPrefix($value)
  * @method static Builder<static>|WhitelistRule whereScheme($value)
  * @method static Builder<static>|WhitelistRule whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class WhitelistRule extends Model
