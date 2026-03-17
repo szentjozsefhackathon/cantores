@@ -87,12 +87,22 @@ new class extends Component
             ->where('name', 'ilike', "%$value%")
             ->whereNotIn('id', $this->music->authors->pluck('id'));
 
-        $this->authorsSearchable = $query
+        $authors = $query
             ->take(20)
             ->get()
+            ->map(function ($author) {
+                $author->avatar = $author->avatarThumbUrl();
+                return $author;
+            })
             ->sortBy('name')
-            ->values()
-            ->merge($selectedOption);
+            ->values();
+
+        $selectedOption = $selectedOption->map(function ($author) {
+            $author->avatar = $author->avatarThumbUrl();
+            return $author;
+        });
+
+        $this->authorsSearchable = $authors->merge($selectedOption);
     }
 
     /**
