@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\MusicTagType;
 use App\Models\BulkImport;
+use App\Models\MusicTag;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 
@@ -150,11 +152,11 @@ DTX;
 
     $csvLines = file($csvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     expect($csvLines)->toHaveCount(3); // header + 2 rows
-    // New CSV format: title,reference,"page number",tag
+    // CSV format: title,reference,related,"page number",tag
     // fputcsv quotes fields with spaces, and empty fields are not quoted
-    expect($csvLines[0])->toBe('title,reference,"page number",tag');
-    expect($csvLines[1])->toBe('1,,,');
-    expect($csvLines[2])->toBe('2,,,');
+    expect($csvLines[0])->toBe('title,reference,related,"page number",tag');
+    expect($csvLines[1])->toBe('1,,,,');
+    expect($csvLines[2])->toBe('2,,,,');
 
     // Clean up CSV
     unlink($csvPath);
@@ -289,6 +291,119 @@ DTX;
     expect($records[0]->batch_number)->toBe(1);
 
     // Clean up CSV
+    $csvPath = storage_path("app/private/dtximport/{$collection}.csv");
+    if (file_exists($csvPath)) {
+        unlink($csvPath);
+    }
+});
+
+test('dtx convert command with --special mode imports only numbered songs with tag and reference', function () {
+    MusicTag::create(['name' => 'Gyertyagyújtás', 'type' => MusicTagType::Liturgy]);
+    MusicTag::create(['name' => 'I. Introitus', 'type' => MusicTagType::Liturgy]);
+
+    $dtxContent = <<<'DTX'
+>#     Skip this comment-like line
+
+>1 Gyertyagyújtás [ÉE 13]
+/1
+#7A04D3DE
+ \KkGE2[?r81f;Ím\K2g]?;e k\K[?2a;edv\K2a]?;ei\Kr42a;m\K|';
+
+>2 I. Introitus [ÉE 501]
+#0A60E420
+ \K-5kGE1;H\K[?r81d;ozz\K1e]?;ád \K[?2g;e\K(a2g2a]?)a;me\Kr42a;le\K|';m
+
+>Introitus [GRAD 417]
+#83CEFBC3
+ \K-5kGE1;S\K[?r82g;zent \K2g;Any\K1e]?;a\K|';
+DTX;
+
+    $collection = 'special_'.uniqid();
+    $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
+
+    Http::fake([$url => Http::response($dtxContent, 200)]);
+
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection, '--special' => true])
+        ->assertSuccessful();
+
+    $records = BulkImport::where('collection', $collection)->orderBy('id')->get();
+    expect($records)->toHaveCount(2);
+
+    expect($records[0]->piece)->toBe('Íme kedveim');
+    expect($records[0]->reference)->toBe('1');
+    expect($records[0]->related)->toBe('ÉE 13');
+    expect($records[0]->tag)->toBe('Gyertyagyújtás');
+
+    expect($records[1]->piece)->toBe('Hozzád emelem');
+    expect($records[1]->reference)->toBe('2');
+    expect($records[1]->related)->toBe('ÉE 501');
+    expect($records[1]->tag)->toBe('I. Introitus');
+
+    // Verify CSV includes tag column
+    $csvPath = storage_path("app/private/dtximport/{$collection}.csv");
+    expect(file_exists($csvPath))->toBeTrue();
+    $csvLines = file($csvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    expect($csvLines[0])->toBe('title,reference,related,"page number",tag');
+    expect($csvLines[1])->toContain('Gyertyagyújtás');
+
+    unlink($csvPath);
+});
+
+test('dtx convert command with --special mode fails when tag does not exist in database', function () {
+    MusicTag::create(['name' => 'Gyertyagyújtás', 'type' => MusicTagType::Liturgy]);
+    // 'I. Introitus' is intentionally missing
+
+    $dtxContent = <<<'DTX'
+>1 Gyertyagyújtás [ÉE 13]
+/1
+#7A04D3DE
+ \KkGE2[?r81f;Ím\K2g]?;e k\K[?2a;edv\K2a]?;ei\Kr42a;m\K|';
+
+>2 I. Introitus [ÉE 501]
+#0A60E420
+ \K-5kGE1;H\K[?r81d;ozz\K1e]?;ád \K[?2g;e\K(a2g2a]?)a;me\Kr42a;le\K|';m
+DTX;
+
+    $collection = 'special_fail_'.uniqid();
+    $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
+
+    Http::fake([$url => Http::response($dtxContent, 200)]);
+
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection, '--special' => true])
+        ->assertFailed();
+
+    expect(BulkImport::where('collection', $collection)->count())->toBe(0);
+
+    $dtxPath = storage_path("app/private/dtximport/{$collection}.dtx");
+    if (file_exists($dtxPath)) {
+        unlink($dtxPath);
+    }
+});
+
+test('dtx convert command with --special mode handles songs without reference brackets', function () {
+    MusicTag::create(['name' => 'I. Offertorium', 'type' => MusicTagType::Liturgy]);
+
+    $dtxContent = <<<'DTX'
+>5 I. Offertorium
+#21C0917E
+ \KkGE1;M\Krb2g;ert akik t\K[?r81f;é\K1e]?;ged v\K2g;árn\Kr42g;ak\K|';
+DTX;
+
+    $collection = 'special_noref_'.uniqid();
+    $url = "https://raw.githubusercontent.com/diatar/diatar-dtxs/refs/heads/main/{$collection}.dtx";
+
+    Http::fake([$url => Http::response($dtxContent, 200)]);
+
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection, '--special' => true])
+        ->assertSuccessful();
+
+    $records = BulkImport::where('collection', $collection)->get();
+    expect($records)->toHaveCount(1);
+    expect($records[0]->tag)->toBe('I. Offertorium');
+    expect($records[0]->reference)->toBe('5');
+    expect($records[0]->related)->toBe('');
+    expect($records[0]->piece)->not->toBeEmpty();
+
     $csvPath = storage_path("app/private/dtximport/{$collection}.csv");
     if (file_exists($csvPath)) {
         unlink($csvPath);

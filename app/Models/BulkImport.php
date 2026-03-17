@@ -15,8 +15,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $batch_number
  * @property int|null $page_number
  * @property string|null $tag
+ * @property string|null $related
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $musics
  * @property-read int|null $musics_count
+ *
  * @method static \Database\Factories\BulkImportFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport newQuery()
@@ -30,6 +32,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport whereReference($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport whereTag($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class BulkImport extends Model

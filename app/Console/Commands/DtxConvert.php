@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\BulkImport;
+use App\Models\MusicTag;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use SplFileObject;
@@ -14,7 +15,7 @@ class DtxConvert extends Command
      *
      * @var string
      */
-    protected $signature = 'cantores:dtx-convert {collection : The collection name (e.g., szvu)} {--title : Use ienek as title and leave reference empty} {--csv : Use CSV file instead of DTX}';
+    protected $signature = 'cantores:dtx-convert {collection : The collection name (e.g., szvu)} {--title : Use ienek as title and leave reference empty} {--csv : Use CSV file instead of DTX} {--special : Special mode: only numbered songs, tag from header validated against DB, ÉE reference as subtitle, first lyrics line as title} {--skip-unknown-tags : In special mode, skip songs whose tag does not exist in the DB instead of aborting (unknown tags are listed as warnings)}';
 
     /**
      * The console command description.
@@ -31,6 +32,8 @@ class DtxConvert extends Command
         $collection = $this->argument('collection');
         $useTitle = $this->option('title');
         $useCsv = $this->option('csv');
+        $useSpecial = $this->option('special');
+        $skipUnknownTags = $this->option('skip-unknown-tags');
 
         if ($useCsv) {
             // Import from CSV file
@@ -85,7 +88,18 @@ class DtxConvert extends Command
 
             $this->info("DTX file saved to: {$dtxPath}");
 
-            $songs = $this->parseDtx($dtxPath, $useTitle);
+            if ($useSpecial) {
+                $validTagNames = MusicTag::pluck('name')->all();
+                try {
+                    $songs = $this->parseSpecialDtx($dtxPath, $validTagNames, (bool) $skipUnknownTags);
+                } catch (\RuntimeException $e) {
+                    $this->error($e->getMessage());
+
+                    return self::FAILURE;
+                }
+            } else {
+                $songs = $this->parseDtx($dtxPath, $useTitle);
+            }
 
             if (empty($songs)) {
                 $this->warn('No songs found in DTX file.');
@@ -186,6 +200,140 @@ class DtxConvert extends Command
                 'page_number' => $pageNumber,
                 'tag' => $tag,
             ];
+        }
+
+        return $songs;
+    }
+
+    /**
+     * Parse special DTX format: only numbered songs, tag from header (validated), ÉE reference as subtitle, first lyrics as title.
+     *
+     * @param  string[]  $validTagNames
+     * @return array<int, array{ienek: string, enek: string, tag: string|null, related: string}>
+     *
+     * @throws \RuntimeException if a tag name from the file does not exist in the database and $skipUnknownTags is false.
+     */
+    private function parseSpecialDtx(string $dtxPath, array $validTagNames, bool $skipUnknownTags = false): array
+    {
+        $songs = [];
+        $currentSong = null;
+        $firstline = '';
+        $captured = false;
+        $ivers = 0;
+        $unknownTags = [];
+
+        $file = new SplFileObject($dtxPath);
+        $file->setFlags(SplFileObject::DROP_NEW_LINE);
+
+        while (! $file->eof()) {
+            $line = $file->fgets();
+            if ($line === false) {
+                break;
+            }
+            $line = rtrim($line, "\r\n");
+            if (empty($line)) {
+                continue;
+            }
+
+            $firstChar = $line[0];
+
+            switch ($firstChar) {
+                case '>':
+                    // Flush previous song if a lyrics line was captured
+                    if ($currentSong !== null && ! empty($firstline)) {
+                        $songs[] = array_merge($currentSong, ['enek' => $firstline]);
+                    }
+
+                    $content = trim(substr($line, 1));
+
+                    // Skip entries without a leading numeric order number (e.g. >Introitus)
+                    if (! preg_match('/^(\d+)\s+(.+)$/', $content, $matches)) {
+                        $currentSong = null;
+                        $firstline = '';
+                        $captured = false;
+                        $ivers = 0;
+                        break;
+                    }
+
+                    $orderNumber = $matches[1];
+                    $headerText = trim($matches[2]);
+
+                    // Split optional [RELATED] from tag text
+                    $tag = $headerText;
+                    $related = '';
+                    if (preg_match('/^(.+?)\s*\[([^\]]+)\]\s*$/', $headerText, $refMatches)) {
+                        $tag = trim($refMatches[1]);
+                        $related = trim($refMatches[2]);
+                    }
+
+                    // Try the full tag name first; fall back to the last word
+                    // (handles "Évközi XII.Offertorium" or "IV.Offertorium" → "Offertorium")
+                    $fullTag = $tag;
+                    $tagParts = preg_split('/[\s.]+/', $tag, -1, PREG_SPLIT_NO_EMPTY);
+                    $lastWord = mb_strtoupper(mb_substr(end($tagParts), 0, 1, 'UTF-8'), 'UTF-8').mb_substr(end($tagParts), 1, null, 'UTF-8');
+                    $tag = in_array($fullTag, $validTagNames, true) ? $fullTag : $lastWord;
+
+                    // Unknown tags: warn and leave tag null; abort if not in skip mode
+                    if (! in_array($tag, $validTagNames, true)) {
+                        $unknownTags[] = $tag;
+                        if (! $skipUnknownTags) {
+                            // Will throw after parsing; continue collecting unknowns
+                        }
+                        $tag = null;
+                    }
+
+                    $currentSong = [
+                        'ienek' => $orderNumber,
+                        'related' => $related,
+                        'tag' => $tag,
+                    ];
+                    $firstline = '';
+                    $captured = false;
+                    $ivers = 0;
+                    break;
+
+                case '/':
+                    $ivers++;
+                    if (! $captured) {
+                        $firstline = '';
+                    }
+                    break;
+
+                case ' ':
+                    if ($currentSong === null || $captured) {
+                        break;
+                    }
+                    if ($ivers <= 1) {
+                        $text = $this->unescape($line);
+                        $text = $this->cleanTxt($text);
+                        if (! empty($text)) {
+                            $firstline = $text;
+                            $captured = true;
+                        }
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        // Flush the last song
+        if ($currentSong !== null && ! empty($firstline)) {
+            $songs[] = array_merge($currentSong, ['enek' => $firstline]);
+        }
+
+        if (! empty($unknownTags)) {
+            if ($skipUnknownTags) {
+                foreach (array_unique($unknownTags) as $unknownTag) {
+                    $this->warn("Unknown tag (set to empty): {$unknownTag}");
+                }
+            } else {
+                throw new \RuntimeException(
+                    'The following tags do not exist in the music_tags table: '.implode(', ', array_unique($unknownTags)).
+                    "\nAdd them first before importing, or use --skip-unknown-tags to import without a tag."
+                );
+            }
         }
 
         return $songs;
@@ -300,14 +448,15 @@ class DtxConvert extends Command
 
         $csvFile = new SplFileObject($csvPath, 'w');
         // Generate CSV with new format columns
-        $csvFile->fputcsv(['title', 'reference', 'page number', 'tag']);
+        $csvFile->fputcsv(['title', 'reference', 'related', 'page number', 'tag']);
 
         foreach ($songs as $song) {
             $csvFile->fputcsv([
                 $song['enek'], // title
-                $song['ienek'], // reference
+                $song['ienek'], // reference (order number)
+                $song['related'] ?? '', // related
                 '', // page number (empty for DTX imports)
-                '', // tag (empty for DTX imports)
+                $song['tag'] ?? '', // tag
             ]);
         }
 
@@ -332,6 +481,7 @@ class DtxConvert extends Command
                 'collection' => $collection,
                 'piece' => $song['enek'],
                 'reference' => (string) $song['ienek'],
+                'related' => $song['related'] ?? null,
                 'page_number' => $song['page_number'] ?? null,
                 'tag' => $song['tag'] ?? null,
                 'batch_number' => $nextBatchNumber,

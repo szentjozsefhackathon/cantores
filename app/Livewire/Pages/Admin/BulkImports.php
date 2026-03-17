@@ -57,6 +57,22 @@ class BulkImports extends Component
     }
 
     /**
+     * Reset pagination when search changes.
+     */
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when collection filter changes.
+     */
+    public function updatedCollectionFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
      * Reset filters.
      */
     public function resetFilters(): void
