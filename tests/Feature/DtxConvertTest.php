@@ -152,11 +152,11 @@ DTX;
 
     $csvLines = file($csvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     expect($csvLines)->toHaveCount(3); // header + 2 rows
-    // CSV format: title,reference,related,"page number",tag
+    // CSV format: title,reference,related,"page number",tag,subtitle
     // fputcsv quotes fields with spaces, and empty fields are not quoted
-    expect($csvLines[0])->toBe('title,reference,related,"page number",tag');
-    expect($csvLines[1])->toBe('1,,,,');
-    expect($csvLines[2])->toBe('2,,,,');
+    expect($csvLines[0])->toBe('title,reference,related,"page number",tag,subtitle');
+    expect($csvLines[1])->toBe('1,,,,,');
+    expect($csvLines[2])->toBe('2,,,,,');
 
     // Clean up CSV
     unlink($csvPath);
@@ -343,7 +343,7 @@ DTX;
     $csvPath = storage_path("app/private/dtximport/{$collection}.csv");
     expect(file_exists($csvPath))->toBeTrue();
     $csvLines = file($csvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    expect($csvLines[0])->toBe('title,reference,related,"page number",tag');
+    expect($csvLines[0])->toBe('title,reference,related,"page number",tag,subtitle');
     expect($csvLines[1])->toContain('Gyertyagyújtás');
 
     unlink($csvPath);

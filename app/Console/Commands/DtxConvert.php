@@ -471,7 +471,15 @@ class DtxConvert extends Command
                         break;
                     }
                     // Capture first line of each verse (only first line per verse)
-                    if ($ivers === 1 && ! $capturedVerse1) {
+                    if ($ivers === 0 && ! $capturedVerse1) {
+                        // No verse prefix - treat as first verse
+                        $text = $this->unescape($line);
+                        $text = $this->cleanTxt($text);
+                        if (! empty($text)) {
+                            $pendingSong['firstLineVerse1'] = $text;
+                            $capturedVerse1 = true;
+                        }
+                    } elseif ($ivers === 1 && ! $capturedVerse1) {
                         $text = $this->unescape($line);
                         $text = $this->cleanTxt($text);
                         if (! empty($text)) {
