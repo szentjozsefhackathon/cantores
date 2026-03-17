@@ -117,7 +117,6 @@
                         <tr>
                             <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                                 <div class="flex flex-col items-center justify-center">
-                                    <flux:icon name="music-note" class="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
                                     <p class="text-lg font-medium">Nincsenek duplikátum kapcsolatok</p>
                                     <p class="mt-2">Nincs olyan ének, amelynek duplikátum típusú kapcsolata lenne.</p>
                                 </div>
