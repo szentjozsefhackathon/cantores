@@ -40,9 +40,12 @@ trait HasMusicSearchScopes
                 });
             });
 
+            // Improved relevance ranking: use word_similarity for the entire search phrase
+            // This gives better results than GREATEST(similarity(...)) because it considers
+            // how well the entire phrase matches, not just individual words
             $query->orderByRaw(
-                'GREATEST('.implode(', ', array_fill(0, count($words), 'similarity(musics.titles, ?)')).') DESC',
-                $words
+                'word_similarity(musics.titles, ?) DESC',
+                [$this->search]
             );
         }
 
