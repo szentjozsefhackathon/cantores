@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $page_number
  * @property string|null $tag
  * @property string|null $related
+ * @property string|null $subtitle
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $musics
  * @property-read int|null $musics_count
  *
@@ -31,6 +32,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport wherePiece($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport whereReference($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport whereTag($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport whereSubtitle($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BulkImport whereUpdatedAt($value)
  *
  * @mixin \Eloquent
@@ -51,6 +53,7 @@ class BulkImport extends Model
         'page_number',
         'tag',
         'batch_number',
+        'subtitle',
     ];
 
     /**
@@ -74,6 +77,7 @@ class BulkImport extends Model
             'page_number' => 'integer',
             'tag' => 'string',
             'batch_number' => 'integer',
+            'subtitle' => 'string',
         ];
     }
 

@@ -161,7 +161,7 @@ class BulkImports extends Component
             \Log::info("Importing music: {$import->piece} (reference: {$import->reference}) into collection ID {$this->selectedCollectionId}");
             $music = Music::create([
                 'title' => $import->piece,
-                'subtitle' => null,
+                'subtitle' => $import->subtitle ?? null,
                 'custom_id' => null,
                 'user_id' => Auth::id(),
                 'is_private' => false,

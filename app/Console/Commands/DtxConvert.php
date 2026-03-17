@@ -91,14 +91,14 @@ class DtxConvert extends Command
             if ($useSpecial) {
                 $validTagNames = MusicTag::pluck('name')->all();
                 try {
-                    $songs = $this->parseSpecialDtx($dtxPath, $validTagNames, (bool) $skipUnknownTags);
+                    $songs = $this->parseSpecialDtx($dtxPath, $validTagNames, (bool) $skipUnknownTags, $collection);
                 } catch (\RuntimeException $e) {
                     $this->error($e->getMessage());
 
                     return self::FAILURE;
                 }
             } else {
-                $songs = $this->parseDtx($dtxPath, $useTitle);
+                $songs = $this->parseDtx($dtxPath, $useTitle, $collection);
             }
 
             if (empty($songs)) {
@@ -125,9 +125,9 @@ class DtxConvert extends Command
     }
 
     /**
-     * Parse CSV file with columns: title, reference, page number, tag
+     * Parse CSV file with columns: title, reference, page number, tag, subtitle
      *
-     * @return array<int, array{ienek: string, enek: string, page_number: ?int, tag: ?string}>
+     * @return array<int, array{ienek: string, enek: string, page_number: ?int, tag: ?string, subtitle?: string}>
      */
     private function parseCsv(string $csvPath): array
     {
@@ -167,6 +167,7 @@ class DtxConvert extends Command
             $reference = '';
             $pageNumber = null;
             $tag = null;
+            $subtitle = null;
 
             if (isset($data['title'])) {
                 $title = trim($data['title']);
@@ -190,16 +191,24 @@ class DtxConvert extends Command
                 $tag = trim($data['tag']);
             }
 
+            if (isset($data['subtitle']) && ! empty(trim($data['subtitle']))) {
+                $subtitle = trim($data['subtitle']);
+            }
+
             if (empty($title) && empty($reference)) {
                 continue; // Skip empty rows
             }
 
-            $songs[] = [
+            $song = [
                 'ienek' => $reference,
                 'enek' => $title,
                 'page_number' => $pageNumber,
                 'tag' => $tag,
             ];
+            if ($subtitle !== null) {
+                $song['subtitle'] = $subtitle;
+            }
+            $songs[] = $song;
         }
 
         return $songs;
@@ -209,11 +218,12 @@ class DtxConvert extends Command
      * Parse special DTX format: only numbered songs, tag from header (validated), ÉE reference as subtitle, first lyrics as title.
      *
      * @param  string[]  $validTagNames
-     * @return array<int, array{ienek: string, enek: string, tag: string|null, related: string}>
+     * @param  string  $collection  Collection name (e.g., 'taize')
+     * @return array<int, array{ienek: string, enek: string, tag: string|null, related: string, subtitle?: string}>
      *
      * @throws \RuntimeException if a tag name from the file does not exist in the database and $skipUnknownTags is false.
      */
-    private function parseSpecialDtx(string $dtxPath, array $validTagNames, bool $skipUnknownTags = false): array
+    private function parseSpecialDtx(string $dtxPath, array $validTagNames, bool $skipUnknownTags = false, string $collection = ''): array
     {
         $songs = [];
         $currentSong = null;
@@ -343,9 +353,10 @@ class DtxConvert extends Command
      * Parse DTX file and extract songs.
      *
      * @param  bool  $useTitle  If true, use ienek as title and leave reference empty.
-     * @return array<int, array{ienek: string, enek: string}>
+     * @param  string  $collection  Collection name (e.g., 'taize')
+     * @return array<int, array{ienek: string, enek: string, subtitle?: string}>
      */
-    private function parseDtx(string $dtxPath, bool $useTitle = false): array
+    private function parseDtx(string $dtxPath, bool $useTitle = false, string $collection = ''): array
     {
         $songs = [];
         $enekszam = '';
@@ -353,9 +364,52 @@ class DtxConvert extends Command
         $firstline = '';
         $ivers = 0;
         $captured = false;
+        $isTaize = strtolower($collection) === 'taize';
+        $firstLineVerse1 = '';
+        $firstLineVerse2 = '';
+        $capturedVerse1 = false;
+        $capturedVerse2 = false;
+        $pendingSong = null;
 
         $file = new SplFileObject($dtxPath);
         $file->setFlags(SplFileObject::DROP_NEW_LINE);
+
+        // Helper to finalize pending song
+        $finalizePendingSong = function () use (&$songs, &$pendingSong, $useTitle, $isTaize) {
+            if ($pendingSong === null) {
+                return;
+            }
+            $title = '';
+            $subtitle = null;
+            if ($isTaize && $pendingSong['firstLineVerse2'] !== '') {
+                // Use second verse as title, first verse as subtitle
+                $title = $pendingSong['firstLineVerse2'];
+                $subtitle = $pendingSong['firstLineVerse1'];
+            } elseif ($pendingSong['firstLineVerse1'] !== '') {
+                // Use first verse as title
+                $title = $pendingSong['firstLineVerse1'];
+            } elseif ($pendingSong['titleOnSameLine'] !== '') {
+                // Title already captured on same line as song number
+                $title = $pendingSong['titleOnSameLine'];
+            }
+            // If $useTitle is true, swap title and reference
+            $ienek = $pendingSong['ienek'];
+            if ($useTitle) {
+                $title = $ienek;
+                $ienek = '';
+            }
+            if ($title !== '' || $useTitle) {
+                $song = [
+                    'ienek' => $ienek,
+                    'enek' => $title,
+                ];
+                if ($subtitle !== null) {
+                    $song['subtitle'] = $subtitle;
+                }
+                $songs[] = $song;
+            }
+            $pendingSong = null;
+        };
 
         while (! $file->eof()) {
             $line = $file->fgets();
@@ -374,32 +428,36 @@ class DtxConvert extends Command
                     // short name, ignore
                     break;
                 case '>':
-                    // New song - format can be ">8" or ">8    A mélyből Hozzád"
-                    $content = trim(substr($line, 1));
+                    // New song - finalize previous pending song
+                    $finalizePendingSong();
 
-                    // Check if title is on the same line as song number
-                    // Format: >NUMBER    TITLE or >NUMBER TITLE
+                    $content = trim(substr($line, 1));
                     $parts = preg_split('/\s{2,}|\t/', $content, 2);
                     $enekszam = $parts[0];
 
-                    // If there's a title on the same line, use it
-                    if (isset($parts[1]) && ! empty($parts[1])) {
-                        $firstline = $this->unescape($parts[1]);
-                        $firstline = $this->cleanTxt($firstline);
-                        if (! empty($firstline) || $useTitle) {
-                            $songs[] = [
-                                'ienek' => $useTitle ? '' : $enekszam,
-                                'enek' => $useTitle ? $enekszam : $firstline,
-                            ];
-                            $captured = true;
-                        }
-                    } else {
-                        $firstline = '';
-                        $captured = false;
-                    }
-
+                    // Reset state for new song
+                    $firstline = '';
+                    $captured = false;
                     $ivers = 0;
                     $diaszam = '';
+                    $firstLineVerse1 = '';
+                    $firstLineVerse2 = '';
+                    $capturedVerse1 = false;
+                    $capturedVerse2 = false;
+
+                    // If there's a title on the same line, store it
+                    $titleOnSameLine = '';
+                    if (isset($parts[1]) && ! empty($parts[1])) {
+                        $titleOnSameLine = $this->unescape($parts[1]);
+                        $titleOnSameLine = $this->cleanTxt($titleOnSameLine);
+                    }
+
+                    $pendingSong = [
+                        'ienek' => $enekszam,
+                        'firstLineVerse1' => '',
+                        'firstLineVerse2' => '',
+                        'titleOnSameLine' => $titleOnSameLine,
+                    ];
                     break;
                 case '/':
                     // New verse
@@ -409,19 +467,23 @@ class DtxConvert extends Command
                     break;
                 case ' ':
                     // Text line
-                    if (empty($enekszam) || ! empty($firstline) || $captured) {
+                    if ($pendingSong === null) {
                         break;
                     }
-                    // Only capture first line of first verse (or song without verse)
-                    if ($ivers === 1 || $ivers === 0) {
-                        $firstline = $this->unescape($line);
-                        $firstline = $this->cleanTxt($firstline);
-                        if (! empty($firstline) || $useTitle) {
-                            $songs[] = [
-                                'ienek' => $useTitle ? '' : $enekszam,
-                                'enek' => $useTitle ? $enekszam : $firstline,
-                            ];
-                            $captured = true;
+                    // Capture first line of each verse (only first line per verse)
+                    if ($ivers === 1 && ! $capturedVerse1) {
+                        $text = $this->unescape($line);
+                        $text = $this->cleanTxt($text);
+                        if (! empty($text)) {
+                            $pendingSong['firstLineVerse1'] = $text;
+                            $capturedVerse1 = true;
+                        }
+                    } elseif ($ivers === 2 && ! $capturedVerse2) {
+                        $text = $this->unescape($line);
+                        $text = $this->cleanTxt($text);
+                        if (! empty($text)) {
+                            $pendingSong['firstLineVerse2'] = $text;
+                            $capturedVerse2 = true;
                         }
                     }
                     break;
@@ -430,6 +492,9 @@ class DtxConvert extends Command
                     break;
             }
         }
+
+        // Finalize last pending song
+        $finalizePendingSong();
 
         return $songs;
     }
@@ -448,7 +513,7 @@ class DtxConvert extends Command
 
         $csvFile = new SplFileObject($csvPath, 'w');
         // Generate CSV with new format columns
-        $csvFile->fputcsv(['title', 'reference', 'related', 'page number', 'tag']);
+        $csvFile->fputcsv(['title', 'reference', 'related', 'page number', 'tag', 'subtitle']);
 
         foreach ($songs as $song) {
             $csvFile->fputcsv([
@@ -457,6 +522,7 @@ class DtxConvert extends Command
                 $song['related'] ?? '', // related
                 '', // page number (empty for DTX imports)
                 $song['tag'] ?? '', // tag
+                $song['subtitle'] ?? '', // subtitle
             ]);
         }
 
@@ -484,6 +550,7 @@ class DtxConvert extends Command
                 'related' => $song['related'] ?? null,
                 'page_number' => $song['page_number'] ?? null,
                 'tag' => $song['tag'] ?? null,
+                'subtitle' => $song['subtitle'] ?? null,
                 'batch_number' => $nextBatchNumber,
                 'created_at' => now(),
                 'updated_at' => now(),

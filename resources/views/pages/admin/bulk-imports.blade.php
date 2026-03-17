@@ -101,6 +101,14 @@
                 </flux:table.column>
                 <flux:table.column
                     sortable
+                    :sorted="$sortBy === 'subtitle'"
+                    :direction="$sortDirection"
+                    wire:click="sort('subtitle')"
+                >
+                    {{ __('Subtitle') }}
+                </flux:table.column>
+                <flux:table.column
+                    sortable
                     :sorted="$sortBy === 'reference'"
                     :direction="$sortDirection"
                     wire:click="sort('reference')"
@@ -151,6 +159,10 @@
                         </flux:table.cell>
                         
                         <flux:table.cell>
+                            <div class="font-medium">{{ $import->subtitle }}</div>
+                        </flux:table.cell>
+                        
+                        <flux:table.cell>
                             <div class="font-medium">{{ $import->reference }}</div>
                         </flux:table.cell>
                         
@@ -178,7 +190,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="8" class="text-center py-8">
+                        <flux:table.cell colspan="9" class="text-center py-8">
                             <div class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
                                 <flux:icon name="file-text" class="h-12 w-12 mb-2 opacity-50" />
                                 <p class="text-lg font-medium">{{ __('No import records found') }}</p>
