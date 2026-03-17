@@ -90,17 +90,8 @@ new class extends Component
         $authors = $query
             ->take(20)
             ->get()
-            ->map(function ($author) {
-                $author->avatar = $author->avatarThumbUrl();
-                return $author;
-            })
             ->sortBy('name')
             ->values();
-
-        $selectedOption = $selectedOption->map(function ($author) {
-            $author->avatar = $author->avatarThumbUrl();
-            return $author;
-        });
 
         $this->authorsSearchable = $authors->merge($selectedOption);
     }
@@ -938,6 +929,7 @@ new class extends Component
                         <x-mary-choices
                             wire:model="selectedAuthorId"
                             :options="$authorsSearchable"
+                            option-avatar="avatarThumbUrl"
                             placeholder="Keresés..."
                             search-function="searchAuthor"
                             no-result-text="Nincs találat"

@@ -96,6 +96,11 @@ class Author extends Model implements Auditable
         return Storage::disk('public')->url("authors/{$this->id}/avatar_{$this->avatar}.jpg");
     }
 
+    public function getAvatarThumbUrlAttribute(): ?string
+    {
+        return $this->avatarThumbUrl();
+    }
+
     /**
      * Get the URL for the thumbnail avatar (64×64).
      */
