@@ -209,90 +209,11 @@ new class extends Component
 
                 <!-- Display parts as tabs -->
                 @if (isset($celebrationDetails['parts']) && is_array($celebrationDetails['parts']))
-                    <x-mary-tabs wire:model="activePartTab">
-                        @foreach ($celebrationDetails['parts'] as $partIndex => $part)
-                            @if (isset($part[0]) && is_array($part[0]))
-                                @foreach ($part as $subIndex => $subPart)
-                                    @php $subLabel = ($subPart['short_title'] ?? 'Rész') . (isset($subPart['cause']) ? ' (' . $subPart['cause'] . ')' : ''); @endphp
-                                    <x-mary-tab name="part-{{ $partIndex }}-{{ $subIndex }}" label="{{ $subLabel }}">
-                                        <div class="rounded-2xl border border-zinc-200 bg-amber-50/80 dark:bg-zinc-900 p-4 dark:border-zinc-800 p-2 font-serif shadow-lg">
-                                            <div class="grid grid-cols-1 gap-2 text-sm ">
-                                                <div>
-                                                    <flux:heading class="inline">{{ $subPart['ref'] ?? '' }}</flux:heading>
-                                                    <flux:text class="inline">{!! $this->sanitize($subPart['teaser'] ?? '') !!}</flux:text>
-                                                </div>
-                                                <div>{{ $subPart['title'] ?? '' }}</div>
-                                                <div
-                                                    x-data="{ expanded: false }"
-                                                    class="text-sm"
-                                                >
-                                                    @php
-                                                        $fullText = $this->sanitize($subPart['text'] ?? '');
-                                                        $truncated = mb_strlen($fullText) > 100 ? mb_substr($fullText, 0, 100) . '...' : $fullText;
-                                                        $needsExpand = mb_strlen($fullText) > 100;
-                                                    @endphp
-                                                    <span x-show="!expanded">
-                                                        {!! $truncated !!}
-                                                    </span>
-                                                    <span x-show="expanded" style="display: none;">
-                                                        {!! $fullText !!}
-                                                    </span>
-                                                    @if($needsExpand)
-                                                        <button
-                                                            @click="expanded = !expanded"
-                                                            class="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium"
-                                                        >
-                                                            <span x-show="!expanded">{{ __('Bővebben') }}</span>
-                                                            <span x-show="expanded" style="display: none;">{{ __('Összecsukás') }}</span>
-                                                        </button>
-                                                    @endif
-                                                </div>
-                                                <div>{{ $subPart['ending'] ?? '' }}</div>
-                                            </div>
-                                        </div>
-                                    </x-mary-tab>
-                                @endforeach
-                            @else
-                                <x-mary-tab name="part-{{ $partIndex }}" label="{{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}">
-                                    <div class="rounded-2xl border border-zinc-200 bg-amber-50/80 dark:bg-zinc-900 p-4 dark:border-zinc-800 p-2 font-serif shadow-lg">
-                                        <div class="grid grid-cols-1 gap-2 text-sm ">
-                                            <div>
-                                                <flux:heading class="inline">{{ $part['ref'] ?? '' }}</flux:heading>
-                                                <flux:text class="inline">{!! $this->sanitize($part['teaser'] ?? '') !!}</flux:text>
-                                            </div>
-                                            <div>{{ $part['title'] ?? '' }}</div>
-                                            <div
-                                                x-data="{ expanded: false }"
-                                                class="text-sm"
-                                            >
-                                                @php
-                                                    $fullText = $this->sanitize($part['text'] ?? '');
-                                                    $truncated = mb_strlen($fullText) > 100 ? mb_substr($fullText, 0, 100) . '...' : $fullText;
-                                                    $needsExpand = mb_strlen($fullText) > 100;
-                                                @endphp
-                                                <span x-show="!expanded">
-                                                    {!! $truncated !!}
-                                                </span>
-                                                <span x-show="expanded" style="display: none;">
-                                                    {!! $fullText !!}
-                                                </span>
-                                                @if($needsExpand)
-                                                    <button
-                                                        @click="expanded = !expanded"
-                                                        class="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium"
-                                                    >
-                                                        <span x-show="!expanded">{{ __('Bővebben') }}</span>
-                                                        <span x-show="expanded" style="display: none;">{{ __('Összecsukás') }}</span>
-                                                    </button>
-                                                @endif
-                                            </div>
-                                            <div>{{ $part['ending'] ?? '' }}</div>
-                                        </div>
-                                    </div>
-                                </x-mary-tab>
-                            @endif
-                        @endforeach
-                    </x-mary-tabs>
+                    <x-celebration-parts-tabs
+                        :parts="$celebrationDetails['parts']"
+                        wire-model="activePartTab"
+                        tab-prefix="part"
+                    />
                 @else
                     <flux:callout color="zinc" icon="information-circle">
                         <flux:callout.heading>Nincs részletes adat</flux:callout.heading>
@@ -306,24 +227,11 @@ new class extends Component
                         <flux:heading size="lg" class="mb-4">
                             {{ $celebrationDetails['parts2cause'] ?? 'Másodlagos olvasmányok' }}
                         </flux:heading>
-                        <x-mary-tabs wire:model="activePart2Tab" class="mb-6">
-                            @foreach ($celebrationDetails['parts2'] as $partIndex => $part)
-                                <x-mary-tab name="part2-{{ $partIndex }}" label="{{ $part['short_title'] ?? 'Rész ' . ($partIndex + 1) }}">
-                                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                            @foreach ($part as $key => $value)
-                                                @if (!is_array($value) && $key !== 'short_title')
-                                                    <div class="flex flex-col">
-                                                        <span class="font-medium text-gray-700 dark:text-gray-300 capitalize">{{ $key }}</span>
-                                                        <span class="text-gray-900 dark:text-gray-100 mt-1">{{ $value }}</span>
-                                                    </div>
-                                                @endif
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </x-mary-tab>
-                            @endforeach
-                        </x-mary-tabs>
+                        <x-celebration-parts-tabs
+                            :parts="$celebrationDetails['parts2']"
+                            wire-model="activePart2Tab"
+                            tab-prefix="part2"
+                        />
                     </div>
                 @endif
             </flux:card>
