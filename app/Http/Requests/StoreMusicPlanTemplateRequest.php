@@ -31,6 +31,7 @@ class StoreMusicPlanTemplateRequest extends FormRequest
             ],
             'description' => ['nullable', 'string', 'max:1000'],
             'is_active' => ['boolean'],
+            'priority' => ['nullable', 'integer', 'min:1'],
         ];
     }
 

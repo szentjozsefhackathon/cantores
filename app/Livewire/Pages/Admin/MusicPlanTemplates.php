@@ -29,6 +29,8 @@ class MusicPlanTemplates extends Component
 
     public bool $is_active = true;
 
+    public ?int $priority = null;
+
     /**
      * Mount the component.
      */
@@ -47,6 +49,7 @@ class MusicPlanTemplates extends Component
                 ->orWhere('description', 'ilike', "%{$search}%");
         })
             ->withCount('slots')
+            ->orderByRaw('priority IS NULL, priority ASC')
             ->orderBy('name')
             ->paginate(20);
 
@@ -75,6 +78,7 @@ class MusicPlanTemplates extends Component
         $this->name = $template->name;
         $this->description = $template->description ?? '';
         $this->is_active = $template->is_active;
+        $this->priority = $template->priority;
         $this->showEditModal = true;
     }
 
@@ -139,7 +143,7 @@ class MusicPlanTemplates extends Component
      */
     private function resetForm(): void
     {
-        $this->reset(['name', 'description', 'is_active']);
+        $this->reset(['name', 'description', 'is_active', 'priority']);
         $this->editingTemplate = null;
         $this->resetErrorBag();
     }

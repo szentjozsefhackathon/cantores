@@ -40,6 +40,7 @@
             <flux:table.columns>
                 <flux:table.column>{{ __('Name') }}</flux:table.column>
                 <flux:table.column>{{ __('Description') }}</flux:table.column>
+                <flux:table.column>{{ __('Priority') }}</flux:table.column>
                 <flux:table.column>{{ __('Status') }}</flux:table.column>
                 <flux:table.column>{{ __('Slots') }}</flux:table.column>
                 <flux:table.column>{{ __('Actions') }}</flux:table.column>
@@ -62,6 +63,16 @@
                             @endif
                         </flux:table.cell>
                         
+                        <flux:table.cell>
+                            @if ($template->priority !== null)
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                    {{ $template->priority }}
+                                </span>
+                            @else
+                                <span class="text-sm text-gray-400 dark:text-gray-500">—</span>
+                            @endif
+                        </flux:table.cell>
+
                         <flux:table.cell>
                             <div class="flex items-center gap-2">
                                 <span class="text-sm {{ $template->is_active ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400' }}">
@@ -120,7 +131,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="5" class="text-center py-8">
+                        <flux:table.cell colspan="6" class="text-center py-8">
                             <div class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
                                 <flux:icon name="file-text" class="h-12 w-12 mb-2 opacity-50" />
                                 <p class="text-lg font-medium">{{ __('No templates found') }}</p>
@@ -174,22 +185,34 @@
             </flux:field>
             
             <flux:field>
+                <flux:label for="create-priority">{{ __('Priority') }}</flux:label>
+                <flux:input
+                    id="create-priority"
+                    type="number"
+                    wire:model="priority"
+                    :placeholder="__('e.g., 1, 2, 3 — lower number appears first')"
+                    min="1"
+                />
+                <flux:error name="priority" />
+            </flux:field>
+
+            <flux:field>
                 <flux:checkbox
                     id="create-is-active"
                     wire:model="is_active"
                     label="{{ __('Active (available for use)') }}" />
                 <flux:error name="is_active" />
             </flux:field>
-            
+
             <div class="flex justify-end gap-3 pt-4">
-                <flux:button 
-                    variant="ghost" 
+                <flux:button
+                    variant="ghost"
                     wire:click="$set('showCreateModal', false)"
                 >
                     {{ __('Cancel') }}
                 </flux:button>
-                <flux:button 
-                    type="submit" 
+                <flux:button
+                    type="submit"
                     variant="primary"
                 >
                     {{ __('Create Template') }}
@@ -223,6 +246,18 @@
                 <flux:error name="description" />
             </flux:field>
 
+            <flux:field>
+                <flux:label for="edit-priority">{{ __('Priority') }}</flux:label>
+                <flux:input
+                    id="edit-priority"
+                    type="number"
+                    wire:model="priority"
+                    :placeholder="__('e.g., 1, 2, 3 — lower number appears first')"
+                    min="1"
+                />
+                <flux:error name="priority" />
+            </flux:field>
+
             <flux:field variant="inline">
                 <flux:checkbox wire:model="is_active" />
                 <flux:label>Aktív</flux:label>
@@ -230,14 +265,14 @@
             </flux:field>
 
             <div class="flex justify-end gap-3 pt-4">
-                <flux:button 
-                    variant="ghost" 
+                <flux:button
+                    variant="ghost"
                     wire:click="$set('showEditModal', false)"
                 >
                     {{ __('Cancel') }}
                 </flux:button>
-                <flux:button 
-                    type="submit" 
+                <flux:button
+                    type="submit"
                     variant="primary"
                 >
                     {{ __('Update Template') }}

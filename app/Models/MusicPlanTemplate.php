@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $name
  * @property string|null $description
  * @property bool $is_active
+ * @property int|null $priority
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property \Carbon\CarbonImmutable|null $deleted_at
@@ -49,6 +50,7 @@ class MusicPlanTemplate extends Model
         'name',
         'description',
         'is_active',
+        'priority',
     ];
 
     /**
@@ -60,6 +62,7 @@ class MusicPlanTemplate extends Model
     {
         return [
             'is_active' => 'boolean',
+            'priority' => 'integer',
             'deleted_at' => 'datetime',
         ];
     }

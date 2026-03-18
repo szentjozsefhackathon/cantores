@@ -108,6 +108,8 @@ new class extends Component
             ->with(['slots' => function ($query) {
                 $query->orderByPivot('sequence');
             }])
+            ->orderByRaw('priority IS NULL, priority ASC')
+            ->orderBy('name')
             ->get()
             ->map(function ($template) {
                 return [
