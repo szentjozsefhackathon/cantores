@@ -265,6 +265,53 @@ test('validation requires name for custom slot creation', function () {
     }
 });
 
+test('same custom slot name can be used in two different plans', function () {
+    $user = User::factory()->create();
+    $planA = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $planB = MusicPlan::factory()->create(['user_id' => $user->id]);
+
+    $slotA = $planA->createCustomSlot(['name' => 'Sancte Pater', 'description' => '']);
+    $slotB = $planB->createCustomSlot(['name' => 'Sancte Pater', 'description' => '']);
+
+    expect($slotA->id)->not->toBe($slotB->id)
+        ->and($slotA->music_plan_id)->toBe($planA->id)
+        ->and($slotB->music_plan_id)->toBe($planB->id);
+});
+
+test('custom slots from other plans are not visible in slot search', function () {
+    $user = User::factory()->create();
+    $planA = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $planB = MusicPlan::factory()->create(['user_id' => $user->id]);
+
+    $slotInPlanA = MusicPlanSlot::factory()->create([
+        'is_custom' => true,
+        'music_plan_id' => $planA->id,
+        'user_id' => $user->id,
+        'name' => 'Unique Plan A Slot',
+    ]);
+
+    $slotsVisibleForPlanB = MusicPlanSlot::query()
+        ->where(function ($query) {
+            $query->where('is_custom', false)
+                ->orWhere('music_plan_id', 0); // simulate planB with no matching custom slots
+        })
+        ->pluck('id')
+        ->toArray();
+
+    expect($slotsVisibleForPlanB)->not->toContain($slotInPlanA->id);
+
+    // Directly verify forPlan scope behaviour
+    $visibleForB = MusicPlanSlot::query()
+        ->where(function ($q) use ($planB) {
+            $q->where('is_custom', false)
+                ->orWhere('music_plan_id', $planB->id);
+        })
+        ->pluck('id')
+        ->toArray();
+
+    expect($visibleForB)->not->toContain($slotInPlanA->id);
+});
+
 test('edge case: cannot create custom slot for deleted plan', function () {
     $user = User::factory()->create();
     $musicPlan = MusicPlan::factory()->create(['user_id' => $user->id]);

@@ -4,7 +4,6 @@ namespace App\Livewire;
 
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -58,6 +57,10 @@ new class extends Component
             ->where(function ($query) use ($value) {
                 $query->where('name', 'ilike', "%{$value}%")
                     ->orWhere('description', 'ilike', "%{$value}%");
+            })
+            ->where(function ($query) {
+                $query->where('is_custom', false)
+                    ->orWhere('music_plan_id', $this->musicPlan->id);
             });
 
         if ($this->filterExcludeExisting && ! empty($this->existingSlotIds)) {
@@ -158,7 +161,18 @@ new class extends Component
         $this->authorize('create', [MusicPlanSlot::class, $this->musicPlan]);
 
         $validated = $this->validate([
-            'newSlotName' => ['required', 'string', 'max:255', Rule::unique('music_plan_slots', 'name')->whereNull('deleted_at')->where('is_custom', 'f')],
+            'newSlotName' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) {
+                $exists = MusicPlanSlot::withoutTrashed()
+                    ->where('name', $value)
+                    ->where(function ($query) {
+                        $query->where('is_custom', false)
+                            ->orWhere('music_plan_id', $this->musicPlan->id);
+                    })
+                    ->exists();
+                if ($exists) {
+                    $fail(__('validation.unique', ['attribute' => $attribute]));
+                }
+            }],
             'newSlotDescription' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -179,7 +193,18 @@ new class extends Component
         $this->authorize('create', [MusicPlanSlot::class, $this->musicPlan]);
 
         $validated = $this->validate([
-            'slotSearch' => ['required', 'string', 'max:255', Rule::unique('music_plan_slots', 'name')->whereNull('deleted_at')->where('is_custom', 'f')],
+            'slotSearch' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) {
+                $exists = MusicPlanSlot::withoutTrashed()
+                    ->where('name', $value)
+                    ->where(function ($query) {
+                        $query->where('is_custom', false)
+                            ->orWhere('music_plan_id', $this->musicPlan->id);
+                    })
+                    ->exists();
+                if ($exists) {
+                    $fail(__('validation.unique', ['attribute' => $attribute]));
+                }
+            }],
         ]);
 
         $slot = $this->musicPlan->createCustomSlot([
