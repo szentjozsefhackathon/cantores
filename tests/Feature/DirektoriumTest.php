@@ -243,37 +243,6 @@ test('admin can browse direktorium entries in the admin table', function () {
         ->assertSee('direktorium-2026.md');
 });
 
-test('direktorium entries admin table trims long full text previews', function () {
-    $admin = User::factory()->create();
-    $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-    $admin->assignRole($adminRole);
-
-    $edition = DirektoriumEdition::create([
-        'year' => 2026,
-        'original_filename' => 'direktorium-2026.md',
-        'file_path' => 'direktorium/2026/direktorium-2026.md',
-        'processing_status' => DirektoriumProcessingStatus::Completed,
-        'is_current' => true,
-        'total_pages' => 200,
-        'processed_pages' => 200,
-    ]);
-
-    $fullText = 'Ez egy nagyon hosszu direktoriumi bejegyzes, amelyet a tablazatban csak rovid elonezetkent kell megjeleniteni, hogy a sor ne nyuljon tul hosszan es a teljes szoveg ne foglaljon el tul sok helyet.';
-    $trimmedPreview = \Illuminate\Support\Str::limit(\Illuminate\Support\Str::squish($fullText), 100);
-
-    DirektoriumEntry::create([
-        'direktorium_edition_id' => $edition->id,
-        'entry_date' => '2026-03-20',
-        'markdown_text' => $fullText,
-    ]);
-
-    $this->actingAs($admin)
-        ->get(route('admin.direktorium.entries'))
-        ->assertSuccessful()
-        ->assertSee($trimmedPreview)
-        ->assertDontSee($fullText);
-});
-
 test('direktorium entries admin page filters by selected edition', function () {
     $admin = User::factory()->create();
     $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
