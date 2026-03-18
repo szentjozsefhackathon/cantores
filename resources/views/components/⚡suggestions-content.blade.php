@@ -66,6 +66,14 @@ new class extends Component
     #[On('genre-changed')]
     public function onGenreChanged(): void
     {
+        if (! isset($this->celebrationsWithScores)) {
+            $this->celebrationsWithScores = collect();
+        }
+
+        if (! isset($this->musicPlans)) {
+            $this->musicPlans = collect();
+        }
+
         // Reload music plans and slot music map when genre changes
         $celebrationIds = $this->celebrationsWithScores->pluck('celebration.id')->toArray();
         $this->musicPlans = $this->fetchMusicPlans($celebrationIds);

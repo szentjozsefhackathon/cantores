@@ -19,6 +19,8 @@ new class extends Component
 
     public array $allSlots = [];
 
+    public string $allSlotsSearch = '';
+
     public bool $filterExcludeExisting = true;
 
     public array $existingSlotIds = [];
@@ -113,34 +115,51 @@ new class extends Component
 
     public function showAllSlots(): void
     {
-        $query = MusicPlanSlot::query();
+        $this->allSlotsSearch = '';
+        $this->allSlots = $this->queryAllSlots();
+        $this->modal('all-slots-modal')->show();
+    }
+
+    public function updatedAllSlotsSearch(): void
+    {
+        $this->allSlots = $this->queryAllSlots();
+    }
+
+    private function queryAllSlots(): array
+    {
+        $query = MusicPlanSlot::query()
+            ->where(function ($q) {
+                $q->where('is_custom', false)
+                    ->orWhere('music_plan_id', $this->musicPlan->id);
+            });
 
         if ($this->filterExcludeExisting && ! empty($this->existingSlotIds)) {
             $query->whereNotIn('id', $this->existingSlotIds);
         }
 
-        $this->allSlots = $query
-            ->orderBy('name')
-            ->where(function ($q) {
-                $q->where('is_custom', false)
-                    ->orWhere('music_plan_id', $this->musicPlan->id);
-            })
-            ->get()
-            ->map(function ($slot) {
-                return [
-                    'id' => $slot->id,
-                    'name' => $slot->name,
-                    'description' => $slot->description,
-                ];
-            })
-            ->toArray();
+        if ($this->allSlotsSearch !== '') {
+            $search = $this->allSlotsSearch;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('description', 'ilike', "%{$search}%");
+            });
+        }
 
-        $this->modal('all-slots-modal')->show();
+        return $query
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($slot) => [
+                'id' => $slot->id,
+                'name' => $slot->name,
+                'description' => $slot->description,
+            ])
+            ->toArray();
     }
 
     public function closeAllSlotsModal(): void
     {
         $this->allSlots = [];
+        $this->allSlotsSearch = '';
     }
 
     public function openCreateSlotModal(): void

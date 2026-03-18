@@ -81,7 +81,16 @@
     <flux:modal name="all-slots-modal" wire:close="closeAllSlotsModal" size="lg">
         <flux:heading size="lg">{{ __('All Available Slots') }}</flux:heading>
 
-        <div class="mt-4 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
+        <div class="mt-4">
+            <flux:input
+                wire:model.live="allSlotsSearch"
+                :placeholder="__('Filter slots...')"
+                icon="magnifying-glass"
+                clearable
+                autofocus />
+        </div>
+
+        <div class="mt-3 max-h-96 overflow-y-auto border border-neutral-200 dark:border-neutral-700 rounded-lg">
             @if(count($allSlots) > 0)
             <div class="divide-y divide-neutral-200 dark:divide-neutral-700">
                 @foreach($allSlots as $slot)
