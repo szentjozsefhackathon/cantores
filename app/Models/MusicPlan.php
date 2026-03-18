@@ -286,6 +286,47 @@ class MusicPlan extends Model
     }
 
     /**
+     * Attach a slot to this plan at the sequence position determined by the slot's priority.
+     * Walks the existing slots in their current sequence order and inserts the new slot
+     * before the first slot whose priority is greater, leaving all other sequences intact.
+     */
+    public function attachSlotAtPriorityPosition(MusicPlanSlot|int $slot): MusicPlanSlotPlan
+    {
+        $slotId = $slot instanceof MusicPlanSlot ? $slot->id : $slot;
+        $newSlot = $slot instanceof MusicPlanSlot ? $slot : MusicPlanSlot::findOrFail($slotId);
+
+        $existingSlotPlans = MusicPlanSlotPlan::with('musicPlanSlot')
+            ->whereHas('musicPlanSlot')
+            ->where('music_plan_id', $this->id)
+            ->orderBy('sequence')
+            ->get();
+
+        $insertAt = null;
+        foreach ($existingSlotPlans as $slotPlan) {
+            if ($slotPlan->musicPlanSlot->priority > $newSlot->priority) {
+                $insertAt = $slotPlan->sequence;
+                break;
+            }
+        }
+
+        if ($insertAt !== null) {
+            MusicPlanSlotPlan::where('music_plan_id', $this->id)
+                ->where('sequence', '>=', $insertAt)
+                ->increment('sequence');
+
+            $this->slots()->attach($slotId, ['sequence' => $insertAt]);
+        } else {
+            $maxSequence = $existingSlotPlans->max('sequence') ?? 0;
+            $this->slots()->attach($slotId, ['sequence' => $maxSequence + 1]);
+        }
+
+        return MusicPlanSlotPlan::where('music_plan_id', $this->id)
+            ->where('music_plan_slot_id', $slotId)
+            ->orderByDesc('id')
+            ->firstOrFail();
+    }
+
+    /**
      * Detach a slot from this music plan and delete all music assignments for that slot.
      */
     public function detachSlot(MusicPlanSlot|int $slot): void

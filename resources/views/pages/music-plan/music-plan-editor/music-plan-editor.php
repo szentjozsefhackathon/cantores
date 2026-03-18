@@ -199,11 +199,7 @@ new class extends Component
     {
         $this->authorize('update', $this->musicPlan);
 
-        $existingSlots = $this->musicPlan->slots()->count();
-
-        $this->musicPlan->slots()->attach($slotId, [
-            'sequence' => $existingSlots + 1,
-        ]);
+        $this->insertSlotAtPriorityPosition($slotId);
 
         $this->dispatch('slots-updated', message: 'Elem hozzáadva.');
     }
@@ -217,16 +213,9 @@ new class extends Component
             $query->orderByPivot('sequence');
         }])->findOrFail($templateId);
 
-        // Get existing slots for this plan to determine next sequence
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-
         $addedCount = 0;
         foreach ($template->slots as $slot) {
-            $this->musicPlan->slots()->attach($slot->id, [
-                'sequence' => $sequence,
-            ]);
-            $sequence++;
+            $this->insertSlotAtPriorityPosition($slot->id);
             $addedCount++;
         }
 
@@ -242,22 +231,20 @@ new class extends Component
             $query->orderByPivot('sequence');
         }])->findOrFail($templateId);
 
-        // Get existing slots for this plan to determine next sequence
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-
         $addedCount = 0;
         foreach ($template->slots as $slot) {
             if ($slot->pivot->is_included_by_default) {
-                $this->musicPlan->slots()->attach($slot->id, [
-                    'sequence' => $sequence,
-                ]);
-                $sequence++;
+                $this->insertSlotAtPriorityPosition($slot->id);
                 $addedCount++;
             }
         }
 
         $this->dispatch('slots-updated', message: $addedCount.' elem hozzáadva a sablonból.');
+    }
+
+    private function insertSlotAtPriorityPosition(int $slotId): void
+    {
+        $this->musicPlan->attachSlotAtPriorityPosition($slotId);
     }
 
     public function updatedIsPublished(): void

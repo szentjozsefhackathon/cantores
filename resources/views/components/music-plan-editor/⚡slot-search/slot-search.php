@@ -97,13 +97,7 @@ new class extends Component
     {
         $slot = MusicPlanSlot::findOrFail($slotId);
 
-        // Get existing slots for this plan to determine next sequence
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-
-        $this->musicPlan->slots()->attach($slotId, [
-            'sequence' => $sequence,
-        ]);
+        $this->musicPlan->attachSlotAtPriorityPosition($slotId);
 
         // Clear search
         $this->slotSearch = '';
@@ -173,12 +167,7 @@ new class extends Component
             'description' => $validated['newSlotDescription'] ?? '',
         ]);
 
-        // Attach the newly created slot to the plan
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-        $this->musicPlan->slots()->attach($slot->id, [
-            'sequence' => $sequence,
-        ]);
+        $this->musicPlan->attachSlotAtPriorityPosition($slot->id);
 
         $this->modal('create-slot-modal')->close();
         $this->loadExistingSlotIds();
@@ -198,12 +187,7 @@ new class extends Component
             'description' => '',
         ]);
 
-        // Attach the newly created slot to the plan
-        $existingSlots = $this->musicPlan->slots()->count();
-        $sequence = $existingSlots + 1;
-        $this->musicPlan->slots()->attach($slot->id, [
-            'sequence' => $sequence,
-        ]);
+        $this->musicPlan->attachSlotAtPriorityPosition($slot->id);
 
         // Clear search
         $this->slotSearch = '';

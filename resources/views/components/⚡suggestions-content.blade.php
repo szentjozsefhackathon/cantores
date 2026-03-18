@@ -273,18 +273,7 @@ new class extends Component
         if ($existingSlotPlan) {
             $slotPlanId = $existingSlotPlan->id;
         } else {
-            // Attach slot to plan with next sequence
-            $maxSequence = DB::table('music_plan_slot_plan')
-                ->where('music_plan_id', $musicPlan->id)
-                ->max('sequence') ?? 0;
-
-            $slotPlanId = DB::table('music_plan_slot_plan')->insertGetId([
-                'music_plan_id' => $musicPlan->id,
-                'music_plan_slot_id' => $slot->id,
-                'sequence' => $maxSequence + 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $slotPlanId = $musicPlan->attachSlotAtPriorityPosition($slot)->id;
             $isNewSlot = true;
         }
 
