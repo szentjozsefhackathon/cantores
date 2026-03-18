@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Music;
 
+use App\Facades\GenreContext;
 use App\Models\Author;
 use App\Models\Collection;
 use App\Models\Genre;
@@ -66,6 +67,12 @@ class QuickCreateMusicModal extends Component
     public function openModal(): void
     {
         $this->resetForm();
+
+        $currentGenreId = GenreContext::getId();
+        if ($currentGenreId !== null) {
+            $this->selectedGenres = [$currentGenreId];
+        }
+
         $this->open = true;
     }
 
