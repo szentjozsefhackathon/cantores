@@ -109,6 +109,12 @@
                 @endforeach
             </div>
             @endif
+
+            @if($celebrations->hasPages())
+            <div class="mt-6">
+                {{ $celebrations->links() }}
+            </div>
+            @endif
         </flux:card>
     </div>
 </div>
