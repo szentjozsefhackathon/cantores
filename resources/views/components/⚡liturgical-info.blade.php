@@ -478,6 +478,15 @@ new class extends Component
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
+                <flux:button
+                    size="sm"
+                    variant="filled"
+                    x-on:click="$dispatch('open-direktorium', { date: '{{ $date }}' }); $flux.modal('direktorium').show()"
+                    class="inline-flex items-center gap-1"
+                    icon="book-open-text" icon:variant="mini">
+                    
+                    Direktórium
+                </flux:button>
                 @foreach ($this->importantLinks() as $link)
                 <flux:link
                     wire:key="important-link-{{ $link['key'] }}"
@@ -487,15 +496,9 @@ new class extends Component
                     class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-blue-500 dark:hover:text-blue-300">
                     <flux:icon name="{{ $link['icon'] }}" class="h-3.5 w-3.5" variant="mini" />
                     {{ $link['label'] }}
+                    <flux:icon name="external-link" class="h-3.5 w-3.5" variant="mini" />
                 </flux:link>
                 @endforeach
-
-                <button
-                    x-on:click="$dispatch('open-direktorium', { date: '{{ $date }}' }); $flux.modal('direktorium').show()"
-                    class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-blue-500 dark:hover:text-blue-300">
-                    <flux:icon name="book-open-text" class="h-3.5 w-3.5" variant="mini" />
-                    Direktórium
-                </button>
             </div>
         </div>
 
