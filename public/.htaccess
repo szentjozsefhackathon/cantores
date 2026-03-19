@@ -1,6 +1,11 @@
 SetEnvIf Request_URI "^/build/assets/" vite_asset
 SetEnvIf Request_URI "^/storage/(authors|collections)/" media_upload
 
+# Disable PHP's session cache limiter so it doesn't emit Cache-Control: no-store
+# on PHP-served asset requests (Livewire/Flux). Laravel's own middleware handles
+# no-cache headers for HTML responses.
+php_value session.cache_limiter none
+
 <IfModule mod_headers.c>
     # Vite build assets have content-hashed filenames — safe to cache for 1 year
     Header set Cache-Control "public, max-age=31536000, immutable" env=vite_asset
@@ -8,11 +13,19 @@ SetEnvIf Request_URI "^/storage/(authors|collections)/" media_upload
     # Author and collection avatars/covers — cache for 1 day
     Header set Cache-Control "public, max-age=86400" env=media_upload
 
-    # Do not cache HTML or PHP responses
-    <FilesMatch "\.(html|php)$">
-        Header set Cache-Control "no-store, no-cache, must-revalidate"
-        Header set Pragma "no-cache"
+    # Favicons change rarely but are not versioned — cache for 1 week
+    <FilesMatch "\.(ico|svg|png)$">
+        Header set Cache-Control "public, max-age=604800"
     </FilesMatch>
+
+    # Livewire and Flux assets are versioned via URL — safe to cache for 1 year.
+    # These are served through PHP (index.php via RewriteRule). mod_rewrite sets
+    # E=livewire_asset:1 but Apache renames it to REDIRECT_livewire_asset after
+    # the internal rewrite, so we reference it with that prefix.
+    # "Header always set" adds the immutable flag on top of what Livewire/Flux
+    # PHP code already emits (max-age=31536000, public).
+    Header always set Cache-Control "public, max-age=31536000, immutable" env=REDIRECT_livewire_asset
+    Header always set Cache-Control "public, max-age=31536000, immutable" env=REDIRECT_flux_asset
 </IfModule>
 
 <IfModule mod_rewrite.c>
@@ -29,6 +42,11 @@ SetEnvIf Request_URI "^/storage/(authors|collections)/" media_upload
     # Handle X-XSRF-Token Header
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # Tag Livewire and Flux assets so mod_headers can add the immutable cache flag.
+    # After the internal rewrite to index.php, Apache prefixes these with REDIRECT_.
+    RewriteRule ^livewire-[a-f0-9]+/ - [E=livewire_asset:1]
+    RewriteRule ^flux/flux\. - [E=flux_asset:1]
 
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_FILENAME} !-d
