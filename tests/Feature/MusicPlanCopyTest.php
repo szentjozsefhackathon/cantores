@@ -158,15 +158,14 @@ test('copied music plan includes assignment flags', function () {
     ]);
 
     $flag = MusicAssignmentFlag::first() ?? MusicAssignmentFlag::factory()->create();
-    $assignment->flags()->attach($flag);
+    $assignment->update(['music_assignment_flag_id' => $flag->id]);
 
     $this->actingAs($user)->post(route('music-plans.copy', $musicPlan));
 
     $copiedPlan = MusicPlan::where('id', '!=', $musicPlan->id)->latest()->first();
     $copiedAssignment = $copiedPlan->musicAssignments()->first();
 
-    expect($copiedAssignment->flags()->count())->toBe(1);
-    expect($copiedAssignment->flags()->first()->id)->toBe($flag->id);
+    expect($copiedAssignment->music_assignment_flag_id)->toBe($flag->id);
 });
 
 test('copied music plan includes assignment scopes', function () {

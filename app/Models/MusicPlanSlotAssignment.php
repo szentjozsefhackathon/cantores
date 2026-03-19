@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 /**
@@ -20,8 +19,8 @@ use Illuminate\Database\Eloquent\Relations\HasOneThrough;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property int $music_sequence
  * @property int $music_plan_slot_plan_id
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicAssignmentFlag> $flags
- * @property-read int|null $flags_count
+ * @property int|null $music_assignment_flag_id
+ * @property-read \App\Models\MusicAssignmentFlag|null $flag
  * @property-read string $scope_label
  * @property-read \App\Models\Music $music
  * @property-read \App\Models\MusicPlan|null $musicPlan
@@ -62,6 +61,7 @@ class MusicPlanSlotAssignment extends Model
         'music_id',
         'music_sequence',
         'notes',
+        'music_assignment_flag_id',
     ];
 
     /**
@@ -146,14 +146,11 @@ class MusicPlanSlotAssignment extends Model
     }
 
     /**
-     * Get the flags associated with this assignment.
+     * Get the flag associated with this assignment.
      */
-    public function flags(): BelongsToMany
+    public function flag(): BelongsTo
     {
-        return $this->belongsToMany(
-            MusicAssignmentFlag::class,
-            'music_plan_slot_assignment_music_assignment_flag'
-        );
+        return $this->belongsTo(MusicAssignmentFlag::class, 'music_assignment_flag_id');
     }
 
     /**

@@ -26,7 +26,7 @@ new class extends Component
 
     public array $assignments = [];
 
-    /** @var array<int, int[]> Flags by assignment ID */
+    /** @var array<int, int|null> Flag ID by assignment ID */
     public array $flags = [];
 
     /** @var array<int, array<int, array{type: string|null, number: int|null}>> */
@@ -127,11 +127,11 @@ new class extends Component
 
         $dbAssignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $this->slotPlan->id)
             ->orderBy('music_sequence')
-            ->with(['music.collections', 'music.tags', 'music.genres', 'music.authors', 'flags', 'scopes'])
+            ->with(['music.collections', 'music.tags', 'music.genres', 'music.authors', 'flag', 'scopes'])
             ->get();
 
         $this->assignments = $dbAssignments->map(function ($assignment) use ($user) {
-            $this->flags[$assignment->id] = $assignment->flags->pluck('id')->toArray();
+            $this->flags[$assignment->id] = $assignment->flag?->id;
 
             $dbScopes = $assignment->scopes->map(function ($scope) {
                 return [
@@ -269,7 +269,7 @@ new class extends Component
             return;
         }
 
-        $assignment->flags()->sync($this->flags[$assignmentId] ?? []);
+        $assignment->update(['music_assignment_flag_id' => $this->flags[$assignmentId] ?: null]);
     }
 
     public function updatedFlags($value, $key): void

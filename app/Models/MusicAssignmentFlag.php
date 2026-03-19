@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -40,12 +40,9 @@ class MusicAssignmentFlag extends Model
     /**
      * Get the music plan slot assignments associated with this flag.
      */
-    public function musicPlanSlotAssignments(): BelongsToMany
+    public function musicPlanSlotAssignments(): HasMany
     {
-        return $this->belongsToMany(
-            MusicPlanSlotAssignment::class,
-            'music_plan_slot_assignment_music_assignment_flag'
-        );
+        return $this->hasMany(MusicPlanSlotAssignment::class, 'music_assignment_flag_id');
     }
 
     /**

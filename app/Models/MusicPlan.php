@@ -463,7 +463,7 @@ class MusicPlan extends Model
                 // Copy all assignments for this slot
                 $assignments = MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $slot->pivot->id)
                     ->orderBy('music_sequence')
-                    ->with(['flags', 'scopes', 'music'])
+                    ->with(['scopes', 'music'])
                     ->get();
 
                 foreach ($assignments as $assignment) {
@@ -477,12 +477,8 @@ class MusicPlan extends Model
                         'music_id' => $assignment->music_id,
                         'music_sequence' => $assignment->music_sequence,
                         'notes' => $assignment->notes,
+                        'music_assignment_flag_id' => $assignment->music_assignment_flag_id,
                     ]);
-
-                    // Copy flags
-                    if ($assignment->flags->isNotEmpty()) {
-                        $newAssignment->flags()->sync($assignment->flags->pluck('id'));
-                    }
 
                     // Copy scopes
                     foreach ($assignment->scopes as $scope) {

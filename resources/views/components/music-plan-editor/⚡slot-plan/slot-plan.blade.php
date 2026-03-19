@@ -87,9 +87,10 @@
                         <x-music-card-static :assignment="$assignment" />
                         <div class="text-sm">
                         <x-mary-choices
-                            placeholder="Címkék"
+                            placeholder="Címke"
                             wire:model.live="flags.{{ $assignment['id'] }}"
                             clearable
+                            single
                             :options="$this->flagOptions">
                             @scope('item', $option)
                             <x-mary-list-item

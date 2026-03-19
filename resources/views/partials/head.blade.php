@@ -23,6 +23,7 @@
 <meta property="og:description" content="{{ $pageDescription }}" />
 @endif
 <meta property="og:url" content="{{ $canonicalUrl }}" />
+<meta property="og:image" content="{{ $ogImage ?? asset('apple-touch-icon.png') }}" />
 
 {{-- Twitter Card --}}
 <meta name="twitter:card" content="summary" />
