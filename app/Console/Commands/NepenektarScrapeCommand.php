@@ -237,10 +237,15 @@ class NepenektarScrapeCommand extends Command
                 }
             } else {
                 // Update title and subtitle for existing Music records
-                Music::where('id', $musicId)->update([
-                    'title' => $title,
-                    'subtitle' => $subtitle !== '' ? $subtitle : null,
-                ]);
+                // Must use Eloquent model instance so the saving event fires,
+                // which recomputes the `titles` denormalized column used for search.
+                $music = Music::find($musicId);
+                if ($music) {
+                    $music->update([
+                        'title' => $title,
+                        'subtitle' => $subtitle !== '' ? $subtitle : null,
+                    ]);
+                }
                 $musicsUpdated++;
             }
 
