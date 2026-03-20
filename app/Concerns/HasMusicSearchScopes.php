@@ -72,13 +72,18 @@ trait HasMusicSearchScopes
                 });
             })
             ->when($this->collectionFreeText !== '', function ($q) {
-                $words = preg_split('/\s+/', trim($this->collectionFreeText));
+                $words = preg_split('/(?<=\d)(?=\p{L})|(?<=\p{L})(?=\d)|\s+/u', trim($this->collectionFreeText), -1, PREG_SPLIT_NO_EMPTY);
                 $q->whereHas('collections', function ($subQuery) use ($words) {
                     foreach ($words as $word) {
                         $subQuery->where(function ($qq) use ($word) {
                             $qq->where('collections.title', 'ilike', "%{$word}%")
-                                ->orWhere('collections.abbreviation', 'ilike', "%{$word}%")
-                                ->orWhere('music_collection.order_number', 'ilike', "{$word}");
+                                ->orWhere('collections.abbreviation', 'ilike', "%{$word}%");
+
+                            if (ctype_digit($word)) {
+                                $qq->orWhereRaw("music_collection.order_number ~* ?", ["^{$word}([^0-9]|$)"]);
+                            } else {
+                                $qq->orWhere('music_collection.order_number', 'ilike', "{$word}");
+                            }
                         });
                     }
                 });
