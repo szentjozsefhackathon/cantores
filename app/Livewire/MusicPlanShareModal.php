@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\MusicPlan;
+use App\MusicUrlLabel;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
@@ -46,7 +47,7 @@ class MusicPlanShareModal extends Component
         $user = Auth::user();
         $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
         $assignmentsByPivot = $musicPlan->musicAssignments()
-            ->with(['music.collections', 'music.authors', 'scopes'])
+            ->with(['music.collections', 'music.authors', 'music.urls', 'scopes'])
             ->orderBy('music_plan_slot_plan_id')
             ->orderBy('music_sequence')
             ->get()
@@ -85,6 +86,7 @@ class MusicPlanShareModal extends Component
         $firstCelebration = $musicPlan->celebration;
 
         $text = '🎵 '.($musicPlan->celebration_name ?? 'Énekrend')."\n";
+        $text .= route('music-plan-view', $musicPlan)."\n";
         $text .= "═══════════════════════════════════════\n\n";
 
         // Date and liturgical info
@@ -165,6 +167,20 @@ class MusicPlanShareModal extends Component
                         }
 
                         $text .= "\n";
+
+                        // Add URLs
+                        if ($assignment['music']->urls->isNotEmpty()) {
+                            foreach ($assignment['music']->urls as $musicUrl) {
+                                $text .= '    🔗 ';
+                                if ($musicUrl->label) {
+                                    $labelEnum = MusicUrlLabel::tryFromLabel($musicUrl->label);
+                                    if ($labelEnum) {
+                                        $text .= $labelEnum->label().': ';
+                                    }
+                                }
+                                $text .= $musicUrl->url."\n";
+                            }
+                        }
                     }
                 }
             } else {
