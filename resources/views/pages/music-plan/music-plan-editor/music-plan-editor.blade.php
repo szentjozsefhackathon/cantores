@@ -139,11 +139,20 @@
 
                             />
                         </flux:field>
-                        <div class="flex items-center">
+                        <div class="flex flex-wrap items-center gap-2">
                             @if($musicPlan->actual_date)
-                            <flux:icon name="external-link" class="h-4 w-4" />
-                            <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank" class="text-sm">
+                            <flux:button
+                                size="sm"
+                                variant="filled"
+                                x-on:click="$dispatch('open-direktorium', { date: '{{ $musicPlan->actual_date->format('Y-m-d') }}' }); $flux.modal('direktorium').show()"
+                                class="inline-flex items-center gap-1"
+                                icon="book-open-text" icon:variant="mini">
+                                Direktórium
+                            </flux:button>
+                            <flux:link href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}" target="_blank" class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-blue-500 dark:hover:text-blue-300">
+                                <flux:icon name="external-link" class="h-3.5 w-3.5" variant="mini" />
                                 Igenaptár
+                                <flux:icon name="external-link" class="h-3.5 w-3.5" variant="mini" />
                             </flux:link>
                             @endif
                         </div>
@@ -265,11 +274,11 @@
                 </div>
                 
                 <!-- Celebration selector modal -->
-                @if ($showCelebrationSelector)                 
+                @if ($showCelebrationSelector)
                 <flux:modal wire:model.self="showCelebrationSelector" title="Liturgikus ünnep kiválasztása" class="md:w-2xl">
                     <div class="flex flex-col gap-4">
                     <livewire:liturgical-info selectable />
-    
+
                     <div class="flex">
                         <flux:spacer />
                         <flux:button
@@ -280,6 +289,9 @@
                     </div>
                 </flux:modal>
                 @endif
+
+                <!-- Direktorium modal -->
+                <livewire:direktorium-modal />
     </div>
     </flux:card>
 </div>
