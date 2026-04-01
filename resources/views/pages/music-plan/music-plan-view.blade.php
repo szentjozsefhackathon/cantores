@@ -76,10 +76,15 @@ new class extends Component
             ->get()
             ->groupBy('music_plan_slot_plan_id');
 
-        $this->planSlots = $this->musicPlan->slots()
-            ->visibleToUser($user)
+        $slotsQuery = $this->musicPlan->slots()
             ->withPivot('id', 'sequence')
-            ->orderBy('music_plan_slot_plan.sequence')
+            ->orderBy('music_plan_slot_plan.sequence');
+
+        if ($this->musicPlan->is_private) {
+            $slotsQuery->visibleToUser($user);
+        }
+
+        $this->planSlots = $slotsQuery
             ->get()
             ->map(function ($slot) use ($assignmentsByPivot) {
                 $pivotId = $slot->pivot->id;
