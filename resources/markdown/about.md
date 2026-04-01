@@ -31,7 +31,7 @@ Nem, a honlap nem tartalmaz letölthető anyagokat. Bizonyos előre meghatározo
 ## Fejlesztés, hibajelentés
 
 A honlap a Szent József Hackathon keretében, önkéntes fejlesztők közreműködésével készül.
-A forráskód szabadon elérhető a [GitHubon](https://github.com/szentjozsefhackathon/cantores.hu), ahol hibákat is lehet jelenteni, illetve fejlesztési javaslatokat is szívesen fogadunk.
+A forráskód szabadon elérhető a [GitHubon](https://github.com/szentjozsefhackathon/cantores), ahol hibákat is lehet jelenteni, illetve fejlesztési javaslatokat is szívesen fogadunk.
 
 ## Csatlakozz!
 
