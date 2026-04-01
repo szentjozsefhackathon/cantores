@@ -15,6 +15,7 @@ new class extends Component
     public array $planSlots = [];
     public bool $isPublished = false;
     public bool $isOwner = false;
+    public bool $canEditGenre = false;
 
     public function mount($musicPlan): void
     {
@@ -32,6 +33,9 @@ new class extends Component
 
         // Check if current user is the owner
         $this->isOwner = Auth::check() && Auth::id() === $this->musicPlan->user_id;
+
+        // Check if current user can edit the genre
+        $this->canEditGenre = Auth::check() && Gate::allows('updateGenre', $this->musicPlan);
 
         // Sync published state
         $this->isPublished = !$this->musicPlan->is_private;
@@ -138,14 +142,14 @@ new class extends Component
                 <!-- Combined info grid -->
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1 inline">Ünnep: 
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1 inline">Ünnep:
                             <flux:text class="text-base font-semibold inline">{{ $musicPlan->celebration_name ?? '–' }}</flux:text>
 
                         </flux:heading>
-                        
+
                     </div>
                     <div>
-                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1 inline">Dátum: 
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-1 inline">Dátum:
                         <flux:text class="text-base font-semibold inline">
                             @if($musicPlan->actual_date)
                             {{ $musicPlan->actual_date->translatedFormat('Y. F j.') }}
@@ -155,6 +159,9 @@ new class extends Component
                         </flux:text>
                         </flux:heading>
                     </div>
+                    @if($canEditGenre)
+                    <livewire:music-plan-editor.genre-select :music-plan="$musicPlan" />
+                    @endif
                         @php
                         $firstCelebration = $musicPlan->celebration;
                         @endphp

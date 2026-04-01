@@ -34,6 +34,7 @@ new class extends Component
 
     public function saveGenre()
     {
+        $this->authorize('updateGenre', $this->musicPlan);
         $this->musicPlan->genre_id = $this->genreId;
         $this->musicPlan->save();
         $this->musicPlan->unsetRelation('genre');

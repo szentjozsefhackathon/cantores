@@ -76,6 +76,20 @@ class MusicPlanPolicy
     }
 
     /**
+     * Determine whether the user can update the genre of the model.
+     */
+    public function updateGenre(User $user, MusicPlan $musicPlan): bool
+    {
+        // Owner can always update their own music plan's genre
+        if ($user->id === $musicPlan->user_id) {
+            return true;
+        }
+
+        // Editors and admins can update genre for published plans
+        return ! $musicPlan->is_private && ($user->is_admin || $user->is_editor);
+    }
+
+    /**
      * Determine whether the user can copy the model.
      */
     public function copy(?User $user, MusicPlan $musicPlan): bool
