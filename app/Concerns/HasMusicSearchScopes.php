@@ -80,7 +80,7 @@ trait HasMusicSearchScopes
                                 ->orWhere('collections.abbreviation', 'ilike', "%{$word}%");
 
                             if (ctype_digit($word)) {
-                                $qq->orWhereRaw("music_collection.order_number ~* ?", ["^{$word}([^0-9]|$)"]);
+                                $qq->orWhereRaw('music_collection.order_number ~* ?', ["^{$word}([^0-9]|$)"]);
                             } else {
                                 $qq->orWhere('music_collection.order_number', 'ilike', "{$word}");
                             }
@@ -91,17 +91,7 @@ trait HasMusicSearchScopes
 
         $query = $query
             ->when($this->authorFreeText !== '', function ($q) {
-                $authorIds = Author::search($this->authorFreeText)
-                    ->take(500)
-                    ->keys();
-
-                if ($authorIds->isEmpty()) {
-                    $q->whereRaw('1=0'); // AND semantics: no matching author => no musics
-
-                    return;
-                }
-
-                $q->whereHas('authors', fn ($aq) => $aq->whereIn('authors.id', $authorIds));
+                $q->whereHas('authors', fn ($aq) => $aq->where('name', 'ilike', '%'.$this->authorFreeText.'%'));
             });
 
         // Tags: AND logic - music must have ALL selected tags
