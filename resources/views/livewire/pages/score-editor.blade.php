@@ -47,23 +47,32 @@
                     </flux:field>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-[1fr_2fr]">
-                    <flux:field>
-                        <flux:label>{{ __('Search Music') }}</flux:label>
-                        <flux:input type="search" wire:model.live.debounce.500ms="musicSearch" icon="magnifying-glass" :placeholder="__('Search visible music')" />
-                    </flux:field>
+                <flux:field>
+                    <flux:label>{{ __('Attached Music') }}</flux:label>
+                    <div class="flex items-center gap-2">
+                        <flux:input
+                            readonly
+                            :value="$this->selectedMusic ? $this->selectedMusic->title.($this->selectedMusic->subtitle ? ' — '.$this->selectedMusic->subtitle : '') : ''"
+                            :placeholder="__('No music attached')"
+                            class="flex-1" />
+                        <flux:button icon="magnifying-glass" x-on:click="$flux.modal('score-music-search').show()">
+                            {{ __('Browse') }}
+                        </flux:button>
+                        @if($musicId)
+                            <flux:button icon="x-mark" variant="ghost" wire:click="clearMusic" :title="__('Remove')" />
+                        @endif
+                    </div>
+                    <flux:error name="musicId" />
+                </flux:field>
 
-                    <flux:field>
-                        <flux:label>{{ __('Attached Music') }}</flux:label>
-                        <flux:select wire:model="musicId">
-                            <flux:select.option value="">{{ __('Not attached') }}</flux:select.option>
-                            @foreach($musicOptions as $music)
-                                <flux:select.option value="{{ $music->id }}">{{ $music->title }}{{ $music->subtitle ? ' — '.$music->subtitle : '' }}</flux:select.option>
-                            @endforeach
-                        </flux:select>
-                        <flux:error name="musicId" />
-                    </flux:field>
-                </div>
+                <flux:modal name="score-music-search" class="max-w-4xl">
+                    <livewire:music-search lazy selectable="true" source=".score" wire:key="score-music-search" />
+                    <div class="mt-6 flex justify-end">
+                        <flux:button x-on:click="$flux.modal('score-music-search').close()" variant="outline">
+                            {{ __('Cancel') }}
+                        </flux:button>
+                    </div>
+                </flux:modal>
 
                 <flux:field required>
                     <flux:label>{{ __('Score Content') }}</flux:label>

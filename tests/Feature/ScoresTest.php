@@ -106,6 +106,19 @@ it('shows only the current users attached scores on the music detail page', func
         ->assertDontSee('Other Private Score');
 });
 
+it('auto-populates title when music is selected via the music search modal', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create(['title' => 'Ave Maria']);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->assertSet('title', '')
+        ->dispatch('music-selected.score', musicId: $music->id)
+        ->assertSet('musicId', $music->id)
+        ->assertSet('title', 'Ave Maria');
+});
+
 it('does not allow attaching a score to a private music piece the user cannot view', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();

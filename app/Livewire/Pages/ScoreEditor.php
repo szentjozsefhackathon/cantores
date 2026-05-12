@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class ScoreEditor extends Component
@@ -19,8 +21,6 @@ class ScoreEditor extends Component
     public ?Score $score = null;
 
     public ?int $musicId = null;
-
-    public string $musicSearch = '';
 
     public string $title = '';
 
@@ -34,7 +34,6 @@ class ScoreEditor extends Component
             $this->authorize('update', $score);
             $this->score = $score->load('music');
             $this->musicId = $score->music_id;
-            $this->musicSearch = $score->music?->title ?? '';
             $this->title = $score->title;
             $this->format = $score->format->value;
             $this->content = $score->content;
@@ -48,7 +47,6 @@ class ScoreEditor extends Component
             abort_unless(Gate::allows('view', $music), 403);
 
             $this->musicId = $music->id;
-            $this->musicSearch = $music->title;
             $this->title = $music->title;
         }
     }
@@ -97,23 +95,36 @@ class ScoreEditor extends Component
         $this->redirectRoute('scores', navigate: true);
     }
 
-    public function getMusicOptionsProperty()
+    #[Computed]
+    public function selectedMusic(): ?Music
     {
-        $search = trim($this->musicSearch);
+        if ($this->musicId === null) {
+            return null;
+        }
 
-        return Music::query()
-            ->visibleTo(Auth::user())
-            ->when($search !== '', fn ($query) => $query->where('title', 'ilike', "%{$search}%"))
-            ->orderBy('title')
-            ->limit(25)
-            ->get();
+        return Music::query()->find($this->musicId);
+    }
+
+    #[On('music-selected.score')]
+    public function onMusicSelected(int $musicId): void
+    {
+        $music = Music::query()->findOrFail($musicId);
+        abort_unless(Gate::allows('view', $music), 403);
+
+        $this->musicId = $music->id;
+        $this->title = $music->title;
+        $this->js("Flux.modal('score-music-search').close()");
+    }
+
+    public function clearMusic(): void
+    {
+        $this->musicId = null;
     }
 
     public function render()
     {
         return view('livewire.pages.score-editor', [
             'formats' => ScoreFormat::cases(),
-            'musicOptions' => $this->musicOptions,
         ]);
     }
 
