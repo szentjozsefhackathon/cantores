@@ -81,6 +81,14 @@
                         previewHtml: '',
                         localContent: '',
                         renderTimer: null,
+                        lyricSize: 16,
+                        staffSize: 100,
+                        dropCapSize: 64,
+                        minLyricWordSpacing: 0,
+                        hyphenWidth: 0,
+                        condensingTolerance: 0.9,
+                        pageRatio: 'auto',
+                        dropCaps: false,
                         renderPreview() {
                             console.log('[score-editor] renderPreview called', { format: $wire.format, exsurgeLoaded: !!window.exsurge, contentLength: this.localContent?.length });
                             if ($wire.format !== 'gabc') {
@@ -102,9 +110,25 @@
                             console.log('[score-editor] calling exsurge with content:', content.substring(0, 100));
                             try {
                                 const ctxt = new exsurge.ChantContext();
+                                ctxt.lyricTextSize = Number(this.lyricSize);
+                                ctxt.dropCapTextSize = Number(this.dropCapSize);
+                                ctxt.glyphScaling = (1.0 / 16.0) * (Number(this.staffSize) / 100);
+                                ctxt.staffInterval = ctxt.glyphPunctumWidth * ctxt.glyphScaling;
+                                ctxt.staffLineWeight = Math.round(ctxt.glyphPunctumWidth * ctxt.glyphScaling / 8);
+                                ctxt.neumeLineWeight = ctxt.staffLineWeight;
+                                ctxt.dividerLineWeight = ctxt.neumeLineWeight;
+                                ctxt.episemaLineWeight = ctxt.neumeLineWeight;
+                                if (Number(this.minLyricWordSpacing) > 0) {
+                                    ctxt.minLyricWordSpacing = Number(this.minLyricWordSpacing);
+                                }
+                                if (Number(this.hyphenWidth) > 0) {
+                                    ctxt.hyphenWidth = Number(this.hyphenWidth);
+                                }
+                                ctxt.condensingTolerance = Number(this.condensingTolerance);
                                 const mappings = exsurge.Gabc.createMappingsFromSource(ctxt, content);
-                                const score = new exsurge.ChantScore(ctxt, mappings, true);
-                                const width = this.$refs.preview ? this.$refs.preview.offsetWidth : 800;
+                                const score = new exsurge.ChantScore(ctxt, mappings, this.dropCaps);
+                                const el = this.$refs.preview;
+                                const width = el ? el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) - parseFloat(getComputedStyle(el).paddingRight) : 800;
                                 console.log('[score-editor] performLayoutAsync starting, width:', width);
                                 score.performLayoutAsync(ctxt, () => {
                                     console.log('[score-editor] layoutChantLines starting');
@@ -122,6 +146,32 @@
                         scheduleRender() {
                             clearTimeout(this.renderTimer);
                             this.renderTimer = setTimeout(() => this.renderPreview(), 600);
+                        },
+                        exportPng() {
+                            const previewEl = this.$refs.preview;
+                            const svgEl = previewEl ? previewEl.querySelector('svg') : null;
+                            if (!svgEl) { return; }
+                            const svgData = new XMLSerializer().serializeToString(svgEl);
+                            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                            const url = URL.createObjectURL(svgBlob);
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const scale = 2;
+                                canvas.width = img.naturalWidth * scale;
+                                canvas.height = img.naturalHeight * scale;
+                                const ctx = canvas.getContext('2d');
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                ctx.scale(scale, scale);
+                                ctx.drawImage(img, 0, 0);
+                                URL.revokeObjectURL(url);
+                                const a = document.createElement('a');
+                                a.download = 'score.png';
+                                a.href = canvas.toDataURL('image/png');
+                                a.click();
+                            };
+                            img.src = url;
                         }
                     }"
                     x-init="
@@ -129,22 +179,96 @@
                         localContent = $wire.content;
                         $watch('$wire.content', (val) => { console.log('[score-editor] $wire.content changed, len:', val?.length); localContent = val; scheduleRender(); });
                         $watch('$wire.format', (val) => { console.log('[score-editor] $wire.format changed:', val); scheduleRender(); });
+                        $watch('lyricSize', () => scheduleRender());
+                        $watch('staffSize', () => scheduleRender());
+                        $watch('dropCapSize', () => scheduleRender());
+                        $watch('pageRatio', () => { $nextTick(() => scheduleRender()); });
+                        $watch('dropCaps', () => scheduleRender());
+                        $watch('minLyricWordSpacing', () => scheduleRender());
+                        $watch('hyphenWidth', () => scheduleRender());
+                        $watch('condensingTolerance', () => scheduleRender());
                         $nextTick(() => { console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge); scheduleRender(); });
                     "
                 >
                     <flux:field required>
                         <flux:label>{{ __('Score Content') }}</flux:label>
-                        <flux:textarea wire:model="content" rows="24" class="font-mono text-sm" :placeholder="__('Paste or type your ABC or GABC source here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
+                        <flux:textarea wire:model="content" rows="10" class="font-mono text-sm" :placeholder="__('Paste or type your ABC or GABC source here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
                         <flux:error name="content" />
                     </flux:field>
 
                     <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4">
-                        <flux:heading size="sm">{{ __('Preview') }}</flux:heading>
                         <div
                             x-ref="preview"
-                            class="mt-2 min-h-16 overflow-x-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
+                            class="min-h-16 overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto"
+                            :style="pageRatio !== 'auto' ? 'aspect-ratio: ' + pageRatio : ''"
                             x-html="previewHtml"
                         ></div>
+
+                        <div class="mt-2 flex justify-end" x-show="previewHtml">
+                            <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
+                                {{ __('Export PNG') }}
+                            </flux:button>
+                        </div>
+
+                        <flux:separator class="my-4" />
+
+                        <flux:heading size="sm">{{ __('Preview Settings') }}</flux:heading>
+
+                        <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <flux:field>
+                                <flux:label>{{ __('Lyric Size') }} (<span x-text="lyricSize"></span>pt)</flux:label>
+                                <input type="range" x-model="lyricSize" min="8" max="60" step="1" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>{{ __('Staff Size') }} (<span x-text="staffSize"></span>%)</flux:label>
+                                <input type="range" x-model="staffSize" min="30" max="300" step="5" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>{{ __('Drop Cap Size') }} (<span x-text="dropCapSize"></span>pt)</flux:label>
+                                <input type="range" x-model="dropCapSize" min="16" max="120" step="1" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                            </flux:field>
+
+                            <flux:field class="w-auto">
+                                <flux:label>{{ __('Page Ratio') }}</flux:label>
+                                <flux:select x-model="pageRatio" class="w-36">
+                                    <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
+                                    <flux:select.option value="16/9">16:9</flux:select.option>
+                                    <flux:select.option value="4/3">4:3</flux:select.option>
+                                    <flux:select.option value="1/1">1:1</flux:select.option>
+                                </flux:select>
+                            </flux:field>
+
+                            <flux:field class="w-auto">
+                                <flux:label>{{ __('Drop Caps') }}</flux:label>
+                                <flux:switch x-model="dropCaps" />
+                            </flux:field>
+                        </div>
+
+                        <flux:separator class="my-4" />
+
+                        <flux:heading size="sm">{{ __('Lyric Spacing') }}</flux:heading>
+
+                        <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <flux:field>
+                                <flux:label>{{ __('Min Word Spacing') }} (<span x-text="minLyricWordSpacing == 0 ? 'auto' : minLyricWordSpacing + 'px'"></span>)</flux:label>
+                                <input type="range" x-model="minLyricWordSpacing" min="0" max="40" step="1" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                                <flux:description>{{ __('0 = auto (derived from font). Controls minimum space between lyric words.') }}</flux:description>
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>{{ __('Hyphen Width') }} (<span x-text="hyphenWidth == 0 ? 'auto' : hyphenWidth + 'px'"></span>)</flux:label>
+                                <input type="range" x-model="hyphenWidth" min="0" max="40" step="1" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                                <flux:description>{{ __('0 = auto (derived from font). Width allocated for hyphens between syllables.') }}</flux:description>
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>{{ __('Condensing Tolerance') }} (<span x-text="condensingTolerance"></span>)</flux:label>
+                                <input type="range" x-model="condensingTolerance" min="0" max="1" step="0.05" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                                <flux:description>{{ __('How aggressively neume spacing can shrink to fit lyrics (0–1).') }}</flux:description>
+                            </flux:field>
+                        </div>
                     </div>
                 </div>
 
