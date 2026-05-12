@@ -89,6 +89,7 @@
                         condensingTolerance: 0.9,
                         pageRatio: 'auto',
                         dropCaps: false,
+                        lyricFont: &quot;'Palatino Linotype', 'Book Antiqua', Palatino, serif&quot;,
                         renderPreview() {
                             console.log('[score-editor] renderPreview called', { format: $wire.format, exsurgeLoaded: !!window.exsurge, contentLength: this.localContent?.length });
                             if ($wire.format !== 'gabc') {
@@ -111,6 +112,9 @@
                             try {
                                 const ctxt = new exsurge.ChantContext();
                                 ctxt.lyricTextSize = Number(this.lyricSize);
+                                ctxt.lyricTextFont = this.lyricFont;
+                                ctxt.dropCapTextFont = this.lyricFont;
+                                ctxt.annotationTextFont = this.lyricFont;
                                 ctxt.dropCapTextSize = Number(this.dropCapSize);
                                 ctxt.glyphScaling = (1.0 / 16.0) * (Number(this.staffSize) / 100);
                                 ctxt.staffInterval = ctxt.glyphPunctumWidth * ctxt.glyphScaling;
@@ -182,6 +186,7 @@
                         $watch('lyricSize', () => scheduleRender());
                         $watch('staffSize', () => scheduleRender());
                         $watch('dropCapSize', () => scheduleRender());
+                        $watch('lyricFont', () => scheduleRender());
                         $watch('pageRatio', () => { $nextTick(() => scheduleRender()); });
                         $watch('dropCaps', () => scheduleRender());
                         $watch('minLyricWordSpacing', () => scheduleRender());
@@ -243,6 +248,16 @@
                             <flux:field class="w-auto">
                                 <flux:label>{{ __('Drop Caps') }}</flux:label>
                                 <flux:switch x-model="dropCaps" />
+                            </flux:field>
+
+                            <flux:field class="col-span-full sm:col-span-2 lg:col-span-2">
+                                <flux:label>{{ __('Font') }}</flux:label>
+                                <flux:select x-model="lyricFont">
+                                    <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino (default)</flux:select.option>
+                                    <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
+                                    <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
+                                    <flux:select.option value="'Franklin Gothic Book', 'Franklin Gothic Medium', 'ITC Franklin Gothic', Arial, sans-serif">Franklin Gothic Book</flux:select.option>
+                                </flux:select>
                             </flux:field>
                         </div>
 
