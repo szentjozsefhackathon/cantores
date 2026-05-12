@@ -81,6 +81,7 @@
                         previewHtml: '',
                         localContent: '',
                         renderTimer: null,
+                        zoom: 100,
                         lyricSize: 16,
                         staffSize: 100,
                         dropCapSize: 64,
@@ -90,6 +91,10 @@
                         pageRatio: 'auto',
                         dropCaps: false,
                         lyricFont: &quot;'Palatino Linotype', 'Book Antiqua', Palatino, serif&quot;,
+                        getRenderWidth() {
+                            const widths = { '16/9': 1920, '4/3': 1440, '1/1': 1080 };
+                            return widths[this.pageRatio] || 1200;
+                        },
                         renderPreview() {
                             console.log('[score-editor] renderPreview called', { format: $wire.format, exsurgeLoaded: !!window.exsurge, contentLength: this.localContent?.length });
                             if ($wire.format !== 'gabc') {
@@ -111,33 +116,47 @@
                             console.log('[score-editor] calling exsurge with content:', content.substring(0, 100));
                             try {
                                 const ctxt = new exsurge.ChantContext();
-                                ctxt.lyricTextSize = Number(this.lyricSize);
+                                const z = Number(this.zoom) / 100;
+                                ctxt.lyricTextSize = Number(this.lyricSize) * z;
                                 ctxt.lyricTextFont = this.lyricFont;
                                 ctxt.dropCapTextFont = this.lyricFont;
                                 ctxt.annotationTextFont = this.lyricFont;
-                                ctxt.dropCapTextSize = Number(this.dropCapSize);
-                                ctxt.glyphScaling = (1.0 / 16.0) * (Number(this.staffSize) / 100);
+                                ctxt.dropCapTextSize = Number(this.dropCapSize) * z;
+                                ctxt.glyphScaling = (1.0 / 16.0) * (Number(this.staffSize) / 100) * z;
                                 ctxt.staffInterval = ctxt.glyphPunctumWidth * ctxt.glyphScaling;
                                 ctxt.staffLineWeight = Math.round(ctxt.glyphPunctumWidth * ctxt.glyphScaling / 8);
                                 ctxt.neumeLineWeight = ctxt.staffLineWeight;
                                 ctxt.dividerLineWeight = ctxt.neumeLineWeight;
                                 ctxt.episemaLineWeight = ctxt.neumeLineWeight;
                                 if (Number(this.minLyricWordSpacing) > 0) {
-                                    ctxt.minLyricWordSpacing = Number(this.minLyricWordSpacing);
+                                    ctxt.minLyricWordSpacing = Number(this.minLyricWordSpacing) * z;
                                 }
                                 if (Number(this.hyphenWidth) > 0) {
-                                    ctxt.hyphenWidth = Number(this.hyphenWidth);
+                                    ctxt.hyphenWidth = Number(this.hyphenWidth) * z;
                                 }
                                 ctxt.condensingTolerance = Number(this.condensingTolerance);
                                 const mappings = exsurge.Gabc.createMappingsFromSource(ctxt, content);
                                 const score = new exsurge.ChantScore(ctxt, mappings, this.dropCaps);
-                                const el = this.$refs.preview;
-                                const width = el ? el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) - parseFloat(getComputedStyle(el).paddingRight) : 800;
+                                const width = this.getRenderWidth();
                                 console.log('[score-editor] performLayoutAsync starting, width:', width);
                                 score.performLayoutAsync(ctxt, () => {
                                     console.log('[score-editor] layoutChantLines starting');
-                                    score.layoutChantLines(ctxt, width || 800, () => {
-                                        const html = score.createSvg(ctxt);
+                                    score.layoutChantLines(ctxt, width, () => {
+                                        let html = score.createSvg(ctxt);
+                                        // Add viewBox to SVG so it scales to fit the container
+                                        const parser = new DOMParser();
+                                        const doc = parser.parseFromString(html, 'image/svg+xml');
+                                        const svg = doc.querySelector('svg');
+                                        if (svg) {
+                                            const w = svg.getAttribute('width');
+                                            const h = svg.getAttribute('height');
+                                            if (w && h) {
+                                                svg.setAttribute('viewBox', '0 0 ' + parseFloat(w) + ' ' + parseFloat(h));
+                                                svg.removeAttribute('width');
+                                                svg.removeAttribute('height');
+                                            }
+                                            html = new XMLSerializer().serializeToString(svg);
+                                        }
                                         console.log('[score-editor] render complete, html length:', html?.length);
                                         this.previewHtml = html;
                                     });
@@ -155,20 +174,32 @@
                             const previewEl = this.$refs.preview;
                             const svgEl = previewEl ? previewEl.querySelector('svg') : null;
                             if (!svgEl) { return; }
-                            const svgData = new XMLSerializer().serializeToString(svgEl);
+                            const renderWidth = this.getRenderWidth();
+                            const viewBox = svgEl.getAttribute('viewBox');
+                            let svgWidth = renderWidth;
+                            let svgHeight = renderWidth * 9 / 16;
+                            if (viewBox) {
+                                const parts = viewBox.split(/\s+/).map(Number);
+                                if (parts.length === 4) {
+                                    svgWidth = parts[2];
+                                    svgHeight = parts[3];
+                                }
+                            }
+                            const clonedSvg = svgEl.cloneNode(true);
+                            clonedSvg.setAttribute('width', String(svgWidth));
+                            clonedSvg.setAttribute('height', String(svgHeight));
+                            const svgData = new XMLSerializer().serializeToString(clonedSvg);
                             const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
                             const url = URL.createObjectURL(svgBlob);
                             const img = new Image();
                             img.onload = () => {
                                 const canvas = document.createElement('canvas');
-                                const scale = 2;
-                                canvas.width = img.naturalWidth * scale;
-                                canvas.height = img.naturalHeight * scale;
+                                canvas.width = svgWidth;
+                                canvas.height = svgHeight;
                                 const ctx = canvas.getContext('2d');
                                 ctx.fillStyle = '#ffffff';
                                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                                ctx.scale(scale, scale);
-                                ctx.drawImage(img, 0, 0);
+                                ctx.drawImage(img, 0, 0, svgWidth, svgHeight);
                                 URL.revokeObjectURL(url);
                                 const a = document.createElement('a');
                                 a.download = 'score.png';
@@ -192,6 +223,7 @@
                         $watch('minLyricWordSpacing', () => scheduleRender());
                         $watch('hyphenWidth', () => scheduleRender());
                         $watch('condensingTolerance', () => scheduleRender());
+                        $watch('zoom', () => scheduleRender());
                         $nextTick(() => { console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge); scheduleRender(); });
                     "
                 >
@@ -206,8 +238,9 @@
                             x-ref="preview"
                             class="min-h-16 overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto"
                             :style="pageRatio !== 'auto' ? 'aspect-ratio: ' + pageRatio : ''"
-                            x-html="previewHtml"
-                        ></div>
+                        >
+                            <div x-html="previewHtml"></div>
+                        </div>
 
                         <div class="mt-2 flex justify-end" x-show="previewHtml">
                             <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
@@ -218,6 +251,13 @@
                         <flux:separator class="my-4" />
 
                         <flux:heading size="sm">{{ __('Preview Settings') }}</flux:heading>
+
+                        <div class="mt-2 mb-4">
+                            <flux:field>
+                                <flux:label>{{ __('Zoom') }} (<span x-text="zoom"></span>%)</flux:label>
+                                <input type="range" x-model="zoom" min="25" max="400" step="5" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                            </flux:field>
+                        </div>
 
                         <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             <flux:field>
