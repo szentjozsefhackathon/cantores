@@ -78,17 +78,17 @@ class CelebrationSearchService
     {
         $score = 0;
 
-        // Rule 1: readings_code exactly the same (10 points)
+        // Rule 1: readings_code exactly the same (5 points)
         if (isset($criteria['readings_code']) && $criteria['readings_code'] !== null) {
             if ($celebration->readings_code === $criteria['readings_code']) {
-                $score += 10;
+                $score += 5;
             }
         }
 
         // Rule 2: name exactly the same (5 points)
         if (isset($criteria['name']) && $criteria['name'] !== null) {
             if ($celebration->name === $criteria['name']) {
-                $score += 5;
+                $score += 10;
             }
         }
 
