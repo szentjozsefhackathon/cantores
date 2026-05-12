@@ -74,11 +74,80 @@
                     </div>
                 </flux:modal>
 
-                <flux:field required>
-                    <flux:label>{{ __('Score Content') }}</flux:label>
-                    <flux:textarea wire:model="content" rows="24" class="font-mono text-sm" :placeholder="__('Paste or type your ABC or GABC source here')" />
-                    <flux:error name="content" />
-                </flux:field>
+<script src="https://ex.surge.sh/exsurge.js"></script>
+
+                <div
+                    x-data="{
+                        previewHtml: '',
+                        localContent: '',
+                        renderTimer: null,
+                        renderPreview() {
+                            console.log('[score-editor] renderPreview called', { format: $wire.format, exsurgeLoaded: !!window.exsurge, contentLength: this.localContent?.length });
+                            if ($wire.format !== 'gabc') {
+                                console.log('[score-editor] skipping: format is not gabc');
+                                this.previewHtml = '';
+                                return;
+                            }
+                            if (!window.exsurge) {
+                                console.warn('[score-editor] skipping: window.exsurge is not available');
+                                this.previewHtml = '';
+                                return;
+                            }
+                            const content = this.localContent;
+                            if (!content || !content.trim()) {
+                                console.log('[score-editor] skipping: content is empty');
+                                this.previewHtml = '';
+                                return;
+                            }
+                            console.log('[score-editor] calling exsurge with content:', content.substring(0, 100));
+                            try {
+                                const ctxt = new exsurge.ChantContext();
+                                const mappings = exsurge.Gabc.createMappingsFromSource(ctxt, content);
+                                const score = new exsurge.ChantScore(ctxt, mappings, true);
+                                const width = this.$refs.preview ? this.$refs.preview.offsetWidth : 800;
+                                console.log('[score-editor] performLayoutAsync starting, width:', width);
+                                score.performLayoutAsync(ctxt, () => {
+                                    console.log('[score-editor] layoutChantLines starting');
+                                    score.layoutChantLines(ctxt, width || 800, () => {
+                                        const html = score.createSvg(ctxt);
+                                        console.log('[score-editor] render complete, html length:', html?.length);
+                                        this.previewHtml = html;
+                                    });
+                                });
+                            } catch (e) {
+                                console.error('[score-editor] exsurge error:', e);
+                                this.previewHtml = '';
+                            }
+                        },
+                        scheduleRender() {
+                            clearTimeout(this.renderTimer);
+                            this.renderTimer = setTimeout(() => this.renderPreview(), 600);
+                        }
+                    }"
+                    x-init="
+                        console.log('[score-editor] init, exsurge available:', !!window.exsurge, 'format:', $wire.format);
+                        localContent = $wire.content;
+                        $watch('$wire.content', (val) => { console.log('[score-editor] $wire.content changed, len:', val?.length); localContent = val; scheduleRender(); });
+                        $watch('$wire.format', (val) => { console.log('[score-editor] $wire.format changed:', val); scheduleRender(); });
+                        $nextTick(() => { console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge); scheduleRender(); });
+                    "
+                >
+                    <flux:field required>
+                        <flux:label>{{ __('Score Content') }}</flux:label>
+                        <flux:textarea wire:model="content" rows="24" class="font-mono text-sm" :placeholder="__('Paste or type your ABC or GABC source here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
+                        <flux:error name="content" />
+                    </flux:field>
+
+                    <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4">
+                        <flux:heading size="sm">{{ __('Preview') }}</flux:heading>
+                        <div
+                            x-ref="preview"
+                            class="mt-2 min-h-16 overflow-x-auto rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
+                            x-html="previewHtml"
+                        ></div>
+                    </div>
+                </div>
+
 
                 <div class="flex justify-end gap-3">
                     <flux:button variant="ghost" :href="route('scores')" wire:navigate>
