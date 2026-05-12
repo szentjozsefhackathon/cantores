@@ -36,6 +36,8 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property-read bool $is_verified
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicPlanSlotAssignments
  * @property-read int|null $music_plan_slot_assignments_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Score> $scores
+ * @property-read int|null $scores_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicRelation> $directMusicRelations
  * @property-read int|null $direct_music_relations_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicRelation> $inverseMusicRelations
@@ -188,6 +190,14 @@ class Music extends Model implements Auditable
     public function urls(): HasMany
     {
         return $this->hasMany(MusicUrl::class);
+    }
+
+    /**
+     * Get private user scores attached to this music.
+     */
+    public function scores(): HasMany
+    {
+        return $this->hasMany(Score::class);
     }
 
     /**

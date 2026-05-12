@@ -211,6 +211,50 @@
                     @endif
                 </div>
 
+                @auth
+                <!-- Private Scores -->
+                <div>
+                    <div class="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400">{{ __('My Private Scores') }}</flux:heading>
+                        <flux:button size="sm" variant="primary" icon="plus" :href="route('scores.create', ['music' => $music->id])" wire:navigate>
+                            {{ __('Create Score') }}
+                        </flux:button>
+                    </div>
+
+                    @php
+                        $myScores = $music->scores()
+                            ->where('user_id', auth()->id())
+                            ->latest('updated_at')
+                            ->get();
+                    @endphp
+
+                    @if($myScores->isNotEmpty())
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            @foreach($myScores as $score)
+                                <flux:card class="p-4" variant="outline" wire:key="score-{{ $score->id }}">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <flux:text class="font-medium truncate">{{ $score->title }}</flux:text>
+                                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                                                <flux:badge size="sm" color="zinc">{{ $score->format->label() }}</flux:badge>
+                                                <flux:text class="text-xs text-gray-500 dark:text-gray-400">
+                                                    {{ $score->updated_at->translatedFormat('Y-m-d') }}
+                                                </flux:text>
+                                            </div>
+                                        </div>
+                                        <flux:button size="sm" variant="ghost" icon="pencil" :href="route('scores.edit', ['score' => $score->id])" wire:navigate :title="__('Edit')" />
+                                    </div>
+                                </flux:card>
+                            @endforeach
+                        </div>
+                    @else
+                        <flux:callout color="zinc" variant="soft">
+                            <flux:text>{{ __('No private scores are attached to this music yet.') }}</flux:text>
+                        </flux:callout>
+                    @endif
+                </div>
+                @endauth
+
             </div>
 
             <!-- Status bar -->

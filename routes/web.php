@@ -120,6 +120,18 @@ Route::livewire('/author/{author}/view', \App\Livewire\Pages\AuthorView::class)
 Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
     ->name('musics');
 
+Route::livewire('/scores', \App\Livewire\Pages\Scores::class)
+    ->middleware(['auth', 'verified'])
+    ->name('scores');
+
+Route::livewire('/scores/create/{music?}', \App\Livewire\Pages\ScoreEditor::class)
+    ->middleware(['auth', 'verified'])
+    ->name('scores.create');
+
+Route::livewire('/scores/{score}/edit', \App\Livewire\Pages\ScoreEditor::class)
+    ->middleware(['auth', 'verified'])
+    ->name('scores.edit');
+
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');

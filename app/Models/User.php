@@ -36,6 +36,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $unread_notifications_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicVerification> $musicVerifications
  * @property-read int|null $music_verifications_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Score> $scores
+ * @property-read int|null $scores_count
  * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spatie\Permission\Models\Permission> $permissions
@@ -173,6 +175,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function musicVerifications(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(MusicVerification::class, 'verifier_id');
+    }
+
+    /**
+     * Get the user's private scores.
+     */
+    public function scores(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Score::class);
     }
 
     /**
