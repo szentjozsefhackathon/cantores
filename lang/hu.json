@@ -648,5 +648,23 @@
 
     "Loading": "Betöltés",
     "Error report submitted successfully.": "Hibajelentés elküldve.",
-    "Delete collection": "Gyűjtemény törlése"
+    "Delete collection": "Gyűjtemény törlése",
+    "Scale": "Méretarány",
+    "Staff Width": "Kottasor szélesség",
+    "Transpose": "Transzponálás",
+    "semitones": "félhang",
+    "Responsive": "Reszponzív",
+    "Preview Settings": "Előnézet beállítások",
+    "Export PNG": "Exportálás PNG-be",
+    "Lyric Size": "Szövegméret",
+    "Staff Size": "Kottasor méret",
+    "Drop Cap Size": "Iniciálé méret",
+    "Page Ratio": "Oldal arány",
+    "Drop Caps": "Iniciálé",
+    "Font": "Betűtípus",
+    "Lyric Spacing": "Szöveg térköz",
+    "Min Word Spacing": "Min. szóköz",
+    "Hyphen Width": "Kötőjel szélesség",
+    "Condensing Tolerance": "Sűrítési tolerancia",
+    "Zoom": "Nagyítás"
 }

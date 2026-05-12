@@ -75,6 +75,7 @@
                 </flux:modal>
 
 <script src="https://ex.surge.sh/exsurge.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/abcjs@6/dist/abcjs-basic-min.js"></script>
 
                 <div
                     x-data="{
@@ -91,12 +92,47 @@
                         pageRatio: 'auto',
                         dropCaps: false,
                         lyricFont: &quot;'Palatino Linotype', 'Book Antiqua', Palatino, serif&quot;,
+                        abcScale: 1,
+                        abcStaffWidth: 740,
+                        abcTranspose: 0,
+                        abcResponsive: true,
                         getRenderWidth() {
                             const widths = { '16/9': 1920, '4/3': 1440, '1/1': 1080 };
                             return widths[this.pageRatio] || 1200;
                         },
+                        renderAbcPreview() {
+                            if (!window.ABCJS) { return; }
+                            const content = this.localContent;
+                            if (!content || !content.trim()) {
+                                const el = this.$refs.abcPreview;
+                                if (el) { el.innerHTML = ''; }
+                                return;
+                            }
+                            try {
+                                const options = {
+                                    scale: Number(this.abcScale),
+                                    staffwidth: Number(this.abcStaffWidth),
+                                    visualTranspose: Number(this.abcTranspose),
+                                    paddingtop: 15,
+                                    paddingbottom: 30,
+                                    paddingleft: 15,
+                                    paddingright: 50,
+                                };
+                                if (this.abcResponsive) {
+                                    options.responsive = 'resize';
+                                }
+                                ABCJS.renderAbc(this.$refs.abcPreview, content, options);
+                            } catch (e) {
+                                console.error('[score-editor] abcjs error:', e);
+                            }
+                        },
                         renderPreview() {
                             console.log('[score-editor] renderPreview called', { format: $wire.format, exsurgeLoaded: !!window.exsurge, contentLength: this.localContent?.length });
+                            if ($wire.format === 'abc') {
+                                this.renderAbcPreview();
+                                this.previewHtml = '';
+                                return;
+                            }
                             if ($wire.format !== 'gabc') {
                                 console.log('[score-editor] skipping: format is not gabc');
                                 this.previewHtml = '';
@@ -171,7 +207,12 @@
                             this.renderTimer = setTimeout(() => this.renderPreview(), 600);
                         },
                         exportPng() {
-                            const previewEl = this.$refs.preview;
+                            let previewEl;
+                            if ($wire.format === 'abc') {
+                                previewEl = this.$refs.abcPreview;
+                            } else {
+                                previewEl = this.$refs.preview;
+                            }
                             const svgEl = previewEl ? previewEl.querySelector('svg') : null;
                             if (!svgEl) { return; }
                             const renderWidth = this.getRenderWidth();
@@ -185,6 +226,14 @@
                                     svgHeight = parts[3];
                                 }
                             }
+                            if (!viewBox) {
+                                const bbox = svgEl.getBBox();
+                                const w = svgEl.getAttribute('width');
+                                const h = svgEl.getAttribute('height');
+                                svgWidth = w ? parseFloat(w) : bbox.width + bbox.x;
+                                svgHeight = h ? parseFloat(h) : bbox.height + bbox.y;
+                            }
+                            const scale = $wire.format === 'abc' ? 2 : 1;
                             const clonedSvg = svgEl.cloneNode(true);
                             clonedSvg.setAttribute('width', String(svgWidth));
                             clonedSvg.setAttribute('height', String(svgHeight));
@@ -194,12 +243,12 @@
                             const img = new Image();
                             img.onload = () => {
                                 const canvas = document.createElement('canvas');
-                                canvas.width = svgWidth;
-                                canvas.height = svgHeight;
+                                canvas.width = svgWidth * scale;
+                                canvas.height = svgHeight * scale;
                                 const ctx = canvas.getContext('2d');
                                 ctx.fillStyle = '#ffffff';
                                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                                ctx.drawImage(img, 0, 0, svgWidth, svgHeight);
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                                 URL.revokeObjectURL(url);
                                 const a = document.createElement('a');
                                 a.download = 'score.png';
@@ -224,6 +273,10 @@
                         $watch('hyphenWidth', () => scheduleRender());
                         $watch('condensingTolerance', () => scheduleRender());
                         $watch('zoom', () => scheduleRender());
+                        $watch('abcScale', () => scheduleRender());
+                        $watch('abcStaffWidth', () => scheduleRender());
+                        $watch('abcTranspose', () => scheduleRender());
+                        $watch('abcResponsive', () => scheduleRender());
                         $nextTick(() => { console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge); scheduleRender(); });
                     "
                 >
@@ -232,6 +285,45 @@
                         <flux:textarea wire:model="content" rows="10" class="font-mono text-sm" :placeholder="__('Paste or type your ABC or GABC source here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
                         <flux:error name="content" />
                     </flux:field>
+
+                    <div x-show="$wire.format === 'abc'" x-cloak class="mt-4">
+                        <div
+                            x-ref="abcPreview"
+                            class="min-h-16 overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto"
+                        ></div>
+
+                        <div class="mt-2 flex justify-end">
+                            <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
+                                {{ __('Export PNG') }}
+                            </flux:button>
+                        </div>
+
+                        <flux:separator class="my-4" />
+
+                        <flux:heading size="sm">{{ __('Preview Settings') }}</flux:heading>
+
+                        <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <flux:field>
+                                <flux:label>{{ __('Scale') }} (<span x-text="abcScale"></span>x)</flux:label>
+                                <input type="range" x-model="abcScale" min="0.5" max="3" step="0.1" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>{{ __('Staff Width') }} (<span x-text="abcStaffWidth"></span>px)</flux:label>
+                                <input type="range" x-model="abcStaffWidth" min="400" max="1600" step="10" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>{{ __('Transpose') }} (<span x-text="abcTranspose"></span> {{ __('semitones') }})</flux:label>
+                                <input type="range" x-model="abcTranspose" min="-12" max="12" step="1" class="w-full accent-zinc-800 dark:accent-zinc-200" />
+                            </flux:field>
+
+                            <flux:field class="w-auto">
+                                <flux:label>{{ __('Responsive') }}</flux:label>
+                                <flux:switch x-model="abcResponsive" />
+                            </flux:field>
+                        </div>
+                    </div>
 
                     <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4">
                         <div
