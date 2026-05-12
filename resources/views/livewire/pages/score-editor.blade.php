@@ -95,7 +95,7 @@
                         abcScale: 1,
                         abcStaffWidth: 740,
                         abcTranspose: 0,
-                        abcResponsive: true,
+                        abcPageRatio: 'auto',
                         getRenderWidth() {
                             const widths = { '16/9': 1920, '4/3': 1440, '1/1': 1080 };
                             return widths[this.pageRatio] || 1200;
@@ -113,15 +113,50 @@
                                     scale: Number(this.abcScale),
                                     staffwidth: Number(this.abcStaffWidth),
                                     visualTranspose: Number(this.abcTranspose),
+                                    add_classes: true,
                                     paddingtop: 15,
                                     paddingbottom: 30,
                                     paddingleft: 15,
                                     paddingright: 50,
                                 };
-                                if (this.abcResponsive) {
-                                    options.responsive = 'resize';
+                                const rendered = content.replace(/^(w:\s*)(.*)$/gm, (match, prefix, lyrics) => {
+                                    return prefix + lyrics.replace(/<([^ |*~_-]+)/g, '\u200B$1');
+                                });
+                                ABCJS.renderAbc(this.$refs.abcPreview, rendered, options);
+                                const el = this.$refs.abcPreview;
+                                if (el) {
+                                    // Find notehead centers by voice/note group
+                                    const noteXMap = new Map();
+                                    el.querySelectorAll('.abcjs-note .abcjs-notehead').forEach(nh => {
+                                        const bbox = nh.getBBox();
+                                        const noteCenter = bbox.x + bbox.width / 2;
+                                        // Walk up to the abcjs-note group to get its data-index
+                                        const noteGroup = nh.closest('.abcjs-note');
+                                        if (noteGroup) {
+                                            const lyric = noteGroup.querySelector('text.abcjs-lyric');
+                                            if (lyric) {
+                                                noteXMap.set(lyric, noteCenter);
+                                            }
+                                        }
+                                    });
+
+                                    el.querySelectorAll('text.abcjs-lyric').forEach(t => {
+                                        const txt = t.textContent || '';
+                                        const tspans = t.querySelectorAll('tspan');
+                                        if (txt.startsWith('\u200B')) {
+                                            t.textContent = txt.replace('\u200B', '');
+                                            t.setAttribute('text-anchor', 'start');
+                                        } else {
+                                            const noteCenter = noteXMap.get(t);
+                                            if (noteCenter !== undefined) {
+                                                const cx = String(noteCenter + (txt.includes('-') ? 4 : 0));
+                                                t.setAttribute('text-anchor', 'middle');
+                                                t.setAttribute('x', cx);
+                                                tspans.forEach(ts => ts.setAttribute('x', cx));
+                                            }
+                                        }
+                                    });
                                 }
-                                ABCJS.renderAbc(this.$refs.abcPreview, content, options);
                             } catch (e) {
                                 console.error('[score-editor] abcjs error:', e);
                             }
@@ -276,7 +311,8 @@
                         $watch('abcScale', () => scheduleRender());
                         $watch('abcStaffWidth', () => scheduleRender());
                         $watch('abcTranspose', () => scheduleRender());
-                        $watch('abcResponsive', () => scheduleRender());
+                        $watch('abcPageRatio', () => { $nextTick(() => scheduleRender()); });
+
                         $nextTick(() => { console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge); scheduleRender(); });
                     "
                 >
@@ -290,6 +326,7 @@
                         <div
                             x-ref="abcPreview"
                             class="min-h-16 overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto"
+                            :style="abcPageRatio !== 'auto' ? 'aspect-ratio: ' + abcPageRatio : ''"
                         ></div>
 
                         <div class="mt-2 flex justify-end">
@@ -319,9 +356,16 @@
                             </flux:field>
 
                             <flux:field class="w-auto">
-                                <flux:label>{{ __('Responsive') }}</flux:label>
-                                <flux:switch x-model="abcResponsive" />
+                                <flux:label>{{ __('Page Ratio') }}</flux:label>
+                                <flux:select x-model="abcPageRatio" class="w-36">
+                                    <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
+                                    <flux:select.option value="16/9">16:9</flux:select.option>
+                                    <flux:select.option value="4/3">4:3</flux:select.option>
+                                    <flux:select.option value="1/1">1:1</flux:select.option>
+                                </flux:select>
                             </flux:field>
+
+
                         </div>
                     </div>
 
