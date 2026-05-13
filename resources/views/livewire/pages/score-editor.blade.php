@@ -26,6 +26,9 @@
                 <x-action-message on="score-updated">
                     {{ __('Score updated.') }}
                 </x-action-message>
+                <x-action-message on="score-defaults-saved">
+                    {{ __('Saved as your default for this ratio.') }}
+                </x-action-message>
             </div>
 
             <div class="space-y-6">
@@ -80,6 +83,7 @@
                 <div
                     x-data="{
                         previewHtml: '',
+                        isClipped: false,
                         localContent: '',
                         renderTimer: null,
                         zoom: 100,
@@ -96,6 +100,54 @@
                         abcStaffWidth: 740,
                         abcTranspose: 0,
                         abcPageRatio: 'auto',
+                        scoreSettings: @js($settings ?: (object) []),
+                        userDefaults: @js($userDefaults ?: (object) []),
+                        gabcFields: ['zoom','lyricSize','staffSize','dropCapSize','dropCaps','lyricFont','minLyricWordSpacing','hyphenWidth','condensingTolerance'],
+                        abcFields: ['abcScale','abcStaffWidth','abcTranspose'],
+                        collectSettings() {
+                            if ($wire.format === 'gabc') {
+                                return {
+                                    settings: {
+                                        zoom: Number(this.zoom),
+                                        lyricSize: Number(this.lyricSize),
+                                        staffSize: Number(this.staffSize),
+                                        dropCapSize: Number(this.dropCapSize),
+                                        dropCaps: !!this.dropCaps,
+                                        lyricFont: this.lyricFont,
+                                        minLyricWordSpacing: Number(this.minLyricWordSpacing),
+                                        hyphenWidth: Number(this.hyphenWidth),
+                                        condensingTolerance: Number(this.condensingTolerance),
+                                    },
+                                    ratio: this.pageRatio,
+                                };
+                            }
+                            return {
+                                settings: {
+                                    abcScale: Number(this.abcScale),
+                                    abcStaffWidth: Number(this.abcStaffWidth),
+                                    abcTranspose: Number(this.abcTranspose),
+                                },
+                                ratio: this.abcPageRatio,
+                            };
+                        },
+                        applyRatioSettings(format, ratio) {
+                            const score = (this.scoreSettings && this.scoreSettings[format] && this.scoreSettings[format][ratio]) || null;
+                            const user = (this.userDefaults && this.userDefaults[format] && this.userDefaults[format][ratio]) || null;
+                            const merged = { ...(user || {}), ...(score || {}) };
+                            Object.keys(merged).forEach(k => { if (k in this) { this[k] = merged[k]; } });
+                        },
+                        applyInitialSettings() {
+                            this.applyRatioSettings('gabc', this.pageRatio);
+                            this.applyRatioSettings('abc', this.abcPageRatio);
+                        },
+                        saveScore() {
+                            const c = this.collectSettings();
+                            $wire.call('save', c.settings, c.ratio);
+                        },
+                        saveAsDefault() {
+                            const c = this.collectSettings();
+                            $wire.call('saveAsDefault', c.settings, c.ratio, $wire.format);
+                        },
                         getRenderWidth() {
                             const widths = { '16/9': 1920, '4/3': 1440, '1/1': 1080 };
                             return widths[this.pageRatio] || 1200;
@@ -171,17 +223,20 @@
                             if ($wire.format !== 'gabc') {
                                 console.log('[score-editor] skipping: format is not gabc');
                                 this.previewHtml = '';
+                                this.isClipped = false;
                                 return;
                             }
                             if (!window.exsurge) {
                                 console.warn('[score-editor] skipping: window.exsurge is not available');
                                 this.previewHtml = '';
+                                this.isClipped = false;
                                 return;
                             }
                             const content = this.localContent;
                             if (!content || !content.trim()) {
                                 console.log('[score-editor] skipping: content is empty');
                                 this.previewHtml = '';
+                                this.isClipped = false;
                                 return;
                             }
                             console.log('[score-editor] calling exsurge with content:', content.substring(0, 100));
@@ -222,14 +277,19 @@
                                             const w = svg.getAttribute('width');
                                             const h = svg.getAttribute('height');
                                             if (w && h) {
-                                                svg.setAttribute('viewBox', '0 0 ' + parseFloat(w) + ' ' + parseFloat(h));
+                                                svg.setAttribute('viewBox', '0 0 ' + parseFloat(w) + ' ' + (parseFloat(h) + 20));
                                                 svg.removeAttribute('width');
                                                 svg.removeAttribute('height');
                                             }
+                                            svg.style.overflow = 'visible';
                                             html = new XMLSerializer().serializeToString(svg);
                                         }
                                         console.log('[score-editor] render complete, html length:', html?.length);
                                         this.previewHtml = html;
+                                        $nextTick(() => {
+                                            const el = this.$refs.preview;
+                                            this.isClipped = el ? el.scrollHeight > el.clientHeight + 2 : false;
+                                        });
                                     });
                                 });
                             } catch (e) {
@@ -295,6 +355,7 @@
                     }"
                     x-init="
                         console.log('[score-editor] init, exsurge available:', !!window.exsurge, 'format:', $wire.format);
+                        applyInitialSettings();
                         localContent = $wire.content;
                         $watch('$wire.content', (val) => { console.log('[score-editor] $wire.content changed, len:', val?.length); localContent = val; scheduleRender(); });
                         $watch('$wire.format', (val) => { console.log('[score-editor] $wire.format changed:', val); scheduleRender(); });
@@ -302,7 +363,7 @@
                         $watch('staffSize', () => scheduleRender());
                         $watch('dropCapSize', () => scheduleRender());
                         $watch('lyricFont', () => scheduleRender());
-                        $watch('pageRatio', () => { $nextTick(() => scheduleRender()); });
+                        $watch('pageRatio', (val) => { applyRatioSettings('gabc', val); $nextTick(() => scheduleRender()); });
                         $watch('dropCaps', () => scheduleRender());
                         $watch('minLyricWordSpacing', () => scheduleRender());
                         $watch('hyphenWidth', () => scheduleRender());
@@ -311,7 +372,7 @@
                         $watch('abcScale', () => scheduleRender());
                         $watch('abcStaffWidth', () => scheduleRender());
                         $watch('abcTranspose', () => scheduleRender());
-                        $watch('abcPageRatio', () => { $nextTick(() => scheduleRender()); });
+                        $watch('abcPageRatio', (val) => { applyRatioSettings('abc', val); $nextTick(() => scheduleRender()); });
 
                         $nextTick(() => { console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge); scheduleRender(); });
                     "
@@ -329,7 +390,10 @@
                             :style="abcPageRatio !== 'auto' ? 'aspect-ratio: ' + abcPageRatio : ''"
                         ></div>
 
-                        <div class="mt-2 flex justify-end">
+                        <div class="mt-2 flex justify-end gap-2">
+                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
+                                {{ __('Save as my default for this ratio') }}
+                            </flux:button>
                             <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
                                 {{ __('Export PNG') }}
                             </flux:button>
@@ -372,13 +436,22 @@
                     <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4">
                         <div
                             x-ref="preview"
-                            class="min-h-16 overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto"
+                            class="relative min-h-16 overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto"
                             :style="pageRatio !== 'auto' ? 'aspect-ratio: ' + pageRatio : ''"
                         >
                             <div x-html="previewHtml"></div>
+                            <div
+                                x-show="isClipped"
+                                class="pointer-events-none absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-2 pt-12 bg-gradient-to-t from-red-50 to-transparent dark:from-red-950"
+                            >
+                                <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">{{ __('Content does not fit on page') }}</span>
+                            </div>
                         </div>
 
-                        <div class="mt-2 flex justify-end" x-show="previewHtml">
+                        <div class="mt-2 flex justify-end gap-2" x-show="previewHtml">
+                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
+                                {{ __('Save as my default for this ratio') }}
+                            </flux:button>
                             <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
                                 {{ __('Export PNG') }}
                             </flux:button>
@@ -461,16 +534,15 @@
                             </flux:field>
                         </div>
                     </div>
-                </div>
-
 
                 <div class="flex justify-end gap-3">
                     <flux:button variant="ghost" :href="route('scores')" wire:navigate>
                         {{ __('Cancel') }}
                     </flux:button>
-                    <flux:button variant="primary" icon="pencil" wire:click="save">
+                    <flux:button variant="primary" icon="pencil" x-on:click="saveScore()">
                         {{ __('Save Score') }}
                     </flux:button>
+                </div>
                 </div>
             </div>
         </flux:card>

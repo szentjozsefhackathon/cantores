@@ -28,6 +28,9 @@ class ScoreEditor extends Component
 
     public string $content = '';
 
+    /** @var array<string, array<string, array<string, mixed>>> */
+    public array $settings = [];
+
     public function mount(mixed $score = null, mixed $music = null): void
     {
         if ($score instanceof Score) {
@@ -37,6 +40,7 @@ class ScoreEditor extends Component
             $this->title = $score->title;
             $this->format = $score->format->value;
             $this->content = $score->content;
+            $this->settings = $score->settings ?? [];
 
             return;
         }
@@ -58,7 +62,10 @@ class ScoreEditor extends Component
         ]);
     }
 
-    public function save(): void
+    /**
+     * @param  array<string, mixed>|null  $ratioSettings
+     */
+    public function save(?array $ratioSettings = null, ?string $ratio = null): void
     {
         $this->authorize($this->score ? 'update' : 'create', $this->score ?? Score::class);
 
@@ -71,18 +78,50 @@ class ScoreEditor extends Component
 
         $musicId = $this->resolveMusicId($validated['musicId']);
 
+        $settings = $this->settings;
+        if (is_string($ratio) && $ratio !== '' && is_array($ratioSettings)) {
+            $settings[$validated['format']][$ratio] = $ratioSettings;
+        }
+
         $score = $this->score ?? new Score(['user_id' => Auth::id()]);
         $score->fill([
             'music_id' => $musicId,
             'title' => $validated['title'],
             'format' => $validated['format'],
             'content' => $validated['content'],
+            'settings' => $settings ?: null,
         ]);
         $score->user_id = $score->user_id ?: Auth::id();
         $score->save();
 
+        $this->settings = $settings;
+
         $this->dispatch($this->score ? 'score-updated' : 'score-created');
         $this->redirectRoute('scores.edit', ['score' => $score->id], navigate: true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $ratioSettings
+     */
+    public function saveAsDefault(array $ratioSettings, string $ratio, string $format): void
+    {
+        if (! ScoreFormat::tryFrom($format) instanceof ScoreFormat) {
+            return;
+        }
+
+        if ($ratio === '') {
+            return;
+        }
+
+        $user = Auth::user();
+        abort_unless($user instanceof \App\Models\User, 403);
+
+        $defaults = $user->score_settings ?? [];
+        $defaults[$format][$ratio] = $ratioSettings;
+        $user->score_settings = $defaults;
+        $user->save();
+
+        $this->dispatch('score-defaults-saved');
     }
 
     public function delete(): void
@@ -123,8 +162,11 @@ class ScoreEditor extends Component
 
     public function render()
     {
+        $user = Auth::user();
+
         return view('livewire.pages.score-editor', [
             'formats' => ScoreFormat::cases(),
+            'userDefaults' => $user instanceof \App\Models\User ? ($user->score_settings ?? []) : [],
         ]);
     }
 

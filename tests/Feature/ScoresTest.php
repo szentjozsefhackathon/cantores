@@ -119,6 +119,63 @@ it('auto-populates title when music is selected via the music search modal', fun
         ->assertSet('title', 'Ave Maria');
 });
 
+it('persists per-ratio preview settings when saving a score', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->set('title', 'Settings Score')
+        ->set('format', ScoreFormat::Gabc->value)
+        ->set('content', "name: x;\n%%\n(c4) Ky(e)")
+        ->call('save', ['zoom' => 150, 'lyricSize' => 24, 'staffSize' => 120], '16/9')
+        ->assertHasNoErrors();
+
+    $score = Score::query()->firstWhere('title', 'Settings Score');
+
+    expect($score->settings)->toBe([
+        'gabc' => [
+            '16/9' => ['zoom' => 150, 'lyricSize' => 24, 'staffSize' => 120],
+        ],
+    ]);
+});
+
+it('merges new ratio settings into existing score settings', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->gabc()->unattached()->create([
+        'user_id' => $user->id,
+        'settings' => ['gabc' => ['auto' => ['lyricSize' => 16]]],
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->call('save', ['lyricSize' => 30], '16/9')
+        ->assertHasNoErrors();
+
+    expect($score->fresh()->settings)->toBe([
+        'gabc' => [
+            'auto' => ['lyricSize' => 16],
+            '16/9' => ['lyricSize' => 30],
+        ],
+    ]);
+});
+
+it('saves per-ratio defaults onto the authenticated user', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->call('saveAsDefault', ['abcScale' => 1.5, 'abcStaffWidth' => 900], '4/3', ScoreFormat::Abc->value);
+
+    expect($user->fresh()->score_settings)->toBe([
+        'abc' => [
+            '4/3' => ['abcScale' => 1.5, 'abcStaffWidth' => 900],
+        ],
+    ]);
+});
+
 it('does not allow attaching a score to a private music piece the user cannot view', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();

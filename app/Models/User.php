@@ -99,6 +99,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'blocked',
         'blocked_at',
         'last_login_at',
+        'score_settings',
     ];
 
     /**
@@ -126,6 +127,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'blocked' => 'boolean',
             'blocked_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'score_settings' => 'array',
         ];
     }
 
