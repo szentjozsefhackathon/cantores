@@ -47,6 +47,10 @@ class ScoreEditor extends Component
 
         $this->authorize('create', Score::class);
 
+        if (is_numeric($music)) {
+            $music = Music::query()->find((int) $music);
+        }
+
         if ($music instanceof Music) {
             abort_unless(Gate::allows('view', $music), 403);
 

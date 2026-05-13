@@ -14,6 +14,17 @@ use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Laravel\get;
 
+it('pre-populates music when mounted with raw numeric id from route', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create(['title' => 'Public Hymn']);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['music' => $music->id])
+        ->assertSet('musicId', $music->id)
+        ->assertSet('title', $music->title);
+});
+
 it('creates an abc score attached to a visible music piece', function () {
     $user = User::factory()->create();
     $music = Music::factory()->create(['title' => 'Public Hymn']);
