@@ -1,12 +1,21 @@
 import * as ABCJS from 'abcjs';
 
+const ABC_LYRIC_FONT_MAP = {
+    Palatino: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+    Garamond: "Garamond, 'EB Garamond', serif",
+    Times: "'Times New Roman', Times, serif",
+    Franklin: "'Franklin Gothic Book', 'Franklin Gothic Medium', Arial, sans-serif",
+};
+
 export function abcMixin() {
     return {
         abcScale: 1,
-        abcStaffWidth: 740,
         abcTranspose: 0,
         abcPageRatio: 'auto',
-        abcFields: ['abcScale', 'abcStaffWidth', 'abcTranspose'],
+        abcHideRepeatClef: false,
+        abcLyricSize: 0,
+        abcLyricFont: '',
+        abcFields: ['abcScale', 'abcTranspose', 'abcHideRepeatClef', 'abcLyricSize', 'abcLyricFont'],
 
         fixAbcLyrics(pageEl) {
             const noteXMap = new Map();
@@ -39,47 +48,84 @@ export function abcMixin() {
             });
         },
 
+        applyAbcLyricFont(pageEl) {
+            const font = this.abcLyricFont;
+            if (!font) { return; }
+            const cssFont = ABC_LYRIC_FONT_MAP[font] || font;
+            pageEl.querySelectorAll('text.abcjs-lyric').forEach(t => {
+                t.setAttribute('font-family', cssFont);
+            });
+        },
+
         renderAbcPreview() {
             const container = this.$refs.abcPreview;
             if (!container) { return; }
             container.innerHTML = '';
+            this.hasPages = false;
             const content = this.localContent;
-            if (!content || !content.trim()) {
-                this.hasPages = false;
-                return;
-            }
+            if (!content || !content.trim()) { return; }
             const pages = this.splitPages(content, 'abc', this.abcPageRatio);
+            const canvas = this.getVirtualCanvasSize('abc');
+            const paddingLeft = 15;
+            const paddingRight = 50;
+            const paddingTop = 15;
+            const paddingBottom = 30;
             const options = {
-                scale: Number(this.abcScale),
-                staffwidth: Number(this.abcStaffWidth),
+                scale: Number(this.abcScale) * 3,
+                staffwidth: canvas.width - paddingLeft - paddingRight,
                 visualTranspose: Number(this.abcTranspose),
                 add_classes: true,
-                paddingtop: 15,
-                paddingbottom: 30,
-                paddingleft: 15,
-                paddingright: 50,
+                paddingtop: paddingTop,
+                paddingbottom: paddingBottom,
+                paddingleft: paddingLeft,
+                paddingright: paddingRight,
+                initialClef: !!this.abcHideRepeatClef,
             };
-            pages.forEach((pageSource) => {
+            const pageEls = pages.map(() => {
                 const pageEl = document.createElement('div');
-                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto';
+                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
                 if (this.abcPageRatio !== 'auto') {
                     pageEl.style.aspectRatio = this.abcPageRatio;
                 }
                 container.appendChild(pageEl);
+                return pageEl;
+            });
+            this.hasPages = pages.length > 0;
+            pages.forEach((pageSource, idx) => {
+                const pageEl = pageEls[idx];
                 try {
-                    const rendered = pageSource.replace(/^(w:\s*)(.*)$/gm, (match, prefix, lyrics) => {
+                    let rendered = pageSource.replace(/^(w:\s*)(.*)$/gm, (match, prefix, lyrics) => {
                         return prefix + lyrics.replace(/<([^ |*~_-]+)/g, '​$1');
                     });
+                    const lyricSize = Number(this.abcLyricSize);
+                    if (lyricSize > 0) {
+                        const fontName = this.abcLyricFont || 'Times';
+                        rendered = `%%vocalfont ${fontName} ${lyricSize}\n` + rendered;
+                    }
                     ABCJS.renderAbc(pageEl, rendered, options);
+                    pageEl.style.height = '';
                     this.fixAbcLyrics(pageEl);
-                    if (this.abcPageRatio !== 'auto' && pageEl.scrollHeight > pageEl.clientHeight + 2) {
+                    this.applyAbcLyricFont(pageEl);
+                    const svg = pageEl.querySelector('svg');
+                    let contentH = 0;
+                    if (svg) {
+                        const h = svg.getAttribute('height');
+                        contentH = h ? parseFloat(h) : 0;
+                        const viewBoxHeight = canvas.height ?? contentH;
+                        svg.setAttribute('viewBox', '0 0 ' + canvas.width + ' ' + viewBoxHeight);
+                        svg.setAttribute('width', '100%');
+                        svg.removeAttribute('height');
+                        svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+                        svg.style.display = 'block';
+                        svg.style.overflow = 'hidden';
+                    }
+                    if (canvas.height && contentH > canvas.height + 2) {
                         this.appendClipWarning(pageEl);
                     }
                 } catch (e) {
                     console.error('[score-editor] abcjs error:', e);
                 }
             });
-            this.hasPages = pages.length > 0;
         },
     };
 }

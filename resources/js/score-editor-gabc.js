@@ -12,19 +12,6 @@ export function gabcMixin() {
         lyricFont: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
         gabcFields: ['zoom', 'lyricSize', 'staffSize', 'dropCapSize', 'dropCaps', 'lyricFont', 'minLyricWordSpacing', 'hyphenWidth', 'condensingTolerance'],
 
-        getRenderWidth() {
-            return this.getVirtualCanvasSize().width;
-        },
-
-        getVirtualCanvasSize() {
-            const sizes = {
-                '16/9': { width: 1920, height: 1080 },
-                '4/3': { width: 1440, height: 1080 },
-                '1/1': { width: 1080, height: 1080 },
-            };
-            return sizes[this.pageRatio] || { width: 1920, height: null };
-        },
-
         renderGabcPreview() {
             const container = this.$refs.preview;
             if (!container) { return; }
@@ -34,7 +21,7 @@ export function gabcMixin() {
             const content = this.localContent;
             if (!content || !content.trim()) { return; }
             const pages = this.splitPages(content, 'gabc', this.pageRatio);
-            const canvas = this.getVirtualCanvasSize();
+            const canvas = this.getVirtualCanvasSize('gabc');
             const pageEls = pages.map(() => {
                 const pageEl = document.createElement('div');
                 pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';

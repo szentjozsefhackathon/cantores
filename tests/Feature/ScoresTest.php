@@ -167,11 +167,44 @@ it('saves per-ratio defaults onto the authenticated user', function () {
     actingAs($user);
 
     Livewire::test(ScoreEditor::class)
-        ->call('saveAsDefault', ['abcScale' => 1.5, 'abcStaffWidth' => 900], '4/3', ScoreFormat::Abc->value);
+        ->call('saveAsDefault', ['abcScale' => 1.5, 'abcTranspose' => 2], '4/3', ScoreFormat::Abc->value);
 
     expect($user->fresh()->score_settings)->toBe([
         'abc' => [
-            '4/3' => ['abcScale' => 1.5, 'abcStaffWidth' => 900],
+            '4/3' => ['abcScale' => 1.5, 'abcTranspose' => 2],
+        ],
+    ]);
+});
+
+it('persists abc per-ratio settings including lyric and clef options', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->set('title', 'ABC Settings Score')
+        ->set('format', ScoreFormat::Abc->value)
+        ->set('content', "X:1\nT:Test\nK:C\nC D E F|")
+        ->call('save', [
+            'abcScale' => 1.5,
+            'abcTranspose' => 0,
+            'abcHideRepeatClef' => true,
+            'abcLyricSize' => 14,
+            'abcLyricFont' => 'Palatino',
+        ], '16/9')
+        ->assertHasNoErrors();
+
+    $score = Score::query()->firstWhere('title', 'ABC Settings Score');
+
+    expect($score->settings)->toBe([
+        'abc' => [
+            '16/9' => [
+                'abcScale' => 1.5,
+                'abcTranspose' => 0,
+                'abcHideRepeatClef' => true,
+                'abcLyricSize' => 14,
+                'abcLyricFont' => 'Palatino',
+            ],
         ],
     ]);
 });

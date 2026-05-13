@@ -43,8 +43,10 @@ document.addEventListener('alpine:init', () => {
             this.$watch('condensingTolerance', () => this.scheduleRender());
             this.$watch('zoom', () => this.scheduleRender());
             this.$watch('abcScale', () => this.scheduleRender());
-            this.$watch('abcStaffWidth', () => this.scheduleRender());
             this.$watch('abcTranspose', () => this.scheduleRender());
+            this.$watch('abcHideRepeatClef', () => this.scheduleRender());
+            this.$watch('abcLyricSize', () => this.scheduleRender());
+            this.$watch('abcLyricFont', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val) => { this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
@@ -72,11 +74,24 @@ document.addEventListener('alpine:init', () => {
             return {
                 settings: {
                     abcScale: Number(this.abcScale),
-                    abcStaffWidth: Number(this.abcStaffWidth),
                     abcTranspose: Number(this.abcTranspose),
+                    abcHideRepeatClef: !!this.abcHideRepeatClef,
+                    abcLyricSize: Number(this.abcLyricSize),
+                    abcLyricFont: this.abcLyricFont,
                 },
                 ratio: this.abcPageRatio,
             };
+        },
+
+        getVirtualCanvasSize(format) {
+            const ratio = format === 'abc' ? this.abcPageRatio : this.pageRatio;
+            const width = 1920;
+            const heights = { '16/9': 1080, '4/3': 1440, '1/1': 1920 };
+            return { width, height: heights[ratio] ?? null };
+        },
+
+        getRenderWidth() {
+            return this.getVirtualCanvasSize(this.$wire.format).width;
         },
 
         applyRatioSettings(format, ratio) {
@@ -172,7 +187,7 @@ document.addEventListener('alpine:init', () => {
 
         svgToCanvas(svgEl) {
             const renderWidth = this.getRenderWidth();
-            const scale = this.$wire.format === 'abc' ? 2 : 1;
+            const scale = 1;
             const margin = 20;
             const viewBox = svgEl.getAttribute('viewBox');
             let svgWidth = renderWidth;

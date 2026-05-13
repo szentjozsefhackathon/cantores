@@ -101,21 +101,37 @@
                             <flux:heading size="sm">{{ __('Settings') }}</flux:heading>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Scale') }}</span>
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Score Size') }}</span>
                                 <input type="range" x-model="abcScale" min="0.5" max="3" step="0.1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
                                 <span x-text="abcScale + 'x'" class="w-8 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Staff Width') }}</span>
-                                <input type="range" x-model="abcStaffWidth" min="400" max="1600" step="10" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="abcStaffWidth + 'px'" class="w-8 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
                             </div>
 
                             <div class="flex items-center gap-2">
                                 <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Transpose') }}</span>
                                 <input type="range" x-model="abcTranspose" min="-12" max="12" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
                                 <span x-text="abcTranspose" class="w-8 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Lyric Size') }}</span>
+                                <input type="range" x-model="abcLyricSize" min="0" max="60" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
+                                <span x-text="abcLyricSize == 0 ? 'auto' : abcLyricSize + 'pt'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Lyric Font') }}</span>
+                                <flux:select x-model="abcLyricFont" class="flex-1 text-xs">
+                                    <flux:select.option value="">{{ __('Default') }}</flux:select.option>
+                                    <flux:select.option value="Palatino">Palatino</flux:select.option>
+                                    <flux:select.option value="Garamond">Garamond</flux:select.option>
+                                    <flux:select.option value="Times">Times New Roman</flux:select.option>
+                                    <flux:select.option value="Franklin">Franklin Gothic</flux:select.option>
+                                </flux:select>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Hide Repeat Clef') }}</span>
+                                <flux:switch x-model="abcHideRepeatClef" />
                             </div>
 
                             <div class="flex items-center gap-2">
