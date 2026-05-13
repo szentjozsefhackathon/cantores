@@ -82,7 +82,7 @@
 
                 <div
                     x-data="{
-                        previewHtml: '',
+                        hasPages: false,
                         isClipped: false,
                         localContent: '',
                         renderTimer: null,
@@ -152,205 +152,258 @@
                             const widths = { '16/9': 1920, '4/3': 1440, '1/1': 1080 };
                             return widths[this.pageRatio] || 1200;
                         },
+                        splitPages(content, format, ratio) {
+                            const ratioSuffix = { '16/9': '169', '4/3': '43', '1/1': '11' };
+                            const targetSuffix = ratioSuffix[ratio];
+                            const isAuto = !targetSuffix;
+                            const lines = content.split('\n');
+                            let headerEnd = -1;
+                            if (format === 'gabc') {
+                                for (let i = 0; i < lines.length; i++) {
+                                    if (/^%%\s*$/.test(lines[i])) { headerEnd = i; break; }
+                                }
+                            } else {
+                                for (let i = 0; i < lines.length; i++) {
+                                    if (/^K:/.test(lines[i])) { headerEnd = i; break; }
+                                }
+                            }
+                            const header = headerEnd >= 0 ? lines.slice(0, headerEnd + 1).join('\n') + '\n' : '';
+                            const bodyLines = headerEnd >= 0 ? lines.slice(headerEnd + 1) : lines.slice();
+                            const breakRe = /^\s*%pagebreak(\d*)\s*$/;
+                            if (isAuto) {
+                                const stripped = bodyLines.filter(l => !breakRe.test(l)).join('\n');
+                                return [header + stripped];
+                            }
+                            const pages = [];
+                            let current = [];
+                            for (const line of bodyLines) {
+                                const m = line.match(breakRe);
+                                if (m) {
+                                    const suffix = m[1];
+                                    if (suffix === '' || suffix === targetSuffix) {
+                                        pages.push(current.join('\n'));
+                                        current = [];
+                                    }
+                                    continue;
+                                }
+                                current.push(line);
+                            }
+                            pages.push(current.join('\n'));
+                            return pages.map(p => header + p);
+                        },
+                        fixAbcLyrics(pageEl) {
+                            const noteXMap = new Map();
+                            pageEl.querySelectorAll('.abcjs-note .abcjs-notehead').forEach(nh => {
+                                const bbox = nh.getBBox();
+                                const noteCenter = bbox.x + bbox.width / 2;
+                                const noteGroup = nh.closest('.abcjs-note');
+                                if (noteGroup) {
+                                    const lyric = noteGroup.querySelector('text.abcjs-lyric');
+                                    if (lyric) {
+                                        noteXMap.set(lyric, noteCenter);
+                                    }
+                                }
+                            });
+                            pageEl.querySelectorAll('text.abcjs-lyric').forEach(t => {
+                                const txt = t.textContent || '';
+                                const tspans = t.querySelectorAll('tspan');
+                                if (txt.startsWith('\u200B')) {
+                                    t.textContent = txt.replace('\u200B', '');
+                                    t.setAttribute('text-anchor', 'start');
+                                } else {
+                                    const noteCenter = noteXMap.get(t);
+                                    if (noteCenter !== undefined) {
+                                        const cx = String(noteCenter + (txt.includes('-') ? 4 : 0));
+                                        t.setAttribute('text-anchor', 'middle');
+                                        t.setAttribute('x', cx);
+                                        tspans.forEach(ts => ts.setAttribute('x', cx));
+                                    }
+                                }
+                            });
+                        },
                         renderAbcPreview() {
                             if (!window.ABCJS) { return; }
+                            const container = this.$refs.abcPreview;
+                            if (!container) { return; }
+                            container.innerHTML = '';
                             const content = this.localContent;
                             if (!content || !content.trim()) {
-                                const el = this.$refs.abcPreview;
-                                if (el) { el.innerHTML = ''; }
+                                this.hasPages = false;
+                                this.isClipped = false;
                                 return;
                             }
-                            try {
-                                const options = {
-                                    scale: Number(this.abcScale),
-                                    staffwidth: Number(this.abcStaffWidth),
-                                    visualTranspose: Number(this.abcTranspose),
-                                    add_classes: true,
-                                    paddingtop: 15,
-                                    paddingbottom: 30,
-                                    paddingleft: 15,
-                                    paddingright: 50,
-                                };
-                                const rendered = content.replace(/^(w:\s*)(.*)$/gm, (match, prefix, lyrics) => {
-                                    return prefix + lyrics.replace(/<([^ |*~_-]+)/g, '\u200B$1');
-                                });
-                                ABCJS.renderAbc(this.$refs.abcPreview, rendered, options);
-                                const el = this.$refs.abcPreview;
-                                if (el) {
-                                    // Find notehead centers by voice/note group
-                                    const noteXMap = new Map();
-                                    el.querySelectorAll('.abcjs-note .abcjs-notehead').forEach(nh => {
-                                        const bbox = nh.getBBox();
-                                        const noteCenter = bbox.x + bbox.width / 2;
-                                        // Walk up to the abcjs-note group to get its data-index
-                                        const noteGroup = nh.closest('.abcjs-note');
-                                        if (noteGroup) {
-                                            const lyric = noteGroup.querySelector('text.abcjs-lyric');
-                                            if (lyric) {
-                                                noteXMap.set(lyric, noteCenter);
-                                            }
-                                        }
-                                    });
-
-                                    el.querySelectorAll('text.abcjs-lyric').forEach(t => {
-                                        const txt = t.textContent || '';
-                                        const tspans = t.querySelectorAll('tspan');
-                                        if (txt.startsWith('\u200B')) {
-                                            t.textContent = txt.replace('\u200B', '');
-                                            t.setAttribute('text-anchor', 'start');
-                                        } else {
-                                            const noteCenter = noteXMap.get(t);
-                                            if (noteCenter !== undefined) {
-                                                const cx = String(noteCenter + (txt.includes('-') ? 4 : 0));
-                                                t.setAttribute('text-anchor', 'middle');
-                                                t.setAttribute('x', cx);
-                                                tspans.forEach(ts => ts.setAttribute('x', cx));
-                                            }
-                                        }
-                                    });
+                            const pages = this.splitPages(content, 'abc', this.abcPageRatio);
+                            const options = {
+                                scale: Number(this.abcScale),
+                                staffwidth: Number(this.abcStaffWidth),
+                                visualTranspose: Number(this.abcTranspose),
+                                add_classes: true,
+                                paddingtop: 15,
+                                paddingbottom: 30,
+                                paddingleft: 15,
+                                paddingright: 50,
+                            };
+                            let anyClipped = false;
+                            pages.forEach((pageSource) => {
+                                const pageEl = document.createElement('div');
+                                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto';
+                                if (this.abcPageRatio !== 'auto') {
+                                    pageEl.style.aspectRatio = this.abcPageRatio;
                                 }
-                            } catch (e) {
-                                console.error('[score-editor] abcjs error:', e);
-                            }
+                                container.appendChild(pageEl);
+                                try {
+                                    const rendered = pageSource.replace(/^(w:\s*)(.*)$/gm, (match, prefix, lyrics) => {
+                                        return prefix + lyrics.replace(/<([^ |*~_-]+)/g, '\u200B$1');
+                                    });
+                                    ABCJS.renderAbc(pageEl, rendered, options);
+                                    this.fixAbcLyrics(pageEl);
+                                    if (this.abcPageRatio !== 'auto' && pageEl.scrollHeight > pageEl.clientHeight + 2) {
+                                        anyClipped = true;
+                                    }
+                                } catch (e) {
+                                    console.error('[score-editor] abcjs error:', e);
+                                }
+                            });
+                            this.hasPages = pages.length > 0;
+                            this.isClipped = anyClipped;
                         },
                         renderPreview() {
-                            console.log('[score-editor] renderPreview called', { format: $wire.format, exsurgeLoaded: !!window.exsurge, contentLength: this.localContent?.length });
                             if ($wire.format === 'abc') {
                                 this.renderAbcPreview();
-                                this.previewHtml = '';
                                 return;
                             }
-                            if ($wire.format !== 'gabc') {
-                                console.log('[score-editor] skipping: format is not gabc');
-                                this.previewHtml = '';
-                                this.isClipped = false;
-                                return;
-                            }
-                            if (!window.exsurge) {
-                                console.warn('[score-editor] skipping: window.exsurge is not available');
-                                this.previewHtml = '';
-                                this.isClipped = false;
-                                return;
-                            }
+                            const container = this.$refs.preview;
+                            if (!container) { return; }
+                            container.innerHTML = '';
+                            this.hasPages = false;
+                            this.isClipped = false;
+                            if ($wire.format !== 'gabc') { return; }
+                            if (!window.exsurge) { return; }
                             const content = this.localContent;
-                            if (!content || !content.trim()) {
-                                console.log('[score-editor] skipping: content is empty');
-                                this.previewHtml = '';
-                                this.isClipped = false;
-                                return;
-                            }
-                            console.log('[score-editor] calling exsurge with content:', content.substring(0, 100));
-                            try {
-                                const ctxt = new exsurge.ChantContext();
-                                const z = Number(this.zoom) / 100;
-                                ctxt.lyricTextSize = Number(this.lyricSize) * z;
-                                ctxt.lyricTextFont = this.lyricFont;
-                                ctxt.dropCapTextFont = this.lyricFont;
-                                ctxt.annotationTextFont = this.lyricFont;
-                                ctxt.dropCapTextSize = Number(this.dropCapSize) * z;
-                                ctxt.glyphScaling = (1.0 / 16.0) * (Number(this.staffSize) / 100) * z;
-                                ctxt.staffInterval = ctxt.glyphPunctumWidth * ctxt.glyphScaling;
-                                ctxt.staffLineWeight = Math.round(ctxt.glyphPunctumWidth * ctxt.glyphScaling / 8);
-                                ctxt.neumeLineWeight = ctxt.staffLineWeight;
-                                ctxt.dividerLineWeight = ctxt.neumeLineWeight;
-                                ctxt.episemaLineWeight = ctxt.neumeLineWeight;
-                                if (Number(this.minLyricWordSpacing) > 0) {
-                                    ctxt.minLyricWordSpacing = Number(this.minLyricWordSpacing) * z;
+                            if (!content || !content.trim()) { return; }
+                            const pages = this.splitPages(content, 'gabc', this.pageRatio);
+                            const width = this.getRenderWidth();
+                            const pageEls = pages.map(() => {
+                                const pageEl = document.createElement('div');
+                                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto';
+                                if (this.pageRatio !== 'auto') {
+                                    pageEl.style.aspectRatio = this.pageRatio;
                                 }
-                                if (Number(this.hyphenWidth) > 0) {
-                                    ctxt.hyphenWidth = Number(this.hyphenWidth) * z;
-                                }
-                                ctxt.condensingTolerance = Number(this.condensingTolerance);
-                                const mappings = exsurge.Gabc.createMappingsFromSource(ctxt, content);
-                                const score = new exsurge.ChantScore(ctxt, mappings, this.dropCaps);
-                                const width = this.getRenderWidth();
-                                console.log('[score-editor] performLayoutAsync starting, width:', width);
-                                score.performLayoutAsync(ctxt, () => {
-                                    console.log('[score-editor] layoutChantLines starting');
-                                    score.layoutChantLines(ctxt, width, () => {
-                                        let html = score.createSvg(ctxt);
-                                        // Add viewBox to SVG so it scales to fit the container
-                                        const parser = new DOMParser();
-                                        const doc = parser.parseFromString(html, 'image/svg+xml');
-                                        const svg = doc.querySelector('svg');
-                                        if (svg) {
-                                            const w = svg.getAttribute('width');
-                                            const h = svg.getAttribute('height');
-                                            if (w && h) {
-                                                svg.setAttribute('viewBox', '0 0 ' + parseFloat(w) + ' ' + (parseFloat(h) + 20));
-                                                svg.removeAttribute('width');
-                                                svg.removeAttribute('height');
+                                container.appendChild(pageEl);
+                                return pageEl;
+                            });
+                            this.hasPages = true;
+                            let renderedCount = 0;
+                            let anyClipped = false;
+                            pages.forEach((pageSource, idx) => {
+                                const pageEl = pageEls[idx];
+                                try {
+                                    const ctxt = new exsurge.ChantContext();
+                                    const z = Number(this.zoom) / 100;
+                                    ctxt.lyricTextSize = Number(this.lyricSize) * z;
+                                    ctxt.lyricTextFont = this.lyricFont;
+                                    ctxt.dropCapTextFont = this.lyricFont;
+                                    ctxt.annotationTextFont = this.lyricFont;
+                                    ctxt.dropCapTextSize = Number(this.dropCapSize) * z;
+                                    ctxt.glyphScaling = (1.0 / 16.0) * (Number(this.staffSize) / 100) * z;
+                                    ctxt.staffInterval = ctxt.glyphPunctumWidth * ctxt.glyphScaling;
+                                    ctxt.staffLineWeight = Math.round(ctxt.glyphPunctumWidth * ctxt.glyphScaling / 8);
+                                    ctxt.neumeLineWeight = ctxt.staffLineWeight;
+                                    ctxt.dividerLineWeight = ctxt.neumeLineWeight;
+                                    ctxt.episemaLineWeight = ctxt.neumeLineWeight;
+                                    if (Number(this.minLyricWordSpacing) > 0) {
+                                        ctxt.minLyricWordSpacing = Number(this.minLyricWordSpacing) * z;
+                                    }
+                                    if (Number(this.hyphenWidth) > 0) {
+                                        ctxt.hyphenWidth = Number(this.hyphenWidth) * z;
+                                    }
+                                    ctxt.condensingTolerance = Number(this.condensingTolerance);
+                                    const mappings = exsurge.Gabc.createMappingsFromSource(ctxt, pageSource);
+                                    const score = new exsurge.ChantScore(ctxt, mappings, this.dropCaps);
+                                    score.performLayoutAsync(ctxt, () => {
+                                        score.layoutChantLines(ctxt, width, () => {
+                                            let html = score.createSvg(ctxt);
+                                            const parser = new DOMParser();
+                                            const doc = parser.parseFromString(html, 'image/svg+xml');
+                                            const svg = doc.querySelector('svg');
+                                            if (svg) {
+                                                const w = svg.getAttribute('width');
+                                                const h = svg.getAttribute('height');
+                                                if (w && h) {
+                                                    svg.setAttribute('viewBox', '0 0 ' + parseFloat(w) + ' ' + (parseFloat(h) + 20));
+                                                    svg.removeAttribute('width');
+                                                    svg.removeAttribute('height');
+                                                }
+                                                svg.style.overflow = 'visible';
+                                                html = new XMLSerializer().serializeToString(svg);
                                             }
-                                            svg.style.overflow = 'visible';
-                                            html = new XMLSerializer().serializeToString(svg);
-                                        }
-                                        console.log('[score-editor] render complete, html length:', html?.length);
-                                        this.previewHtml = html;
-                                        $nextTick(() => {
-                                            const el = this.$refs.preview;
-                                            this.isClipped = el ? el.scrollHeight > el.clientHeight + 2 : false;
+                                            pageEl.innerHTML = html;
+                                            renderedCount++;
+                                            if (this.pageRatio !== 'auto' && pageEl.scrollHeight > pageEl.clientHeight + 2) {
+                                                anyClipped = true;
+                                            }
+                                            if (renderedCount === pages.length) {
+                                                this.isClipped = anyClipped;
+                                            }
                                         });
                                     });
-                                });
-                            } catch (e) {
-                                console.error('[score-editor] exsurge error:', e);
-                                this.previewHtml = '';
-                            }
+                                } catch (e) {
+                                    console.error('[score-editor] exsurge error:', e);
+                                }
+                            });
                         },
                         scheduleRender() {
                             clearTimeout(this.renderTimer);
                             this.renderTimer = setTimeout(() => this.renderPreview(), 600);
                         },
                         exportPng() {
-                            let previewEl;
-                            if ($wire.format === 'abc') {
-                                previewEl = this.$refs.abcPreview;
-                            } else {
-                                previewEl = this.$refs.preview;
-                            }
-                            const svgEl = previewEl ? previewEl.querySelector('svg') : null;
-                            if (!svgEl) { return; }
+                            const previewEl = $wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
+                            if (!previewEl) { return; }
+                            const svgs = previewEl.querySelectorAll('svg');
+                            if (!svgs.length) { return; }
                             const renderWidth = this.getRenderWidth();
-                            const viewBox = svgEl.getAttribute('viewBox');
-                            let svgWidth = renderWidth;
-                            let svgHeight = renderWidth * 9 / 16;
-                            if (viewBox) {
-                                const parts = viewBox.split(/\s+/).map(Number);
-                                if (parts.length === 4) {
-                                    svgWidth = parts[2];
-                                    svgHeight = parts[3];
-                                }
-                            }
-                            if (!viewBox) {
-                                const bbox = svgEl.getBBox();
-                                const w = svgEl.getAttribute('width');
-                                const h = svgEl.getAttribute('height');
-                                svgWidth = w ? parseFloat(w) : bbox.width + bbox.x;
-                                svgHeight = h ? parseFloat(h) : bbox.height + bbox.y;
-                            }
                             const scale = $wire.format === 'abc' ? 2 : 1;
-                            const clonedSvg = svgEl.cloneNode(true);
-                            clonedSvg.setAttribute('width', String(svgWidth));
-                            clonedSvg.setAttribute('height', String(svgHeight));
-                            const svgData = new XMLSerializer().serializeToString(clonedSvg);
-                            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-                            const url = URL.createObjectURL(svgBlob);
-                            const img = new Image();
-                            img.onload = () => {
-                                const canvas = document.createElement('canvas');
-                                canvas.width = svgWidth * scale;
-                                canvas.height = svgHeight * scale;
-                                const ctx = canvas.getContext('2d');
-                                ctx.fillStyle = '#ffffff';
-                                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                                URL.revokeObjectURL(url);
-                                const a = document.createElement('a');
-                                a.download = 'score.png';
-                                a.href = canvas.toDataURL('image/png');
-                                a.click();
-                            };
-                            img.src = url;
+                            const total = svgs.length;
+                            svgs.forEach((svgEl, idx) => {
+                                const viewBox = svgEl.getAttribute('viewBox');
+                                let svgWidth = renderWidth;
+                                let svgHeight = renderWidth * 9 / 16;
+                                if (viewBox) {
+                                    const parts = viewBox.split(/\s+/).map(Number);
+                                    if (parts.length === 4) {
+                                        svgWidth = parts[2];
+                                        svgHeight = parts[3];
+                                    }
+                                } else {
+                                    const bbox = svgEl.getBBox();
+                                    const w = svgEl.getAttribute('width');
+                                    const h = svgEl.getAttribute('height');
+                                    svgWidth = w ? parseFloat(w) : bbox.width + bbox.x;
+                                    svgHeight = h ? parseFloat(h) : bbox.height + bbox.y;
+                                }
+                                const clonedSvg = svgEl.cloneNode(true);
+                                clonedSvg.setAttribute('width', String(svgWidth));
+                                clonedSvg.setAttribute('height', String(svgHeight));
+                                const svgData = new XMLSerializer().serializeToString(clonedSvg);
+                                const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                                const url = URL.createObjectURL(svgBlob);
+                                const img = new Image();
+                                img.onload = () => {
+                                    const canvas = document.createElement('canvas');
+                                    canvas.width = svgWidth * scale;
+                                    canvas.height = svgHeight * scale;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                    URL.revokeObjectURL(url);
+                                    const a = document.createElement('a');
+                                    a.download = total > 1 ? 'score-page-' + (idx + 1) + '.png' : 'score.png';
+                                    a.href = canvas.toDataURL('image/png');
+                                    a.click();
+                                };
+                                img.src = url;
+                            });
                         }
                     }"
                     x-init="
@@ -384,13 +437,13 @@
                     </flux:field>
 
                     <div x-show="$wire.format === 'abc'" x-cloak class="mt-4">
-                        <div
-                            x-ref="abcPreview"
-                            class="min-h-16 overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto"
-                            :style="abcPageRatio !== 'auto' ? 'aspect-ratio: ' + abcPageRatio : ''"
-                        ></div>
+                        <div x-ref="abcPreview" class="min-h-16 space-y-4"></div>
 
-                        <div class="mt-2 flex justify-end gap-2">
+                        <div x-show="isClipped" class="mt-2 flex justify-center">
+                            <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">{{ __('Content does not fit on page') }}</span>
+                        </div>
+
+                        <div class="mt-2 flex justify-end gap-2" x-show="hasPages">
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
                                 {{ __('Save as my default for this ratio') }}
                             </flux:button>
@@ -434,21 +487,13 @@
                     </div>
 
                     <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4">
-                        <div
-                            x-ref="preview"
-                            class="relative min-h-16 overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto"
-                            :style="pageRatio !== 'auto' ? 'aspect-ratio: ' + pageRatio : ''"
-                        >
-                            <div x-html="previewHtml"></div>
-                            <div
-                                x-show="isClipped"
-                                class="pointer-events-none absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-2 pt-12 bg-gradient-to-t from-red-50 to-transparent dark:from-red-950"
-                            >
-                                <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">{{ __('Content does not fit on page') }}</span>
-                            </div>
+                        <div x-ref="preview" class="min-h-16 space-y-4"></div>
+
+                        <div x-show="isClipped" class="mt-2 flex justify-center">
+                            <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">{{ __('Content does not fit on page') }}</span>
                         </div>
 
-                        <div class="mt-2 flex justify-end gap-2" x-show="previewHtml">
+                        <div class="mt-2 flex justify-end gap-2" x-show="hasPages">
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
                                 {{ __('Save as my default for this ratio') }}
                             </flux:button>
