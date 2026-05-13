@@ -366,54 +366,100 @@
                             clearTimeout(this.renderTimer);
                             this.renderTimer = setTimeout(() => this.renderPreview(), 600);
                         },
-                        exportPng() {
-                            const previewEl = $wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
-                            if (!previewEl) { return; }
-                            const svgs = previewEl.querySelectorAll('svg');
-                            if (!svgs.length) { return; }
+                        copyFeedback: '',
+                        copyFeedbackTimer: null,
+                        showCopyFeedback(msg) {
+                            this.copyFeedback = msg;
+                            clearTimeout(this.copyFeedbackTimer);
+                            this.copyFeedbackTimer = setTimeout(() => { this.copyFeedback = ''; }, 2500);
+                        },
+                        svgToCanvas(svgEl) {
                             const renderWidth = this.getRenderWidth();
                             const scale = $wire.format === 'abc' ? 2 : 1;
-                            const total = svgs.length;
-                            svgs.forEach((svgEl, idx) => {
-                                const viewBox = svgEl.getAttribute('viewBox');
-                                let svgWidth = renderWidth;
-                                let svgHeight = renderWidth * 9 / 16;
-                                if (viewBox) {
-                                    const parts = viewBox.split(/\s+/).map(Number);
-                                    if (parts.length === 4) {
-                                        svgWidth = parts[2];
-                                        svgHeight = parts[3];
-                                    }
-                                } else {
-                                    const bbox = svgEl.getBBox();
-                                    const w = svgEl.getAttribute('width');
-                                    const h = svgEl.getAttribute('height');
-                                    svgWidth = w ? parseFloat(w) : bbox.width + bbox.x;
-                                    svgHeight = h ? parseFloat(h) : bbox.height + bbox.y;
+                            const margin = 20;
+                            const viewBox = svgEl.getAttribute('viewBox');
+                            let svgWidth = renderWidth;
+                            let svgHeight = renderWidth * 9 / 16;
+                            let paddedViewBox = null;
+                            if (viewBox) {
+                                const parts = viewBox.split(/\s+/).map(Number);
+                                if (parts.length === 4) {
+                                    svgWidth = parts[2];
+                                    svgHeight = parts[3];
+                                    paddedViewBox = `${parts[0] - margin} ${parts[1] - margin} ${parts[2] + margin * 2} ${parts[3] + margin * 2}`;
                                 }
-                                const clonedSvg = svgEl.cloneNode(true);
-                                clonedSvg.setAttribute('width', String(svgWidth));
-                                clonedSvg.setAttribute('height', String(svgHeight));
-                                const svgData = new XMLSerializer().serializeToString(clonedSvg);
-                                const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-                                const url = URL.createObjectURL(svgBlob);
+                            } else {
+                                const bbox = svgEl.getBBox();
+                                const w = svgEl.getAttribute('width');
+                                const h = svgEl.getAttribute('height');
+                                svgWidth = w ? parseFloat(w) : bbox.width + bbox.x;
+                                svgHeight = h ? parseFloat(h) : bbox.height + bbox.y;
+                            }
+                            const paddedWidth = svgWidth + margin * 2;
+                            const paddedHeight = svgHeight + margin * 2;
+                            const clonedSvg = svgEl.cloneNode(true);
+                            clonedSvg.setAttribute('width', String(paddedWidth));
+                            clonedSvg.setAttribute('height', String(paddedHeight));
+                            if (paddedViewBox) {
+                                clonedSvg.setAttribute('viewBox', paddedViewBox);
+                            }
+                            const svgData = new XMLSerializer().serializeToString(clonedSvg);
+                            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                            const url = URL.createObjectURL(svgBlob);
+                            return new Promise((resolve, reject) => {
                                 const img = new Image();
                                 img.onload = () => {
                                     const canvas = document.createElement('canvas');
-                                    canvas.width = svgWidth * scale;
-                                    canvas.height = svgHeight * scale;
+                                    canvas.width = paddedWidth * scale;
+                                    canvas.height = paddedHeight * scale;
                                     const ctx = canvas.getContext('2d');
                                     ctx.fillStyle = '#ffffff';
                                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                                     URL.revokeObjectURL(url);
+                                    resolve(canvas);
+                                };
+                                img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+                                img.src = url;
+                            });
+                        },
+                        exportPng() {
+                            const previewEl = $wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
+                            if (!previewEl) { return; }
+                            const svgs = previewEl.querySelectorAll('svg');
+                            if (!svgs.length) { return; }
+                            const total = svgs.length;
+                            svgs.forEach((svgEl, idx) => {
+                                this.svgToCanvas(svgEl).then(canvas => {
                                     const a = document.createElement('a');
                                     a.download = total > 1 ? 'score-page-' + (idx + 1) + '.png' : 'score.png';
                                     a.href = canvas.toDataURL('image/png');
                                     a.click();
-                                };
-                                img.src = url;
+                                }).catch(e => console.error('[score-editor] export error:', e));
                             });
+                        },
+                        async copyImage() {
+                            const previewEl = $wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
+                            if (!previewEl) { return; }
+                            const svgs = previewEl.querySelectorAll('svg');
+                            if (!svgs.length) { return; }
+                            if (!navigator.clipboard || !window.ClipboardItem) {
+                                this.showCopyFeedback(@js(__('Clipboard not supported in this browser')));
+                                return;
+                            }
+                            try {
+                                const blobPromise = this.svgToCanvas(svgs[0]).then(canvas =>
+                                    new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+                                );
+                                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
+                                const msg = svgs.length > 1
+                                    ? @js(__('First page copied to clipboard'))
+                                    : @js(__('Image copied to clipboard'));
+                                this.showCopyFeedback(msg);
+                            } catch (e) {
+                                console.error('[score-editor] copy image error:', e);
+                                this.showCopyFeedback(@js(__('Failed to copy image')));
+                            }
                         }
                     }"
                     x-init="
@@ -449,9 +495,13 @@
                     <div x-show="$wire.format === 'abc'" x-cloak class="mt-4">
                         <div x-ref="abcPreview" class="min-h-16 space-y-4"></div>
 
-                        <div class="mt-2 flex justify-end gap-2" x-show="hasPages">
+                        <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
+                            <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
                                 {{ __('Save as my default for this ratio') }}
+                            </flux:button>
+                            <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
+                                {{ __('Copy as Image') }}
                             </flux:button>
                             <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
                                 {{ __('Export PNG') }}
@@ -495,9 +545,13 @@
                     <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4">
                         <div x-ref="preview" class="min-h-16 space-y-4"></div>
 
-                        <div class="mt-2 flex justify-end gap-2" x-show="hasPages">
+                        <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
+                            <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
                                 {{ __('Save as my default for this ratio') }}
+                            </flux:button>
+                            <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
+                                {{ __('Copy as Image') }}
                             </flux:button>
                             <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
                                 {{ __('Export PNG') }}
