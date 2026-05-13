@@ -87,7 +87,7 @@
                         clippedWarningText: @js(__('Content does not fit on page')),
                         renderTimer: null,
                         zoom: 100,
-                        lyricSize: 16,
+                        lyricSize: 12,
                         staffSize: 100,
                         dropCapSize: 64,
                         minLyricWordSpacing: 0,
@@ -287,7 +287,8 @@
                             const content = this.localContent;
                             if (!content || !content.trim()) { return; }
                             const pages = this.splitPages(content, 'gabc', this.pageRatio);
-                            const width = this.getRenderWidth();
+                            const pagePadding = 32; // p-4 = 16px each side
+                            const width = (container.clientWidth > 0 ? container.clientWidth : this.getRenderWidth()) - pagePadding;
                             const pageEls = pages.map(() => {
                                 const pageEl = document.createElement('div');
                                 pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto';
@@ -303,22 +304,23 @@
                                 try {
                                     const ctxt = new exsurge.ChantContext();
                                     const z = Number(this.zoom) / 100;
-                                    ctxt.lyricTextSize = Number(this.lyricSize) * z;
+                                    const ptToPx = 2;
+                                    ctxt.lyricTextSize = Number(this.lyricSize) * z * ptToPx;
                                     ctxt.lyricTextFont = this.lyricFont;
                                     ctxt.dropCapTextFont = this.lyricFont;
                                     ctxt.annotationTextFont = this.lyricFont;
-                                    ctxt.dropCapTextSize = Number(this.dropCapSize) * z;
-                                    ctxt.glyphScaling = (1.0 / 16.0) * (Number(this.staffSize) / 100) * z;
+                                    ctxt.dropCapTextSize = Number(this.dropCapSize) * z * ptToPx;
+                                    ctxt.glyphScaling = (1.0 / 16.0) * (Number(this.staffSize) / 100) * z * ptToPx;
                                     ctxt.staffInterval = ctxt.glyphPunctumWidth * ctxt.glyphScaling;
                                     ctxt.staffLineWeight = Math.round(ctxt.glyphPunctumWidth * ctxt.glyphScaling / 8);
                                     ctxt.neumeLineWeight = ctxt.staffLineWeight;
                                     ctxt.dividerLineWeight = ctxt.neumeLineWeight;
                                     ctxt.episemaLineWeight = ctxt.neumeLineWeight;
                                     if (Number(this.minLyricWordSpacing) > 0) {
-                                        ctxt.minLyricWordSpacing = Number(this.minLyricWordSpacing) * z;
+                                        ctxt.minLyricWordSpacing = Number(this.minLyricWordSpacing) * z * ptToPx;
                                     }
                                     if (Number(this.hyphenWidth) > 0) {
-                                        ctxt.hyphenWidth = Number(this.hyphenWidth) * z;
+                                        ctxt.hyphenWidth = Number(this.hyphenWidth) * z * ptToPx;
                                     }
                                     ctxt.condensingTolerance = Number(this.condensingTolerance);
                                     const mappings = exsurge.Gabc.createMappingsFromSource(ctxt, pageSource);
@@ -332,13 +334,12 @@
                                             let viewBoxW = 0;
                                             let contentH = 0;
                                             if (svg) {
-                                                const w = svg.getAttribute('width');
                                                 const h = svg.getAttribute('height');
-                                                if (w && h) {
-                                                    viewBoxW = parseFloat(w);
+                                                if (h) {
+                                                    viewBoxW = width;
                                                     contentH = parseFloat(h);
-                                                    svg.setAttribute('viewBox', '0 0 ' + viewBoxW + ' ' + (contentH + 20));
-                                                    svg.removeAttribute('width');
+                                                    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + (contentH + 20));
+                                                    svg.setAttribute('width', '100%');
                                                     svg.removeAttribute('height');
                                                 }
                                                 svg.style.overflow = 'visible';
