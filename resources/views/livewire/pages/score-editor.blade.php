@@ -83,8 +83,8 @@
                 <div
                     x-data="{
                         hasPages: false,
-                        isClipped: false,
                         localContent: '',
+                        clippedWarningText: @js(__('Content does not fit on page')),
                         renderTimer: null,
                         zoom: 100,
                         lyricSize: 16,
@@ -191,6 +191,15 @@
                             pages.push(current.join('\n'));
                             return pages.map(p => header + p);
                         },
+                        appendClipWarning(pageEl) {
+                            const warn = document.createElement('div');
+                            warn.className = 'mt-2 flex justify-center';
+                            const span = document.createElement('span');
+                            span.className = 'rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300';
+                            span.textContent = this.clippedWarningText;
+                            warn.appendChild(span);
+                            pageEl.insertAdjacentElement('afterend', warn);
+                        },
                         fixAbcLyrics(pageEl) {
                             const noteXMap = new Map();
                             pageEl.querySelectorAll('.abcjs-note .abcjs-notehead').forEach(nh => {
@@ -229,7 +238,6 @@
                             const content = this.localContent;
                             if (!content || !content.trim()) {
                                 this.hasPages = false;
-                                this.isClipped = false;
                                 return;
                             }
                             const pages = this.splitPages(content, 'abc', this.abcPageRatio);
@@ -243,7 +251,6 @@
                                 paddingleft: 15,
                                 paddingright: 50,
                             };
-                            let anyClipped = false;
                             pages.forEach((pageSource) => {
                                 const pageEl = document.createElement('div');
                                 pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 [&_svg]:max-w-full [&_svg]:h-auto';
@@ -258,14 +265,13 @@
                                     ABCJS.renderAbc(pageEl, rendered, options);
                                     this.fixAbcLyrics(pageEl);
                                     if (this.abcPageRatio !== 'auto' && pageEl.scrollHeight > pageEl.clientHeight + 2) {
-                                        anyClipped = true;
+                                        this.appendClipWarning(pageEl);
                                     }
                                 } catch (e) {
                                     console.error('[score-editor] abcjs error:', e);
                                 }
                             });
                             this.hasPages = pages.length > 0;
-                            this.isClipped = anyClipped;
                         },
                         renderPreview() {
                             if ($wire.format === 'abc') {
@@ -276,7 +282,6 @@
                             if (!container) { return; }
                             container.innerHTML = '';
                             this.hasPages = false;
-                            this.isClipped = false;
                             if ($wire.format !== 'gabc') { return; }
                             if (!window.exsurge) { return; }
                             const content = this.localContent;
@@ -293,8 +298,6 @@
                                 return pageEl;
                             });
                             this.hasPages = true;
-                            let renderedCount = 0;
-                            let anyClipped = false;
                             pages.forEach((pageSource, idx) => {
                                 const pageEl = pageEls[idx];
                                 try {
@@ -326,11 +329,15 @@
                                             const parser = new DOMParser();
                                             const doc = parser.parseFromString(html, 'image/svg+xml');
                                             const svg = doc.querySelector('svg');
+                                            let viewBoxW = 0;
+                                            let contentH = 0;
                                             if (svg) {
                                                 const w = svg.getAttribute('width');
                                                 const h = svg.getAttribute('height');
                                                 if (w && h) {
-                                                    svg.setAttribute('viewBox', '0 0 ' + parseFloat(w) + ' ' + (parseFloat(h) + 20));
+                                                    viewBoxW = parseFloat(w);
+                                                    contentH = parseFloat(h);
+                                                    svg.setAttribute('viewBox', '0 0 ' + viewBoxW + ' ' + (contentH + 20));
                                                     svg.removeAttribute('width');
                                                     svg.removeAttribute('height');
                                                 }
@@ -338,12 +345,15 @@
                                                 html = new XMLSerializer().serializeToString(svg);
                                             }
                                             pageEl.innerHTML = html;
-                                            renderedCount++;
-                                            if (this.pageRatio !== 'auto' && pageEl.scrollHeight > pageEl.clientHeight + 2) {
-                                                anyClipped = true;
-                                            }
-                                            if (renderedCount === pages.length) {
-                                                this.isClipped = anyClipped;
+                                            if (this.pageRatio !== 'auto' && viewBoxW > 0) {
+                                                const padding = 32;
+                                                const renderWidthPx = Math.max(0, pageEl.clientWidth - padding);
+                                                const scale = renderWidthPx / viewBoxW;
+                                                const contentHeightPx = contentH * scale;
+                                                const availableHeightPx = pageEl.clientHeight - padding;
+                                                if (contentHeightPx > availableHeightPx + 2) {
+                                                    this.appendClipWarning(pageEl);
+                                                }
                                             }
                                         });
                                     });
@@ -439,10 +449,6 @@
                     <div x-show="$wire.format === 'abc'" x-cloak class="mt-4">
                         <div x-ref="abcPreview" class="min-h-16 space-y-4"></div>
 
-                        <div x-show="isClipped" class="mt-2 flex justify-center">
-                            <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">{{ __('Content does not fit on page') }}</span>
-                        </div>
-
                         <div class="mt-2 flex justify-end gap-2" x-show="hasPages">
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
                                 {{ __('Save as my default for this ratio') }}
@@ -488,10 +494,6 @@
 
                     <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4">
                         <div x-ref="preview" class="min-h-16 space-y-4"></div>
-
-                        <div x-show="isClipped" class="mt-2 flex justify-center">
-                            <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-300">{{ __('Content does not fit on page') }}</span>
-                        </div>
 
                         <div class="mt-2 flex justify-end gap-2" x-show="hasPages">
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
