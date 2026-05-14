@@ -110,147 +110,168 @@
                         linkCopyFailed: @js(__('Failed to copy link')),
                     })"
                 >
-                    <div class="md:flex md:gap-6">
-                        {{-- Textarea --}}
-                        <div class="min-w-0 flex-1">
-                            <flux:field required>
-                                <flux:textarea wire:model="content" rows="10" class="font-mono text-sm" :placeholder="__('Paste or type your ABC or GABC source here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
-                                <flux:error name="content" />
-                            </flux:field>
-                        </div>
+                    {{-- Textarea --}}
+                    <flux:field required>
+                        <flux:textarea wire:model="content" rows="10" class="font-mono text-sm" :placeholder="__('Paste or type your ABC or GABC source here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
+                        <flux:error name="content" />
+                    </flux:field>
 
-                        {{-- GABC Settings --}}
-                        <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4 shrink-0 space-y-3 md:mt-0 md:w-44">
-                            <flux:heading size="sm">{{ __('Settings') }}</flux:heading>
-
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Zoom')" />
-                                <flux:input size="sm" type="number" x-model="zoom" min="50" max="300" step="5" class="flex-1" />
-                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">%</span>
+                    {{-- GABC Settings Toolbar --}}
+                    <div x-show="$wire.format === 'gabc'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <flux:tooltip :content="__('Zoom (%)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="zoom" min="50" max="300" step="5" class="w-16" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Lyric Size')" />
-                                <flux:input size="sm" type="number" x-model="lyricSize" min="8" max="60" step="1" class="flex-1" />
-                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">pt</span>
+                        <flux:tooltip :content="__('Lyric size (pt)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="lyricSize" min="8" max="60" step="1" class="w-16" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Staff Size')" />
-                                <flux:input size="sm" type="number" x-model="staffSize" min="30" max="300" step="5" class="flex-1" />
-                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">%</span>
+                        <flux:tooltip :content="__('Staff size (%)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="staffSize" min="30" max="300" step="5" class="w-16" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Page Ratio')" />
-                                <flux:select size="sm" x-model="pageRatio" class="flex-1 text-xs">
+                        <flux:tooltip :content="__('Page ratio')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:select size="sm" x-model="pageRatio" class="w-20 text-xs">
                                     <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
                                     <flux:select.option value="16/9">16:9</flux:select.option>
                                     <flux:select.option value="4/3">4:3</flux:select.option>
                                     <flux:select.option value="1/1">1:1</flux:select.option>
                                 </flux:select>
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="text-initial" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Drop Caps')" />
+                        <flux:tooltip :content="__('Drop caps')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="text-initial" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 <flux:switch x-model="dropCaps" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Font')" />
-                                <flux:select size="sm" x-model="lyricFont" class="flex-1 text-xs">
+                        <flux:tooltip :content="__('Font')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:select size="sm" x-model="lyricFont" class="w-32 text-xs">
                                     <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
                                     <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
                                     <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
                                     <flux:select.option value="'Franklin Gothic Book', 'Franklin Gothic Medium', 'ITC Franklin Gothic', Arial, sans-serif">Franklin Gothic</flux:select.option>
                                 </flux:select>
                             </div>
+                        </flux:tooltip>
 
-                            <flux:separator />
-                            <flux:heading size="xs">{{ __('Lyric Spacing') }}</flux:heading>
+                        <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="space" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Word Spacing')" />
-                                <flux:input size="sm" type="number" x-model="minLyricWordSpacing" min="0" max="40" step="1" class="flex-1" />
-                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">px</span>
+                        <flux:tooltip :content="__('Word spacing (px)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="space" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="minLyricWordSpacing" min="0" max="40" step="1" class="w-16" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="minus" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Hyphen Width')" />
-                                <flux:input size="sm" type="number" x-model="hyphenWidth" min="0" max="40" step="1" class="flex-1" />
-                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">px</span>
+                        <flux:tooltip :content="__('Hyphen width (px)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="minus" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="hyphenWidth" min="0" max="40" step="1" class="w-16" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="ruler-dimension-line" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Condensing')" />
-                                <flux:input size="sm" type="number" x-model="condensingTolerance" min="0" max="1" step="0.05" class="flex-1" />
+                        <flux:tooltip :content="__('Condensing tolerance')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="ruler-dimension-line" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="condensingTolerance" min="0" max="1" step="0.05" class="w-16" />
                             </div>
+                        </flux:tooltip>
 
-                            <flux:separator />
-                            <flux:heading size="xs">{{ __('Line Spacing') }}</flux:heading>
+                        <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Between Lines')" />
-                                <flux:input size="sm" type="number" x-model="spaceBetweenSystems" min="-2" max="2" step="0.1" class="flex-1" />
+                        <flux:tooltip :content="__('Space between lines')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="spaceBetweenSystems" min="-2" max="2" step="0.1" class="w-16" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Notes to Text')" />
-                                <flux:input size="sm" type="number" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="flex-1" />
+                        <flux:tooltip :content="__('Min. space below staff')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="w-16" />
                             </div>
-                        </div>
+                        </flux:tooltip>
+                    </div>
 
-                        {{-- ABC Settings --}}
-                        <div x-show="$wire.format === 'abc'" x-cloak class="mt-4 shrink-0 space-y-3 md:mt-0 md:w-44">
-                            <flux:heading size="sm">{{ __('Settings') }}</flux:heading>
-
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Page Ratio')" />
-                                <flux:select size="sm" x-model="abcPageRatio" class="flex-1 text-xs">
+                    {{-- ABC Settings Toolbar --}}
+                    <div x-show="$wire.format === 'abc'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <flux:tooltip :content="__('Page ratio')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:select size="sm" x-model="abcPageRatio" class="w-20 text-xs">
                                     <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
                                     <flux:select.option value="16/9">16:9</flux:select.option>
                                     <flux:select.option value="4/3">4:3</flux:select.option>
                                     <flux:select.option value="1/1">1:1</flux:select.option>
                                 </flux:select>
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Font')" />
-                                <flux:select size="sm" x-model="abcLyricFont" class="flex-1 text-xs">
+                        <flux:tooltip :content="__('Font')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:select size="sm" x-model="abcLyricFont" class="w-32 text-xs">
                                     <flux:select.option value="Palatino Linotype">Palatino</flux:select.option>
                                     <flux:select.option value="Garamond">Garamond</flux:select.option>
                                     <flux:select.option value="Times New Roman">Times New Roman</flux:select.option>
                                     <flux:select.option value="Franklin Gothic Book">Franklin Gothic</flux:select.option>
                                 </flux:select>
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Lyric Size')" />
-                                <flux:input size="sm" type="number" x-model="abcLyricSize" min="8" max="40" step="1" class="flex-1" />
-                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">pt</span>
+                        <flux:tooltip :content="__('Lyric size (pt)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="abcLyricSize" min="8" max="40" step="1" class="w-16" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="bold" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Bold')" />
+                        <flux:tooltip :content="__('Bold lyrics')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="bold" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 <flux:checkbox x-model="abcLyricBold" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="space" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Note Spacing')" />
-                                <flux:input size="sm" type="number" x-model="abcNoteSpacing" min="1" max="3" step="0.1" class="flex-1" />
-                            </div>
+                        <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Staff Separation')" />
-                                <flux:input size="sm" type="number" x-model="abcStaffSep" min="20" max="120" step="1" class="flex-1" />
+                        <flux:tooltip :content="__('Note spacing')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="space" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="abcNoteSpacing" min="1" max="3" step="0.1" class="w-16" />
                             </div>
+                        </flux:tooltip>
 
-                            <div class="flex items-center gap-2">
-                                <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Vocal Space')" />
-                                <flux:input size="sm" type="number" x-model="abcVocalSpace" min="0" max="40" step="1" class="flex-1" />
-                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">pt</span>
+                        <flux:tooltip :content="__('Staff separation')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="abcStaffSep" min="20" max="120" step="1" class="w-16" />
                             </div>
-                        </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Vocal space (pt)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="abcVocalSpace" min="0" max="40" step="1" class="w-16" />
+                            </div>
+                        </flux:tooltip>
                     </div>
 
                     {{-- ABC Preview --}}
