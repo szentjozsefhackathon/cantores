@@ -688,10 +688,9 @@
     "Saving will create a new score in your library.": "A mentés új kottát hoz létre a könyvtáradban.",
     "Share Score": "Kotta megosztása",
     "Copy Link": "Link másolása",
-    "This link encodes the full score and all settings directly in the URL — no account or registration needed. Anyone with the link can open and preview the score instantly.": "Ez a link a teljes kottát és minden beállítást tartalmaz - nincs szükség fiókra vagy regisztrációra. Bárki, akinek megvan a link, azonnal megnyithatja és megnézheti a kottát."
-
-
-
+    "This link encodes the full score and all settings directly in the URL — no account or registration needed. Anyone with the link can open and preview the score instantly.": "Ez a link a teljes kottát és minden beállítást tartalmaz - nincs szükség fiókra vagy regisztrációra. Bárki, akinek megvan a link, azonnal megnyithatja és megnézheti a kottát.",
+    "Score title": "Kotta címe",
+    "Type the score here": "Írd be a kottát ide"
 
     
 }

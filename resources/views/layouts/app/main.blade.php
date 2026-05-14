@@ -55,9 +55,15 @@
                             </flux:button>
                         </div>
                     @else
+                        <a href="{{ route('score.preview') }}" class="text-accent hover:underline font-medium text-sm">
+                            <flux:icon name="musical-note" class="inline" variant="mini"></flux:icon>
+                            Kottaszerkesztő
+                        </a>
+
                         <a href="{{ url('/about') }}" class="text-accent hover:underline font-medium text-sm">
-                        <flux:icon name="information-circle" class="inline" variant="mini"></flux:icon>
-                        Rólunk</a>
+                            <flux:icon name="information-circle" class="inline" variant="mini"></flux:icon>
+                            Rólunk
+                        </a>
 
                         <a
                             href="{{ route('login') }}"
@@ -66,24 +72,14 @@
                             <flux:icon name="log-in" class="inline" variant="mini"></flux:icon>
                             {{ __('Log in') }}
                         </a>
-        
-                        @if (Route::has('register'))
-                            <a
-                                href="{{ route('register') }}"
-                                class="inline-block px-5 py-1.5 dark:text-[#EDEDEC] border-[#19140035] hover:border-[#1915014a] border text-[#1b1b18] dark:border-[#3E3E3A] dark:hover:border-[#62605b] rounded-sm text-sm leading-normal">
-                                <flux:icon name="user-plus" class="inline" variant="mini"></flux:icon>
 
-                                {{ __('Register') }}
-                            </a>
-                            
-                            <div class="flex items-center" x-data="{ cycle() { const s = ['light','dark','system']; $flux.appearance = s[(s.indexOf($flux.appearance) + 1) % 3]; } }">
-                                <flux:button variant="ghost" square @click="cycle()" aria-label="Toggle appearance">
-                                    <flux:icon x-show="$flux.appearance === 'light'" name="sun" variant="mini" />
-                                    <flux:icon x-show="$flux.appearance === 'dark'" name="moon" variant="mini" />
-                                    <flux:icon x-show="$flux.appearance === 'system'" name="computer-desktop" variant="mini" />
-                                </flux:button>
-                            </div>
-                        @endif
+                        <div class="flex items-center" x-data="{ cycle() { const s = ['light','dark','system']; $flux.appearance = s[(s.indexOf($flux.appearance) + 1) % 3]; } }">
+                            <flux:button variant="ghost" square @click="cycle()" aria-label="Toggle appearance">
+                                <flux:icon x-show="$flux.appearance === 'light'" name="sun" variant="mini" />
+                                <flux:icon x-show="$flux.appearance === 'dark'" name="moon" variant="mini" />
+                                <flux:icon x-show="$flux.appearance === 'system'" name="computer-desktop" variant="mini" />
+                            </flux:button>
+                        </div>
                     @endauth
                 </nav>
         
@@ -122,14 +118,12 @@
                                     Irányítópult
                                 </flux:menu.item>
                             @else
+                                <flux:menu.item href="{{ route('score.preview') }}" icon="musical-note">
+                                    Kottaszerkesztő
+                                </flux:menu.item>
                                 <flux:menu.item href="{{ route('login') }}" icon="log-in">
                                     {{ __('Log in') }}
                                 </flux:menu.item>
-                                @if (Route::has('register'))
-                                    <flux:menu.item href="{{ route('register') }}" icon="user-plus">
-                                        {{ __('Register') }}
-                                    </flux:menu.item>
-                                @endif
                             @endauth
                         </flux:menu>
                     </flux:dropdown>

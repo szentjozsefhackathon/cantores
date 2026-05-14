@@ -8,12 +8,16 @@
                             {{ __('Edit Score') }}
                         @elseif($isSharedLink && $isGuest)
                             {{ __('Score Preview') }}
+                        @elseif($isGuest)
+                            Kottaszerkesztő
                         @else
                             {{ __('Create Score') }}
                         @endif
                     </flux:heading>
                     <flux:subheading>
-                        @if($isSharedLink && $isGuest)
+                        @if($isGuest && !$isSharedLink)
+                            Regisztráció nélkül szerkeszthetsz kottát. A munkád mentéséhez használd a <strong>Megosztás</strong> gombot, és küldd el magadnak a linket – vagy mentsd el a böngészőben könyvjelzőként.
+                        @elseif($isSharedLink && $isGuest)
                             {{ __('Sign in to save this score to your library.') }}
                         @elseif($isSharedLink)
                             {{ __('Saving will create a new score in your library.') }}
@@ -24,7 +28,7 @@
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                    @if(!($isSharedLink && $isGuest))
+                    @if(!$isGuest)
                         <flux:button variant="ghost" icon="arrow-left" :href="route('scores')" wire:navigate>
                             {{ __('Back to Scores') }}
                         </flux:button>
@@ -66,7 +70,7 @@
                     </flux:field>
                 </div>
 
-                @if(!($isSharedLink && $isGuest))
+                @if(!$isGuest)
                 <flux:field>
                     <div class="flex items-center gap-2">
                         <flux:input
@@ -112,7 +116,7 @@
                 >
                     {{-- Textarea --}}
                     <flux:field required>
-                        <flux:textarea wire:model="content" rows="10" class="font-mono text-sm" :placeholder="__('Paste or type your ABC or GABC source here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
+                        <flux:textarea wire:model="content" rows="10" class="font-mono text-sm" :placeholder="__('Type the score here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
                         <flux:error name="content" />
                     </flux:field>
 
@@ -209,9 +213,9 @@
                             </div>
                         </flux:tooltip>
                         
-                        @if(!($isSharedLink && $isGuest))
+                        @if(!$isGuest)
                         <flux:tooltip :content="__('Save as my default for this ratio')">
-                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />                                
+                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
                         </flux:tooltip>
                         @endif
 
@@ -280,9 +284,9 @@
                             </div>
                         </flux:tooltip>
 
-                        @if(!($isSharedLink && $isGuest))
+                        @if(!$isGuest)
                         <flux:tooltip :content="__('Save as my default for this ratio')">
-                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />                                
+                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
                         </flux:tooltip>
                         @endif
 
@@ -348,7 +352,7 @@
                         </div>
                     </flux:modal>
 
-                    @if(!($isSharedLink && $isGuest))
+                    @if(!$isGuest)
                     <div class="mt-4 flex justify-end gap-3">
                         <flux:button variant="ghost" :href="route('scores')" wire:navigate>
                             {{ __('Cancel') }}

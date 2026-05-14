@@ -60,6 +60,10 @@ class ScoreEditor extends Component
             return;
         }
 
+        if (! Auth::check()) {
+            return;
+        }
+
         $this->authorize('create', Score::class);
 
         if (is_numeric($music)) {
@@ -76,15 +80,16 @@ class ScoreEditor extends Component
 
     public function rendering(IlluminateView $view): void
     {
-        $isGuestPreview = $this->isSharedLink && ! Auth::check();
+        $isGuest = ! Auth::check();
 
         $title = match (true) {
             $this->score instanceof Score => __('Edit Score'),
-            $isGuestPreview => __('Score Preview'),
+            $isGuest && $this->isSharedLink => __('Score Preview'),
+            $isGuest => __('Score Editor'),
             default => __('Create Score'),
         };
 
-        $layout = $isGuestPreview ? 'layouts::app.main' : 'layouts::app';
+        $layout = $isGuest ? 'layouts::app.main' : 'layouts::app';
         $view->layout($layout, ['title' => $title]);
     }
 
