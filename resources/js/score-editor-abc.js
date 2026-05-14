@@ -20,48 +20,52 @@ export function abcMixin() {
             if (!/^X:/m.test(content)) {
                 content = 'X:1\n' + content;
             }
-            const pageEl = document.createElement('div');
-            pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
-            if (this.abcPageRatio !== 'auto') {
-                pageEl.style.aspectRatio = this.abcPageRatio;
-            }
-            container.appendChild(pageEl);
-            try {
-                const virtualWidth = this.getVirtualCanvasSize('abc').width;
-                const fontName = this.abcLyricFont.includes(' ') ? `"${this.abcLyricFont}"` : this.abcLyricFont;
-                const boldStr = this.abcLyricBold ? 'Bold' : '';
-                const vocalfontLine = `%%vocalfont ${fontName}${boldStr} ${this.abcLyricSize}`;
-                const source = `%%fullsvg 1\n%%pagewidth ${virtualWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale 3\n${vocalfontLine}\n` + content;
-                const svgChunks = [];
-                const errs = [];
-                const user = {
-                    img_out: (str) => svgChunks.push(str),
-                    errmsg: (msg, l) => errs.push(`${msg} (line ${l})`),
-                    read_file: () => null,
-                };
-                const abc = new abc2svg.Abc(user);
-                abc.tosvg('score', source);
-                pageEl.innerHTML = svgChunks.join('\n');
-                if (errs.length) {
-                    console.warn('[score-editor] abc2svg warnings:', errs);
+            const virtualWidth = this.getVirtualCanvasSize('abc').width;
+            const fontName = this.abcLyricFont.includes(' ') ? `"${this.abcLyricFont}"` : this.abcLyricFont;
+            const boldStr = this.abcLyricBold ? 'Bold' : '';
+            const vocalfontLine = `%%vocalfont ${fontName}${boldStr} ${this.abcLyricSize}`;
+            const preamble = `%%fullsvg 1\n%%pagewidth ${virtualWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale 3\n${vocalfontLine}\n`;
+            const pages = this.splitPages(content, 'abc', this.abcPageRatio);
+            pages.forEach(pageContent => {
+                const pageEl = document.createElement('div');
+                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
+                if (this.abcPageRatio !== 'auto') {
+                    pageEl.style.aspectRatio = this.abcPageRatio;
                 }
-                const svgs = pageEl.querySelectorAll('svg');
-                svgs.forEach(svg => {
-                    if (!svg.getAttribute('viewBox')) {
-                        const w = parseFloat(svg.getAttribute('width')) || virtualWidth;
-                        const h = parseFloat(svg.getAttribute('height')) || 0;
-                        if (h) {
-                            svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-                        }
+                container.appendChild(pageEl);
+                try {
+                    const source = preamble + pageContent;
+                    const svgChunks = [];
+                    const errs = [];
+                    const user = {
+                        img_out: (str) => svgChunks.push(str),
+                        errmsg: (msg, l) => errs.push(`${msg} (line ${l})`),
+                        read_file: () => null,
+                    };
+                    const abc = new abc2svg.Abc(user);
+                    abc.tosvg('score', source);
+                    pageEl.innerHTML = svgChunks.join('\n');
+                    if (errs.length) {
+                        console.warn('[score-editor] abc2svg warnings:', errs);
                     }
-                    svg.setAttribute('width', '100%');
-                    svg.removeAttribute('height');
-                    svg.style.display = 'block';
-                });
-                this.hasPages = svgs.length > 0;
-            } catch (e) {
-                console.error('[score-editor] abc2svg error:', e);
-            }
+                    const svgs = pageEl.querySelectorAll('svg');
+                    svgs.forEach(svg => {
+                        if (!svg.getAttribute('viewBox')) {
+                            const w = parseFloat(svg.getAttribute('width')) || virtualWidth;
+                            const h = parseFloat(svg.getAttribute('height')) || 0;
+                            if (h) {
+                                svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                            }
+                        }
+                        svg.setAttribute('width', '100%');
+                        svg.removeAttribute('height');
+                        svg.style.display = 'block';
+                    });
+                    if (svgs.length > 0) { this.hasPages = true; }
+                } catch (e) {
+                    console.error('[score-editor] abc2svg error:', e);
+                }
+            });
         },
     };
 }
