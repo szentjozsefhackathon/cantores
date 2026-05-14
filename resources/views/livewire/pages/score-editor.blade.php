@@ -241,6 +241,13 @@
                             </div>
                         </flux:tooltip>
 
+                        <flux:tooltip :content="__('Page scale')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="abcPageScale" min="1" max="5" step="0.1" class="w-16" />
+                            </div>
+                        </flux:tooltip>
+
                         <flux:tooltip :content="__('Font')">
                             <div class="flex items-center gap-1">
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
@@ -256,7 +263,7 @@
                         <flux:tooltip :content="__('Lyric size (pt)')">
                             <div class="flex items-center gap-1">
                                 <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                                <flux:input size="sm" type="number" x-model="abcLyricSize" min="8" max="40" step="1" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="abcLyricSize" min="8" max="60" step="1" class="w-16" />
                             </div>
                         </flux:tooltip>
 

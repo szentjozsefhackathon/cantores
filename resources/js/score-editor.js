@@ -54,6 +54,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcNoteSpacing', () => this.scheduleRender());
             this.$watch('abcStaffSep', () => this.scheduleRender());
             this.$watch('abcVocalSpace', () => this.scheduleRender());
+            this.$watch('abcPageScale', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val) => { this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);

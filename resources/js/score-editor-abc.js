@@ -4,10 +4,11 @@ export function abcMixin() {
         abcLyricSize: 13,
         abcLyricBold: false,
         abcPageRatio: 'auto',
+        abcPageScale: 3,
         abcNoteSpacing: 1.414,
         abcStaffSep: 46,
         abcVocalSpace: 10,
-        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace'],
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace'],
 
         renderAbcPreview() {
             const container = this.$refs.abcPreview;
@@ -27,7 +28,7 @@ export function abcMixin() {
             const fontName = this.abcLyricFont.includes(' ') ? `"${this.abcLyricFont}"` : this.abcLyricFont;
             const boldStr = this.abcLyricBold ? 'Bold' : '';
             const vocalfontLine = `%%vocalfont ${fontName}${boldStr} ${this.abcLyricSize}`;
-            const preamble = `%%fullsvg 1\n%%pagewidth ${virtualWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale 3\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
+            const preamble = `%%fullsvg 1\n%%pagewidth ${virtualWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${this.abcPageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
             const pages = this.splitPages(content, 'abc', this.abcPageRatio);
             pages.forEach(pageContent => {
                 const pageEl = document.createElement('div');

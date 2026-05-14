@@ -690,7 +690,9 @@
     "Copy Link": "Link másolása",
     "This link encodes the full score and all settings directly in the URL — no account or registration needed. Anyone with the link can open and preview the score instantly.": "Ez a link a teljes kottát és minden beállítást tartalmaz - nincs szükség fiókra vagy regisztrációra. Bárki, akinek megvan a link, azonnal megnyithatja és megnézheti a kottát.",
     "Score title": "Kotta címe",
-    "Type the score here": "Írd be a kottát ide"
+    "Type the score here": "Írd be a kottát ide",
+    "Lyric size (pt)": "Szövegméret (pt)",
+    "Page scale": "Oldalméret"
 
     
 }
