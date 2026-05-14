@@ -17,6 +17,9 @@ document.addEventListener('alpine:init', () => {
         userDefaults: config.userDefaults ?? {},
         copyFeedback: '',
         copyFeedbackTimer: null,
+        shareUrl: '',
+        shareUrlLoading: false,
+        shareModalCopied: false,
 
         ...abcMixin(),
         ...gabcMixin(),
@@ -134,19 +137,29 @@ document.addEventListener('alpine:init', () => {
             };
         },
 
-        async generateShareUrl() {
-            const data = this.getShareData();
+        async openShareModal() {
+            this.shareUrl = '';
+            this.shareModalCopied = false;
+            this.shareUrlLoading = true;
+            this.$flux.modal('share-link-modal').show();
             try {
-                const url = await this.$wire.createShareUrl(data);
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(url)
-                        .then(() => this.showCopyFeedback(this.shareLinkCopied))
-                        .catch(() => this.showCopyFeedback(this.linkCopyFailed));
-                } else {
-                    this.showCopyFeedback(this.clipboardNotSupported);
-                }
+                const data = this.getShareData();
+                this.shareUrl = await this.$wire.createShareUrl(data);
             } catch (e) {
                 this.showCopyFeedback(this.linkCopyFailed);
+            } finally {
+                this.shareUrlLoading = false;
+            }
+        },
+
+        async copyShareLink() {
+            if (!this.shareUrl) { return; }
+            try {
+                await navigator.clipboard.writeText(this.shareUrl);
+                this.shareModalCopied = true;
+            } catch (e) {
+                this.showCopyFeedback(this.linkCopyFailed);
+                this.$flux.modal('share-link-modal').close();
             }
         },
 

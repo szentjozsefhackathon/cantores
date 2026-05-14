@@ -259,8 +259,7 @@
     "Enter subtitle": "Add meg az alcímet",
     "All": "Mind",
     "My items": "Saját elemek",
-    "empty": "üres",
-
+    "empty": "üres",    
     "Author created.": "Szerző létrehozva.",
     "Author updated.": "Szerző frissítve.",
     "Author deleted.": "Szerző törölve.",
@@ -666,5 +665,33 @@
     "Min Word Spacing": "Min. szóköz",
     "Hyphen Width": "Kötőjel szélesség",
     "Condensing Tolerance": "Sűrítési tolerancia",
-    "Zoom": "Nagyítás"
+    "Zoom": "Nagyítás",
+    "My Scores": "Kottáim",
+    "Attached Music": "Csatolt zenemű",
+    "Not attached": "Nincs csatolva",
+    "No music attached": "Nincs csatolt zenemű",
+    "Browse": "Böngészés",
+    "Page ratio": "Oldalarány",
+    "Edit Score": "Kotta szerkesztése",
+    "Scores are always private and visible only to you.": "A kották mindig privátok és csak neked láthatóak.",
+    "Back to Scores": "Vissza a kottákhoz",
+    "Note spacing": "Hangjegy távolság",
+    "Bold lyrics": "Félkövér szöveg",
+    "Staff separation": "Kottasor távolság",
+    "Vocal space (pt)": "Szöveg távolság (pt)",
+    "Save as my default for this ratio": "Mentés alapértelmezettként ehhez az oldalarányhoz",
+    "Share": "Megosztás",
+    "Copy as Image": "Másolás képként",
+    "Save Score": "Kotta mentése",
+    "Link copied! You can now paste it anywhere.": "Link másolva! Most már bárhova beillesztheted.",
+    "Create Score": "Kotta létrehozása",
+    "Saving will create a new score in your library.": "A mentés új kottát hoz létre a könyvtáradban.",
+    "Share Score": "Kotta megosztása",
+    "Copy Link": "Link másolása",
+    "This link encodes the full score and all settings directly in the URL — no account or registration needed. Anyone with the link can open and preview the score instantly.": "Ez a link a teljes kottát és minden beállítást tartalmaz - nincs szükség fiókra vagy regisztrációra. Bárki, akinek megvan a link, azonnal megnyithatja és megnézheti a kottát."
+
+
+
+
+    
 }

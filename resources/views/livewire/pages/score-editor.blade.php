@@ -208,6 +208,13 @@
                                 <flux:input size="sm" type="number" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="w-16" />
                             </div>
                         </flux:tooltip>
+                        
+                        @if(!($isSharedLink && $isGuest))
+                        <flux:tooltip :content="__('Save as my default for this ratio')">
+                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />                                
+                        </flux:tooltip>
+                        @endif
+
                     </div>
 
                     {{-- ABC Settings Toolbar --}}
@@ -272,6 +279,13 @@
                                 <flux:input size="sm" type="number" x-model="abcVocalSpace" min="0" max="40" step="1" class="w-16" />
                             </div>
                         </flux:tooltip>
+
+                        @if(!($isSharedLink && $isGuest))
+                        <flux:tooltip :content="__('Save as my default for this ratio')">
+                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />                                
+                        </flux:tooltip>
+                        @endif
+
                     </div>
 
                     {{-- ABC Preview --}}
@@ -280,12 +294,7 @@
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
                             <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
-                            @if(!($isSharedLink && $isGuest))
-                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
-                                {{ __('Save as my default for this ratio') }}
-                            </flux:button>
-                            @endif
-                            <flux:button icon="link" variant="ghost" x-on:click="generateShareUrl()">
+                            <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                 {{ __('Share') }}
                             </flux:button>
                             <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
@@ -303,12 +312,7 @@
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
                             <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
-                            @if(!($isSharedLink && $isGuest))
-                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
-                                {{ __('Save as my default for this ratio') }}
-                            </flux:button>
-                            @endif
-                            <flux:button icon="link" variant="ghost" x-on:click="generateShareUrl()">
+                            <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                 {{ __('Share') }}
                             </flux:button>
                             <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
@@ -319,6 +323,30 @@
                             </flux:button>
                         </div>
                     </div>
+
+                    <flux:modal name="share-link-modal" class="max-w-md">
+                        <div class="space-y-4">
+                            <flux:heading size="lg">{{ __('Share Score') }}</flux:heading>
+                            <flux:text>
+                                {{ __('This link encodes the full score and all settings directly in the URL — no account or registration needed. Anyone with the link can open and preview the score instantly.') }}
+                            </flux:text>
+                            <div class="flex flex-col gap-3 pt-2">
+                                <flux:button icon="link" variant="primary" x-show="!shareUrlLoading && !shareModalCopied" x-on:click="copyShareLink()">
+                                    {{ __('Copy Link') }}
+                                </flux:button>
+                                <flux:button disabled icon="arrow-path" variant="primary" x-show="shareUrlLoading" x-cloak>
+                                    {{ __('Generating link…') }}
+                                </flux:button>
+                                <div x-show="shareModalCopied" x-cloak class="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                    <flux:icon name="check-circle" variant="micro" class="shrink-0" />
+                                    <span class="text-sm font-medium">{{ __('Link copied! You can now paste it anywhere.') }}</span>
+                                </div>
+                                <flux:button variant="ghost" x-on:click="$flux.modal('share-link-modal').close()">
+                                    {{ __('Close') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    </flux:modal>
 
                     @if(!($isSharedLink && $isGuest))
                     <div class="mt-4 flex justify-end gap-3">
