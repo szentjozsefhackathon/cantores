@@ -7,7 +7,6 @@
         "dev": "vite"
     },
     "dependencies": {
-        "abcjs": "^6.6.3",
         "autoprefixer": "^10.4.20",
         "axios": "^1.7.4",
         "concurrently": "^9.0.1",

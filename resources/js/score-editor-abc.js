@@ -1,131 +1,63 @@
-import * as ABCJS from 'abcjs';
-
-const ABC_LYRIC_FONT_MAP = {
-    Palatino: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
-    Garamond: "Garamond, 'EB Garamond', serif",
-    Times: "'Times New Roman', Times, serif",
-    Franklin: "'Franklin Gothic Book', 'Franklin Gothic Medium', Arial, sans-serif",
-};
-
 export function abcMixin() {
     return {
-        abcScale: 1,
-        abcTranspose: 0,
-        abcPageRatio: 'auto',
-        abcHideRepeatClef: false,
-        abcLyricSize: 0,
-        abcLyricFont: '',
-        abcFields: ['abcScale', 'abcTranspose', 'abcHideRepeatClef', 'abcLyricSize', 'abcLyricFont'],
-
-        fixAbcLyrics(pageEl) {
-            const noteXMap = new Map();
-            pageEl.querySelectorAll('.abcjs-note .abcjs-notehead').forEach(nh => {
-                const bbox = nh.getBBox();
-                const noteCenter = bbox.x + bbox.width / 2;
-                const noteGroup = nh.closest('.abcjs-note');
-                if (noteGroup) {
-                    const lyric = noteGroup.querySelector('text.abcjs-lyric');
-                    if (lyric) {
-                        noteXMap.set(lyric, noteCenter);
-                    }
-                }
-            });
-            pageEl.querySelectorAll('text.abcjs-lyric').forEach(t => {
-                const txt = t.textContent || '';
-                const tspans = t.querySelectorAll('tspan');
-                if (txt.startsWith('​')) {
-                    t.textContent = txt.replace('​', '');
-                    t.setAttribute('text-anchor', 'start');
-                } else {
-                    const noteCenter = noteXMap.get(t);
-                    if (noteCenter !== undefined) {
-                        const cx = String(noteCenter + (txt.includes('-') ? 4 : 0));
-                        t.setAttribute('text-anchor', 'middle');
-                        t.setAttribute('x', cx);
-                        tspans.forEach(ts => ts.setAttribute('x', cx));
-                    }
-                }
-            });
-        },
-
-        applyAbcLyricFont(pageEl) {
-            const font = this.abcLyricFont;
-            if (!font) { return; }
-            const cssFont = ABC_LYRIC_FONT_MAP[font] || font;
-            pageEl.querySelectorAll('text.abcjs-lyric').forEach(t => {
-                t.setAttribute('font-family', cssFont);
-            });
-        },
+        abcLyricFont: 'Palatino Linotype',
+        abcLyricSize: 13,
+        abcLyricBold: false,
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold'],
 
         renderAbcPreview() {
             const container = this.$refs.abcPreview;
             if (!container) { return; }
             container.innerHTML = '';
             this.hasPages = false;
-            const content = this.localContent;
+            let content = this.localContent;
             if (!content || !content.trim()) { return; }
-            const pages = this.splitPages(content, 'abc', this.abcPageRatio);
-            const canvas = this.getVirtualCanvasSize('abc');
-            const paddingLeft = 15;
-            const paddingRight = 50;
-            const paddingTop = 15;
-            const paddingBottom = 30;
-            const options = {
-                scale: Number(this.abcScale) * 3,
-                staffwidth: canvas.width - paddingLeft - paddingRight,
-                visualTranspose: Number(this.abcTranspose),
-                add_classes: true,
-                paddingtop: paddingTop,
-                paddingbottom: paddingBottom,
-                paddingleft: paddingLeft,
-                paddingright: paddingRight,
-                initialClef: !!this.abcHideRepeatClef,
-            };
-            const pageEls = pages.map(() => {
-                const pageEl = document.createElement('div');
-                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
-                if (this.abcPageRatio !== 'auto') {
-                    pageEl.style.aspectRatio = this.abcPageRatio;
+            if (typeof abc2svg === 'undefined' || !abc2svg.Abc) {
+                console.error('[score-editor] abc2svg not loaded');
+                return;
+            }
+            if (!/^X:/m.test(content)) {
+                content = 'X:1\n' + content;
+            }
+            const pageEl = document.createElement('div');
+            pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
+            container.appendChild(pageEl);
+            try {
+                const virtualWidth = this.getVirtualCanvasSize('abc').width;
+                const fontName = this.abcLyricFont.includes(' ') ? `"${this.abcLyricFont}"` : this.abcLyricFont;
+                const boldStr = this.abcLyricBold ? 'Bold' : '';
+                const vocalfontLine = `%%vocalfont ${fontName}${boldStr} ${this.abcLyricSize}`;
+                const source = `%%fullsvg 1\n%%pagewidth ${virtualWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale 3\n${vocalfontLine}\n` + content;
+                const svgChunks = [];
+                const errs = [];
+                const user = {
+                    img_out: (str) => svgChunks.push(str),
+                    errmsg: (msg, l) => errs.push(`${msg} (line ${l})`),
+                    read_file: () => null,
+                };
+                const abc = new abc2svg.Abc(user);
+                abc.tosvg('score', source);
+                pageEl.innerHTML = svgChunks.join('\n');
+                if (errs.length) {
+                    console.warn('[score-editor] abc2svg warnings:', errs);
                 }
-                container.appendChild(pageEl);
-                return pageEl;
-            });
-            this.hasPages = pages.length > 0;
-            pages.forEach((pageSource, idx) => {
-                const pageEl = pageEls[idx];
-                try {
-                    let rendered = pageSource.replace(/^(w:\s*)(.*)$/gm, (match, prefix, lyrics) => {
-                        return prefix + lyrics.replace(/<([^ |*~_-]+)/g, '​$1');
-                    });
-                    const lyricSize = Number(this.abcLyricSize);
-                    if (lyricSize > 0) {
-                        const fontName = this.abcLyricFont || 'Times';
-                        rendered = `%%vocalfont ${fontName} ${lyricSize}\n` + rendered;
+                const svgs = pageEl.querySelectorAll('svg');
+                svgs.forEach(svg => {
+                    if (!svg.getAttribute('viewBox')) {
+                        const w = parseFloat(svg.getAttribute('width')) || virtualWidth;
+                        const h = parseFloat(svg.getAttribute('height')) || 0;
+                        if (h) {
+                            svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                        }
                     }
-                    ABCJS.renderAbc(pageEl, rendered, options);
-                    pageEl.style.height = '';
-                    this.fixAbcLyrics(pageEl);
-                    this.applyAbcLyricFont(pageEl);
-                    const svg = pageEl.querySelector('svg');
-                    let contentH = 0;
-                    if (svg) {
-                        const h = svg.getAttribute('height');
-                        contentH = h ? parseFloat(h) : 0;
-                        const viewBoxHeight = canvas.height ?? contentH;
-                        svg.setAttribute('viewBox', '0 0 ' + canvas.width + ' ' + viewBoxHeight);
-                        svg.setAttribute('width', '100%');
-                        svg.removeAttribute('height');
-                        svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
-                        svg.style.display = 'block';
-                        svg.style.overflow = 'hidden';
-                    }
-                    if (canvas.height && contentH > canvas.height + 2) {
-                        this.appendClipWarning(pageEl);
-                    }
-                } catch (e) {
-                    console.error('[score-editor] abcjs error:', e);
-                }
-            });
+                    svg.setAttribute('width', '100%');
+                    svg.removeAttribute('height');
+                    svg.style.display = 'block';
+                });
+                this.hasPages = svgs.length > 0;
+            } catch (e) {
+                console.error('[score-editor] abc2svg error:', e);
+            }
         },
     };
 }

@@ -42,12 +42,9 @@ document.addEventListener('alpine:init', () => {
             this.$watch('hyphenWidth', () => this.scheduleRender());
             this.$watch('condensingTolerance', () => this.scheduleRender());
             this.$watch('zoom', () => this.scheduleRender());
-            this.$watch('abcScale', () => this.scheduleRender());
-            this.$watch('abcTranspose', () => this.scheduleRender());
-            this.$watch('abcHideRepeatClef', () => this.scheduleRender());
-            this.$watch('abcLyricSize', () => this.scheduleRender());
             this.$watch('abcLyricFont', () => this.scheduleRender());
-            this.$watch('abcPageRatio', (val) => { this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
+            this.$watch('abcLyricSize', () => this.scheduleRender());
+            this.$watch('abcLyricBold', () => this.scheduleRender());
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
                 this.scheduleRender();
@@ -71,23 +68,24 @@ document.addEventListener('alpine:init', () => {
                     ratio: this.pageRatio,
                 };
             }
-            return {
-                settings: {
-                    abcScale: Number(this.abcScale),
-                    abcTranspose: Number(this.abcTranspose),
-                    abcHideRepeatClef: !!this.abcHideRepeatClef,
-                    abcLyricSize: Number(this.abcLyricSize),
-                    abcLyricFont: this.abcLyricFont,
-                },
-                ratio: this.abcPageRatio,
-            };
+            if (this.$wire.format === 'abc') {
+                return {
+                    settings: {
+                        abcLyricFont: this.abcLyricFont,
+                        abcLyricSize: Number(this.abcLyricSize),
+                        abcLyricBold: !!this.abcLyricBold,
+                    },
+                    ratio: 'auto',
+                };
+            }
+            return { settings: {}, ratio: 'auto' };
         },
 
         getVirtualCanvasSize(format) {
-            const ratio = format === 'abc' ? this.abcPageRatio : this.pageRatio;
+            if (format === 'abc') { return { width: 1920, height: null }; }
             const width = 1920;
             const heights = { '16/9': 1080, '4/3': 1440, '1/1': 1920 };
-            return { width, height: heights[ratio] ?? null };
+            return { width, height: heights[this.pageRatio] ?? null };
         },
 
         getRenderWidth() {
@@ -103,7 +101,7 @@ document.addEventListener('alpine:init', () => {
 
         applyInitialSettings() {
             this.applyRatioSettings('gabc', this.pageRatio);
-            this.applyRatioSettings('abc', this.abcPageRatio);
+            this.applyRatioSettings('abc', 'auto');
         },
 
         saveScore() {
@@ -239,8 +237,12 @@ document.addEventListener('alpine:init', () => {
         exportPng() {
             const previewEl = this.$wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
             if (!previewEl) { return; }
-            const svgs = previewEl.querySelectorAll('svg');
+            const svgs = Array.from(previewEl.querySelectorAll('svg'));
             if (!svgs.length) { return; }
+            if (this.$wire.format === 'abc') {
+                this.exportAbcPng(svgs);
+                return;
+            }
             const total = svgs.length;
             svgs.forEach((svgEl, idx) => {
                 this.svgToCanvas(svgEl).then(canvas => {
@@ -252,17 +254,72 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        buildAbcCanvas(svgs) {
+            const margin = 20;
+            const dims = svgs.map(svg => {
+                const vb = svg.getAttribute('viewBox');
+                if (vb) {
+                    const [x, y, w, h] = vb.split(/\s+/).map(Number);
+                    return { x, y, w, h };
+                }
+                return { x: 0, y: 0, w: 1920, h: 200 };
+            });
+            const maxW = Math.max(...dims.map(d => d.w));
+            const totalH = dims.reduce((sum, d) => sum + d.h, 0);
+            const promises = svgs.map((svg, i) => {
+                const d = dims[i];
+                const clone = svg.cloneNode(true);
+                clone.setAttribute('width', String(d.w));
+                clone.setAttribute('height', String(d.h));
+                clone.setAttribute('viewBox', `${d.x} ${d.y} ${d.w} ${d.h}`);
+                const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => { URL.revokeObjectURL(url); resolve({ img, w: d.w, h: d.h }); };
+                    img.onerror = e => { URL.revokeObjectURL(url); reject(e); };
+                    img.src = url;
+                });
+            });
+            return Promise.all(promises).then(results => {
+                const canvas = document.createElement('canvas');
+                canvas.width = maxW + margin * 2;
+                canvas.height = totalH + margin * 2;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                let y = margin;
+                results.forEach(r => {
+                    ctx.drawImage(r.img, margin, y, r.w, r.h);
+                    y += r.h;
+                });
+                return canvas;
+            });
+        },
+
+        exportAbcPng(svgs) {
+            this.buildAbcCanvas(svgs).then(canvas => {
+                const a = document.createElement('a');
+                a.download = 'score.png';
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            }).catch(e => console.error('[score-editor] export error:', e));
+        },
+
         async copyImage() {
             const previewEl = this.$wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
             if (!previewEl) { return; }
-            const svgs = previewEl.querySelectorAll('svg');
+            const svgs = Array.from(previewEl.querySelectorAll('svg'));
             if (!svgs.length) { return; }
             if (!navigator.clipboard || !window.ClipboardItem) {
                 this.showCopyFeedback(this.clipboardNotSupported);
                 return;
             }
             try {
-                const blobPromise = this.svgToCanvas(svgs[0]).then(canvas =>
+                const canvasPromise = this.$wire.format === 'abc'
+                    ? this.buildAbcCanvas(svgs)
+                    : this.svgToCanvas(svgs[0]);
+                const blobPromise = canvasPromise.then(canvas =>
                     new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
                 );
                 await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);

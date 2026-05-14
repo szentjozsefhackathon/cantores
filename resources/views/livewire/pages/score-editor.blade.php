@@ -75,6 +75,7 @@
                 </flux:modal>
 
 <script src="https://ex.surge.sh/exsurge.js"></script>
+<script src="http://moinejf.free.fr/js/abc2svg-1.js"></script>
 
                 <div
                     x-data="scoreEditor({
@@ -94,55 +95,6 @@
                                 <flux:textarea wire:model="content" rows="10" class="font-mono text-sm" :placeholder="__('Paste or type your ABC or GABC source here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
                                 <flux:error name="content" />
                             </flux:field>
-                        </div>
-
-                        {{-- ABC Settings --}}
-                        <div x-show="$wire.format === 'abc'" x-cloak class="mt-4 shrink-0 space-y-3 md:mt-0 md:w-56">
-                            <flux:heading size="sm">{{ __('Settings') }}</flux:heading>
-
-                            <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Score Size') }}</span>
-                                <input type="range" x-model="abcScale" min="0.5" max="3" step="0.1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="abcScale + 'x'" class="w-8 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Transpose') }}</span>
-                                <input type="range" x-model="abcTranspose" min="-12" max="12" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="abcTranspose" class="w-8 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Lyric Size') }}</span>
-                                <input type="range" x-model="abcLyricSize" min="0" max="60" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="abcLyricSize == 0 ? 'auto' : abcLyricSize + 'pt'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Lyric Font') }}</span>
-                                <flux:select x-model="abcLyricFont" class="flex-1 text-xs">
-                                    <flux:select.option value="">{{ __('Default') }}</flux:select.option>
-                                    <flux:select.option value="Palatino">Palatino</flux:select.option>
-                                    <flux:select.option value="Garamond">Garamond</flux:select.option>
-                                    <flux:select.option value="Times">Times New Roman</flux:select.option>
-                                    <flux:select.option value="Franklin">Franklin Gothic</flux:select.option>
-                                </flux:select>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Hide Repeat Clef') }}</span>
-                                <flux:switch x-model="abcHideRepeatClef" />
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Page Ratio') }}</span>
-                                <flux:select x-model="abcPageRatio" class="flex-1 text-xs">
-                                    <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
-                                    <flux:select.option value="16/9">16:9</flux:select.option>
-                                    <flux:select.option value="4/3">4:3</flux:select.option>
-                                    <flux:select.option value="1/1">1:1</flux:select.option>
-                                </flux:select>
-                            </div>
                         </div>
 
                         {{-- GABC Settings --}}
@@ -202,7 +154,7 @@
                             <flux:heading size="xs">{{ __('Lyric Spacing') }}</flux:heading>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400" :title="__('Min Word Spacing')">{{ __('Word Spacing') }}</span>
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Word Spacing') }}</span>
                                 <input type="range" x-model="minLyricWordSpacing" min="0" max="40" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
                                 <span x-text="minLyricWordSpacing == 0 ? 'auto' : minLyricWordSpacing + 'px'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
                             </div>
@@ -214,9 +166,35 @@
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400" :title="__('Condensing Tolerance')">{{ __('Condensing') }}</span>
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Condensing') }}</span>
                                 <input type="range" x-model="condensingTolerance" min="0" max="1" step="0.05" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
                                 <span x-text="condensingTolerance" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                            </div>
+                        </div>
+
+                        {{-- ABC Settings --}}
+                        <div x-show="$wire.format === 'abc'" x-cloak class="mt-4 shrink-0 space-y-3 md:mt-0 md:w-56">
+                            <flux:heading size="sm">{{ __('Settings') }}</flux:heading>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Font') }}</span>
+                                <flux:select x-model="abcLyricFont" class="flex-1 text-xs">
+                                    <flux:select.option value="Palatino Linotype">Palatino</flux:select.option>
+                                    <flux:select.option value="Garamond">Garamond</flux:select.option>
+                                    <flux:select.option value="Times New Roman">Times New Roman</flux:select.option>
+                                    <flux:select.option value="Arial">Arial</flux:select.option>
+                                </flux:select>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Lyric Size') }}</span>
+                                <input type="range" x-model="abcLyricSize" min="8" max="40" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
+                                <span x-text="abcLyricSize + 'pt'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Bold') }}</span>
+                                <flux:checkbox x-model="abcLyricBold" />
                             </div>
                         </div>
                     </div>
@@ -227,9 +205,6 @@
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
                             <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
-                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()">
-                                {{ __('Save as my default for this ratio') }}
-                            </flux:button>
                             <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
                                 {{ __('Copy as Image') }}
                             </flux:button>

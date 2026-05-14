@@ -187,7 +187,7 @@ it('saves per-ratio defaults onto the authenticated user', function () {
     ]);
 });
 
-it('persists abc per-ratio settings including lyric and clef options', function () {
+it('persists abc per-ratio settings including lyric options', function () {
     $user = User::factory()->create();
 
     actingAs($user);
@@ -199,7 +199,6 @@ it('persists abc per-ratio settings including lyric and clef options', function 
         ->call('save', [
             'abcScale' => 1.5,
             'abcTranspose' => 0,
-            'abcHideRepeatClef' => true,
             'abcLyricSize' => 14,
             'abcLyricFont' => 'Palatino',
         ], '16/9')
@@ -212,7 +211,6 @@ it('persists abc per-ratio settings including lyric and clef options', function 
             '16/9' => [
                 'abcScale' => 1.5,
                 'abcTranspose' => 0,
-                'abcHideRepeatClef' => true,
                 'abcLyricSize' => 14,
                 'abcLyricFont' => 'Palatino',
             ],
