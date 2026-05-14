@@ -237,6 +237,24 @@
                                 <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Bold') }}</span>
                                 <flux:checkbox x-model="abcLyricBold" />
                             </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Note Spacing') }}</span>
+                                <input type="range" x-model="abcNoteSpacing" min="1" max="3" step="0.1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
+                                <span x-text="parseFloat(abcNoteSpacing).toFixed(1)" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Staff Sep') }}</span>
+                                <input type="range" x-model="abcStaffSep" min="20" max="120" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
+                                <span x-text="abcStaffSep" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Vocal Space') }}</span>
+                                <input type="range" x-model="abcVocalSpace" min="0" max="40" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
+                                <span x-text="abcVocalSpace + 'pt'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                            </div>
                         </div>
                     </div>
 

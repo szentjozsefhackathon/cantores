@@ -48,6 +48,9 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcLyricFont', () => this.scheduleRender());
             this.$watch('abcLyricSize', () => this.scheduleRender());
             this.$watch('abcLyricBold', () => this.scheduleRender());
+            this.$watch('abcNoteSpacing', () => this.scheduleRender());
+            this.$watch('abcStaffSep', () => this.scheduleRender());
+            this.$watch('abcVocalSpace', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val) => { this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
@@ -79,6 +82,9 @@ document.addEventListener('alpine:init', () => {
                         abcLyricFont: this.abcLyricFont,
                         abcLyricSize: Number(this.abcLyricSize),
                         abcLyricBold: !!this.abcLyricBold,
+                        abcNoteSpacing: Number(this.abcNoteSpacing),
+                        abcStaffSep: Number(this.abcStaffSep),
+                        abcVocalSpace: Number(this.abcVocalSpace),
                     },
                     ratio: this.abcPageRatio,
                 };
