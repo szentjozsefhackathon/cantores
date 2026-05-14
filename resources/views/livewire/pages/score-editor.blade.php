@@ -74,7 +74,7 @@
                     </div>
                 </flux:modal>
 
-<script src="https://ex.surge.sh/exsurge.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
 <script src="http://moinejf.free.fr/js/abc2svg-1.js"></script>
 
                 <div
@@ -103,7 +103,7 @@
 
                             <div class="flex items-center gap-2">
                                 <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Zoom') }}</span>
-                                <input type="range" x-model="zoom" min="25" max="400" step="5" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
+                                <input type="range" x-model="zoom" min="50" max="300" step="5" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
                                 <span x-text="zoom + '%'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
                             </div>
 
@@ -117,12 +117,6 @@
                                 <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Staff Size') }}</span>
                                 <input type="range" x-model="staffSize" min="30" max="300" step="5" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
                                 <span x-text="staffSize + '%'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Drop Cap Size') }}</span>
-                                <input type="range" x-model="dropCapSize" min="16" max="120" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="dropCapSize + 'pt'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
                             </div>
 
                             <div class="flex items-center gap-2">
@@ -169,6 +163,21 @@
                                 <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Condensing') }}</span>
                                 <input type="range" x-model="condensingTolerance" min="0" max="1" step="0.05" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
                                 <span x-text="condensingTolerance" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                            </div>
+
+                            <flux:separator />
+                            <flux:heading size="xs">{{ __('Line Spacing') }}</flux:heading>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Between Lines') }}</span>
+                                <input type="range" x-model="spaceBetweenSystems" min="-2" max="2" step="0.1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
+                                <span x-text="spaceBetweenSystems" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Notes to Text') }}</span>
+                                <input type="range" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
+                                <span x-text="minSpaceBelowStaff" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
                             </div>
                         </div>
 

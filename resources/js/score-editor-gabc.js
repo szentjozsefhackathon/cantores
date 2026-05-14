@@ -3,14 +3,15 @@ export function gabcMixin() {
         zoom: 100,
         lyricSize: 12,
         staffSize: 100,
-        dropCapSize: 64,
         minLyricWordSpacing: 0,
         hyphenWidth: 0,
         condensingTolerance: 0.9,
+        spaceBetweenSystems: 0,
+        minSpaceBelowStaff: 0,
         pageRatio: 'auto',
         dropCaps: false,
         lyricFont: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
-        gabcFields: ['zoom', 'lyricSize', 'staffSize', 'dropCapSize', 'dropCaps', 'lyricFont', 'minLyricWordSpacing', 'hyphenWidth', 'condensingTolerance'],
+        gabcFields: ['zoom', 'lyricSize', 'staffSize', 'dropCaps', 'lyricFont', 'minLyricWordSpacing', 'hyphenWidth', 'condensingTolerance', 'spaceBetweenSystems', 'minSpaceBelowStaff'],
 
         renderGabcPreview() {
             const container = this.$refs.preview;
@@ -36,26 +37,18 @@ export function gabcMixin() {
                 const pageEl = pageEls[idx];
                 try {
                     const ctxt = new exsurge.ChantContext();
-                    const z = Number(this.zoom) / 100;
-                    const ptToPx = 4;
-                    ctxt.lyricTextSize = Number(this.lyricSize) * z * ptToPx;
-                    ctxt.lyricTextFont = this.lyricFont;
-                    ctxt.dropCapTextFont = this.lyricFont;
-                    ctxt.annotationTextFont = this.lyricFont;
-                    ctxt.dropCapTextSize = Number(this.dropCapSize) * z * ptToPx;
-                    ctxt.glyphScaling = (1.0 / 16.0) * (Number(this.staffSize) / 100) * z * ptToPx;
-                    ctxt.staffInterval = ctxt.glyphPunctumWidth * ctxt.glyphScaling;
-                    ctxt.staffLineWeight = Math.round(ctxt.glyphPunctumWidth * ctxt.glyphScaling / 8);
-                    ctxt.neumeLineWeight = ctxt.staffLineWeight;
-                    ctxt.dividerLineWeight = ctxt.neumeLineWeight;
-                    ctxt.episemaLineWeight = ctxt.neumeLineWeight;
+                    const z = Number(this.zoom) / 30;
+                    ctxt.setFont(this.lyricFont, Number(this.lyricSize) * z * 1.3);
+                    ctxt.setGlyphScaling((Number(this.staffSize) / 100) * z / 16);
                     if (Number(this.minLyricWordSpacing) > 0) {
-                        ctxt.minLyricWordSpacing = Number(this.minLyricWordSpacing) * z * ptToPx;
+                        ctxt.minLyricWordSpacing = Number(this.minLyricWordSpacing) * z;
                     }
                     if (Number(this.hyphenWidth) > 0) {
-                        ctxt.hyphenWidth = Number(this.hyphenWidth) * z * ptToPx;
+                        ctxt.hyphenWidth = Number(this.hyphenWidth) * z;
                     }
                     ctxt.condensingTolerance = Number(this.condensingTolerance);
+                    ctxt.spaceBetweenSystems = Number(this.spaceBetweenSystems);
+                    ctxt.minSpaceBelowStaff = Number(this.minSpaceBelowStaff);
                     const mappings = exsurge.Gabc.createMappingsFromSource(ctxt, pageSource);
                     const score = new exsurge.ChantScore(ctxt, mappings, this.dropCaps);
                     score.performLayoutAsync(ctxt, () => {

@@ -34,13 +34,14 @@ document.addEventListener('alpine:init', () => {
             });
             this.$watch('lyricSize', () => this.scheduleRender());
             this.$watch('staffSize', () => this.scheduleRender());
-            this.$watch('dropCapSize', () => this.scheduleRender());
             this.$watch('lyricFont', () => this.scheduleRender());
             this.$watch('pageRatio', (val) => { this.applyRatioSettings('gabc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('dropCaps', () => this.scheduleRender());
             this.$watch('minLyricWordSpacing', () => this.scheduleRender());
             this.$watch('hyphenWidth', () => this.scheduleRender());
             this.$watch('condensingTolerance', () => this.scheduleRender());
+            this.$watch('spaceBetweenSystems', () => this.scheduleRender());
+            this.$watch('minSpaceBelowStaff', () => this.scheduleRender());
             this.$watch('zoom', () => this.scheduleRender());
             this.$watch('abcLyricFont', () => this.scheduleRender());
             this.$watch('abcLyricSize', () => this.scheduleRender());
@@ -58,12 +59,13 @@ document.addEventListener('alpine:init', () => {
                         zoom: Number(this.zoom),
                         lyricSize: Number(this.lyricSize),
                         staffSize: Number(this.staffSize),
-                        dropCapSize: Number(this.dropCapSize),
                         dropCaps: !!this.dropCaps,
                         lyricFont: this.lyricFont,
                         minLyricWordSpacing: Number(this.minLyricWordSpacing),
                         hyphenWidth: Number(this.hyphenWidth),
                         condensingTolerance: Number(this.condensingTolerance),
+                        spaceBetweenSystems: Number(this.spaceBetweenSystems),
+                        minSpaceBelowStaff: Number(this.minSpaceBelowStaff),
                     },
                     ratio: this.pageRatio,
                 };
