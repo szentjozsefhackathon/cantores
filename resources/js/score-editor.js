@@ -10,6 +10,8 @@ document.addEventListener('alpine:init', () => {
         firstPageCopied: config.firstPageCopied ?? '',
         imageCopied: config.imageCopied ?? '',
         failedToCopy: config.failedToCopy ?? '',
+        shareLinkCopied: config.shareLinkCopied ?? '',
+        linkCopyFailed: config.linkCopyFailed ?? '',
         renderTimer: null,
         scoreSettings: config.scoreSettings ?? {},
         userDefaults: config.userDefaults ?? {},
@@ -46,6 +48,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcLyricFont', () => this.scheduleRender());
             this.$watch('abcLyricSize', () => this.scheduleRender());
             this.$watch('abcLyricBold', () => this.scheduleRender());
+            this.$watch('abcPageRatio', (val) => { this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
                 this.scheduleRender();
@@ -77,7 +80,7 @@ document.addEventListener('alpine:init', () => {
                         abcLyricSize: Number(this.abcLyricSize),
                         abcLyricBold: !!this.abcLyricBold,
                     },
-                    ratio: 'auto',
+                    ratio: this.abcPageRatio,
                 };
             }
             return { settings: {}, ratio: 'auto' };
@@ -103,12 +106,42 @@ document.addEventListener('alpine:init', () => {
 
         applyInitialSettings() {
             this.applyRatioSettings('gabc', this.pageRatio);
-            this.applyRatioSettings('abc', 'auto');
+            this.applyRatioSettings('abc', this.abcPageRatio);
         },
 
         saveScore() {
             const c = this.collectSettings();
             this.$wire.call('save', c.settings, c.ratio);
+        },
+
+        getShareData() {
+            const { settings, ratio } = this.collectSettings();
+            const allSettings = JSON.parse(JSON.stringify(this.scoreSettings || {}));
+            const format = this.$wire.format;
+            if (!allSettings[format]) { allSettings[format] = {}; }
+            allSettings[format][ratio] = settings;
+            return {
+                title: this.$wire.title,
+                format,
+                content: this.localContent,
+                settings: allSettings,
+            };
+        },
+
+        async generateShareUrl() {
+            const data = this.getShareData();
+            try {
+                const url = await this.$wire.createShareUrl(data);
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(url)
+                        .then(() => this.showCopyFeedback(this.shareLinkCopied))
+                        .catch(() => this.showCopyFeedback(this.linkCopyFailed));
+                } else {
+                    this.showCopyFeedback(this.clipboardNotSupported);
+                }
+            } catch (e) {
+                this.showCopyFeedback(this.linkCopyFailed);
+            }
         },
 
         saveAsDefault() {

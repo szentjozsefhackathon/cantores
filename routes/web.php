@@ -120,6 +120,10 @@ Route::livewire('/author/{author}/view', \App\Livewire\Pages\AuthorView::class)
 Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
     ->name('musics');
 
+// Shared score preview — public, no authentication required
+Route::livewire('/score/preview', \App\Livewire\Pages\ScoreEditor::class)
+    ->name('score.preview');
+
 Route::livewire('/scores', \App\Livewire\Pages\Scores::class)
     ->middleware(['auth', 'verified'])
     ->name('scores');

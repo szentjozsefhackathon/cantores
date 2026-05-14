@@ -12,6 +12,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 class ScoreEditor extends Component
@@ -31,8 +32,22 @@ class ScoreEditor extends Component
     /** @var array<string, array<string, array<string, mixed>>> */
     public array $settings = [];
 
+    public bool $isSharedLink = false;
+
     public function mount(mixed $score = null, mixed $music = null): void
     {
+        $d = (string) request()->query('d', '');
+
+        if ($d !== '') {
+            $this->isSharedLink = true;
+            $this->loadFromSharedData($d);
+            if (Auth::check()) {
+                $this->authorize('create', Score::class);
+            }
+
+            return;
+        }
+
         if ($score instanceof Score) {
             $this->authorize('update', $score);
             $this->score = $score->load('music');
@@ -61,9 +76,16 @@ class ScoreEditor extends Component
 
     public function rendering(IlluminateView $view): void
     {
-        $view->layout('layouts::app', [
-            'title' => $this->score ? __('Edit Score') : __('Create Score'),
-        ]);
+        $isGuestPreview = $this->isSharedLink && ! Auth::check();
+
+        $title = match (true) {
+            $this->score instanceof Score => __('Edit Score'),
+            $isGuestPreview => __('Score Preview'),
+            default => __('Create Score'),
+        };
+
+        $layout = $isGuestPreview ? 'layouts::app.main' : 'layouts::app';
+        $view->layout($layout, ['title' => $title]);
     }
 
     /**
@@ -128,6 +150,30 @@ class ScoreEditor extends Component
         $this->dispatch('score-defaults-saved');
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    #[Renderless]
+    public function createShareUrl(array $data): string
+    {
+        $title = is_string($data['title'] ?? null) ? $data['title'] : '';
+        $format = ScoreFormat::tryFrom(is_string($data['format'] ?? null) ? $data['format'] : '');
+        $content = is_string($data['content'] ?? null) ? $data['content'] : '';
+        $settings = is_array($data['settings'] ?? null) ? $data['settings'] : [];
+
+        $json = (string) json_encode([
+            'title' => $title,
+            'format' => $format instanceof ScoreFormat ? $format->value : ScoreFormat::Abc->value,
+            'content' => $content,
+            'settings' => $settings,
+        ]);
+
+        $compressed = gzdeflate($json, 9);
+        $encoded = rtrim(strtr(base64_encode((string) $compressed), '+/', '-_'), '=');
+
+        return route('score.preview', ['d' => $encoded]);
+    }
+
     public function delete(): void
     {
         abort_unless($this->score instanceof Score, 404);
@@ -171,7 +217,38 @@ class ScoreEditor extends Component
         return view('livewire.pages.score-editor', [
             'formats' => ScoreFormat::cases(),
             'userDefaults' => $user instanceof \App\Models\User ? ($user->score_settings ?? []) : [],
+            'isSharedLink' => $this->isSharedLink,
+            'isGuest' => ! Auth::check(),
         ]);
+    }
+
+    private function loadFromSharedData(string $d): void
+    {
+        $padded = str_replace(['-', '_'], ['+', '/'], $d);
+        $remainder = strlen($padded) % 4;
+        if ($remainder !== 0) {
+            $padded = str_pad($padded, strlen($padded) + (4 - $remainder), '=');
+        }
+
+        $decoded = base64_decode($padded, strict: true);
+        if ($decoded === false) {
+            return;
+        }
+
+        // Try deflate decompression (new format), fall back to raw JSON (legacy format)
+        $inflated = @gzinflate($decoded);
+        $json = $inflated !== false ? $inflated : $decoded;
+
+        $data = json_decode($json, true);
+        if (! is_array($data)) {
+            return;
+        }
+
+        $this->title = is_string($data['title'] ?? null) ? $data['title'] : '';
+        $format = ScoreFormat::tryFrom(is_string($data['format'] ?? null) ? $data['format'] : '');
+        $this->format = $format instanceof ScoreFormat ? $format->value : ScoreFormat::Abc->value;
+        $this->content = is_string($data['content'] ?? null) ? $data['content'] : '';
+        $this->settings = is_array($data['settings'] ?? null) ? $data['settings'] : [];
     }
 
     private function resolveMusicId(?int $musicId): ?int

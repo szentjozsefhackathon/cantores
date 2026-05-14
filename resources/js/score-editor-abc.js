@@ -3,7 +3,8 @@ export function abcMixin() {
         abcLyricFont: 'Palatino Linotype',
         abcLyricSize: 13,
         abcLyricBold: false,
-        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold'],
+        abcPageRatio: 'auto',
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio'],
 
         renderAbcPreview() {
             const container = this.$refs.abcPreview;
@@ -21,6 +22,9 @@ export function abcMixin() {
             }
             const pageEl = document.createElement('div');
             pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
+            if (this.abcPageRatio !== 'auto') {
+                pageEl.style.aspectRatio = this.abcPageRatio;
+            }
             container.appendChild(pageEl);
             try {
                 const virtualWidth = this.getVirtualCanvasSize('abc').width;
