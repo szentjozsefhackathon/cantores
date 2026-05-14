@@ -360,6 +360,22 @@ document.addEventListener('alpine:init', () => {
             }).catch(e => console.error('[score-editor] export error:', e));
         },
 
+        fillExample() {
+            const examples = {
+                abc: `K:d minor
+L:1/4
+ABAG | A G2 z | A A G (A1/2G1/2) | F2 E2 | ABAG | A G2 z | A A G (A1/2G1/2) | F2 E2 | D E F E | D4 | F F G/ G3/2 | A4 | A A G A | B2 A2 | DEFG | E2 D2 |]
+w: Bol-dog-asz-szony a-nyánk, ré-gi nagy pát-_ró-nánk! Nagy ín-ség-ben lé-vén így szó-lít meg_ ha-zánk: Ma-gyar-or-szág-ról, é-des ha-zánk-ról, ne fe-lejt-kez-zél el sze-gény ma-gya-rok-ról!`,
+                gabc: `(c3) KY(d)ri(gxfgh)e(h.ivHGh.) *(kvIH'Ghih.) (,) e(gxhvFE'Dgf)lé(e')i(e)son.(d.) (::)
+`,
+            };
+            const example = examples[this.$wire.format] ?? '';
+            if (!example) { return; }
+            this.$wire.content = example;
+            this.localContent = example;
+            this.scheduleRender();
+        },
+
         async copyImage() {
             const previewEl = this.$wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
             if (!previewEl) { return; }

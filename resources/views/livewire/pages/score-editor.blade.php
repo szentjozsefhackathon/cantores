@@ -120,6 +120,12 @@
                         <flux:error name="content" />
                     </flux:field>
 
+                    <div x-show="localContent.trim() === ''" class="flex">
+                        <flux:button size="sm" variant="ghost" icon="light-bulb" x-on:click="fillExample()">
+                            {{ __('Show me an example') }}
+                        </flux:button>
+                    </div>
+
                     {{-- GABC Settings Toolbar --}}
                     <div x-show="$wire.format === 'gabc'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
                         <flux:tooltip :content="__('Zoom (%)')">
@@ -273,7 +279,7 @@
                         <flux:tooltip :content="__('Staff separation')">
                             <div class="flex items-center gap-1">
                                 <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                                <flux:input size="sm" type="number" x-model="abcStaffSep" min="20" max="120" step="1" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="abcStaffSep" min="15" max="120" step="1" class="w-16" />
                             </div>
                         </flux:tooltip>
 
