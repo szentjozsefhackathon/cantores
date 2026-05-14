@@ -120,30 +120,30 @@
                         </div>
 
                         {{-- GABC Settings --}}
-                        <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4 shrink-0 space-y-3 md:mt-0 md:w-56">
+                        <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4 shrink-0 space-y-3 md:mt-0 md:w-44">
                             <flux:heading size="sm">{{ __('Settings') }}</flux:heading>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Zoom') }}</span>
-                                <input type="range" x-model="zoom" min="50" max="300" step="5" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="zoom + '%'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Zoom')" />
+                                <flux:input size="sm" type="number" x-model="zoom" min="50" max="300" step="5" class="flex-1" />
+                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">%</span>
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Lyric Size') }}</span>
-                                <input type="range" x-model="lyricSize" min="8" max="60" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="lyricSize + 'pt'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Lyric Size')" />
+                                <flux:input size="sm" type="number" x-model="lyricSize" min="8" max="60" step="1" class="flex-1" />
+                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">pt</span>
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Staff Size') }}</span>
-                                <input type="range" x-model="staffSize" min="30" max="300" step="5" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="staffSize + '%'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Staff Size')" />
+                                <flux:input size="sm" type="number" x-model="staffSize" min="30" max="300" step="5" class="flex-1" />
+                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">%</span>
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Page Ratio') }}</span>
-                                <flux:select x-model="pageRatio" class="flex-1 text-xs">
+                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Page Ratio')" />
+                                <flux:select size="sm" x-model="pageRatio" class="flex-1 text-xs">
                                     <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
                                     <flux:select.option value="16/9">16:9</flux:select.option>
                                     <flux:select.option value="4/3">4:3</flux:select.option>
@@ -152,13 +152,13 @@
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Drop Caps') }}</span>
+                                <flux:icon name="text-initial" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Drop Caps')" />
                                 <flux:switch x-model="dropCaps" />
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Font') }}</span>
-                                <flux:select x-model="lyricFont" class="flex-1 text-xs">
+                                <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Font')" />
+                                <flux:select size="sm" x-model="lyricFont" class="flex-1 text-xs">
                                     <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
                                     <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
                                     <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
@@ -170,46 +170,43 @@
                             <flux:heading size="xs">{{ __('Lyric Spacing') }}</flux:heading>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Word Spacing') }}</span>
-                                <input type="range" x-model="minLyricWordSpacing" min="0" max="40" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="minLyricWordSpacing == 0 ? 'auto' : minLyricWordSpacing + 'px'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="space" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Word Spacing')" />
+                                <flux:input size="sm" type="number" x-model="minLyricWordSpacing" min="0" max="40" step="1" class="flex-1" />
+                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">px</span>
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Hyphen Width') }}</span>
-                                <input type="range" x-model="hyphenWidth" min="0" max="40" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="hyphenWidth == 0 ? 'auto' : hyphenWidth + 'px'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="minus" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Hyphen Width')" />
+                                <flux:input size="sm" type="number" x-model="hyphenWidth" min="0" max="40" step="1" class="flex-1" />
+                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">px</span>
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Condensing') }}</span>
-                                <input type="range" x-model="condensingTolerance" min="0" max="1" step="0.05" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="condensingTolerance" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="ruler-dimension-line" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Condensing')" />
+                                <flux:input size="sm" type="number" x-model="condensingTolerance" min="0" max="1" step="0.05" class="flex-1" />
                             </div>
 
                             <flux:separator />
                             <flux:heading size="xs">{{ __('Line Spacing') }}</flux:heading>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Between Lines') }}</span>
-                                <input type="range" x-model="spaceBetweenSystems" min="-2" max="2" step="0.1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="spaceBetweenSystems" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Between Lines')" />
+                                <flux:input size="sm" type="number" x-model="spaceBetweenSystems" min="-2" max="2" step="0.1" class="flex-1" />
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Notes to Text') }}</span>
-                                <input type="range" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="minSpaceBelowStaff" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Notes to Text')" />
+                                <flux:input size="sm" type="number" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="flex-1" />
                             </div>
                         </div>
 
                         {{-- ABC Settings --}}
-                        <div x-show="$wire.format === 'abc'" x-cloak class="mt-4 shrink-0 space-y-3 md:mt-0 md:w-56">
+                        <div x-show="$wire.format === 'abc'" x-cloak class="mt-4 shrink-0 space-y-3 md:mt-0 md:w-44">
                             <flux:heading size="sm">{{ __('Settings') }}</flux:heading>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Page Ratio') }}</span>
-                                <flux:select x-model="abcPageRatio" class="flex-1 text-xs">
+                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Page Ratio')" />
+                                <flux:select size="sm" x-model="abcPageRatio" class="flex-1 text-xs">
                                     <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
                                     <flux:select.option value="16/9">16:9</flux:select.option>
                                     <flux:select.option value="4/3">4:3</flux:select.option>
@@ -218,8 +215,8 @@
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Font') }}</span>
-                                <flux:select x-model="abcLyricFont" class="flex-1 text-xs">
+                                <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Font')" />
+                                <flux:select size="sm" x-model="abcLyricFont" class="flex-1 text-xs">
                                     <flux:select.option value="Palatino Linotype">Palatino</flux:select.option>
                                     <flux:select.option value="Garamond">Garamond</flux:select.option>
                                     <flux:select.option value="Times New Roman">Times New Roman</flux:select.option>
@@ -228,32 +225,30 @@
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Lyric Size') }}</span>
-                                <input type="range" x-model="abcLyricSize" min="8" max="40" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="abcLyricSize + 'pt'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Lyric Size')" />
+                                <flux:input size="sm" type="number" x-model="abcLyricSize" min="8" max="40" step="1" class="flex-1" />
+                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">pt</span>
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Bold') }}</span>
+                                <flux:icon name="bold" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Bold')" />
                                 <flux:checkbox x-model="abcLyricBold" />
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Note Spacing') }}</span>
-                                <input type="range" x-model="abcNoteSpacing" min="1" max="3" step="0.1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="parseFloat(abcNoteSpacing).toFixed(1)" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="space" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Note Spacing')" />
+                                <flux:input size="sm" type="number" x-model="abcNoteSpacing" min="1" max="3" step="0.1" class="flex-1" />
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Staff Sep') }}</span>
-                                <input type="range" x-model="abcStaffSep" min="20" max="120" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="abcStaffSep" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Staff Separation')" />
+                                <flux:input size="sm" type="number" x-model="abcStaffSep" min="20" max="120" step="1" class="flex-1" />
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <span class="w-28 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ __('Vocal Space') }}</span>
-                                <input type="range" x-model="abcVocalSpace" min="0" max="40" step="1" class="flex-1 accent-zinc-800 dark:accent-zinc-200" />
-                                <span x-text="abcVocalSpace + 'pt'" class="w-10 text-right text-xs tabular-nums text-zinc-600 dark:text-zinc-300"></span>
+                                <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" :title="__('Vocal Space')" />
+                                <flux:input size="sm" type="number" x-model="abcVocalSpace" min="0" max="40" step="1" class="flex-1" />
+                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">pt</span>
                             </div>
                         </div>
                     </div>
