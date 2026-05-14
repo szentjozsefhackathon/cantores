@@ -99,7 +99,7 @@
                 @endif
 
 <script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
-<script src="http://moinejf.free.fr/js/abc2svg-1.js"></script>
+<script src="{{ asset('js/abc2svg-1.js') }}"></script>
 
                 <div
                     x-data="scoreEditor({
