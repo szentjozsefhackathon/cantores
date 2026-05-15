@@ -149,7 +149,7 @@ services:
   webgrind:
     image: jokkedk/webgrind:latest
     ports:
-      - "${WEBGRIND_EXTERNAL_PORT:-8081}:80"
+      - "${WEBGRIND_EXTERNAL_PORT:-8281}:80"
     volumes:
       - xdebug-profiles:/tmp
     networks:

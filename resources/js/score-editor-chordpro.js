@@ -1,20 +1,47 @@
 import ChordSheetJS from 'chordsheetjs';
 
+function convertGermanNote(note) {
+    if (note === 'H') { return 'B'; }
+    if (note === 'B') { return 'Bb'; }
+    return note;
+}
+
+function germanChordsToEnglish(content) {
+    content = content.replace(/\[([^\]]+)\]/g, (_, chord) => {
+        let result = chord.replace(/^(H|Bb?)/, n => convertGermanNote(n));
+        result = result.replace(/\/(H|Bb?)/, (_, n) => '/' + convertGermanNote(n));
+        return '[' + result + ']';
+    });
+    content = content.replace(/\{key:\s*(H|Bb?)\s*\}/gi, (_, k) => `{key: ${convertGermanNote(k)}}`);
+    return content;
+}
+
+function englishChordsToGerman(html) {
+    return html.replace(/(<div class="chord">)(.*?)(<\/div>)/g, (_, open, content, close) => {
+        const converted = content.replace(/B(?!b)/g, 'H');
+        return open + converted + close;
+    });
+}
+
 export function chordproMixin() {
     return {
         chordproFontSize: 14,
         chordproFontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
         chordproColumns: 1,
         chordproTranspose: 0,
-        chordproFields: ['chordproFontSize', 'chordproFontFamily', 'chordproColumns', 'chordproTranspose'],
+        chordproGermanNotation: false,
+        chordproFields: ['chordproFontSize', 'chordproFontFamily', 'chordproColumns', 'chordproTranspose', 'chordproGermanNotation'],
 
         renderChordproPreview() {
             const container = this.$refs.chordproPreview;
             if (!container) { return; }
             container.innerHTML = '';
             this.hasPages = false;
-            const content = this.localContent;
+            let content = this.localContent;
             if (!content || !content.trim()) { return; }
+            if (this.chordproGermanNotation) {
+                content = germanChordsToEnglish(content);
+            }
             try {
                 const parser = new ChordSheetJS.ChordProParser();
                 const formatter = new ChordSheetJS.HtmlDivFormatter();
@@ -23,7 +50,7 @@ export function chordproMixin() {
                 if (transpose !== 0) {
                     song = song.transpose(transpose);
                 }
-                const html = formatter.format(song);
+                let html = englishChordsToGerman(formatter.format(song));
                 const pageEl = document.createElement('div');
                 pageEl.className = 'chordpro-preview overflow-auto rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900';
                 pageEl.style.fontFamily = this.chordproFontFamily;
@@ -58,8 +85,11 @@ export function chordproMixin() {
         },
 
         exportChordproHtml() {
-            const content = this.localContent;
+            let content = this.localContent;
             if (!content || !content.trim()) { return; }
+            if (this.chordproGermanNotation) {
+                content = germanChordsToEnglish(content);
+            }
             try {
                 const parser = new ChordSheetJS.ChordProParser();
                 const formatter = new ChordSheetJS.HtmlDivFormatter();
@@ -68,7 +98,7 @@ export function chordproMixin() {
                 if (transpose !== 0) {
                     song = song.transpose(transpose);
                 }
-                const body = formatter.format(song);
+                let body = englishChordsToGerman(formatter.format(song));
                 const title = this.$wire.title || 'score';
                 const fontFamily = this.chordproFontFamily;
                 const fontSize = Number(this.chordproFontSize);

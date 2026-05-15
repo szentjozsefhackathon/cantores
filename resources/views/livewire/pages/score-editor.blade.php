@@ -268,6 +268,13 @@
                             </div>
                         </flux:tooltip>
 
+                        <flux:tooltip :content="__('German notation (H = B, B = B♭)')">
+                            <div class="flex items-center gap-1">
+                                <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400">H</span>
+                                <flux:switch x-model="chordproGermanNotation" />
+                            </div>
+                        </flux:tooltip>
+
                         @if(!$isGuest)
                         <flux:tooltip :content="__('Save as my default')">
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />

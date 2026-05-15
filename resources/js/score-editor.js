@@ -70,6 +70,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('chordproFontFamily', () => this.scheduleRender());
             this.$watch('chordproColumns', () => this.scheduleRender());
             this.$watch('chordproTranspose', () => this.scheduleRender());
+            this.$watch('chordproGermanNotation', () => this.scheduleRender());
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
                 this.scheduleRender();
@@ -114,6 +115,7 @@ document.addEventListener('alpine:init', () => {
                         chordproFontFamily: this.chordproFontFamily,
                         chordproColumns: Number(this.chordproColumns),
                         chordproTranspose: Number(this.chordproTranspose),
+                        chordproGermanNotation: !!this.chordproGermanNotation,
                     },
                     ratio: 'auto',
                 };
