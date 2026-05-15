@@ -37,7 +37,15 @@ document.addEventListener('alpine:init', () => {
             });
             this.$watch('$wire.format', (val) => {
                 console.log('[score-editor] $wire.format changed:', val);
+                if (val === 'chordpro') {
+                    this.syncChordproTitle(this.$wire.title);
+                }
                 this.scheduleRender();
+            });
+            this.$watch('$wire.title', (val) => {
+                if (this.$wire.format === 'chordpro') {
+                    this.syncChordproTitle(val);
+                }
             });
             this.$watch('lyricSize', () => this.scheduleRender());
             this.$watch('staffSize', () => this.scheduleRender());

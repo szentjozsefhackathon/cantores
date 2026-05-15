@@ -41,6 +41,22 @@ export function chordproMixin() {
             }
         },
 
+        syncChordproTitle(title) {
+            const directive = `{title: ${title}}`;
+            const titleRe = /^\{title:[^}]*\}/m;
+            let content = this.localContent;
+            if (titleRe.test(content)) {
+                content = content.replace(titleRe, directive);
+            } else if (title) {
+                content = content ? directive + '\n' + content : directive;
+            }
+            if (content !== this.localContent) {
+                this.localContent = content;
+                this.$wire.content = content;
+                this.scheduleRender();
+            }
+        },
+
         exportChordproHtml() {
             const content = this.localContent;
             if (!content || !content.trim()) { return; }
