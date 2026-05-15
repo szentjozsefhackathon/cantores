@@ -126,15 +126,14 @@ document.addEventListener('alpine:init', () => {
 
         getShareData() {
             const { settings, ratio } = this.collectSettings();
-            const allSettings = JSON.parse(JSON.stringify(this.scoreSettings || {}));
             const format = this.$wire.format;
-            if (!allSettings[format]) { allSettings[format] = {}; }
-            allSettings[format][ratio] = settings;
+            const formatSettings = JSON.parse(JSON.stringify((this.scoreSettings || {})[format] || {}));
+            formatSettings[ratio] = settings;
             return {
                 title: this.$wire.title,
                 format,
                 content: this.localContent,
-                settings: allSettings,
+                settings: { [format]: formatSettings },
             };
         },
 

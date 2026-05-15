@@ -124,6 +124,25 @@ it('populates fields from gzip-compressed shared url data', function () {
         ->assertSet('isSharedLink', true);
 });
 
+it('shared score preview page has noindex meta tag', function () {
+    $d = makeGzipSharePayload([
+        'title' => 'Private Score',
+        'format' => 'abc',
+        'content' => "X:1\nT:Private\nK:C\nC D|",
+        'settings' => [],
+    ]);
+
+    get(route('score.preview', ['d' => $d]))
+        ->assertOk()
+        ->assertSee('noindex, nofollow', false);
+});
+
+it('score preview page without shared data does not have noindex', function () {
+    get(route('score.preview'))
+        ->assertOk()
+        ->assertSee('index, follow', false);
+});
+
 it('createShareUrl returns a valid url that can be parsed back', function () {
     $user = User::factory()->create();
     actingAs($user);

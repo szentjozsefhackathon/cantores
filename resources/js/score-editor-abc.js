@@ -5,7 +5,7 @@ export function abcMixin() {
         abcLyricBold: false,
         abcPageRatio: 'auto',
         abcPageScale: 3,
-        abcNoteSpacing: 1.414,
+        abcNoteSpacing: 1.4,
         abcStaffSep: 46,
         abcVocalSpace: 10,
         abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace'],

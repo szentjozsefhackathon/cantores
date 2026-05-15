@@ -90,7 +90,7 @@ class ScoreEditor extends Component
         };
 
         $layout = $isGuest ? 'layouts::app.main' : 'layouts::app';
-        $view->layout($layout, ['title' => $title]);
+        $view->layout($layout, ['title' => $title, 'noindex' => $this->isSharedLink]);
     }
 
     /**
