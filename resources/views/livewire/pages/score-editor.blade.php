@@ -398,6 +398,85 @@
                         </div>
                     </div>
 
+                    {{-- Aretino Settings Toolbar --}}
+                    <div x-show="$wire.format === 'aretino'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <flux:tooltip :content="__('Zoom (%)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="aretinoZoom" min="50" max="300" step="5" class="w-16" />
+                            </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Staff size (%)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="aretinoStaffSize" min="30" max="300" step="5" class="w-16" />
+                            </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Lyric size (pt)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="aretinoLyricSize" min="8" max="60" step="1" class="w-16" />
+                            </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Note spacing')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="space" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="aretinoNoteSpacing" min="0.5" max="3" step="0.1" class="w-16" />
+                            </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Font')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:select size="sm" x-model="aretinoLyricFont" class="w-32 text-xs">
+                                    <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
+                                    <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
+                                    <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
+                                    <flux:select.option value="'Franklin Gothic Book', 'Franklin Gothic Medium', 'ITC Franklin Gothic', Arial, sans-serif">Franklin Gothic</flux:select.option>
+                                </flux:select>
+                            </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Page ratio')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:select size="sm" x-model="aretinoPageRatio" class="w-20 text-xs">
+                                    <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
+                                    <flux:select.option value="16/9">16:9</flux:select.option>
+                                    <flux:select.option value="4/3">4:3</flux:select.option>
+                                    <flux:select.option value="1/1">1:1</flux:select.option>
+                                </flux:select>
+                            </div>
+                        </flux:tooltip>
+
+                        @if(!$isGuest)
+                        <flux:tooltip :content="__('Save as my default for this ratio')">
+                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
+                        </flux:tooltip>
+                        @endif
+                    </div>
+
+                    {{-- Aretino Preview --}}
+                    <div x-show="$wire.format === 'aretino'" x-cloak class="mt-4">
+                        <div x-ref="aretinoPreview" class="min-h-16 space-y-4" wire:ignore></div>
+
+                        <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
+                            <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
+                            <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
+                                {{ __('Share') }}
+                            </flux:button>
+                            <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
+                                {{ __('Copy as Image') }}
+                            </flux:button>
+                            <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
+                                {{ __('Export PNG') }}
+                            </flux:button>
+                        </div>
+                    </div>
+
                     {{-- ChordPro Preview --}}
                     <div x-show="$wire.format === 'chordpro'" x-cloak class="mt-4">
                         <div x-ref="chordproPreview" class="min-h-16 space-y-4" wire:ignore></div>

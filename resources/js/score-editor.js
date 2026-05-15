@@ -1,6 +1,7 @@
 import { abcMixin } from './score-editor-abc.js';
 import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
+import { aretinoMixin } from './score-editor-aretino.js';
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('scoreEditor', (config = {}) => ({
@@ -27,6 +28,7 @@ document.addEventListener('alpine:init', () => {
         ...abcMixin(),
         ...gabcMixin(),
         ...chordproMixin(),
+        ...aretinoMixin(),
 
         init() {
             console.log('[score-editor] init, exsurge available:', !!window.exsurge, 'format:', this.$wire.format);
@@ -73,6 +75,12 @@ document.addEventListener('alpine:init', () => {
             this.$watch('chordproColumns', () => this.scheduleRender());
             this.$watch('chordproTranspose', () => this.scheduleRender());
             this.$watch('chordproGermanNotation', () => this.scheduleRender());
+            this.$watch('aretinoLyricFont', () => this.scheduleRender());
+            this.$watch('aretinoLyricSize', () => this.scheduleRender());
+            this.$watch('aretinoStaffSize', () => this.scheduleRender());
+            this.$watch('aretinoZoom', () => this.scheduleRender());
+            this.$watch('aretinoNoteSpacing', () => this.scheduleRender());
+            this.$watch('aretinoPageRatio', (val) => { this.applyRatioSettings('aretino', val); this.$nextTick(() => this.scheduleRender()); });
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
                 this.scheduleRender();
@@ -122,6 +130,18 @@ document.addEventListener('alpine:init', () => {
                     ratio: 'auto',
                 };
             }
+            if (this.$wire.format === 'aretino') {
+                return {
+                    settings: {
+                        aretinoLyricFont: this.aretinoLyricFont,
+                        aretinoLyricSize: Number(this.aretinoLyricSize),
+                        aretinoStaffSize: Number(this.aretinoStaffSize),
+                        aretinoZoom: Number(this.aretinoZoom),
+                        aretinoNoteSpacing: Number(this.aretinoNoteSpacing),
+                    },
+                    ratio: this.aretinoPageRatio,
+                };
+            }
             return { settings: {}, ratio: 'auto' };
         },
 
@@ -129,6 +149,9 @@ document.addEventListener('alpine:init', () => {
             if (format === 'abc') { return { width: 1920, height: null }; }
             const width = 1920;
             const heights = { '16/9': 1080, '4/3': 1440, '1/1': 1920 };
+            if (format === 'aretino') {
+                return { width, height: heights[this.aretinoPageRatio] ?? null };
+            }
             return { width, height: heights[this.pageRatio] ?? null };
         },
 
@@ -147,6 +170,7 @@ document.addEventListener('alpine:init', () => {
             this.applyRatioSettings('gabc', this.pageRatio);
             this.applyRatioSettings('abc', this.abcPageRatio);
             this.applyRatioSettings('chordpro', 'auto');
+            this.applyRatioSettings('aretino', this.aretinoPageRatio);
         },
 
         saveScore() {
@@ -204,7 +228,7 @@ document.addEventListener('alpine:init', () => {
             const isAuto = !targetSuffix;
             const lines = content.split('\n');
             let headerEnd = -1;
-            if (format === 'gabc') {
+            if (format === 'gabc' || format === 'aretino') {
                 for (let i = 0; i < lines.length; i++) {
                     if (/^%%\s*$/.test(lines[i])) { headerEnd = i; break; }
                 }
@@ -260,6 +284,10 @@ document.addEventListener('alpine:init', () => {
             }
             if (this.$wire.format === 'chordpro') {
                 this.renderChordproPreview();
+                return;
+            }
+            if (this.$wire.format === 'aretino') {
+                this.renderAretinoPreview();
                 return;
             }
             this.renderGabcPreview();
@@ -327,7 +355,9 @@ document.addEventListener('alpine:init', () => {
                 this.exportChordproHtml();
                 return;
             }
-            const previewEl = this.$wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
+            const previewEl = this.$wire.format === 'abc'
+                ? this.$refs.abcPreview
+                : (this.$wire.format === 'aretino' ? this.$refs.aretinoPreview : this.$refs.preview);
             if (!previewEl) { return; }
             const svgs = Array.from(previewEl.querySelectorAll('svg'));
             if (!svgs.length) { return; }
@@ -406,6 +436,18 @@ ABAG | A G2 z | A A G (A1/2G1/2) | F2 E2 | ABAG | A G2 z | A A G (A1/2G1/2) | F2
 w: Bol-dog-asz-szony a-nyánk, ré-gi nagy pát-_ró-nánk! Nagy ín-ség-ben lé-vén így szó-lít meg_ ha-zánk: Ma-gyar-or-szág-ról, é-des ha-zánk-ról, ne fe-lejt-kez-zél el sze-gény ma-gya-rok-ról!`,
                 gabc: `(c3) KY(d)ri(gxfgh)e(h.ivHGh.) *(kvIH'Ghih.) (,) e(gxhvFE'Dgf)lé(e')i(e)son.(d.) (::)
 `,
+                aretino: `;cím: Kyrie I
+;mód: I
+%%
+(g2) d fg h_ * g. fgfe d' d d. (::)
+w:   Ky-ri-e    e-lé- i-son.
+
+fg h_ * g. fgfe d' d d. (::)
+w: Chris-te e-lé- i-son.
+
+d fgfe d * c. d fg h_ d. (::)
+w: Ky-ri- e e-lé-i- son.
+`,
                 chordpro: `{title: Minden, mi él}
 {subtitle: K 272}
 {soc}
@@ -427,7 +469,9 @@ Refr.
         },
 
         async copyImage() {
-            const previewEl = this.$wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
+            const previewEl = this.$wire.format === 'abc'
+                ? this.$refs.abcPreview
+                : (this.$wire.format === 'aretino' ? this.$refs.aretinoPreview : this.$refs.preview);
             if (!previewEl) { return; }
             const svgs = Array.from(previewEl.querySelectorAll('svg'));
             if (!svgs.length) { return; }
