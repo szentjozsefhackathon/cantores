@@ -118,6 +118,20 @@ select:focus[data-flux-control] {
     @apply cursor-pointer
 }
 
+/* ChordPro preview styles */
+.chordpro-preview h1.title { font-size: 1.6em; font-weight: bold; margin: 0 0 0.2em; }
+.chordpro-preview h2.subtitle { font-size: 1.1em; font-weight: normal; margin: 0 0 0.2em; }
+.chordpro-preview p.artist { margin: 0 0 1.5em; color: #555; }
+.chordpro-preview .paragraph { margin-bottom: 1.5rem; }
+.chordpro-preview .paragraph-header { font-weight: bold; font-style: italic; color: #666; margin-bottom: 0.4rem; }
+.chordpro-preview .row { display: flex; flex-wrap: wrap; margin-bottom: 0.25rem; align-items: flex-end; }
+.chordpro-preview .column { display: flex; flex-direction: column; margin-right: 0.1em; }
+.chordpro-preview .chord { font-weight: bold; color: #1d4ed8; min-height: 1.4em; white-space: nowrap; }
+.chordpro-preview .lyrics { white-space: pre; }
+.dark .chordpro-preview p.artist { color: #9ca3af; }
+.dark .chordpro-preview .paragraph-header { color: #9ca3af; }
+.dark .chordpro-preview .chord { color: #60a5fa; }
+
 /* Markdown prose styles */
 .prose {
     @apply text-neutral-700 dark:text-neutral-200 leading-relaxed;

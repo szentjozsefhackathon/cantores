@@ -44,6 +44,14 @@ class ScoreFactory extends Factory
         ]);
     }
 
+    public function chordpro(): static
+    {
+        return $this->state([
+            'format' => ScoreFormat::ChordPro,
+            'content' => "{title: Sample ChordPro}\n\n[G]Amazing [C]grace how [G]sweet the sound",
+        ]);
+    }
+
     public function unattached(): static
     {
         return $this->state(['music_id' => null]);

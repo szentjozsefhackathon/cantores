@@ -1,5 +1,6 @@
 import { abcMixin } from './score-editor-abc.js';
 import { gabcMixin } from './score-editor-gabc.js';
+import { chordproMixin } from './score-editor-chordpro.js';
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('scoreEditor', (config = {}) => ({
@@ -23,6 +24,7 @@ document.addEventListener('alpine:init', () => {
 
         ...abcMixin(),
         ...gabcMixin(),
+        ...chordproMixin(),
 
         init() {
             console.log('[score-editor] init, exsurge available:', !!window.exsurge, 'format:', this.$wire.format);
@@ -56,6 +58,10 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcVocalSpace', () => this.scheduleRender());
             this.$watch('abcPageScale', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val) => { this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
+            this.$watch('chordproFontSize', () => this.scheduleRender());
+            this.$watch('chordproFontFamily', () => this.scheduleRender());
+            this.$watch('chordproColumns', () => this.scheduleRender());
+            this.$watch('chordproTranspose', () => this.scheduleRender());
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
                 this.scheduleRender();
@@ -93,6 +99,17 @@ document.addEventListener('alpine:init', () => {
                     ratio: this.abcPageRatio,
                 };
             }
+            if (this.$wire.format === 'chordpro') {
+                return {
+                    settings: {
+                        chordproFontSize: Number(this.chordproFontSize),
+                        chordproFontFamily: this.chordproFontFamily,
+                        chordproColumns: Number(this.chordproColumns),
+                        chordproTranspose: Number(this.chordproTranspose),
+                    },
+                    ratio: 'auto',
+                };
+            }
             return { settings: {}, ratio: 'auto' };
         },
 
@@ -117,6 +134,7 @@ document.addEventListener('alpine:init', () => {
         applyInitialSettings() {
             this.applyRatioSettings('gabc', this.pageRatio);
             this.applyRatioSettings('abc', this.abcPageRatio);
+            this.applyRatioSettings('chordpro', 'auto');
         },
 
         saveScore() {
@@ -228,6 +246,10 @@ document.addEventListener('alpine:init', () => {
                 this.renderAbcPreview();
                 return;
             }
+            if (this.$wire.format === 'chordpro') {
+                this.renderChordproPreview();
+                return;
+            }
             this.renderGabcPreview();
         },
 
@@ -289,6 +311,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         exportPng() {
+            if (this.$wire.format === 'chordpro') {
+                this.exportChordproHtml();
+                return;
+            }
             const previewEl = this.$wire.format === 'abc' ? this.$refs.abcPreview : this.$refs.preview;
             if (!previewEl) { return; }
             const svgs = Array.from(previewEl.querySelectorAll('svg'));
@@ -368,6 +394,22 @@ ABAG | A G2 z | A A G (A1/2G1/2) | F2 E2 | ABAG | A G2 z | A A G (A1/2G1/2) | F2
 w: Bol-dog-asz-szony a-nyánk, ré-gi nagy pát-_ró-nánk! Nagy ín-ség-ben lé-vén így szó-lít meg_ ha-zánk: Ma-gyar-or-szág-ról, é-des ha-zánk-ról, ne fe-lejt-kez-zél el sze-gény ma-gya-rok-ról!`,
                 gabc: `(c3) KY(d)ri(gxfgh)e(h.ivHGh.) *(kvIH'Ghih.) (,) e(gxhvFE'Dgf)lé(e')i(e)son.(d.) (::)
 `,
+                chordpro: `{title: Amazing Grace}
+{artist: John Newton}
+
+{start_of_verse: Verse 1}
+[G]Amazing [G7]grace, how [C]sweet the [G]sound
+That [G]saved a [Em]wretch like [D]me
+I [G]once was [G7]lost, but [C]now am [G]found
+Was [G]blind but [D]now I [G]see
+{end_of_verse}
+
+{start_of_chorus}
+[G]Amazing [G7]grace how [C]sweet the [G]sound
+[Em]Grace that [D]taught my [G]heart to [G7]fear
+[C]And grace [G]my fears [Em]relieved
+[G]How [D]precious [G]did that grace appear
+{end_of_chorus}`,
             };
             const example = examples[this.$wire.format] ?? '';
             if (!example) { return; }

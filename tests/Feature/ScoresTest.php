@@ -218,6 +218,26 @@ it('persists abc per-ratio settings including lyric options', function () {
     ]);
 });
 
+it('creates an unattached chordpro score', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->set('title', 'My ChordPro Score')
+        ->set('format', ScoreFormat::ChordPro->value)
+        ->set('content', "{title: My ChordPro Score}\n\n[G]Amazing [C]grace how [G]sweet the sound")
+        ->call('save')
+        ->assertHasNoErrors();
+
+    assertDatabaseHas('scores', [
+        'user_id' => $user->id,
+        'music_id' => null,
+        'title' => 'My ChordPro Score',
+        'format' => ScoreFormat::ChordPro->value,
+    ]);
+});
+
 it('does not allow attaching a score to a private music piece the user cannot view', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();

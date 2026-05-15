@@ -227,6 +227,54 @@
 
                     </div>
 
+                    {{-- ChordPro Settings Toolbar --}}
+                    <div x-show="$wire.format === 'chordpro'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <flux:tooltip :content="__('Font size (pt)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="chordproFontSize" min="10" max="32" step="1" class="w-16" />
+                            </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Font')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:select size="sm" x-model="chordproFontFamily" class="w-32 text-xs">
+                                    <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
+                                    <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
+                                    <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
+                                    <flux:select.option value="Arial, Helvetica, sans-serif">Arial</flux:select.option>
+                                </flux:select>
+                            </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Columns')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="view-columns" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:select size="sm" x-model="chordproColumns" class="w-16 text-xs">
+                                    <flux:select.option value="1">1</flux:select.option>
+                                    <flux:select.option value="2">2</flux:select.option>
+                                    <flux:select.option value="3">3</flux:select.option>
+                                </flux:select>
+                            </div>
+                        </flux:tooltip>
+
+                        <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
+
+                        <flux:tooltip :content="__('Transpose (semitones)')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="musical-note" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="chordproTranspose" min="-11" max="11" step="1" class="w-16" />
+                            </div>
+                        </flux:tooltip>
+
+                        @if(!$isGuest)
+                        <flux:tooltip :content="__('Save as my default')">
+                            <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
+                        </flux:tooltip>
+                        @endif
+                    </div>
+
                     {{-- ABC Settings Toolbar --}}
                     <div x-show="$wire.format === 'abc'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
                         <flux:tooltip :content="__('Page ratio')">
@@ -337,6 +385,21 @@
                             </flux:button>
                             <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
                                 {{ __('Export PNG') }}
+                            </flux:button>
+                        </div>
+                    </div>
+
+                    {{-- ChordPro Preview --}}
+                    <div x-show="$wire.format === 'chordpro'" x-cloak class="mt-4">
+                        <div x-ref="chordproPreview" class="min-h-16 space-y-4"></div>
+
+                        <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
+                            <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
+                            <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
+                                {{ __('Share') }}
+                            </flux:button>
+                            <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportChordproHtml()">
+                                {{ __('Export HTML') }}
                             </flux:button>
                         </div>
                     </div>
