@@ -692,7 +692,52 @@
     "Score title": "Kotta címe",
     "Type the score here": "Írd be a kottát ide",
     "Lyric size (pt)": "Szövegméret (pt)",
-    "Page scale": "Oldalméret"
+    "Page scale": "Oldalméret",
 
-    
+    "Score Preview": "Kotta előnézete",
+    "Sign in to save this score to your library.": "Jelentkezz be a kotta könyvtáradba való mentéséhez.",
+    "Are you sure you want to delete this score?": "Biztosan törölni szeretnéd ezt a kottát?",
+    "Score created.": "Kotta létrehozva.",
+    "Score updated.": "Kotta frissítve.",
+    "Saved as your default for this ratio.": "Alapértelmezettként elmentve ehhez az arányhoz.",
+
+    "Content does not fit on page": "A tartalom nem fér el az oldalon",
+    "Clipboard not supported in this browser": "A vágólap nem támogatott ebben a böngészőben",
+    "First page copied to clipboard": "Az első oldal a vágólapra másolva",
+    "Image copied to clipboard": "Kép a vágólapra másolva",
+    "Failed to copy image": "Nem sikerült a képet másolni",
+    "Share link copied!": "Megosztási link másolva!",
+    "Failed to copy link": "Nem sikerült a linket másolni",
+    "HTML copied to clipboard!": "HTML a vágólapra másolva!",
+    "Plain text copied to clipboard!": "Egyszerű szöveg a vágólapra másolva!",
+
+    "Show me an example": "Mutass egy példát",
+    "Zoom (%)": "Nagyítás (%)",
+    "Staff size (%)": "Kottasor mérete (%)",
+    "Auto": "Automatikus",
+    "Drop caps": "Iniciálé",
+    "Word spacing (px)": "Szóköz (px)",
+    "Hyphen width (px)": "Kötőjel szélesség (px)",
+    "Condensing tolerance": "Sűrítési tolerancia",
+    "Space between lines": "Sorok közötti tér",
+    "Min. space below staff": "Min. tér a kottasor alatt",
+
+    "Font size (pt)": "Betűméret (pt)",
+    "Columns": "Oszlopok",
+    "Transpose (semitones)": "Transzponálás (félhang)",
+    "German notation (H = B, B = B♭)": "Német jelölés (H = H, B = B♭)",
+    "Save as my default": "Mentés alapértelmezettként",
+
+    "Copy as Text": "Másolás szövegként",
+    "Copy HTML": "HTML másolása",
+    "Export HTML": "Exportálás HTML-be",
+    "Generating link…": "Link generálása…",
+
+    "Secret Link": "Titkos link",
+    "Copy link": "Link másolása",
+    "Delete link": "Link törlése",
+    "This will invalidate the current link. Are you sure?": "Ez érvényteleníti az aktuális linket. Biztosan folytatod?",
+    "Generate Secret Link": "Titkos link generálása",
+    "Anyone with this link can view the score (read-only). Delete the link to revoke access.": "Bárki megtekintheti a kottát ezzel a linkkel (csak olvasható). Töröld a linket a hozzáférés visszavonásához.",
+    "Generate a secret link to share this score as a read-only preview.": "Generálj titkos linket a kotta csak olvasható előnézetként való megosztásához."
 }
