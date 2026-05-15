@@ -112,7 +112,7 @@ it('shows only the current users attached scores on the music detail page', func
     actingAs($user);
 
     Livewire::test(MusicView::class, ['music' => $music])
-        ->assertSee('Create Score')
+        ->assertSee(__('Create Score'))
         ->assertSee('Visible Private Score')
         ->assertDontSee('Other Private Score');
 });

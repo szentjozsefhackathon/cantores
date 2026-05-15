@@ -124,6 +124,10 @@ Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
 Route::livewire('/score/preview', \App\Livewire\Pages\ScoreEditor::class)
     ->name('score.preview');
 
+// Secret link — public, resolves to edit for owner or read-only for others
+Route::livewire('/s/{token}', \App\Livewire\Pages\ScoreView::class)
+    ->name('score.share');
+
 Route::livewire('/scores', \App\Livewire\Pages\Scores::class)
     ->middleware(['auth', 'verified'])
     ->name('scores');

@@ -8,6 +8,7 @@ use App\Models\Score;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Computed;
@@ -34,6 +35,8 @@ class ScoreEditor extends Component
 
     public bool $isSharedLink = false;
 
+    public ?string $secretLinkUrl = null;
+
     public function mount(mixed $score = null, mixed $music = null): void
     {
         $d = (string) request()->query('d', '');
@@ -56,6 +59,9 @@ class ScoreEditor extends Component
             $this->format = $score->format->value;
             $this->content = $score->content;
             $this->settings = $score->settings ?? [];
+            $this->secretLinkUrl = $score->share_token !== null
+                ? route('score.share', ['token' => $score->share_token])
+                : null;
 
             return;
         }
@@ -177,6 +183,34 @@ class ScoreEditor extends Component
         $encoded = rtrim(strtr(base64_encode((string) $compressed), '+/', '-_'), '=');
 
         return route('score.preview', ['d' => $encoded]);
+    }
+
+    #[Renderless]
+    public function generateSecretLink(): void
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('update', $this->score);
+
+        do {
+            $token = Str::random(32);
+        } while (Score::query()->where('share_token', $token)->exists());
+
+        $this->score->share_token = $token;
+        $this->score->save();
+
+        $this->secretLinkUrl = route('score.share', ['token' => $token]);
+    }
+
+    #[Renderless]
+    public function deleteSecretLink(): void
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('update', $this->score);
+
+        $this->score->share_token = null;
+        $this->score->save();
+
+        $this->secretLinkUrl = null;
     }
 
     public function delete(): void

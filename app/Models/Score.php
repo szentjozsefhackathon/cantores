@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
  * @property \App\Enums\ScoreFormat $format
  * @property string $content
  * @property array<string, array<string, array<string, mixed>>>|null $settings
+ * @property string|null $share_token
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\Music|null $music
@@ -46,6 +47,7 @@ class Score extends Model
         'format',
         'content',
         'settings',
+        'share_token',
     ];
 
     /**
