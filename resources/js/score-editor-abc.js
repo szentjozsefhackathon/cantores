@@ -1,3 +1,5 @@
+const DEFAULT_ABC_FONT = 'Palatino Linotype';
+
 export function abcMixin() {
     return {
         abcLyricFont: 'Palatino Linotype',
@@ -25,7 +27,8 @@ export function abcMixin() {
                 content = 'X:1\n' + content;
             }
             const virtualWidth = this.getVirtualCanvasSize('abc').width;
-            const fontName = this.abcLyricFont.includes(' ') ? `"${this.abcLyricFont}"` : this.abcLyricFont;
+            const safeFont = /^[a-zA-Z0-9 ]+$/.test(this.abcLyricFont) ? this.abcLyricFont : DEFAULT_ABC_FONT;
+            const fontName = safeFont.includes(' ') ? `"${safeFont}"` : safeFont;
             const boldStr = this.abcLyricBold ? 'Bold' : '';
             const vocalfontLine = `%%vocalfont ${fontName}${boldStr} ${this.abcLyricSize}`;
             const preamble = `%%fullsvg 1\n%%pagewidth ${virtualWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${this.abcPageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;

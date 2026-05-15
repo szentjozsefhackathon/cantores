@@ -112,6 +112,8 @@
                         failedToCopy: @js(__('Failed to copy image')),
                         shareLinkCopied: @js(__('Share link copied!')),
                         linkCopyFailed: @js(__('Failed to copy link')),
+                        htmlCopied: @js(__('HTML copied to clipboard!')),
+                        plainTextCopied: @js(__('Plain text copied to clipboard!')),
                     })"
                 >
                     {{-- Textarea --}}
@@ -405,10 +407,17 @@
                             <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                 {{ __('Share') }}
                             </flux:button>
+                            <flux:button icon="clipboard-document-list" variant="ghost" x-on:click="copyChordproPlainText()">
+                                {{ __('Copy as Text') }}
+                            </flux:button>
+                            <flux:button icon="clipboard" variant="ghost" x-on:click="copyChordproHtml()">
+                                {{ __('Copy HTML') }}
+                            </flux:button>
                             <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportChordproHtml()">
                                 {{ __('Export HTML') }}
                             </flux:button>
                         </div>
+
                     </div>
 
                     <flux:modal name="share-link-modal" class="max-w-md">

@@ -13,6 +13,8 @@ document.addEventListener('alpine:init', () => {
         failedToCopy: config.failedToCopy ?? '',
         shareLinkCopied: config.shareLinkCopied ?? '',
         linkCopyFailed: config.linkCopyFailed ?? '',
+        htmlCopied: config.htmlCopied ?? '',
+        plainTextCopied: config.plainTextCopied ?? '',
         renderTimer: null,
         scoreSettings: config.scoreSettings ?? {},
         userDefaults: config.userDefaults ?? {},
@@ -398,28 +400,24 @@ document.addEventListener('alpine:init', () => {
 
         fillExample() {
             const examples = {
-                abc: `K:d minor
+                abc: `K:D minor
 L:1/4
 ABAG | A G2 z | A A G (A1/2G1/2) | F2 E2 | ABAG | A G2 z | A A G (A1/2G1/2) | F2 E2 | D E F E | D4 | F F G/ G3/2 | A4 | A A G A | B2 A2 | DEFG | E2 D2 |]
 w: Bol-dog-asz-szony a-nyánk, ré-gi nagy pát-_ró-nánk! Nagy ín-ség-ben lé-vén így szó-lít meg_ ha-zánk: Ma-gyar-or-szág-ról, é-des ha-zánk-ról, ne fe-lejt-kez-zél el sze-gény ma-gya-rok-ról!`,
                 gabc: `(c3) KY(d)ri(gxfgh)e(h.ivHGh.) *(kvIH'Ghih.) (,) e(gxhvFE'Dgf)lé(e')i(e)son.(d.) (::)
 `,
-                chordpro: `{title: Amazing Grace}
-{artist: John Newton}
-
-{start_of_verse: Verse 1}
-[G]Amazing [G7]grace, how [C]sweet the [G]sound
-That [G]saved a [Em]wretch like [D]me
-I [G]once was [G7]lost, but [C]now am [G]found
-Was [G]blind but [D]now I [G]see
-{end_of_verse}
-
-{start_of_chorus}
-[G]Amazing [G7]grace how [C]sweet the [G]sound
-[Em]Grace that [D]taught my [G]heart to [G7]fear
-[C]And grace [G]my fears [Em]relieved
-[G]How [D]precious [G]did that grace appear
-{end_of_chorus}`,
+                chordpro: `{title: Minden, mi él}
+{subtitle: K 272}
+{soc}
+[D]Minden, mi él, csak Téged hirdet, [Hm]Minden dicsér, mert mind a műved.
+[G]Azzal, hogy él, ezt zengi Néked: [A]dicsérlek, én, [A7]dicsérlek Téged!
+{eoc}
+1. Dicsér az ég, Nap, Hold és csillagok, fény és sötét, nap, éj és hajnalok,
+dicsér a szél, felhő és hóvihar, a víz s a tűz, megannyi tiszta dallal
+Refr.
+...
+<i>Coda:</i> [D]Dicsérlek én!
+`,
             };
             const example = examples[this.$wire.format] ?? '';
             if (!example) { return; }
