@@ -220,6 +220,22 @@ function emitLigature(ctx, notes, x, staffBottomY) {
         }
     }
 
+    // Auto-virga: in a multi-note ligature, the relatively highest pitch(es)
+    // carry a downward stem on the left to mark the neume unit.
+    const autoVirga = new Array(notes.length).fill(false);
+    if (notes.length >= 2) {
+        const pitchPositions = notes.map(n => pitchToPos(n));
+        const maxPos = Math.max(...pitchPositions);
+        const minPos = Math.min(...pitchPositions);
+        if (maxPos > minPos) {
+            for (let i = 0; i < notes.length; i++) {
+                if (pitchPositions[i] === maxPos) {
+                    autoVirga[i] = true;
+                }
+            }
+        }
+    }
+
     // Draw ligature connectors first (under the heads).
     const halfSW = ligatureConnectorHalfStroke(ctx);
     for (let i = 1; i < positions.length; i++) {
@@ -243,7 +259,8 @@ function emitLigature(ctx, notes, x, staffBottomY) {
     for (let i = 0; i < positions.length; i++) {
         const p = positions[i];
         const prevCy = i > 0 ? positions[i - 1].cy : null;
-        parts.push(drawNoteHead(ctx, p.note, p.cx, p.cy, staffBottomY, prevCy));
+        const drawnNote = autoVirga[i] ? { ...p.note, virga: true } : p.note;
+        parts.push(drawNoteHead(ctx, drawnNote, p.cx, p.cy, staffBottomY, prevCy));
         for (const mod of p.note.modifiers) {
             if (mod === 'episema') {
                 parts.push(drawEpisema(ctx, p.cx, p.cy));
