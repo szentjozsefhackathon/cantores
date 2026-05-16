@@ -89,6 +89,10 @@ function tokenizeMusicLine(line) {
             const bareBar = inner.match(/^([,;]|::?)$/);
             if (bareBar) {
                 tokens.push({ type: 'barline', kind: bareBar[1] });
+            } else if (/^sp([0-9]*\.?[0-9]*)$/i.test(inner)) {
+                const m2 = inner.match(/^sp([0-9]*\.?[0-9]*)$/i);
+                const multiplier = m2[1] ? parseFloat(m2[1]) : 1;
+                tokens.push({ type: 'spacer', multiplier: isFinite(multiplier) && multiplier > 0 ? multiplier : 1 });
             } else {
                 tokens.push({ type: 'directive', value: inner });
             }

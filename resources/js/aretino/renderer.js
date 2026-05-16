@@ -78,11 +78,6 @@ export function renderAretino(source, options = {}) {
 
         let cursor = { x: ctx.leftMargin, clef: currentClef, glyphs: [] };
 
-        // Always emit a clef at the start of a system.
-        const startClef = drawClef(ctx, cursor.clef, cursor.x, staffBottomY);
-        parts.push(startClef.svg);
-        cursor.x += startClef.advance + ss(ctx, METRICS.clefPostGap);
-
         const expanderIndices = [];
         const items = [];
 
@@ -118,6 +113,10 @@ export function renderAretino(source, options = {}) {
                 items.push({ kind: 'barline', value: tok.kind });
                 continue;
             }
+            if (tok.type === 'spacer') {
+                items.push({ kind: 'spacer', multiplier: tok.multiplier });
+                continue;
+            }
             if (tok.type === 'ligature') {
                 items.push({ kind: 'ligature', groups: tok.groups });
             }
@@ -131,6 +130,8 @@ export function renderAretino(source, options = {}) {
                 natural += ctx.expanderWidth;
             } else if (it.kind === 'barline') {
                 natural += measureBarline(ctx, it.value);
+            } else if (it.kind === 'spacer') {
+                natural += ss(ctx, METRICS.spacerAdvance) * it.multiplier;
             } else if (it.kind === 'ligature') {
                 natural += measureLigature(ctx, it.groups);
             }
@@ -147,6 +148,8 @@ export function renderAretino(source, options = {}) {
                 const b = drawBarline(ctx, it.value, cursor.x, staffBottomY);
                 parts.push(b.svg);
                 cursor.x += b.advance + ss(ctx, METRICS.barlinePostGap);
+            } else if (it.kind === 'spacer') {
+                cursor.x += ss(ctx, METRICS.spacerAdvance) * it.multiplier;
             } else if (it.kind === 'ligature') {
                 const r = emitLigature(ctx, it.groups, cursor.x, staffBottomY);
                 parts.push(r.svg);
@@ -208,11 +211,15 @@ function measureBarline(ctx, kind) {
 function measureLigature(ctx, groups) {
     let total = 0;
     for (let g = 0; g < groups.length; g++) {
-        const n = groups[g].length;
+        const notes = groups[g];
+        const n = notes.length;
         if (g < groups.length - 1) {
             total += ss(ctx, METRICS.noteBoxWidth) + (n - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance;
         } else {
-            total += ctx.singleNoteAdvance + (n - 1) * ctx.ligatureStepAdvance;
+            const lastNote = notes[n - 1];
+            const hasMora = lastNote.modifiers && lastNote.modifiers.includes('mora');
+            const moraExtra = hasMora ? ss(ctx, METRICS.moraOffsetX + METRICS.moraRadius) : 0;
+            total += ctx.singleNoteAdvance + (n - 1) * ctx.ligatureStepAdvance + moraExtra;
         }
     }
     return total;
@@ -281,9 +288,11 @@ function emitLigature(ctx, groups, x, staffBottomY) {
             parts.push(drawNoteHead(ctx, drawnNote, p.cx, p.cy, staffBottomY, prevCy));
             for (const mod of p.note.modifiers) {
                 if (mod === 'episema') {
-                    parts.push(drawEpisema(ctx, p.cx, p.cy));
+                    const onLine = pitchToPos(p.note) % 2 === 0;
+                    parts.push(drawEpisema(ctx, p.cx, p.cy, onLine));
                 } else if (mod === 'mora') {
-                    parts.push(drawMora(ctx, p.cx, p.cy));
+                    const onLine = pitchToPos(p.note) % 2 === 0;
+                    parts.push(drawMora(ctx, p.cx, p.cy, onLine));
                 } else if (mod === 'liquescens') {
                     parts.push(drawLiquescens(ctx, p.cx, p.cy, 'down'));
                 }
