@@ -1,5 +1,6 @@
 import { parseAretino } from './parser.js';
 import {
+    METRICS,
     pitchToPos,
     pitchY,
     drawNoteHead,
@@ -7,6 +8,7 @@ import {
     drawMora,
     drawLiquescens,
     drawLigatureConnector,
+    ligatureConnectorHalfStroke,
     noteheadRightPoint,
     noteheadLeftPoint,
     drawStaffLines,
@@ -19,6 +21,13 @@ import {
 
 const DEFAULT_FONT = "'Palatino Linotype', 'Book Antiqua', Palatino, serif";
 
+// One staff space in pixels at 100% staffSize.
+const BASE_STAFF_SPACE_PX = 16;
+
+function ss(ctx, n) {
+    return n * ctx.staffSpace;
+}
+
 export function renderAretino(source, options = {}) {
     const ast = parseAretino(source);
     const canvasWidth = options.canvasWidth || 1920;
@@ -26,30 +35,31 @@ export function renderAretino(source, options = {}) {
     const staffScale = Math.max(0.1, (options.staffSize ?? 100) / 100);
     const noteSpacing = Math.max(0.5, options.noteSpacing ?? 1);
     const lyricFont = options.lyricFont || DEFAULT_FONT;
-    const baseUnit = 8;
 
+    // The whole engraving is parameterised by a single pixel-size: staffSpace.
+    // Everything else (margins, advances, glyph dimensions) is a multiple of
+    // it via METRICS.
     const ctx = {
-        unit: baseUnit * staffScale,
+        staffSpace: BASE_STAFF_SPACE_PX * staffScale,
     };
-    ctx.staffSpace = 2 * ctx.unit;
-    ctx.staffHeight = 4 * ctx.staffSpace;
-    ctx.noteW = 1.8 * ctx.unit;
-    ctx.noteH = ctx.staffSpace;
-    ctx.defaultAdvance = 3.5 * ctx.unit * noteSpacing;
-    ctx.ligatureAdvance = 2.1 * ctx.unit;
+    ctx.pitchStep = ctx.staffSpace / 2;
+    ctx.staffHeight = (METRICS.staffLineCount - 1) * ctx.staffSpace;
+    ctx.singleNoteAdvance = ss(ctx, METRICS.singleNoteAdvance) * noteSpacing;
+    ctx.ligatureStepAdvance = ss(ctx, METRICS.ligatureStepAdvance);
+    ctx.expanderWidth = ss(ctx, METRICS.expanderWidth);
+    ctx.leftMargin = ss(ctx, METRICS.leftMargin);
+    ctx.rightMargin = ss(ctx, METRICS.rightMargin);
+    ctx.systemGap = ss(ctx, METRICS.systemGap);
+    ctx.lyricToNextStaff = ss(ctx, METRICS.lyricToNextStaff);
     ctx.lyricFont = lyricFont;
     ctx.lyricSize = Math.max(6, (options.lyricSize ?? 12) * staffScale);
     ctx.canvasWidth = canvasWidth;
-    ctx.leftMargin = 10 * ctx.unit;
-    ctx.rightMargin = 6 * ctx.unit;
-    ctx.systemGap = 3 * ctx.unit;
-    ctx.lyricToNextStaff = 5 * ctx.unit;
 
     const systems = groupSystems(ast.lines);
 
     const parts = [];
     let currentClef = { letter: 'g', line: 2 };
-    let y = ctx.unit * 3;
+    let y = ss(ctx, METRICS.titleTopPadding);
 
     if (ast.header && Object.keys(ast.header).length) {
         const title = ast.header['cím'] || ast.header['title'];
@@ -70,9 +80,8 @@ export function renderAretino(source, options = {}) {
         // Always emit a clef at the start of a system.
         const startClef = drawClef(ctx, cursor.clef, cursor.x, staffBottomY);
         parts.push(startClef.svg);
-        cursor.x += startClef.advance + ctx.unit * 0.6;
+        cursor.x += startClef.advance + ss(ctx, METRICS.clefPostGap);
 
-        // Layout pass — collect glyph instructions, with expander spots for justification.
         const expanderIndices = [];
         const items = [];
 
@@ -84,7 +93,7 @@ export function renderAretino(source, options = {}) {
                     cursor.clef = { letter: clefM[1].toLowerCase(), line: parseInt(clefM[2], 10) };
                     const c = drawClef(ctx, cursor.clef, cursor.x, staffBottomY);
                     parts.push(c.svg);
-                    cursor.x += c.advance + ctx.unit * 0.5;
+                    cursor.x += c.advance + ss(ctx, METRICS.clefInlinePostGap);
                     continue;
                 }
                 const accM = v.match(/^([a-mA-M]?)b([xy#])$/);
@@ -117,7 +126,7 @@ export function renderAretino(source, options = {}) {
         let natural = 0;
         for (const it of items) {
             if (it.kind === 'expander') {
-                natural += ctx.unit * 1.5;
+                natural += ctx.expanderWidth;
             } else if (it.kind === 'barline') {
                 natural += measureBarline(ctx, it.value);
             } else if (it.kind === 'ligature') {
@@ -128,15 +137,14 @@ export function renderAretino(source, options = {}) {
         const extra = Math.max(0, available - natural);
         const extraPer = expanderIndices.length > 0 ? extra / expanderIndices.length : 0;
 
-        // Emit items.
         for (let idx = 0; idx < items.length; idx++) {
             const it = items[idx];
             if (it.kind === 'expander') {
-                cursor.x += ctx.unit * 1.5 + extraPer;
+                cursor.x += ctx.expanderWidth + extraPer;
             } else if (it.kind === 'barline') {
                 const b = drawBarline(ctx, it.value, cursor.x, staffBottomY);
                 parts.push(b.svg);
-                cursor.x += b.advance + ctx.unit * 0.4;
+                cursor.x += b.advance + ss(ctx, METRICS.barlinePostGap);
             } else if (it.kind === 'ligature') {
                 const r = emitLigature(ctx, it.notes, cursor.x, staffBottomY);
                 parts.push(r.svg);
@@ -159,7 +167,7 @@ export function renderAretino(source, options = {}) {
         }
     }
 
-    const totalHeight = canvasHeight || Math.max(y + ctx.unit * 2, 100);
+    const totalHeight = canvasHeight || Math.max(y + ctx.staffSpace, 100);
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvasWidth} ${totalHeight}" preserveAspectRatio="xMidYMin meet" width="100%" style="display:block">${parts.join('')}</svg>`;
 }
 
@@ -186,33 +194,34 @@ function groupSystems(lines) {
 }
 
 function measureBarline(ctx, kind) {
-    if (kind === '::') {
-        return ctx.unit * 3 + ctx.unit * 0.4;
-    }
-    return ctx.unit * 1.6 + ctx.unit * 0.4;
+    const base = kind === '::'
+        ? ss(ctx, METRICS.barlineDoubleAdvance)
+        : ss(ctx, METRICS.barlineAdvance);
+    return base + ss(ctx, METRICS.barlinePostGap);
 }
 
 function measureLigature(ctx, notes) {
     if (notes.length <= 1) {
-        return ctx.defaultAdvance;
+        return ctx.singleNoteAdvance;
     }
-    return ctx.defaultAdvance + (notes.length - 1) * ctx.ligatureAdvance;
+    return ctx.singleNoteAdvance + (notes.length - 1) * ctx.ligatureStepAdvance;
 }
 
 function emitLigature(ctx, notes, x, staffBottomY) {
     const parts = [];
     const positions = [];
-    let cx = x + ctx.noteW * 0.5;
+    let cx = x + ss(ctx, METRICS.noteBoxWidth) * 0.5;
     for (let i = 0; i < notes.length; i++) {
         const note = notes[i];
         const cy = pitchY(ctx, note, staffBottomY);
         positions.push({ note, cx, cy });
         if (i < notes.length - 1) {
-            cx += ctx.ligatureAdvance;
+            cx += ctx.ligatureStepAdvance;
         }
     }
 
     // Draw ligature connectors first (under the heads).
+    const halfSW = ligatureConnectorHalfStroke(ctx);
     for (let i = 1; i < positions.length; i++) {
         const prev = positions[i - 1];
         const cur = positions[i];
@@ -221,18 +230,13 @@ function emitLigature(ctx, notes, x, staffBottomY) {
         }
         const prevPos = pitchToPos(prev.note);
         const curPos = pitchToPos(cur.note);
-        if (curPos > prevPos) {
-            const interval = curPos - prevPos;
-            const sw = Math.max(0.7, ctx.unit * 0.22) / 2.0;
-            const from = noteheadRightPoint(ctx, prev.cx, prev.cy);
-            const to = noteheadLeftPoint(ctx, cur.cx, cur.cy);
-            parts.push(drawLigatureConnector(ctx, from.x - sw, from.y, to.x + sw, to.y, 'up'));
-        } else if (curPos < prevPos) {
-            const sw = Math.max(0.7, ctx.unit * 0.22)/2.0;
-            const from = noteheadRightPoint(ctx, prev.cx, prev.cy);
-            const to = noteheadLeftPoint(ctx, cur.cx, cur.cy);
-            parts.push(drawLigatureConnector(ctx, from.x - sw, from.y, to.x + sw, to.y, 'down'));
+        if (curPos === prevPos) {
+            continue;
         }
+        const from = noteheadRightPoint(ctx, prev.cx, prev.cy);
+        const to = noteheadLeftPoint(ctx, cur.cx, cur.cy);
+        const kind = curPos > prevPos ? 'up' : 'down';
+        parts.push(drawLigatureConnector(ctx, from.x - halfSW, from.y, to.x + halfSW, to.y, kind));
     }
 
     // Draw note heads + modifiers.
@@ -252,7 +256,7 @@ function emitLigature(ctx, notes, x, staffBottomY) {
     }
 
     const advance = notes.length > 1
-        ? ctx.defaultAdvance + (notes.length - 1) * ctx.ligatureAdvance
-        : ctx.defaultAdvance;
+        ? ctx.singleNoteAdvance + (notes.length - 1) * ctx.ligatureStepAdvance
+        : ctx.singleNoteAdvance;
     return { svg: parts.join(''), advance };
 }
