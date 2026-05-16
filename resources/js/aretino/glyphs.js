@@ -47,7 +47,7 @@ export const METRICS = {
     // --- Stems (virga & tenor side strokes) -------------------------------
     stemStroke: 0.11,
     stemStrokeMinPx: 0.8,
-    virgaStemLength: 1.5,              // default descent of virga stem
+    virgaStemLength: 1.75,              // default descent of virga stem
     virgaStemDescentBelowPrev: 2.0,    // descent past a lower preceding note
 
     // --- Tenor notehead (open oval with two side strokes) -----------------

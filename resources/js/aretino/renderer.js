@@ -220,16 +220,20 @@ function emitLigature(ctx, notes, x, staffBottomY) {
         }
     }
 
-    // Auto-virga: in a multi-note ligature, the relatively highest pitch(es)
-    // carry a downward stem on the left to mark the neume unit.
+    // Auto-virga: when direction changes inside a multi-note ligature, every
+    // local peak carries a downward stem on the left. The virga marks the
+    // *arrival* at a higher pitch, so on a plateau (e.g. a-c-c-a) only the
+    // first note of the plateau is the peak: left side strict (>), right side
+    // non-strict (>=).
     const autoVirga = new Array(notes.length).fill(false);
     if (notes.length >= 2) {
         const pitchPositions = notes.map(n => pitchToPos(n));
-        const maxPos = Math.max(...pitchPositions);
-        const minPos = Math.min(...pitchPositions);
-        if (maxPos > minPos) {
+        const hasVariation = Math.max(...pitchPositions) > Math.min(...pitchPositions);
+        if (hasVariation) {
             for (let i = 0; i < notes.length; i++) {
-                if (pitchPositions[i] === maxPos) {
+                const higherThanLeft = i === 0 || pitchPositions[i] > pitchPositions[i - 1];
+                const atLeastAsHighAsRight = i === notes.length - 1 || pitchPositions[i] >= pitchPositions[i + 1];
+                if (higherThanLeft && atLeastAsHighAsRight) {
                     autoVirga[i] = true;
                 }
             }
