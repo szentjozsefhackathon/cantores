@@ -7,6 +7,8 @@ import {
     drawMora,
     drawLiquescens,
     drawLigatureConnector,
+    noteheadRightPoint,
+    noteheadLeftPoint,
     drawStaffLines,
     drawClef,
     drawAccidental,
@@ -32,9 +34,9 @@ export function renderAretino(source, options = {}) {
     ctx.staffSpace = 2 * ctx.unit;
     ctx.staffHeight = 4 * ctx.staffSpace;
     ctx.noteW = 1.8 * ctx.unit;
-    ctx.noteH = 1.5 * ctx.unit;
+    ctx.noteH = ctx.staffSpace;
     ctx.defaultAdvance = 3.5 * ctx.unit * noteSpacing;
-    ctx.ligatureAdvance = 1.9 * ctx.unit;
+    ctx.ligatureAdvance = 2.1 * ctx.unit;
     ctx.lyricFont = lyricFont;
     ctx.lyricSize = Math.max(6, (options.lyricSize ?? 12) * staffScale);
     ctx.canvasWidth = canvasWidth;
@@ -214,18 +216,30 @@ function emitLigature(ctx, notes, x, staffBottomY) {
     for (let i = 1; i < positions.length; i++) {
         const prev = positions[i - 1];
         const cur = positions[i];
+        if (cur.note.shape === 'virga' || cur.note.virga) {
+            continue;
+        }
         const prevPos = pitchToPos(prev.note);
         const curPos = pitchToPos(cur.note);
         if (curPos > prevPos) {
-            parts.push(drawLigatureConnector(ctx, prev.cx + ctx.noteW * 0.45, prev.cy, cur.cx + ctx.noteW * 0.45, cur.cy, 'up'));
+            const interval = curPos - prevPos;
+            const sw = Math.max(0.7, ctx.unit * 0.22) / 2.0;
+            const from = noteheadRightPoint(ctx, prev.cx, prev.cy);
+            const to = noteheadLeftPoint(ctx, cur.cx, cur.cy);
+            parts.push(drawLigatureConnector(ctx, from.x - sw, from.y, to.x + sw, to.y, 'up'));
         } else if (curPos < prevPos) {
-            parts.push(drawLigatureConnector(ctx, prev.cx, prev.cy, cur.cx, cur.cy, 'down'));
+            const sw = Math.max(0.7, ctx.unit * 0.22)/2.0;
+            const from = noteheadRightPoint(ctx, prev.cx, prev.cy);
+            const to = noteheadLeftPoint(ctx, cur.cx, cur.cy);
+            parts.push(drawLigatureConnector(ctx, from.x - sw, from.y, to.x + sw, to.y, 'down'));
         }
     }
 
     // Draw note heads + modifiers.
-    for (const p of positions) {
-        parts.push(drawNoteHead(ctx, p.note, p.cx, p.cy, staffBottomY));
+    for (let i = 0; i < positions.length; i++) {
+        const p = positions[i];
+        const prevCy = i > 0 ? positions[i - 1].cy : null;
+        parts.push(drawNoteHead(ctx, p.note, p.cx, p.cy, staffBottomY, prevCy));
         for (const mod of p.note.modifiers) {
             if (mod === 'episema') {
                 parts.push(drawEpisema(ctx, p.cx, p.cy));

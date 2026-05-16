@@ -27,14 +27,14 @@ function notesNeedLedger(ctx, pos, staffBottomY) {
     return { lineX1, lineX2, out };
 }
 
-// Filled oval note head. Centered at (cx, cy).
+// Filled oval note head. Centered at (cx, cy). Rotated slightly CCW.
 function ovalHead(ctx, cx, cy, opts = {}) {
-    const rx = (opts.rx ?? ctx.noteW / 2);
-    const ry = (opts.ry ?? ctx.noteH / 2);
+    const rx = (opts.rx ?? ctx.unit * 1.9 * 0.6);
+    const ry = (opts.ry ?? ctx.unit * 0.9);
     const fill = opts.fill ?? '#000';
     const stroke = opts.stroke ?? 'none';
     const sw = opts.strokeWidth ?? 0;
-    return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
+    return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" transform="rotate(-20, ${cx}, ${cy})"/>`;
 }
 
 function ledgerLines(ctx, cx, cy, staffBottomY) {
@@ -61,7 +61,7 @@ function ledgerLines(ctx, cx, cy, staffBottomY) {
     return parts.join('');
 }
 
-export function drawNoteHead(ctx, note, cx, cy, staffBottomY) {
+export function drawNoteHead(ctx, note, cx, cy, staffBottomY, prevCy = null) {
     const parts = [];
     parts.push(ledgerLines(ctx, cx, cy, staffBottomY));
     if (note.shape === 'quilisma') {
@@ -97,15 +97,19 @@ export function drawNoteHead(ctx, note, cx, cy, staffBottomY) {
     }
     if (note.shape === 'virga' || note.virga) {
         // Stem going down from the left side of the head.
-        const stemX = cx - ctx.noteW / 2 + ctx.unit * 0.1;
         const sw = Math.max(0.8, ctx.unit * 0.22);
-        parts.push(`<line x1="${stemX}" y1="${cy}" x2="${stemX}" y2="${cy + ctx.staffSpace * 1.8}" stroke="#000" stroke-width="${sw}"/>`);
+        const stemX = cx - ctx.noteW / 2.0 - sw/2.0;        
+        // When a preceding note is lower (higher cy), extend stem to reach below it.
+        const stemLength = prevCy !== null && prevCy > cy
+            ? (prevCy - cy) + 2 * ctx.staffSpace
+            : ctx.staffSpace * 1.5;
+        parts.push(`<line x1="${stemX}" y1="${cy}" x2="${stemX}" y2="${cy + stemLength}" stroke="#000" stroke-width="${sw}"/>`);
     }
     return parts.join('');
 }
 
 export function drawEpisema(ctx, cx, cy) {
-    const w = ctx.noteW * 1.3;
+    const w = ctx.noteW * 1;
     const y = cy - ctx.noteH * 0.9 - ctx.unit * 0.35;
     const sw = Math.max(0.8, ctx.unit * 0.24);
     return `<line x1="${cx - w / 2}" y1="${y}" x2="${cx + w / 2}" y2="${y}" stroke="#000" stroke-width="${sw}" stroke-linecap="round"/>`;
@@ -127,18 +131,38 @@ export function drawLiquescens(ctx, cx, cy, direction = 'down') {
     return `<path d="M ${x1} ${y1} Q ${x1 + ctx.unit * 0.2} ${(y1 + y2) / 2} ${x2} ${y2}" fill="none" stroke="#000" stroke-width="${sw}" stroke-linecap="round"/>`;
 }
 
+// Returns the geometric rightmost point of a notehead ellipse at (cx, cy).
+export function noteheadRightPoint(ctx, cx, cy) {
+    const rx = ctx.unit * 1.9 * 0.6;
+    const ry = ctx.unit * 0.9;
+    const θ = -20 * Math.PI / 180;
+    const cosθ = Math.cos(θ);
+    const sinθ = Math.sin(θ);
+    const d = Math.sqrt(rx * rx * cosθ * cosθ + ry * ry * sinθ * sinθ);
+    return { x: cx + d, y: cy + sinθ * cosθ * (rx * rx - ry * ry) / d };
+}
+
+// Returns the geometric leftmost point of a notehead ellipse at (cx, cy).
+export function noteheadLeftPoint(ctx, cx, cy) {
+    const rx = ctx.unit * 1.9 * 0.6;
+    const ry = ctx.unit * 0.9;
+    const θ = -20 * Math.PI / 180;
+    const cosθ = Math.cos(θ);
+    const sinθ = Math.sin(θ);
+    const d = Math.sqrt(rx * rx * cosθ * cosθ + ry * ry * sinθ * sinθ);
+    return { x: cx - d, y: cy - sinθ * cosθ * (rx * rx - ry * ry) / d };
+}
+
 export function drawLigatureConnector(ctx, fromX, fromY, toX, toY, kind) {
     const sw = Math.max(0.7, ctx.unit * 0.22);
     if (kind === 'up') {
-        // Vertical line on the right side connecting two heads ascending.
-        const x = Math.max(fromX, toX);
-        return `<line x1="${x}" y1="${fromY}" x2="${x}" y2="${toY}" stroke="#000" stroke-width="${sw}"/>`;
+        // Vertical line on the left side of the upper note connecting ascending heads.
+        return `<line x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}" stroke="#000" stroke-width="${sw}"/>`;
     }
     if (kind === 'down') {
-        // Slight curve from upper note down to the lower note.
-        const cx = (fromX + toX) / 2 - ctx.unit * 0.4;
-        const cy = (fromY + toY) / 2;
-        return `<path d="M ${fromX} ${fromY} Q ${cx} ${cy} ${toX} ${toY}" fill="none" stroke="#000" stroke-width="${sw}"/>`;
+        // Straight line from rightmost point of first ellipse to leftmost point of second ellipse.
+        // Callers pass the already-computed attachment points directly.
+        return `<line x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}" stroke="#000" stroke-width="${sw}" stroke-linecap="round"/>`;
     }
     return '';
 }
@@ -231,8 +255,8 @@ export function drawBarline(ctx, kind, x, staffBottomY) {
     let svg = '';
     let advance = ctx.unit * 1.6;
     if (kind === ',') {
-        const y1 = top5;
-        const y2 = top5 + ctx.staffSpace;
+        const y1 = top5 - ctx.staffSpace * 0.5;
+        const y2 = top5 + ctx.staffSpace * 0.5;
         svg = `<line x1="${x + ctx.unit * 0.6}" y1="${y1}" x2="${x + ctx.unit * 0.6}" y2="${y2}" stroke="#000" stroke-width="${sw}"/>`;
     } else if (kind === ';') {
         svg = `<line x1="${x + ctx.unit * 0.6}" y1="${top5}" x2="${x + ctx.unit * 0.6}" y2="${top3}" stroke="#000" stroke-width="${sw}"/>`;
