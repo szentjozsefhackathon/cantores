@@ -116,6 +116,7 @@ betűje adja: `(ebx)` = b a 3. vonalon (E magasságában).
 | `:` | egész vonal |
 | `::` | kettős vonal (tétel vége) |
 | `*` | sorvég-kiegyenlítő — szélesen szétfutó üres vonalszakasz |
+| `/` | neuma-tagoló rés — egy kottafejnyi üres hely a kis csoportok között, a melizmán belül |
 | `(z)` | sortörés-javaslat (custos automatikusan generálódik) |
 
 ## Custos

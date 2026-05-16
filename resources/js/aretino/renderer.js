@@ -47,6 +47,7 @@ export function renderAretino(source, options = {}) {
     ctx.singleNoteAdvance = ss(ctx, METRICS.singleNoteAdvance) * noteSpacing;
     ctx.ligatureStepAdvance = ss(ctx, METRICS.ligatureStepAdvance);
     ctx.expanderWidth = ss(ctx, METRICS.expanderWidth);
+    ctx.neumeGapAdvance = ss(ctx, METRICS.neumeGapAdvance);
     ctx.leftMargin = ss(ctx, METRICS.leftMargin);
     ctx.rightMargin = ss(ctx, METRICS.rightMargin);
     ctx.systemGap = ss(ctx, METRICS.systemGap);
@@ -118,19 +119,20 @@ export function renderAretino(source, options = {}) {
                 continue;
             }
             if (tok.type === 'ligature') {
-                items.push({ kind: 'ligature', notes: tok.notes });
+                items.push({ kind: 'ligature', groups: tok.groups });
             }
         }
 
         // Measure natural width (no expanders).
         let natural = 0;
-        for (const it of items) {
+        for (let idx = 0; idx < items.length; idx++) {
+            const it = items[idx];
             if (it.kind === 'expander') {
                 natural += ctx.expanderWidth;
             } else if (it.kind === 'barline') {
                 natural += measureBarline(ctx, it.value);
             } else if (it.kind === 'ligature') {
-                natural += measureLigature(ctx, it.notes);
+                natural += measureLigature(ctx, it.groups);
             }
         }
         const available = (canvasWidth - ctx.rightMargin) - cursor.x;
@@ -146,7 +148,7 @@ export function renderAretino(source, options = {}) {
                 parts.push(b.svg);
                 cursor.x += b.advance + ss(ctx, METRICS.barlinePostGap);
             } else if (it.kind === 'ligature') {
-                const r = emitLigature(ctx, it.notes, cursor.x, staffBottomY);
+                const r = emitLigature(ctx, it.groups, cursor.x, staffBottomY);
                 parts.push(r.svg);
                 cursor.x += r.advance;
             }
@@ -200,84 +202,98 @@ function measureBarline(ctx, kind) {
     return base + ss(ctx, METRICS.barlinePostGap);
 }
 
-function measureLigature(ctx, notes) {
-    if (notes.length <= 1) {
-        return ctx.singleNoteAdvance;
-    }
-    return ctx.singleNoteAdvance + (notes.length - 1) * ctx.ligatureStepAdvance;
-}
-
-function emitLigature(ctx, notes, x, staffBottomY) {
-    const parts = [];
-    const positions = [];
-    let cx = x + ss(ctx, METRICS.noteBoxWidth) * 0.5;
-    for (let i = 0; i < notes.length; i++) {
-        const note = notes[i];
-        const cy = pitchY(ctx, note, staffBottomY);
-        positions.push({ note, cx, cy });
-        if (i < notes.length - 1) {
-            cx += ctx.ligatureStepAdvance;
+// groups: Note[][] — each group is a run of notes; groups are separated by neumatic cuts ('/').
+// All groups except the last contribute noteBoxWidth + steps + neumeGapAdvance;
+// the last group contributes the normal singleNoteAdvance + steps (trailing slack included).
+function measureLigature(ctx, groups) {
+    let total = 0;
+    for (let g = 0; g < groups.length; g++) {
+        const n = groups[g].length;
+        if (g < groups.length - 1) {
+            total += ss(ctx, METRICS.noteBoxWidth) + (n - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance;
+        } else {
+            total += ctx.singleNoteAdvance + (n - 1) * ctx.ligatureStepAdvance;
         }
     }
+    return total;
+}
 
-    // Auto-virga: when direction changes inside a multi-note ligature, every
-    // local peak carries a downward stem on the left. The virga marks the
-    // *arrival* at a higher pitch, so on a plateau (e.g. a-c-c-a) only the
-    // first note of the plateau is the peak: left side strict (>), right side
-    // non-strict (>=).
-    const autoVirga = new Array(notes.length).fill(false);
-    if (notes.length >= 2) {
-        const pitchPositions = notes.map(n => pitchToPos(n));
-        const hasVariation = Math.max(...pitchPositions) > Math.min(...pitchPositions);
-        if (hasVariation) {
-            for (let i = 0; i < notes.length; i++) {
-                const higherThanLeft = i === 0 || pitchPositions[i] > pitchPositions[i - 1];
-                const atLeastAsHighAsRight = i === notes.length - 1 || pitchPositions[i] >= pitchPositions[i + 1];
-                if (higherThanLeft && atLeastAsHighAsRight) {
-                    autoVirga[i] = true;
+function emitLigature(ctx, groups, x, staffBottomY) {
+    const parts = [];
+    const halfSW = ligatureConnectorHalfStroke(ctx);
+    let groupStartX = x;
+
+    for (let g = 0; g < groups.length; g++) {
+        const notes = groups[g];
+        const positions = [];
+        let cx = groupStartX + ss(ctx, METRICS.noteBoxWidth) * 0.5;
+
+        for (let i = 0; i < notes.length; i++) {
+            const note = notes[i];
+            const cy = pitchY(ctx, note, staffBottomY);
+            positions.push({ note, cx, cy });
+            if (i < notes.length - 1) {
+                cx += ctx.ligatureStepAdvance;
+            }
+        }
+
+        // Auto-virga per group: every local pitch peak gets a downward stem on the left.
+        // Left side strict (>), right side non-strict (>=) so only the first note of a
+        // plateau is marked.
+        const autoVirga = new Array(notes.length).fill(false);
+        if (notes.length >= 2) {
+            const pitchPositions = notes.map(n => pitchToPos(n));
+            const hasVariation = Math.max(...pitchPositions) > Math.min(...pitchPositions);
+            if (hasVariation) {
+                for (let i = 0; i < notes.length; i++) {
+                    const higherThanLeft = i === 0 || pitchPositions[i] > pitchPositions[i - 1];
+                    const atLeastAsHighAsRight = i === notes.length - 1 || pitchPositions[i] >= pitchPositions[i + 1];
+                    if (higherThanLeft && atLeastAsHighAsRight) {
+                        autoVirga[i] = true;
+                    }
                 }
             }
         }
-    }
 
-    // Draw ligature connectors first (under the heads).
-    const halfSW = ligatureConnectorHalfStroke(ctx);
-    for (let i = 1; i < positions.length; i++) {
-        const prev = positions[i - 1];
-        const cur = positions[i];
-        if (cur.note.shape === 'virga' || cur.note.virga) {
-            continue;
+        // Draw ligature connectors first (under the heads).
+        for (let i = 1; i < positions.length; i++) {
+            const prev = positions[i - 1];
+            const cur = positions[i];
+            if (cur.note.shape === 'virga' || cur.note.virga) {
+                continue;
+            }
+            const prevPos = pitchToPos(prev.note);
+            const curPos = pitchToPos(cur.note);
+            if (curPos === prevPos) {
+                continue;
+            }
+            const from = noteheadRightPoint(ctx, prev.cx, prev.cy);
+            const to = noteheadLeftPoint(ctx, cur.cx, cur.cy);
+            const kind = curPos > prevPos ? 'up' : 'down';
+            parts.push(drawLigatureConnector(ctx, from.x - halfSW, from.y, to.x + halfSW, to.y, kind));
         }
-        const prevPos = pitchToPos(prev.note);
-        const curPos = pitchToPos(cur.note);
-        if (curPos === prevPos) {
-            continue;
-        }
-        const from = noteheadRightPoint(ctx, prev.cx, prev.cy);
-        const to = noteheadLeftPoint(ctx, cur.cx, cur.cy);
-        const kind = curPos > prevPos ? 'up' : 'down';
-        parts.push(drawLigatureConnector(ctx, from.x - halfSW, from.y, to.x + halfSW, to.y, kind));
-    }
 
-    // Draw note heads + modifiers.
-    for (let i = 0; i < positions.length; i++) {
-        const p = positions[i];
-        const prevCy = i > 0 ? positions[i - 1].cy : null;
-        const drawnNote = autoVirga[i] ? { ...p.note, virga: true } : p.note;
-        parts.push(drawNoteHead(ctx, drawnNote, p.cx, p.cy, staffBottomY, prevCy));
-        for (const mod of p.note.modifiers) {
-            if (mod === 'episema') {
-                parts.push(drawEpisema(ctx, p.cx, p.cy));
-            } else if (mod === 'mora') {
-                parts.push(drawMora(ctx, p.cx, p.cy));
-            } else if (mod === 'liquescens') {
-                parts.push(drawLiquescens(ctx, p.cx, p.cy, 'down'));
+        // Draw note heads + modifiers.
+        for (let i = 0; i < positions.length; i++) {
+            const p = positions[i];
+            const prevCy = i > 0 ? positions[i - 1].cy : null;
+            const drawnNote = autoVirga[i] ? { ...p.note, virga: true } : p.note;
+            parts.push(drawNoteHead(ctx, drawnNote, p.cx, p.cy, staffBottomY, prevCy));
+            for (const mod of p.note.modifiers) {
+                if (mod === 'episema') {
+                    parts.push(drawEpisema(ctx, p.cx, p.cy));
+                } else if (mod === 'mora') {
+                    parts.push(drawMora(ctx, p.cx, p.cy));
+                } else if (mod === 'liquescens') {
+                    parts.push(drawLiquescens(ctx, p.cx, p.cy, 'down'));
+                }
             }
         }
+
+        if (g < groups.length - 1) {
+            groupStartX += ss(ctx, METRICS.noteBoxWidth) + (notes.length - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance;
+        }
     }
 
-    const advance = notes.length > 1
-        ? ctx.singleNoteAdvance + (notes.length - 1) * ctx.ligatureStepAdvance
-        : ctx.singleNoteAdvance;
-    return { svg: parts.join(''), advance };
+    return { svg: parts.join(''), advance: measureLigature(ctx, groups) };
 }

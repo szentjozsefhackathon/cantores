@@ -14,7 +14,7 @@
 //   { type: 'directive', value: string }              — anything inside ( )
 //   { type: 'barline', kind: ',' | ';' | ':' | '::' }
 //   { type: 'expander' }                              — `*`
-//   { type: 'ligature', notes: Note[] }               — one or more glued notes
+//   { type: 'ligature', groups: Note[][] }            — one or more note groups; groups are separated by '/' cuts within the neume
 //
 // Note shape:
 //   {
@@ -110,55 +110,73 @@ function tokenizeMusicLine(line) {
             continue;
         }
         if (isPitchLetter(ch)) {
-            const group = [];
-            while (i < len && isPitchLetter(line[i])) {
-                const pitchChar = line[i];
-                i++;
-                const note = {
-                    pitch: pitchChar.toLowerCase(),
-                    virga: pitchChar !== pitchChar.toLowerCase(),
-                    high: false,
-                    shape: pitchChar === pitchChar.toLowerCase() ? 'punctum' : 'virga',
-                    modifiers: [],
-                };
-                while (i < len) {
-                    const m = line[i];
-                    if (m === "'") {
-                        note.high = true;
-                        i++;
-                        continue;
+            const groups = [];
+            while (true) {
+                const group = [];
+                while (i < len && isPitchLetter(line[i])) {
+                    const pitchChar = line[i];
+                    i++;
+                    const note = {
+                        pitch: pitchChar.toLowerCase(),
+                        virga: pitchChar !== pitchChar.toLowerCase(),
+                        high: false,
+                        shape: pitchChar === pitchChar.toLowerCase() ? 'punctum' : 'virga',
+                        modifiers: [],
+                    };
+                    while (i < len) {
+                        const m = line[i];
+                        if (m === "'") {
+                            note.high = true;
+                            i++;
+                            continue;
+                        }
+                        if (m === '_') {
+                            note.modifiers.push('episema');
+                            i++;
+                            continue;
+                        }
+                        if (m === '.') {
+                            note.modifiers.push('mora');
+                            i++;
+                            continue;
+                        }
+                        if (m === '~') {
+                            note.modifiers.push('liquescens');
+                            i++;
+                            continue;
+                        }
+                        if (m === 'w') {
+                            note.shape = 'quilisma';
+                            i++;
+                            continue;
+                        }
+                        if (m === 't') {
+                            note.shape = 'tenor';
+                            i++;
+                            continue;
+                        }
+                        break;
                     }
-                    if (m === '_') {
-                        note.modifiers.push('episema');
-                        i++;
-                        continue;
-                    }
-                    if (m === '.') {
-                        note.modifiers.push('mora');
-                        i++;
-                        continue;
-                    }
-                    if (m === '~') {
-                        note.modifiers.push('liquescens');
-                        i++;
-                        continue;
-                    }
-                    if (m === 'w') {
-                        note.shape = 'quilisma';
-                        i++;
-                        continue;
-                    }
-                    if (m === 't') {
-                        note.shape = 'tenor';
-                        i++;
-                        continue;
-                    }
-                    break;
+                    group.push(note);
                 }
-                group.push(note);
+                if (group.length) {
+                    groups.push(group);
+                }
+                // Check for '/' (skip surrounding whitespace) — '/' within a neume
+                // connects the next note group to this ligature.
+                let j = i;
+                while (j < len && (line[j] === ' ' || line[j] === '\t')) { j++; }
+                if (j < len && line[j] === '/') {
+                    i = j + 1;
+                    while (i < len && (line[i] === ' ' || line[i] === '\t')) { i++; }
+                    if (i < len && isPitchLetter(line[i])) {
+                        continue;
+                    }
+                }
+                break;
             }
-            if (group.length) {
-                tokens.push({ type: 'ligature', notes: group });
+            if (groups.length) {
+                tokens.push({ type: 'ligature', groups });
             }
             continue;
         }

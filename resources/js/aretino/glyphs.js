@@ -32,6 +32,7 @@ export const METRICS = {
     singleNoteAdvance: 1.75,           // base spacing per glyph (× noteSpacing)
     ligatureStepAdvance: 1.05,         // added per extra note in a ligature
     expanderWidth: 0.75,               // intrinsic width of '*' expander
+    neumeGapAdvance: 0.9,              // extra space inserted by '/' between neume groups
 
     // --- Staff lines ------------------------------------------------------
     staffLineCount: 5,
@@ -48,7 +49,7 @@ export const METRICS = {
     stemStroke: 0.11,
     stemStrokeMinPx: 0.8,
     virgaStemLength: 1.75,              // default descent of virga stem
-    virgaStemDescentBelowPrev: 2.0,    // descent past a lower preceding note
+    virgaStemDescentBelowPrev: 1.25,    // descent past a lower preceding note
 
     // --- Tenor notehead (open oval with two side strokes) -----------------
     tenorOutlineStroke: 0.1,
