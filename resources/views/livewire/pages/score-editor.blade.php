@@ -175,6 +175,7 @@
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 <flux:select size="sm" x-model="lyricFont" class="w-32 text-xs">
                                     <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
+                                    <flux:select.option value="'Barlow Condensed', sans-serif">Barlow Condensed</flux:select.option>
                                     <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
                                     <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
                                     <flux:select.option value="'Franklin Gothic Book', 'Franklin Gothic Medium', 'ITC Franklin Gothic', Arial, sans-serif">Franklin Gothic</flux:select.option>
@@ -243,6 +244,7 @@
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 <flux:select size="sm" x-model="chordproFontFamily" class="w-32 text-xs">
                                     <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
+                                    <flux:select.option value="'Barlow Condensed', sans-serif">Barlow Condensed</flux:select.option>
                                     <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
                                     <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
                                     <flux:select.option value="Arial, Helvetica, sans-serif">Arial</flux:select.option>
@@ -306,14 +308,29 @@
                         </flux:tooltip>
 
                         <flux:tooltip :content="__('Font')">
-                            <div class="flex items-center gap-1">
+                            <div class="flex items-center gap-1"
+                                x-data="{
+                                    fontPresets: ['Palatino Linotype', 'Barlow Condensed', 'Garamond', 'Times New Roman', 'Franklin Gothic Book', 'Franklin Gothic Book Medium Cond'],
+                                    get fontSelect() {
+                                        return this.fontPresets.includes(this.abcLyricFont) ? this.abcLyricFont : 'custom';
+                                    },
+                                    set fontSelect(val) {
+                                        if (val !== 'custom') this.abcLyricFont = val;
+                                        else this.abcLyricFont = '';
+                                    },
+                                    get isCustom() { return !this.fontPresets.includes(this.abcLyricFont); }
+                                }"
+                            >
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                                <flux:select size="sm" x-model="abcLyricFont" class="w-32 text-xs">
-                                    <flux:select.option value="Palatino Linotype">Palatino</flux:select.option>
+                                <flux:select size="sm" x-model="fontSelect" class="w-40 text-xs">
+                                    <flux:select.option value="Palatino Linotype">Palatino Linotype</flux:select.option>
+                                    <flux:select.option value="Barlow Condensed">Barlow Condensed</flux:select.option>
                                     <flux:select.option value="Garamond">Garamond</flux:select.option>
                                     <flux:select.option value="Times New Roman">Times New Roman</flux:select.option>
-                                    <flux:select.option value="Franklin Gothic Book">Franklin Gothic</flux:select.option>
+                                    <flux:select.option value="Franklin Gothic Book">Franklin Gothic Book</flux:select.option>
+                                    <flux:select.option value="custom">Custom…</flux:select.option>
                                 </flux:select>
+                                <flux:input size="sm" x-show="isCustom" x-model="abcLyricFont" placeholder="Font name" class="w-36 text-xs" />
                             </div>
                         </flux:tooltip>
 
@@ -454,6 +471,7 @@
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 <flux:select size="sm" x-model="aretinoLyricFont" class="w-32 text-xs">
                                     <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
+                                    <flux:select.option value="'Barlow Condensed', sans-serif">Barlow Condensed</flux:select.option>
                                     <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
                                     <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
                                     <flux:select.option value="'Franklin Gothic Book', 'Franklin Gothic Medium', 'ITC Franklin Gothic', Arial, sans-serif">Franklin Gothic</flux:select.option>

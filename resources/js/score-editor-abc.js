@@ -33,11 +33,12 @@ export function abcMixin() {
                 content = content.replace(/\|[|:\]]?/, '$&[K:clef=none]');
             }
             const virtualWidth = this.getVirtualCanvasSize('abc').width;
-            const safeFont = /^[a-zA-Z0-9 ]+$/.test(this.abcLyricFont) ? this.abcLyricFont : DEFAULT_ABC_FONT;
-            const fontName = safeFont.includes(' ') ? `"${safeFont}"` : safeFont;
+            const rawFont = (this.abcLyricFont || '').trim();
+            const safeFont = /^[a-zA-Z0-9 .\-'&]+$/.test(rawFont) ? rawFont : DEFAULT_ABC_FONT;
+            const fontName = /[ .\-'&]/.test(safeFont) ? `"${safeFont}"` : safeFont;
             const boldStr = this.abcLyricBold ? ' bold' : '';
             const lyricSize = this.abcLyricSize > 0 ? this.abcLyricSize : 12;
-            const vocalfontLine = `%%vocalfont ${fontName}${boldStr} ${lyricSize}`;
+            const vocalfontLine = `%%vocalfont ${fontName} ${boldStr} ${lyricSize}`;
             const preamble = `%%fullsvg 1\n%%pagewidth ${virtualWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${this.abcPageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
             const pages = this.splitPages(content, 'abc', this.abcPageRatio);
             pages.forEach(pageContent => {
