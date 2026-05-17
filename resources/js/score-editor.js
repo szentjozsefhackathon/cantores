@@ -68,7 +68,10 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcNoteSpacing', () => this.scheduleRender());
             this.$watch('abcStaffSep', () => this.scheduleRender());
             this.$watch('abcVocalSpace', () => this.scheduleRender());
+            this.$watch('abcNoClef', () => this.scheduleRender());
             this.$watch('abcPageScale', () => this.scheduleRender());
+            this.$watch('abcStemWidth', () => this.scheduleRender());
+            this.$watch('abcStaffLineWidth', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val) => { this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('chordproFontSize', () => this.scheduleRender());
             this.$watch('chordproFontFamily', () => this.scheduleRender());
@@ -114,6 +117,9 @@ document.addEventListener('alpine:init', () => {
                         abcNoteSpacing: Number(this.abcNoteSpacing),
                         abcStaffSep: Number(this.abcStaffSep),
                         abcVocalSpace: Number(this.abcVocalSpace),
+                        abcNoClef: !!this.abcNoClef,
+                        abcStemWidth: Number(this.abcStemWidth),
+                        abcStaffLineWidth: Number(this.abcStaffLineWidth),
                     },
                     ratio: this.abcPageRatio,
                 };

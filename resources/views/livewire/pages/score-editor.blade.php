@@ -354,6 +354,27 @@
                             </div>
                         </flux:tooltip>
 
+                        <flux:tooltip :content="__('Stem width')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="pencil-line" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="abcStemWidth" min="0.1" max="3" step="0.1" class="w-16" />
+                            </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Staff line width')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="bars-3" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:input size="sm" type="number" x-model="abcStaffLineWidth" min="0.1" max="3" step="0.1" class="w-16" />
+                            </div>
+                        </flux:tooltip>
+
+                        <flux:tooltip :content="__('Hide clefs from second measure onward')">
+                            <div class="flex items-center gap-1">
+                                <flux:icon name="clef-none" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                <flux:checkbox x-model="abcNoClef" />
+                            </div>
+                        </flux:tooltip>
+
                         @if(!$isGuest)
                         <flux:tooltip :content="__('Save as my default for this ratio')">
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
