@@ -23,13 +23,14 @@ export function gabcMixin() {
             if (!content || !content.trim()) { return; }
             const pages = this.splitPages(content, 'gabc', this.pageRatio);
             const canvas = this.getVirtualCanvasSize('gabc');
-            const pageEls = pages.map(() => {
+            const pageEls = pages.map((_, idx) => {
                 const pageEl = document.createElement('div');
                 pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
                 if (this.pageRatio !== 'auto') {
                     pageEl.style.aspectRatio = this.pageRatio;
                 }
                 container.appendChild(pageEl);
+                this.addPageControls(pageEl, idx + 1, pages.length, 'gabc');
                 return pageEl;
             });
             this.hasPages = true;

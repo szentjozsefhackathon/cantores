@@ -41,7 +41,7 @@ export function abcMixin() {
             const vocalfontLine = `%%vocalfont ${fontName} ${boldStr} ${lyricSize}`;
             const preamble = `%%fullsvg 1\n%%pagewidth ${virtualWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${this.abcPageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
             const pages = this.splitPages(content, 'abc', this.abcPageRatio);
-            pages.forEach(pageContent => {
+            pages.forEach((pageContent, idx) => {
                 const pageEl = document.createElement('div');
                 pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
                 if (this.abcPageRatio !== 'auto') {
@@ -83,6 +83,7 @@ export function abcMixin() {
                 } catch (e) {
                     console.error('[score-editor] abc2svg error:', e);
                 }
+                this.addPageControls(pageEl, idx + 1, pages.length, 'abc');
             });
         },
     };

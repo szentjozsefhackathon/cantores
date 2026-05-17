@@ -116,13 +116,14 @@ window.abc2svg = window.abc2svg || {};
                         userDefaults: @js($userDefaults ?: (object) []),
                         clippedWarningText: @js(__('Content does not fit on page')),
                         clipboardNotSupported: @js(__('Clipboard not supported in this browser')),
-                        firstPageCopied: @js(__('First page copied to clipboard')),
                         imageCopied: @js(__('Image copied to clipboard')),
                         failedToCopy: @js(__('Failed to copy image')),
                         shareLinkCopied: @js(__('Share link copied!')),
                         linkCopyFailed: @js(__('Failed to copy link')),
                         htmlCopied: @js(__('HTML copied to clipboard!')),
                         plainTextCopied: @js(__('Plain text copied to clipboard!')),
+                        copyAsImageText: @js(__('Copy as Image')),
+                        exportPngText: @js(__('Export PNG')),
                     })"
                 >
                     {{-- Textarea --}}
@@ -297,17 +298,18 @@ window.abc2svg = window.abc2svg || {};
 
                     {{-- ABC Settings Toolbar --}}
                     <div x-show="$wire.format === 'abc'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
-                        <flux:tooltip :content="__('Page ratio')">
                             <div class="flex items-center gap-1">
-                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                                <flux:select size="sm" x-model="abcPageRatio" class="w-20 text-xs">
-                                    <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
-                                    <flux:select.option value="16/9">16:9</flux:select.option>
-                                    <flux:select.option value="4/3">4:3</flux:select.option>
-                                    <flux:select.option value="1/1">1:1</flux:select.option>
-                                </flux:select>
+                                <flux:tooltip :content="__('Page ratio')">                                
+                                    <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                </flux:tooltip>                                    
+                                    <flux:select size="sm" x-model="abcPageRatio" class="w-20 text-xs">
+                                        <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
+                                        <flux:select.option value="16/9">16:9</flux:select.option>
+                                        <flux:select.option value="4/3">4:3</flux:select.option>
+                                        <flux:select.option value="1/1">1:1</flux:select.option>
+                                    </flux:select>
                             </div>
-                        </flux:tooltip>
+
 
                         <flux:tooltip :content="__('Page scale')">
                             <div class="flex items-center gap-1">
@@ -414,15 +416,8 @@ window.abc2svg = window.abc2svg || {};
                         <div x-ref="abcPreview" class="min-h-16 space-y-4" wire:ignore></div>
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
-                            <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
                             <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                 {{ __('Share') }}
-                            </flux:button>
-                            <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
-                                {{ __('Copy as Image') }}
-                            </flux:button>
-                            <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
-                                {{ __('Export PNG') }}
                             </flux:button>
                         </div>
                     </div>
@@ -432,15 +427,8 @@ window.abc2svg = window.abc2svg || {};
                         <div x-ref="preview" class="min-h-16 space-y-4" wire:ignore></div>
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
-                            <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
                             <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                 {{ __('Share') }}
-                            </flux:button>
-                            <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
-                                {{ __('Copy as Image') }}
-                            </flux:button>
-                            <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
-                                {{ __('Export PNG') }}
                             </flux:button>
                         </div>
                     </div>
@@ -512,15 +500,8 @@ window.abc2svg = window.abc2svg || {};
                         <div x-ref="aretinoPreview" class="min-h-16 space-y-4" wire:ignore></div>
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
-                            <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
                             <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                 {{ __('Share') }}
-                            </flux:button>
-                            <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
-                                {{ __('Copy as Image') }}
-                            </flux:button>
-                            <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
-                                {{ __('Export PNG') }}
                             </flux:button>
                         </div>
                     </div>

@@ -53,13 +53,14 @@ document.addEventListener('alpine:init', () => {
         localContent: '',
         clippedWarningText: config.clippedWarningText ?? '',
         clipboardNotSupported: config.clipboardNotSupported ?? '',
-        firstPageCopied: config.firstPageCopied ?? '',
         imageCopied: config.imageCopied ?? '',
         failedToCopy: config.failedToCopy ?? '',
         shareLinkCopied: config.shareLinkCopied ?? '',
         linkCopyFailed: config.linkCopyFailed ?? '',
         htmlCopied: config.htmlCopied ?? '',
         plainTextCopied: config.plainTextCopied ?? '',
+        copyAsImageText: config.copyAsImageText ?? '',
+        exportPngText: config.exportPngText ?? '',
         renderTimer: null,
         scoreSettings: config.scoreSettings ?? {},
         userDefaults: config.userDefaults ?? {},
@@ -322,6 +323,43 @@ document.addEventListener('alpine:init', () => {
             pageEl.insertAdjacentElement('afterend', warn);
         },
 
+        addPageControls(pageEl, pageIdx, totalPages, format) {
+            const bar = document.createElement('div');
+            bar.className = 'mt-1 mb-2 flex flex-wrap items-center justify-end gap-2';
+
+            const feedbackSpan = document.createElement('span');
+            feedbackSpan.className = 'text-sm text-zinc-600 dark:text-zinc-300';
+            feedbackSpan.style.display = 'none';
+
+            const showFeedback = (msg) => {
+                feedbackSpan.textContent = msg;
+                feedbackSpan.style.display = '';
+                clearTimeout(feedbackSpan._timer);
+                feedbackSpan._timer = setTimeout(() => { feedbackSpan.style.display = 'none'; }, 2500);
+            };
+
+            const clipIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/></svg>';
+            const dlIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>';
+            const btnClass = 'inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800';
+
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = btnClass;
+            copyBtn.innerHTML = clipIcon + this.copyAsImageText;
+            copyBtn.addEventListener('click', () => this.copyPageImage(pageEl, format, showFeedback));
+
+            const exportBtn = document.createElement('button');
+            exportBtn.type = 'button';
+            exportBtn.className = btnClass;
+            exportBtn.innerHTML = dlIcon + this.exportPngText;
+            exportBtn.addEventListener('click', () => this.exportPagePng(pageEl, pageIdx, totalPages, format));
+
+            bar.appendChild(feedbackSpan);
+            bar.appendChild(copyBtn);
+            bar.appendChild(exportBtn);
+            pageEl.insertAdjacentElement('afterend', bar);
+        },
+
         scheduleRender() {
             clearTimeout(this.renderTimer);
             this.renderTimer = setTimeout(() => this.renderPreview(), 600);
@@ -402,30 +440,37 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        exportPng() {
-            if (this.$wire.format === 'chordpro') {
-                this.exportChordproHtml();
-                return;
-            }
-            const previewEl = this.$wire.format === 'abc'
-                ? this.$refs.abcPreview
-                : (this.$wire.format === 'aretino' ? this.$refs.aretinoPreview : this.$refs.preview);
-            if (!previewEl) { return; }
-            const svgs = Array.from(previewEl.querySelectorAll('svg'));
+        exportPagePng(pageEl, pageIdx, totalPages, format) {
+            const svgs = Array.from(pageEl.querySelectorAll('svg'));
             if (!svgs.length) { return; }
-            if (this.$wire.format === 'abc') {
-                this.exportAbcPng(svgs);
+            const filename = totalPages > 1 ? 'score-page-' + pageIdx + '.png' : 'score.png';
+            const canvasPromise = format === 'abc' ? this.buildAbcCanvas(svgs) : this.svgToCanvas(svgs[0]);
+            canvasPromise.then(canvas => {
+                const a = document.createElement('a');
+                a.download = filename;
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            }).catch(e => console.error('[score-editor] export error:', e));
+        },
+
+        async copyPageImage(pageEl, format, showFeedback) {
+            const svgs = Array.from(pageEl.querySelectorAll('svg'));
+            if (!svgs.length) { return; }
+            if (!navigator.clipboard || !window.ClipboardItem) {
+                showFeedback(this.clipboardNotSupported);
                 return;
             }
-            const total = svgs.length;
-            svgs.forEach((svgEl, idx) => {
-                this.svgToCanvas(svgEl).then(canvas => {
-                    const a = document.createElement('a');
-                    a.download = total > 1 ? 'score-page-' + (idx + 1) + '.png' : 'score.png';
-                    a.href = canvas.toDataURL('image/png');
-                    a.click();
-                }).catch(e => console.error('[score-editor] export error:', e));
-            });
+            try {
+                const canvasPromise = format === 'abc' ? this.buildAbcCanvas(svgs) : this.svgToCanvas(svgs[0]);
+                const blobPromise = canvasPromise.then(canvas =>
+                    new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+                );
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
+                showFeedback(this.imageCopied);
+            } catch (e) {
+                console.error('[score-editor] copy image error:', e);
+                showFeedback(this.failedToCopy);
+            }
         },
 
         buildAbcCanvas(svgs) {
@@ -473,15 +518,6 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        exportAbcPng(svgs) {
-            this.buildAbcCanvas(svgs).then(canvas => {
-                const a = document.createElement('a');
-                a.download = 'score.png';
-                a.href = canvas.toDataURL('image/png');
-                a.click();
-            }).catch(e => console.error('[score-editor] export error:', e));
-        },
-
         fillExample() {
             const examples = {
                 abc: `K:D minor
@@ -522,31 +558,5 @@ Refr.
             this.scheduleRender();
         },
 
-        async copyImage() {
-            const previewEl = this.$wire.format === 'abc'
-                ? this.$refs.abcPreview
-                : (this.$wire.format === 'aretino' ? this.$refs.aretinoPreview : this.$refs.preview);
-            if (!previewEl) { return; }
-            const svgs = Array.from(previewEl.querySelectorAll('svg'));
-            if (!svgs.length) { return; }
-            if (!navigator.clipboard || !window.ClipboardItem) {
-                this.showCopyFeedback(this.clipboardNotSupported);
-                return;
-            }
-            try {
-                const canvasPromise = this.$wire.format === 'abc'
-                    ? this.buildAbcCanvas(svgs)
-                    : this.svgToCanvas(svgs[0]);
-                const blobPromise = canvasPromise.then(canvas =>
-                    new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
-                );
-                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
-                const msg = svgs.length > 1 ? this.firstPageCopied : this.imageCopied;
-                this.showCopyFeedback(msg);
-            } catch (e) {
-                console.error('[score-editor] copy image error:', e);
-                this.showCopyFeedback(this.failedToCopy);
-            }
-        },
     }));
 });

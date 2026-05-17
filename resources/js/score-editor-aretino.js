@@ -20,7 +20,7 @@ export function aretinoMixin() {
             const pages = this.splitPages(content, 'aretino', this.aretinoPageRatio);
             const canvas = this.getVirtualCanvasSize('aretino');
             const zoom = Number(this.aretinoZoom) / 100;
-            pages.forEach(pageSource => {
+            pages.forEach((pageSource, idx) => {
                 const pageEl = document.createElement('div');
                 pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
                 if (this.aretinoPageRatio !== 'auto') {
@@ -49,6 +49,7 @@ export function aretinoMixin() {
                 } catch (e) {
                     console.error('[score-editor] aretino render error:', e);
                 }
+                this.addPageControls(pageEl, idx + 1, pages.length, 'aretino');
             });
             this.hasPages = true;
         },
