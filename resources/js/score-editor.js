@@ -3,6 +3,50 @@ import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 
+const WEB_FONT_URLS = {
+    'Barlow Condensed': 'https://fonts.bunny.net/barlow-condensed/files/barlow-condensed-latin-500-normal.woff2',
+};
+const fontBase64Cache = {};
+
+async function fetchFontBase64(url) {
+    if (fontBase64Cache[url]) { return fontBase64Cache[url]; }
+    const res = await fetch(url);
+    const buf = await res.arrayBuffer();
+    let binary = '';
+    new Uint8Array(buf).forEach(b => { binary += String.fromCharCode(b); });
+    const b64 = btoa(binary);
+    fontBase64Cache[url] = b64;
+    return b64;
+}
+
+function parsePrimaryFontFamily(fontValue) {
+    return (fontValue ?? '').split(',')[0].trim().replace(/['"]/g, '');
+}
+
+async function injectWebFontsIntoSvg(svgEl, fontValues) {
+    const rules = [];
+    for (const value of fontValues) {
+        const family = parsePrimaryFontFamily(value);
+        const url = WEB_FONT_URLS[family];
+        if (!url) { continue; }
+        try {
+            const b64 = await fetchFontBase64(url);
+            rules.push(`@font-face{font-family:'${family}';src:url('data:font/woff2;base64,${b64}')format('woff2');}`);
+        } catch (e) {
+            console.warn('[score-editor] could not embed font:', family, e);
+        }
+    }
+    if (!rules.length) { return; }
+    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    style.textContent = rules.join('');
+    let defs = svgEl.querySelector('defs');
+    if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        svgEl.insertBefore(defs, svgEl.firstChild);
+    }
+    defs.insertBefore(style, defs.firstChild);
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('scoreEditor', (config = {}) => ({
         hasPages: false,
@@ -305,7 +349,7 @@ document.addEventListener('alpine:init', () => {
             this.copyFeedbackTimer = setTimeout(() => { this.copyFeedback = ''; }, 2500);
         },
 
-        svgToCanvas(svgEl) {
+        async svgToCanvas(svgEl) {
             const renderWidth = this.getRenderWidth();
             const scale = 1;
             const margin = 20;
@@ -335,6 +379,8 @@ document.addEventListener('alpine:init', () => {
             if (paddedViewBox) {
                 clonedSvg.setAttribute('viewBox', paddedViewBox);
             }
+            const lyricFont = this.$wire.format === 'aretino' ? this.aretinoLyricFont : this.lyricFont;
+            await injectWebFontsIntoSvg(clonedSvg, [lyricFont]);
             const svgData = new XMLSerializer().serializeToString(clonedSvg);
             const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
             const url = URL.createObjectURL(svgBlob);
@@ -400,13 +446,15 @@ document.addEventListener('alpine:init', () => {
                 clone.setAttribute('width', String(d.w));
                 clone.setAttribute('height', String(d.h));
                 clone.setAttribute('viewBox', `${d.x} ${d.y} ${d.w} ${d.h}`);
-                const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                return new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = () => { URL.revokeObjectURL(url); resolve({ img, w: d.w, h: d.h }); };
-                    img.onerror = e => { URL.revokeObjectURL(url); reject(e); };
-                    img.src = url;
+                return injectWebFontsIntoSvg(clone, [this.abcLyricFont]).then(() => {
+                    const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    return new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => { URL.revokeObjectURL(url); resolve({ img, w: d.w, h: d.h }); };
+                        img.onerror = e => { URL.revokeObjectURL(url); reject(e); };
+                        img.src = url;
+                    });
                 });
             });
             return Promise.all(promises).then(results => {

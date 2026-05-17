@@ -99,6 +99,15 @@
                 @endif
 
 <script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
+<script>
+window.abc2svg = window.abc2svg || {};
+(function () {
+    var el = document.createElement('span');
+    el.style.cssText = 'position:absolute;top:-9999px;left:-9999px;visibility:hidden;white-space:nowrap;';
+    document.body.appendChild(el);
+    window.abc2svg.el = el;
+})();
+</script>
 <script src="{{ asset('js/abc2svg-1.js') }}"></script>
 
                 <div
