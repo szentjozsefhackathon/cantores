@@ -26,7 +26,17 @@
 //   }
 
 export function parseAretino(source) {
-    const lines = (source ?? '').replace(/\r\n/g, '\n').split('\n');
+    const src = source ?? '';
+    const lines = src.replace(/\r\n/g, '\n').split('\n');
+    // Absolute source offset of the first character of each line. Used to
+    // translate per-line token positions into absolute positions that match
+    // the textarea's selectionStart.
+    const lineStarts = [];
+    let off = 0;
+    for (const line of lines) {
+        lineStarts.push(off);
+        off += line.length + 1;
+    }
     const header = {};
     let bodyStart = 0;
     let sawHeaderEnd = false;
@@ -51,9 +61,10 @@ export function parseAretino(source) {
     if (!sawHeaderEnd && Object.keys(header).length === 0) {
         bodyStart = 0;
     }
-    const body = lines.slice(bodyStart);
     const result = [];
-    for (const raw of body) {
+    for (let li = bodyStart; li < lines.length; li++) {
+        const raw = lines[li];
+        const lineStart = lineStarts[li];
         if (raw.trim() === '') {
             result.push({ type: 'blank' });
             continue;
@@ -62,7 +73,7 @@ export function parseAretino(source) {
             result.push({ type: 'lyrics', text: raw.replace(/^\s*w:\s?/, '') });
             continue;
         }
-        result.push({ type: 'music', tokens: tokenizeMusicLine(raw) });
+        result.push({ type: 'music', tokens: tokenizeMusicLine(raw, lineStart) });
     }
     return { header, lines: result };
 }
@@ -71,7 +82,7 @@ function isPitchLetter(c) {
     return /[a-mA-M]/.test(c);
 }
 
-function tokenizeMusicLine(line) {
+function tokenizeMusicLine(line, lineStart = 0) {
     const tokens = [];
     const len = line.length;
     let i = 0;
@@ -81,35 +92,38 @@ function tokenizeMusicLine(line) {
             i++;
             continue;
         }
+        const tokStart = i;
         if (ch === '(') {
             const end = line.indexOf(')', i);
             const value = end < 0 ? line.slice(i + 1) : line.slice(i + 1, end);
             i = end < 0 ? len : end + 1;
             const inner = value.trim();
+            const srcStart = lineStart + tokStart;
+            const srcEnd = lineStart + i;
             const bareBar = inner.match(/^([,;]|::?)$/);
             if (bareBar) {
-                tokens.push({ type: 'barline', kind: bareBar[1] });
+                tokens.push({ type: 'barline', kind: bareBar[1], srcStart, srcEnd });
             } else if (/^sp([0-9]*\.?[0-9]*)$/i.test(inner)) {
                 const m2 = inner.match(/^sp([0-9]*\.?[0-9]*)$/i);
                 const multiplier = m2[1] ? parseFloat(m2[1]) : 1;
-                tokens.push({ type: 'spacer', multiplier: isFinite(multiplier) && multiplier > 0 ? multiplier : 1 });
+                tokens.push({ type: 'spacer', multiplier: isFinite(multiplier) && multiplier > 0 ? multiplier : 1, srcStart, srcEnd });
             } else {
-                tokens.push({ type: 'directive', value: inner });
+                tokens.push({ type: 'directive', value: inner, srcStart, srcEnd });
             }
             continue;
         }
         if (ch === '*') {
-            tokens.push({ type: 'expander' });
+            tokens.push({ type: 'expander', srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 1 });
             i++;
             continue;
         }
         if (ch === ':' && line[i + 1] === ':') {
-            tokens.push({ type: 'barline', kind: '::' });
+            tokens.push({ type: 'barline', kind: '::', srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 2 });
             i += 2;
             continue;
         }
         if (ch === ',' || ch === ';' || ch === ':') {
-            tokens.push({ type: 'barline', kind: ch });
+            tokens.push({ type: 'barline', kind: ch, srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 1 });
             i++;
             continue;
         }
@@ -118,6 +132,7 @@ function tokenizeMusicLine(line) {
             while (true) {
                 const group = [];
                 while (i < len && isPitchLetter(line[i])) {
+                    const noteStart = i;
                     const pitchChar = line[i];
                     i++;
                     const note = {
@@ -161,6 +176,8 @@ function tokenizeMusicLine(line) {
                         }
                         break;
                     }
+                    note.srcStart = lineStart + noteStart;
+                    note.srcEnd = lineStart + i;
                     group.push(note);
                 }
                 if (group.length) {
@@ -180,7 +197,7 @@ function tokenizeMusicLine(line) {
                 break;
             }
             if (groups.length) {
-                tokens.push({ type: 'ligature', groups });
+                tokens.push({ type: 'ligature', groups, srcStart: lineStart + tokStart, srcEnd: lineStart + i });
             }
             continue;
         }

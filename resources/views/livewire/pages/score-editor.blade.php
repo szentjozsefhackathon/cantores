@@ -128,7 +128,18 @@ window.abc2svg = window.abc2svg || {};
                 >
                     {{-- Textarea --}}
                     <flux:field required>
-                        <flux:textarea wire:model="content" rows="10" class="font-mono text-sm" :placeholder="__('Type the score here')" x-on:input="localContent = $event.target.value; scheduleRender()" />
+                        <flux:textarea
+                            wire:model="content"
+                            rows="10"
+                            class="font-mono text-sm"
+                            :placeholder="__('Type the score here')"
+                            x-ref="contentTextarea"
+                            x-on:input="localContent = $event.target.value; scheduleRender(); updateAretinoHighlight && updateAretinoHighlight()"
+                            x-on:click="updateAretinoHighlight && updateAretinoHighlight()"
+                            x-on:keyup="updateAretinoHighlight && updateAretinoHighlight()"
+                            x-on:select="updateAretinoHighlight && updateAretinoHighlight()"
+                            x-on:focus="updateAretinoHighlight && updateAretinoHighlight()"
+                        />
                         <flux:error name="content" />
                     </flux:field>
 

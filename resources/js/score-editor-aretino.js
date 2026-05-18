@@ -50,6 +50,37 @@ export function aretinoMixin() {
                 this.addPageControls(pageEl, idx + 1, pages.length, 'aretino');
             });
             this.hasPages = true;
+            this.updateAretinoHighlight();
+        },
+
+        // Highlights the SVG element whose source range contains the textarea
+        // cursor position. Re-run on cursor moves and after each re-render.
+        updateAretinoHighlight() {
+            if (this.$wire.format !== 'aretino') { return; }
+            const container = this.$refs.aretinoPreview;
+            const textarea = this.$refs.contentTextarea;
+            if (!container || !textarea) { return; }
+            const pos = textarea.selectionStart;
+            container.querySelectorAll('.aretino-active').forEach(el => el.classList.remove('aretino-active'));
+            if (pos === null || pos === undefined) { return; }
+
+            // Walk all source-tagged elements; pick the smallest range that
+            // contains the cursor (notes nest inside ligatures).
+            let best = null;
+            let bestSize = Infinity;
+            container.querySelectorAll('[data-src-start]').forEach(el => {
+                const s = Number(el.dataset.srcStart);
+                const e = Number(el.dataset.srcEnd);
+                if (pos < s || pos > e) { return; }
+                const size = e - s;
+                if (size < bestSize) {
+                    best = el;
+                    bestSize = size;
+                }
+            });
+            if (best) {
+                best.classList.add('aretino-active');
+            }
         },
     };
 }

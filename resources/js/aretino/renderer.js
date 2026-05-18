@@ -28,6 +28,17 @@ function ss(ctx, n) {
     return n * ctx.staffSpace;
 }
 
+function wrapSrc(item, svg, cls) {
+    if (item.srcStart === undefined || item.srcEnd === undefined) {
+        return svg;
+    }
+    return `<g class="${cls}" data-src-start="${item.srcStart}" data-src-end="${item.srcEnd}">${svg}</g>`;
+}
+
+// CSS rules embedded in the SVG so a cursor-tracking script can toggle a
+// single class to highlight the active note/token.
+const HIGHLIGHT_STYLE = `<style>.aretino-active [fill]:not([fill="none"]){fill:#ea580c}.aretino-active [stroke]:not([stroke="none"]){stroke:#ea580c}</style>`;
+
 export function renderAretino(source, options = {}) {
     const ast = parseAretino(source);
     const canvasWidth = options.canvasWidth || 1920;
@@ -161,23 +172,23 @@ export function renderAretino(source, options = {}) {
                 const it = row.items[idx];
                 if (it.kind === 'clef') {
                     const c = drawClef(ctx, it.clef, cursorX, staffBottomY);
-                    parts.push(c.svg);
+                    parts.push(wrapSrc(it, c.svg, 'aretino-token aretino-clef'));
                     cursorX += c.advance + ss(ctx, METRICS.clefInlinePostGap);
                 } else if (it.kind === 'accidental') {
                     const a = drawAccidental(ctx, it.pitch, it.symbol, cursorX, staffBottomY);
-                    parts.push(a.svg);
+                    parts.push(wrapSrc(it, a.svg, 'aretino-token aretino-accidental'));
                     cursorX += a.advance;
                 } else if (it.kind === 'expander') {
                     cursorX += ctx.expanderWidth + extraPerExpander;
                 } else if (it.kind === 'barline') {
                     const b = drawBarline(ctx, it.value, cursorX, staffBottomY);
-                    parts.push(b.svg);
+                    parts.push(wrapSrc(it, b.svg, 'aretino-token aretino-barline'));
                     cursorX += b.advance + ss(ctx, METRICS.barlinePostGap);
                 } else if (it.kind === 'spacer') {
                     cursorX += ss(ctx, METRICS.spacerAdvance) * it.multiplier;
                 } else if (it.kind === 'ligature') {
                     const r = emitLigature(ctx, it.groups, cursorX, staffBottomY);
-                    parts.push(r.svg);
+                    parts.push(wrapSrc(it, r.svg, 'aretino-token aretino-ligature'));
                     rowLigatures.push({ centerX: r.centerX, leftX: r.leftX });
                     cursorX += r.advance + (it.syllableExtra || 0);
                 }
@@ -218,7 +229,7 @@ export function renderAretino(source, options = {}) {
     }
 
     const totalHeight = canvasHeight || Math.max(y + ctx.staffSpace, 100);
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvasWidth} ${totalHeight}" preserveAspectRatio="xMidYMin meet" width="100%" style="display:block">${parts.join('')}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvasWidth} ${totalHeight}" preserveAspectRatio="xMidYMin meet" width="100%" style="display:block">${HIGHLIGHT_STYLE}${parts.join('')}</svg>`;
 }
 
 function trailingClef(items, fallback) {
@@ -265,42 +276,43 @@ function groupSections(lines) {
 function flattenItems(tokens) {
     const items = [];
     for (const tok of tokens) {
+        const src = { srcStart: tok.srcStart, srcEnd: tok.srcEnd };
         if (tok.type === 'directive') {
             const v = tok.value;
             const clefM = v.match(/^([gfcGFC])([0-9])$/);
             if (clefM) {
-                items.push({ kind: 'clef', clef: { letter: clefM[1].toLowerCase(), line: parseInt(clefM[2], 10) } });
+                items.push({ kind: 'clef', clef: { letter: clefM[1].toLowerCase(), line: parseInt(clefM[2], 10) }, ...src });
                 continue;
             }
             const accM = v.match(/^([a-mA-M]?)b([xy#])$/);
             if (accM) {
-                items.push({ kind: 'accidental', pitch: (accM[1] || 'b').toLowerCase(), symbol: accM[2] });
+                items.push({ kind: 'accidental', pitch: (accM[1] || 'b').toLowerCase(), symbol: accM[2], ...src });
                 continue;
             }
             if (v === 'z') {
-                items.push({ kind: 'break', justify: true });
+                items.push({ kind: 'break', justify: true, ...src });
                 continue;
             }
             if (v === 'Z') {
-                items.push({ kind: 'break', justify: false });
+                items.push({ kind: 'break', justify: false, ...src });
                 continue;
             }
             continue;
         }
         if (tok.type === 'expander') {
-            items.push({ kind: 'expander' });
+            items.push({ kind: 'expander', ...src });
             continue;
         }
         if (tok.type === 'barline') {
-            items.push({ kind: 'barline', value: tok.kind });
+            items.push({ kind: 'barline', value: tok.kind, ...src });
             continue;
         }
         if (tok.type === 'spacer') {
-            items.push({ kind: 'spacer', multiplier: tok.multiplier });
+            items.push({ kind: 'spacer', multiplier: tok.multiplier, ...src });
             continue;
         }
         if (tok.type === 'ligature') {
-            items.push({ kind: 'ligature', groups: tok.groups });
+            items.push({ kind: 'ligature', groups: tok.groups, ...src });
             continue;
         }
     }
@@ -494,23 +506,25 @@ function emitLigature(ctx, groups, x, staffBottomY) {
             parts.push(drawLigatureConnector(ctx, from.x - halfSW, from.y, to.x + halfSW, to.y, kind));
         }
 
-        // Draw note heads + modifiers.
+        // Draw note heads + modifiers, wrapped per-note so each note can be
+        // highlighted independently when the cursor sits on it.
         for (let i = 0; i < positions.length; i++) {
             const p = positions[i];
             const prevCy = i > 0 ? positions[i - 1].cy : null;
             const drawnNote = autoVirga[i] ? { ...p.note, virga: true } : p.note;
-            parts.push(drawNoteHead(ctx, drawnNote, p.cx, p.cy, staffBottomY, prevCy));
+            const noteParts = [drawNoteHead(ctx, drawnNote, p.cx, p.cy, staffBottomY, prevCy)];
             for (const mod of p.note.modifiers) {
                 if (mod === 'episema') {
                     const onLine = pitchToPos(p.note) % 2 === 0;
-                    parts.push(drawEpisema(ctx, p.cx, p.cy, onLine));
+                    noteParts.push(drawEpisema(ctx, p.cx, p.cy, onLine));
                 } else if (mod === 'mora') {
                     const onLine = pitchToPos(p.note) % 2 === 0;
-                    parts.push(drawMora(ctx, p.cx, p.cy, onLine));
+                    noteParts.push(drawMora(ctx, p.cx, p.cy, onLine));
                 } else if (mod === 'liquescens') {
-                    parts.push(drawLiquescens(ctx, p.cx, p.cy, 'down'));
+                    noteParts.push(drawLiquescens(ctx, p.cx, p.cy, 'down'));
                 }
             }
+            parts.push(wrapSrc(p.note, noteParts.join(''), 'aretino-note'));
         }
 
         if (g < groups.length - 1) {
