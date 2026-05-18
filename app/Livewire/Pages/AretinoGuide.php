@@ -5,7 +5,11 @@ namespace App\Livewire\Pages;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\View as IlluminateView;
-use League\CommonMark\GithubFlavoredMarkdownConverter;
+use League\CommonMark\Environment\Environment;
+use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
+use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension;
+use League\CommonMark\MarkdownConverter;
 use Livewire\Component;
 
 class AretinoGuide extends Component
@@ -36,10 +40,20 @@ class AretinoGuide extends Component
      */
     public function toHtml(string $markdown): HtmlString
     {
-        $converter = new GithubFlavoredMarkdownConverter([
+        $environment = new Environment([
             'html_input' => 'strip',
             'allow_unsafe_links' => false,
+            'heading_permalink' => [
+                'insert' => 'none',
+                'id_prefix' => '',
+                'apply_id_to_heading' => true,
+            ],
         ]);
+        $environment->addExtension(new CommonMarkCoreExtension);
+        $environment->addExtension(new GithubFlavoredMarkdownExtension);
+        $environment->addExtension(new HeadingPermalinkExtension);
+
+        $converter = new MarkdownConverter($environment);
 
         return new HtmlString($converter->convert($markdown));
     }

@@ -4,7 +4,7 @@
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <flux:heading size="2xl">{{ __('My Scores') }}</flux:heading>
-                    <flux:subheading>{{ __('Private ABC and Gregorio GABC scores created by you.') }}</flux:subheading>
+                    <flux:subheading>{{ __('Private scores created by you.') }}</flux:subheading>
                 </div>
 
                 <flux:button variant="primary" icon="plus" :href="route('scores.create')" wire:navigate>
@@ -21,7 +21,7 @@
             <div class="mb-6">
                 <flux:field>
                     <flux:label>{{ __('Search') }}</flux:label>
-                    <flux:input type="search" wire:model.live.debounce.500ms="search" icon="magnifying-glass" :placeholder="__('Search by score or music title')" />
+                    <flux:input type="search" wire:model.live.debounce.500ms="search" icon="magnifying-glass" :placeholder="__('Search')" />
                 </flux:field>
             </div>
 
@@ -44,7 +44,12 @@
                         @foreach($scores as $score)
                             <flux:table.row wire:key="score-row-{{ $score->id }}">
                                 <flux:table.cell>
-                                    <div class="font-medium">{{ $score->title }}</div>
+                                    <div class="flex items-center gap-1.5 font-medium">
+                                        {{ $score->title }}
+                                        @if($score->share_token)
+                                            <flux:icon name="link" size="sm" class="text-blue-500 dark:text-blue-400" :title="__('Secret link active')" />
+                                        @endif
+                                    </div>
                                 </flux:table.cell>
                                 <flux:table.cell>
                                     <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
