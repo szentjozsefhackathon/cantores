@@ -373,11 +373,12 @@ A kottafej alapformáját egy **utótag-karakter** módosítja a betű után:
 | `D` | **virga** | punctum bal oldalán lefelé mutató szárral (nagybetű!) |
 | `dw` | **quilisma** | csíkozott, cikkcakkos kontúrú kottafej |
 | `dt` | **tenor-hang** | üres kottafej, két oldalán függőleges vonalkák |
+| `ds` | **kiskotta** | kis méretű kottafej |
 
 ### Példák
 
 ```aretino
-(g2) d D dw dt d~
+(g2) d D dw dt ds
 ```
 
 Bal → jobb: punctum, virga, quilisma, tenor-hang — mind ugyanazon a magasságon (D).
@@ -687,7 +688,7 @@ w: U-ram, ir-gal-mazz né-künk!
 (g2) (K:mb#) d e g f gh h , i j i h i h ge d : d e gfgh h , i g ge ggfg h g e d d ::
 w: Hints meg en-gem U-ram, i-zsóp-pal és meg-tisz-tu-lok, moss meg en-gem, és fe-hé-rebb le-szek a hó-nál.
 
-f g ht g ht g h i g g : ht i h g gf e ::
+f g ht gs ht g h i gs g : ht i h g gf e ::
 w: ~ ~ ~ † (*)
 ```
 ---

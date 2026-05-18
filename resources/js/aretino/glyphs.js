@@ -59,6 +59,9 @@ export const METRICS = {
     tenorSideStroke: 0.15,             // thickness of the two vertical bars
     tenorSideStrokeMinPx: 1.4,
 
+    // --- Small notehead (optional psalm-tone notes) ----------------------
+    smallNoteScale: 0.7,               // scale factor for small noteheads
+
     // --- Mora dot ---------------------------------------------------------
     moraOffsetX: 0.85,                // horizontal distance from notehead center
     moraRadius: 0.125,
@@ -189,6 +192,12 @@ export function drawNoteHead(ctx, note, cx, cy, staffBottomY, prevCy = null) {
     const noteW = ss(ctx, METRICS.noteBoxWidth);
     const noteH = ss(ctx, METRICS.noteBoxHeight);
 
+    const isSmall = note.modifiers && note.modifiers.includes('small');
+    const scale = isSmall ? METRICS.smallNoteScale : 1;
+    // Shift small noteheads left so their left edge aligns with a normal notehead's left edge.
+    const smallOffsetX = isSmall ? ss(ctx, METRICS.noteheadRx) * (1 - scale) : 0;
+    const headCx = cx - smallOffsetX;
+
     if (note.shape === 'quilisma') {
         const teeth = METRICS.quilismaTeeth;
         const dx = noteW / teeth;
@@ -217,20 +226,21 @@ export function drawNoteHead(ctx, note, cx, cy, staffBottomY, prevCy = null) {
         parts.push(`<path d="${path}" fill="#000"/>`);
     } else if (note.shape === 'tenor') {
         const outlineSW = stroke(ctx, METRICS.tenorOutlineStroke, METRICS.tenorOutlineStrokeMinPx);
-        parts.push(ovalHead(ctx, cx, cy, { fill: 'none', stroke: '#000', strokeWidth: outlineSW }));
+        parts.push(ovalHead(ctx, headCx, cy, { rx: ss(ctx, METRICS.noteheadRx) * scale, ry: ss(ctx, METRICS.noteheadRy) * scale, fill: 'none', stroke: '#000', strokeWidth: outlineSW }));
         const sideSW = stroke(ctx, METRICS.tenorSideStroke, METRICS.tenorSideStrokeMinPx);
-        const sideX = noteW / 2 + ss(ctx, METRICS.tenorSideStrokeOffset);
-        const halfH = ss(ctx, METRICS.tenorSideStrokeHalfHeight);
-        parts.push(`<line x1="${cx - sideX}" y1="${cy - halfH}" x2="${cx - sideX}" y2="${cy + halfH}" stroke="#000" stroke-width="${sideSW}"/>`);
-        parts.push(`<line x1="${cx + sideX}" y1="${cy - halfH}" x2="${cx + sideX}" y2="${cy + halfH}" stroke="#000" stroke-width="${sideSW}"/>`);
+        const sideX = (noteW / 2 + ss(ctx, METRICS.tenorSideStrokeOffset)) * scale;
+        const halfH = ss(ctx, METRICS.tenorSideStrokeHalfHeight) * scale;
+        parts.push(`<line x1="${headCx - sideX}" y1="${cy - halfH}" x2="${headCx - sideX}" y2="${cy + halfH}" stroke="#000" stroke-width="${sideSW}"/>`);
+        parts.push(`<line x1="${headCx + sideX}" y1="${cy - halfH}" x2="${headCx + sideX}" y2="${cy + halfH}" stroke="#000" stroke-width="${sideSW}"/>`);
     } else {
-        parts.push(ovalHead(ctx, cx, cy));
+        parts.push(ovalHead(ctx, headCx, cy, { rx: ss(ctx, METRICS.noteheadRx) * scale, ry: ss(ctx, METRICS.noteheadRy) * scale }));
     }
 
     if (note.shape === 'virga' || note.virga) {
         // Stem going down from the left edge of the head.
         const sw = stroke(ctx, METRICS.stemStroke, METRICS.stemStrokeMinPx);
-        const stemX = cx - noteW / 2 - sw / 2;
+        const scaledNoteW = noteW * scale;
+        const stemX = headCx - scaledNoteW / 2 - sw / 2;
         const stemLength = prevCy !== null && prevCy > cy
             ? (prevCy - cy) + ss(ctx, METRICS.virgaStemDescentBelowPrev)
             : ss(ctx, METRICS.virgaStemLength);

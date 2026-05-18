@@ -207,6 +207,11 @@ function tokenizeMusicLine(line, lineStart = 0) {
                             i++;
                             continue;
                         }
+                        if (m === 's') {
+                            note.modifiers.push('small');
+                            i++;
+                            continue;
+                        }
                         break;
                     }
                     note.srcStart = lineStart + noteStart;

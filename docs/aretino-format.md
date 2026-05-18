@@ -65,6 +65,7 @@ Aposztrof (`'`) emelt oktáv (ritka): `d'` = magas D.
 | `D` | virga | punctum bal oldalán lefelé mutató szár |
 | `dw` | quilisma | csíkozott (cikkcakkos kontúrú) kottafej |
 | `dt` | tenor-hang | üres kottafej, két oldalán függőleges vonalka |
+| `ds` | kis kottafej | kicsinyített (70%) kottafej, opcionális hangok jelölésére |
 | `d.` | mora (nyújtópont) | a kottafej után, jobbra |
 | `d_` | episzéma | rövid vízszintes vonal a kottafej **fölött, a hang magasságához igazítva** |
 | `d~` | likveszcens kicsi | kis „farok" kiegészítés |
