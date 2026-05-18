@@ -137,6 +137,12 @@ function tokenizeMusicLine(line, lineStart = 0) {
             i++;
             continue;
         }
+        if (ch === '=') {
+            let count = 0;
+            while (i < len && line[i] === '=') { count++; i++; }
+            tokens.push({ type: 'spacer', multiplier: count, srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + count });
+            continue;
+        }
         if (ch === ':' && line[i + 1] === ':') {
             tokens.push({ type: 'barline', kind: '::', srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 2 });
             i += 2;

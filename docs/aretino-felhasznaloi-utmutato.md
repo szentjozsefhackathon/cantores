@@ -270,9 +270,7 @@ tartalomra kell figyelnie, nem a glyph-ek rajzolására.
 
 ---
 
-## 5. Forrásszerkezet — első kotta
-
-A legrövidebb, működő Aretino forrás:
+## 5. Első kotta
 
 ```aretino
 (g2) d f g h.
@@ -499,30 +497,29 @@ w: Men-je-tek, és vi-gyé-tek hí-rül: (*) föl-tá-madt az Úr, al-le-lu-ja! 
 
 ---
 
-## 14. Sorvégi kiegyenlítés és sortörés
+## 14. Sorvégi kiegyenlítés, manuális elosztás és sortörés
 
-### Csillag `*` — szétfutó üres szakasz
+Az Aretino megjelenítő igyekszik kedvezően elosztani a neumákat/szótagokat, néha mégis szükség lehet manuális beavatkozásra.
 
-A `*` egy üres, "rugalmas" szakasz, amelyet a megjelenítő a sor végéig
-kiegyenlít. Tipikusan akkor használod, amikor egy frázis közepén vagy
-végén a szöveg hosszabb a hangoknál, és vizuálisan szétoszlatnád a
-hangokat:
+### Csillag `*` — sorkizárt sorok elosztása
+
+A `*` egy üres, "rugalmas" szakasz, amellyel befolyásolhatjuk, hogy egy sorkizárt szakasz hol legyen szellősebb:
 
 ```aretino
-(g2) d f g h * g f d  (::)
+(g2) d f * g h * g (z) f d  (::)
 ```
 
 Több `*` is használható egy sorban; a maradék helyet egyenlően elosztja
 köztük.
 
-### Spacer `(sp)` — fix méretű rés
+### Spacer `(sp)` és `=` — fix méretű rés
 
 Ha **fix** szélességű rést akarsz (nem rugalmas, mint a `*`), használd
 a `(sp)` direktívát. Szorzóval is megadható: `(sp2)` = 2× alapszélesség,
-`(sp0.5)` = fél szélesség.
+`(sp0.5)` = fél szélesség, illetve az `(sp)`-nek azonos jelentésű a `=` jel.
 
 ```aretino
-(g2) d f (sp2) g h
+(g2) d f (sp2) g = h ==== f
 ```
 
 ### Explicit sortörés `(z)` és `(Z)`
@@ -537,6 +534,11 @@ sorba viszi. Explicit sortörést is kérhetsz:
 
 A `(z)` formát használd ott, ahol a frázis-vége természetesen indokol
 sortörést.
+
+```aretino
+(g2) g h i j (z) g h i j (Z) g h i j ::
+```
+
 
 ---
 
@@ -555,14 +557,10 @@ jelenik meg.
 ### Példa
 
 ```aretino
-;cím: Példa b-vel
-%%
-(g2) h (ibx) hih fgh.
+(g2) (ibx) (sp) (iby) (sp) (ib#) (sp) : h (ibx) hih fgh. g(ibx)hih
 ```
 
-Az `(ebx)` egy *aktuális* (egyszeri) b. Az Aretino nem érvényesít
-sor-szintű alteráció-emlékezetet, ezért ha minden hangon ismétlődő b-t
-szeretnél, használj **előjegyzést** (lásd lent).
+A módosítójeleket a következő neumával egyben tartjuk. (Neumán belül is használható módosítójel.)
 
 ### Előjegyzés — `(K:...)`
 
@@ -688,7 +686,7 @@ w: U-ram, ir-gal-mazz né-künk!
 (g2) (K:mb#) d e g f gh h , i j i h i h ge d : d e gfgh h , i g ge ggfg h g e d d ::
 w: Hints meg en-gem U-ram, i-zsóp-pal és meg-tisz-tu-lok, moss meg en-gem, és fe-hé-rebb le-szek a hó-nál.
 
-f g ht gs ht g h i gs g : ht i h g gf e ::
+f g ht gs ht g h i gs g : ht i h gs gf e ::
 w: ~ ~ ~ † (*)
 ```
 ---

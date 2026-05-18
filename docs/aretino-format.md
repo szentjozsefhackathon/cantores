@@ -133,6 +133,7 @@ elején is az új előjegyzés szerepel.
 | `:` | egész vonal |
 | `::` | kettős vonal (tétel vége) |
 | `*` | sorvég-kiegyenlítő — szélesen szétfutó üres vonalszakasz |
+| `=` | szóköz (spacer) — megegyezik `(sp)`-vel; `==` = `(sp2)`, `===` = `(sp3)` stb. |
 | `/` | neuma-tagoló rés — egy kottafejnyi üres hely a kis csoportok között, a melizmán belül |
 | `(z)` | sortörés-javaslat (custos automatikusan generálódik) |
 
