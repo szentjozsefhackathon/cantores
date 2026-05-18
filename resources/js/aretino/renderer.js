@@ -37,7 +37,7 @@ function wrapSrc(item, svg, cls) {
 
 // CSS rules embedded in the SVG so a cursor-tracking script can toggle a
 // single class to highlight the active note/token.
-const HIGHLIGHT_STYLE = `<style>.aretino-active [fill]:not([fill="none"]){fill:#ea580c}.aretino-active [stroke]:not([stroke="none"]){stroke:#ea580c}</style>`;
+const HIGHLIGHT_STYLE = `<style>.aretino-active [fill]:not([fill="none"]):not(.aretino-cursor-bg){fill:#ea580c}.aretino-active [stroke]:not([stroke="none"]):not(.aretino-cursor-bg){stroke:#ea580c}</style>`;
 
 export function renderAretino(source, options = {}) {
     const ast = parseAretino(source);

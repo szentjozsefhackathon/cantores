@@ -571,7 +571,7 @@ sortörést.
 | `(by)` | feloldó | a megelőző alteráció feloldása |
 | `(b#)` | kereszt | félhanggal emelt |
 
-A `b` után a hang betűje adja meg a magasságot: `(ebx)` = b a 3. vonalon
+A `b` előtt a hang betűje adja meg a magasságot: `(ebx)` = b a 3. vonalon
 (E magasságán), `(fbx)` = b az F-en stb. Ha csak `(bx)`, akkor a B-hangon
 jelenik meg.
 

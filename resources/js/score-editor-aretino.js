@@ -62,6 +62,7 @@ export function aretinoMixin() {
             if (!container || !textarea) { return; }
             const pos = textarea.selectionStart;
             container.querySelectorAll('.aretino-active').forEach(el => el.classList.remove('aretino-active'));
+            container.querySelectorAll('.aretino-cursor-bg').forEach(el => el.remove());
             if (pos === null || pos === undefined) { return; }
 
             // Walk all source-tagged elements; pick the smallest range that
@@ -80,7 +81,34 @@ export function aretinoMixin() {
             });
             if (best) {
                 best.classList.add('aretino-active');
+                this.drawAretinoCursorBg(best);
             }
+        },
+
+        // Insert a translucent rect behind the active element so the cursor
+        // location reads at a glance, even when the underlying glyph is small.
+        drawAretinoCursorBg(el) {
+            let bbox;
+            try {
+                bbox = el.getBBox();
+            } catch (e) {
+                return;
+            }
+            if (!bbox || (bbox.width === 0 && bbox.height === 0)) { return; }
+            const pad = 4;
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('class', 'aretino-cursor-bg');
+            rect.setAttribute('x', bbox.x - pad);
+            rect.setAttribute('y', bbox.y - pad);
+            rect.setAttribute('width', bbox.width + pad * 2);
+            rect.setAttribute('height', bbox.height + pad * 2);
+            rect.setAttribute('rx', 3);
+            rect.setAttribute('ry', 3);
+            rect.setAttribute('fill', 'rgba(0, 122, 204, 0.25)');
+            rect.setAttribute('stroke', '#007acc');
+            rect.setAttribute('stroke-width', 2);
+            rect.setAttribute('pointer-events', 'none');
+            el.insertBefore(rect, el.firstChild);
         },
     };
 }
