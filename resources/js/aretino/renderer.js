@@ -1082,7 +1082,7 @@ function emitAlignedSyllables(ctx, syllables, ligatures, lyricY) {
     const minGap = fontSize * 0.18;
     // A hyphen occupies the width of an 'n' character; if the gap between
     // syllables is smaller than that, there is no room to render it.
-    const hyphenSpaceW = measureTextWidth('-', fontSize, fontFamily);
+    const hyphenSpaceW = measureTextWidth('.', fontSize, fontFamily);
     const trailingAdvance = fontSize * 0.6;
 
     const parts = [];
