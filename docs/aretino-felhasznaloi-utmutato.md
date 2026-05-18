@@ -1,7 +1,7 @@
 # Aretino — felhasználói útmutató
 
 ```aretino
-(g2) f g h f. gh g f d_c_ , f gh gf f. ::
+(g2) g h i g. hi h g e_d_ , g hi a'g g. ::
 w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
 ```
 
@@ -300,12 +300,10 @@ A három fő építőelem:
 A fejléc-sorok pontosvesszővel kezdődnek (`;kulcs: érték`), és a `%%` lezárja:
 
 ```aretino
-;title: Kyrie I
-;mode: I
-;author: Hagyományos
+;title: Vesperás
 %%
-(g2) d fg h_ * g. fgfe d' d d.  (::)
-w:   Ky-ri-e      e-lé- i-son.
+(g2) h h h g h j i g h. ::
+w: Is-te-nem, hall-gass hí-vá-som-ra!
 ```
 
 A megjelenítő jelenleg a `title` kulcsot jeleníti meg középre

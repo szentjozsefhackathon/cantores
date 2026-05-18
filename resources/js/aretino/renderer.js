@@ -688,16 +688,11 @@ function parseSyllables(text) {
     const result = [];
     const words = (text || '').match(/\S+/g) || [];
     for (const word of words) {
-        if (word.includes('~')) {
-            // Tilde groups multiple words under the same note head.
-            result.push({ text: word.replace(/~/g, ' '), hyphenAfter: false });
-            continue;
-        }
         const parts = word.split('-');
         const nonEmpty = parts.filter(p => p !== '');
         for (let i = 0; i < nonEmpty.length; i++) {
             result.push({
-                text: nonEmpty[i],
+                text: nonEmpty[i].replace(/~/g, ' '),
                 hyphenAfter: i < nonEmpty.length - 1,
             });
         }
