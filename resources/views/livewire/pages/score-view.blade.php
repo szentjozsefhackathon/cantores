@@ -243,31 +243,11 @@
                 {{-- ABC Preview --}}
                 <div x-show="$wire.format === 'abc'" x-cloak class="mt-4">
                     <div x-ref="abcPreview" class="min-h-16 space-y-4"></div>
-
-                    <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
-                        <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
-                        <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
-                            {{ __('Copy as Image') }}
-                        </flux:button>
-                        <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
-                            {{ __('Export PNG') }}
-                        </flux:button>
-                    </div>
                 </div>
 
                 {{-- GABC Preview --}}
                 <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4">
                     <div x-ref="preview" class="min-h-16 space-y-4"></div>
-
-                    <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
-                        <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
-                        <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
-                            {{ __('Copy as Image') }}
-                        </flux:button>
-                        <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
-                            {{ __('Export PNG') }}
-                        </flux:button>
-                    </div>
                 </div>
 
                 {{-- Aretino Settings Toolbar --}}
@@ -322,16 +302,6 @@
                 {{-- Aretino Preview --}}
                 <div x-show="$wire.format === 'aretino'" x-cloak class="mt-4">
                     <div x-ref="aretinoPreview" class="min-h-16 space-y-4"></div>
-
-                    <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
-                        <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
-                        <flux:button icon="clipboard" variant="ghost" x-on:click="copyImage()">
-                            {{ __('Copy as Image') }}
-                        </flux:button>
-                        <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportPng()">
-                            {{ __('Export PNG') }}
-                        </flux:button>
-                    </div>
                 </div>
 
                 {{-- ChordPro Preview --}}
