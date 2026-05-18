@@ -238,6 +238,12 @@ export function drawEpisema(ctx, cx, cy, onLine = false) {
     return `<line x1="${cx - w / 2}" y1="${y}" x2="${cx + w / 2}" y2="${y}" stroke="#000" stroke-width="${sw}" stroke-linecap="round"/>`;
 }
 
+export function drawEpisemaSpan(ctx, x1, x2, cy, onLine = false) {
+    const y = cy - (onLine ? ctx.staffSpace * 1.5 : ctx.staffSpace);
+    const sw = stroke(ctx, METRICS.episemaStroke, METRICS.episemaStrokeMinPx);
+    return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#000" stroke-width="${sw}" stroke-linecap="round"/>`;
+}
+
 export function drawMora(ctx, cx, cy, onLine = false) {
     const dotX = cx + ss(ctx, METRICS.moraOffsetX);
     const r = ss(ctx, METRICS.moraRadius);

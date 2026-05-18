@@ -5,6 +5,7 @@ import {
     pitchY,
     drawNoteHead,
     drawEpisema,
+    drawEpisemaSpan,
     drawMora,
     drawLiquescens,
     drawLigatureConnector,
@@ -575,6 +576,42 @@ function emitLigature(ctx, groups, x, staffBottomY, gaps = []) {
             parts.push(drawLigatureConnector(ctx, from.x - halfSW, from.y, to.x + halfSW, to.y, kind));
         }
 
+        // Detect runs of consecutive notes that all carry an episema.
+        // For each run of 2+ notes, draw one spanning episema at the highest
+        // note's vertical position so all segments touch.
+        const halfEW = ss(ctx, METRICS.episemaWidth) / 2;
+        const episemaInGroup = new Set(); // indices covered by a group episema
+        {
+            let runStart = null;
+            const flushRun = (end) => {
+                if (runStart === null) {
+                    return;
+                }
+                if (end - runStart >= 2) {
+                    const run = positions.slice(runStart, end);
+                    const highest = run.reduce((best, p) => (p.cy < best.cy ? p : best), run[0]);
+                    const onLine = pitchToPos(highest.note) % 2 === 0;
+                    const x1 = run[0].cx - halfEW;
+                    const x2 = run[run.length - 1].cx + halfEW;
+                    parts.push(drawEpisemaSpan(ctx, x1, x2, highest.cy, onLine));
+                    for (let j = runStart; j < end; j++) {
+                        episemaInGroup.add(j);
+                    }
+                }
+                runStart = null;
+            };
+            for (let i = 0; i <= positions.length; i++) {
+                const hasEpisema = i < positions.length && positions[i].note.modifiers.includes('episema');
+                if (hasEpisema) {
+                    if (runStart === null) {
+                        runStart = i;
+                    }
+                } else {
+                    flushRun(i);
+                }
+            }
+        }
+
         // Draw note heads + modifiers, wrapped per-note so each note can be
         // highlighted independently when the cursor sits on it.
         for (let i = 0; i < positions.length; i++) {
@@ -584,8 +621,10 @@ function emitLigature(ctx, groups, x, staffBottomY, gaps = []) {
             const noteParts = [drawNoteHead(ctx, drawnNote, p.cx, p.cy, staffBottomY, prevCy)];
             for (const mod of p.note.modifiers) {
                 if (mod === 'episema') {
-                    const onLine = pitchToPos(p.note) % 2 === 0;
-                    noteParts.push(drawEpisema(ctx, p.cx, p.cy, onLine));
+                    if (!episemaInGroup.has(i)) {
+                        const onLine = pitchToPos(p.note) % 2 === 0;
+                        noteParts.push(drawEpisema(ctx, p.cx, p.cy, onLine));
+                    }
                 } else if (mod === 'mora') {
                     const onLine = pitchToPos(p.note) % 2 === 0;
                     noteParts.push(drawMora(ctx, p.cx, p.cy, onLine));
