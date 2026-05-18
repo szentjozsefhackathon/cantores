@@ -433,7 +433,7 @@ window.abc2svg = window.abc2svg || {};
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
                             <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
-                                {{ __('Share') }}
+                                Megosztás
                             </flux:button>
                         </div>
                     </div>
@@ -444,7 +444,7 @@ window.abc2svg = window.abc2svg || {};
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
                             <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
-                                {{ __('Share') }}
+                                Megosztás
                             </flux:button>
                         </div>
                     </div>
@@ -510,7 +510,7 @@ window.abc2svg = window.abc2svg || {};
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
                             <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
-                                {{ __('Share') }}
+                                Megosztás
                             </flux:button>
                         </div>
                     </div>
@@ -522,7 +522,7 @@ window.abc2svg = window.abc2svg || {};
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
                             <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
                             <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
-                                {{ __('Share') }}
+                                Megosztás
                             </flux:button>
                             <flux:button icon="clipboard-document-list" variant="ghost" x-on:click="copyChordproPlainText()">
                                 {{ __('Copy as Text') }}
@@ -539,11 +539,11 @@ window.abc2svg = window.abc2svg || {};
 
                     <flux:modal name="share-link-modal" class="max-w-md">
                         <div class="space-y-4">
-                            <flux:heading size="lg">{{ __('Share Score') }}</flux:heading>
+                            <flux:heading size="lg">Kotta megosztása</flux:heading>
                             <flux:text>
                                 {{ __('This link encodes the full score and all settings directly in the URL — no account or registration needed. Anyone with the link can open and preview the score instantly.') }}
                             </flux:text>
-                            <div class="flex flex-col gap-3 pt-2">
+                            <div class="flex flex-col gap-3">
                                 <flux:button icon="link" variant="primary" x-show="!shareUrlLoading && !shareModalCopied" x-on:click="copyShareLink()">
                                     {{ __('Copy Link') }}
                                 </flux:button>
@@ -554,48 +554,51 @@ window.abc2svg = window.abc2svg || {};
                                     <flux:icon name="check-circle" variant="micro" class="shrink-0" />
                                     <span class="text-sm font-medium">{{ __('Link copied! You can now paste it anywhere.') }}</span>
                                 </div>
+                            </div>
+
+                            @if($score && !$isGuest)
+                            <div class="border-t border-zinc-200 pt-4 dark:border-zinc-700" x-data="{ secretLinkCopied: false }">
+                                <div class="flex items-center justify-between gap-2">
+                                    <flux:subheading class="font-medium">{{ __('Secret Link') }}</flux:subheading>
+                                    <div class="flex min-w-0 flex-1 items-center gap-2" x-show="$wire.secretLinkUrl" x-cloak>
+                                        <flux:input readonly x-bind:value="$wire.secretLinkUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
+                                        <flux:button
+                                            icon="clipboard"
+                                            variant="ghost"
+                                            :title="__('Copy link')"
+                                            x-on:click="navigator.clipboard.writeText($wire.secretLinkUrl).then(() => { secretLinkCopied = true; setTimeout(() => secretLinkCopied = false, 2000) })"
+                                            x-bind:class="secretLinkCopied ? 'text-green-600' : ''"
+                                        />
+                                        <flux:button
+                                            icon="trash"
+                                            variant="ghost"
+                                            :title="__('Delete link')"
+                                            wire:click="deleteSecretLink"
+                                            wire:confirm="{{ __('This will invalidate the current link. Are you sure?') }}"
+                                        />
+                                    </div>
+                                    <div x-show="!$wire.secretLinkUrl">
+                                        <flux:button icon="link" variant="ghost" wire:click="generateSecretLink">
+                                            {{ __('Generate Secret Link') }}
+                                        </flux:button>
+                                    </div>
+                                </div>
+                                <flux:text class="mt-1 text-xs text-zinc-500" x-show="$wire.secretLinkUrl" x-cloak>
+                                    {{ __('Anyone with this link can view the score (read-only). Delete the link to revoke access.') }}
+                                </flux:text>
+                                <flux:text class="mt-1 text-xs text-zinc-500" x-show="!$wire.secretLinkUrl">
+                                    {{ __('Generate a secret link to share this score as a read-only preview.') }}
+                                </flux:text>
+                            </div>
+                            @endif
+
+                            <div class="flex justify-end">
                                 <flux:button variant="ghost" x-on:click="$flux.modal('share-link-modal').close()">
                                     {{ __('Close') }}
                                 </flux:button>
                             </div>
                         </div>
                     </flux:modal>
-
-                    @if($score)
-                    <div class="mt-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700" x-data="{ copied: false }">
-                        <div class="flex items-center justify-between gap-2">
-                            <flux:subheading class="font-medium">{{ __('Secret Link') }}</flux:subheading>
-                            <div class="flex min-w-0 flex-1 items-center gap-2" x-show="$wire.secretLinkUrl" x-cloak>
-                                <flux:input readonly x-bind:value="$wire.secretLinkUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
-                                <flux:button
-                                    icon="clipboard"
-                                    variant="ghost"
-                                    :title="__('Copy link')"
-                                    x-on:click="navigator.clipboard.writeText($wire.secretLinkUrl).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
-                                    x-bind:class="copied ? 'text-green-600' : ''"
-                                />
-                                <flux:button
-                                    icon="trash"
-                                    variant="ghost"
-                                    :title="__('Delete link')"
-                                    wire:click="deleteSecretLink"
-                                    wire:confirm="{{ __('This will invalidate the current link. Are you sure?') }}"
-                                />
-                            </div>
-                            <div x-show="!$wire.secretLinkUrl">
-                                <flux:button icon="link" variant="ghost" wire:click="generateSecretLink">
-                                    {{ __('Generate Secret Link') }}
-                                </flux:button>
-                            </div>
-                        </div>
-                        <flux:text class="mt-1 text-xs text-zinc-500" x-show="$wire.secretLinkUrl" x-cloak>
-                            {{ __('Anyone with this link can view the score (read-only). Delete the link to revoke access.') }}
-                        </flux:text>
-                        <flux:text class="mt-1 text-xs text-zinc-500" x-show="!$wire.secretLinkUrl">
-                            {{ __('Generate a secret link to share this score as a read-only preview.') }}
-                        </flux:text>
-                    </div>
-                    @endif
 
                     @if(!$isGuest)
                     <div class="mt-4 flex justify-end gap-3">
