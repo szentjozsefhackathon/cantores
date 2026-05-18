@@ -80,10 +80,10 @@ export const METRICS = {
     ligatureConnectorStrokeMinPx: 0.7,
 
     // --- Quilisma (saw-tooth notehead) ------------------------------------
-    quilismaTeeth: 3,
-    quilismaPeakUp: 0.55,              // × noteBoxHeight
-    quilismaLowerY: 0.4,
-    quilismaTrough: 0.85,
+    quilismaTeeth: 4,
+    quilismaPeakUp: 0.5,              // × noteBoxHeight
+    quilismaLowerY: 0,
+    quilismaTrough: 0.5,
 
     // --- Clefs ------------------------------------------------------------
     clefCHeight: 0.9,
@@ -117,6 +117,7 @@ export const METRICS = {
     systemGap: 1.5,
     lyricToNextStaff: 2.5,
     titleTopPadding: 1.5,
+    lyricDistance: 0.1
 };
 
 const PITCH_BASE = { a: -4, b: -3, c: -2, d: -1, e: 0, f: 1, g: 2, h: 3, i: 4, j: 5, k: 6, l: 7, m: 8 };
@@ -159,17 +160,18 @@ function ledgerLines(ctx, cx, cy, staffBottomY) {
     const halfW = ss(ctx, METRICS.ledgerHalfExtent);
     const spacing = ss(ctx, METRICS.ledgerLineSpacing);
     const tolerance = ctx.pitchStep;
+    const epsilon = ctx.pitchStep * 0.1;
     const sw = stroke(ctx, METRICS.ledgerStroke, METRICS.ledgerStrokeMinPx);
     const parts = [];
     if (cy < top - tolerance) {
         let yLine = top - spacing;
-        while (yLine >= cy - tolerance) {
+        while (yLine >= cy - epsilon) {
             parts.push(`<line x1="${cx - halfW}" y1="${yLine}" x2="${cx + halfW}" y2="${yLine}" stroke="#000" stroke-width="${sw}"/>`);
             yLine -= spacing;
         }
     } else if (cy > bottom + tolerance) {
         let yLine = bottom + spacing;
-        while (yLine <= cy + tolerance) {
+        while (yLine <= cy + epsilon) {
             parts.push(`<line x1="${cx - halfW}" y1="${yLine}" x2="${cx + halfW}" y2="${yLine}" stroke="#000" stroke-width="${sw}"/>`);
             yLine += spacing;
         }

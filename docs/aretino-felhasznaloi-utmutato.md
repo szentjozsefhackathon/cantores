@@ -1,5 +1,10 @@
 # Aretino — felhasználói útmutató
 
+```aretino
+(g2) f g h f. gh g f d_c_ , f gh gf f. ::
+w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
+```
+
 > Magyar katolikus gregorián notáció szöveges formátumban.
 > Verzió: 0.1 · Utolsó frissítés: 2026-05-18
 
@@ -181,6 +186,12 @@ Egy tipikus forrássor a Guido-ban így nézett ki:
 A táblázat fejből-megjegyzendő billentyű-kombinációkkal dolgozott:
 `4 t` = pes, `t T 4` = szekund clivis összekötő vonallal, `5 z Z 5` =
 torculus, `4 u U 6` = másik torculus, stb.
+
+Ugyanez Aretino-val:
+
+```aretino
+(g2) g gh hg H/g hf he hih gji jjihg
+```
 
 ### Mit hozott a Guido?
 

@@ -62,6 +62,7 @@ export function renderAretino(source, options = {}) {
     ctx.leftMargin = ss(ctx, METRICS.leftMargin);
     ctx.rightMargin = ss(ctx, METRICS.rightMargin);
     ctx.systemGap = ss(ctx, METRICS.systemGap);
+    ctx.lyricDistance = ss(ctx, METRICS.lyricDistance);
     ctx.lyricToNextStaff = ss(ctx, METRICS.lyricToNextStaff);
     ctx.lyricFont = lyricFont;
     // lyricSize is in typographic points; convert to SVG user units for the virtual canvas.
@@ -199,7 +200,11 @@ export function renderAretino(source, options = {}) {
 
             const isLastRow = rowIdx === rows.length - 1;
             const rowLigCount = rowLigatures.length;
-            let lyricY = staffBottomY + ctx.systemGap + ctx.lyricSize;
+            const lowestNoteY = rowLowestNoteY(ctx, row, staffBottomY);
+            const lyricTopY = lowestNoteY > staffBottomY
+                ? lowestNoteY + ctx.lyricDistance
+                : staffBottomY + ctx.lyricDistance;
+            let lyricY = lyricTopY + ctx.lyricSize;
 
             if (alignSyllables) {
                 for (let v = 0; v < verseCount; v++) {
@@ -485,6 +490,25 @@ function measureSplitLigature(ctx, groups, gaps) {
         }
     }
     return total;
+}
+
+function rowLowestNoteY(ctx, row, staffBottomY) {
+    let maxY = staffBottomY;
+    const halfNoteH = ss(ctx, METRICS.noteBoxHeight) * 0.5;
+    for (const it of row.items) {
+        if (it.kind !== 'ligature') {
+            continue;
+        }
+        for (const group of it.groups) {
+            for (const note of group) {
+                const cy = pitchY(ctx, note, staffBottomY);
+                if (cy > maxY) {
+                    maxY = cy + halfNoteH;
+                }
+            }
+        }
+    }
+    return maxY;
 }
 
 function emitLigature(ctx, groups, x, staffBottomY, gaps = []) {
