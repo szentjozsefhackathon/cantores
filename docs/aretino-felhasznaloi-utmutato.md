@@ -11,6 +11,8 @@ w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
 Ez az útmutató lépésről lépésre, példákkal mutatja be az **Aretino** kottaformátum használatát.
 A formátum még változhat, a visszajelzéseket köszönettel fogadjuk!
 
+Ezen az oldalon kipróbálható, gyakorolható a formátum használata. Az összes beállítási lehetőséggel ellátott szerkesztő a [Kottaszerkesztő](/score/preview) oldalunkon található.
+
 ---
 
 ## Tartalomjegyzék
@@ -485,9 +487,11 @@ A vonalak írhatók zárójelben is: `(,)`, `(;)`, `(:)`, `(::)` — a hatás
 ugyanaz, de a zárójeles forma a hagyományos GABC-felhasználóknak ismerős
 lehet.
 
+Ha a szövegben zárójelben szerepel valami, azt a következő ütemvonal alá rendezzük, a lenti példában a `(*)` jelöli, hogy a rövid vonal alá kell írni egy * jelet.
+
 ```aretino
 (g2) (K:fb#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. :: ht i ht g ht ::
-w: Men-je-tek, és vi-gyé-tek hí-rül: föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja! 
+w: Men-je-tek, és vi-gyé-tek hí-rül: (*) föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja! 
 ```
 
 ---
@@ -550,8 +554,7 @@ jelenik meg.
 ```aretino
 ;cím: Példa b-vel
 %%
-(g2) (ebx) d e f g a g f e d  (::)
-w:        kez-de- ti b-vel
+(g2) h (ibx) hih fgh.
 ```
 
 Az `(ebx)` egy *aktuális* (egyszeri) b. Az Aretino nem érvényesít
@@ -649,13 +652,13 @@ ha a dallamot kiegészíted a hiányzó hangokkal vagy a szöveget tagolod át.
 ;cím: Uram, irgalmazz (XVI.)
 %%
 (g2) (K:ibx) h h h g h fg h :|
-w: U-ram, ir-gal-mazz né-künk!
+w: U-ram, ir-gal-mazz né-künk! (3x)
 
 h h h g h fg h :|
-w: Krisz-tus, ke-gyel-mezz né-künk! 
+w: Krisz-tus, ke-gyel-mezz né-künk!  (3x)
 
 h h h g h fg h :|
-w: U-ram, ir-gal-mazz né-künk!
+w: U-ram, ir-gal-mazz né-künk! (2x)
 
 h g i g f gh h ::
 w: U-ram, ir-gal-mazz né-künk!
@@ -663,24 +666,18 @@ w: U-ram, ir-gal-mazz né-künk!
 
 **Mit lehet itt megfigyelni?**
 
-- A kulcsot csak az első sorban kell megadni — a megjelenítő az új rendszerek
-  elejére automatikusan kiteszi.
-- Üres sorok **új szakaszt** indítanak: minden frázis (Kyrie, Christe, Kyrie)
-  külön szöveg-sort kap.
+- A kulcsot csak az első sorban kell megadni — a megjelenítő az új rendszerek elejére automatikusan kiteszi.
+- Üres sorok **új szakaszt** indítanak: minden frázis (Kyrie, Christe, Kyrie) külön szövegsort kap.
+- Az ütemvonal alá rendezünk szöveget
 
-### 14.2 Antifóna szöveggel
+### 14.2 Antifóna zsoltárdallammal
 
 ```aretino
-;cím: Asperges me
-;mód: VII
+;cím: Hints meg engem
 %%
-(g2) d_ fg h. * g fgfe d' d.  (,)
-w:   As-per- ges  me, Dó-mine,
-
-h. j_ h_ g_ fgfe d.  (;)
-w: hys-só- po,  et  mun-dá-bor.
+(g2) (K:mb#) d e g f gh h , i j i h i h ge d : d e gfgh h , i g ge ggfg h g e d d :: (Z) f g ht g ht g h i g g : ht i h g gf e ::
+w: Hints meg en-gem U-ram, i-zsóp-pal és meg-tisz-tu-lok, moss meg en-gem, és fe-hé-rebb le-szek a hó-nál.
 ```
-
 ---
 
 ## 18. A szerkesztő használata
@@ -719,7 +716,6 @@ megnyitható és nyomtatható.
 
 **Tünet:** ligatúra-csúcsokon kéretlenül szárak jelennek meg.
 **Ok:** ez a normál viselkedés — az auto-virga minden csúcsra szárat tesz.
-A v0.1 ezt nem teszi letiltóvá.
 **Megoldás:** ha tudatosan nem akarsz virga-csúcsot, írd át a ligatúrát
 külön punctum-okra (szóközzel) ott, ahol nem akarod az automatikust.
 
@@ -749,21 +745,3 @@ illesztés.
 **Megoldás:** ha nem akarsz új szakaszt, ne hagyj üres sort a dallam
 és szöveg között.
 
-### Stílus-ajánlások
-
-- Egy dallam-sor egy frázis vagy egy invokáció — ne zsúfolj túl sokat
-  egy sorba; a tagolt forrás könnyebben szerkeszthető.
-- A szöveg-sort **közvetlenül** a dallam alá írd; üres sorral csak akkor
-  válassz el szakaszokat, ha tudatosan ezt akarod.
-- A `*`-ot a frázis közepén/végén használd — a vonalak (`,`, `;`, `:`,
-  `::`) elé/után tedd, ahol a szöveg vizuálisan szellősebb lehet.
-- Hosszabb melizmákat tagolj `/`-jellel — a forráskód olvashatóbb lesz,
-  és vizuálisan is csoportosul a kotta.
-
----
-
-## Kapcsolódó dokumentumok
-
-- [`docs/aretino-format.md`](aretino-format.md) — formális specifikáció (v0.1)
-- [`plans/aretino-implementation.md`](../plans/aretino-implementation.md) — implementációs terv és terv-előzmények
-- [`resources/js/aretino/`](../resources/js/aretino/) — a megjelenítő forrása (parser, layout, glyphs)
