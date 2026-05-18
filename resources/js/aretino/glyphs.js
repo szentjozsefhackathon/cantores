@@ -71,6 +71,11 @@ export const METRICS = {
     episemaStroke: 0.12,
     episemaStrokeMinPx: 0.8,
 
+    // --- Ictus (vertical mark above note) --------------------------------
+    ictusHeight: 0.5,
+    ictusStroke: 0.12,
+    ictusStrokeMinPx: 0.8,
+
     // --- Liquescens (right-parenthesis tail beside the notehead) ----------
     liquescensAnchorX: 0.4,            // x offset of both endpoints from notehead center
     liquescensTopY: 0.4,               // y offset above center (top-right corner of head)
@@ -264,6 +269,13 @@ export function drawEpisemaSpan(ctx, x1, x2, cy, onLine = false) {
     const y = cy - (onLine ? ctx.staffSpace * 1.5 : ctx.staffSpace);
     const sw = stroke(ctx, METRICS.episemaStroke, METRICS.episemaStrokeMinPx);
     return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#000" stroke-width="${sw}" stroke-linecap="round"/>`;
+}
+
+export function drawIctus(ctx, cx, cy, onLine = false) {
+    const h = ss(ctx, METRICS.ictusHeight);
+    const topY = cy - (onLine ? ctx.staffSpace * 1.75 : ctx.staffSpace * 1.25);
+    const sw = stroke(ctx, METRICS.ictusStroke, METRICS.ictusStrokeMinPx);
+    return `<line x1="${cx}" y1="${topY}" x2="${cx}" y2="${topY + h}" stroke="#000" stroke-width="${sw}" stroke-linecap="round"/>`;
 }
 
 export function drawMora(ctx, cx, cy, onLine = false) {

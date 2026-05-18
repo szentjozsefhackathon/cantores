@@ -68,6 +68,7 @@ Aposztrof (`'`) emelt oktáv (ritka): `d'` = magas D.
 | `ds` | kis kottafej | kicsinyített (70%) kottafej, opcionális hangok jelölésére |
 | `d.` | mora (nyújtópont) | a kottafej után, jobbra |
 | `d_` | episzéma | rövid vízszintes vonal a kottafej **fölött, a hang magasságához igazítva** |
+| `d-` | ictus | kis függőleges vonal a kottafej **fölött, a vonalközben** |
 | `d~` | likveszcens kicsi | kis „farok" kiegészítés |
 
 Több utótag sorrendben kombinálható: `D_.` = virga episzémával és morával.

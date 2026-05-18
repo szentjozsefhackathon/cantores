@@ -6,6 +6,7 @@ import {
     drawNoteHead,
     drawEpisema,
     drawEpisemaSpan,
+    drawIctus,
     drawMora,
     drawLiquescens,
     drawLigatureConnector,
@@ -807,6 +808,9 @@ function emitLigature(ctx, groups, x, staffBottomY, gaps = []) {
                 } else if (mod === 'mora') {
                     const onLine = pitchToPos(p.note) % 2 === 0;
                     noteParts.push(drawMora(ctx, p.cx, p.cy, onLine));
+                } else if (mod === 'ictus') {
+                    const onLine = pitchToPos(p.note) % 2 === 0;
+                    noteParts.push(drawIctus(ctx, p.cx, p.cy, onLine));
                 } else if (mod === 'liquescens') {
                     noteParts.push(drawLiquescens(ctx, p.cx, p.cy, 'down'));
                 }

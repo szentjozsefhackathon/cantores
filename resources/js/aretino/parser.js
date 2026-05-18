@@ -22,7 +22,7 @@
 //       virga: boolean,                  — uppercase letter
 //       high: boolean,                   — trailing apostrophe (octave up)
 //       shape: 'punctum' | 'virga' | 'quilisma' | 'tenor',
-//       modifiers: Array<'episema'|'mora'|'liquescens'>,
+//       modifiers: Array<'episema'|'mora'|'liquescens'|'ictus'>,
 //   }
 
 export function parseAretino(source) {
@@ -213,6 +213,11 @@ function tokenizeMusicLine(line, lineStart = 0) {
                         }
                         if (m === '_') {
                             note.modifiers.push('episema');
+                            i++;
+                            continue;
+                        }
+                        if (m === '-') {
+                            note.modifiers.push('ictus');
                             i++;
                             continue;
                         }

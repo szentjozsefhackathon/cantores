@@ -28,7 +28,7 @@ Az Aretino kottaformátum szabadon felhasználható, kérjük, nyilvános anyago
 7. [Kulcsok](#7-kulcsok)
 8. [Hangmagasság](#8-hangmagasság)
 9. [Kottafej-típusok](#9-kottafej-típusok)
-10. [Módosító utótagok (mora, episema, liquescens)](#10-módosító-utótagok)
+10. [Módosító utótagok (mora, episema, ictus, liquescens)](#10-módosító-utótagok)
 11. [Ligatúrák — neumák](#11-ligatúrák--neumák)
 12. [Neuma-tagoló rés (`/`)](#12-neuma-tagoló-rés)
 13. [Vonalak és tagolójelek](#13-vonalak-és-tagolójelek)
@@ -401,10 +401,11 @@ A kottafej után, **szóköz nélkül**, kombinálható utótagok:
 |---|---|---|
 | `.` | **mora** (nyújtópont) | jobbra a kottafejtől, hosszú hangot jelez |
 | `_` | **episema** | rövid vízszintes vonal a kottafej fölött |
+| `-` | **ictus** | kis függőleges vonal a kottafej fölött (a vonalközben) |
 | `~` | **liquescens** | kis "farok" a kottafej jobb felső sarkán |
 
 ```aretino
-(g2) d d. d_ d~ d_e_d_
+(g2) d d. d_ d- d~ d_e_d_
 ```
 
 ---
