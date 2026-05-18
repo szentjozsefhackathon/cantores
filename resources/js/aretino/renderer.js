@@ -76,6 +76,7 @@ export function renderAretino(source, options = {}) {
 
     const parts = [];
     let currentClef = { letter: 'g', line: 2 };
+    let currentKeySig = [];
     let hasSeenClef = false;
     let y = ss(ctx, METRICS.titleTopPadding);
 
@@ -128,7 +129,7 @@ export function renderAretino(source, options = {}) {
             }
         }
 
-        const rows = layoutRows(items, ctx, currentClef, staffRightX, drawClefForRows);
+        const rows = layoutRows(items, ctx, currentClef, staffRightX, drawClefForRows, currentKeySig);
 
         // For lyric-only sections (no music), still emit one empty row so lyrics render.
         if (rows.length === 0 && sec.lyrics.length > 0) {
@@ -137,6 +138,7 @@ export function renderAretino(source, options = {}) {
                 itemsWidth: 0,
                 justify: false,
                 startClef: currentClef,
+                startKeySig: currentKeySig,
                 drawStartClef: drawClefForRows,
             });
         }
@@ -153,7 +155,22 @@ export function renderAretino(source, options = {}) {
             if (row.drawStartClef) {
                 const c = drawClef(ctx, row.startClef, cursorX, staffBottomY);
                 parts.push(c.svg);
-                cursorX += c.advance + ss(ctx, METRICS.clefInlinePostGap);
+                const startKeySig = row.startKeySig ?? [];
+                // Use compact gap before key sig (skip the clefPostGap already baked into
+                // the advance — that wider gap is for when notes immediately follow the clef).
+                cursorX += c.advance
+                    - ss(ctx, METRICS.clefPostGap)
+                    + ss(ctx, METRICS.clefInlinePostGap);
+                for (const acc of startKeySig) {
+                    const a = drawAccidental(ctx, acc.pitch, acc.symbol, cursorX, staffBottomY);
+                    parts.push(a.svg);
+                    cursorX += a.advance;
+                }
+                // When no key sig is present, restore the full clefPostGap so the first
+                // note has the proper distance from the clef.
+                if (startKeySig.length === 0) {
+                    cursorX += ss(ctx, METRICS.clefPostGap);
+                }
             }
 
             const remaining = staffRightX - cursorX;
@@ -180,6 +197,20 @@ export function renderAretino(source, options = {}) {
                     const a = drawAccidental(ctx, it.pitch, it.symbol, cursorX, staffBottomY);
                     parts.push(wrapSrc(it, a.svg, 'aretino-token aretino-accidental'));
                     cursorX += a.advance;
+                } else if (it.kind === 'keysig') {
+                    const startX = cursorX;
+                    const pieces = [];
+                    for (const acc of it.accidentals) {
+                        const a = drawAccidental(ctx, acc.pitch, acc.symbol, cursorX, staffBottomY);
+                        pieces.push(a.svg);
+                        cursorX += a.advance;
+                    }
+                    if (pieces.length) {
+                        parts.push(wrapSrc(it, pieces.join(''), 'aretino-token aretino-keysig'));
+                    } else {
+                        // Empty (K:) — clears signature; nothing to draw.
+                        cursorX = startX;
+                    }
                 } else if (it.kind === 'expander') {
                     cursorX += ctx.expanderWidth + extraPerExpander;
                 } else if (it.kind === 'barline') {
@@ -232,6 +263,7 @@ export function renderAretino(source, options = {}) {
         });
 
         currentClef = trailingClef(items, currentClef);
+        currentKeySig = trailingKeySig(items, currentKeySig);
     }
 
     const totalHeight = canvasHeight || Math.max(y + ctx.staffSpace, 100);
@@ -242,6 +274,15 @@ function trailingClef(items, fallback) {
     for (let i = items.length - 1; i >= 0; i--) {
         if (items[i].kind === 'clef') {
             return items[i].clef;
+        }
+    }
+    return fallback;
+}
+
+function trailingKeySig(items, fallback) {
+    for (let i = items.length - 1; i >= 0; i--) {
+        if (items[i].kind === 'keysig') {
+            return items[i].accidentals;
         }
     }
     return fallback;
@@ -295,6 +336,21 @@ function flattenItems(tokens) {
                 items.push({ kind: 'accidental', pitch: (accM[1] || 'b').toLowerCase(), symbol: accM[2], ...src });
                 continue;
             }
+            const keyM = v.match(/^K:\s*(.*)$/);
+            if (keyM) {
+                const inner = keyM[1].trim();
+                const accidentals = [];
+                if (inner) {
+                    for (const part of inner.split(/\s+/)) {
+                        const m = part.match(/^([a-mA-M]?)b([xy#])$/);
+                        if (m) {
+                            accidentals.push({ pitch: (m[1] || 'b').toLowerCase(), symbol: m[2] });
+                        }
+                    }
+                }
+                items.push({ kind: 'keysig', accidentals, ...src });
+                continue;
+            }
             if (v === 'z') {
                 items.push({ kind: 'break', justify: true, ...src });
                 continue;
@@ -342,12 +398,19 @@ function clefAdvance(ctx, clef) {
     return 0;
 }
 
+function keySigAdvance(ctx, accidentals) {
+    return (accidentals?.length ?? 0) * ss(ctx, METRICS.accidentalAdvance);
+}
+
 function measureItem(ctx, item) {
     if (item.kind === 'clef') {
         return clefAdvance(ctx, item.clef) + ss(ctx, METRICS.clefInlinePostGap);
     }
     if (item.kind === 'accidental') {
         return ss(ctx, METRICS.accidentalAdvance);
+    }
+    if (item.kind === 'keysig') {
+        return keySigAdvance(ctx, item.accidentals);
     }
     if (item.kind === 'barline') {
         return measureBarline(ctx, item.value);
@@ -367,18 +430,28 @@ function measureItem(ctx, item) {
 // Greedy line-fit. Walks items, accumulating widths, breaking before any
 // item that would push the row past the right margin. Explicit (z)/(Z)
 // directives appear as `break` items and force a row finalization.
-function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef) {
+function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initialKeySig) {
     const rows = [];
     let cur = [];
     let curWidth = 0;
     let rowStartClef = initialClef;
     let runningClef = initialClef;
+    let rowStartKeySig = initialKeySig ?? [];
+    let runningKeySig = initialKeySig ?? [];
 
     function rowItemsAvailable() {
-        const clefSlot = drawStartClef
-            ? clefAdvance(ctx, rowStartClef) + ss(ctx, METRICS.clefInlinePostGap)
-            : 0;
-        return staffRightX - ctx.leftMargin - clefSlot;
+        if (!drawStartClef) {
+            return staffRightX - ctx.leftMargin;
+        }
+        // When a key sig follows the clef, use clefInlinePostGap (compact) rather than
+        // the full clefPostGap that is baked into clefAdvance — the key sig sits tight
+        // against the clef, just like an inline clef change does.
+        const hasKeySig = rowStartKeySig.length > 0;
+        const clefSlot = hasKeySig
+            ? clefAdvance(ctx, rowStartClef) - ss(ctx, METRICS.clefPostGap) + ss(ctx, METRICS.clefInlinePostGap)
+            : clefAdvance(ctx, rowStartClef) + ss(ctx, METRICS.clefInlinePostGap);
+        const keySlot = hasKeySig ? keySigAdvance(ctx, rowStartKeySig) : 0;
+        return staffRightX - ctx.leftMargin - clefSlot - keySlot;
     }
 
     function finalize(justify) {
@@ -390,11 +463,13 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef) {
             itemsWidth: curWidth,
             justify,
             startClef: rowStartClef,
+            startKeySig: rowStartKeySig,
             drawStartClef,
         });
         cur = [];
         curWidth = 0;
         rowStartClef = runningClef;
+        rowStartKeySig = runningKeySig;
     }
 
     for (const item of items) {
@@ -409,11 +484,22 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef) {
                 continue;
             }
         }
+        if (item.kind === 'keysig') {
+            runningKeySig = item.accidentals;
+            if (cur.length === 0) {
+                rowStartKeySig = item.accidentals;
+                continue;
+            }
+        }
         const w = measureItem(ctx, item);
         if (cur.length > 0 && curWidth + w > rowItemsAvailable()) {
             finalize(true);
             if (item.kind === 'clef') {
                 rowStartClef = item.clef;
+                continue;
+            }
+            if (item.kind === 'keysig') {
+                rowStartKeySig = item.accidentals;
                 continue;
             }
         }
@@ -726,7 +812,7 @@ function emitAlignedSyllables(ctx, syllables, ligatures, lyricY) {
         if (i < ligatures.length) {
             const lig = ligatures[i];
             const neumeWidth = (lig.centerX - lig.leftX) * 2;
-            if (w < neumeWidth || w > neumeWidth + ctx.staffSpace) {
+            if (w < neumeWidth || w > neumeWidth + 2 * ctx.staffSpace) {
                 // Neume is wider than the syllable, or syllable exceeds the
                 // neume by more than one staff space: align left edges.
                 center = lig.leftX + w / 2 - ctx.staffSpace * 0.1;

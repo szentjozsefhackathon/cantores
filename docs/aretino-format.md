@@ -100,12 +100,28 @@ F, G és C kulcs van támogatva. A C kulcs jelölése egy kis szögletes C jel (
 
 | Forrás | Jelentés |
 |---|---|
-| `(bx)` | előjegyzés / aktuális b |
+| `(bx)` | aktuális b (egyszeri módosítójel) |
 | `(by)` | feloldó |
 | `(b#)` | kereszt |
 
 A módosítójelek a saját hangmagasságukon jelennek meg, a `b` után a vonal
 betűje adja: `(ebx)` = b a 3. vonalon (E magasságában).
+
+## Előjegyzés
+
+Az előjegyzést a kulcs után helyezzük el, és minden új sor elején
+automatikusan megismétlődik (a kulccsal együtt).
+
+| Forrás | Jelentés |
+|---|---|
+| `(K:bx)` | b-előjegyzés (a `b` vonalon álló b) |
+| `(K:ebx)` | b a 3. vonalon (E magasságában) |
+| `(K:bx ebx)` | több módosítójel — szóközzel elválasztva |
+| `(K:)` | előjegyzés törlése |
+
+Az előjegyzés ugyanúgy módosulhat a darab közben is: ahol új `(K:…)`
+token áll, ott jelenik meg in-line, és onnantól a következő sorok
+elején is az új előjegyzés szerepel.
 
 ## Vonalak, elválasztók
 

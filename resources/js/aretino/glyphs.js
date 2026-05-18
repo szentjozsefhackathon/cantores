@@ -68,12 +68,11 @@ export const METRICS = {
     episemaStroke: 0.12,
     episemaStrokeMinPx: 0.8,
 
-    // --- Liquescens (small tail off upper-right of head) ------------------
-    liquescensAnchorX: 0.405,
-    liquescensAnchorY: 0.4,            // above center
-    liquescensTailDX: 0.3,
-    liquescensTailDY: 0.55,
-    liquescensControlDX: 0.1,
+    // --- Liquescens (right-parenthesis tail beside the notehead) ----------
+    liquescensAnchorX: 0.4,            // x offset of both endpoints from notehead center
+    liquescensTopY: 0.4,               // y offset above center (top-right corner of head)
+    liquescensBottomY: 0.55,           // y offset below center (under bottom-right corner)
+    liquescensBulge: 0.5,              // outward push of control points → curve depth
     liquescensStroke: 0.1,
     liquescensStrokeMinPx: 0.7,
 
@@ -86,6 +85,8 @@ export const METRICS = {
     quilismaPeakUp: 0.5,              // × noteBoxHeight
     quilismaLowerY: 0,
     quilismaTrough: 0.5,
+    quilismaSlope: 0.4,               // total upward rise left→right, × noteBoxHeight
+    quilismaOffsetY: 0.3,             // downward shift of entire glyph, × noteBoxHeight
 
     // --- Clefs ------------------------------------------------------------
     clefCHeight: 0.9,
@@ -191,19 +192,26 @@ export function drawNoteHead(ctx, note, cx, cy, staffBottomY, prevCy = null) {
     if (note.shape === 'quilisma') {
         const teeth = METRICS.quilismaTeeth;
         const dx = noteW / teeth;
-        let path = `M ${cx - noteW / 2} ${cy} `;
+        const totalRise = noteH * METRICS.quilismaSlope;
+        const offsetY = noteH * METRICS.quilismaOffsetY;
+        const baseY = (f) => cy + offsetY - f * totalRise;
+        let path = `M ${cx - noteW / 2} ${baseY(0)} `;
         for (let t = 0; t < teeth; t++) {
             const xa = cx - noteW / 2 + t * dx;
             const xb = xa + dx / 2;
             const xc = xa + dx;
-            path += `L ${xb} ${cy - noteH * METRICS.quilismaPeakUp} L ${xc} ${cy} `;
+            const fPeak = (t + 0.5) / teeth;
+            const fBase = (t + 1) / teeth;
+            path += `L ${xb} ${baseY(fPeak) - noteH * METRICS.quilismaPeakUp} L ${xc} ${baseY(fBase)} `;
         }
-        path += `L ${cx + noteW / 2} ${cy + noteH * METRICS.quilismaLowerY} `;
+        path += `L ${cx + noteW / 2} ${baseY(1) + noteH * METRICS.quilismaLowerY} `;
         for (let t = teeth - 1; t >= 0; t--) {
             const xa = cx - noteW / 2 + t * dx + dx;
             const xb = xa - dx / 2;
             const xc = xa - dx;
-            path += `L ${xb} ${cy + noteH * METRICS.quilismaTrough} L ${xc} ${cy + noteH * METRICS.quilismaLowerY} `;
+            const fTrough = (t + 0.5) / teeth;
+            const fBase = t / teeth;
+            path += `L ${xb} ${baseY(fTrough) + noteH * METRICS.quilismaTrough} L ${xc} ${baseY(fBase) + noteH * METRICS.quilismaLowerY} `;
         }
         path += 'Z';
         parts.push(`<path d="${path}" fill="#000"/>`);
@@ -252,14 +260,16 @@ export function drawMora(ctx, cx, cy, onLine = false) {
 }
 
 export function drawLiquescens(ctx, cx, cy, direction = 'down') {
-    const x1 = cx + ss(ctx, METRICS.liquescensAnchorX);
-    const y1 = cy - ss(ctx, METRICS.liquescensAnchorY);
-    const x2 = x1 + ss(ctx, METRICS.liquescensTailDX);
-    const dy = ss(ctx, METRICS.liquescensTailDY);
-    const y2 = direction === 'down' ? y1 + dy : y1 - dy;
-    const cxControl = x1 + ss(ctx, METRICS.liquescensControlDX);
+    const ax = cx + ss(ctx, METRICS.liquescensAnchorX);
+    const topY = cy - ss(ctx, METRICS.liquescensTopY);
+    const bottomY = cy + ss(ctx, METRICS.liquescensBottomY);
+    const x1 = ax;
+    const x2 = ax;
+    const y1 = direction === 'down' ? topY : bottomY;
+    const y2 = direction === 'down' ? bottomY : topY;
+    const bulge = ss(ctx, METRICS.liquescensBulge);
     const sw = stroke(ctx, METRICS.liquescensStroke, METRICS.liquescensStrokeMinPx);
-    return `<path d="M ${x1} ${y1} Q ${cxControl} ${(y1 + y2) / 2} ${x2} ${y2}" fill="none" stroke="#000" stroke-width="${sw}" stroke-linecap="round"/>`;
+    return `<path d="M ${x1} ${y1} C ${x1 + bulge} ${y1} ${x2 + bulge} ${y2} ${x2} ${y2}" fill="none" stroke="#000" stroke-width="${sw}" stroke-linecap="round"/>`;
 }
 
 function noteheadEdgeOffset(ctx) {

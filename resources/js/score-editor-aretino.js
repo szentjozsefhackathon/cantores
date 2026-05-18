@@ -9,13 +9,23 @@ export function aretinoMixin() {
         aretinoPageRatio: 'auto',
         aretinoFields: ['aretinoLyricFont', 'aretinoLyricSize', 'aretinoStaffSize', 'aretinoZoom'],
 
-        renderAretinoPreview() {
+        async renderAretinoPreview() {
             const container = this.$refs.aretinoPreview;
             if (!container) { return; }
             container.innerHTML = '';
             this.hasPages = false;
             const content = this.localContent;
             if (!content || !content.trim()) { return; }
+
+            if (document.fonts) {
+                const primaryFamily = this.aretinoLyricFont.split(',')[0].trim().replace(/['"]/g, '');
+                try {
+                    await document.fonts.load(`${this.aretinoLyricSize}px "${primaryFamily}"`);
+                } catch (_e) {
+                    // proceed anyway if font load fails
+                }
+            }
+
             const pages = this.splitPages(content, 'aretino', this.aretinoPageRatio);
             const canvas = this.getVirtualCanvasSize('aretino');
             const zoom = Number(this.aretinoZoom) / 100;

@@ -1,12 +1,12 @@
 # Aretino — felhasználói útmutató
 
+> Magyar katolikus gregorián notáció szöveges formátumban.
+> Verzió: 1.0 · Utolsó frissítés: 2026-05-18
+
 ```aretino
 (g2) g h i g. hi h g e_d_ , g hi a'g g. ::
 w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
 ```
-
-> Magyar katolikus gregorián notáció szöveges formátumban.
-> Verzió: 0.1 · Utolsó frissítés: 2026-05-18
 
 Ez az útmutató lépésről lépésre, példákkal mutatja be az **Aretino** kottaformátum használatát.
 A formátum még változhat, a visszajelzéseket köszönettel fogadjuk!
@@ -354,6 +354,7 @@ de a vonal-pozíció nem).
 
 ```aretino
 a' b' c' d' e' f' g' h'
+w: a' b' c' d' e' f' g' h'
 ```
 
 ---
@@ -372,7 +373,7 @@ A kottafej alapformáját egy **utótag-karakter** módosítja a betű után:
 ### Példák
 
 ```aretino
-(g2) d D dw dt
+(g2) d D dw dt d~
 ```
 
 Bal → jobb: punctum, virga, quilisma, tenor-hang — mind ugyanazon a magasságon (D).
@@ -401,15 +402,6 @@ A kottafej után, **szóköz nélkül**, kombinálható utótagok:
 
 ```aretino
 (g2) d d. d_ d~ d_e_d_
-```
-
-### Tipikus használat
-
-```aretino
-;title: Pueri Hebraeorum
-%%
-(g2) d f d c f g fa' a' ,
-w: Je-ru-zsá-lem gyer-mek-né-pe
 ```
 
 ---
@@ -449,7 +441,7 @@ virga-szárat tesz — ezt nem kell kézzel jelölni. Például `dfd` (torculus)
 esetén az `f` (csúcs) automatikusan virga-szárral rajzolódik.
 
 ```aretino
-dfd
+dfd ihgfghghjijigh
 ```
 
 ### Mit nem támogat az Aretino?
@@ -494,8 +486,8 @@ ugyanaz, de a zárójeles forma a hagyományos GABC-felhasználóknak ismerős
 lehet.
 
 ```aretino
-(g2) d f g, h g f d; f g h. * g f d.  (::)
-w:   Ky-ri-e   e-le- i- son.
+(g2) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. :: ht i ht g ht ::
+w: Men-je-tek, és vi-gyé-tek hí-rül: föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja! 
 ```
 
 ---
@@ -545,7 +537,7 @@ sortörést.
 
 | Forrás | Név | Jelentés |
 |---|---|---|
-| `(bx)` | előjegyzés b | aktuális b a `b` hang magasságán |
+| `(bx)` | aktuális b | egyszeri b a `b` hang magasságán |
 | `(by)` | feloldó | a megelőző alteráció feloldása |
 | `(b#)` | kereszt | félhanggal emelt |
 
@@ -562,10 +554,33 @@ jelenik meg.
 w:        kez-de- ti b-vel
 ```
 
-Az `(ebx)` egy *aktuális* b — a következő `e` hangok ettől kezdve
-b-ként szólnak (a hagyományos olvasat szerint). Az Aretino jelenleg
-nem érvényesít sor-szintű alteráció-emlékezetet, ezért **minden alkalommal**
-ki kell írni a jelet, ha azt akarod, hogy megjelenjen.
+Az `(ebx)` egy *aktuális* (egyszeri) b. Az Aretino nem érvényesít
+sor-szintű alteráció-emlékezetet, ezért ha minden hangon ismétlődő b-t
+szeretnél, használj **előjegyzést** (lásd lent).
+
+### Előjegyzés — `(K:...)`
+
+Az előjegyzést a kulcs után helyezzük el. A megjelenítő minden új sor
+elején automatikusan kiteszi a kulcsot követően, akkor is, ha a kulcs
+csak a darab elején van leírva.
+
+| Forrás | Jelentés |
+|---|---|
+| `(K:bx)` | b-előjegyzés a `b` vonalon |
+| `(K:ebx)` | b a 3. vonalon (E magasságában) |
+| `(K:bx ebx)` | több módosítójel — szóközzel elválasztva |
+| `(K:)` | előjegyzés törlése |
+
+```aretino
+;title: Példa előjegyzéssel
+%%
+(g2) (K:mb# jb# ) d e f g h i j k (::)
+```
+
+Az `(K:bx)` minden új sor elején megismétlődik. Egy újabb `(K:…)` token
+megváltoztatja az előjegyzést onnantól (helyben is megjelenik, és a
+következő sorok elején is az új jel szerepel). `(K:)` törli az
+előjegyzést.
 
 ---
 
@@ -596,24 +611,12 @@ Itt a szótagok rendre a ligatúrákhoz tartoznak:
 A dallamsor alá több `w:` sor is írható — minden új sor egy versszak:
 
 ```aretino
-(g2) df g h. * g fd d.  (::)
-w:   Ky-ri- e   e-le- i-son.
-w:   Chris-te   e-le- i-son.
-w:   Ky-ri- e   e-le- i-son.
+(g2) d c d f g f e d. ,
+w: Vic-ti-mae pas-cha-li lau-des
+w: A hús-vé-ti szent Bá-rány-nak
 ```
 
 A megjelenítő mindhárom sort a dallam alá fűzi, egymás alá.
-
-### Szóköz a szótagokban
-
-Ha **nem** akarod, hogy a szótagok közé kötőjel kerüljön, használj szóközt:
-
-```aretino
-w: Allelúja, allelúja.
-```
-
-A megjelenítő ezt **szavakra** bontja, nem szótagokra — egy szóra egy
-ligatúra-szótag jut.
 
 ### Több szó ugyanarra a hangra (`~`)
 
@@ -621,8 +624,8 @@ Ha több szót (szótagot) kell **egyetlen hangra** írni — például recitál
 tenor-hang alatt —, kösd össze őket `~` jellel szóköz nélkül:
 
 ```aretino
-(g2) dt dt dt dt d.  (::)
-w:   Dicsőség~az~Atyának, ~és Fi-ú-nak.
+(g2) f g ht h g h :
+w: szent vagy, mindenség~Ura, Is-te-ne!
 ```
 
 A `~` **nem** hoz létre kötőjelet; a kapcsolt szavak szóközzel jelennek meg
@@ -643,17 +646,19 @@ ha a dallamot kiegészíted a hiányzó hangokkal vagy a szöveget tagolod át.
 ### 14.1 Kyrie (egyszerű)
 
 ```aretino
-;cím: Kyrie I
-;mód: I
+;cím: Uram, irgalmazz (XVI.)
 %%
-(g2) d fg h_ * g. fgfe d' d d.  (::)
-w:   Ky-ri-e      e-lé- i-son.
+(g2) (K:ibx) h h h g h fg h :|
+w: U-ram, ir-gal-mazz né-künk!
 
-fg h_ * g. fgfe d' d d.  (::)
-w: Chris-te  e-lé- i-son.
+h h h g h fg h :|
+w: Krisz-tus, ke-gyel-mezz né-künk! 
 
-d fgfe d * c. d fg h_ d.  (::)
-w: Ky-ri- e  e-lé-i- son.
+h h h g h fg h :|
+w: U-ram, ir-gal-mazz né-künk!
+
+h g i g f gh h ::
+w: U-ram, ir-gal-mazz né-künk!
 ```
 
 **Mit lehet itt megfigyelni?**
@@ -662,9 +667,6 @@ w: Ky-ri- e  e-lé-i- son.
   elejére automatikusan kiteszi.
 - Üres sorok **új szakaszt** indítanak: minden frázis (Kyrie, Christe, Kyrie)
   külön szöveg-sort kap.
-- A `*` a frázis közepén kitágítja a helyet, hogy a szöveg vizuálisan
-  kényelmesen elférjen.
-- A `(::)` kettős vonallal zárja az egyes invokációkat.
 
 ### 14.2 Antifóna szöveggel
 
@@ -678,31 +680,6 @@ w:   As-per- ges  me, Dó-mine,
 h. j_ h_ g_ fgfe d.  (;)
 w: hys-só- po,  et  mun-dá-bor.
 ```
-
-### 14.3 Tenor-hang és quilisma
-
-```aretino
-;cím: Példa: tenor és quilisma
-%%
-(g2) dt dt dt fwg h_ * g f d.  (::)
-w:   Tu so- lus  Sanc-tus.
-```
-
-A `dt` recitáló tenor-hangot rajzol (üres kottafej, két oldalt
-függőleges vonalkákkal). A `fwg` egy ligatúra, amelyben az `f` quilisma —
-felfelé hullámzó mozgást jelez.
-
-### 14.4 Több ligatúra-csoport `/`-tagolóval
-
-```aretino
-;cím: Hosszú melizma
-%%
-(g2) d fg/h_ jh/gf d.  (::)
-w:   Al-      le-     lú-ja.
-```
-
-A `fg/h_` egy összefüggő melizma az `Al-` szótaghoz: két csoportra
-tagolódik vizuálisan (`fg` + `h_`), de szótag-szempontból egy egység.
 
 ---
 
