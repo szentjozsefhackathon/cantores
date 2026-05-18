@@ -53,7 +53,10 @@ export function renderAretino(source, options = {}) {
     ctx.systemGap = ss(ctx, METRICS.systemGap);
     ctx.lyricToNextStaff = ss(ctx, METRICS.lyricToNextStaff);
     ctx.lyricFont = lyricFont;
-    ctx.lyricSize = Math.max(6, (options.lyricSize ?? 12) * staffScale);
+    // lyricSize is in typographic points; convert to SVG user units for the virtual canvas.
+    // Assumes the SVG is displayed at ~750px CSS width (96/72 pt→px, scaled by canvas/display ratio).
+    const lyricPt = Math.max(6, options.lyricSize ?? 12);
+    ctx.lyricSize = lyricPt * (96 / 72) * (canvasWidth / 750);
     ctx.canvasWidth = canvasWidth;
 
     const sections = groupSections(ast.lines);

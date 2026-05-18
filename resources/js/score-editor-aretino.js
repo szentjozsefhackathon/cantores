@@ -32,7 +32,7 @@ export function aretinoMixin() {
                         canvasHeight: canvas.height,
                         staffSize: Number(this.aretinoStaffSize) * zoom,
                         lyricFont: this.aretinoLyricFont,
-                        lyricSize: Number(this.aretinoLyricSize),
+                        lyricSize: Number(this.aretinoLyricSize) * zoom,
                     });
                     pageEl.innerHTML = svg;
                     const svgEl = pageEl.querySelector('svg');
