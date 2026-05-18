@@ -1,0 +1,800 @@
+# Aretino — felhasználói útmutató
+
+> Magyar katolikus gregorián notáció szöveges formátumban.
+> Verzió: 0.1 · Utolsó frissítés: 2026-05-18
+
+Ez az útmutató lépésről lépésre, példákkal mutatja be az **Aretino** kottaformátum használatát.
+A formális specifikáció a [`docs/aretino-format.md`](aretino-format.md) fájlban található; itt a
+gyakorlati használatra koncentrálunk.
+
+---
+
+## Tartalomjegyzék
+
+1. [Mi az Aretino?](#1-mi-az-aretino)
+2. [Elvi háttér — a "modernizált metzigót" átírás](#2-elvi-háttér--a-modernizált-metzigót-átírás)
+3. [A Guido font, mint szellemi előd](#3-a-guido-font-mint-szellemi-előd)
+4. [Miért lép tovább az Aretino?](#4-miért-lép-tovább-az-aretino)
+5. [Forrásszerkezet — első kotta](#5-forrásszerkezet--első-kotta)
+6. [Fejléc](#6-fejléc)
+7. [Kulcsok](#7-kulcsok)
+8. [Hangmagasság](#8-hangmagasság)
+9. [Kottafej-típusok](#9-kottafej-típusok)
+10. [Módosító utótagok (mora, episzéma, likveszcens)](#10-módosító-utótagok)
+11. [Ligatúrák — neumák](#11-ligatúrák--neumák)
+12. [Neuma-tagoló rés (`/`)](#12-neuma-tagoló-rés)
+13. [Vonalak és tagolójelek](#13-vonalak-és-tagolójelek)
+14. [Sorvégi kiegyenlítés és sortörés](#14-sorvégi-kiegyenlítés-és-sortörés)
+15. [Módosítójelek (b, kereszt, feloldó)](#15-módosítójelek)
+16. [Szöveg és versszakok](#16-szöveg-és-versszakok)
+17. [Hosszabb példák](#17-hosszabb-példák)
+18. [A szerkesztő használata](#18-a-szerkesztő-használata)
+19. [Gyakori hibák és tippek](#19-gyakori-hibák-és-tippek)
+
+---
+
+## 1. Mi az Aretino?
+
+Az **Aretino** egy szöveges forrásnyelv a magyar katolikus gregorián gyakorlat
+lejegyzésére — Dobszay László és Szendrei Janka konvencióját követi:
+
+- **ötvonalas** kottarendszer,
+- alapértelmezett **violinkulcs**,
+- hagyományos **kerek** kottafejek (nem kvadrát),
+- de **gregorián ritmika** és jelölésrendszer: mora, episzéma, likveszcencia,
+  kvilizma, ligatúrák.
+
+A név Guido d'Arezzóra (latinul *Guido Aretinus*) utal — a régi *Guido HU/EN*
+TTF betűkészlet szellemi utódja, de attól független, szemantikus formátum.
+
+### Tervezési filozófia röviden
+
+| Elv | Mit jelent a gyakorlatban? |
+|---|---|
+| **Karakter = jeltípus** | `d` mindig punctum; nincs ASCII-art koordináta-trükk. |
+| **Pozíció = hangmagasság** | A betűkód határozza meg, melyik vonalon/vonalközben van a hang. |
+| **Szemantikus jelölők** | Az episzéma, mora stb. utótag-karakterek, nem mágikus glyph-fájlok. |
+| **Külön sor a szövegnek** | A `w:` előtagú sor önállóan értelmezhető. |
+
+---
+
+## 2. Elvi háttér — a "modernizált metzigót" átírás
+
+Az Aretino nem a semmiből nőtt ki: egy közel négy évtizedes magyar
+gregorián-átírási iskola örököse. A szakmai alapot Dobszay László
+*A gregorián átírásról* című tanulmánya (és Szendrei Janka paleográfiai
+munkái) fektették le. Az alábbiakban röviden összefoglaljuk azokat az
+elveket, amelyekből az Aretino mai formája is következik.
+
+### Az átírás alapproblémája
+
+Dobszay éles megfogalmazása szerint a gregorián átírás valódi nehézsége
+**nem** a vonalak száma vagy a kulcsok kérdése — ezek korokon át
+változtak, és a lényeg érintése nélkül változtathatóak ma is. A
+tulajdonképpeni kérdés **szemléleti**:
+
+> "A korai neumaírások nagy része nem a hangok sorát akarta jelölni…
+> hanem azt, hogy a szöveg egyes szótagjait miféle dallamalakzaton kell
+> kiejteni. Ennek a dallamalakzatnak jelzése a notáció, s mint egységes
+> jel fejezi ki a 3–4 hangos figurát."
+
+Másként szólva: a gregorián dallamot az énekli jól, aki **egy szótagra
+eső dallamalakzatot egységként** képzeli el és szólaltatja meg — nem
+hangról hangra építi össze a melizmát. Az a jó modern átírás tehát,
+amely az olvasónak ezt a "neumatikus" hallásmódot sugallja.
+
+### Két klasszikus zsákutca
+
+1. **Kvadrát-kotta reprodukciója** — történeti, de a mai énekestől
+   böngészést követel; a négy vonal és a C-/F-kulcs még a kisebb baj,
+   a vertikálisan írt pes, a porrectus íves vonala, a rombikus hangfejek
+   viszont félrevezetik a modern olvasót.
+2. **Nyolcad–negyed értékes "modern" átirat** — nyilvánvalóvá teszi,
+   hogy átiratról van szó, de a metrikus ritmusértékek **hamis ritmikai
+   képzeteket** kapcsolnak a dallamhoz.
+
+A 20. század végére mindkét megoldást felváltotta egy harmadik — a
+modern, **szár nélküli kerek kottafejek + kötőjelek** módszere. Dobszay
+ezt is élesen bírálja: ez a kottakép a dallamot egyes hangok hosszú
+sorozataként jeleníti meg, és ugyanezt a hallásképet ülteti az énekesbe
+is. Az elterjedéséhez két ok vezetett: (1) a leíróban nem él erősen
+a dallamalakzat-szerinti hallás; (2) a számítógépes kottaírás triviálisan
+elő tudja állítani ezt a primitív kottaképet.
+
+### A megoldás iránya — a metzigót notáció
+
+Van egy középkori notációs rendszer, amely a "modern" szemléletmóddal
+egybehangzóan értelmezi a két tengelyt (vízszintes = idő, függőleges =
+hangmagasság), **és** közben megtartja a hangcsoportok vizuális
+összetartozását: a **metzigót notáció**. A budapesti gregorián-kutatók
+(mindenekelőtt Szendrei Janka) ezt vették alapul, és modern kerek
+kottafejekkel kombinálva dolgozták ki azt a rendszert, amelyet ma
+"budapesti átírás" vagy "modernizált metzigót" néven említünk.
+
+### A modernizált metzigót tíz pontja (Dobszay)
+
+A tanulmány IV. fejezete tíz pontban foglalja össze az elveket. Az
+Aretino lényegében ezt a rendszert kódolja szöveges formátumban:
+
+1. **Vízszintes = idő, függőleges = hangmagasság.** (A modern szemlélettel
+   egybehangzóan.)
+2. **Tetszőleges kottafej**, természetesen modern **kerek** is.
+3. **Egy neumába tartozó hangokat** olyan **közel írjuk** egymáshoz,
+   amennyire az olvashatóság engedi.
+4. **A neuma egységét a relatíve legmagasabb hang baloldalán lefelé
+   bocsátott szár fejezi ki.** Ilyen szárat kap tehát:
+   - a pes 2., a clivis 1., a torculus középső, a porrectus 1. és 3.,
+     a scandicus 3., a climacus 1. hangja — **mindig a környezetében
+     legmagasabb hang**.
+   - Ha a neumában az irány változik, annyiszor ismételjük a szárat,
+     ahány új csúcs adódik.
+5. **Lefelé lépő hangcsoportokat** (clivis stb.) **vékony függőleges
+   vagy enyhén ferde összekötő vonallal** kapcsoljuk össze. Szekundnál
+   elhagyható, **nagyobb hangközöknél kötelező**.
+6. **Hosszabb melizmák belső tagolása** kétféleképpen:
+   - vagy újabb szárakkal (más-más artikulációt jelezve),
+   - vagy egy **kottafejnyi üres rés** beiktatásával a kis csoportok között.
+7. **Hangkettőzések** szabadon használhatók; ha a kettőzött hangból indul
+   lefelé a mozgás, a második hangra szár jöhet.
+8. **Vessző (plica)** kétféleképpen: kis belső elválasztó, vagy egy
+   hanghoz ragasztva annak szeparálása a csoporton belül.
+9. **Liquescencia** jelölhető csökkentett méretű hanggal — vagy ha ilyen
+   jelünk nincs, plicával ellátott hanggal.
+10. **A vonalak száma és a kulcsok kérdése független** a rendszer
+    lényegétől.
+
+A 4–5. pont a rendszer szíve: a **csúcson lefelé bocsátott szár** és az
+**ereszkedő hangokat összekötő ívelt/ferde vonal**. Ettől válik a
+gregorián notáció egyszerre **modernül olvashatóvá és neumatikussá**.
+
+---
+
+## 3. A Guido font, mint szellemi előd
+
+A modernizált metzigót átírás első, gyakorlatilag használható
+számítógépes megvalósítása **Bali János** munkája volt: a **Guido**
+nevű TTF betűkészlet (a régi *Guido HU/EN* font). A név Guido d'Arezzo
+(*Guido Aretinus*) — a hangrendszer és a négy vonalas notáció középkori
+atyja — előtt tiszteleg; az Aretino innen örökli a nevét is.
+
+### Hogyan működött a Guido?
+
+A Guido **nem program, hanem fontkészlet** — a felhasználó egy
+sima szövegszerkesztőben (Word, OpenOffice stb.) a betűtípust Guido-ra
+állította, és karakterről karakterre gépelte a kottát. A főbb elvek:
+
+- **Nem készre húzott kottavonalra dolgozott**: a hangjegy-glyph-ek
+  maguk hozták magukkal a hozzájuk tartozó kottavonal-darabot.
+- **Számbillentyűk = punktum** (egyvonalas c-től kétvonalas á-ig);
+  páros szám = vonalon ülő hang, páratlan = vonalközben.
+- **Shift** ugyanazon a billentyűn = **plica** (vesszős kis jel).
+- **Számsor alatti betű** = **virga** (szárral ellátott hang).
+- **Lefelé lépő szekund/terc/kvart** = külön billentyűsorok kombinációi.
+- A **szöveget külön sorba** írta a felhasználó, és **szóközökkel
+  igazította** a hangok alá — a szótag nem tapadt a hanghoz.
+
+Egy tipikus forrássor a Guido-ban így nézett ki:
+
+```
+<-4--4t---tT4--t4--tg3--tG2--5zZ5--4uU6---7uU6Z5T4
+```
+
+A táblázat fejből-megjegyzendő billentyű-kombinációkkal dolgozott:
+`4 t` = pes, `t T 4` = szekund clivis összekötő vonallal, `5 z Z 5` =
+torculus, `4 u U 6` = másik torculus, stb.
+
+### Mit hozott a Guido?
+
+Forradalmian sokat:
+
+- **bárki gépén futott**, telepítés szinte nulla,
+- pillanatokon belül lehetett vele kottát szedni,
+- **megőrizte a metzigót notáció elveit** — a szárak, az ívelt
+  összekötő vonalak, a plica mind elérhetők voltak,
+- és olcsó volt: nem kellett hozzá szakember, nyomdai metszés.
+
+---
+
+## 4. Miért lép tovább az Aretino?
+
+A Guido **karakter-szintű, manuális tipográfia** — a felhasználó
+ASCII-szintű "rajzolást" végez: minden jelet maga rak ki, minden
+távolságot szóközzel állít, minden szár melyik hanghoz tartozik, azt
+neki kell tudnia és odapozícionálnia. Ez **egy fontkészlet
+korlátja**, nem hiba — de a következménye, hogy:
+
+- a kottakép **statikus**: ha a szótagok átrendeződnek vagy a kotta
+  átméretezésre kerül, az igazítás összeomlik;
+- **automatizmus nincs**: szárakat, összekötő vonalakat, neuma-távolságot
+  mind kézzel kell beállítani;
+- **a szöveg és a hangok között nincs szemantikai kapcsolat**:
+  a "Ky-ri-e" szótagjai csak vizuálisan állnak a hangok alatt;
+- **nincs sortörés, nincs justify**: minden sor manuálisan szabva;
+- **a forrás nem értelmezhető**: a `<-4--4t---tT4` karaktersorozat
+  csak a Guido glyph-ek pozícióinak rajza, nem szemantikus jelölés —
+  ha a font eltűnik, az érték is.
+
+Az **Aretino** ugyanazt a notációs hagyományt — a modernizált metzigót
+átírást — **szemantikus, gépi feldolgozásra tervezett szöveges
+formátumként** valósítja meg. Ami ezzel jár:
+
+| Szempont | Guido (TTF font) | Aretino (szemantikus formátum) |
+|---|---|---|
+| **Reprezentáció** | karakter = glyph-pozíció | karakter = jeltípus + pozíció |
+| **Hangmagasság** | klaviatúrasor szerinti hozzárendelés | `a–m` betűk, kulcstól független, abszolút |
+| **Virga (csúcsi szár)** | a felhasználó rakja ki, mindig kézzel | **automatikus**: a renderer minden helyi maximumra szárat tesz |
+| **Lefelé összekötő vonal** | külön billentyű-kombináció | **automatikus**: a renderer rajzolja minden ereszkedőre, hangköz szerint igazítva |
+| **Neuma-távolság** | manuális — szóközökkel és kötőjelekkel | **automatikus**: a `ligature` token egysége vezérli |
+| **Sorvégi kiegyenlítés** | nincs | `*` és `(z)` direktívák, automatikus justify |
+| **Szótag–hang igazítás** | szóközzel a felhasználó | **automatikus**: szótag a megfelelő neuma alá |
+| **Több versszak** | mindegyik külön sor, kézzel igazítva | `w:` sorok, mindegyik automatikus alignmenttel |
+| **Skálázás** | font-pontméret változtatja | tetszőleges DPI-n SVG-vé renderel |
+| **Tördelés/újraszedés** | nincs — a sor csak addig fér, ameddig betűzi | **automatikus sortörés** a margónál, kulcs ismétlésével |
+| **Forrás hordozhatósága** | TTF-fontfüggő, font nélkül értelmezhetetlen | tiszta UTF-8 szöveg, font nélkül is olvasható és értelmezhető |
+| **Verzió- és diff-barát** | nem — a karakterek pozíció szerintiek | igen — a sor szerkesztése követhető git-tel |
+| **Programozott feldolgozás** | gyakorlatilag lehetetlen | trivális — parser → AST → renderer |
+
+### Egy hasonlat
+
+A Guido és az Aretino viszonya kicsit olyan, mint a régi
+**WordArt-ban "kirajzolt" képlet** és a **LaTeX** képlete: ugyanazt a
+matematikai tartalmat akarja közvetíteni — de az egyik egy szétmálló
+vizuális utánzat, a másik egy szemantikus forrás, amit a rendszer
+automatikusan a végső formára szed. Az Aretino célja ugyanez a
+gregorián notáció területén.
+
+### Mit őriz az Aretino a hagyományból?
+
+Mindent, ami a Dobszay–Szendrei iskola lényege:
+
+- **kerek kottafejek**, ötvonalas rendszer, modern kulcsok (10. pont);
+- **csúcsi virga-szár** (4. pont) — automatikusan, minden helyi maximumra;
+- **ereszkedő összekötő vonal** (5. pont) — automatikusan, hangköz szerint;
+- **neuma-tagolás kottafejnyi réssel** (6. pont) — a `/` operátor;
+- **mora, episzéma, liquescentia, kvilizma** (8–9. pont) —
+  utótag-karakterek formájában;
+- **a vonalak és kulcsok kérdésének függetlensége** (10. pont) —
+  kulcs cserélhető, és nem érinti a `a–m` jelölést.
+
+Az Aretino tehát **nem szakít** a hagyománnyal — éppen ellenkezőleg:
+a **lényeget** automatizálja, így a felhasználónak csak a zenei
+tartalomra kell figyelnie, nem a glyph-ek rajzolására.
+
+---
+
+## 5. Forrásszerkezet — első kotta
+
+A legrövidebb, működő Aretino forrás:
+
+```aretino
+(g2) d f g h.
+```
+
+Ez egy violinkulcsot (G a 2. vonalon), majd négy punctumot rajzol —
+az utolsóra morával (nyújtóponttal).
+
+Egy gazdagabb minimum-példa szöveggel és fejléccel:
+
+```aretino
+;cím: Első kísérlet
+%%
+(g2) d f g h.
+w:   Pró-ba kot- ta.
+```
+
+A három fő építőelem:
+
+1. **Fejléc** — opcionális, `;kulcs: érték` sorok, `%%` zárja.
+2. **Dallam-sor** — hangok, ligatúrák, vonalak. Az első zárójeles elem
+   a kulcs (`(g2)`, `(f4)`, `(c3)`).
+3. **Szöveg-sor** — `w:` előtaggal, közvetlenül a dallam alatt.
+
+---
+
+## 6. Fejléc
+
+A fejléc-sorok pontosvesszővel kezdődnek (`;kulcs: érték`), és a `%%` lezárja:
+
+```aretino
+;cím: Kyrie I
+;mód: I
+;szerző: Hagyományos
+%%
+(g2) d fg h_ * g. fgfe d' d d.  (::)
+w:   Ky-ri-e      e-lé- i-son.
+```
+
+A renderer jelenleg a `cím` (vagy `title`) kulcsot jeleníti meg középre
+igazítva, félkövéren a kotta fölött. A többi mező a forráshoz tartozó
+metaadat — későbbi verziókban megjelenhet a fejlécben.
+
+A fejléc **elhagyható**: ha rögtön dallamsorral kezdesz, a renderer simán
+elindul kulcs nélkül (de jó szokás kulcsot megadni az első hang előtt).
+
+---
+
+## 7. Kulcsok
+
+A kulcsot zárójelben adod meg: betű + sorszám.
+
+| Forrás | Kulcs | Megjegyzés |
+|---|---|---|
+| `(g2)` | G-kulcs a 2. vonalon | Violinkulcs — **alapértelmezett**. |
+| `(f4)` | F-kulcs a 4. vonalon | Basszuskulcs. |
+| `(c3)` | C-kulcs a 3. vonalon | Kis szögletes C-jel (nem hagyományos altkulcs). |
+
+A kulcs általában a dallamsor első eleme. Sor közben is válthatsz kulcsot:
+
+```aretino
+(g2) d f g h  (c3) e g h
+```
+
+Új rendszer (sortörés után) elejére a renderer automatikusan kirajzolja az
+aktuális kulcsot.
+
+---
+
+## 8. Hangmagasság
+
+A hangokat **a–m** kisbetűk jelölik. A betű mindig ugyanazt a sort/vonalközt
+jelenti, **függetlenül a kulcstól**:
+
+```
+                                          m
+                                       l
+        — — — — — — — — — — — — k — — — — —  (5. vonal)
+                                 j
+        — — — — — — — — — — — i — — — — — —  (4. vonal)
+                              h
+        — — — — — — — — — g — — — — — — — —  (3. vonal)
+                          f
+        — — — — — — — e — — — — — — — — — —  (2. vonal)
+                      d
+        — — — — — c — — — — — — — — — — — —  (1. vonal)
+                  b
+                a
+```
+
+Tehát G-kulcsban `c` az 1. vonalon C-hang, `g` a 3. vonalon B-hang stb.
+F-kulcsban ugyanaz a `c` az 1. vonalon E-hang lesz (mert a kulcs változik,
+de a vonal-pozíció nem).
+
+### Emelt oktáv — aposztrof
+
+```aretino
+(g2) d d' d
+```
+
+A `d'` egy oktávval magasabb D — a 4. vonalköz fölött. Ritka, csak speciális
+esetekben kell.
+
+---
+
+## 9. Kottafej-típusok
+
+A kottafej alapformáját egy **utótag-karakter** módosítja a betű után:
+
+| Forrás | Név | Rajz |
+|---|---|---|
+| `d` | **punctum** | töltött kerek kottafej, szár nélkül |
+| `D` | **virga** | punctum bal oldalán lefelé mutató szárral (nagybetű!) |
+| `dw` | **quilisma** | csíkozott, cikkcakkos kontúrú kottafej |
+| `dt` | **tenor-hang** | üres kottafej, két oldalán függőleges vonalkák |
+
+### Példák
+
+```aretino
+(g2) d D dw dt
+```
+
+Bal → jobb: punctum, virga, kvilizma, tenor-hang — mind ugyanazon a magasságon (D).
+
+A **virga** egyúttal hangsúlyt is jelez, és gyakran ligatúra-csúcsokon
+jelenik meg automatikusan (lásd a [Ligatúrák](#11-ligatúrák--neumák) szakaszt).
+Az auto-virga miatt ritkán kell kézzel nagybetűt írni: csak akkor, ha külön
+hangsúlyt akarsz egy egyedülálló hangra.
+
+A **kvilizma** mindig ligatúrában fordul elő — ívelt, "remegő" felfelé-mozgás
+jele:
+
+```aretino
+(g2) dfwg
+```
+
+Itt `f` után `w` jelöli, hogy az `f` kvilizma.
+
+---
+
+## 10. Módosító utótagok
+
+A kottafej után, **szóköz nélkül**, kombinálható utótagok:
+
+| Utótag | Név | Jelentés |
+|---|---|---|
+| `.` | **mora** (nyújtópont) | jobbra a kottafejtől, hosszú hangot jelez |
+| `_` | **episzéma** | rövid vízszintes vonal a kottafej fölött |
+| `~` | **likveszcens** | kis "farok" a kottafej jobb felső sarkán |
+
+### Példák
+
+```aretino
+(g2) d d. d_ d~ D_.
+```
+
+Sorrendben: sima punctum, mora-pontos, episzémás, likveszcens, virga
+episzémával **és** morával. Az utótagok bármilyen sorrendben kombinálhatók.
+
+### Tipikus használat
+
+```aretino
+;cím: Egyszerű frázis
+%%
+(g2) d_ f_ g h. * f e d.  (::)
+w:   Sá-li-cem sa-lu- tá- ris.
+```
+
+Itt az első három hang episzémás (hangsúlyos, vontatott), az `h` után mora
+(záróhang előtti nyújtás), a frázis vége pedig a kettős vonallal `(::)`
+zárul.
+
+---
+
+## 11. Ligatúrák — neumák
+
+Az **egymás után, szóköz nélkül** írt hangbetűk egy ligatúrát (neumát)
+alkotnak. Ez az Aretino egyik leglényegesebb mechanizmusa.
+
+| Forrás | Név | Jelentés |
+|---|---|---|
+| `df` | **podatus** | felfelé lépő kettős, alsóról a felsőre vivő ívvel |
+| `fd` | **clivis** | lefelé lépő kettős, ívelt kalligrafikus vonallal |
+| `dfd` | **torculus** | hármas: fel-le |
+| `fdf` | (völgy hármas) | le-fel — egyedi ligatúraként rajzolódik |
+| `dfgf` | hosszabb neuma | tetszőleges hosszú ligatúra |
+
+### Egy hang vs. ligatúra
+
+```aretino
+(g2) d f g    df g    dfg
+```
+
+- `d f g` → három **különálló** punctum (szóköz választja el).
+- `df g` → egy **podatus** (`df` egybe), majd egy különálló `g`.
+- `dfg` → egy **hármas ligatúra** (torculus jellegű, fel-fel).
+
+### Automatikus virga csúcsokon
+
+A renderer minden ligatúra-csúcsra (helyi maximumra) automatikusan
+virga-szárat tesz — ezt nem kell kézzel jelölned. Például `dfd` (torculus)
+esetén az `f` (csúcs) automatikusan virga-szárral rajzolódik.
+
+Ha **nem** akarsz auto-virgát, az nem letiltható v0.1-ben — a viselkedés
+mindig így működik. (Plateau-k esetén csak az első hang virga lesz.)
+
+### Mit nem támogat az Aretino?
+
+Dobszay szellemében az Aretino **nem** tartalmaz külön porrectus, climacus
+vagy flexa-ligatúra elemeket. Ezeket nem speciális kódokkal, hanem a
+hangokból építed össze (pl. egy climacus = három csökkenő hang szóköz
+nélkül egybeírva).
+
+Oriscus és nagy likveszcens sincs.
+
+---
+
+## 12. Neuma-tagoló rés
+
+A `/` (per-jel) egy **kis lélegzetnyi** rést tesz egy ligatúrán belül —
+gyakorlatilag a melizmán belüli csoportosítást teszi láthatóvá. A `/` előtti
+és utáni hangok továbbra is **egy ligatúrához** tartoznak, csak vizuálisan
+elválaszthatók.
+
+```aretino
+(g2) dfg/fed
+```
+
+Ez egy hosszú neuma, amely két csoportra tagolódik (`dfg` és `fed`), de
+egyetlen ligatúraként viselkedik (pl. a szótag-illesztésnél is egyetlen
+egységként számít).
+
+Szóközt **nem** írhatsz a `/` köré ligatúrán belül — az a ligatúrát
+megszakítaná, és külön neumákat csinálna belőle.
+
+---
+
+## 13. Vonalak és tagolójelek
+
+| Forrás | Név | Funkció |
+|---|---|---|
+| `,` | rövid vonal (negyedvonal) | kis cezúra, lélegzet |
+| `;` | félvonal | tagmondat vége |
+| `:` | egész vonal | mondat vége |
+| `::` | kettős vonal | tétel vége |
+
+A vonalak írhatók zárójelben is: `(,)`, `(;)`, `(:)`, `(::)` — a hatás
+ugyanaz, de a zárójeles forma a hagyományos GABC-felhasználóknak ismerős
+lehet.
+
+```aretino
+(g2) d f g, h g f d; f g h. * g f d.  (::)
+w:   Ky-ri-e   e-le- i- son.
+```
+
+---
+
+## 14. Sorvégi kiegyenlítés és sortörés
+
+### Csillag `*` — szétfutó üres szakasz
+
+A `*` egy üres, "rugalmas" szakasz, amelyet a renderer a sor végéig
+kiegyenlít. Tipikusan akkor használod, amikor egy frázis közepén vagy
+végén a szöveg hosszabb a hangoknál, és vizuálisan szétoszlatnád a
+hangokat:
+
+```aretino
+(g2) d f g h * g f d  (::)
+```
+
+Több `*` is használható egy sorban; a maradék helyet egyenlően elosztja
+köztük.
+
+### Spacer `(sp)` — fix méretű rés
+
+Ha **fix** szélességű rést akarsz (nem rugalmas, mint a `*`), használd
+a `(sp)` direktívát. Szorzóval is megadható: `(sp2)` = 2× alapszélesség,
+`(sp0.5)` = fél szélesség.
+
+```aretino
+(g2) d f (sp2) g h
+```
+
+### Explicit sortörés `(z)` és `(Z)`
+
+A renderer maga is tördel: ha egy sor nem fér ki, a következő hangot új
+sorba viszi. Explicit sortörést is kérhetsz:
+
+| Forrás | Hatás |
+|---|---|
+| `(z)` | sortörés-javaslat, a kötés **kiegyenlítve** (justified) — a sor a margóig kitölt |
+| `(Z)` | sortörés-javaslat, **nem** kiegyenlítve — a sor balra zárt |
+
+A `(z)` formát használd ott, ahol a frázis-vége természetesen indokol
+sortörést.
+
+---
+
+## 15. Módosítójelek
+
+| Forrás | Név | Jelentés |
+|---|---|---|
+| `(bx)` | előjegyzés b | aktuális b a `b` hang magasságán |
+| `(by)` | feloldó | a megelőző alteráció feloldása |
+| `(b#)` | kereszt | félhanggal emelt |
+
+A `b` után a hang betűje adja meg a magasságot: `(ebx)` = b a 3. vonalon
+(E magasságán), `(fbx)` = b az F-en stb. Ha csak `(bx)`, akkor a B-hangon
+jelenik meg.
+
+### Példa
+
+```aretino
+;cím: Példa b-vel
+%%
+(g2) (ebx) d e f g a g f e d  (::)
+w:        kez-de- ti b-vel
+```
+
+Az `(ebx)` egy *aktuális* b — a következő `e` hangok ettől kezdve
+b-ként szólnak (a hagyományos olvasat szerint). Az Aretino jelenleg
+nem érvényesít sor-szintű alteráció-emlékezetet, ezért **minden alkalommal**
+ki kell írni a jelet, ha azt akarod, hogy megjelenjen.
+
+---
+
+## 16. Szöveg és versszakok
+
+### Szótagok illesztése
+
+A renderer **automatikusan illeszti** a szótagokat a hangokhoz: minden
+szótag a megfelelő neuma (vagy különálló punctum) középpontja alá kerül.
+A kötőjeles tagolás (`Ky-ri-e`) a szótaghatárt jelöli, a kötőjelek
+a hangok között automatikusan megjelennek, ha van hozzá hely.
+
+A szabály egyszerű: **egy szótag — egy neuma vagy egy különálló hang**.
+Egy ligatúra (pl. `df`) egyetlen egységnek számít, így egy szótag jut rá;
+egy különálló punctum (pl. `d` szóközökkel a két oldalán) szintén egy
+egységnek számít, és egy szótag jut rá.
+
+```aretino
+(g2) df g h. * g fd d.  (::)
+w:   Ky-ri- e   e-le- i-son.
+```
+
+Itt a szótagok rendre a ligatúrákhoz tartoznak:
+`Ky` → `df`, `ri` → `g`, `e` → `h.`, `e` → `g`, `le` → `fd`, `i` → `d`, `son` → `d.`.
+
+### Több versszak
+
+A dallamsor alá több `w:` sor is írható — minden új sor egy versszak:
+
+```aretino
+(g2) df g h. * g fd d.  (::)
+w:   Ky-ri- e   e-le- i-son.
+w:   Chris-te   e-le- i-son.
+w:   Ky-ri- e   e-le- i-son.
+```
+
+A renderer mindhárom sort a dallam alá fűzi, egymás alá.
+
+### Szóköz a szótagokban
+
+Ha **nem** akarod, hogy a szótagok közé kötőjel kerüljön, használj szóközt:
+
+```aretino
+w: Allelúja, allelúja.
+```
+
+A renderer ezt **szavakra** bontja, nem szótagokra — egy szóra egy
+ligatúra-szótag jut.
+
+### Ha több a szótag, mint a hang
+
+Ha a `w:` sorban több szótag van, mint amennyi hangod van a dallamban,
+a többletszótagokat a renderer az utolsó hang után, alapértelmezett
+szótag-távolsággal helyezi el — így a szöveg nem vész el, de jó gyakorlat,
+ha a dallamot kiegészíted a hiányzó hangokkal vagy a szöveget tagolod át.
+
+---
+
+## 17. Hosszabb példák
+
+### 14.1 Kyrie (egyszerű)
+
+```aretino
+;cím: Kyrie I
+;mód: I
+%%
+(g2) d fg h_ * g. fgfe d' d d.  (::)
+w:   Ky-ri-e      e-lé- i-son.
+
+fg h_ * g. fgfe d' d d.  (::)
+w: Chris-te  e-lé- i-son.
+
+d fgfe d * c. d fg h_ d.  (::)
+w: Ky-ri- e  e-lé-i- son.
+```
+
+**Mit lehet itt megfigyelni?**
+
+- A kulcsot csak az első sorban kell megadni — a renderer az új rendszerek
+  elejére automatikusan kiteszi.
+- Üres sorok **új szakaszt** indítanak: minden frázis (Kyrie, Christe, Kyrie)
+  külön szöveg-sort kap.
+- A `*` a frázis közepén kitágítja a helyet, hogy a szöveg vizuálisan
+  kényelmesen elférjen.
+- A `(::)` kettős vonallal zárja az egyes invokációkat.
+
+### 14.2 Antifóna szöveggel
+
+```aretino
+;cím: Asperges me
+;mód: VII
+%%
+(g2) d_ fg h. * g fgfe d' d.  (,)
+w:   As-per- ges  me, Dó-mine,
+
+h. j_ h_ g_ fgfe d.  (;)
+w: hys-só- po,  et  mun-dá-bor.
+```
+
+### 14.3 Tenor-hang és kvilizma
+
+```aretino
+;cím: Példa: tenor és kvilizma
+%%
+(g2) dt dt dt fwg h_ * g f d.  (::)
+w:   Tu so- lus  Sanc-tus.
+```
+
+A `dt` recitáló tenor-hangot rajzol (üres kottafej, két oldalt
+függőleges vonalkákkal). A `fwg` egy ligatúra, amelyben az `f` kvilizma —
+felfelé hullámzó mozgást jelez.
+
+### 14.4 Több ligatúra-csoport `/`-tagolóval
+
+```aretino
+;cím: Hosszú melizma
+%%
+(g2) d fg/h_ jh/gf d.  (::)
+w:   Al-      le-     lú-ja.
+```
+
+A `fg/h_` egy összefüggő melizma az `Al-` szótaghoz: két csoportra
+tagolódik vizuálisan (`fg` + `h_`), de szótag-szempontból egy egység.
+
+---
+
+## 18. A szerkesztő használata
+
+Az Aretino formátum a **kottaszerkesztőben** elérhető — a formátumválasztóban
+válaszd ki az **Aretino** opciót. Élő előnézet jelenik meg a forrás alatt.
+
+### A beállító-sáv elemei
+
+| Vezérlő | Mit állít? |
+|---|---|
+| **Nagyítás** | Az előnézet zoom-szintje (csak megjelenítés). |
+| **Kotta méret** | A vonalrendszer fizikai mérete pontban (alapérték 100). |
+| **Szöveg méret** | A liturgikus szöveg betűmérete. |
+| **Hang-távolság** | Hangok közötti vízszintes szóköz szorzója. |
+| **Szöveg betűtípusa** | Palatino / serif család a szöveghez. |
+| **Oldalarány** | Az exportált oldal képaránya (`auto` = adat-méret szerinti). |
+
+### Export
+
+A kotta SVG formátumban exportálható és másolható is — a `score-editor`
+oldalon a megfelelő gombok használhatóak. Az exportált SVG önállóan
+megnyitható és nyomtatható.
+
+---
+
+## 19. Gyakori hibák és tippek
+
+### "A ligatúra nem áll össze"
+
+**Tünet:** két hang közé szándékodnál hosszabb rés került.
+**Ok:** szóköz van a hangok között.
+**Megoldás:** írd egybe — `d f` (két punctum) helyett `df` (podatus).
+
+### "Túl sok virga-szár jelent meg"
+
+**Tünet:** ligatúra-csúcsokon kéretlenül szárak jelennek meg.
+**Ok:** ez a normál viselkedés — az auto-virga minden csúcsra szárat tesz.
+A v0.1 ezt nem teszi letiltóvá.
+**Megoldás:** ha tudatosan nem akarsz virga-csúcsot, írd át a ligatúrát
+külön punctum-okra (szóközzel) ott, ahol nem akarod az automatikust.
+
+### "A szöveg nem igazodik a hangokhoz"
+
+**Tünet:** szótagok nem a megfelelő egység alá kerülnek.
+**Ok:** valószínűleg a szótag-tagolás nem stimmel — vagy hiányoznak a
+kötőjelek (`Kyrie` helyett `Ky-ri-e`), vagy ott írtál ligatúrát, ahol
+külön hangokat kéne (vagy fordítva).
+**Megoldás:** ellenőrizd, hogy minden szótaghoz **pontosan egy** neuma
+vagy különálló hang tartozik-e. Ha egy szótag alá több hang kell, írd
+őket ligatúrába (szóköz nélkül egybe).
+
+### "A módosító nem jelenik meg a megfelelő hangon"
+
+**Tünet:** mora vagy episzéma nem ott jelenik meg, ahol kellene.
+**Ok:** az utótag-karakter csak az **előtte álló** hangra vonatkozik.
+**Megoldás:** `df.` → az `f`-hez tartozik a mora. Ha a `d`-hez szeretnéd,
+írd `d.f`-nek (de figyelj: a szóköz nélküli ligatúrában a `d.` előbbi
+hangot módosít, és a `f` a következő hang).
+
+### "Üres sor lett a kotta közepén"
+
+**Tünet:** váratlan kötőjel a két szakasz között, vagy szétesik az
+illesztés.
+**Ok:** üres sor **új szakaszt** indít a parserben.
+**Megoldás:** ha nem akarsz új szakaszt, ne hagyj üres sort a dallam
+és szöveg között.
+
+### Stílus-ajánlások
+
+- Egy dallam-sor egy frázis vagy egy invokáció — ne zsúfolj túl sokat
+  egy sorba; a tagolt forrás könnyebben szerkeszthető.
+- A szöveg-sort **közvetlenül** a dallam alá írd; üres sorral csak akkor
+  válassz el szakaszokat, ha tudatosan ezt akarod.
+- A `*`-ot a frázis közepén/végén használd — a vonalak (`,`, `;`, `:`,
+  `::`) elé/után tedd, ahol a szöveg vizuálisan szellősebb lehet.
+- Hosszabb melizmákat tagolj `/`-jellel — a forráskód olvashatóbb lesz,
+  és vizuálisan is csoportosul a kotta.
+
+---
+
+## Kapcsolódó dokumentumok
+
+- [`docs/aretino-format.md`](aretino-format.md) — formális specifikáció (v0.1)
+- [`plans/aretino-implementation.md`](../plans/aretino-implementation.md) — implementációs terv és terv-előzmények
+- [`resources/js/aretino/`](../resources/js/aretino/) — a renderer forrása (parser, layout, glyphs)
