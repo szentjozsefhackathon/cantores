@@ -267,7 +267,7 @@ export function renderAretino(source, options = {}) {
                 } else if (it.kind === 'ligature') {
                     const r = emitLigature(ctx, it.groups, cursorX, staffBottomY, it.gaps ?? []);
                     parts.push(wrapSrc(it, r.svg, 'aretino-token aretino-ligature'));
-                    rowLigatures.push({ centerX: r.centerX, leftX: r.leftX });
+                    rowLigatures.push({ centerX: r.centerX, leftX: r.leftX, shouldAlignLeft: r.shouldAlignLeft });
                     cursorX += r.advance + (it.syllableExtra || 0);
                 }
                 if (idx < row.items.length - 1 && extraPerGap > 0) {
@@ -837,7 +837,15 @@ function emitLigature(ctx, groups, x, staffBottomY, gaps = []) {
     const leftX = firstNoteCx !== null
         ? firstNoteCx - ss(ctx, METRICS.noteBoxWidth) * 0.5
         : x;
-    return { svg: parts.join(''), advance, centerX, leftX };
+
+    // Determine if syllable should align to left edge
+    const totalNotes = groups.reduce((sum, g) => sum + g.length, 0);
+    const lastNote = groups[groups.length - 1]?.[groups[groups.length - 1].length - 1];
+    const hasMora = lastNote?.modifiers?.includes('mora');
+    const isTenor = groups.some(g => g.some(n => n.shape === 'tenor'));
+    const shouldAlignLeft = totalNotes > 1 || hasMora || isTenor;
+
+    return { svg: parts.join(''), advance, centerX, leftX, shouldAlignLeft };
 }
 
 let _measureCanvas = null;
@@ -1091,12 +1099,11 @@ function emitAlignedSyllables(ctx, syllables, ligatures, lyricY) {
         let center;
         if (i < ligatures.length) {
             const lig = ligatures[i];
-            const neumeWidth = (lig.centerX - lig.leftX) * 2;
-            if (alignW < neumeWidth || alignW > neumeWidth + 3 * ctx.staffSpace) {
-                // Neume is wider than the syllable, or syllable exceeds the
-                // neume by more than one staff space: align left edges.
+            if (lig.shouldAlignLeft) {
+                // Align left edge: syllable with mora, multi-note neume, or tenor note
                 center = lig.leftX + alignW / 2 - ctx.staffSpace * 0.1;
             } else {
+                // Center syllable: single note without mora (default)
                 center = lig.centerX;
             }
         } else {
