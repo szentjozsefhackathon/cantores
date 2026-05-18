@@ -65,8 +65,10 @@ export function abcMixin() {
                     }
                     const svgs = pageEl.querySelectorAll('svg');
                     svgs.forEach((svg, svgIdx) => {
+                        const svgId = `abc-svg-${idx}-${svgIdx}-${Date.now()}`;
+                        svg.id = svgId;
                         const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-                        style.textContent = `svg{color:#000!important;fill:#000!important}.sW{stroke-width:${this.abcStemWidth}!important}.slW{stroke-width:${this.abcStaffLineWidth}!important}`;
+                        style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${this.abcStemWidth}!important}#${svgId} .slW{stroke-width:${this.abcStaffLineWidth}!important}`;
                         svg.appendChild(style);
                         if (!svg.getAttribute('viewBox')) {
                             const w = parseFloat(svg.getAttribute('width')) || virtualWidth;
