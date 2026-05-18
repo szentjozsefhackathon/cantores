@@ -43,7 +43,7 @@ export function abcMixin() {
             const pages = this.splitPages(content, 'abc', this.abcPageRatio);
             pages.forEach((pageContent, idx) => {
                 const pageEl = document.createElement('div');
-                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
+                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 if (this.abcPageRatio !== 'auto') {
                     pageEl.style.aspectRatio = this.abcPageRatio;
                 }
@@ -66,7 +66,7 @@ export function abcMixin() {
                     const svgs = pageEl.querySelectorAll('svg');
                     svgs.forEach((svg, svgIdx) => {
                         const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-                        style.textContent = `.sW{stroke-width:${this.abcStemWidth}!important}.slW{stroke-width:${this.abcStaffLineWidth}!important}`;
+                        style.textContent = `svg{color:#000!important;fill:#000!important}.sW{stroke-width:${this.abcStemWidth}!important}.slW{stroke-width:${this.abcStaffLineWidth}!important}`;
                         svg.appendChild(style);
                         if (!svg.getAttribute('viewBox')) {
                             const w = parseFloat(svg.getAttribute('width')) || virtualWidth;

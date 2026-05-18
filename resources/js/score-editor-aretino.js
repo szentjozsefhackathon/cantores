@@ -21,7 +21,7 @@ export function aretinoMixin() {
             const zoom = Number(this.aretinoZoom) / 100;
             pages.forEach((pageSource, idx) => {
                 const pageEl = document.createElement('div');
-                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
+                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 if (this.aretinoPageRatio !== 'auto') {
                     pageEl.style.aspectRatio = this.aretinoPageRatio;
                 }

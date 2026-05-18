@@ -25,7 +25,7 @@ export function gabcMixin() {
             const canvas = this.getVirtualCanvasSize('gabc');
             const pageEls = pages.map((_, idx) => {
                 const pageEl = document.createElement('div');
-                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900';
+                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 if (this.pageRatio !== 'auto') {
                     pageEl.style.aspectRatio = this.pageRatio;
                 }

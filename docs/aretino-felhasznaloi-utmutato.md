@@ -4,8 +4,7 @@
 > Verzió: 0.1 · Utolsó frissítés: 2026-05-18
 
 Ez az útmutató lépésről lépésre, példákkal mutatja be az **Aretino** kottaformátum használatát.
-A formális specifikáció a [`docs/aretino-format.md`](aretino-format.md) fájlban található; itt a
-gyakorlati használatra koncentrálunk.
+A formátum még változhat, a visszajelzéseket köszönettel fogadjuk!
 
 ---
 

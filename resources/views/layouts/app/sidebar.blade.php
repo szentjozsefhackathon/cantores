@@ -128,6 +128,10 @@
                 Útmutató
             </flux:sidebar.item>
 
+            <flux:sidebar.item icon="musical-note" :href="route('aretino.guide')" :current="request()->routeIs('aretino.guide')" wire:navigate>
+                Aretino útmutató
+            </flux:sidebar.item>
+
             <flux:sidebar.item
                 icon="envelope"
                 as="button"

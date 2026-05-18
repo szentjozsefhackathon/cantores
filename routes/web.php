@@ -18,6 +18,9 @@ Route::view('/about', 'pages.about')->name('about');
 
 Route::view('/guide', 'pages.guide')->name('guide');
 
+Route::livewire('/aretino/guide', \App\Livewire\Pages\AretinoGuide::class)
+    ->name('aretino.guide');
+
 // Music database landing page (public)
 Route::livewire('/music-database', 'pages::music-database')
     ->name('music-database');
