@@ -101,9 +101,12 @@ export function renderAretino(source, options = {}) {
         const drawClefForRows = hasSeenClef;
 
         const verseSyllables = sec.lyrics.map(parseSyllables);
+        const verseNotes = verseSyllables.map(arr => arr.filter(s => s.kind === 'note'));
+        const verseBarlines = verseSyllables.map(arr => arr.filter(s => s.kind === 'barline'));
         const verseCount = sec.lyrics.length;
         const totalLigatures = items.reduce((n, it) => n + (it.kind === 'ligature' ? 1 : 0), 0);
         const alignSyllables = totalLigatures > 0 && verseCount > 0;
+        const hasBarlineLabels = verseBarlines.some(arr => arr.length > 0);
 
         // Reserve extra advance after a neume whose syllable is wider than the
         // neume's natural trailing slack, so the next neume isn't overlapped.
@@ -115,9 +118,9 @@ export function renderAretino(source, options = {}) {
                     continue;
                 }
                 let maxSylW = 0;
-                for (const sylls of verseSyllables) {
-                    if (li < sylls.length) {
-                        const w = measureTextWidth(sylls[li].text, ctx.lyricSize, ctx.lyricFont);
+                for (const notes of verseNotes) {
+                    if (li < notes.length) {
+                        const w = measureTextWidth(notes[li].text, ctx.lyricSize, ctx.lyricFont);
                         if (w > maxSylW) {
                             maxSylW = w;
                         }
@@ -126,6 +129,32 @@ export function renderAretino(source, options = {}) {
                 const baseAdv = measureLigature(ctx, it.groups, it.gaps ?? []);
                 it.syllableExtra = Math.max(0, maxSylW + minGap - baseAdv);
                 li++;
+            }
+        }
+
+        // Reserve extra space around barlines that carry a label, so the
+        // centered label doesn't overlap neighboring ligature syllables.
+        if (hasBarlineLabels) {
+            const minGap = ctx.lyricSize * 0.18;
+            let bi = 0;
+            for (const it of items) {
+                if (it.kind !== 'barline') {
+                    continue;
+                }
+                let maxW = 0;
+                for (const barlines of verseBarlines) {
+                    if (bi < barlines.length) {
+                        const w = measureTextWidth(barlines[bi].text, ctx.lyricSize, ctx.lyricFont);
+                        if (w > maxW) {
+                            maxW = w;
+                        }
+                    }
+                }
+                if (maxW > 0) {
+                    const baseAdv = measureBarline(ctx, it.value);
+                    it.barlineExtra = Math.max(0, maxW + minGap - baseAdv);
+                }
+                bi++;
             }
         }
 
@@ -144,6 +173,7 @@ export function renderAretino(source, options = {}) {
         }
 
         let ligOffset = 0;
+        let barlineOffset = 0;
 
         rows.forEach((row, rowIdx) => {
             const staffBottomY = y + ctx.staffHeight;
@@ -151,6 +181,7 @@ export function renderAretino(source, options = {}) {
 
             let cursorX = ctx.leftMargin;
             const rowLigatures = [];
+            const rowBarlines = [];
 
             if (row.drawStartClef) {
                 const c = drawClef(ctx, row.startClef, cursorX, staffBottomY);
@@ -214,9 +245,15 @@ export function renderAretino(source, options = {}) {
                 } else if (it.kind === 'expander') {
                     cursorX += ctx.expanderWidth + extraPerExpander;
                 } else if (it.kind === 'barline') {
+                    const extra = it.barlineExtra || 0;
+                    cursorX += extra / 2;
                     const b = drawBarline(ctx, it.value, cursorX, staffBottomY);
                     parts.push(wrapSrc(it, b.svg, 'aretino-token aretino-barline'));
-                    cursorX += b.advance + ss(ctx, METRICS.barlinePostGap);
+                    const offsetX = it.value === '::'
+                        ? (METRICS.barlineOffsetX + METRICS.barlineDoubleSecondOffsetX) / 2
+                        : METRICS.barlineOffsetX;
+                    rowBarlines.push({ centerX: cursorX + ss(ctx, offsetX), value: it.value });
+                    cursorX += b.advance + ss(ctx, METRICS.barlinePostGap) + extra / 2;
                 } else if (it.kind === 'spacer') {
                     cursorX += ss(ctx, METRICS.spacerAdvance) * it.multiplier;
                 } else if (it.kind === 'ligature') {
@@ -239,17 +276,28 @@ export function renderAretino(source, options = {}) {
             let lyricY = lyricTopY + ctx.lyricSize;
 
             if (alignSyllables) {
+                const rowBarlineCount = rowBarlines.length;
                 for (let v = 0; v < verseCount; v++) {
-                    const sylls = verseSyllables[v];
+                    const notes = verseNotes[v];
                     const start = ligOffset;
                     const end = isLastRow
-                        ? Math.max(sylls.length, ligOffset + rowLigCount)
+                        ? Math.max(notes.length, ligOffset + rowLigCount)
                         : ligOffset + rowLigCount;
-                    const rowSyllables = sylls.slice(start, end);
+                    const rowSyllables = notes.slice(start, end);
                     parts.push(emitAlignedSyllables(ctx, rowSyllables, rowLigatures, lyricY));
+                    const barlines = verseBarlines[v];
+                    const bStart = barlineOffset;
+                    const bEnd = isLastRow
+                        ? Math.max(barlines.length, barlineOffset + rowBarlineCount)
+                        : barlineOffset + rowBarlineCount;
+                    const rowBarlineSyls = barlines.slice(bStart, bEnd);
+                    if (rowBarlineSyls.length > 0) {
+                        parts.push(emitBarlineLabels(ctx, rowBarlineSyls, rowBarlines, lyricY));
+                    }
                     lyricY += ctx.lyricSize * 1.4;
                 }
                 ligOffset += rowLigCount;
+                barlineOffset += rowBarlineCount;
                 y = lyricY + ctx.lyricToNextStaff;
             } else if (isLastRow && verseCount > 0) {
                 for (const lyric of sec.lyrics) {
@@ -413,7 +461,7 @@ function measureItem(ctx, item) {
         return keySigAdvance(ctx, item.accidentals);
     }
     if (item.kind === 'barline') {
-        return measureBarline(ctx, item.value);
+        return measureBarline(ctx, item.value) + (item.barlineExtra || 0);
     }
     if (item.kind === 'spacer') {
         return ss(ctx, METRICS.spacerAdvance) * item.multiplier;
@@ -763,27 +811,75 @@ function measureTextWidth(text, fontSize, fontFamily) {
     return text.length * fontSize * 0.55;
 }
 
-// "San-ctus, Do-mi-nus" → [
-//   {text:'San', hyphenAfter:true},
-//   {text:'ctus,', hyphenAfter:false},
-//   {text:'Do', hyphenAfter:true},
-//   {text:'mi', hyphenAfter:true},
-//   {text:'nus', hyphenAfter:false},
+// "San-ctus, (M.:) Do-mi-nus" → [
+//   {text:'San', hyphenAfter:true,  kind:'note'},
+//   {text:'ctus,', hyphenAfter:false, kind:'note'},
+//   {text:'M.:', hyphenAfter:false, kind:'barline'},
+//   {text:'Do', hyphenAfter:true,  kind:'note'},
+//   {text:'mi', hyphenAfter:true,  kind:'note'},
+//   {text:'nus', hyphenAfter:false, kind:'note'},
 // ]
+// Parenthesized tokens are barline labels: rendered centered under the next
+// barline rather than the next ligature.
 function parseSyllables(text) {
     const result = [];
-    const words = (text || '').match(/\S+/g) || [];
-    for (const word of words) {
-        const parts = word.split('-');
-        const nonEmpty = parts.filter(p => p !== '');
-        for (let i = 0; i < nonEmpty.length; i++) {
+    const src = text || '';
+    let i = 0;
+    while (i < src.length) {
+        const ch = src[i];
+        if (ch === ' ' || ch === '\t') {
+            i++;
+            continue;
+        }
+        if (ch === '(') {
+            const end = src.indexOf(')', i);
+            const inner = end < 0 ? src.slice(i + 1) : src.slice(i + 1, end);
+            i = end < 0 ? src.length : end + 1;
             result.push({
-                text: nonEmpty[i].replace(/~/g, ' '),
-                hyphenAfter: i < nonEmpty.length - 1,
+                text: inner.replace(/~/g, ' '),
+                hyphenAfter: false,
+                kind: 'barline',
+            });
+            continue;
+        }
+        let j = i;
+        while (j < src.length && src[j] !== ' ' && src[j] !== '\t' && src[j] !== '(') {
+            j++;
+        }
+        const word = src.slice(i, j);
+        i = j;
+        const parts = word.split('-').filter(p => p !== '');
+        for (let k = 0; k < parts.length; k++) {
+            result.push({
+                text: parts[k].replace(/~/g, ' '),
+                hyphenAfter: k < parts.length - 1,
+                kind: 'note',
             });
         }
     }
     return result;
+}
+
+// Renders parenthesized lyric tokens centered under their corresponding
+// barlines. Each label pairs in order with the barlines that appeared in this
+// row; extra labels beyond the row's barline count are skipped.
+function emitBarlineLabels(ctx, labels, barlines, lyricY) {
+    if (labels.length === 0 || barlines.length === 0) {
+        return '';
+    }
+    const fontSize = ctx.lyricSize;
+    const fontFamily = ctx.lyricFont;
+    const parts = [];
+    const n = Math.min(labels.length, barlines.length);
+    for (let i = 0; i < n; i++) {
+        const text = labels[i].text;
+        if (text === '') {
+            continue;
+        }
+        const cx = barlines[i].centerX;
+        parts.push(`<text xml:space="preserve" x="${cx}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">${escapeText(text)}</text>`);
+    }
+    return parts.join('');
 }
 
 // Lays out a row's worth of syllables centered under their corresponding

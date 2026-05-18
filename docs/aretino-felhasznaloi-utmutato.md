@@ -486,7 +486,7 @@ ugyanaz, de a zárójeles forma a hagyományos GABC-felhasználóknak ismerős
 lehet.
 
 ```aretino
-(g2) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. :: ht i ht g ht ::
+(g2) (K:fb#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. :: ht i ht g ht ::
 w: Men-je-tek, és vi-gyé-tek hí-rül: föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja! 
 ```
 
