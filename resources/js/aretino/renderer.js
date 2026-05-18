@@ -122,7 +122,7 @@ export function renderAretino(source, options = {}) {
                 let maxSylW = 0;
                 for (const notes of verseNotes) {
                     if (li < notes.length) {
-                        const w = measureTextWidth(notes[li].text, ctx.lyricSize, ctx.lyricFont);
+                        const w = measureTextWidth(notes[li].alignText || notes[li].text, ctx.lyricSize, ctx.lyricFont);
                         if (w > maxSylW) {
                             maxSylW = w;
                         }
@@ -900,8 +900,20 @@ function parseSyllables(text) {
         i = j;
         const parts = word.split('-').filter(p => p !== '');
         for (let k = 0; k < parts.length; k++) {
+            const raw = parts[k];
+            const tildeIdx = raw.indexOf('~~');
+            let text, alignText;
+            if (tildeIdx !== -1) {
+                // Verse number prefix: "1.~~Hogy" → display "1. Hogy", align on "Hogy"
+                text = raw.slice(0, tildeIdx).replace(/~/g, ' ') + ' ' + raw.slice(tildeIdx + 2).replace(/~/g, ' ');
+                alignText = raw.slice(tildeIdx + 2).replace(/~/g, ' ');
+            } else {
+                text = raw.replace(/~/g, ' ');
+                alignText = text;
+            }
             result.push({
-                text: parts[k].replace(/~/g, ' '),
+                text,
+                alignText,
                 hyphenAfter: k < parts.length - 1,
                 kind: 'note',
             });
@@ -953,24 +965,30 @@ function emitAlignedSyllables(ctx, syllables, ligatures, lyricY) {
 
     for (let i = 0; i < syllables.length; i++) {
         const syl = syllables[i];
-        const w = measureTextWidth(syl.text, fontSize, fontFamily);
+        const alignStr = syl.alignText || syl.text;
+        const fullW = measureTextWidth(syl.text, fontSize, fontFamily);
+        const alignW = measureTextWidth(alignStr, fontSize, fontFamily);
+        // Offset from the left edge of fullW to the left edge of alignText portion
+        const prefixW = fullW - alignW;
         let center;
         if (i < ligatures.length) {
             const lig = ligatures[i];
             const neumeWidth = (lig.centerX - lig.leftX) * 2;
-            if (w < neumeWidth || w > neumeWidth + 3 * ctx.staffSpace) {
+            if (alignW < neumeWidth || alignW > neumeWidth + 3 * ctx.staffSpace) {
                 // Neume is wider than the syllable, or syllable exceeds the
                 // neume by more than one staff space: align left edges.
-                center = lig.leftX + w / 2 - ctx.staffSpace * 0.1;
+                center = lig.leftX + alignW / 2 - ctx.staffSpace * 0.1;
             } else {
                 center = lig.centerX;
             }
         } else {
             // More syllables than ligatures: lay them out after the last one
             // with default spacing.
-            center = prevRight + trailingAdvance + w / 2;
+            center = prevRight + trailingAdvance + alignW / 2;
         }
-        let left = center - w / 2;
+        // left edge of full text: align portion starts at (center - alignW/2),
+        // prefix sits to the left of it
+        let left = center - alignW / 2 - prefixW;
         let hyphenX = null;
         if (i > 0) {
             const needsHyphen = syllables[i - 1].hyphenAfter;
@@ -979,16 +997,17 @@ function emitAlignedSyllables(ctx, syllables, ligatures, lyricY) {
                     hyphenX = (left + prevRight) / 2;
                 } else {
                     left = prevRight;
-                    center = left + w / 2;
+                    center = left + prefixW + alignW / 2;
                 }
             } else if (left < prevRight + minGap) {
                 left = prevRight + minGap;
-                center = left + w / 2;
+                center = left + prefixW + alignW / 2;
             }
         }
-        const right = left + w;
+        const right = left + fullW;
+        const textCenter = left + fullW / 2;
 
-        parts.push(`<text xml:space="preserve" x="${center}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">${escapeText(syl.text)}</text>`);
+        parts.push(`<text xml:space="preserve" x="${textCenter}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">${escapeText(syl.text)}</text>`);
         if (hyphenX !== null) {
             parts.push(`<text x="${hyphenX}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">-</text>`);
         }

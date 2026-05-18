@@ -651,18 +651,20 @@ f g ; h g
 w: ~ ~ szö-veg
 ```
 
-### Ha több a szótag, mint a hang
+### Verszak számozás
 
-Ha a `w:` sorban több szótag van, mint amennyi hangod van a dallamban,
-a többletszótagokat a megjelenítő az utolsó hang után, alapértelmezett
-szótag-távolsággal helyezi el — így a szöveg nem vész el, de jó gyakorlat,
-ha a dallamot kiegészíted a hiányzó hangokkal vagy a szöveget tagolod át.
+Hogy a szöveg tördelését ne zavarják a verszakok számai, R., V. egyéb jelölés, a `~~` jellel kell öszekötnünk. Első versszak esetén manuális térközt kellhet alkalmaznunk.
+
+```aretino
+(g2) = g g g h g gj j ' jt
+w: 1.~~Ki-rá-lyok-nak Ki-rá-lya (†) és~Atyja...
+```
 
 ---
 
 ## 17. Hosszabb példák
 
-### 14.1 Kyrie (egyszerű)
+### Kyrie (egyszerű)
 
 ```aretino
 ;cím: Uram, irgalmazz (XVI.)
@@ -686,7 +688,7 @@ w: U-ram, ir-gal-mazz né-künk!
 - Üres sorok **új szakaszt** indítanak: minden frázis (Kyrie, Christe, Kyrie) külön szövegsort kap.
 - Az ütemvonal alá rendezünk szöveget
 
-### 14.2 Antifóna zsoltárdallammal
+### Antifóna zsoltárdallammal
 
 ```aretino
 ;title: Hints meg engem
@@ -694,14 +696,14 @@ w: U-ram, ir-gal-mazz né-künk!
 (g2) (K:mb#) d e g f gh h , i j i h i h ge d | d e gfgh h , i g ge ggfg h g e d d ||
 w: Hints meg en-gem U-ram, i-zsóp-pal és meg-tisz-tu-lok, moss meg en-gem, és fe-hé-rebb le-szek a hó-nál.
 
-f g ht gs ht g h i gs g | ht i h gs gf e ||
+f g ht gs ht g h i- gs g | ht i h gs- gf e ||
 w: ~ ~ ~ † (*)
 ```
 ---
 
 ## 18. A szerkesztő használata
 
-Az Aretino formátum a **kottaszerkesztőben** elérhető — a formátumválasztóban
+Az Aretino formátum a [kottaszerkesztőben](/score/preview) elérhető — a formátumválasztóban
 válaszd ki az **Aretino** opciót. Élő előnézet jelenik meg a forrás alatt.
 
 ### A beállító-sáv elemei
