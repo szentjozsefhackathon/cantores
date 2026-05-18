@@ -153,7 +153,27 @@ export function renderAretino(source, options = {}) {
                         nextLeftIntrusion = Math.max(0, next.maxSylW / 2 - halfNoteW);
                     }
                 }
-                item.syllableExtra = Math.max(0, currRight + nextLeftIntrusion + minGap - baseAdv);
+                // Hyphen-joined syllables ("Ki-rá-lyok") butt up against each other;
+                // a gap (filled with a hyphen) only appears when the neumes are
+                // naturally wider than the syllables. Separate words ("Ki rá lyok")
+                // still need a minimum gap between them.
+                let pairConnected = false;
+                if (i + 1 < ligInfo.length) {
+                    let pairExists = false;
+                    let allHyphenated = true;
+                    for (const notes of verseNotes) {
+                        if (i < notes.length && i + 1 < notes.length) {
+                            pairExists = true;
+                            if (!notes[i].hyphenAfter) {
+                                allHyphenated = false;
+                                break;
+                            }
+                        }
+                    }
+                    pairConnected = pairExists && allHyphenated;
+                }
+                const gap = pairConnected ? 0 : minGap;
+                item.syllableExtra = Math.max(0, currRight + nextLeftIntrusion + gap - baseAdv);
             }
         }
 
