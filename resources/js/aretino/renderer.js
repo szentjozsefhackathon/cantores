@@ -95,11 +95,18 @@ export function renderAretino(source, options = {}) {
             });
         }
 
+        const verseSyllables = sec.lyrics.map(parseSyllables);
+        const verseCount = sec.lyrics.length;
+        const totalLigatures = items.reduce((n, it) => n + (it.kind === 'ligature' ? 1 : 0), 0);
+        const alignSyllables = totalLigatures > 0 && verseCount > 0;
+        let ligOffset = 0;
+
         rows.forEach((row, rowIdx) => {
             const staffBottomY = y + ctx.staffHeight;
             parts.push(drawStaffLines(ctx, ctx.leftMargin, staffRightX, staffBottomY));
 
             let cursorX = ctx.leftMargin;
+            const rowLigatureCenters = [];
 
             if (row.drawStartClef) {
                 const c = drawClef(ctx, row.startClef, cursorX, staffBottomY);
@@ -142,6 +149,7 @@ export function renderAretino(source, options = {}) {
                 } else if (it.kind === 'ligature') {
                     const r = emitLigature(ctx, it.groups, cursorX, staffBottomY);
                     parts.push(r.svg);
+                    rowLigatureCenters.push(r.centerX);
                     cursorX += r.advance;
                 }
                 if (idx < row.items.length - 1 && extraPerGap > 0) {
@@ -150,8 +158,23 @@ export function renderAretino(source, options = {}) {
             }
 
             const isLastRow = rowIdx === rows.length - 1;
+            const rowLigCount = rowLigatureCenters.length;
             let lyricY = staffBottomY + ctx.systemGap + ctx.lyricSize;
-            if (isLastRow && sec.lyrics.length > 0) {
+
+            if (alignSyllables) {
+                for (let v = 0; v < verseCount; v++) {
+                    const sylls = verseSyllables[v];
+                    const start = ligOffset;
+                    const end = isLastRow
+                        ? Math.max(sylls.length, ligOffset + rowLigCount)
+                        : ligOffset + rowLigCount;
+                    const rowSyllables = sylls.slice(start, end);
+                    parts.push(emitAlignedSyllables(ctx, rowSyllables, rowLigatureCenters, lyricY));
+                    lyricY += ctx.lyricSize * 1.4;
+                }
+                ligOffset += rowLigCount;
+                y = lyricY + ctx.lyricToNextStaff;
+            } else if (isLastRow && verseCount > 0) {
                 for (const lyric of sec.lyrics) {
                     parts.push(`<text xml:space="preserve" x="${ctx.leftMargin}" y="${lyricY}" font-family="${escapeAttr(ctx.lyricFont)}" font-size="${ctx.lyricSize}" fill="#000">${escapeText(lyric)}</text>`);
                     lyricY += ctx.lyricSize * 1.4;
@@ -385,6 +408,8 @@ function emitLigature(ctx, groups, x, staffBottomY) {
     const parts = [];
     const halfSW = ligatureConnectorHalfStroke(ctx);
     let groupStartX = x;
+    let firstNoteCx = null;
+    let lastNoteCx = null;
 
     for (let g = 0; g < groups.length; g++) {
         const notes = groups[g];
@@ -395,6 +420,10 @@ function emitLigature(ctx, groups, x, staffBottomY) {
             const note = notes[i];
             const cy = pitchY(ctx, note, staffBottomY);
             positions.push({ note, cx, cy });
+            if (firstNoteCx === null) {
+                firstNoteCx = cx;
+            }
+            lastNoteCx = cx;
             if (i < notes.length - 1) {
                 cx += ctx.ligatureStepAdvance;
             }
@@ -460,5 +489,108 @@ function emitLigature(ctx, groups, x, staffBottomY) {
         }
     }
 
-    return { svg: parts.join(''), advance: measureLigature(ctx, groups) };
+    const centerX = firstNoteCx !== null
+        ? (firstNoteCx + lastNoteCx) / 2
+        : x + measureLigature(ctx, groups) / 2;
+    return { svg: parts.join(''), advance: measureLigature(ctx, groups), centerX };
+}
+
+let _measureCanvas = null;
+
+function measureTextWidth(text, fontSize, fontFamily) {
+    if (text === '') {
+        return 0;
+    }
+    if (typeof document !== 'undefined') {
+        try {
+            if (!_measureCanvas) {
+                _measureCanvas = document.createElement('canvas');
+            }
+            const c2d = _measureCanvas.getContext('2d');
+            c2d.font = `${fontSize}px ${fontFamily}`;
+            return c2d.measureText(text).width;
+        } catch (_e) {
+            // fall through to estimation
+        }
+    }
+    return text.length * fontSize * 0.55;
+}
+
+// "San-ctus, Do-mi-nus" → [
+//   {text:'San', hyphenAfter:true},
+//   {text:'ctus,', hyphenAfter:false},
+//   {text:'Do', hyphenAfter:true},
+//   {text:'mi', hyphenAfter:true},
+//   {text:'nus', hyphenAfter:false},
+// ]
+function parseSyllables(text) {
+    const result = [];
+    const words = (text || '').match(/\S+/g) || [];
+    for (const word of words) {
+        const parts = word.split('-');
+        const nonEmpty = parts.filter(p => p !== '');
+        for (let i = 0; i < nonEmpty.length; i++) {
+            result.push({
+                text: nonEmpty[i],
+                hyphenAfter: i < nonEmpty.length - 1,
+            });
+        }
+    }
+    return result;
+}
+
+// Lays out a row's worth of syllables centered under their corresponding
+// ligature centers. Adjusts for collisions and emits hyphens between
+// syllables of the same word when there's room.
+function emitAlignedSyllables(ctx, syllables, ligatureCenters, lyricY) {
+    if (syllables.length === 0) {
+        return '';
+    }
+    const fontSize = ctx.lyricSize;
+    const fontFamily = ctx.lyricFont;
+    const minGap = fontSize * 0.18;
+    const hyphenW = measureTextWidth('-', fontSize, fontFamily);
+    const hyphenMargin = fontSize * 0.22;
+    const trailingAdvance = fontSize * 0.6;
+
+    const parts = [];
+    let prevRight = -Infinity;
+
+    for (let i = 0; i < syllables.length; i++) {
+        const syl = syllables[i];
+        const w = measureTextWidth(syl.text, fontSize, fontFamily);
+        let center;
+        if (i < ligatureCenters.length) {
+            center = ligatureCenters[i];
+        } else {
+            // More syllables than ligatures: lay them out after the last one
+            // with default spacing.
+            center = prevRight + trailingAdvance + w / 2;
+        }
+        let left = center - w / 2;
+        let hyphenX = null;
+        if (i > 0) {
+            const needsHyphen = syllables[i - 1].hyphenAfter;
+            const hyphenSlot = hyphenW + 2 * hyphenMargin;
+            if (needsHyphen) {
+                if (left - prevRight >= hyphenSlot) {
+                    hyphenX = (left + prevRight) / 2;
+                } else {
+                    left = prevRight;
+                    center = left + w / 2;
+                }
+            } else if (left < prevRight + minGap) {
+                left = prevRight + minGap;
+                center = left + w / 2;
+            }
+        }
+        const right = left + w;
+
+        parts.push(`<text xml:space="preserve" x="${center}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">${escapeText(syl.text)}</text>`);
+        if (hyphenX !== null) {
+            parts.push(`<text x="${hyphenX}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">-</text>`);
+        }
+        prevRight = right;
+    }
+    return parts.join('');
 }
