@@ -237,7 +237,7 @@ export function drawEpisema(ctx, cx, cy, onLine = false) {
 export function drawMora(ctx, cx, cy, onLine = false) {
     const dotX = cx + ss(ctx, METRICS.moraOffsetX);
     const r = ss(ctx, METRICS.moraRadius);
-    const dotY = cy - (onLine ? ctx.staffSpace / 2 : ctx.staffSpace);
+    const dotY = onLine ? cy - ctx.staffSpace / 2 : cy;
     return `<circle cx="${dotX}" cy="${dotY}" r="${r}" fill="#000"/>`;
 }
 
