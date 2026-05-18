@@ -127,7 +127,6 @@ document.addEventListener('alpine:init', () => {
             this.$watch('aretinoLyricSize', () => this.scheduleRender());
             this.$watch('aretinoStaffSize', () => this.scheduleRender());
             this.$watch('aretinoZoom', () => this.scheduleRender());
-            this.$watch('aretinoNoteSpacing', () => this.scheduleRender());
             this.$watch('aretinoPageRatio', (val) => { this.applyRatioSettings('aretino', val); this.$nextTick(() => this.scheduleRender()); });
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
@@ -188,7 +187,6 @@ document.addEventListener('alpine:init', () => {
                         aretinoLyricSize: Number(this.aretinoLyricSize),
                         aretinoStaffSize: Number(this.aretinoStaffSize),
                         aretinoZoom: Number(this.aretinoZoom),
-                        aretinoNoteSpacing: Number(this.aretinoNoteSpacing),
                     },
                     ratio: this.aretinoPageRatio,
                 };

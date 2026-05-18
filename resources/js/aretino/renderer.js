@@ -82,6 +82,36 @@ export function renderAretino(source, options = {}) {
             hasSeenClef = true;
         }
         const drawClefForRows = hasSeenClef;
+
+        const verseSyllables = sec.lyrics.map(parseSyllables);
+        const verseCount = sec.lyrics.length;
+        const totalLigatures = items.reduce((n, it) => n + (it.kind === 'ligature' ? 1 : 0), 0);
+        const alignSyllables = totalLigatures > 0 && verseCount > 0;
+
+        // Reserve extra advance after a neume whose syllable is wider than the
+        // neume's natural trailing slack, so the next neume isn't overlapped.
+        if (alignSyllables) {
+            const minGap = ctx.lyricSize * 0.18;
+            let li = 0;
+            for (const it of items) {
+                if (it.kind !== 'ligature') {
+                    continue;
+                }
+                let maxSylW = 0;
+                for (const sylls of verseSyllables) {
+                    if (li < sylls.length) {
+                        const w = measureTextWidth(sylls[li].text, ctx.lyricSize, ctx.lyricFont);
+                        if (w > maxSylW) {
+                            maxSylW = w;
+                        }
+                    }
+                }
+                const baseAdv = measureLigature(ctx, it.groups);
+                it.syllableExtra = Math.max(0, maxSylW + minGap - baseAdv);
+                li++;
+            }
+        }
+
         const rows = layoutRows(items, ctx, currentClef, staffRightX, drawClefForRows);
 
         // For lyric-only sections (no music), still emit one empty row so lyrics render.
@@ -95,10 +125,6 @@ export function renderAretino(source, options = {}) {
             });
         }
 
-        const verseSyllables = sec.lyrics.map(parseSyllables);
-        const verseCount = sec.lyrics.length;
-        const totalLigatures = items.reduce((n, it) => n + (it.kind === 'ligature' ? 1 : 0), 0);
-        const alignSyllables = totalLigatures > 0 && verseCount > 0;
         let ligOffset = 0;
 
         rows.forEach((row, rowIdx) => {
@@ -106,7 +132,7 @@ export function renderAretino(source, options = {}) {
             parts.push(drawStaffLines(ctx, ctx.leftMargin, staffRightX, staffBottomY));
 
             let cursorX = ctx.leftMargin;
-            const rowLigatureCenters = [];
+            const rowLigatures = [];
 
             if (row.drawStartClef) {
                 const c = drawClef(ctx, row.startClef, cursorX, staffBottomY);
@@ -149,8 +175,8 @@ export function renderAretino(source, options = {}) {
                 } else if (it.kind === 'ligature') {
                     const r = emitLigature(ctx, it.groups, cursorX, staffBottomY);
                     parts.push(r.svg);
-                    rowLigatureCenters.push(r.centerX);
-                    cursorX += r.advance;
+                    rowLigatures.push({ centerX: r.centerX, leftX: r.leftX });
+                    cursorX += r.advance + (it.syllableExtra || 0);
                 }
                 if (idx < row.items.length - 1 && extraPerGap > 0) {
                     cursorX += extraPerGap;
@@ -158,7 +184,7 @@ export function renderAretino(source, options = {}) {
             }
 
             const isLastRow = rowIdx === rows.length - 1;
-            const rowLigCount = rowLigatureCenters.length;
+            const rowLigCount = rowLigatures.length;
             let lyricY = staffBottomY + ctx.systemGap + ctx.lyricSize;
 
             if (alignSyllables) {
@@ -169,7 +195,7 @@ export function renderAretino(source, options = {}) {
                         ? Math.max(sylls.length, ligOffset + rowLigCount)
                         : ligOffset + rowLigCount;
                     const rowSyllables = sylls.slice(start, end);
-                    parts.push(emitAlignedSyllables(ctx, rowSyllables, rowLigatureCenters, lyricY));
+                    parts.push(emitAlignedSyllables(ctx, rowSyllables, rowLigatures, lyricY));
                     lyricY += ctx.lyricSize * 1.4;
                 }
                 ligOffset += rowLigCount;
@@ -312,7 +338,7 @@ function measureItem(ctx, item) {
         return ctx.expanderWidth;
     }
     if (item.kind === 'ligature') {
-        return measureLigature(ctx, item.groups);
+        return measureLigature(ctx, item.groups) + (item.syllableExtra || 0);
     }
     return 0;
 }
@@ -492,7 +518,10 @@ function emitLigature(ctx, groups, x, staffBottomY) {
     const centerX = firstNoteCx !== null
         ? (firstNoteCx + lastNoteCx) / 2
         : x + measureLigature(ctx, groups) / 2;
-    return { svg: parts.join(''), advance: measureLigature(ctx, groups), centerX };
+    const leftX = firstNoteCx !== null
+        ? firstNoteCx - ss(ctx, METRICS.noteBoxWidth) * 0.5
+        : x;
+    return { svg: parts.join(''), advance: measureLigature(ctx, groups), centerX, leftX };
 }
 
 let _measureCanvas = null;
@@ -542,26 +571,36 @@ function parseSyllables(text) {
 // Lays out a row's worth of syllables centered under their corresponding
 // ligature centers. Adjusts for collisions and emits hyphens between
 // syllables of the same word when there's room.
-function emitAlignedSyllables(ctx, syllables, ligatureCenters, lyricY) {
+function emitAlignedSyllables(ctx, syllables, ligatures, lyricY) {
     if (syllables.length === 0) {
         return '';
     }
     const fontSize = ctx.lyricSize;
     const fontFamily = ctx.lyricFont;
     const minGap = fontSize * 0.18;
-    const hyphenW = measureTextWidth('-', fontSize, fontFamily);
-    const hyphenMargin = fontSize * 0.22;
+    // A hyphen occupies the width of an 'n' character; if the gap between
+    // syllables is smaller than that, there is no room to render it.
+    const hyphenSpaceW = measureTextWidth('-', fontSize, fontFamily);
     const trailingAdvance = fontSize * 0.6;
 
     const parts = [];
     let prevRight = -Infinity;
+    let lastRight = null;
 
     for (let i = 0; i < syllables.length; i++) {
         const syl = syllables[i];
         const w = measureTextWidth(syl.text, fontSize, fontFamily);
         let center;
-        if (i < ligatureCenters.length) {
-            center = ligatureCenters[i];
+        if (i < ligatures.length) {
+            const lig = ligatures[i];
+            const neumeWidth = (lig.centerX - lig.leftX) * 2;
+            if (w < neumeWidth) {
+                // Neume is wider than the syllable: align the syllable's left
+                // edge with the neume's left edge instead of centering.
+                center = lig.leftX + w / 2;
+            } else {
+                center = lig.centerX;
+            }
         } else {
             // More syllables than ligatures: lay them out after the last one
             // with default spacing.
@@ -571,9 +610,8 @@ function emitAlignedSyllables(ctx, syllables, ligatureCenters, lyricY) {
         let hyphenX = null;
         if (i > 0) {
             const needsHyphen = syllables[i - 1].hyphenAfter;
-            const hyphenSlot = hyphenW + 2 * hyphenMargin;
             if (needsHyphen) {
-                if (left - prevRight >= hyphenSlot) {
+                if (left - prevRight >= hyphenSpaceW) {
                     hyphenX = (left + prevRight) / 2;
                 } else {
                     left = prevRight;
@@ -591,6 +629,15 @@ function emitAlignedSyllables(ctx, syllables, ligatureCenters, lyricY) {
             parts.push(`<text x="${hyphenX}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">-</text>`);
         }
         prevRight = right;
+        lastRight = right;
+    }
+
+    // Word broken at the row boundary: render a trailing hyphen so the reader
+    // knows the syllable continues on the next row.
+    const lastSyl = syllables[syllables.length - 1];
+    if (lastSyl && lastSyl.hyphenAfter && lastRight !== null) {
+        const hyphenX = lastRight + hyphenSpaceW / 2;
+        parts.push(`<text x="${hyphenX}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">-</text>`);
     }
     return parts.join('');
 }

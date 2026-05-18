@@ -6,9 +6,8 @@ export function aretinoMixin() {
         aretinoLyricSize: 13,
         aretinoStaffSize: 100,
         aretinoZoom: 100,
-        aretinoNoteSpacing: 1,
         aretinoPageRatio: 'auto',
-        aretinoFields: ['aretinoLyricFont', 'aretinoLyricSize', 'aretinoStaffSize', 'aretinoZoom', 'aretinoNoteSpacing'],
+        aretinoFields: ['aretinoLyricFont', 'aretinoLyricSize', 'aretinoStaffSize', 'aretinoZoom'],
 
         renderAretinoPreview() {
             const container = this.$refs.aretinoPreview;
@@ -34,7 +33,6 @@ export function aretinoMixin() {
                         staffSize: Number(this.aretinoStaffSize) * zoom,
                         lyricFont: this.aretinoLyricFont,
                         lyricSize: Number(this.aretinoLyricSize),
-                        noteSpacing: Number(this.aretinoNoteSpacing),
                     });
                     pageEl.innerHTML = svg;
                     const svgEl = pageEl.querySelector('svg');

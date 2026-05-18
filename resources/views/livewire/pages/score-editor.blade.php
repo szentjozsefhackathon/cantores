@@ -456,13 +456,6 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Note spacing')">
-                                <flux:icon name="space" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="aretinoNoteSpacing" min="0.5" max="3" step="0.1" class="w-16" />
-                        </div>
-
-                        <div class="flex items-center gap-1">
                             <flux:tooltip :content="__('Font')">
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
