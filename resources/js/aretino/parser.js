@@ -82,6 +82,26 @@ function isPitchLetter(c) {
     return /[a-mA-M]/.test(c);
 }
 
+// Peek at position `pos` (which should be '(') to see if the parenthesized
+// content is an accidental pattern like (ibx), (by), (c#), etc.
+// Returns { pitch, symbol, end } where `end` is the index past ')' if it
+// matches, or null if it doesn't.
+function peekInlineAccidental(line, pos) {
+    if (line[pos] !== '(') {
+        return null;
+    }
+    const end = line.indexOf(')', pos);
+    if (end < 0) {
+        return null;
+    }
+    const inner = line.slice(pos + 1, end).trim();
+    const m = inner.match(/^([a-mA-M]?)b([xy#])$/);
+    if (!m) {
+        return null;
+    }
+    return { pitch: (m[1] || 'b').toLowerCase(), symbol: m[2], end: end + 1 };
+}
+
 function tokenizeMusicLine(line, lineStart = 0) {
     const tokens = [];
     const len = line.length;
@@ -132,7 +152,15 @@ function tokenizeMusicLine(line, lineStart = 0) {
             const gaps = []; // 'neume' for each explicit '/' boundary between groups
             while (true) {
                 const group = [];
-                while (i < len && isPitchLetter(line[i])) {
+                let pendingAcc = null;
+                while (i < len && (isPitchLetter(line[i]) || (line[i] === '(' && peekInlineAccidental(line, i) !== null))) {
+                    // Check for inline accidental before the next note.
+                    if (line[i] === '(') {
+                        pendingAcc = peekInlineAccidental(line, i);
+                        // Advance past the directive including closing ')'.
+                        i = pendingAcc.end;
+                        continue;
+                    }
                     const noteStart = i;
                     const pitchChar = line[i];
                     i++;
@@ -143,6 +171,10 @@ function tokenizeMusicLine(line, lineStart = 0) {
                         shape: pitchChar === pitchChar.toLowerCase() ? 'punctum' : 'virga',
                         modifiers: [],
                     };
+                    if (pendingAcc) {
+                        note.accidental = { pitch: pendingAcc.pitch, symbol: pendingAcc.symbol };
+                        pendingAcc = null;
+                    }
                     while (i < len) {
                         const m = line[i];
                         if (m === "'") {
@@ -191,7 +223,8 @@ function tokenizeMusicLine(line, lineStart = 0) {
                 if (j < len && line[j] === '/') {
                     i = j + 1;
                     while (i < len && (line[i] === ' ' || line[i] === '\t')) { i++; }
-                    if (i < len && isPitchLetter(line[i])) {
+                    // After '/', also allow an inline accidental before the next pitch.
+                    if (i < len && (isPitchLetter(line[i]) || (line[i] === '(' && peekInlineAccidental(line, i) !== null))) {
                         gaps.push('neume');
                         continue;
                     }

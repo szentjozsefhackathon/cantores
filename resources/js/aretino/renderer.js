@@ -208,7 +208,9 @@ export function renderAretino(source, options = {}) {
             const remaining = staffRightX - cursorX;
             const extra = Math.max(0, remaining - row.itemsWidth);
             const expanderCount = row.items.reduce((n, it) => n + (it.kind === 'expander' ? 1 : 0), 0);
-            const gapCount = Math.max(0, row.items.length - 1);
+            // Accidental+ligature pairs are glued — don't count them as a gap.
+            const gluedPairs = row.items.reduce((n, it, i) => n + (it.kind === 'accidental' && i + 1 < row.items.length && row.items[i + 1].kind === 'ligature' ? 1 : 0), 0);
+            const gapCount = Math.max(0, row.items.length - 1 - gluedPairs);
             let extraPerExpander = 0;
             let extraPerGap = 0;
             if (row.justify && extra > 0) {
@@ -264,7 +266,11 @@ export function renderAretino(source, options = {}) {
                     cursorX += r.advance + (it.syllableExtra || 0);
                 }
                 if (idx < row.items.length - 1 && extraPerGap > 0) {
-                    cursorX += extraPerGap;
+                    // Don't insert justification gap between an accidental and its neume.
+                    const nextIt = row.items[idx + 1];
+                    if (!(it.kind === 'accidental' && nextIt.kind === 'ligature')) {
+                        cursorX += extraPerGap;
+                    }
                 }
             }
 
@@ -526,7 +532,8 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
         rowStartKeySig = runningKeySig;
     }
 
-    for (const item of items) {
+    for (let ii = 0; ii < items.length; ii++) {
+        const item = items[ii];
         if (item.kind === 'break') {
             finalize(item.justify);
             continue;
@@ -545,8 +552,16 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
                 continue;
             }
         }
-        const w = measureItem(ctx, item);
-        if (cur.length > 0 && curWidth + w > rowItemsAvailable()) {
+        // Accidentals are glued to the following neume — measure them as a
+        // single atomic unit for line-breaking purposes.
+        let w = measureItem(ctx, item);
+        if (item.kind === 'accidental' && ii + 1 < items.length && items[ii + 1].kind === 'ligature') {
+            w += measureItem(ctx, items[ii + 1]);
+        }
+        // If the previous item was an accidental glued to this item, skip the
+        // overflow check (it was already accounted for).
+        const gluedToPrev = ii > 0 && items[ii - 1].kind === 'accidental' && item.kind === 'ligature';
+        if (!gluedToPrev && cur.length > 0 && curWidth + w > rowItemsAvailable()) {
             finalize(true);
             if (item.kind === 'clef') {
                 rowStartClef = item.clef;
@@ -558,7 +573,7 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
             }
         }
         cur.push(item);
-        curWidth += w;
+        curWidth += measureItem(ctx, item);
     }
     finalize(false);
     return rows;
@@ -613,6 +628,8 @@ function measureSplitLigature(ctx, groups, gaps) {
     for (let g = 0; g < groups.length; g++) {
         const notes = groups[g];
         const n = notes.length;
+        // Add advance for any inline accidentals on notes in this group.
+        const accExtra = notes.reduce((sum, note) => sum + (note.accidental ? ss(ctx, METRICS.accidentalAdvance) : 0), 0);
         if (g < groups.length - 1) {
             const gapType = gaps[g] ?? 'neume';
             const lastNote = notes[n - 1];
@@ -622,12 +639,12 @@ function measureSplitLigature(ctx, groups, gaps) {
             const moraOverhang = (gapType === 'neume' && hasMora)
                 ? ss(ctx, METRICS.moraOffsetX + METRICS.moraRadius - METRICS.noteBoxWidth * 0.5)
                 : 0;
-            total += ss(ctx, METRICS.noteBoxWidth) + (n - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance + moraOverhang;
+            total += ss(ctx, METRICS.noteBoxWidth) + (n - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance + moraOverhang + accExtra;
         } else {
             const lastNote = notes[n - 1];
             const hasMora = lastNote.modifiers && lastNote.modifiers.includes('mora');
             const moraExtra = hasMora ? ss(ctx, METRICS.moraOffsetX + METRICS.moraRadius) : 0;
-            total += ctx.singleNoteAdvance + (n - 1) * ctx.ligatureStepAdvance + moraExtra;
+            total += ctx.singleNoteAdvance + (n - 1) * ctx.ligatureStepAdvance + moraExtra + accExtra;
         }
     }
     return total;
@@ -669,6 +686,13 @@ function emitLigature(ctx, groups, x, staffBottomY, gaps = []) {
 
         for (let i = 0; i < notes.length; i++) {
             const note = notes[i];
+            // Draw inline accidental before this note if present.
+            if (note.accidental) {
+                const accX = cx - ss(ctx, METRICS.noteBoxWidth) * 0.5;
+                const a = drawAccidental(ctx, note.accidental.pitch, note.accidental.symbol, accX, staffBottomY);
+                parts.push(a.svg);
+                cx += ss(ctx, METRICS.accidentalAdvance);
+            }
             const cy = pitchY(ctx, note, staffBottomY);
             positions.push({ note, cx, cy });
             if (firstNoteCx === null) {
@@ -703,6 +727,11 @@ function emitLigature(ctx, groups, x, staffBottomY, gaps = []) {
             const prev = positions[i - 1];
             const cur = positions[i];
             if (cur.note.shape === 'virga' || cur.note.virga) {
+                continue;
+            }
+            // Skip connector into a note preceded by an inline accidental —
+            // the accidental glyph occupies the space where the connector would be.
+            if (cur.note.accidental) {
                 continue;
             }
             const prevPos = pitchToPos(prev.note);
@@ -782,7 +811,8 @@ function emitLigature(ctx, groups, x, staffBottomY, gaps = []) {
             const moraOverhang = (gapType === 'neume' && hasMora)
                 ? ss(ctx, METRICS.moraOffsetX + METRICS.moraRadius - METRICS.noteBoxWidth * 0.5)
                 : 0;
-            groupStartX += ss(ctx, METRICS.noteBoxWidth) + (notes.length - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance + moraOverhang;
+            const accExtra = notes.reduce((sum, note) => sum + (note.accidental ? ss(ctx, METRICS.accidentalAdvance) : 0), 0);
+            groupStartX += ss(ctx, METRICS.noteBoxWidth) + (notes.length - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance + moraOverhang + accExtra;
         }
     }
 
