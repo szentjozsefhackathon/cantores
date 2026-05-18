@@ -114,6 +114,8 @@ export function renderAretino(source, options = {}) {
         // neume's natural trailing slack, so the next neume isn't overlapped.
         if (alignSyllables) {
             const minGap = ctx.lyricSize * 0.18;
+            const halfNoteW = ss(ctx, METRICS.noteBoxWidth) * 0.5;
+            const ligInfo = [];
             let li = 0;
             for (const it of items) {
                 if (it.kind !== 'ligature') {
@@ -128,9 +130,30 @@ export function renderAretino(source, options = {}) {
                         }
                     }
                 }
-                const baseAdv = measureLigature(ctx, it.groups, it.gaps ?? []);
-                it.syllableExtra = Math.max(0, maxSylW + minGap - baseAdv);
+                const totalNotes = it.groups.reduce((sum, g) => sum + g.length, 0);
+                const lastG = it.groups[it.groups.length - 1];
+                const lastN = lastG?.[lastG.length - 1];
+                const isCentered = totalNotes === 1
+                    && !(lastN?.modifiers?.includes('mora'))
+                    && !it.groups.some(g => g.some(n => n.shape === 'tenor'));
+                ligInfo.push({ item: it, maxSylW, isCentered });
                 li++;
+            }
+            for (let i = 0; i < ligInfo.length; i++) {
+                const { item, maxSylW, isCentered } = ligInfo[i];
+                const baseAdv = measureLigature(ctx, item.groups, item.gaps ?? []);
+                // Current syllable's right-edge offset from the ligature's left.
+                const currRight = isCentered ? halfNoteW + maxSylW / 2 : maxSylW;
+                // How far the next syllable extends to the left of the next ligature's
+                // start (positive = intrudes). Only centered syllables intrude leftward.
+                let nextLeftIntrusion = 0;
+                if (i + 1 < ligInfo.length) {
+                    const next = ligInfo[i + 1];
+                    if (next.isCentered) {
+                        nextLeftIntrusion = Math.max(0, next.maxSylW / 2 - halfNoteW);
+                    }
+                }
+                item.syllableExtra = Math.max(0, currRight + nextLeftIntrusion + minGap - baseAdv);
             }
         }
 
