@@ -52,10 +52,12 @@ export const METRICS = {
     virgaStemDescentBelowPrev: 1.25,    // descent past a lower preceding note
 
     // --- Tenor notehead (open oval with two side strokes) -----------------
-    tenorOutlineStroke: 0.1,
+    tenorOutlineStroke: 0.15,
     tenorOutlineStrokeMinPx: 0.8,
-    tenorSideStrokeOffset: 0.075,      // gap between head edge and side stroke
+    tenorSideStrokeOffset: 0.15,      // gap between head edge and side stroke
     tenorSideStrokeHalfHeight: 0.9,
+    tenorSideStroke: 0.15,             // thickness of the two vertical bars
+    tenorSideStrokeMinPx: 1.4,
 
     // --- Mora dot ---------------------------------------------------------
     moraOffsetX: 0.85,                // horizontal distance from notehead center
@@ -208,7 +210,7 @@ export function drawNoteHead(ctx, note, cx, cy, staffBottomY, prevCy = null) {
     } else if (note.shape === 'tenor') {
         const outlineSW = stroke(ctx, METRICS.tenorOutlineStroke, METRICS.tenorOutlineStrokeMinPx);
         parts.push(ovalHead(ctx, cx, cy, { fill: 'none', stroke: '#000', strokeWidth: outlineSW }));
-        const sideSW = stroke(ctx, METRICS.stemStroke, METRICS.stemStrokeMinPx);
+        const sideSW = stroke(ctx, METRICS.tenorSideStroke, METRICS.tenorSideStrokeMinPx);
         const sideX = noteW / 2 + ss(ctx, METRICS.tenorSideStrokeOffset);
         const halfH = ss(ctx, METRICS.tenorSideStrokeHalfHeight);
         parts.push(`<line x1="${cx - sideX}" y1="${cy - halfH}" x2="${cx - sideX}" y2="${cy + halfH}" stroke="#000" stroke-width="${sideSW}"/>`);

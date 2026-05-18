@@ -649,6 +649,11 @@ function parseSyllables(text) {
     const result = [];
     const words = (text || '').match(/\S+/g) || [];
     for (const word of words) {
+        if (word.includes('~')) {
+            // Tilde groups multiple words under the same note head.
+            result.push({ text: word.replace(/~/g, ' '), hyphenAfter: false });
+            continue;
+        }
         const parts = word.split('-');
         const nonEmpty = parts.filter(p => p !== '');
         for (let i = 0; i < nonEmpty.length; i++) {
@@ -687,10 +692,10 @@ function emitAlignedSyllables(ctx, syllables, ligatures, lyricY) {
         if (i < ligatures.length) {
             const lig = ligatures[i];
             const neumeWidth = (lig.centerX - lig.leftX) * 2;
-            if (w < neumeWidth) {
-                // Neume is wider than the syllable: align the syllable's left
-                // edge with the neume's left edge instead of centering.
-                center = lig.leftX + w / 2;
+            if (w < neumeWidth || w > neumeWidth + ctx.staffSpace) {
+                // Neume is wider than the syllable, or syllable exceeds the
+                // neume by more than one staff space: align left edges.
+                center = lig.leftX + w / 2 - ctx.staffSpace * 0.1;
             } else {
                 center = lig.centerX;
             }

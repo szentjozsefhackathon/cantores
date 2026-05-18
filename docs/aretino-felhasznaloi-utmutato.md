@@ -617,6 +617,20 @@ w: Allelúja, allelúja.
 A megjelenítő ezt **szavakra** bontja, nem szótagokra — egy szóra egy
 ligatúra-szótag jut.
 
+### Több szó ugyanarra a hangra (`~`)
+
+Ha több szót (szótagot) kell **egyetlen hangra** írni — például recitáló
+tenor-hang alatt —, kösd össze őket `~` jellel szóköz nélkül:
+
+```aretino
+(g2) dt dt dt dt d.  (::)
+w:   Dicsőség~az~Atyának, ~és Fi-ú-nak.
+```
+
+A `~` **nem** hoz létre kötőjelet; a kapcsolt szavak szóközzel jelennek meg
+(„Dicsőség az Atyának,"), és az egész szócsoport a bal széléhez igazodik
+annak a hangnak, amelyhez tartozik.
+
 ### Ha több a szótag, mint a hang
 
 Ha a `w:` sorban több szótag van, mint amennyi hangod van a dallamban,
