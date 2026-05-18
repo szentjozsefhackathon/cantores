@@ -350,7 +350,7 @@ document.addEventListener('alpine:init', () => {
             exportBtn.type = 'button';
             exportBtn.className = btnClass;
             exportBtn.innerHTML = dlIcon + this.exportPngText;
-            exportBtn.addEventListener('click', () => this.exportPagePng(pageEl, pageIdx, totalPages, format));
+            exportBtn.addEventListener('click', () => this.exportPagePng(pageEl, pageIdx, totalPages, format, this.$wire.title));
 
             bar.appendChild(feedbackSpan);
             bar.appendChild(copyBtn);
@@ -438,10 +438,11 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        exportPagePng(pageEl, pageIdx, totalPages, format) {
+        exportPagePng(pageEl, pageIdx, totalPages, format, title) {
             const svgs = Array.from(pageEl.querySelectorAll('svg'));
             if (!svgs.length) { return; }
-            const filename = totalPages > 1 ? 'score-page-' + pageIdx + '.png' : 'score.png';
+            const base = title ? title.trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '') || 'score' : 'score';
+            const filename = totalPages > 1 ? base + '-page-' + pageIdx + '.cantores.hu.png' : base + '.cantores.hu.png';
             const canvasPromise = format === 'abc' ? this.buildAbcCanvas(svgs) : this.svgToCanvas(svgs[0]);
             canvasPromise.then(canvas => {
                 const a = document.createElement('a');
