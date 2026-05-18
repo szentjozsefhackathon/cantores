@@ -977,7 +977,7 @@ function parseSyllables(text) {
                 text = raw.replace(/~/g, ' ');
                 alignText = text;
             }
-            const segments = buildSegments(absStart, absEnd, s => s.replace(/~/g, ' '));
+            const segments = buildSegments(absStart, absEnd, s => s.replace(/~~/g, ' ').replace(/~/g, ' '));
             result.push({
                 text,
                 alignText,
