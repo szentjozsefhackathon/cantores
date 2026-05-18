@@ -204,6 +204,9 @@ export function renderAretino(source, options = {}) {
                 } else {
                     cursorX += ss(ctx, 1);
                 }
+            } else {
+                // No clef and no key sig: still add one staff space of emptiness
+                cursorX += ctx.staffSpace;
             }
 
             const remaining = staffRightX - cursorX;
@@ -511,6 +514,9 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
             } else {
                 reserved += ss(ctx, 1);
             }
+        }
+        if (!drawStartClef && !hasKeySig) {
+            reserved += ctx.staffSpace;
         }
         return staffRightX - ctx.leftMargin - reserved;
     }
@@ -945,7 +951,7 @@ function emitAlignedSyllables(ctx, syllables, ligatures, lyricY) {
         if (i < ligatures.length) {
             const lig = ligatures[i];
             const neumeWidth = (lig.centerX - lig.leftX) * 2;
-            if (w < neumeWidth || w > neumeWidth + 2 * ctx.staffSpace) {
+            if (w < neumeWidth || w > neumeWidth + 3 * ctx.staffSpace) {
                 // Neume is wider than the syllable, or syllable exceeds the
                 // neume by more than one staff space: align left edges.
                 center = lig.leftX + w / 2 - ctx.staffSpace * 0.1;

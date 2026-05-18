@@ -13,6 +13,8 @@ A formátum még változhat, a visszajelzéseket köszönettel fogadjuk!
 
 Ezen az oldalon kipróbálható, gyakorolható a formátum használata. Az összes beállítási lehetőséggel ellátott szerkesztő a [Kottaszerkesztő](/score/preview) oldalunkon található.
 
+Az Aretino kottaformátum szabadon felhasználható, kérjük, nyilvános anyagokban hivatkozzanak honlapunkra: [Cantores.hu](https://cantores.hu)
+
 ---
 
 ## Tartalomjegyzék
@@ -490,8 +492,8 @@ lehet.
 Ha a szövegben zárójelben szerepel valami, azt a következő ütemvonal alá rendezzük, a lenti példában a `(*)` jelöli, hogy a rövid vonal alá kell írni egy * jelet.
 
 ```aretino
-(g2) (K:fb#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. :: ht i ht g ht ::
-w: Men-je-tek, és vi-gyé-tek hí-rül: (*) föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja! 
+(g2) (K:fb#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. :: (Z) ht i ht g ht ::
+w: Men-je-tek, és vi-gyé-tek hí-rül: (*) föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja!
 ```
 
 ---
@@ -635,6 +637,13 @@ A `~` **nem** hoz létre kötőjelet; a kapcsolt szavak szóközzel jelennek meg
 („Dicsőség az Atyának,"), és az egész szócsoport a bal széléhez igazodik
 annak a hangnak, amelyhez tartozik.
 
+A `~` jel arra is használható, hogy átugorjunk hangokat, kihagyjunk szöveget:
+
+```aretino
+f g ; h g
+w: ~ ~ szö-veg
+```
+
 ### Ha több a szótag, mint a hang
 
 Ha a `w:` sorban több szótag van, mint amennyi hangod van a dallamban,
@@ -651,13 +660,13 @@ ha a dallamot kiegészíted a hiányzó hangokkal vagy a szöveget tagolod át.
 ```aretino
 ;cím: Uram, irgalmazz (XVI.)
 %%
-(g2) (K:ibx) h h h g h fg h :|
+(g2) (K:ibx) h h h g h fg h ::
 w: U-ram, ir-gal-mazz né-künk! (3x)
 
-h h h g h fg h :|
-w: Krisz-tus, ke-gyel-mezz né-künk!  (3x)
+h h h g h fg h ::
+w: Krisz-tus, ke-gyel-mezz né-künk! (3x)
 
-h h h g h fg h :|
+h h h g h fg h ::
 w: U-ram, ir-gal-mazz né-künk! (2x)
 
 h g i g f gh h ::
@@ -673,10 +682,13 @@ w: U-ram, ir-gal-mazz né-künk!
 ### 14.2 Antifóna zsoltárdallammal
 
 ```aretino
-;cím: Hints meg engem
+;title: Hints meg engem
 %%
-(g2) (K:mb#) d e g f gh h , i j i h i h ge d : d e gfgh h , i g ge ggfg h g e d d :: (Z) f g ht g ht g h i g g : ht i h g gf e ::
+(g2) (K:mb#) d e g f gh h , i j i h i h ge d : d e gfgh h , i g ge ggfg h g e d d ::
 w: Hints meg en-gem U-ram, i-zsóp-pal és meg-tisz-tu-lok, moss meg en-gem, és fe-hé-rebb le-szek a hó-nál.
+
+f g ht g ht g h i g g : ht i h g gf e ::
+w: ~ ~ ~ † (*)
 ```
 ---
 

@@ -107,7 +107,7 @@ export const METRICS = {
     barlineStrokeMinPx: 0.8,
     barlineOffsetX: 0.3,               // gap before line
     barlineAdvance: 0.8,
-    barlinePostGap: 0.2,               // gap after barline
+    barlinePostGap: 1,                 // gap after barline (one staff space)
     barlineDoubleSecondOffsetX: 1.0,   // second line offset for '::'
     barlineDoubleAdvance: 1.5,
 
