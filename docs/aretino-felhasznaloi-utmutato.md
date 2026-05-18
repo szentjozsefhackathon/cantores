@@ -660,6 +660,20 @@ Hogy a szöveg tördelését ne zavarják a verszakok számai, R., V. egyéb jel
 w: 1.~~Ki-rá-lyok-nak Ki-rá-lya (†) és~Atyja...
 ```
 
+### Szövegformázás (dőlt, félkövér)
+
+A szöveges sorokba egyszerű formázó jelöléseket is tehetünk:
+
+- `<i>szöveg</i>` — *dőlt* (italic)
+- `<b>szöveg</b>` — **félkövér** (bold)
+
+A formázás tetszőleges szótagokra alkalmazható, és a szótaghatáron át is érvényes marad, amíg a záró tag meg nem jelenik.
+
+```aretino
+(g2) g h i g. hi h g e_d_ , g hi a'g g. ||
+w: <b>℟.:</b>~~Al-le-lu-ja, <i>al-le-lu-ja</i>, al-le-lu-ja.
+```
+
 ---
 
 ## 17. Hosszabb példák
@@ -670,13 +684,13 @@ w: 1.~~Ki-rá-lyok-nak Ki-rá-lya (†) és~Atyja...
 ;cím: Uram, irgalmazz (XVI.)
 %%
 (g2) (K:ibx) h h h g h fg h ||
-w: U-ram, ir-gal-mazz né-künk! (3x)
+w: U-ram, ir-gal-mazz né-künk! (<i>3x</i>)
 
 h h h g h fg h ||
-w: Krisz-tus, ke-gyel-mezz né-künk! (3x)
+w: Krisz-tus, ke-gyel-mezz né-künk! (<i>3x</i>)
 
 h h h g h fg h ||
-w: U-ram, ir-gal-mazz né-künk! (2x)
+w: U-ram, ir-gal-mazz né-künk! (<i>2x</i>)
 
 h g i g f gh h ||
 w: U-ram, ir-gal-mazz né-künk!

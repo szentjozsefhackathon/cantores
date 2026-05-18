@@ -126,6 +126,12 @@ window.abc2svg = window.abc2svg || {};
                         exportPngText: @js(__('Export PNG')),
                     })"
                 >
+                    <div x-show="$wire.format === 'aretino'" x-cloak class="mb-2 flex items-center gap-4">
+                        <flux:link href="/aretino/guide" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+                            <flux:icon name="book-open" class="mr-1 inline" />{{ __('Aretino guide') }}
+                        </flux:link>
+                    </div>
+
                     {{-- Textarea --}}
                     <flux:field required>
                         <flux:textarea

@@ -740,5 +740,6 @@
     "This will invalidate the current link. Are you sure?": "Ez érvényteleníti az aktuális linket. Biztosan folytatod?",
     "Generate Secret Link": "Titkos link generálása",
     "Anyone with this link can view the score (read-only). Delete the link to revoke access.": "Bárki megtekintheti a kottát ezzel a linkkel (csak olvasható). Töröld a linket a hozzáférés visszavonásához.",
-    "Generate a secret link to share this score as a read-only preview.": "Generálj titkos linket a kotta csak olvasható előnézetként való megosztásához."
+    "Generate a secret link to share this score as a read-only preview.": "Generálj titkos linket a kotta csak olvasható előnézetként való megosztásához.",
+    "Aretino guide": "Aretino útmutató"
 }

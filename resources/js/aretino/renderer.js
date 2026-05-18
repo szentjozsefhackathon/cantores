@@ -313,7 +313,7 @@ export function renderAretino(source, options = {}) {
                 y = lyricY + ctx.lyricToNextStaff;
             } else if (isLastRow && verseCount > 0) {
                 for (const lyric of sec.lyrics) {
-                    parts.push(`<text xml:space="preserve" x="${ctx.leftMargin}" y="${lyricY}" font-family="${escapeAttr(ctx.lyricFont)}" font-size="${ctx.lyricSize}" fill="#000">${escapeText(lyric)}</text>`);
+                    parts.push(`<text xml:space="preserve" x="${ctx.leftMargin}" y="${lyricY}" font-family="${escapeAttr(ctx.lyricFont)}" font-size="${ctx.lyricSize}" fill="#000">${formatLyricLine(lyric)}</text>`);
                     lyricY += ctx.lyricSize * 1.4;
                 }
                 y = lyricY + ctx.lyricToNextStaff;
@@ -874,52 +874,169 @@ function measureTextWidth(text, fontSize, fontFamily) {
 function parseSyllables(text) {
     const result = [];
     const src = text || '';
+    // Strip formatting tags and track bold/italic state per character position.
+    const tagRe = /<\/?[bi]>/gi;
+    let cleaned = '';
+    const formatMap = []; // for each char in cleaned: { bold, italic }
+    let bold = false;
+    let italic = false;
+    let lastIdx = 0;
+    let m;
+    while ((m = tagRe.exec(src)) !== null) {
+        const before = src.slice(lastIdx, m.index);
+        for (const c of before) {
+            cleaned += c;
+            formatMap.push({ bold, italic });
+        }
+        const tag = m[0].toLowerCase();
+        if (tag === '<b>') { bold = true; }
+        else if (tag === '</b>') { bold = false; }
+        else if (tag === '<i>') { italic = true; }
+        else if (tag === '</i>') { italic = false; }
+        lastIdx = m.index + m[0].length;
+    }
+    const tail = src.slice(lastIdx);
+    for (const c of tail) {
+        cleaned += c;
+        formatMap.push({ bold, italic });
+    }
+
+    // Build segments for a range [start, end) in cleaned, collapsing runs of
+    // same formatting. The displayText function transforms the raw slice
+    // (e.g. replacing ~ with space).
+    function buildSegments(start, end, displayFn) {
+        const segments = [];
+        let runStart = start;
+        let runBold = (formatMap[start] || {}).bold || false;
+        let runItalic = (formatMap[start] || {}).italic || false;
+        for (let p = start + 1; p < end; p++) {
+            const f = formatMap[p] || { bold: false, italic: false };
+            if (f.bold !== runBold || f.italic !== runItalic) {
+                const rawSlice = cleaned.slice(runStart, p);
+                segments.push({ text: displayFn(rawSlice), bold: runBold, italic: runItalic });
+                runStart = p;
+                runBold = f.bold;
+                runItalic = f.italic;
+            }
+        }
+        const rawSlice = cleaned.slice(runStart, end);
+        segments.push({ text: displayFn(rawSlice), bold: runBold, italic: runItalic });
+        return segments;
+    }
+
     let i = 0;
-    while (i < src.length) {
-        const ch = src[i];
+    while (i < cleaned.length) {
+        const ch = cleaned[i];
         if (ch === ' ' || ch === '\t') {
             i++;
             continue;
         }
         if (ch === '(') {
-            const end = src.indexOf(')', i);
-            const inner = end < 0 ? src.slice(i + 1) : src.slice(i + 1, end);
-            i = end < 0 ? src.length : end + 1;
+            const end = cleaned.indexOf(')', i);
+            const innerStart = i + 1;
+            const innerEnd = end < 0 ? cleaned.length : end;
+            const segments = buildSegments(innerStart, innerEnd, s => s.replace(/~/g, ' '));
+            i = end < 0 ? cleaned.length : end + 1;
             result.push({
-                text: inner.replace(/~/g, ' '),
+                text: cleaned.slice(innerStart, innerEnd).replace(/~/g, ' '),
+                segments,
                 hyphenAfter: false,
                 kind: 'barline',
             });
             continue;
         }
         let j = i;
-        while (j < src.length && src[j] !== ' ' && src[j] !== '\t' && src[j] !== '(') {
+        while (j < cleaned.length && cleaned[j] !== ' ' && cleaned[j] !== '\t' && cleaned[j] !== '(') {
             j++;
         }
-        const word = src.slice(i, j);
+        const word = cleaned.slice(i, j);
+        const wordStart = i;
         i = j;
         const parts = word.split('-').filter(p => p !== '');
+        let posInWord = 0;
         for (let k = 0; k < parts.length; k++) {
             const raw = parts[k];
+            const sylPos = word.indexOf(raw, posInWord);
+            const absStart = wordStart + sylPos;
+            const absEnd = absStart + raw.length;
+            posInWord = sylPos + raw.length + 1; // +1 for the hyphen
             const tildeIdx = raw.indexOf('~~');
             let text, alignText;
             if (tildeIdx !== -1) {
-                // Verse number prefix: "1.~~Hogy" → display "1. Hogy", align on "Hogy"
                 text = raw.slice(0, tildeIdx).replace(/~/g, ' ') + ' ' + raw.slice(tildeIdx + 2).replace(/~/g, ' ');
                 alignText = raw.slice(tildeIdx + 2).replace(/~/g, ' ');
             } else {
                 text = raw.replace(/~/g, ' ');
                 alignText = text;
             }
+            const segments = buildSegments(absStart, absEnd, s => s.replace(/~/g, ' '));
             result.push({
                 text,
                 alignText,
+                segments,
                 hyphenAfter: k < parts.length - 1,
                 kind: 'note',
             });
         }
     }
     return result;
+}
+
+// Renders a syllable's segments array as SVG text content (plain or with tspans).
+function renderSegments(segments) {
+    if (!segments || segments.length === 0) {
+        return '';
+    }
+    if (segments.every(s => !s.bold && !s.italic)) {
+        return escapeText(segments.map(s => s.text).join(''));
+    }
+    return segments.map(s => {
+        const attrs = (s.bold ? ' font-weight="bold"' : '') + (s.italic ? ' font-style="italic"' : '');
+        if (!attrs) {
+            return escapeText(s.text);
+        }
+        return `<tspan${attrs}>${escapeText(s.text)}</tspan>`;
+    }).join('');
+}
+
+// Converts a lyric line with <b>/<i> formatting tags into SVG tspan elements.
+function formatLyricLine(text) {
+    const tagRe = /<\/?[bi]>/gi;
+    const segments = [];
+    let bold = false;
+    let italic = false;
+    let lastIdx = 0;
+    let m;
+    while ((m = tagRe.exec(text)) !== null) {
+        const before = text.slice(lastIdx, m.index);
+        if (before) {
+            segments.push({ text: before, bold, italic });
+        }
+        const tag = m[0].toLowerCase();
+        if (tag === '<b>') { bold = true; }
+        else if (tag === '</b>') { bold = false; }
+        else if (tag === '<i>') { italic = true; }
+        else if (tag === '</i>') { italic = false; }
+        lastIdx = m.index + m[0].length;
+    }
+    const tail = text.slice(lastIdx);
+    if (tail) {
+        segments.push({ text: tail, bold, italic });
+    }
+    if (segments.length === 0) {
+        return '';
+    }
+    // If no formatting at all, return plain escaped text
+    if (segments.every(s => !s.bold && !s.italic)) {
+        return escapeText(text);
+    }
+    return segments.map(s => {
+        const attrs = (s.bold ? ' font-weight="bold"' : '') + (s.italic ? ' font-style="italic"' : '');
+        if (!attrs) {
+            return escapeText(s.text);
+        }
+        return `<tspan${attrs}>${escapeText(s.text)}</tspan>`;
+    }).join('');
 }
 
 // Renders parenthesized lyric tokens centered under their corresponding
@@ -939,7 +1056,8 @@ function emitBarlineLabels(ctx, labels, barlines, lyricY) {
             continue;
         }
         const cx = barlines[i].centerX;
-        parts.push(`<text xml:space="preserve" x="${cx}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">${escapeText(text)}</text>`);
+        const label = labels[i];
+        parts.push(`<text xml:space="preserve" x="${cx}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">${renderSegments(label.segments)}</text>`);
     }
     return parts.join('');
 }
@@ -1007,7 +1125,7 @@ function emitAlignedSyllables(ctx, syllables, ligatures, lyricY) {
         const right = left + fullW;
         const textCenter = left + fullW / 2;
 
-        parts.push(`<text xml:space="preserve" x="${textCenter}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">${escapeText(syl.text)}</text>`);
+        parts.push(`<text xml:space="preserve" x="${textCenter}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">${renderSegments(syl.segments)}</text>`);
         if (hyphenX !== null) {
             parts.push(`<text x="${hyphenX}" y="${lyricY}" font-family="${escapeAttr(fontFamily)}" font-size="${fontSize}" text-anchor="middle" fill="#000">-</text>`);
         }
