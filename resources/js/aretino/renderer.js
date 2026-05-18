@@ -186,21 +186,22 @@ export function renderAretino(source, options = {}) {
             if (row.drawStartClef) {
                 const c = drawClef(ctx, row.startClef, cursorX, staffBottomY);
                 parts.push(c.svg);
-                const startKeySig = row.startKeySig ?? [];
-                // Use compact gap before key sig (skip the clefPostGap already baked into
-                // the advance — that wider gap is for when notes immediately follow the clef).
-                cursorX += c.advance
-                    - ss(ctx, METRICS.clefPostGap)
-                    + ss(ctx, METRICS.clefInlinePostGap);
-                for (const acc of startKeySig) {
-                    const a = drawAccidental(ctx, acc.pitch, acc.symbol, cursorX, staffBottomY);
-                    parts.push(a.svg);
-                    cursorX += a.advance;
-                }
-                // When no key sig is present, restore the full clefPostGap so the first
-                // note has the proper distance from the clef.
+                cursorX += c.advance - ss(ctx, METRICS.clefPostGap) + ss(ctx, METRICS.clefInlinePostGap);
+            }
+
+            const startKeySig = row.startKeySig ?? [];
+            for (const acc of startKeySig) {
+                const a = drawAccidental(ctx, acc.pitch, acc.symbol, cursorX, staffBottomY);
+                parts.push(a.svg);
+                cursorX += a.advance;
+            }
+
+            // Add proper spacing after clef/key sig and before notes
+            if (row.drawStartClef || startKeySig.length > 0) {
                 if (startKeySig.length === 0) {
                     cursorX += ss(ctx, METRICS.clefPostGap);
+                } else {
+                    cursorX += ss(ctx, 1);
                 }
             }
 
@@ -488,18 +489,23 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
     let runningKeySig = initialKeySig ?? [];
 
     function rowItemsAvailable() {
-        if (!drawStartClef) {
-            return staffRightX - ctx.leftMargin;
-        }
-        // When a key sig follows the clef, use clefInlinePostGap (compact) rather than
-        // the full clefPostGap that is baked into clefAdvance — the key sig sits tight
-        // against the clef, just like an inline clef change does.
+        let reserved = 0;
         const hasKeySig = rowStartKeySig.length > 0;
-        const clefSlot = hasKeySig
-            ? clefAdvance(ctx, rowStartClef) - ss(ctx, METRICS.clefPostGap) + ss(ctx, METRICS.clefInlinePostGap)
-            : clefAdvance(ctx, rowStartClef) + ss(ctx, METRICS.clefInlinePostGap);
-        const keySlot = hasKeySig ? keySigAdvance(ctx, rowStartKeySig) : 0;
-        return staffRightX - ctx.leftMargin - clefSlot - keySlot;
+        if (drawStartClef) {
+            const clefSlot = hasKeySig
+                ? clefAdvance(ctx, rowStartClef) - ss(ctx, METRICS.clefPostGap) + ss(ctx, METRICS.clefInlinePostGap)
+                : clefAdvance(ctx, rowStartClef) + ss(ctx, METRICS.clefInlinePostGap);
+            reserved += clefSlot;
+        }
+        if (hasKeySig) {
+            reserved += keySigAdvance(ctx, rowStartKeySig);
+            if (!drawStartClef) {
+                reserved += ss(ctx, METRICS.clefPostGap);
+            } else {
+                reserved += ss(ctx, 1);
+            }
+        }
+        return staffRightX - ctx.leftMargin - reserved;
     }
 
     function finalize(justify) {
