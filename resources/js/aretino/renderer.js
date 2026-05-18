@@ -256,7 +256,7 @@ export function renderAretino(source, options = {}) {
                     cursorX += extra / 2;
                     const b = drawBarline(ctx, it.value, cursorX, staffBottomY);
                     parts.push(wrapSrc(it, b.svg, 'aretino-token aretino-barline'));
-                    const offsetX = it.value === '::'
+                    const offsetX = (it.value === '||' || it.value === ':|' || it.value === '|:' || it.value === ':|:' || it.value === '|||')
                         ? (METRICS.barlineOffsetX + METRICS.barlineDoubleSecondOffsetX) / 2
                         : METRICS.barlineOffsetX;
                     rowBarlines.push({ centerX: cursorX + ss(ctx, offsetX), value: it.value });
@@ -587,7 +587,10 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
 }
 
 function measureBarline(ctx, kind) {
-    const base = kind === '::'
+    if (kind === ':|:') {
+        return ss(ctx, METRICS.barlineDoubleAdvance) * 1.5 + ss(ctx, METRICS.barlinePostGap);
+    }
+    const base = (kind === '||' || kind === ':|' || kind === '|:' || kind === '|||')
         ? ss(ctx, METRICS.barlineDoubleAdvance)
         : ss(ctx, METRICS.barlineAdvance);
     return base + ss(ctx, METRICS.barlinePostGap);

@@ -4,7 +4,7 @@
 > Verzió: 1.0 · Utolsó frissítés: 2026-05-18
 
 ```aretino
-(g2) g h i g. hi h g e_d_ , g hi a'g g. ::
+(g2) g h i g. hi h g e_d_ , g hi a'g g. ||
 w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
 ```
 
@@ -304,7 +304,7 @@ A fejléc-sorok pontosvesszővel kezdődnek (`;kulcs: érték`), és a `%%` lez�
 ```aretino
 ;title: Vesperás
 %%
-(g2) h h h g h j i g h. ::
+(g2) h h h g h j i g h. ||
 w: Is-te-nem, hall-gass hí-vá-som-ra!
 ```
 
@@ -481,17 +481,24 @@ megszakítaná, és külön neumákat csinálna belőle.
 |---|---|---|
 | `,` | rövid vonal (negyedvonal) | kis cezúra, lélegzet |
 | `;` | félvonal | tagmondat vége |
-| `:` | egész vonal | mondat vége |
-| `::` | kettős vonal | tétel vége |
+| `\|` | egész vonal | mondat vége |
+| `\|\|` | kettős vonal | rész vége |
+| `:\| \|: :\|:` | ismétlőjel | ismétlés |
+| `\|\|\|` | záróvonal | klasszikus záró |
+| `'` | apró szünetjel | lélegzetvétel |
 
-A vonalak írhatók zárójelben is: `(,)`, `(;)`, `(:)`, `(::)` — a hatás
+```aretino
+' , ; | || :| |||
+```
+
+A vonalak írhatók zárójelben is: `(,)`, `(;)`, `(|)`, `(||)`, `(:|)`, `(|||)` — a hatás
 ugyanaz, de a zárójeles forma a hagyományos GABC-felhasználóknak ismerős
 lehet.
 
 Ha a szövegben zárójelben szerepel valami, azt a következő ütemvonal alá rendezzük, a lenti példában a `(*)` jelöli, hogy a rövid vonal alá kell írni egy * jelet.
 
 ```aretino
-(g2) (K:fb#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. :: (Z) ht i ht g ht ::
+(g2) (K:fb#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. || (Z) ht i ht g ht ||
 w: Men-je-tek, és vi-gyé-tek hí-rül: (*) föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja!
 ```
 
@@ -506,7 +513,7 @@ Az Aretino megjelenítő igyekszik kedvezően elosztani a neumákat/szótagokat,
 A `*` egy üres, "rugalmas" szakasz, amellyel befolyásolhatjuk, hogy egy sorkizárt szakasz hol legyen szellősebb:
 
 ```aretino
-(g2) d f * g h * g (z) f d  (::)
+(g2) d f * g h * g (z) f d  (||)
 ```
 
 Több `*` is használható egy sorban; a maradék helyet egyenlően elosztja
@@ -536,7 +543,7 @@ A `(z)` formát használd ott, ahol a frázis-vége természetesen indokol
 sortörést.
 
 ```aretino
-(g2) g h i j (z) g h i j (Z) g h i j ::
+(g2) g h i j (z) g h i j (Z) g h i j ||
 ```
 
 
@@ -578,7 +585,7 @@ csak a darab elején van leírva.
 ```aretino
 ;title: Példa előjegyzéssel
 %%
-(g2) (K:mb# jb# ) d e f g h i j k (::)
+(g2) (K:mb# jb# ) d e f g h i j k (||)
 ```
 
 Az `(K:bx)` minden új sor elején megismétlődik. Egy újabb `(K:…)` token
@@ -659,16 +666,16 @@ ha a dallamot kiegészíted a hiányzó hangokkal vagy a szöveget tagolod át.
 ```aretino
 ;cím: Uram, irgalmazz (XVI.)
 %%
-(g2) (K:ibx) h h h g h fg h ::
+(g2) (K:ibx) h h h g h fg h ||
 w: U-ram, ir-gal-mazz né-künk! (3x)
 
-h h h g h fg h ::
+h h h g h fg h ||
 w: Krisz-tus, ke-gyel-mezz né-künk! (3x)
 
-h h h g h fg h ::
+h h h g h fg h ||
 w: U-ram, ir-gal-mazz né-künk! (2x)
 
-h g i g f gh h ::
+h g i g f gh h ||
 w: U-ram, ir-gal-mazz né-künk!
 ```
 
@@ -683,10 +690,10 @@ w: U-ram, ir-gal-mazz né-künk!
 ```aretino
 ;title: Hints meg engem
 %%
-(g2) (K:mb#) d e g f gh h , i j i h i h ge d : d e gfgh h , i g ge ggfg h g e d d ::
+(g2) (K:mb#) d e g f gh h , i j i h i h ge d | d e gfgh h , i g ge ggfg h g e d d ||
 w: Hints meg en-gem U-ram, i-zsóp-pal és meg-tisz-tu-lok, moss meg en-gem, és fe-hé-rebb le-szek a hó-nál.
 
-f g ht gs ht g h i gs g : ht i h gs gf e ::
+f g ht gs ht g h i gs g | ht i h gs gf e ||
 w: ~ ~ ~ † (*)
 ```
 ---

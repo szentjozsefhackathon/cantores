@@ -12,7 +12,7 @@
 //
 // Token shapes:
 //   { type: 'directive', value: string }              — anything inside ( )
-//   { type: 'barline', kind: ',' | ';' | ':' | '::' }
+//   { type: 'barline', kind: ',' | ';' | '|' | '||' | ':|' | '|||' | "'" }
 //   { type: 'expander' }                              — `*`
 //   { type: 'ligature', groups: Note[][] }            — one or more note groups; groups are separated by '/' cuts within the neume
 //
@@ -120,7 +120,7 @@ function tokenizeMusicLine(line, lineStart = 0) {
             const inner = value.trim();
             const srcStart = lineStart + tokStart;
             const srcEnd = lineStart + i;
-            const bareBar = inner.match(/^([,;]|::?)$/);
+            const bareBar = inner.match(/^([,;']|:\|:|:\||\|:|\|{1,3})$/);
             if (bareBar) {
                 tokens.push({ type: 'barline', kind: bareBar[1], srcStart, srcEnd });
             } else if (/^sp([0-9]*\.?[0-9]*)$/i.test(inner)) {
@@ -143,13 +143,36 @@ function tokenizeMusicLine(line, lineStart = 0) {
             tokens.push({ type: 'spacer', multiplier: count, srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + count });
             continue;
         }
-        if (ch === ':' && line[i + 1] === ':') {
-            tokens.push({ type: 'barline', kind: '::', srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 2 });
-            i += 2;
+        if (ch === ':' && line[i + 1] === '|') {
+            if (line[i + 2] === ':') {
+                tokens.push({ type: 'barline', kind: ':|:', srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 3 });
+                i += 3;
+            } else {
+                tokens.push({ type: 'barline', kind: ':|', srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 2 });
+                i += 2;
+            }
             continue;
         }
-        if (ch === ',' || ch === ';' || ch === ':') {
+        if (ch === '|') {
+            let count = 1;
+            while (i + count < len && line[i + count] === '|') { count++; }
+            if (count === 1 && line[i + 1] === ':') {
+                tokens.push({ type: 'barline', kind: '|:', srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 2 });
+                i += 2;
+            } else {
+                const kind = '|'.repeat(Math.min(count, 3));
+                tokens.push({ type: 'barline', kind, srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + count });
+                i += count;
+            }
+            continue;
+        }
+        if (ch === ',' || ch === ';') {
             tokens.push({ type: 'barline', kind: ch, srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 1 });
+            i++;
+            continue;
+        }
+        if (ch === "'") {
+            tokens.push({ type: 'barline', kind: "'", srcStart: lineStart + tokStart, srcEnd: lineStart + tokStart + 1 });
             i++;
             continue;
         }

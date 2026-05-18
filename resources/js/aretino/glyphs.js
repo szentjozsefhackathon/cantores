@@ -111,8 +111,12 @@ export const METRICS = {
     barlineOffsetX: 0.3,               // gap before line
     barlineAdvance: 0.8,
     barlinePostGap: 1,                 // gap after barline (one staff space)
-    barlineDoubleSecondOffsetX: 1.0,   // second line offset for '::'
+    barlineDoubleSecondOffsetX: 1.0,   // second line offset for '||'
     barlineDoubleAdvance: 1.5,
+    barlineRepeatAdvance: 2.4,           // advance for repeat signs (wider than double)
+    barlineRepeatDotRadius: 0.25,       // dot radius for ':|'
+    barlineRepeatDotGap: 0.8,           // gap between dots for ':|'
+    barlineFinalThickStroke: 0.4,       // thick stroke for '|||'
 
     // --- Spacer -----------------------------------------------------------
     spacerAdvance: 1,                   // default width of one (sp) spacer unit
@@ -508,13 +512,77 @@ export function drawBarline(ctx, kind, x, staffBottomY) {
         const y1 = top3 + ctx.staffSpace * 1.5;
         const y2 = top3 - ctx.staffSpace * 1.5;
         svg = `<line x1="${lineX}" y1="${y1}" x2="${lineX}" y2="${y2}" stroke="#000" stroke-width="${sw}"/>`;
-    } else if (kind === ':') {
+    } else if (kind === '|') {
         svg = `<line x1="${lineX}" y1="${top5}" x2="${lineX}" y2="${staffBottomY}" stroke="#000" stroke-width="${sw}"/>`;
-    } else if (kind === '::') {
+    } else if (kind === '||') {
         const lineX2 = x + ss(ctx, METRICS.barlineDoubleSecondOffsetX);
         svg = `<line x1="${lineX}" y1="${top5}" x2="${lineX}" y2="${staffBottomY}" stroke="#000" stroke-width="${sw}"/>`
             + `<line x1="${lineX2}" y1="${top5}" x2="${lineX2}" y2="${staffBottomY}" stroke="#000" stroke-width="${sw}"/>`;
         advance = ss(ctx, METRICS.barlineDoubleAdvance);
+    } else if (kind === ':|') {
+        // End repeat: dots + thin line + thick line (classical finish with dots)
+        const dotR = ss(ctx, METRICS.barlineRepeatDotRadius);
+        const dotGap = ss(ctx, METRICS.barlineRepeatDotGap);
+        const thickSw = ss(ctx, METRICS.barlineFinalThickStroke);
+        const midY = (top5 + staffBottomY) / 2;
+        const dotX = lineX;
+        const thinX = lineX + dotGap;
+        const thickX = thinX + (ss(ctx, METRICS.barlineDoubleSecondOffsetX) - ss(ctx, METRICS.barlineOffsetX));
+        svg = `<circle cx="${dotX}" cy="${midY - ctx.staffSpace * 0.5}" r="${dotR}" fill="#000"/>`
+            + `<circle cx="${dotX}" cy="${midY + ctx.staffSpace * 0.5}" r="${dotR}" fill="#000"/>`
+            + `<line x1="${thinX}" y1="${top5}" x2="${thinX}" y2="${staffBottomY}" stroke="#000" stroke-width="${sw}"/>`
+            + `<line x1="${thickX}" y1="${top5}" x2="${thickX}" y2="${staffBottomY}" stroke="#000" stroke-width="${thickSw}"/>`;
+        advance = ss(ctx, METRICS.barlineRepeatAdvance);
+    } else if (kind === '|:') {
+        // Start repeat: thick line + thin line + dots (barlines at x, dots after)
+        const dotR = ss(ctx, METRICS.barlineRepeatDotRadius);
+        const dotGap = ss(ctx, METRICS.barlineRepeatDotGap);
+        const thickSw = ss(ctx, METRICS.barlineFinalThickStroke);
+        const midY = (top5 + staffBottomY) / 2;
+        const secondOffset = ss(ctx, METRICS.barlineDoubleSecondOffsetX) - ss(ctx, METRICS.barlineOffsetX);
+        const thickX = lineX;
+        const thinX = lineX + secondOffset;
+        const dotX = thinX + dotGap;
+        svg = `<line x1="${thickX}" y1="${top5}" x2="${thickX}" y2="${staffBottomY}" stroke="#000" stroke-width="${thickSw}"/>`
+            + `<line x1="${thinX}" y1="${top5}" x2="${thinX}" y2="${staffBottomY}" stroke="#000" stroke-width="${sw}"/>`
+            + `<circle cx="${dotX}" cy="${midY - ctx.staffSpace * 0.5}" r="${dotR}" fill="#000"/>`
+            + `<circle cx="${dotX}" cy="${midY + ctx.staffSpace * 0.5}" r="${dotR}" fill="#000"/>`;
+        advance = ss(ctx, METRICS.barlineRepeatAdvance);
+    } else if (kind === ':|:') {
+        // Double repeat: dots + thin + thick + thin + dots
+        const dotR = ss(ctx, METRICS.barlineRepeatDotRadius);
+        const dotGap = ss(ctx, METRICS.barlineRepeatDotGap);
+        const thickSw = ss(ctx, METRICS.barlineFinalThickStroke);
+        const midY = (top5 + staffBottomY) / 2;
+        const secondOffset = ss(ctx, METRICS.barlineDoubleSecondOffsetX) - ss(ctx, METRICS.barlineOffsetX);
+        const dotXL = lineX;
+        const thinXL = lineX + dotGap;
+        const thickX = thinXL + secondOffset;
+        const thinXR = thickX + secondOffset;
+        const dotXR = thinXR + dotGap;
+        svg = `<circle cx="${dotXL}" cy="${midY - ctx.staffSpace * 0.5}" r="${dotR}" fill="#000"/>`
+            + `<circle cx="${dotXL}" cy="${midY + ctx.staffSpace * 0.5}" r="${dotR}" fill="#000"/>`
+            + `<line x1="${thinXL}" y1="${top5}" x2="${thinXL}" y2="${staffBottomY}" stroke="#000" stroke-width="${sw}"/>`
+            + `<line x1="${thickX}" y1="${top5}" x2="${thickX}" y2="${staffBottomY}" stroke="#000" stroke-width="${thickSw}"/>`
+            + `<line x1="${thinXR}" y1="${top5}" x2="${thinXR}" y2="${staffBottomY}" stroke="#000" stroke-width="${sw}"/>`
+            + `<circle cx="${dotXR}" cy="${midY - ctx.staffSpace * 0.5}" r="${dotR}" fill="#000"/>`
+            + `<circle cx="${dotXR}" cy="${midY + ctx.staffSpace * 0.5}" r="${dotR}" fill="#000"/>`;
+        advance = ss(ctx, METRICS.barlineRepeatAdvance) * 1.5;
+    } else if (kind === '|||') {
+        const thickSw = ss(ctx, METRICS.barlineFinalThickStroke);
+        const lineX2 = x + ss(ctx, METRICS.barlineDoubleSecondOffsetX);
+        svg = `<line x1="${lineX}" y1="${top5}" x2="${lineX}" y2="${staffBottomY}" stroke="#000" stroke-width="${sw}"/>`
+            + `<line x1="${lineX2}" y1="${top5}" x2="${lineX2}" y2="${staffBottomY}" stroke="#000" stroke-width="${thickSw}"/>`;
+        advance = ss(ctx, METRICS.barlineDoubleAdvance);
+    } else if (kind === "'") {
+        // Breath mark — liquescent-shaped curve drawn on the 4th staff line
+        const cy = staffBottomY - 3 * ctx.staffSpace; // 4th line from bottom
+        const ax = lineX;
+        const topY = cy - ss(ctx, METRICS.liquescensTopY);
+        const bottomY = cy + ss(ctx, METRICS.liquescensBottomY);
+        const bulge = ss(ctx, METRICS.liquescensBulge);
+        const bsw = stroke(ctx, METRICS.liquescensStroke, METRICS.liquescensStrokeMinPx);
+        svg = `<path d="M ${ax} ${topY} C ${ax + bulge} ${topY} ${ax + bulge} ${bottomY} ${ax} ${bottomY}" fill="none" stroke="#000" stroke-width="${bsw}" stroke-linecap="round"/>`;
     }
     return { svg, advance };
 }

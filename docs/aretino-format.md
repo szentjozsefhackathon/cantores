@@ -30,7 +30,7 @@ TTF betűkészlet szellemi utódja, de attól független, szemantikus formátum.
 ;cím: Kyrie
 ;mód: I
 %%
-(g2) d fg h_ * g. fgfe d' d d.  (::)
+(g2) d fg h_ * g. fgfe d' d d.  (||)
 w:   Ky-ri-e      e-lé- i-son.
 ```
 
@@ -130,8 +130,12 @@ elején is az új előjegyzés szerepel.
 |---|---|
 | `,` | rövid vonal (negyedvonal) |
 | `;` | fél-vonal |
-| `:` | egész vonal |
-| `::` | kettős vonal (tétel vége) |
+| `\|` | egész vonal |
+| `\|\|` | kettős vonal (tétel vége) |
+| `:\|` | ismétlőjel (vége) |
+| `\|:` | ismétlőjel (eleje) |
+| `:\|:` | ismétlőjel (kétirányú) |
+| `\|\|\|` | záróvonal (klasszikus záró) |
 | `*` | sorvég-kiegyenlítő — szélesen szétfutó üres vonalszakasz |
 | `=` | szóköz (spacer) — megegyezik `(sp)`-vel; `==` = `(sp2)`, `===` = `(sp3)` stb. |
 | `/` | neuma-tagoló rés — egy kottafejnyi üres hely a kis csoportok között, a melizmán belül |
@@ -147,13 +151,13 @@ Custos egyelőre nincs.
 ;cím: Kyrie I
 ;mód: I
 %%
-(g2) d fg h_ * g. fgvFE d' d d.  (::)
+(g2) d fg h_ * g. fgvFE d' d d.  (||)
 w:   Ky-ri-e    e-lé- i-son.
 
-fg h_ * g. fgvFE d' d d.  (::)
+fg h_ * g. fgvFE d' d d.  (||)
 w: Chris-te  e-lé- i-son.
 
-d fgvFE d * c. d fg h_ d.  (::)
+d fgvFE d * c. d fg h_ d.  (||)
 w: Ky-ri- e  e-lé-i- son.
 ```
 
