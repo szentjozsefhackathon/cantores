@@ -455,39 +455,42 @@ export function drawClef(ctx, clef, x, staffBottomY) {
     return { svg: '', advance: 0 };
 }
 
+// Bravura (SMuFL) accidental glyph paths — extracted from the official OTF.
+// Coordinates are in font units (1 em = 1000 units = 4 staff spaces).
+const BRAVURA_ACCIDENTALS = {
+    // U+E260 accidentalFlat — advance 226
+    flat: {
+        path: 'M12 -170C15 -174 18 -175 21 -175C24 -175 27 -173 27 -173C57 -156 81 -129 106 -112C195 -50 226 11 226 57C226 114 182 150 136 153C119 153 95 145 81 136C75 131 64 122 59 122C57 122 56 122 54 123C47 126 43 133 43 140C44 162 50 402 50 422C50 433 41 439 31 439C17 439 1 429 0 411C0 411 4 -160 12 -170ZM47 -81C47 -81 44 -21 44 19C44 35 45 47 46 51C53 71 93 100 116 100C145 100 157 67 157 42C157 -12 111 -66 68 -93C64 -95 61 -96 58 -96C49 -96 47 -86 47 -81Z',
+        advance: 226,
+    },
+    // U+E261 accidentalNatural — advance 168
+    natural: {
+        path: 'M141 181C139 181 138 180 137 180C137 180 73 157 47 157C41 157 37 158 37 162V329C37 336 31 341 25 341H12C5 341 0 336 0 329V-186C0 -192 3 -195 9 -195L11 -194C12 -194 14 -194 15 -193C29 -187 85 -163 114 -163C124 -163 131 -166 131 -174V-323C131 -330 136 -335 143 -335H156C162 -335 168 -330 168 -323V179C168 184 164 187 160 187C159 187 157 187 156 186ZM37 39C37 53 98 79 122 79C128 79 131 78 131 74V-29C131 -47 74 -70 49 -70C42 -70 37 -68 37 -64Z',
+        advance: 168,
+    },
+    // U+E262 accidentalSharp — advance 249
+    sharp: {
+        path: 'M237 118C244 121 249 129 249 135V206C249 211 246 214 242 214C240 214 239 214 237 213C237 213 217 205 212 204C205 204 198 209 198 217V339C198 345 192 350 184 350C174 350 168 345 168 339V209C167 199 164 186 155 180C143 173 109 159 92 155C83 155 80 167 80 175V295C80 301 73 306 66 306C56 306 50 301 50 295V160C50 146 44 136 38 133C32 130 12 122 12 122C5 120 0 112 0 106V35C0 29 3 26 9 26L11 27C12 27 27 33 35 37L36 38C44 38 50 28 50 20V-79C50 -90 45 -99 39 -102C33 -104 12 -113 12 -113C5 -115 0 -123 0 -129V-200C0 -206 3 -209 9 -209L11 -208C12 -208 26 -202 35 -199C36 -198 37 -198 38 -198C45 -198 50 -209 50 -214V-337C50 -343 56 -348 63 -348C73 -348 80 -343 80 -337V-198C80 -185 85 -178 90 -176L151 -151C151 -151 152 -151 152 -151L154 -150C163 -150 168 -162 168 -168V-293C168 -299 174 -304 181 -304C192 -304 198 -299 198 -293V-151C198 -143 202 -131 209 -128C216 -125 237 -117 237 -117C244 -114 249 -106 249 -100V-29C249 -24 246 -21 242 -21C240 -21 239 -21 237 -22L211 -32C205 -32 198 -26 198 -14V79C198 86 203 105 211 108ZM168 -45C162 -65 115 -85 92 -85C86 -85 81 -83 80 -80C78 -76 77 -54 77 -30C77 1 78 36 80 44C82 61 128 82 153 82C160 82 166 80 168 76C170 71 172 46 172 19C172 -8 170 -36 168 -45Z',
+        advance: 249,
+    },
+};
+
 export function drawAccidental(ctx, pitchLetter, kind, x, staffBottomY) {
     const pos = PITCH_BASE[pitchLetter] ?? 3;
     const cy = staffBottomY - pos * ctx.pitchStep;
-    const sz = ss(ctx, METRICS.accidentalSize);
+    // In SMuFL/Bravura: 1 em = 1000 units = 4 staff spaces.
+    // Scale factor: 1 staff space in pixels / 250 font units.
+    const scale = ctx.staffSpace / 250;
+    let glyph;
+    if (kind === 'x') glyph = BRAVURA_ACCIDENTALS.flat;
+    else if (kind === 'y') glyph = BRAVURA_ACCIDENTALS.natural;
+    else if (kind === '#') glyph = BRAVURA_ACCIDENTALS.sharp;
     let svg = '';
-    if (kind === 'x') {
-        // flat
-        const stemSW = stroke(ctx, METRICS.stemStroke, METRICS.stemStrokeMinPx);
-        const stemX = x + sz * 0.25;
-        svg = `<line x1="${stemX}" y1="${cy - sz * 1.1}" x2="${stemX}" y2="${cy + sz * 0.35}" stroke="#000" stroke-width="${stemSW}"/>`
-            + `<path d="M ${stemX} ${cy - sz * 0.1} Q ${stemX + sz * 0.9} ${cy - sz * 0.55} ${stemX + sz * 0.05} ${cy + sz * 0.4}" fill="#000" stroke="#000" stroke-width="${stemSW}"/>`;
-    } else if (kind === 'y') {
-        // natural
-        const w = sz * 0.55;
-        const h = sz * 1.4;
-        const sw = stroke(ctx, METRICS.liquescensStroke, METRICS.liquescensStrokeMinPx);
-        const cxA = x + sz * 0.45;
-        svg = `<line x1="${cxA - w / 2}" y1="${cy - h / 2}" x2="${cxA - w / 2}" y2="${cy + h / 2 - sz * 0.2}" stroke="#000" stroke-width="${sw}"/>`
-            + `<line x1="${cxA + w / 2}" y1="${cy - h / 2 + sz * 0.2}" x2="${cxA + w / 2}" y2="${cy + h / 2}" stroke="#000" stroke-width="${sw}"/>`
-            + `<line x1="${cxA - w / 2}" y1="${cy - sz * 0.15}" x2="${cxA + w / 2}" y2="${cy - sz * 0.4}" stroke="#000" stroke-width="${sw * 1.4}"/>`
-            + `<line x1="${cxA - w / 2}" y1="${cy + sz * 0.4}" x2="${cxA + w / 2}" y2="${cy + sz * 0.15}" stroke="#000" stroke-width="${sw * 1.4}"/>`;
-    } else if (kind === '#') {
-        // sharp
-        const w = sz * 0.7;
-        const h = sz * 1.3;
-        const sw = stroke(ctx, METRICS.liquescensStroke, METRICS.liquescensStrokeMinPx);
-        const cxA = x + sz * 0.45;
-        svg = `<line x1="${cxA - w * 0.3}" y1="${cy - h / 2}" x2="${cxA - w * 0.3}" y2="${cy + h / 2}" stroke="#000" stroke-width="${sw}"/>`
-            + `<line x1="${cxA + w * 0.3}" y1="${cy - h / 2}" x2="${cxA + w * 0.3}" y2="${cy + h / 2}" stroke="#000" stroke-width="${sw}"/>`
-            + `<line x1="${cxA - w / 2}" y1="${cy - sz * 0.1}" x2="${cxA + w / 2}" y2="${cy - sz * 0.35}" stroke="#000" stroke-width="${sw * 1.4}"/>`
-            + `<line x1="${cxA - w / 2}" y1="${cy + sz * 0.35}" x2="${cxA + w / 2}" y2="${cy + sz * 0.1}" stroke="#000" stroke-width="${sw * 1.4}"/>`;
+    if (glyph) {
+        // Translate to (x, cy) and apply scale with y-flip (font y-up → SVG y-down)
+        svg = `<path d="${glyph.path}" fill="#000" transform="translate(${x}, ${cy}) scale(${scale}, ${-scale})"/>`;
     }
-    return { svg, advance: ss(ctx, METRICS.accidentalAdvance) };
+    return { svg, advance: glyph ? glyph.advance * scale : ss(ctx, METRICS.accidentalAdvance) };
 }
 
 export function drawBarline(ctx, kind, x, staffBottomY) {
