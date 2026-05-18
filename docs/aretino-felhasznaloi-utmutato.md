@@ -368,10 +368,7 @@ A kottafej alapformáját egy **utótag-karakter** módosítja a betű után:
 
 Bal → jobb: punctum, virga, quilisma, tenor-hang — mind ugyanazon a magasságon (D).
 
-A **virga** egyúttal hangsúlyt is jelez, és gyakran ligatúra-csúcsokon
-jelenik meg automatikusan (lásd a [Ligatúrák](#11-ligatúrák--neumák) szakaszt).
-Az auto-virga miatt ritkán kell kézzel nagybetűt írni: csak akkor, ha külön
-hangsúlyt akarsz egy egyedülálló hangra.
+A **virga** gyakran ligatúra-csúcsokon jelenik meg automatikusan (lásd a [Ligatúrák](#11-ligatúrák--neumák) szakaszt), de manuálisan is használhatjuk arra, hogy hosszabb melizmák belső tagolódását jelezzük.
 
 A **quilisma** mindig ligatúrában fordul elő:
 
@@ -465,7 +462,8 @@ gyakorlatilag a melizmán belüli csoportosítást teszi láthatóvá. A `/` el�
 elválaszthatók.
 
 ```aretino
-(g2) fefdc.efdc./feg.gggeecededdc.
+(g2) fefdc.efdc./feg.gggee/cededdc. c
+
 ```
 
 Szóközt **nem** írhatsz a `/` köré ligatúrán belül — az a ligatúrát
@@ -577,8 +575,8 @@ egy különálló punctum (pl. `d` szóközökkel a két oldalán) szintén egy
 egységnek számít, és egy szótag jut rá.
 
 ```aretino
-(g2) df g h. * g fd d.  (::)
-w:   Ky-ri- e   e-le- i-son.
+(g2) dghfe ed , g hg ghj h hghgfg(ibx)ihig fhgfgfe e:
+w: Hús-vét ün-ne-pe e-lőtt tör-tént:
 ```
 
 Itt a szótagok rendre a ligatúrákhoz tartoznak:

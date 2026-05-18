@@ -120,7 +120,7 @@ export function renderAretino(source, options = {}) {
                         }
                     }
                 }
-                const baseAdv = measureLigature(ctx, it.groups);
+                const baseAdv = measureLigature(ctx, it.groups, it.gaps ?? []);
                 it.syllableExtra = Math.max(0, maxSylW + minGap - baseAdv);
                 li++;
             }
@@ -187,7 +187,7 @@ export function renderAretino(source, options = {}) {
                 } else if (it.kind === 'spacer') {
                     cursorX += ss(ctx, METRICS.spacerAdvance) * it.multiplier;
                 } else if (it.kind === 'ligature') {
-                    const r = emitLigature(ctx, it.groups, cursorX, staffBottomY);
+                    const r = emitLigature(ctx, it.groups, cursorX, staffBottomY, it.gaps ?? []);
                     parts.push(wrapSrc(it, r.svg, 'aretino-token aretino-ligature'));
                     rowLigatures.push({ centerX: r.centerX, leftX: r.leftX });
                     cursorX += r.advance + (it.syllableExtra || 0);
@@ -312,7 +312,7 @@ function flattenItems(tokens) {
             continue;
         }
         if (tok.type === 'ligature') {
-            items.push({ kind: 'ligature', groups: tok.groups, ...src });
+            items.push({ kind: 'ligature', groups: tok.groups, gaps: tok.gaps ?? [], ...src });
             continue;
         }
     }
@@ -353,7 +353,7 @@ function measureItem(ctx, item) {
         return ctx.expanderWidth;
     }
     if (item.kind === 'ligature') {
-        return measureLigature(ctx, item.groups) + (item.syllableExtra || 0);
+        return measureLigature(ctx, item.groups, item.gaps ?? []) + (item.syllableExtra || 0);
     }
     return 0;
 }
@@ -425,16 +425,58 @@ function measureBarline(ctx, kind) {
     return base + ss(ctx, METRICS.barlinePostGap);
 }
 
+// A mora on a non-final note within a group acts like an implicit '/' cut:
+// the group is split after that note so the remaining notes form a new group.
+// Returns { groups, gaps } where gaps[i] is the gap type after groups[i]:
+//   'mora'  — implicit split from an internal mora (compact spacing)
+//   'neume' — explicit '/' separator (standard neumeGapAdvance)
+function splitGroupsAtInternalMora(groups, gaps = []) {
+    const resultGroups = [];
+    const resultGaps = [];
+    for (let gi = 0; gi < groups.length; gi++) {
+        const group = groups[gi];
+        let current = [];
+        for (let i = 0; i < group.length; i++) {
+            current.push(group[i]);
+            if (i < group.length - 1 && group[i].modifiers && group[i].modifiers.includes('mora')) {
+                resultGroups.push(current);
+                resultGaps.push('mora');
+                current = [];
+            }
+        }
+        if (current.length > 0) {
+            resultGroups.push(current);
+            if (gi < groups.length - 1) {
+                resultGaps.push(gaps[gi] ?? 'neume');
+            }
+        }
+    }
+    return { groups: resultGroups, gaps: resultGaps };
+}
+
 // groups: Note[][] — each group is a run of notes; groups are separated by neumatic cuts ('/').
-// All groups except the last contribute noteBoxWidth + steps + neumeGapAdvance;
-// the last group contributes the normal singleNoteAdvance + steps (trailing slack included).
-function measureLigature(ctx, groups) {
+// All groups except the last contribute a gap advance; the last group contributes singleNoteAdvance.
+// Gap types: 'neume' = standard neumeGapAdvance; 'mora' = compact spacing just past the mora dot.
+function measureLigature(ctx, groups, gaps = []) {
+    const split = splitGroupsAtInternalMora(groups, gaps);
+    return measureSplitLigature(ctx, split.groups, split.gaps);
+}
+
+function measureSplitLigature(ctx, groups, gaps) {
     let total = 0;
     for (let g = 0; g < groups.length; g++) {
         const notes = groups[g];
         const n = notes.length;
         if (g < groups.length - 1) {
-            total += ss(ctx, METRICS.noteBoxWidth) + (n - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance;
+            const gapType = gaps[g] ?? 'neume';
+            const lastNote = notes[n - 1];
+            const hasMora = lastNote.modifiers && lastNote.modifiers.includes('mora');
+            // For an explicit '/' after a mora, the neume gap starts from the mora dot's right
+            // edge rather than the note box edge, so add the mora's overhang.
+            const moraOverhang = (gapType === 'neume' && hasMora)
+                ? ss(ctx, METRICS.moraOffsetX + METRICS.moraRadius - METRICS.noteBoxWidth * 0.5)
+                : 0;
+            total += ss(ctx, METRICS.noteBoxWidth) + (n - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance + moraOverhang;
         } else {
             const lastNote = notes[n - 1];
             const hasMora = lastNote.modifiers && lastNote.modifiers.includes('mora');
@@ -445,7 +487,10 @@ function measureLigature(ctx, groups) {
     return total;
 }
 
-function emitLigature(ctx, groups, x, staffBottomY) {
+function emitLigature(ctx, groups, x, staffBottomY, gaps = []) {
+    const splitResult = splitGroupsAtInternalMora(groups, gaps);
+    groups = splitResult.groups;
+    gaps = splitResult.gaps;
     const parts = [];
     const halfSW = ligatureConnectorHalfStroke(ctx);
     let groupStartX = x;
@@ -528,17 +573,24 @@ function emitLigature(ctx, groups, x, staffBottomY) {
         }
 
         if (g < groups.length - 1) {
-            groupStartX += ss(ctx, METRICS.noteBoxWidth) + (notes.length - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance;
+            const gapType = gaps[g] ?? 'neume';
+            const lastNote = notes[notes.length - 1];
+            const hasMora = lastNote.modifiers && lastNote.modifiers.includes('mora');
+            const moraOverhang = (gapType === 'neume' && hasMora)
+                ? ss(ctx, METRICS.moraOffsetX + METRICS.moraRadius - METRICS.noteBoxWidth * 0.5)
+                : 0;
+            groupStartX += ss(ctx, METRICS.noteBoxWidth) + (notes.length - 1) * ctx.ligatureStepAdvance + ctx.neumeGapAdvance + moraOverhang;
         }
     }
 
+    const advance = measureSplitLigature(ctx, groups, gaps);
     const centerX = firstNoteCx !== null
         ? (firstNoteCx + lastNoteCx) / 2
-        : x + measureLigature(ctx, groups) / 2;
+        : x + advance / 2;
     const leftX = firstNoteCx !== null
         ? firstNoteCx - ss(ctx, METRICS.noteBoxWidth) * 0.5
         : x;
-    return { svg: parts.join(''), advance: measureLigature(ctx, groups), centerX, leftX };
+    return { svg: parts.join(''), advance, centerX, leftX };
 }
 
 let _measureCanvas = null;

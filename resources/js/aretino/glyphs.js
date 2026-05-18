@@ -472,7 +472,9 @@ export function drawBarline(ctx, kind, x, staffBottomY) {
         const y2 = top5 + ctx.staffSpace * 0.5;
         svg = `<line x1="${lineX}" y1="${y1}" x2="${lineX}" y2="${y2}" stroke="#000" stroke-width="${sw}"/>`;
     } else if (kind === ';') {
-        svg = `<line x1="${lineX}" y1="${top5}" x2="${lineX}" y2="${top3}" stroke="#000" stroke-width="${sw}"/>`;
+        const y1 = top3 + ctx.staffSpace * 1.5;
+        const y2 = top3 - ctx.staffSpace * 1.5;
+        svg = `<line x1="${lineX}" y1="${y1}" x2="${lineX}" y2="${y2}" stroke="#000" stroke-width="${sw}"/>`;
     } else if (kind === ':') {
         svg = `<line x1="${lineX}" y1="${top5}" x2="${lineX}" y2="${staffBottomY}" stroke="#000" stroke-width="${sw}"/>`;
     } else if (kind === '::') {

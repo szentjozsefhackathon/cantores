@@ -129,6 +129,7 @@ function tokenizeMusicLine(line, lineStart = 0) {
         }
         if (isPitchLetter(ch)) {
             const groups = [];
+            const gaps = []; // 'neume' for each explicit '/' boundary between groups
             while (true) {
                 const group = [];
                 while (i < len && isPitchLetter(line[i])) {
@@ -191,13 +192,14 @@ function tokenizeMusicLine(line, lineStart = 0) {
                     i = j + 1;
                     while (i < len && (line[i] === ' ' || line[i] === '\t')) { i++; }
                     if (i < len && isPitchLetter(line[i])) {
+                        gaps.push('neume');
                         continue;
                     }
                 }
                 break;
             }
             if (groups.length) {
-                tokens.push({ type: 'ligature', groups, srcStart: lineStart + tokStart, srcEnd: lineStart + i });
+                tokens.push({ type: 'ligature', groups, gaps, srcStart: lineStart + tokStart, srcEnd: lineStart + i });
             }
             continue;
         }
