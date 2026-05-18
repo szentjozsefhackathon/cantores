@@ -56,10 +56,11 @@ export function renderAretino(source, options = {}) {
     ctx.lyricSize = Math.max(6, (options.lyricSize ?? 12) * staffScale);
     ctx.canvasWidth = canvasWidth;
 
-    const systems = groupSystems(ast.lines);
+    const sections = groupSections(ast.lines);
 
     const parts = [];
     let currentClef = { letter: 'g', line: 2 };
+    let hasSeenClef = false;
     let y = ss(ctx, METRICS.titleTopPadding);
 
     if (ast.header && Object.keys(ast.header).length) {
@@ -72,130 +73,285 @@ export function renderAretino(source, options = {}) {
         }
     }
 
-    for (const sys of systems) {
-        const staffBottomY = y + ctx.staffHeight;
-        parts.push(drawStaffLines(ctx, ctx.leftMargin, canvasWidth - ctx.rightMargin, staffBottomY));
+    const staffRightX = canvasWidth - ctx.rightMargin;
 
-        let cursor = { x: ctx.leftMargin, clef: currentClef, glyphs: [] };
+    for (const sec of sections) {
+        const items = flattenItems(sec.tokens);
+        const sectionHasClef = items.some(it => it.kind === 'clef');
+        if (sectionHasClef) {
+            hasSeenClef = true;
+        }
+        const drawClefForRows = hasSeenClef;
+        const rows = layoutRows(items, ctx, currentClef, staffRightX, drawClefForRows);
 
-        const expanderIndices = [];
-        const items = [];
+        // For lyric-only sections (no music), still emit one empty row so lyrics render.
+        if (rows.length === 0 && sec.lyrics.length > 0) {
+            rows.push({
+                items: [],
+                itemsWidth: 0,
+                justify: false,
+                startClef: currentClef,
+                drawStartClef: drawClefForRows,
+            });
+        }
 
-        for (const tok of sys.music) {
-            if (tok.type === 'directive') {
-                const v = tok.value;
-                const clefM = v.match(/^([gfcGFC])([0-9])$/);
-                if (clefM) {
-                    cursor.clef = { letter: clefM[1].toLowerCase(), line: parseInt(clefM[2], 10) };
-                    const c = drawClef(ctx, cursor.clef, cursor.x, staffBottomY);
+        rows.forEach((row, rowIdx) => {
+            const staffBottomY = y + ctx.staffHeight;
+            parts.push(drawStaffLines(ctx, ctx.leftMargin, staffRightX, staffBottomY));
+
+            let cursorX = ctx.leftMargin;
+
+            if (row.drawStartClef) {
+                const c = drawClef(ctx, row.startClef, cursorX, staffBottomY);
+                parts.push(c.svg);
+                cursorX += c.advance + ss(ctx, METRICS.clefInlinePostGap);
+            }
+
+            const remaining = staffRightX - cursorX;
+            const extra = Math.max(0, remaining - row.itemsWidth);
+            const expanderCount = row.items.reduce((n, it) => n + (it.kind === 'expander' ? 1 : 0), 0);
+            const gapCount = Math.max(0, row.items.length - 1);
+            let extraPerExpander = 0;
+            let extraPerGap = 0;
+            if (row.justify && extra > 0) {
+                if (expanderCount > 0) {
+                    extraPerExpander = extra / expanderCount;
+                } else if (gapCount > 0) {
+                    extraPerGap = extra / gapCount;
+                }
+            }
+
+            for (let idx = 0; idx < row.items.length; idx++) {
+                const it = row.items[idx];
+                if (it.kind === 'clef') {
+                    const c = drawClef(ctx, it.clef, cursorX, staffBottomY);
                     parts.push(c.svg);
-                    cursor.x += c.advance + ss(ctx, METRICS.clefInlinePostGap);
-                    continue;
-                }
-                const accM = v.match(/^([a-mA-M]?)b([xy#])$/);
-                if (accM) {
-                    const a = drawAccidental(ctx, (accM[1] || 'b').toLowerCase(), accM[2], cursor.x, staffBottomY);
+                    cursorX += c.advance + ss(ctx, METRICS.clefInlinePostGap);
+                } else if (it.kind === 'accidental') {
+                    const a = drawAccidental(ctx, it.pitch, it.symbol, cursorX, staffBottomY);
                     parts.push(a.svg);
-                    cursor.x += a.advance;
-                    continue;
+                    cursorX += a.advance;
+                } else if (it.kind === 'expander') {
+                    cursorX += ctx.expanderWidth + extraPerExpander;
+                } else if (it.kind === 'barline') {
+                    const b = drawBarline(ctx, it.value, cursorX, staffBottomY);
+                    parts.push(b.svg);
+                    cursorX += b.advance + ss(ctx, METRICS.barlinePostGap);
+                } else if (it.kind === 'spacer') {
+                    cursorX += ss(ctx, METRICS.spacerAdvance) * it.multiplier;
+                } else if (it.kind === 'ligature') {
+                    const r = emitLigature(ctx, it.groups, cursorX, staffBottomY);
+                    parts.push(r.svg);
+                    cursorX += r.advance;
                 }
-                if (v === 'z') {
-                    continue;
+                if (idx < row.items.length - 1 && extraPerGap > 0) {
+                    cursorX += extraPerGap;
                 }
-                continue;
             }
-            if (tok.type === 'expander') {
-                items.push({ kind: 'expander' });
-                expanderIndices.push(items.length - 1);
-                continue;
-            }
-            if (tok.type === 'barline') {
-                items.push({ kind: 'barline', value: tok.kind });
-                continue;
-            }
-            if (tok.type === 'spacer') {
-                items.push({ kind: 'spacer', multiplier: tok.multiplier });
-                continue;
-            }
-            if (tok.type === 'ligature') {
-                items.push({ kind: 'ligature', groups: tok.groups });
-            }
-        }
 
-        // Measure natural width (no expanders).
-        let natural = 0;
-        for (let idx = 0; idx < items.length; idx++) {
-            const it = items[idx];
-            if (it.kind === 'expander') {
-                natural += ctx.expanderWidth;
-            } else if (it.kind === 'barline') {
-                natural += measureBarline(ctx, it.value);
-            } else if (it.kind === 'spacer') {
-                natural += ss(ctx, METRICS.spacerAdvance) * it.multiplier;
-            } else if (it.kind === 'ligature') {
-                natural += measureLigature(ctx, it.groups);
+            const isLastRow = rowIdx === rows.length - 1;
+            let lyricY = staffBottomY + ctx.systemGap + ctx.lyricSize;
+            if (isLastRow && sec.lyrics.length > 0) {
+                for (const lyric of sec.lyrics) {
+                    parts.push(`<text xml:space="preserve" x="${ctx.leftMargin}" y="${lyricY}" font-family="${escapeAttr(ctx.lyricFont)}" font-size="${ctx.lyricSize}" fill="#000">${escapeText(lyric)}</text>`);
+                    lyricY += ctx.lyricSize * 1.4;
+                }
+                y = lyricY + ctx.lyricToNextStaff;
+            } else {
+                y = staffBottomY + ctx.systemGap + ctx.lyricToNextStaff;
             }
-        }
-        const available = (canvasWidth - ctx.rightMargin) - cursor.x;
-        const extra = Math.max(0, available - natural);
-        const extraPer = expanderIndices.length > 0 ? extra / expanderIndices.length : 0;
+        });
 
-        for (let idx = 0; idx < items.length; idx++) {
-            const it = items[idx];
-            if (it.kind === 'expander') {
-                cursor.x += ctx.expanderWidth + extraPer;
-            } else if (it.kind === 'barline') {
-                const b = drawBarline(ctx, it.value, cursor.x, staffBottomY);
-                parts.push(b.svg);
-                cursor.x += b.advance + ss(ctx, METRICS.barlinePostGap);
-            } else if (it.kind === 'spacer') {
-                cursor.x += ss(ctx, METRICS.spacerAdvance) * it.multiplier;
-            } else if (it.kind === 'ligature') {
-                const r = emitLigature(ctx, it.groups, cursor.x, staffBottomY);
-                parts.push(r.svg);
-                cursor.x += r.advance;
-            }
-        }
-
-        currentClef = cursor.clef;
-
-        // Lyric line(s).
-        let lyricY = staffBottomY + ctx.systemGap + ctx.lyricSize;
-        if (sys.lyrics.length > 0) {
-            for (const lyric of sys.lyrics) {
-                parts.push(`<text xml:space="preserve" x="${ctx.leftMargin}" y="${lyricY}" font-family="${escapeAttr(ctx.lyricFont)}" font-size="${ctx.lyricSize}" fill="#000">${escapeText(lyric)}</text>`);
-                lyricY += ctx.lyricSize * 1.4;
-            }
-            y = lyricY + ctx.lyricToNextStaff;
-        } else {
-            y = staffBottomY + ctx.systemGap + ctx.lyricToNextStaff;
-        }
+        currentClef = trailingClef(items, currentClef);
     }
 
     const totalHeight = canvasHeight || Math.max(y + ctx.staffSpace, 100);
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvasWidth} ${totalHeight}" preserveAspectRatio="xMidYMin meet" width="100%" style="display:block">${parts.join('')}</svg>`;
 }
 
-function groupSystems(lines) {
-    const systems = [];
+function trailingClef(items, fallback) {
+    for (let i = items.length - 1; i >= 0; i--) {
+        if (items[i].kind === 'clef') {
+            return items[i].clef;
+        }
+    }
+    return fallback;
+}
+
+// A section bundles a run of music tokens (concatenated across input music
+// lines) with the lyric lines that immediately follow it. A new section starts
+// when a music line appears after lyrics, mirroring the natural "verse" unit
+// in a score.
+function groupSections(lines) {
+    const sections = [];
     let pending = null;
+    let lyricStarted = false;
     for (const item of lines) {
         if (item.type === 'music') {
-            if (pending) {
-                systems.push(pending);
+            if (!pending || lyricStarted) {
+                if (pending) {
+                    sections.push(pending);
+                }
+                pending = { tokens: [], lyrics: [] };
+                lyricStarted = false;
             }
-            pending = { music: item.tokens, lyrics: [] };
+            pending.tokens.push(...item.tokens);
         } else if (item.type === 'lyrics') {
             if (!pending) {
-                pending = { music: [], lyrics: [] };
+                pending = { tokens: [], lyrics: [] };
             }
             pending.lyrics.push(item.text);
+            lyricStarted = true;
         }
     }
     if (pending) {
-        systems.push(pending);
+        sections.push(pending);
     }
-    return systems;
+    return sections;
+}
+
+function flattenItems(tokens) {
+    const items = [];
+    for (const tok of tokens) {
+        if (tok.type === 'directive') {
+            const v = tok.value;
+            const clefM = v.match(/^([gfcGFC])([0-9])$/);
+            if (clefM) {
+                items.push({ kind: 'clef', clef: { letter: clefM[1].toLowerCase(), line: parseInt(clefM[2], 10) } });
+                continue;
+            }
+            const accM = v.match(/^([a-mA-M]?)b([xy#])$/);
+            if (accM) {
+                items.push({ kind: 'accidental', pitch: (accM[1] || 'b').toLowerCase(), symbol: accM[2] });
+                continue;
+            }
+            if (v === 'z') {
+                items.push({ kind: 'break', justify: true });
+                continue;
+            }
+            if (v === 'Z') {
+                items.push({ kind: 'break', justify: false });
+                continue;
+            }
+            continue;
+        }
+        if (tok.type === 'expander') {
+            items.push({ kind: 'expander' });
+            continue;
+        }
+        if (tok.type === 'barline') {
+            items.push({ kind: 'barline', value: tok.kind });
+            continue;
+        }
+        if (tok.type === 'spacer') {
+            items.push({ kind: 'spacer', multiplier: tok.multiplier });
+            continue;
+        }
+        if (tok.type === 'ligature') {
+            items.push({ kind: 'ligature', groups: tok.groups });
+            continue;
+        }
+    }
+    return items;
+}
+
+// Mirrors the advance returned by drawClef in glyphs.js. We need it during
+// the line-fit pass before any drawing happens.
+function clefAdvance(ctx, clef) {
+    const letter = (clef.letter || 'g').toLowerCase();
+    const k = ctx.staffSpace / 591;
+    if (letter === 'g') {
+        return (2621 - 1186) * k + ss(ctx, METRICS.clefPostGap);
+    }
+    if (letter === 'f') {
+        return (2889 - 1239) * k + ss(ctx, METRICS.clefPostGap);
+    }
+    if (letter === 'c') {
+        return ss(ctx, METRICS.clefCWidth) + ss(ctx, METRICS.clefCRightPadding);
+    }
+    return 0;
+}
+
+function measureItem(ctx, item) {
+    if (item.kind === 'clef') {
+        return clefAdvance(ctx, item.clef) + ss(ctx, METRICS.clefInlinePostGap);
+    }
+    if (item.kind === 'accidental') {
+        return ss(ctx, METRICS.accidentalAdvance);
+    }
+    if (item.kind === 'barline') {
+        return measureBarline(ctx, item.value);
+    }
+    if (item.kind === 'spacer') {
+        return ss(ctx, METRICS.spacerAdvance) * item.multiplier;
+    }
+    if (item.kind === 'expander') {
+        return ctx.expanderWidth;
+    }
+    if (item.kind === 'ligature') {
+        return measureLigature(ctx, item.groups);
+    }
+    return 0;
+}
+
+// Greedy line-fit. Walks items, accumulating widths, breaking before any
+// item that would push the row past the right margin. Explicit (z)/(Z)
+// directives appear as `break` items and force a row finalization.
+function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef) {
+    const rows = [];
+    let cur = [];
+    let curWidth = 0;
+    let rowStartClef = initialClef;
+    let runningClef = initialClef;
+
+    function rowItemsAvailable() {
+        const clefSlot = drawStartClef
+            ? clefAdvance(ctx, rowStartClef) + ss(ctx, METRICS.clefInlinePostGap)
+            : 0;
+        return staffRightX - ctx.leftMargin - clefSlot;
+    }
+
+    function finalize(justify) {
+        if (cur.length === 0) {
+            return;
+        }
+        rows.push({
+            items: cur,
+            itemsWidth: curWidth,
+            justify,
+            startClef: rowStartClef,
+            drawStartClef,
+        });
+        cur = [];
+        curWidth = 0;
+        rowStartClef = runningClef;
+    }
+
+    for (const item of items) {
+        if (item.kind === 'break') {
+            finalize(item.justify);
+            continue;
+        }
+        if (item.kind === 'clef') {
+            runningClef = item.clef;
+            if (cur.length === 0) {
+                rowStartClef = item.clef;
+                continue;
+            }
+        }
+        const w = measureItem(ctx, item);
+        if (cur.length > 0 && curWidth + w > rowItemsAvailable()) {
+            finalize(true);
+            if (item.kind === 'clef') {
+                rowStartClef = item.clef;
+                continue;
+            }
+        }
+        cur.push(item);
+        curWidth += w;
+    }
+    finalize(false);
+    return rows;
 }
 
 function measureBarline(ctx, kind) {
