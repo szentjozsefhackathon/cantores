@@ -115,8 +115,8 @@ export const METRICS = {
     spacerAdvance: 1,                   // default width of one (sp) spacer unit
 
     // --- Page layout ------------------------------------------------------
-    leftMargin: 5,
-    rightMargin: 3,
+    leftMargin: 1,
+    rightMargin: 1,
     systemGap: 1.5,
     lyricToNextStaff: 2.5,
     titleTopPadding: 1.5,
