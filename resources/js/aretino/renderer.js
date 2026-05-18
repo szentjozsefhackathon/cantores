@@ -430,17 +430,17 @@ function emitLigature(ctx, groups, x, staffBottomY) {
         }
 
         // Auto-virga per group: every local pitch peak gets a downward stem on the left.
-        // Left side strict (>), right side non-strict (>=) so only the first note of a
-        // plateau is marked.
+        // Left side non-strict (>=), right side strict (>) so only the last note of a
+        // plateau is marked (e.g. "ggf" → virga on the second g).
         const autoVirga = new Array(notes.length).fill(false);
         if (notes.length >= 2) {
             const pitchPositions = notes.map(n => pitchToPos(n));
             const hasVariation = Math.max(...pitchPositions) > Math.min(...pitchPositions);
             if (hasVariation) {
                 for (let i = 0; i < notes.length; i++) {
-                    const higherThanLeft = i === 0 || pitchPositions[i] > pitchPositions[i - 1];
-                    const atLeastAsHighAsRight = i === notes.length - 1 || pitchPositions[i] >= pitchPositions[i + 1];
-                    if (higherThanLeft && atLeastAsHighAsRight) {
+                    const atLeastAsHighAsLeft = i === 0 || pitchPositions[i] >= pitchPositions[i - 1];
+                    const higherThanRight = i === notes.length - 1 || pitchPositions[i] > pitchPositions[i + 1];
+                    if (atLeastAsHighAsLeft && higherThanRight) {
                         autoVirga[i] = true;
                     }
                 }
