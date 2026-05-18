@@ -25,8 +25,8 @@ document.addEventListener('alpine:init', () => {
                 const width = preview.clientWidth || 700;
                 const svg = renderAretino(this.content, {
                     canvasWidth: width,
-                    staffSize: 100,
-                    lyricSize: 13,
+                    staffSize: 90,
+                    lyricSize: 16,
                     lyricFont: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
                 });
                 preview.innerHTML = svg;
