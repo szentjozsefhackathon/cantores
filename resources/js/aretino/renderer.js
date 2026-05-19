@@ -1004,7 +1004,7 @@ function measureTextWidth(text, fontSize, fontFamily) {
 // barline rather than the next ligature.
 function parseSyllables(text) {
     const result = [];
-    const src = text || '';
+    const src = substituteSymbols(text || '');
     // Strip formatting tags and track bold/italic state per character position.
     const tagRe = /<\/?[bi]>/gi;
     let cleaned = '';
@@ -1133,8 +1133,17 @@ function renderSegments(segments) {
     }).join('');
 }
 
+function substituteSymbols(text) {
+    return text
+        .replace(/\+\+/g, '‡')
+        .replace(/\+/g, '†')
+        .replace(/R\//g, '℟')
+        .replace(/V\//g, '℣');
+}
+
 // Converts a lyric line with <b>/<i> formatting tags into SVG tspan elements.
 function formatLyricLine(text) {
+    text = substituteSymbols(text);
     const tagRe = /<\/?[bi]>/gi;
     const segments = [];
     let bold = false;

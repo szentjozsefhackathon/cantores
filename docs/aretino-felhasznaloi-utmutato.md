@@ -641,6 +641,14 @@ Hogy a szöveg tördelését ne zavarják a verszakok számai, R., V. egyéb jel
 w: 1.~~Ki-rá-lyok-nak Ki-rá-lya (†) és~Atyja...
 ```
 
+### Speciális karakterek
+Néhány karaktert speciálisan jelenítünk meg.
+
+```aretino
+c d e f
+w: R/ V/ + ++
+``` 
+
 ### Szövegformázás (dőlt, félkövér)
 
 A szöveges sorokba egyszerű formázó jelöléseket is tehetünk:
