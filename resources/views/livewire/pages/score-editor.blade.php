@@ -497,6 +497,15 @@ window.abc2svg = window.abc2svg || {};
                             </flux:select>
                         </div>
 
+                        <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
+
+                        <div class="flex items-center gap-1">
+                            <flux:tooltip :content="__('Space between lines')">
+                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="aretinoStaffGap" min="0" max="10" step="0.5" class="w-16" />
+                        </div>
+
                         @if(!$isGuest)
                         <flux:tooltip :content="__('Save as my default for this ratio')">
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />

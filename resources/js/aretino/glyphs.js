@@ -129,8 +129,7 @@ export const METRICS = {
     // --- Page layout ------------------------------------------------------
     leftMargin: 1,
     rightMargin: 1,
-    systemGap: 1.5,
-    lyricToNextStaff: 2.5,
+    staffGap: 2.5,
     titleTopPadding: 1.5,
     lyricDistance: 0.1
 };

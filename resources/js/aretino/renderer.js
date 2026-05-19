@@ -63,9 +63,8 @@ export function renderAretino(source, options = {}) {
     ctx.neumeGapAdvance = ss(ctx, METRICS.neumeGapAdvance);
     ctx.leftMargin = ss(ctx, METRICS.leftMargin);
     ctx.rightMargin = ss(ctx, METRICS.rightMargin);
-    ctx.systemGap = ss(ctx, METRICS.systemGap);
+    ctx.staffGap = Math.max(0, ss(ctx, options.staffGap ?? METRICS.staffGap));
     ctx.lyricDistance = ss(ctx, METRICS.lyricDistance);
-    ctx.lyricToNextStaff = ss(ctx, METRICS.lyricToNextStaff);
     ctx.lyricFont = lyricFont;
     // lyricSize is in typographic points; convert to SVG user units for the virtual canvas.
     // Scale proportionally to canvas width but clamp the ratio so lyrics stay readable on small screens.
@@ -81,6 +80,7 @@ export function renderAretino(source, options = {}) {
     let currentKeySig = [];
     let hasSeenClef = false;
     let y = ss(ctx, METRICS.titleTopPadding);
+    let contentBottom = y;
 
     if (ast.header && Object.keys(ast.header).length) {
         const title = ast.header['cím'] || ast.header['title'];
@@ -353,15 +353,22 @@ export function renderAretino(source, options = {}) {
                 }
                 ligOffset += rowLigCount;
                 barlineOffset += rowBarlineCount;
-                y = lyricY + ctx.lyricToNextStaff;
+                // lyricY has advanced one full line past the last rendered baseline;
+                // only add descender clearance, not another full line height.
+                const lastLyricBottom = lyricY - ctx.lyricSize * 1.4 + ctx.lyricSize * 0.3;
+                contentBottom = Math.max(contentBottom, lastLyricBottom);
+                y = lastLyricBottom + ctx.staffGap;
             } else if (isLastRow && verseCount > 0) {
                 for (const lyric of sec.lyrics) {
                     parts.push(`<text xml:space="preserve" x="${ctx.leftMargin}" y="${lyricY}" font-family="${escapeAttr(ctx.lyricFont)}" font-size="${ctx.lyricSize}" fill="#000">${formatLyricLine(lyric)}</text>`);
                     lyricY += ctx.lyricSize * 1.4;
                 }
-                y = lyricY + ctx.lyricToNextStaff;
+                const lastLyricBottom = lyricY - ctx.lyricSize * 1.4 + ctx.lyricSize * 0.3;
+                contentBottom = Math.max(contentBottom, lastLyricBottom);
+                y = lastLyricBottom + ctx.staffGap;
             } else {
-                y = staffBottomY + ctx.systemGap + ctx.lyricToNextStaff;
+                y = staffBottomY + ctx.staffGap;
+                contentBottom = Math.max(contentBottom, y);
             }
         });
 
@@ -369,7 +376,7 @@ export function renderAretino(source, options = {}) {
         currentKeySig = trailingKeySig(items, currentKeySig);
     }
 
-    const totalHeight = canvasHeight || Math.max(y + ctx.staffSpace, 100);
+    const totalHeight = canvasHeight || Math.max(contentBottom, y + ctx.staffSpace, 100);
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvasWidth} ${totalHeight}" preserveAspectRatio="xMidYMin meet" width="100%" style="display:block">${HIGHLIGHT_STYLE}${parts.join('')}</svg>`;
 }
 
@@ -436,7 +443,7 @@ function flattenItems(tokens) {
             }
             const accM = v.match(/^([a-mA-M]?)b([xy#])$/);
             if (accM) {
-                items.push({ kind: 'accidental', pitch: (accM[1] || 'b').toLowerCase(), symbol: accM[2], ...src });
+                items.push({ kind: 'accidental', pitch: (accM[1] || 'i').toLowerCase(), symbol: accM[2], ...src });
                 continue;
             }
             const keyM = v.match(/^K:\s*(.*)$/);
@@ -447,7 +454,7 @@ function flattenItems(tokens) {
                     for (const part of inner.split(/\s+/)) {
                         const m = part.match(/^([a-mA-M]?)b([xy#])$/);
                         if (m) {
-                            accidentals.push({ pitch: (m[1] || 'b').toLowerCase(), symbol: m[2] });
+                            accidentals.push({ pitch: (m[1] || 'i').toLowerCase(), symbol: m[2] });
                         }
                     }
                 }
