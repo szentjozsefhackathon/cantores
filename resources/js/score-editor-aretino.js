@@ -1,4 +1,4 @@
-import { renderAretino } from './aretino/index.js';
+import { renderAretino } from '@aretino-chant/core';
 
 const ARETINO_STAFF_SIZE_CALIBRATION = 1.3;
 

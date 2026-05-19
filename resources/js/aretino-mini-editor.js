@@ -1,4 +1,4 @@
-import { renderAretino } from './aretino/index.js';
+import { renderAretino } from '@aretino-chant/core';
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('aretinoMiniEditor', (initialContent = '') => ({
