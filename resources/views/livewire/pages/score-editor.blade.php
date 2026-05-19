@@ -1,7 +1,7 @@
 <div class="py-8">
     <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <flux:card class="p-4 lg:p-6">
-            <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                     <flux:heading size="2xl">
                         @if($score)
@@ -9,7 +9,7 @@
                         @elseif($isSharedLink && $isGuest)
                             {{ __('Score Preview') }}
                         @elseif($isGuest)
-                            Kottaszerkesztő
+                            {{ __('Score Editor') }}
                         @else
                             {{ __('Create Score') }}
                         @endif
@@ -56,11 +56,13 @@
             <div class="space-y-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <flux:field required>
+                        <flux:label class="inline">{{ __('Score title') }}</flux:label>
                         <flux:input wire:model="title" :placeholder="__('Score title')" autofocus />
                         <flux:error name="title" />
                     </flux:field>
 
                     <flux:field required>
+                        <flux:label class="inline">{{ __('Format') }}</flux:label>
                         <flux:select wire:model="format">
                             @foreach($formats as $formatOption)
                                 <flux:select.option value="{{ $formatOption->value }}">{{ $formatOption->label() }}</flux:select.option>
@@ -124,6 +126,7 @@ window.abc2svg = window.abc2svg || {};
                         plainTextCopied: @js(__('Plain text copied to clipboard!')),
                         copyAsImageText: @js(__('Copy as Image')),
                         exportPngText: @js(__('Export PNG')),
+                        exportSvgText: @js(__('Export SVG')),
                     })"
                 >
                     <div x-show="$wire.format === 'abc'" x-cloak class="mb-2 flex items-center gap-4">

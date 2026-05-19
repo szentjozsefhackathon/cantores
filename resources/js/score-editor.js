@@ -61,6 +61,7 @@ document.addEventListener('alpine:init', () => {
         plainTextCopied: config.plainTextCopied ?? '',
         copyAsImageText: config.copyAsImageText ?? '',
         exportPngText: config.exportPngText ?? '',
+        exportSvgText: config.exportSvgText ?? '',
         renderTimer: null,
         scoreSettings: config.scoreSettings ?? {},
         userDefaults: config.userDefaults ?? {},
@@ -354,9 +355,17 @@ document.addEventListener('alpine:init', () => {
             exportBtn.innerHTML = dlIcon + this.exportPngText;
             exportBtn.addEventListener('click', () => this.exportPagePng(pageEl, pageIdx, totalPages, format, this.$wire.title));
 
+            const svgIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>';
+            const exportSvgBtn = document.createElement('button');
+            exportSvgBtn.type = 'button';
+            exportSvgBtn.className = btnClass;
+            exportSvgBtn.innerHTML = svgIcon + this.exportSvgText;
+            exportSvgBtn.addEventListener('click', () => this.exportPageSvg(pageEl, pageIdx, totalPages, format, this.$wire.title));
+
             bar.appendChild(feedbackSpan);
             bar.appendChild(copyBtn);
             bar.appendChild(exportBtn);
+            bar.appendChild(exportSvgBtn);
             pageEl.insertAdjacentElement('afterend', bar);
         },
 
@@ -452,6 +461,107 @@ document.addEventListener('alpine:init', () => {
                 a.href = canvas.toDataURL('image/png');
                 a.click();
             }).catch(e => console.error('[score-editor] export error:', e));
+        },
+
+        async exportPageSvg(pageEl, pageIdx, totalPages, format, title) {
+            const svgs = Array.from(pageEl.querySelectorAll('svg'));
+            if (!svgs.length) { return; }
+            const base = title ? title.trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '') || 'score' : 'score';
+            const filename = totalPages > 1 ? base + '-page-' + pageIdx + '.cantores.hu.svg' : base + '.cantores.hu.svg';
+            try {
+                let svgData;
+                if (format === 'abc' && svgs.length > 1) {
+                    svgData = await this.buildMergedSvg(svgs);
+                } else {
+                    const clone = svgs[0].cloneNode(true);
+                    let lyricFont;
+                    if (format === 'aretino') { lyricFont = this.aretinoLyricFont; }
+                    else if (format === 'abc') { lyricFont = this.abcLyricFont; }
+                    else { lyricFont = this.lyricFont; }
+                    await injectWebFontsIntoSvg(clone, [lyricFont]);
+                    svgData = new XMLSerializer().serializeToString(clone);
+                }
+                const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.download = filename;
+                a.href = url;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('[score-editor] svg export error:', e);
+            }
+        },
+
+        async buildMergedSvg(svgs) {
+            const dims = svgs.map(svg => {
+                const vb = svg.getAttribute('viewBox');
+                if (vb) {
+                    const [x, y, w, h] = vb.split(/\s+/).map(Number);
+                    return { x, y, w, h };
+                }
+                return { x: 0, y: 0, w: 1920, h: 200 };
+            });
+            const maxW = Math.max(...dims.map(d => d.w));
+            const totalH = dims.reduce((sum, d) => sum + d.h, 0);
+            const ns = 'http://www.w3.org/2000/svg';
+            const wrapper = document.createElementNS(ns, 'svg');
+            wrapper.setAttribute('xmlns', ns);
+            wrapper.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            wrapper.setAttribute('viewBox', `0 0 ${maxW} ${totalH}`);
+            wrapper.setAttribute('width', String(maxW));
+            wrapper.setAttribute('height', String(totalH));
+            wrapper.setAttribute('color', '#000');
+            wrapper.setAttribute('fill', 'currentColor');
+
+            // Hoist <style> and <defs> to the wrapper root so @font-face rules
+            // and glyph definitions are at document scope, not buried inside <g>
+            // elements where some SVG renderers won't process them.
+            let combinedStyle = `.sW{stroke-width:${this.abcStemWidth}!important}.slW{stroke-width:${this.abcStaffLineWidth}!important}\n`;
+            const mergedDefs = document.createElementNS(ns, 'defs');
+            const seenIds = new Set();
+
+            let yOffset = 0;
+            svgs.forEach((svg, i) => {
+                const d = dims[i];
+                const clone = svg.cloneNode(true);
+                const g = document.createElementNS(ns, 'g');
+                g.setAttribute('transform', `translate(${-d.x} ${yOffset - d.y})`);
+                ['class', 'fill', 'stroke-width', 'color'].forEach(attr => {
+                    const val = clone.getAttribute(attr);
+                    if (val) { g.setAttribute(attr, val); }
+                });
+                Array.from(clone.childNodes).forEach(child => {
+                    const tag = child.nodeName.toLowerCase();
+                    if (tag === 'style') {
+                        combinedStyle += child.textContent + '\n';
+                    } else if (tag === 'defs') {
+                        Array.from(child.childNodes).forEach(def => {
+                            if (def.nodeType !== 1) { return; }
+                            const id = def.getAttribute && def.getAttribute('id');
+                            if (id) {
+                                if (seenIds.has(id)) { return; }
+                                seenIds.add(id);
+                            }
+                            mergedDefs.appendChild(def.cloneNode(true));
+                        });
+                    } else {
+                        g.appendChild(child);
+                    }
+                });
+                wrapper.appendChild(g);
+                yOffset += d.h;
+            });
+
+            const styleEl = document.createElementNS(ns, 'style');
+            styleEl.textContent = combinedStyle;
+            wrapper.insertBefore(styleEl, wrapper.firstChild);
+            if (mergedDefs.childNodes.length) {
+                wrapper.insertBefore(mergedDefs, wrapper.firstChild);
+            }
+
+            await injectWebFontsIntoSvg(wrapper, [this.abcLyricFont]);
+            return new XMLSerializer().serializeToString(wrapper);
         },
 
         async copyPageImage(pageEl, format, showFeedback) {
