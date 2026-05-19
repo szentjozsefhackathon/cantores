@@ -1,12 +1,11 @@
 | Fejléc | Jelentés |
 |---|---|
-| `X:1` | sorszám (kötelező, egész szám) |
+| `K:G` | hangnem (kötelező, lezárja a fejlécet) |
 | `T:Cím` | cím |
 | `C:Szerző` | szerző/zeneszerző |
 | `M:4/4` | ütemmutatő (`C` = common, `C\|` = alla breve) |
 | `L:1/8` | alapértékű hanghossz |
 | `Q:120` | tempó (ütés/perc), pl. `Q:1/4=120` |
-| `K:G` | hangnem (lezárja a fejlécet) |
 
 | Hangmagasság | |
 |---|---|
@@ -20,7 +19,7 @@
 | `A` | alapértékű hang (L: szerint) |
 | `A2` | kétszeres hossz |
 | `A/2` vagy `A/` | feles hossz |
-| `A3/2` | pontozott |
+| `A3/2`, `A>`, `A<` | pontozott |
 | `z` | szünet (hossza ugyanúgy módosítható) |
 | `x` | láthatatlan szünet |
 
@@ -43,18 +42,18 @@
 
 | Kötések és díszítések | |
 |---|---|
-| `(ABC)` | legato ív (slur) |
-| `A-B` | kötőív (tie) |
-| `~A` | rögtönzött díszítés |
+| `(ABC)` | legato ív |
+| `A-B` | kötőív |
 | `.A` | staccato |
-| `TA` | trill |
-| `{fg}` | gracenotes (előkék) |
+| `TA` | trilla |
+| `HA` | fermata |
+| `{fg}` | előkék |
 
 | Akkordok és többszólamúság | |
 |---|---|
 | `[CEG]` | akkord (egyszerre szóló hangok) |
-| `[V:1]` `[V:2]` | hangszólamok inline váltása |
-| `V:1` `V:2` | hangszólam-fejléc (sor elején) |
+| `V:1` `V:2` | szólam jelölés (külön sorban) |
+| `&C` | Alsó szólam
 
 | Szöveg | |
 |---|---|

@@ -127,7 +127,7 @@ window.abc2svg = window.abc2svg || {};
                     })"
                 >
                     <div x-show="$wire.format === 'abc'" x-cloak class="mb-2 flex items-center gap-4">
-                        <flux:link href="https://abcplus.sourceforge.net/abcplus_en.html" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+                        <flux:link href="https://abcplus.sourceforge.net" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('ABC guide') }}
                         </flux:link>
                         <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('abc-cheatsheet').show()">
