@@ -35,9 +35,7 @@
                     <flux:table.columns>
                         <flux:table.column>{{ __('Title') }}</flux:table.column>
                         <flux:table.column>{{ __('Format') }}</flux:table.column>
-                        <flux:table.column>{{ __('Attached Music') }}</flux:table.column>
                         <flux:table.column>{{ __('Updated') }}</flux:table.column>
-                        <flux:table.column>{{ __('Actions') }}</flux:table.column>
                     </flux:table.columns>
 
                     <flux:table.rows>
@@ -45,32 +43,26 @@
                             <flux:table.row wire:key="score-row-{{ $score->id }}">
                                 <flux:table.cell>
                                     <div class="flex items-center gap-1.5 font-medium">
-                                        {{ $score->title }}
+                                        <a href="{{ route('scores.edit', ['score' => $score->id]) }}" wire:navigate class="hover:underline">
+                                            {{ $score->title }}
+                                        </a>
                                         @if($score->share_token)
                                             <flux:icon name="link" size="sm" class="text-blue-500 dark:text-blue-400" :title="__('Secret link active')" />
                                         @endif
                                     </div>
+                                    @if($score->music)
+                                        <div class="mt-1">
+                                            <a href="{{ route('music-view', $score->music) }}" wire:navigate class="text-sm text-blue-600 hover:underline dark:text-blue-400">
+                                                {{ $score->music->title }}
+                                            </a>
+                                        </div>
+                                    @endif
                                 </flux:table.cell>
                                 <flux:table.cell>
                                     <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
                                 </flux:table.cell>
                                 <flux:table.cell>
-                                    @if($score->music)
-                                        <a href="{{ route('music-view', $score->music) }}" wire:navigate class="text-blue-600 hover:underline dark:text-blue-400">
-                                            {{ $score->music->title }}
-                                        </a>
-                                    @else
-                                        <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('Not attached') }}</span>
-                                    @endif
-                                </flux:table.cell>
-                                <flux:table.cell>
                                     <span class="text-sm text-gray-600 dark:text-gray-400">{{ $score->updated_at->translatedFormat('Y-m-d H:i') }}</span>
-                                </flux:table.cell>
-                                <flux:table.cell>
-                                    <div class="flex items-center gap-2">
-                                        <flux:button variant="ghost" size="sm" icon="pencil" :href="route('scores.edit', ['score' => $score->id])" wire:navigate :title="__('Edit')" />
-                                        <flux:button variant="ghost" size="sm" icon="trash" wire:click="delete({{ $score->id }})" wire:confirm="{{ __('Are you sure you want to delete this score?') }}" :title="__('Delete')" />
-                                    </div>
                                 </flux:table.cell>
                             </flux:table.row>
                         @endforeach
