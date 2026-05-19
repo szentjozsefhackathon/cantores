@@ -302,15 +302,27 @@ A három fő építőelem:
 A fejléc-sorok pontosvesszővel kezdődnek (`;kulcs: érték`), és a `%%` lezárja:
 
 ```aretino
-;title: Vesperás
+;title: Kezdő fohász
+;caption: Vesperás
 %%
 (g2) h h h g h j i g h. ||
 w: Is-te-nem, hall-gass hí-vá-som-ra!
 ```
 
-A megjelenítő jelenleg a `title` kulcsot jeleníti meg középre
-igazítva, félkövéren a kotta fölött. A többi mező a forráshoz tartozó
-metaadat — későbbi verziókban megjelenhet a fejlécben.
+| Kulcs | Magyar alias | Leírás |
+|---|---|---|
+| `title` | `cím` | Cím, középre igazítva, félkövér. |
+| `caption` | `felirat` | Felírat, jobbra igazítva, dőlt. |
+| `indent` | `behúzás` | Behúzás az első sor elején. Ha értéket adsz (pl. `I.d`), kis dőlt betűvel jelenik meg. |
+
+Az `indent` kulcs a hangnem/tónus-jelzés tipikus helye, a kottasor bal szélén:
+
+```aretino
+;indent: I.d
+%%
+(g2) g h i g. hi h g e_d_ , g hi a'g g. ||
+w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
+```
 
 A fejléc **elhagyható**, lehet rögtön dallamsorral kezdeni.
 
@@ -716,7 +728,7 @@ válaszd ki az **Aretino** opciót. Élő előnézet jelenik meg a forrás alatt
 | **Nagyítás** | Az előnézet zoom-szintje (csak megjelenítés). |
 | **Kotta méret** | A vonalrendszer fizikai mérete pontban (alapérték 100). |
 | **Szöveg méret** | A liturgikus szöveg betűmérete. |
-| **Szöveg betűtípusa** | Palatino / serif család a szöveghez. |
+| **Szöveg betűtípusa** | Előre megadott, szabadon felhasználható betűtípusok |
 | **Oldalarány** | Az exportált oldal képaránya (`auto` = adat-méret szerinti). |
 | **Sorok távolsága** | A kottarendszerek közötti függőleges szóköz állítása (0 = alapértelmezett). |
 
@@ -736,9 +748,7 @@ Ha az oldalarányt `16:9`, `4:3` vagy `1:1` értékre állítod, a forrásban `%
 
 ### Export
 
-A kotta SVG formátumban exportálható és másolható is — a `score-editor`
-oldalon a megfelelő gombok használhatóak. Az exportált SVG önállóan
-megnyitható és nyomtatható.
+A kotta SVG és PNG formátumban exportálható és képként másolható is. Így szöveg- és kiadványszerkesztőben akár professzionális nyomtatással is előállítható.
 
 ---
 

@@ -74,6 +74,15 @@ export function renderAretino(source, options = {}) {
     ctx.lyricSize = lyricPt * (96 / 72) * lyricScale;
     ctx.canvasWidth = canvasWidth;
 
+    const hasIndent = 'indent' in ast.header || 'behúzás' in ast.header;
+    const indentText = hasIndent ? (ast.header['indent'] ?? ast.header['behúzás'] ?? '') : '';
+    const indentFontSize = ctx.lyricSize * 0.85;
+    let indentWidth = 0;
+    if (hasIndent) {
+        const textW = indentText ? measureTextWidth(indentText, indentFontSize, lyricFont) : 0;
+        indentWidth = Math.max(textW + ctx.staffSpace * 1.5, ctx.staffSpace * 2);
+    }
+
     const sections = groupSections(ast.lines);
 
     const parts = [];
@@ -81,6 +90,7 @@ export function renderAretino(source, options = {}) {
     let currentKeySig = [];
     let hasSeenClef = false;
     let clefRowsBudget = hideRepeatClef ? 1 : Infinity;
+    let firstSectionLayoutDone = false;
     let y = ss(ctx, METRICS.titleTopPadding);
     let contentBottom = y;
 
@@ -90,6 +100,13 @@ export function renderAretino(source, options = {}) {
             const fontSize = ctx.lyricSize * 1.6;
             y += fontSize;
             parts.push(`<text x="${canvasWidth / 2}" y="${y}" font-family="${escapeAttr(lyricFont)}" font-size="${fontSize}" font-weight="bold" text-anchor="middle" fill="#000">${escapeText(title)}</text>`);
+            y += fontSize * 0.4;
+        }
+        const caption = ast.header['caption'] || ast.header['felirat'];
+        if (caption) {
+            const fontSize = ctx.lyricSize * 0.95;
+            y += fontSize;
+            parts.push(`<text x="${canvasWidth - ctx.rightMargin}" y="${y}" font-family="${escapeAttr(lyricFont)}" font-size="${fontSize}" font-style="italic" text-anchor="end" fill="#000">${escapeText(caption)}</text>`);
             y += fontSize * 0.4;
         }
     }
@@ -231,7 +248,9 @@ export function renderAretino(source, options = {}) {
         }
 
         const allowedClefRows = drawClefForRows ? clefRowsBudget : 0;
-        const rows = layoutRows(items, ctx, currentClef, staffRightX, drawClefForRows, currentKeySig, allowedClefRows);
+        const firstRowIndent = firstSectionLayoutDone ? 0 : indentWidth;
+        firstSectionLayoutDone = true;
+        const rows = layoutRows(items, ctx, currentClef, staffRightX, drawClefForRows, currentKeySig, allowedClefRows, firstRowIndent);
 
         if (hideRepeatClef) {
             const clefRowsUsed = rows.filter(r => r.drawStartClef).length;
@@ -251,6 +270,7 @@ export function renderAretino(source, options = {}) {
                 startClef: currentClef,
                 startKeySig: currentKeySig,
                 drawStartClef: emptyRowDrawClef,
+                indentWidth: firstRowIndent,
             });
         }
 
@@ -258,10 +278,18 @@ export function renderAretino(source, options = {}) {
         let globalBarlineIdx = 0;
 
         rows.forEach((row, rowIdx) => {
+            const rowIndent = row.indentWidth || 0;
+            const staffLeftX = ctx.leftMargin + rowIndent;
             const staffBottomY = y + ctx.staffHeight;
-            parts.push(drawStaffLines(ctx, ctx.leftMargin, staffRightX, staffBottomY));
+            parts.push(drawStaffLines(ctx, staffLeftX, staffRightX, staffBottomY));
 
-            let cursorX = ctx.leftMargin;
+            if (rowIndent > 0 && indentText) {
+                const tx = ctx.leftMargin + rowIndent / 2;
+                const ty = staffBottomY - ctx.staffHeight / 2 + indentFontSize * 0.35;
+                parts.push(`<text x="${tx}" y="${ty}" font-family="${escapeAttr(lyricFont)}" font-size="${indentFontSize}" text-anchor="middle" fill="#000">${escapeText(indentText)}</text>`);
+            }
+
+            let cursorX = staffLeftX;
             const rowLigatures = [];
             const rowBarlines = [];
 
@@ -400,7 +428,7 @@ export function renderAretino(source, options = {}) {
                 y = lastLyricBottom + ctx.staffGap;
             } else if (isLastRow && verseCount > 0) {
                 for (const lyric of sec.lyrics) {
-                    parts.push(`<text xml:space="preserve" x="${ctx.leftMargin}" y="${lyricY}" font-family="${escapeAttr(ctx.lyricFont)}" font-size="${ctx.lyricSize}" fill="#000">${formatLyricLine(lyric)}</text>`);
+                    parts.push(`<text xml:space="preserve" x="${staffLeftX}" y="${lyricY}" font-family="${escapeAttr(ctx.lyricFont)}" font-size="${ctx.lyricSize}" fill="#000">${formatLyricLine(lyric)}</text>`);
                     lyricY += ctx.lyricSize * 1.4;
                 }
                 const lastLyricBottom = lyricY - ctx.lyricSize * 1.4 + ctx.lyricSize * 0.3;
@@ -580,7 +608,7 @@ function measureItem(ctx, item) {
 // Greedy line-fit. Walks items, accumulating widths, breaking before any
 // item that would push the row past the right margin. Explicit (z)/(Z)
 // directives appear as `break` items and force a row finalization.
-function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initialKeySig, allowedClefRows = Infinity) {
+function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initialKeySig, allowedClefRows = Infinity, firstRowIndentWidth = 0) {
     const rows = [];
     let cur = [];
     let curWidth = 0;
@@ -589,6 +617,7 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
     let rowStartKeySig = initialKeySig ?? [];
     let runningKeySig = initialKeySig ?? [];
     let clefRowsDrawn = 0;
+    let isFirstRow = true;
 
     function currentRowDrawsClef() {
         return drawStartClef && clefRowsDrawn < allowedClefRows;
@@ -596,7 +625,7 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
 
     function rowItemsAvailable() {
         const showClef = currentRowDrawsClef();
-        let reserved = 0;
+        let reserved = isFirstRow ? firstRowIndentWidth : 0;
         const hasKeySig = rowStartKeySig.length > 0;
         if (showClef) {
             const clefSlot = hasKeySig
@@ -623,6 +652,8 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
             return;
         }
         const showClef = currentRowDrawsClef();
+        const rowIsFirst = isFirstRow;
+        isFirstRow = false;
         rows.push({
             items: cur,
             itemsWidth: curWidth,
@@ -630,6 +661,7 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
             startClef: rowStartClef,
             startKeySig: rowStartKeySig,
             drawStartClef: showClef,
+            indentWidth: rowIsFirst ? firstRowIndentWidth : 0,
         });
         if (showClef) {
             clefRowsDrawn++;
