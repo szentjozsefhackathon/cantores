@@ -310,12 +310,11 @@ window.abc2svg = window.abc2svg || {};
                             <flux:tooltip :content="__('Font')">
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:select size="sm" x-model="lyricFont" class="w-32 text-xs">
-                                <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
-                                <flux:select.option value="'Barlow Condensed', sans-serif">Barlow Condensed</flux:select.option>
-                                <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
-                                <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
-                                <flux:select.option value="'Franklin Gothic Book', 'Franklin Gothic Medium', 'ITC Franklin Gothic', Arial, sans-serif">Franklin Gothic</flux:select.option>
+                            <flux:select size="sm" x-model="lyricFont" class="w-40 text-xs">
+                                <flux:select.option value="'EB Garamond'">EB Garamond</flux:select.option>
+                                <flux:select.option value="'Lora'">Lora</flux:select.option>
+                                <flux:select.option value="'Inter'">Inter</flux:select.option>
+                                <flux:select.option value="'Barlow Condensed'">Barlow Condensed</flux:select.option>
                             </flux:select>
                         </div>
 
@@ -379,12 +378,11 @@ window.abc2svg = window.abc2svg || {};
                             <flux:tooltip :content="__('Font')">
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:select size="sm" x-model="chordproFontFamily" class="w-32 text-xs">
-                                <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
-                                <flux:select.option value="'Barlow Condensed', sans-serif">Barlow Condensed</flux:select.option>
-                                <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
-                                <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
-                                <flux:select.option value="Arial, Helvetica, sans-serif">Arial</flux:select.option>
+                            <flux:select size="sm" x-model="chordproFontFamily" class="w-40 text-xs">
+                                <flux:select.option value="'EB Garamond'">EB Garamond</flux:select.option>
+                                <flux:select.option value="'Lora'">Lora</flux:select.option>
+                                <flux:select.option value="'Inter'">Inter</flux:select.option>
+                                <flux:select.option value="'Barlow Condensed'">Barlow Condensed</flux:select.option>
                             </flux:select>
                         </div>
 
@@ -443,31 +441,16 @@ window.abc2svg = window.abc2svg || {};
                             <flux:input size="sm" type="number" x-model="abcPageScale" min="1" max="5" step="0.1" class="w-16" />
                         </div>
 
-                        <div class="flex items-center gap-1"
-                            x-data="{
-                                fontPresets: ['Palatino Linotype', 'Barlow Condensed', 'Garamond', 'Times New Roman', 'Franklin Gothic Book', 'Franklin Gothic Book Medium Cond'],
-                                get fontSelect() {
-                                    return this.fontPresets.includes(this.abcLyricFont) ? this.abcLyricFont : 'custom';
-                                },
-                                set fontSelect(val) {
-                                    if (val !== 'custom') this.abcLyricFont = val;
-                                    else this.abcLyricFont = '';
-                                },
-                                get isCustom() { return !this.fontPresets.includes(this.abcLyricFont); }
-                            }"
-                        >
+                        <div class="flex items-center gap-1">
                             <flux:tooltip :content="__('Font')">
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:select size="sm" x-model="fontSelect" class="w-40 text-xs">
-                                <flux:select.option value="Palatino Linotype">Palatino Linotype</flux:select.option>
+                            <flux:select size="sm" x-model="abcLyricFont" class="w-40 text-xs">
+                                <flux:select.option value="EB Garamond">EB Garamond</flux:select.option>
+                                <flux:select.option value="Lora">Lora</flux:select.option>
+                                <flux:select.option value="Inter">Inter</flux:select.option>
                                 <flux:select.option value="Barlow Condensed">Barlow Condensed</flux:select.option>
-                                <flux:select.option value="Garamond">Garamond</flux:select.option>
-                                <flux:select.option value="Times New Roman">Times New Roman</flux:select.option>
-                                <flux:select.option value="Franklin Gothic Book">Franklin Gothic Book</flux:select.option>
-                                <flux:select.option value="custom">Custom…</flux:select.option>
                             </flux:select>
-                            <flux:input size="sm" x-show="isCustom" x-model="abcLyricFont" placeholder="Font name" class="w-36 text-xs" />
                         </div>
 
                         <div class="flex items-center gap-1">
@@ -585,12 +568,11 @@ window.abc2svg = window.abc2svg || {};
                             <flux:tooltip :content="__('Font')">
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:select size="sm" x-model="aretinoLyricFont" class="w-32 text-xs">
-                                <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
-                                <flux:select.option value="'Barlow Condensed', sans-serif">Barlow Condensed</flux:select.option>
-                                <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
-                                <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
-                                <flux:select.option value="'Franklin Gothic Book', 'Franklin Gothic Medium', 'ITC Franklin Gothic', Arial, sans-serif">Franklin Gothic</flux:select.option>
+                            <flux:select size="sm" x-model="aretinoLyricFont" class="w-40 text-xs">
+                                <flux:select.option value="'EB Garamond'">EB Garamond</flux:select.option>
+                                <flux:select.option value="'Lora'">Lora</flux:select.option>
+                                <flux:select.option value="'Inter'">Inter</flux:select.option>
+                                <flux:select.option value="'Barlow Condensed'">Barlow Condensed</flux:select.option>
                             </flux:select>
                         </div>
 

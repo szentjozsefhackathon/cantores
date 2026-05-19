@@ -1,8 +1,8 @@
-const DEFAULT_ABC_FONT = 'Palatino Linotype';
+const DEFAULT_ABC_FONT = 'EB Garamond';
 
 export function abcMixin() {
     return {
-        abcLyricFont: 'Palatino Linotype',
+        abcLyricFont: 'EB Garamond',
         abcLyricSize: 13,
         abcLyricBold: false,
         abcPageRatio: 'auto',

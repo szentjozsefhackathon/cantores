@@ -4,7 +4,7 @@ const ARETINO_STAFF_SIZE_CALIBRATION = 1.3;
 
 export function aretinoMixin() {
     return {
-        aretinoLyricFont: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+        aretinoLyricFont: "'EB Garamond'",
         aretinoLyricSize: 12,
         aretinoStaffSize: 100,
         aretinoZoom: 100,

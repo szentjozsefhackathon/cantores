@@ -22,7 +22,7 @@ function germanChordsToEnglish(content) {
     return content;
 }
 
-const DEFAULT_FONT_FAMILY = "'Palatino Linotype', 'Book Antiqua', Palatino, serif";
+const DEFAULT_FONT_FAMILY = "'Lora'";
 
 function safeFontFamily(value) {
     return /^[a-zA-Z0-9 ',\-]+$/.test(value) ? value : DEFAULT_FONT_FAMILY;
@@ -55,7 +55,7 @@ function englishChordsToGerman(html) {
 export function chordproMixin() {
     return {
         chordproFontSize: 14,
-        chordproFontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+        chordproFontFamily: "'Lora'",
         chordproColumns: 1,
         chordproTranspose: 0,
         chordproGermanNotation: true,

@@ -3,9 +3,32 @@ import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 
-const WEB_FONT_URLS = {
-    'Barlow Condensed': 'https://fonts.bunny.net/barlow-condensed/files/barlow-condensed-latin-500-normal.woff2',
+const LATIN_EXT = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
+const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
+
+const WEB_FONTS = {
+    'EB Garamond': [
+        { style: 'normal', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-400.woff2' },
+        { style: 'normal', weight: '400', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-400.woff2' },
+        { style: 'italic', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-400i.woff2' },
+        { style: 'italic', weight: '400', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-400i.woff2' },
+    ],
+    'Lora': [
+        { style: 'normal', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-400.woff2' },
+        { style: 'normal', weight: '400', unicodeRange: LATIN,     url: '/fonts/lora-latin-400.woff2' },
+        { style: 'italic', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-400i.woff2' },
+        { style: 'italic', weight: '400', unicodeRange: LATIN,     url: '/fonts/lora-latin-400i.woff2' },
+    ],
+    'Inter': [
+        { style: 'normal', weight: '100 900', unicodeRange: LATIN_EXT, url: '/fonts/inter-latin-ext.woff2' },
+        { style: 'normal', weight: '100 900', unicodeRange: LATIN,     url: '/fonts/inter-latin.woff2' },
+    ],
+    'Barlow Condensed': [
+        { style: 'normal', weight: '500', unicodeRange: LATIN_EXT, url: '/fonts/barlow-condensed-latin-ext-500.woff2' },
+        { style: 'normal', weight: '500', unicodeRange: LATIN,     url: '/fonts/barlow-condensed-latin-500.woff2' },
+    ],
 };
+
 const fontBase64Cache = {};
 
 async function fetchFontBase64(url) {
@@ -25,15 +48,23 @@ function parsePrimaryFontFamily(fontValue) {
 
 async function injectWebFontsIntoSvg(svgEl, fontValues) {
     const rules = [];
+    const seenFamilies = new Set();
     for (const value of fontValues) {
         const family = parsePrimaryFontFamily(value);
-        const url = WEB_FONT_URLS[family];
-        if (!url) { continue; }
-        try {
-            const b64 = await fetchFontBase64(url);
-            rules.push(`@font-face{font-family:'${family}';src:url('data:font/woff2;base64,${b64}')format('woff2');}`);
-        } catch (e) {
-            console.warn('[score-editor] could not embed font:', family, e);
+        if (seenFamilies.has(family)) { continue; }
+        const descriptors = WEB_FONTS[family];
+        if (!descriptors) { continue; }
+        seenFamilies.add(family);
+        for (const d of descriptors) {
+            try {
+                const b64 = await fetchFontBase64(d.url);
+                rules.push(
+                    `@font-face{font-family:'${family}';font-style:${d.style};font-weight:${d.weight};` +
+                    `unicode-range:${d.unicodeRange};src:url('data:font/woff2;base64,${b64}')format('woff2');}`
+                );
+            } catch (e) {
+                console.warn('[score-editor] could not embed font:', family, d.url, e);
+            }
         }
     }
     if (!rules.length) { return; }

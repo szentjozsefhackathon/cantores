@@ -10,7 +10,7 @@ export function gabcMixin() {
         minSpaceBelowStaff: 0,
         pageRatio: 'auto',
         dropCaps: false,
-        lyricFont: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+        lyricFont: "'EB Garamond'",
         gabcFields: ['zoom', 'lyricSize', 'staffSize', 'dropCaps', 'lyricFont', 'minLyricWordSpacing', 'hyphenWidth', 'condensingTolerance', 'spaceBetweenSystems', 'minSpaceBelowStaff'],
 
         renderGabcPreview() {
