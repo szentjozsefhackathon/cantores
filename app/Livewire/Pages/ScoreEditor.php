@@ -8,9 +8,14 @@ use App\Models\Score;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
+use League\CommonMark\Environment\Environment;
+use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
+use League\CommonMark\MarkdownConverter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
@@ -221,6 +226,19 @@ class ScoreEditor extends Component
         $this->score->delete();
 
         $this->redirectRoute('scores', navigate: true);
+    }
+
+    #[Computed]
+    public function cheatsheetHtml(): HtmlString
+    {
+        $path = base_path('docs/aretino-cheatsheet.md');
+        $markdown = file_exists($path) ? (string) file_get_contents($path) : '';
+
+        $environment = new Environment(['html_input' => 'strip', 'allow_unsafe_links' => false]);
+        $environment->addExtension(new CommonMarkCoreExtension);
+        $environment->addExtension(new GithubFlavoredMarkdownExtension);
+
+        return new HtmlString((new MarkdownConverter($environment))->convert($markdown));
     }
 
     #[Computed]

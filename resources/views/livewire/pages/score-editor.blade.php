@@ -130,7 +130,29 @@ window.abc2svg = window.abc2svg || {};
                         <flux:link href="/aretino/guide" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('Aretino guide') }}
                         </flux:link>
+                        <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('aretino-cheatsheet').show()">
+                            {{ __('Cheatsheet') }}
+                        </flux:button>
                     </div>
+
+                    <flux:modal name="aretino-cheatsheet" class="max-w-2xl">
+                        <div class="space-y-4">
+                            <flux:heading size="lg">Aretino – gyorssegéd</flux:heading>
+
+                            <div class="prose prose-zinc dark:prose-invert max-w-none
+                                        prose-h2:mt-4 prose-h2:text-sm prose-h2:font-semibold prose-h2:border-b prose-h2:border-zinc-200 dark:prose-h2:border-zinc-700 prose-h2:pb-1
+                                        prose-table:text-xs prose-td:py-0.5 prose-td:pr-3
+                                        prose-code:bg-zinc-100 prose-code:px-1 prose-code:rounded prose-code:text-xs prose-code:text-blue-700 dark:prose-code:bg-zinc-800 dark:prose-code:text-blue-400">
+                                {!! $this->cheatsheetHtml !!}
+                            </div>
+
+                            <div class="flex justify-end">
+                                <flux:button variant="ghost" x-on:click="$flux.modal('aretino-cheatsheet').close()">
+                                    {{ __('Close') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    </flux:modal>
 
                     {{-- Textarea --}}
                     <flux:field required>
