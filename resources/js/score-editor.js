@@ -305,6 +305,42 @@ document.addEventListener('alpine:init', () => {
             this.$wire.call('saveAsDefault', c.settings, c.ratio, this.$wire.format);
         },
 
+        resetToDefaults() {
+            const format = this.$wire.format;
+            let defaults = {};
+            let fields = [];
+
+            if (format === 'gabc') {
+                const m = gabcMixin();
+                fields = m.gabcFields;
+                defaults = m;
+            } else if (format === 'abc') {
+                const m = abcMixin();
+                fields = m.abcFields;
+                defaults = m;
+            } else if (format === 'chordpro') {
+                const m = chordproMixin();
+                fields = m.chordproFields;
+                defaults = m;
+            } else if (format === 'aretino') {
+                const m = aretinoMixin();
+                fields = m.aretinoFields;
+                defaults = m;
+            }
+
+            const applyDefaults = () => {
+                fields.forEach(field => {
+                    if (field in defaults) { this[field] = defaults[field]; }
+                });
+            };
+
+            applyDefaults();
+            this.$nextTick(() => {
+                applyDefaults();
+                this.scheduleRender();
+            });
+        },
+
         splitPages(content, format, ratio) {
             const ratioSuffix = { '16/9': '169', '4/3': '43', '1/1': '11' };
             const targetSuffix = ratioSuffix[ratio];

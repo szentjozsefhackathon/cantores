@@ -238,6 +238,15 @@ it('creates an unattached chordpro score', function () {
     ]);
 });
 
+it('renders reset to defaults button in each format toolbar', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->assertSeeHtml('resetToDefaults()');
+});
+
 it('does not allow attaching a score to a private music piece the user cannot view', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();

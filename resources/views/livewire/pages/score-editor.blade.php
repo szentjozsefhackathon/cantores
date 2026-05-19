@@ -357,6 +357,10 @@ window.abc2svg = window.abc2svg || {};
                             <flux:input size="sm" type="number" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="w-16" />
                         </div>
                         
+                        <flux:tooltip :content="__('Reset to defaults')">
+                            <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
+                        </flux:tooltip>
+
                         @if(!$isGuest)
                         <flux:tooltip :content="__('Save as my default for this ratio')">
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
@@ -412,6 +416,10 @@ window.abc2svg = window.abc2svg || {};
                             </flux:tooltip>
                             <flux:switch x-model="chordproGermanNotation" />
                         </div>
+
+                        <flux:tooltip :content="__('Reset to defaults')">
+                            <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
+                        </flux:tooltip>
 
                         @if(!$isGuest)
                         <flux:tooltip :content="__('Save as my default')">
@@ -511,6 +519,10 @@ window.abc2svg = window.abc2svg || {};
                             <flux:checkbox x-model="abcNoClef" />
                         </div>
 
+                        <flux:tooltip :content="__('Reset to defaults')">
+                            <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
+                        </flux:tooltip>
+
                         @if(!$isGuest)
                         <flux:tooltip :content="__('Save as my default for this ratio')">
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
@@ -603,6 +615,10 @@ window.abc2svg = window.abc2svg || {};
                             </flux:tooltip>
                             <flux:checkbox x-model="aretinoHideRepeatClef" />
                         </div>
+
+                        <flux:tooltip :content="__('Reset to defaults')">
+                            <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
+                        </flux:tooltip>
 
                         @if(!$isGuest)
                         <flux:tooltip :content="__('Save as my default for this ratio')">
