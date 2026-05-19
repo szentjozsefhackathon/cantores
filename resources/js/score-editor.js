@@ -12,12 +12,20 @@ const WEB_FONTS = {
         { style: 'normal', weight: '400', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-400.woff2' },
         { style: 'italic', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-400i.woff2' },
         { style: 'italic', weight: '400', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-400i.woff2' },
+        { style: 'normal', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-700.woff2' },
+        { style: 'normal', weight: '700', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-700.woff2' },
+        { style: 'italic', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-700i.woff2' },
+        { style: 'italic', weight: '700', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-700i.woff2' },
     ],
     'Lora': [
         { style: 'normal', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-400.woff2' },
         { style: 'normal', weight: '400', unicodeRange: LATIN,     url: '/fonts/lora-latin-400.woff2' },
         { style: 'italic', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-400i.woff2' },
         { style: 'italic', weight: '400', unicodeRange: LATIN,     url: '/fonts/lora-latin-400i.woff2' },
+        { style: 'normal', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-700.woff2' },
+        { style: 'normal', weight: '700', unicodeRange: LATIN,     url: '/fonts/lora-latin-700.woff2' },
+        { style: 'italic', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-700i.woff2' },
+        { style: 'italic', weight: '700', unicodeRange: LATIN,     url: '/fonts/lora-latin-700i.woff2' },
     ],
     'Inter': [
         { style: 'normal', weight: '100 900', unicodeRange: LATIN_EXT, url: '/fonts/inter-latin-ext.woff2' },
@@ -26,6 +34,8 @@ const WEB_FONTS = {
     'Barlow Condensed': [
         { style: 'normal', weight: '500', unicodeRange: LATIN_EXT, url: '/fonts/barlow-condensed-latin-ext-500.woff2' },
         { style: 'normal', weight: '500', unicodeRange: LATIN,     url: '/fonts/barlow-condensed-latin-500.woff2' },
+        { style: 'normal', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/barlow-condensed-latin-ext-700.woff2' },
+        { style: 'normal', weight: '700', unicodeRange: LATIN,     url: '/fonts/barlow-condensed-latin-700.woff2' },
     ],
 };
 
@@ -82,6 +92,7 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('scoreEditor', (config = {}) => ({
         hasPages: false,
         localContent: '',
+        isContentUserModified: false,
         clippedWarningText: config.clippedWarningText ?? '',
         clipboardNotSupported: config.clipboardNotSupported ?? '',
         imageCopied: config.imageCopied ?? '',
@@ -107,15 +118,39 @@ document.addEventListener('alpine:init', () => {
         ...chordproMixin(),
         ...aretinoMixin(),
 
+        minimalExamples: {
+            abc: 'K:C\nL:1/4\nC D E|]\nw: Glo-ri-a',
+            gabc: '(c3) Glo(f)ri(g)a.(h.) (::)\n',
+            aretino: '(g2) g h i ||\nw: Glo-ri-a\n',
+            chordpro: '{title: }\n[C]Glo-ri-[G]a [C]Deo\n',
+        },
+
+        fillMinimalExample() {
+            const example = this.minimalExamples[this.$wire.format] ?? '';
+            if (!example) { return; }
+            this.$wire.content = example;
+            this.localContent = example;
+            this.scheduleRender();
+        },
+
         init() {
             console.log('[score-editor] init, exsurge available:', !!window.exsurge, 'format:', this.$wire.format);
             this.applyInitialSettings();
             this.localContent = this.$wire.content;
+            if (this.localContent.trim() === '') {
+                this.isContentUserModified = false;
+                this.fillMinimalExample();
+            } else {
+                this.isContentUserModified = true;
+            }
             this.$watch('$wire.content', (val) => {
                 this.localContent = val;
                 this.scheduleRender();
             });
             this.$watch('$wire.format', (val) => {
+                if (!this.isContentUserModified) {
+                    this.fillMinimalExample();
+                }
                 if (val === 'chordpro') {
                     this.syncChordproTitle(this.$wire.title);
                 }

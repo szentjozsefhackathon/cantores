@@ -249,7 +249,7 @@ window.abc2svg = window.abc2svg || {};
                             class="font-mono text-sm"
                             :placeholder="__('Type the score here')"
                             x-ref="contentTextarea"
-                            x-on:input="localContent = $event.target.value; scheduleRender(); updateAretinoHighlight && updateAretinoHighlight()"
+                            x-on:input="isContentUserModified = true; localContent = $event.target.value; scheduleRender(); updateAretinoHighlight && updateAretinoHighlight()"
                             x-on:click="updateAretinoHighlight && updateAretinoHighlight()"
                             x-on:keyup="updateAretinoHighlight && updateAretinoHighlight()"
                             x-on:select="updateAretinoHighlight && updateAretinoHighlight()"
