@@ -297,6 +297,13 @@
                             <flux:select.option value="1/1">1:1</flux:select.option>
                         </flux:select>
                     </div>
+
+                    <div class="flex items-center gap-1">
+                        <flux:tooltip :content="__('Hide clef from second line onwards')">
+                            <flux:icon name="clef-none" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                        </flux:tooltip>
+                        <flux:checkbox x-model="aretinoHideRepeatClef" />
+                    </div>
                 </div>
 
                 {{-- Aretino Preview --}}

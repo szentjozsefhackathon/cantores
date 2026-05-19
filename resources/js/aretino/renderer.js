@@ -48,6 +48,7 @@ export function renderAretino(source, options = {}) {
     const staffScale = Math.max(0.1, (options.staffSize ?? 100) / 100);
     const noteSpacing = Math.max(0.5, options.noteSpacing ?? 1);
     const lyricFont = options.lyricFont || DEFAULT_FONT;
+    const hideRepeatClef = !!options.hideRepeatClef;
 
     // The whole engraving is parameterised by a single pixel-size: staffSpace.
     // Everything else (margins, advances, glyph dimensions) is a multiple of
@@ -79,6 +80,7 @@ export function renderAretino(source, options = {}) {
     let currentClef = { letter: 'g', line: 2 };
     let currentKeySig = [];
     let hasSeenClef = false;
+    let clefRowsBudget = hideRepeatClef ? 1 : Infinity;
     let y = ss(ctx, METRICS.titleTopPadding);
     let contentBottom = y;
 
@@ -203,17 +205,27 @@ export function renderAretino(source, options = {}) {
             }
         }
 
-        const rows = layoutRows(items, ctx, currentClef, staffRightX, drawClefForRows, currentKeySig);
+        const allowedClefRows = drawClefForRows ? clefRowsBudget : 0;
+        const rows = layoutRows(items, ctx, currentClef, staffRightX, drawClefForRows, currentKeySig, allowedClefRows);
+
+        if (hideRepeatClef) {
+            const clefRowsUsed = rows.filter(r => r.drawStartClef).length;
+            clefRowsBudget = Math.max(0, clefRowsBudget - clefRowsUsed);
+        }
 
         // For lyric-only sections (no music), still emit one empty row so lyrics render.
         if (rows.length === 0 && sec.lyrics.length > 0) {
+            const emptyRowDrawClef = drawClefForRows && clefRowsBudget > 0;
+            if (hideRepeatClef && emptyRowDrawClef) {
+                clefRowsBudget = 0;
+            }
             rows.push({
                 items: [],
                 itemsWidth: 0,
                 justify: false,
                 startClef: currentClef,
                 startKeySig: currentKeySig,
-                drawStartClef: drawClefForRows,
+                drawStartClef: emptyRowDrawClef,
             });
         }
 
@@ -540,7 +552,7 @@ function measureItem(ctx, item) {
 // Greedy line-fit. Walks items, accumulating widths, breaking before any
 // item that would push the row past the right margin. Explicit (z)/(Z)
 // directives appear as `break` items and force a row finalization.
-function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initialKeySig) {
+function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initialKeySig, allowedClefRows = Infinity) {
     const rows = [];
     let cur = [];
     let curWidth = 0;
@@ -548,11 +560,17 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
     let runningClef = initialClef;
     let rowStartKeySig = initialKeySig ?? [];
     let runningKeySig = initialKeySig ?? [];
+    let clefRowsDrawn = 0;
+
+    function currentRowDrawsClef() {
+        return drawStartClef && clefRowsDrawn < allowedClefRows;
+    }
 
     function rowItemsAvailable() {
+        const showClef = currentRowDrawsClef();
         let reserved = 0;
         const hasKeySig = rowStartKeySig.length > 0;
-        if (drawStartClef) {
+        if (showClef) {
             const clefSlot = hasKeySig
                 ? clefAdvance(ctx, rowStartClef) - ss(ctx, METRICS.clefPostGap) + ss(ctx, METRICS.clefInlinePostGap)
                 : clefAdvance(ctx, rowStartClef) + ss(ctx, METRICS.clefInlinePostGap);
@@ -560,13 +578,13 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
         }
         if (hasKeySig) {
             reserved += keySigAdvance(ctx, rowStartKeySig);
-            if (!drawStartClef) {
+            if (!showClef) {
                 reserved += ss(ctx, METRICS.clefPostGap);
             } else {
                 reserved += ss(ctx, 1);
             }
         }
-        if (!drawStartClef && !hasKeySig) {
+        if (!showClef && !hasKeySig) {
             reserved += ctx.staffSpace;
         }
         return staffRightX - ctx.leftMargin - reserved;
@@ -576,14 +594,18 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
         if (cur.length === 0) {
             return;
         }
+        const showClef = currentRowDrawsClef();
         rows.push({
             items: cur,
             itemsWidth: curWidth,
             justify,
             startClef: rowStartClef,
             startKeySig: rowStartKeySig,
-            drawStartClef,
+            drawStartClef: showClef,
         });
+        if (showClef) {
+            clefRowsDrawn++;
+        }
         cur = [];
         curWidth = 0;
         rowStartClef = runningClef;
@@ -620,14 +642,37 @@ function layoutRows(items, ctx, initialClef, staffRightX, drawStartClef, initial
         // overflow check (it was already accounted for).
         const gluedToPrev = ii > 0 && items[ii - 1].kind === 'accidental' && item.kind === 'ligature';
         if (!gluedToPrev && cur.length > 0 && curWidth + w > rowItemsAvailable()) {
-            finalize(true);
-            if (item.kind === 'clef') {
-                rowStartClef = item.clef;
-                continue;
-            }
-            if (item.kind === 'keysig') {
-                rowStartKeySig = item.accidentals;
-                continue;
+            if (item.kind === 'barline') {
+                // Barlines must not start a row — carry the preceding note/neume
+                // unit (optionally with its leading accidental) to the new row.
+                let splitIdx = -1;
+                for (let k = cur.length - 1; k >= 0; k--) {
+                    if (cur[k].kind === 'ligature') {
+                        splitIdx = (k > 0 && cur[k - 1].kind === 'accidental') ? k - 1 : k;
+                        break;
+                    }
+                }
+                if (splitIdx >= 0) {
+                    const carried = cur.splice(splitIdx);
+                    curWidth -= carried.reduce((sum, it) => sum + measureItem(ctx, it), 0);
+                    finalize(true);
+                    for (const it of carried) {
+                        cur.push(it);
+                        curWidth += measureItem(ctx, it);
+                    }
+                } else {
+                    finalize(true);
+                }
+            } else {
+                finalize(true);
+                if (item.kind === 'clef') {
+                    rowStartClef = item.clef;
+                    continue;
+                }
+                if (item.kind === 'keysig') {
+                    rowStartKeySig = item.accidentals;
+                    continue;
+                }
             }
         }
         cur.push(item);

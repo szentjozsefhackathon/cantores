@@ -128,6 +128,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('aretinoStaffSize', () => this.scheduleRender());
             this.$watch('aretinoZoom', () => this.scheduleRender());
             this.$watch('aretinoStaffGap', () => this.scheduleRender());
+            this.$watch('aretinoHideRepeatClef', () => this.scheduleRender());
             this.$watch('aretinoPageRatio', (val) => { this.applyRatioSettings('aretino', val); this.$nextTick(() => this.scheduleRender()); });
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
@@ -189,6 +190,7 @@ document.addEventListener('alpine:init', () => {
                         aretinoStaffSize: Number(this.aretinoStaffSize),
                         aretinoZoom: Number(this.aretinoZoom),
                         aretinoStaffGap: Number(this.aretinoStaffGap),
+                        aretinoHideRepeatClef: !!this.aretinoHideRepeatClef,
                     },
                     ratio: this.aretinoPageRatio,
                 };
