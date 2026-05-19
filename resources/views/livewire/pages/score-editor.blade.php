@@ -258,7 +258,7 @@ window.abc2svg = window.abc2svg || {};
                         <flux:error name="content" />
                     </flux:field>
 
-                    <div x-show="localContent.trim() === ''" class="flex">
+                    <div x-show="localContent.trim() === '' || localContent === minimalExamples[$wire.format]" class="flex">
                         <flux:button size="sm" variant="ghost" icon="light-bulb" x-on:click="fillExample()">
                             {{ __('Show me an example') }}
                         </flux:button>
