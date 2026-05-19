@@ -1,4 +1,10 @@
-import ChordSheetJS from 'chordsheetjs';
+let chordSheetJsPromise = null;
+function loadChordSheetJS() {
+    if (!chordSheetJsPromise) {
+        chordSheetJsPromise = import('chordsheetjs').then(m => m.default);
+    }
+    return chordSheetJsPromise;
+}
 
 function convertGermanNote(note) {
     if (note === 'H') { return 'B'; }
@@ -56,7 +62,7 @@ export function chordproMixin() {
         chordproFields: ['chordproFontSize', 'chordproFontFamily', 'chordproColumns', 'chordproTranspose', 'chordproGermanNotation'],
 
 
-        renderChordproPreview() {
+        async renderChordproPreview() {
             const container = this.$refs.chordproPreview;
             if (!container) { return; }
             container.innerHTML = '';
@@ -68,6 +74,7 @@ export function chordproMixin() {
             }
             content = sanitizeChordproContent(content);
             try {
+                const ChordSheetJS = await loadChordSheetJS();
                 const parser = new ChordSheetJS.ChordProParser();
                 const formatter = new ChordSheetJS.HtmlDivFormatter();
                 let song = parser.parse(content);
@@ -109,7 +116,7 @@ export function chordproMixin() {
             }
         },
 
-        copyChordproPlainText() {
+        async copyChordproPlainText() {
             if (!navigator.clipboard) {
                 this.showCopyFeedback(this.clipboardNotSupported);
                 return;
@@ -121,6 +128,7 @@ export function chordproMixin() {
             }
             content = sanitizeChordproContent(content);
             try {
+                const ChordSheetJS = await loadChordSheetJS();
                 const parser = new ChordSheetJS.ChordProParser();
                 const formatter = new ChordSheetJS.TextFormatter();
                 let song = parser.parse(content);
@@ -141,7 +149,7 @@ export function chordproMixin() {
             }
         },
 
-        copyChordproHtml() {
+        async copyChordproHtml() {
             if (!navigator.clipboard || !window.ClipboardItem) {
                 this.showCopyFeedback(this.clipboardNotSupported);
                 return;
@@ -153,6 +161,7 @@ export function chordproMixin() {
             }
             content = sanitizeChordproContent(content);
             try {
+                const ChordSheetJS = await loadChordSheetJS();
                 const parser = new ChordSheetJS.ChordProParser();
                 const formatter = new ChordSheetJS.HtmlTableFormatter();
                 let song = parser.parse(content);
@@ -189,7 +198,7 @@ td.column{vertical-align:bottom;padding-right:0.1em;}
             }
         },
 
-        exportChordproHtml() {
+        async exportChordproHtml() {
             let content = this.localContent;
             if (!content || !content.trim()) { return; }
             if (this.chordproGermanNotation) {
@@ -197,6 +206,7 @@ td.column{vertical-align:bottom;padding-right:0.1em;}
             }
             content = sanitizeChordproContent(content);
             try {
+                const ChordSheetJS = await loadChordSheetJS();
                 const parser = new ChordSheetJS.ChordProParser();
                 const formatter = new ChordSheetJS.HtmlDivFormatter();
                 let song = parser.parse(content);
