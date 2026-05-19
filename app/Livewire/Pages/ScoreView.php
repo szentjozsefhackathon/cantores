@@ -31,7 +31,7 @@ class ScoreView extends Component
             return;
         }
 
-        $this->score = $score;
+        $this->score = $score->load('urls');
         $this->title = $score->title;
         $this->format = $score->format->value;
         $this->content = $score->content;

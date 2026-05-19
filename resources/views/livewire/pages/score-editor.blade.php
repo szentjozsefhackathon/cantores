@@ -723,6 +723,76 @@ window.abc2svg = window.abc2svg || {};
                         </div>
                     </flux:modal>
 
+                    @if(!$isGuest && $score)
+                    {{-- URL Management --}}
+                    <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                        <flux:heading size="sm" class="mb-3">{{ __('Links') }}</flux:heading>
+
+                        @if($this->scoreUrls->isNotEmpty())
+                        <div class="mb-4 space-y-2">
+                            @foreach($this->scoreUrls as $scoreUrl)
+                            <div class="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                                @if($scoreUrl->label instanceof \App\MusicUrlLabel)
+                                <flux:icon name="{{ $scoreUrl->label->icon() }}" variant="micro" class="shrink-0 {{ $scoreUrl->label->color() }}" />
+                                @else
+                                <flux:icon name="link" variant="micro" class="shrink-0 text-zinc-400" />
+                                @endif
+                                <div class="min-w-0 flex-1">
+                                    <a href="{{ $scoreUrl->url }}" target="_blank" rel="noopener noreferrer" class="block truncate text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                        {{ $scoreUrl->url }}
+                                    </a>
+                                    @if($scoreUrl->comment)
+                                    <span class="text-xs text-zinc-500 dark:text-zinc-400">{{ $scoreUrl->comment }}</span>
+                                    @endif
+                                </div>
+                                @if($scoreUrl->label instanceof \App\MusicUrlLabel)
+                                <span class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">{{ $scoreUrl->label->label() }}</span>
+                                @endif
+                                <flux:button
+                                    icon="trash"
+                                    variant="ghost"
+                                    size="sm"
+                                    wire:click="deleteUrl({{ $scoreUrl->id }})"
+                                    wire:confirm="{{ __('Remove this link?') }}"
+                                />
+                            </div>
+                            @endforeach
+                        </div>
+                        @endif
+
+                        <div class="flex flex-wrap items-end gap-2">
+                            <flux:field class="flex-1 min-w-48">
+                                <flux:input
+                                    wire:model="newUrl"
+                                    type="url"
+                                    :placeholder="__('https://...')"
+                                    size="sm"
+                                />
+                                <flux:error name="newUrl" />
+                            </flux:field>
+                            <flux:field class="w-40">
+                                <flux:select wire:model="newUrlLabel" size="sm">
+                                    <flux:select.option value="">{{ __('No type') }}</flux:select.option>
+                                    @foreach($urlLabels as $urlLabel)
+                                    <flux:select.option value="{{ $urlLabel->value }}">{{ $urlLabel->label() }}</flux:select.option>
+                                    @endforeach
+                                </flux:select>
+                            </flux:field>
+                            <flux:field class="flex-1 min-w-32">
+                                <flux:input
+                                    wire:model="newUrlComment"
+                                    :placeholder="__('Comment (optional)')"
+                                    size="sm"
+                                />
+                                <flux:error name="newUrlComment" />
+                            </flux:field>
+                            <flux:button icon="plus" variant="outline" size="sm" wire:click="addUrl">
+                                {{ __('Add Link') }}
+                            </flux:button>
+                        </div>
+                    </div>
+                    @endif
+
                     @if(!$isGuest)
                     <div class="mt-4 flex justify-end gap-3">
                         <flux:button variant="ghost" :href="route('scores')" wire:navigate>

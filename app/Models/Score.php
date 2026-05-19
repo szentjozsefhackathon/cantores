@@ -6,6 +6,7 @@ use App\Enums\ScoreFormat;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Auth;
  * @property string|null $share_token
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreUrl> $urls
+ * @property-read int|null $urls_count
  * @property-read \App\Models\Music|null $music
  * @property-read \App\Models\User $user
  *
@@ -71,6 +74,11 @@ class Score extends Model
     public function music(): BelongsTo
     {
         return $this->belongsTo(Music::class);
+    }
+
+    public function urls(): HasMany
+    {
+        return $this->hasMany(ScoreUrl::class);
     }
 
     public function scopeMine(\Illuminate\Database\Eloquent\Builder $query, ?User $user = null): void

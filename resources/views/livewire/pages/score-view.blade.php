@@ -11,6 +11,27 @@
 <script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
 <script src="{{ asset('js/abc2svg-1.js') }}"></script>
 
+            @if($this->score->urls->isNotEmpty())
+            <div class="mb-6 flex flex-wrap gap-2">
+                @foreach($this->score->urls as $scoreUrl)
+                <a
+                    href="{{ $scoreUrl->url }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                >
+                    @if($scoreUrl->label instanceof \App\MusicUrlLabel)
+                    <flux:icon name="{{ $scoreUrl->label->icon() }}" variant="micro" class="shrink-0 {{ $scoreUrl->label->color() }}" />
+                    @else
+                    <flux:icon name="link" variant="micro" class="shrink-0 text-zinc-400" />
+                    @endif
+                    <span class="max-w-xs truncate">{{ $scoreUrl->comment ?: ($scoreUrl->label instanceof \App\MusicUrlLabel ? $scoreUrl->label->label() : $scoreUrl->url) }}</span>
+                    <flux:icon name="arrow-top-right-on-square" variant="micro" class="shrink-0 text-zinc-400" />
+                </a>
+                @endforeach
+            </div>
+            @endif
+
             <div
                 x-data="scoreEditor({
                     scoreSettings: @js($this->settings ?: (object) []),

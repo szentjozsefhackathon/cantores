@@ -5,6 +5,8 @@ namespace App\Livewire\Pages;
 use App\Enums\ScoreFormat;
 use App\Models\Music;
 use App\Models\Score;
+use App\Models\ScoreUrl;
+use App\MusicUrlLabel;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -41,6 +43,12 @@ class ScoreEditor extends Component
     public bool $isSharedLink = false;
 
     public ?string $secretLinkUrl = null;
+
+    public string $newUrl = '';
+
+    public ?string $newUrlLabel = null;
+
+    public string $newUrlComment = '';
 
     public function mount(mixed $score = null, mixed $music = null): void
     {
@@ -218,6 +226,42 @@ class ScoreEditor extends Component
         $this->secretLinkUrl = null;
     }
 
+    public function addUrl(): void
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('update', $this->score);
+
+        $this->validate([
+            'newUrl' => ['required', 'string', 'url', 'max:2048'],
+            'newUrlLabel' => ['nullable', Rule::enum(MusicUrlLabel::class)],
+            'newUrlComment' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $this->score->urls()->create([
+            'url' => $this->newUrl,
+            'label' => $this->newUrlLabel ?: null,
+            'comment' => $this->newUrlComment ?: null,
+        ]);
+
+        $this->newUrl = '';
+        $this->newUrlLabel = null;
+        $this->newUrlComment = '';
+
+        unset($this->scoreUrls);
+    }
+
+    public function deleteUrl(int $urlId): void
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('update', $this->score);
+
+        $url = ScoreUrl::query()->where('score_id', $this->score->id)->find($urlId);
+        abort_if($url === null, 404);
+        $url->delete();
+
+        unset($this->scoreUrls);
+    }
+
     public function delete(): void
     {
         abort_unless($this->score instanceof Score, 404);
@@ -226,6 +270,17 @@ class ScoreEditor extends Component
         $this->score->delete();
 
         $this->redirectRoute('scores', navigate: true);
+    }
+
+    #[Computed]
+    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreUrl> */
+    public function scoreUrls(): \Illuminate\Database\Eloquent\Collection
+    {
+        if (! $this->score instanceof Score) {
+            return ScoreUrl::query()->whereNull('id')->get();
+        }
+
+        return $this->score->urls()->orderBy('id')->get();
     }
 
     #[Computed]
@@ -296,6 +351,7 @@ class ScoreEditor extends Component
 
         return view('livewire.pages.score-editor', [
             'formats' => ScoreFormat::cases(),
+            'urlLabels' => MusicUrlLabel::cases(),
             'userDefaults' => $user instanceof \App\Models\User ? ($user->score_settings ?? []) : [],
             'isSharedLink' => $this->isSharedLink,
             'isGuest' => ! Auth::check(),

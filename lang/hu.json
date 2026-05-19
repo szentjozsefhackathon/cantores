@@ -180,6 +180,7 @@
 
     "Assigned Tags": "Hozzárendelt címkék",
     "No tags assigned yet.": "Még nincs hozzárendelt címke.",
+    "Add Link": "Hivatkozás hozzáadása",
     "Add Tag": "Címke hozzáadása",
     "Select a tag to assign to this music piece.": "Válassz egy címkét a zeneműhöz való hozzárendeléshez.",
     "Select a tag": "Válassz egy címkét",
@@ -354,6 +355,7 @@
     "Order Number": "Sorszám",
     "Page Number": "Oldalszám",
     "Remove": "Eltávolítás",
+    "Remove this link?": "Eltávolítod ezt a hivatkozást?",
     "No collections attached": "Nincs csatolt gyűjtemény",
     "This music piece is not attached to any collections yet.": "Ez a zenemű még nincs csatolva egyetlen gyűjteményhez sem.",
     "Collection removed.": "Gyűjtemény eltávolítva.",
@@ -701,6 +703,9 @@
     "Score created.": "Kotta létrehozva.",
     "Score updated.": "Kotta frissítve.",
     "Saved as your default for this ratio.": "Alapértelmezettként elmentve ehhez az arányhoz.",
+    "Links": "Hivatkozások",
+    "No type": "Nincs típus",
+    "Comment (optional)": "Megjegyzés (nem kötelező)",
 
     "Content does not fit on page": "A tartalom nem fér el az oldalon",
     "Clipboard not supported in this browser": "A vágólap nem támogatott ebben a böngészőben",
