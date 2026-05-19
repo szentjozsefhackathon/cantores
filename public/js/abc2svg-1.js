@@ -8432,13 +8432,11 @@ output+=h.toFixed(1)
 output+=h.toFixed(1)
 +((f&4)?'h-3"/>\n':'c5 0 9 4.5 8.5 5.5c0 1 -1.5 -4.5 -12 -3.5"/>\n')}}
 function out_bracket(x,y,h){out_wings(x-5,y+2,h,0)}
-function out_hyph(x,y,w){var n,a_y,d=25+((w/20)|0)*3
+function out_hyph(x,y,w){var n,a_y,d=25+((w/20)|0)*3,sz=gene.curfont.size,sw=(1.2*sz/18).toFixed(2),dl=Math.max(2,Math.round(5*sz/18))
 if(w>15.)
 n=((w-15)/d)|0
 else
-n=0;x+=(w-d*n-5)/2;out_XYAB('<path class="stroke" stroke-width="1.2"\n\
- stroke-dasharray="5,A"\n\
- d="mX YhB"/>\n',x,y+4,Math.round((d-5)/stv_g.scale),d*n+5)}
+n=0;x+=(w-d*n-dl)/2;out_XYAB('<path class="stroke" stroke-width="'+sw+'"\n stroke-dasharray="'+dl+',A"\n d="mX YhB"/>\n',x,y+sz*.22,Math.round((d-dl)/stv_g.scale),d*n+dl)}
 function out_stem(x,y,h,grace,nflags,straight){var dx=grace?GSTEM_XOFF:3.5,slen=-h
 if(h<0)
 dx=-dx;x+=dx*stv_g.scale
