@@ -107,7 +107,7 @@ function peekInlineAccidental(line, pos) {
         return null;
     }
     const inner = line.slice(pos + 1, end).trim();
-    const m = inner.match(/^([a-mA-M]?)b([xy#])$/);
+    const m = inner.match(/^([a-nA-N]?)b([xy#])$/);
     if (!m) {
         return null;
     }

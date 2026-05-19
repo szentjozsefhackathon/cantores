@@ -481,7 +481,7 @@ function flattenItems(tokens) {
                 items.push({ kind: 'clef', clef: { letter: clefM[1].toLowerCase(), line: parseInt(clefM[2], 10) }, ...src });
                 continue;
             }
-            const accM = v.match(/^([a-mA-M]?)b([xy#])$/);
+            const accM = v.match(/^([a-nA-N]?)b([xy#])$/);
             if (accM) {
                 items.push({ kind: 'accidental', pitch: (accM[1] || 'i').toLowerCase(), symbol: accM[2], ...src });
                 continue;
@@ -492,7 +492,7 @@ function flattenItems(tokens) {
                 const accidentals = [];
                 if (inner) {
                     for (const part of inner.split(/\s+/)) {
-                        const m = part.match(/^([a-mA-M]?)b([xy#])$/);
+                        const m = part.match(/^([a-nA-N]?)b([xy#])$/);
                         if (m) {
                             accidentals.push({ pitch: (m[1] || 'i').toLowerCase(), symbol: m[2] });
                         }
