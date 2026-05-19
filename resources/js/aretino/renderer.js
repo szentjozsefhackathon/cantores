@@ -112,6 +112,32 @@ export function renderAretino(source, options = {}) {
         const alignSyllables = totalLigatures > 0 && verseCount > 0;
         const hasBarlineLabels = verseBarlines.some(arr => arr.length > 0);
 
+        // For each barline item in the music sequence, record how many ligatures
+        // precede it. Used to match lyric barline labels (which carry notesBefore)
+        // to the correct actual barline rather than by parallel index.
+        let _lc = 0;
+        const barlineLigsBefore = [];
+        for (const it of items) {
+            if (it.kind === 'ligature') { _lc++; }
+            else if (it.kind === 'barline') { barlineLigsBefore.push(_lc); }
+        }
+
+        // Build per-verse maps: globalBarlineIdx → label.
+        // A label with notesBefore=K targets the first barline where ligsBefore >= K.
+        const verseBarlineMaps = verseBarlines.map(lbls => {
+            const m = new Map();
+            for (const lbl of lbls) {
+                const K = lbl.notesBefore ?? 0;
+                for (let bi = 0; bi < barlineLigsBefore.length; bi++) {
+                    if (barlineLigsBefore[bi] >= K && !m.has(bi)) {
+                        m.set(bi, lbl);
+                        break;
+                    }
+                }
+            }
+            return m;
+        });
+
         // Reserve extra advance after a neume whose syllable is wider than the
         // neume's natural trailing slack, so the next neume isn't overlapped.
         if (alignSyllables) {
@@ -189,12 +215,11 @@ export function renderAretino(source, options = {}) {
                     continue;
                 }
                 let maxW = 0;
-                for (const barlines of verseBarlines) {
-                    if (bi < barlines.length) {
-                        const w = measureTextWidth(barlines[bi].text, ctx.lyricSize, ctx.lyricFont);
-                        if (w > maxW) {
-                            maxW = w;
-                        }
+                for (const barlineMap of verseBarlineMaps) {
+                    const lbl = barlineMap.get(bi);
+                    if (lbl) {
+                        const w = measureTextWidth(lbl.text, ctx.lyricSize, ctx.lyricFont);
+                        if (w > maxW) { maxW = w; }
                     }
                 }
                 if (maxW > 0) {
@@ -230,7 +255,7 @@ export function renderAretino(source, options = {}) {
         }
 
         let ligOffset = 0;
-        let barlineOffset = 0;
+        let globalBarlineIdx = 0;
 
         rows.forEach((row, rowIdx) => {
             const staffBottomY = y + ctx.staffHeight;
@@ -315,7 +340,8 @@ export function renderAretino(source, options = {}) {
                     const offsetX = (it.value === '||' || it.value === ':|' || it.value === '|:' || it.value === ':|:' || it.value === '|||')
                         ? (METRICS.barlineOffsetX + METRICS.barlineDoubleSecondOffsetX) / 2
                         : METRICS.barlineOffsetX;
-                    rowBarlines.push({ centerX: cursorX + ss(ctx, offsetX), value: it.value });
+                    rowBarlines.push({ centerX: cursorX + ss(ctx, offsetX), value: it.value, globalIdx: globalBarlineIdx });
+                    globalBarlineIdx++;
                     cursorX += b.advance + ss(ctx, METRICS.barlinePostGap) + extra / 2;
                 } else if (it.kind === 'spacer') {
                     cursorX += ss(ctx, METRICS.spacerAdvance) * it.multiplier;
@@ -343,7 +369,6 @@ export function renderAretino(source, options = {}) {
             let lyricY = lyricTopY + ctx.lyricSize;
 
             if (alignSyllables) {
-                const rowBarlineCount = rowBarlines.length;
                 for (let v = 0; v < verseCount; v++) {
                     const notes = verseNotes[v];
                     const start = ligOffset;
@@ -352,19 +377,22 @@ export function renderAretino(source, options = {}) {
                         : ligOffset + rowLigCount;
                     const rowSyllables = notes.slice(start, end);
                     parts.push(emitAlignedSyllables(ctx, rowSyllables, rowLigatures, lyricY));
-                    const barlines = verseBarlines[v];
-                    const bStart = barlineOffset;
-                    const bEnd = isLastRow
-                        ? Math.max(barlines.length, barlineOffset + rowBarlineCount)
-                        : barlineOffset + rowBarlineCount;
-                    const rowBarlineSyls = barlines.slice(bStart, bEnd);
-                    if (rowBarlineSyls.length > 0) {
-                        parts.push(emitBarlineLabels(ctx, rowBarlineSyls, rowBarlines, lyricY));
+                    const barlineMap = verseBarlineMaps[v];
+                    const matchedLabels = [];
+                    const matchedBarlines = [];
+                    for (const rb of rowBarlines) {
+                        const lbl = barlineMap.get(rb.globalIdx);
+                        if (lbl) {
+                            matchedLabels.push(lbl);
+                            matchedBarlines.push(rb);
+                        }
+                    }
+                    if (matchedLabels.length > 0) {
+                        parts.push(emitBarlineLabels(ctx, matchedLabels, matchedBarlines, lyricY));
                     }
                     lyricY += ctx.lyricSize * 1.4;
                 }
                 ligOffset += rowLigCount;
-                barlineOffset += rowBarlineCount;
                 // lyricY has advanced one full line past the last rendered baseline;
                 // only add descender clearance, not another full line height.
                 const lastLyricBottom = lyricY - ctx.lyricSize * 1.4 + ctx.lyricSize * 0.3;
@@ -1028,6 +1056,7 @@ function parseSyllables(text) {
     }
 
     let i = 0;
+    let noteCount = 0;
     while (i < cleaned.length) {
         const ch = cleaned[i];
         if (ch === ' ' || ch === '\t') {
@@ -1045,6 +1074,7 @@ function parseSyllables(text) {
                 segments,
                 hyphenAfter: false,
                 kind: 'barline',
+                notesBefore: noteCount,
             });
             continue;
         }
@@ -1080,6 +1110,7 @@ function parseSyllables(text) {
                 hyphenAfter: k < parts.length - 1,
                 kind: 'note',
             });
+            noteCount++;
         }
     }
     return result;
