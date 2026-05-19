@@ -301,27 +301,20 @@ A három fő építőelem:
 
 A fejléc-sorok pontosvesszővel kezdődnek (`;kulcs: érték`), és a `%%` lezárja:
 
+| Kulcs | Leírás |
+|---|---|---|
+| `title` | Cím, középre igazítva, félkövér. |
+| `caption` | Felirat, jobbra igazítva, dőlt. |
+| `indent` | Behúzás az első sor elején. Ha értéket adsz (pl. `I.d`), kis betűvel jelenik meg. |
+
+
 ```aretino
 ;title: Kezdő fohász
 ;caption: Vesperás
+;indent: VII.
 %%
 (g2) h h h g h j i g h. ||
 w: Is-te-nem, hall-gass hí-vá-som-ra!
-```
-
-| Kulcs | Magyar alias | Leírás |
-|---|---|---|
-| `title` | `cím` | Cím, középre igazítva, félkövér. |
-| `caption` | `felirat` | Felírat, jobbra igazítva, dőlt. |
-| `indent` | `behúzás` | Behúzás az első sor elején. Ha értéket adsz (pl. `I.d`), kis dőlt betűvel jelenik meg. |
-
-Az `indent` kulcs a hangnem/tónus-jelzés tipikus helye, a kottasor bal szélén:
-
-```aretino
-;indent: I.d
-%%
-(g2) g h i g. hi h g e_d_ , g hi a'g g. ||
-w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
 ```
 
 A fejléc **elhagyható**, lehet rögtön dallamsorral kezdeni.
