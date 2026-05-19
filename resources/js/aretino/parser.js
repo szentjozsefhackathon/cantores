@@ -62,15 +62,27 @@ export function parseAretino(source) {
         bodyStart = 0;
     }
     const result = [];
+    let lastWasLyrics = false;
     for (let li = bodyStart; li < lines.length; li++) {
         const raw = lines[li];
         const lineStart = lineStarts[li];
         if (raw.trim() === '') {
             result.push({ type: 'blank' });
+            lastWasLyrics = false;
             continue;
         }
         if (/^\s*w:/.test(raw)) {
             result.push({ type: 'lyrics', text: raw.replace(/^\s*w:\s?/, '') });
+            lastWasLyrics = true;
+            continue;
+        }
+        if (lastWasLyrics) {
+            // A line without w: prefix that follows a lyrics line continues the
+            // same lyric line (same verse) — e.g. a linebreak added mid-lyric.
+            const last = result[result.length - 1];
+            if (last && last.type === 'lyrics') {
+                last.text += ' ' + raw.trim();
+            }
             continue;
         }
         result.push({ type: 'music', tokens: tokenizeMusicLine(raw, lineStart) });

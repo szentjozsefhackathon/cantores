@@ -438,35 +438,35 @@ function trailingKeySig(items, fallback) {
     return fallback;
 }
 
-// A section bundles a run of music tokens (concatenated across input music
-// lines) with the lyric lines that immediately follow it. A new section starts
-// when a music line appears after lyrics, mirroring the natural "verse" unit
-// in a score.
+// A section bundles music tokens and lyric lines separated from other sections
+// by a blank line (empty line). A new section starts only on a blank line —
+// single linebreaks in either the notation or w: parts do not break sections.
 function groupSections(lines) {
     const sections = [];
     let pending = null;
-    let lyricStarted = false;
+
+    function flushPending() {
+        if (pending && (pending.tokens.length > 0 || pending.lyrics.length > 0)) {
+            sections.push(pending);
+        }
+        pending = null;
+    }
+
     for (const item of lines) {
+        if (item.type === 'blank') {
+            flushPending();
+            continue;
+        }
+        if (!pending) {
+            pending = { tokens: [], lyrics: [] };
+        }
         if (item.type === 'music') {
-            if (!pending || lyricStarted) {
-                if (pending) {
-                    sections.push(pending);
-                }
-                pending = { tokens: [], lyrics: [] };
-                lyricStarted = false;
-            }
             pending.tokens.push(...item.tokens);
         } else if (item.type === 'lyrics') {
-            if (!pending) {
-                pending = { tokens: [], lyrics: [] };
-            }
             pending.lyrics.push(item.text);
-            lyricStarted = true;
         }
     }
-    if (pending) {
-        sections.push(pending);
-    }
+    flushPending();
     return sections;
 }
 
