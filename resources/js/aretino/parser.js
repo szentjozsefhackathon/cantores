@@ -18,7 +18,7 @@
 //
 // Note shape:
 //   {
-//       pitch: 'a'..'m',
+//       pitch: 'a'..'n',
 //       virga: boolean,                  — uppercase letter
 //       high: boolean,                   — trailing apostrophe (octave up)
 //       shape: 'punctum' | 'virga' | 'quilisma' | 'tenor',
@@ -91,7 +91,7 @@ export function parseAretino(source) {
 }
 
 function isPitchLetter(c) {
-    return /[a-mA-M]/.test(c);
+    return /[a-nA-N]/.test(c);
 }
 
 // Peek at position `pos` (which should be '(') to see if the parenthesized
