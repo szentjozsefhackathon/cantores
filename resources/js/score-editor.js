@@ -80,12 +80,10 @@ document.addEventListener('alpine:init', () => {
             this.applyInitialSettings();
             this.localContent = this.$wire.content;
             this.$watch('$wire.content', (val) => {
-                console.log('[score-editor] $wire.content changed, len:', val?.length);
                 this.localContent = val;
                 this.scheduleRender();
             });
             this.$watch('$wire.format', (val) => {
-                console.log('[score-editor] $wire.format changed:', val);
                 if (val === 'chordpro') {
                     this.syncChordproTitle(this.$wire.title);
                 }

@@ -231,7 +231,30 @@ class ScoreEditor extends Component
     #[Computed]
     public function cheatsheetHtml(): HtmlString
     {
-        $path = base_path('docs/aretino-cheatsheet.md');
+        return $this->markdownDocToHtml('docs/aretino-cheatsheet.md');
+    }
+
+    #[Computed]
+    public function abcCheatsheetHtml(): HtmlString
+    {
+        return $this->markdownDocToHtml('docs/abc-cheatsheet.md');
+    }
+
+    #[Computed]
+    public function chordproCheatsheetHtml(): HtmlString
+    {
+        return $this->markdownDocToHtml('docs/chordpro-cheatsheet.md');
+    }
+
+    #[Computed]
+    public function gabcCheatsheetHtml(): HtmlString
+    {
+        return $this->markdownDocToHtml('docs/gabc-cheatsheet.md');
+    }
+
+    private function markdownDocToHtml(string $relativePath): HtmlString
+    {
+        $path = base_path($relativePath);
         $markdown = file_exists($path) ? (string) file_get_contents($path) : '';
 
         $environment = new Environment(['html_input' => 'strip', 'allow_unsafe_links' => false]);

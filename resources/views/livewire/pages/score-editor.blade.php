@@ -126,6 +126,90 @@ window.abc2svg = window.abc2svg || {};
                         exportPngText: @js(__('Export PNG')),
                     })"
                 >
+                    <div x-show="$wire.format === 'abc'" x-cloak class="mb-2 flex items-center gap-4">
+                        <flux:link href="https://abcplus.sourceforge.net/abcplus_en.html" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+                            <flux:icon name="book-open" class="mr-1 inline" />{{ __('ABC guide') }}
+                        </flux:link>
+                        <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('abc-cheatsheet').show()">
+                            {{ __('Cheatsheet') }}
+                        </flux:button>
+                    </div>
+
+                    <flux:modal name="abc-cheatsheet" class="max-w-2xl">
+                        <div class="space-y-4">
+                            <flux:heading size="lg">ABC – gyorssegéd</flux:heading>
+
+                            <div class="prose prose-zinc dark:prose-invert max-w-none
+                                        prose-h2:mt-4 prose-h2:text-sm prose-h2:font-semibold prose-h2:border-b prose-h2:border-zinc-200 dark:prose-h2:border-zinc-700 prose-h2:pb-1
+                                        prose-table:text-xs prose-td:py-0.5 prose-td:pr-3
+                                        prose-code:bg-zinc-100 prose-code:px-1 prose-code:rounded prose-code:text-xs prose-code:text-blue-700 dark:prose-code:bg-zinc-800 dark:prose-code:text-blue-400">
+                                {!! $this->abcCheatsheetHtml !!}
+                            </div>
+
+                            <div class="flex justify-end">
+                                <flux:button variant="ghost" x-on:click="$flux.modal('abc-cheatsheet').close()">
+                                    {{ __('Close') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    </flux:modal>
+
+                    <div x-show="$wire.format === 'chordpro'" x-cloak class="mb-2 flex items-center gap-4">
+                        <flux:link href="https://www.chordpro.org/chordpro/chordpro-introduction/" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+                            <flux:icon name="book-open" class="mr-1 inline" />{{ __('ChordPro guide') }}
+                        </flux:link>
+                        <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('chordpro-cheatsheet').show()">
+                            {{ __('Cheatsheet') }}
+                        </flux:button>
+                    </div>
+
+                    <flux:modal name="chordpro-cheatsheet" class="max-w-2xl">
+                        <div class="space-y-4">
+                            <flux:heading size="lg">ChordPro – gyorssegéd</flux:heading>
+
+                            <div class="prose prose-zinc dark:prose-invert max-w-none
+                                        prose-h2:mt-4 prose-h2:text-sm prose-h2:font-semibold prose-h2:border-b prose-h2:border-zinc-200 dark:prose-h2:border-zinc-700 prose-h2:pb-1
+                                        prose-table:text-xs prose-td:py-0.5 prose-td:pr-3
+                                        prose-code:bg-zinc-100 prose-code:px-1 prose-code:rounded prose-code:text-xs prose-code:text-blue-700 dark:prose-code:bg-zinc-800 dark:prose-code:text-blue-400">
+                                {!! $this->chordproCheatsheetHtml !!}
+                            </div>
+
+                            <div class="flex justify-end">
+                                <flux:button variant="ghost" x-on:click="$flux.modal('chordpro-cheatsheet').close()">
+                                    {{ __('Close') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    </flux:modal>
+
+                    <div x-show="$wire.format === 'gabc'" x-cloak class="mb-2 flex items-center gap-4">
+                        <flux:link href="https://gregorio-project.github.io/gabc/" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+                            <flux:icon name="book-open" class="mr-1 inline" />{{ __('GABC guide') }}
+                        </flux:link>
+                        <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('gabc-cheatsheet').show()">
+                            {{ __('Cheatsheet') }}
+                        </flux:button>
+                    </div>
+
+                    <flux:modal name="gabc-cheatsheet" class="max-w-2xl">
+                        <div class="space-y-4">
+                            <flux:heading size="lg">GABC – gyorssegéd</flux:heading>
+
+                            <div class="prose prose-zinc dark:prose-invert max-w-none
+                                        prose-h2:mt-4 prose-h2:text-sm prose-h2:font-semibold prose-h2:border-b prose-h2:border-zinc-200 dark:prose-h2:border-zinc-700 prose-h2:pb-1
+                                        prose-table:text-xs prose-td:py-0.5 prose-td:pr-3
+                                        prose-code:bg-zinc-100 prose-code:px-1 prose-code:rounded prose-code:text-xs prose-code:text-blue-700 dark:prose-code:bg-zinc-800 dark:prose-code:text-blue-400">
+                                {!! $this->gabcCheatsheetHtml !!}
+                            </div>
+
+                            <div class="flex justify-end">
+                                <flux:button variant="ghost" x-on:click="$flux.modal('gabc-cheatsheet').close()">
+                                    {{ __('Close') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    </flux:modal>
+
                     <div x-show="$wire.format === 'aretino'" x-cloak class="mb-2 flex items-center gap-4">
                         <flux:link href="/aretino/guide" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('Aretino guide') }}
