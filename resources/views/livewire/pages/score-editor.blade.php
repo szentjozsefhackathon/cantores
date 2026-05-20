@@ -302,7 +302,7 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Staff size (%)')">
+                            <flux:tooltip :content="__('Staff size (mm)')">
                                 <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
                             <flux:input size="sm" type="number" x-model="staffSize" min="30" max="300" step="5" class="w-16" />
@@ -584,17 +584,17 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Staff size (%)')">
+                            <flux:tooltip :content="__('Staff size (mm)')">
                                 <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="aretinoStaffSize" min="30" max="300" step="5" class="w-16" />
+                            <flux:input size="sm" type="number" x-model="aretinoStaffSize" min="4" max="14" step="0.1" class="w-16" />
                         </div>
 
                         <div class="flex items-center gap-1">
                             <flux:tooltip :content="__('Lyric size (pt)')">
                                 <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="aretinoLyricSize" min="8" max="60" step="1" class="w-16" />
+                            <flux:input size="sm" type="number" x-model="aretinoLyricSize" min="6" max="40" step="1" class="w-16" />
                         </div>
 
                         <div class="flex items-center gap-1">

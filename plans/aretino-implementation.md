@@ -60,8 +60,8 @@ self::Aretino => __('Aretino (magyar gregorián)'),
 
 State (Alpine adat):
 - `aretinoLyricFont` — alapértelmezett `'Palatino Linotype', serif`
-- `aretinoLyricSize` — 12 (pt)
-- `aretinoStaffSize` — 100 (százalék)
+- `aretinoLyricSize` — 10 (pt)
+- `aretinoStaffSize` — 7 (milliméter)
 - `aretinoZoom` — 100
 - `aretinoNoteSpacing` — finom hangolás
 - `aretinoPageRatio` — `'auto' | '16/9' | '4/3' | '1/1'`

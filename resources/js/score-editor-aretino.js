@@ -5,9 +5,9 @@ const ARETINO_STAFF_SIZE_CALIBRATION = 1.3;
 export function aretinoMixin() {
     return {
         aretinoLyricFont: "'EB Garamond'",
-        aretinoLyricSize: 12,
-        aretinoStaffSize: 100,
-        aretinoZoom: 100,
+        aretinoLyricSize: 10,
+        aretinoStaffSize: 7,
+        aretinoZoom: 140,
         aretinoPageRatio: 'auto',
         aretinoStaffGap: 2.5,
         aretinoHideRepeatClef: false,
@@ -42,11 +42,11 @@ export function aretinoMixin() {
                 container.appendChild(pageEl);
                 try {
                     const svg = renderAretino(pageSource, {
-                        canvasWidth: canvas.width,
-                        canvasHeight: canvas.height,
-                        staffSize: Number(this.aretinoStaffSize) * ARETINO_STAFF_SIZE_CALIBRATION * zoom,
+                        widthMm: 159,
+                        zoom: zoom,
+                        staffSpaceMm: Number(this.aretinoStaffSize) / 4.0,
+                        lyricSize: Number(this.aretinoLyricSize),
                         lyricFont: this.aretinoLyricFont,
-                        lyricSize: Number(this.aretinoLyricSize) * zoom,
                         staffGap: Number(this.aretinoStaffGap),
                         hideRepeatClef: !!this.aretinoHideRepeatClef,
                     });
