@@ -136,7 +136,28 @@ window.abc2svg = window.abc2svg || {};
                         <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('abc-cheatsheet').show()">
                             {{ __('Cheatsheet') }}
                         </flux:button>
+                        <flux:button size="sm" variant="ghost" icon="arrow-down-on-square" x-on:click="$flux.modal('diatar-import').show()">
+                            {{ __('Import from Diatar') }}
+                        </flux:button>
                     </div>
+
+                    <flux:modal name="diatar-import" class="max-w-2xl">
+                        <div class="space-y-4">
+                            <flux:heading size="lg">{{ __('Import from Diatar') }}</flux:heading>
+                            <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">
+                                {{ __('Paste a Diatar score below. Converting replaces the editor content with the generated ABC notation.') }}
+                            </flux:text>
+                            <flux:textarea x-model="diatarSource" rows="8" class="font-mono text-sm" placeholder="\K-5kGE2[?r81f;Ki\K1d;ált\K1f]?;sunk,"></flux:textarea>
+                            <div class="flex justify-end gap-2">
+                                <flux:button variant="ghost" x-on:click="$flux.modal('diatar-import').close()">
+                                    {{ __('Cancel') }}
+                                </flux:button>
+                                <flux:button variant="primary" icon="arrow-right" x-on:click="convertDiatarToAbc()" x-bind:disabled="!diatarSource.trim()">
+                                    {{ __('Convert') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    </flux:modal>
 
                     <flux:modal name="abc-cheatsheet" class="max-w-2xl">
                         <div class="space-y-4">

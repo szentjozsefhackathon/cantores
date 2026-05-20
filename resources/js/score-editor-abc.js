@@ -1,7 +1,10 @@
+import { diatarToAbc } from './diatar-to-abc.js';
+
 const DEFAULT_ABC_FONT = 'EB Garamond';
 
 export function abcMixin() {
     return {
+        diatarSource: '',
         abcLyricFont: 'EB Garamond',
         abcLyricSize: 13,
         abcLyricBold: false,
@@ -14,6 +17,18 @@ export function abcMixin() {
         abcStemWidth: 0.7,
         abcStaffLineWidth: 0.7,
         abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth'],
+
+        convertDiatarToAbc() {
+            const abc = diatarToAbc(this.diatarSource);
+            if (!abc.trim()) { return; }
+            this.isContentUserModified = true;
+            this.$wire.format = 'abc';
+            this.$wire.content = abc;
+            this.localContent = abc;
+            this.diatarSource = '';
+            this.$flux.modal('diatar-import').close();
+            this.$nextTick(() => this.scheduleRender());
+        },
 
         renderAbcPreview() {
             const container = this.$refs.abcPreview;
