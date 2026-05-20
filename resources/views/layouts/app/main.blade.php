@@ -133,13 +133,13 @@
         {{ $slot }}
         <footer class="w-full lg:max-w-4xl mx-auto mt-2 flex flex-col items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
             <div class="items-center">&copy; {{ date('Y') }} Cantores.hu. A fejlesztést a <a href="https://github.com/szentjozsefhackathon/" target="_blank" class="hover:text-blue-500 underline">Szent József Hackathon</a> keretében végezzük.
+                <a href="https://aretino-chant.github.io" target="_blank" class="hover:text-blue-500 underline">Aretino Chant</a> – saját kottázási rendszerünkkel.
                 @if(config('version.hash'))
                     <span class="text-zinc-400 dark:text-zinc-600">
                         Verzió: <a href="https://github.com/szentjozsefhackathon/cantores/commit/{{ config('version.hash') }}" target="_blank">{{ substr(config('version.hash'), 0, 7) }}</a>
                     </span>
                 @endif
-
-        </div>
+            </div>
             <div class="flex items-center gap-1">
                 <span class="font-bold text-lg tracking-widest text-accent">U.I.O.G.D.</span>
             </div>

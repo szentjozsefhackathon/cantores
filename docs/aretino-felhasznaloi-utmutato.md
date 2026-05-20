@@ -495,6 +495,7 @@ Ha a szövegben zárójelben szerepel valami, azt a következő ütemvonal alá 
 (g2) (K:fb#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. || (Z) ht i ht g ht ||
 w: Men-je-tek, és vi-gyé-tek hí-rül: (*) föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja!
 ```
+<small>Forrás: A húsvéti Szent Három Nap liturgiája, © Bencés Kiadó</small>
 
 ---
 
@@ -707,6 +708,7 @@ w: Hints meg en-gem U-ram, i-zsóp-pal és meg-tisz-tu-lok, moss meg en-gem, és
 f g ht gs ht g h i- gs g | ht i h gs- gf e ||
 w: ~ ~ ~ † (*)
 ```
+<small>Forrás: Népénektár, © Gödöllői Premontrei Apátság</small>
 ---
 
 ## 18. A szerkesztő használata
