@@ -477,19 +477,17 @@ document.addEventListener('alpine:init', () => {
         },
 
         renderPreview() {
+            const scrollY = window.scrollY;
             if (this.$wire.format === 'abc') {
                 this.renderAbcPreview();
-                return;
-            }
-            if (this.$wire.format === 'chordpro') {
+            } else if (this.$wire.format === 'chordpro') {
                 this.renderChordproPreview();
-                return;
-            }
-            if (this.$wire.format === 'aretino') {
+            } else if (this.$wire.format === 'aretino') {
                 this.renderAretinoPreview();
-                return;
+            } else {
+                this.renderGabcPreview();
             }
-            this.renderGabcPreview();
+            window.scrollTo(0, scrollY);
         },
 
         showCopyFeedback(msg) {
