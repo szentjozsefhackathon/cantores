@@ -26,10 +26,15 @@ export function gabcMixin() {
             const isResponsive = this.isResponsiveRatio(ratio);
             const canvas = this.getVirtualCanvasSize('gabc');
             const zoom = Number(this.zoom || 100) / 100;
-            // Paper & fixed ratios lay out to the virtual canvas width; responsive
-            // lays out to the live container width so content reflows on resize.
+            const paperWidth = canvas.width / 2;
+            const zoomedPaperWidth = Math.round(paperWidth * zoom);
+            const availableWidth = Math.max(200, Math.round((container.clientWidth || zoomedPaperWidth) - 4));
+            const renderWidth = isResponsive
+                ? Math.min(zoomedPaperWidth, availableWidth)
+                : zoomedPaperWidth;
+            const renderScale = zoomedPaperWidth / canvas.width;
             const layoutWidth = isResponsive
-                ? Math.max(200, Math.round((container.clientWidth || canvas.width) / zoom) - 4)
+                ? Math.max(200, Math.round(renderWidth / renderScale))
                 : canvas.width;
             const pages = this.splitPages(content, 'gabc', ratio);
             const pageEls = pages.map((_, idx) => {
@@ -73,7 +78,6 @@ export function gabcMixin() {
                             const doc = parser.parseFromString(html, 'image/svg+xml');
                             const svg = doc.querySelector('svg');
                             let contentH = 0;
-                            let overflowScale = 1;
                             if (svg) {
                                 const h = svg.getAttribute('height');
                                 contentH = h ? parseFloat(h) : 0;
@@ -85,28 +89,22 @@ export function gabcMixin() {
                                 svg.style.display = 'block';
                                 svg.style.overflow = 'hidden';
                                 if (isFixed) {
-                                    overflowScale = zoom;
                                     svg.style.width = '100%';
                                     svg.style.height = '100%';
                                     svg.style.maxWidth = 'none';
-                                } else if (!isResponsive) {
-                                    overflowScale = zoom;
+                                } else {
                                     svg.style.width = '100%';
                                     svg.style.maxWidth = 'none';
                                 }
                                 html = new XMLSerializer().serializeToString(svg);
                             }
                             pageEl.innerHTML = html;
-                            if (!isResponsive && overflowScale !== 1) {
+                            if (!isFixed) {
                                 const svgEl = pageEl.querySelector('svg');
                                 if (svgEl) {
-                                    const scrollWidth = (overflowScale * 100) + '%';
                                     const zoomFrame = document.createElement('div');
-                                    zoomFrame.style.width = scrollWidth;
+                                    zoomFrame.style.width = renderWidth + 'px';
                                     zoomFrame.style.maxWidth = 'none';
-                                    if (isFixed) {
-                                        zoomFrame.style.aspectRatio = ratio;
-                                    }
                                     pageEl.replaceChildren(zoomFrame);
                                     zoomFrame.appendChild(svgEl);
                                 }
