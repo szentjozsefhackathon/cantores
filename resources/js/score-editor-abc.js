@@ -75,7 +75,7 @@ export function abcMixin() {
             const fontName = /[ .\-'&]/.test(safeFont) ? `"${safeFont}"` : safeFont;
             const pageScale = Number(this.abcPageScale) > 0 ? Number(this.abcPageScale) : 1;
             const rawLyricSize = Number(this.abcLyricSize) > 0 ? Number(this.abcLyricSize) : 12;
-            const lyricSize = Number((rawLyricSize / pageScale).toFixed(3));
+            const lyricSize = Number((rawLyricSize / pageScale * 3).toFixed(3));
             const vocalfontLine = ['%%vocalfont', fontName, this.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
             const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
             const pages = this.splitPages(content, 'abc', ratio);

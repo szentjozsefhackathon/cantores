@@ -256,8 +256,8 @@
                     </div>
 
                     <div class="flex items-center gap-1">
-                        <flux:tooltip :content="__('Page scale')">
-                            <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                        <flux:tooltip :content="__('Staff size')">
+                            <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>
                         <flux:input size="sm" type="number" x-model="abcPageScale" min="1" max="5" step="0.1" class="w-16" />
                     </div>
