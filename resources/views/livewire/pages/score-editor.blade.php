@@ -289,27 +289,6 @@ window.abc2svg = window.abc2svg || {};
                     {{-- GABC Settings Toolbar --}}
                     <div x-show="$wire.format === 'gabc'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
                         <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Zoom (%)')">
-                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="zoom" min="50" max="300" step="5" class="w-16" />
-                        </div>
-
-                        <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Lyric size (pt)')">
-                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="lyricSize" min="8" max="60" step="1" class="w-16" />
-                        </div>
-
-                        <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Staff size (mm)')">
-                                <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="staffSize" min="30" max="300" step="5" class="w-16" />
-                        </div>
-
-                        <div class="flex items-center gap-1">
                             <flux:tooltip :content="__('Page ratio')">
                                 <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
@@ -322,10 +301,10 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Drop caps')">
-                                <flux:icon name="text-initial" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            <flux:tooltip :content="__('Lyric size (pt)')">
+                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:switch x-model="dropCaps" />
+                            <flux:input size="sm" type="number" x-model="lyricSize" min="8" max="60" step="1" class="w-16" />
                         </div>
 
                         <div class="flex items-center gap-1">
@@ -338,6 +317,41 @@ window.abc2svg = window.abc2svg || {};
                                 <flux:select.option value="'Inter'">Inter</flux:select.option>
                                 <flux:select.option value="'Barlow Condensed'">Barlow Condensed</flux:select.option>
                             </flux:select>
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <flux:tooltip :content="__('Drop caps')">
+                                <flux:icon name="text-initial" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:switch x-model="dropCaps" />
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <flux:tooltip :content="__('Staff size (mm)')">
+                                <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="staffSize" min="30" max="300" step="5" class="w-16" />
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <flux:tooltip :content="__('Space between lines')">
+                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="spaceBetweenSystems" min="-2" max="2" step="0.1" class="w-16" />
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <flux:tooltip :content="__('Min. space below staff')">
+                                <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="w-16" />
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <flux:tooltip :content="__('Zoom (%)')">
+                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="zoom" min="50" max="300" step="5" class="w-16" />
                         </div>
 
                         <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
@@ -363,22 +377,6 @@ window.abc2svg = window.abc2svg || {};
                             <flux:input size="sm" type="number" x-model="condensingTolerance" min="0" max="1" step="0.05" class="w-16" />
                         </div>
 
-                        <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
-
-                        <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Space between lines')">
-                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="spaceBetweenSystems" min="-2" max="2" step="0.1" class="w-16" />
-                        </div>
-
-                        <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Min. space below staff')">
-                                <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="w-16" />
-                        </div>
-                        
                         <flux:tooltip :content="__('Reset to defaults')">
                             <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
                         </flux:tooltip>
@@ -465,10 +463,10 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Page scale')">
-                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            <flux:tooltip :content="__('Lyric size (pt)')">
+                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="abcPageScale" min="1" max="5" step="0.1" class="w-16" />
+                            <flux:input size="sm" type="number" x-model="abcLyricSize" min="8" max="60" step="1" class="w-16" />
                         </div>
 
                         <div class="flex items-center gap-1">
@@ -484,20 +482,11 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Lyric size (pt)')">
-                                <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="abcLyricSize" min="8" max="60" step="1" class="w-16" />
-                        </div>
-
-                        <div class="flex items-center gap-1">
                             <flux:tooltip :content="__('Bold lyrics')">
                                 <flux:icon name="bold" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
                             <flux:checkbox x-model="abcLyricBold" />
                         </div>
-
-                        <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
 
                         <div class="flex items-center gap-1">
                             <flux:tooltip :content="__('Note spacing')">
@@ -521,6 +510,22 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                         <div class="flex items-center gap-1">
+                            <flux:tooltip :content="__('Page scale')">
+                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="abcPageScale" min="1" max="5" step="0.1" class="w-16" />
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <flux:tooltip :content="__('Hide clefs from second measure onward')">
+                                <flux:icon name="clef-none" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:checkbox x-model="abcNoClef" />
+                        </div>
+
+                        <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
+
+                        <div class="flex items-center gap-1">
                             <flux:tooltip :content="__('Stem width')">
                                 <flux:icon name="pencil-line" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
@@ -532,13 +537,6 @@ window.abc2svg = window.abc2svg || {};
                                 <flux:icon name="bars-3" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
                             <flux:input size="sm" type="number" x-model="abcStaffLineWidth" min="0.1" max="3" step="0.1" class="w-16" />
-                        </div>
-
-                        <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Hide clefs from second measure onward')">
-                                <flux:icon name="clef-none" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            </flux:tooltip>
-                            <flux:checkbox x-model="abcNoClef" />
                         </div>
 
                         <flux:tooltip :content="__('Reset to defaults')">
@@ -577,18 +575,17 @@ window.abc2svg = window.abc2svg || {};
 
                     {{-- Aretino Settings Toolbar --}}
                     <div x-show="$wire.format === 'aretino'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
-                        <div class="flex items-center gap-1" x-show="!['16/9', '4/3', '1/1'].includes(aretinoPageRatio)">
-                            <flux:tooltip :content="__('Zoom (%)')">
-                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="aretinoZoom" min="50" max="300" step="5" class="w-16" />
-                        </div>
-
                         <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Staff size (mm)')">
-                                <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            <flux:tooltip :content="__('Page ratio')">
+                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="aretinoStaffSize" min="4" max="14" step="0.1" class="w-16" />
+                            <flux:select size="sm" x-model="aretinoPageRatio" class="w-28 text-xs">
+                                <flux:select.option value="paper">{{ __('Paper') }}</flux:select.option>
+                                <flux:select.option value="responsive">{{ __('Responsive') }}</flux:select.option>
+                                <flux:select.option value="16/9">16:9</flux:select.option>
+                                <flux:select.option value="4/3">4:3</flux:select.option>
+                                <flux:select.option value="1/1">1:1</flux:select.option>
+                            </flux:select>
                         </div>
 
                         <div class="flex items-center gap-1">
@@ -611,16 +608,17 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Page ratio')">
-                                <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            <flux:tooltip :content="__('Staff size (mm)')">
+                                <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:select size="sm" x-model="aretinoPageRatio" class="w-28 text-xs">
-                                <flux:select.option value="paper">{{ __('Paper') }}</flux:select.option>
-                                <flux:select.option value="responsive">{{ __('Responsive') }}</flux:select.option>
-                                <flux:select.option value="16/9">16:9</flux:select.option>
-                                <flux:select.option value="4/3">4:3</flux:select.option>
-                                <flux:select.option value="1/1">1:1</flux:select.option>
-                            </flux:select>
+                            <flux:input size="sm" type="number" x-model="aretinoStaffSize" min="4" max="14" step="0.1" class="w-16" />
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <flux:tooltip :content="__('Space between lines')">
+                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="aretinoStaffGap" min="0" max="10" step="0.5" class="w-16" />
                         </div>
 
                         <div class="flex items-center gap-1" x-show="aretinoPageRatio === 'paper'">
@@ -630,13 +628,11 @@ window.abc2svg = window.abc2svg || {};
                             <flux:input size="sm" type="number" x-model="aretinoStaffWidth" min="50" max="400" step="1" class="w-16" />
                         </div>
 
-                        <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
-
-                        <div class="flex items-center gap-1">
-                            <flux:tooltip :content="__('Space between lines')">
-                                <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                        <div class="flex items-center gap-1" x-show="!['16/9', '4/3', '1/1'].includes(aretinoPageRatio)">
+                            <flux:tooltip :content="__('Zoom (%)')">
+                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:input size="sm" type="number" x-model="aretinoStaffGap" min="0" max="10" step="0.5" class="w-16" />
+                            <flux:input size="sm" type="number" x-model="aretinoZoom" min="50" max="300" step="5" class="w-16" />
                         </div>
 
                         <div class="flex items-center gap-1">
