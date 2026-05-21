@@ -8,7 +8,7 @@ export function abcMixin() {
         abcLyricFont: 'EB Garamond',
         abcLyricSize: 13,
         abcLyricBold: false,
-        abcPageRatio: 'auto',
+        abcPageRatio: 'paper',
         abcPageScale: 3,
         abcNoteSpacing: 1.4,
         abcStaffSep: 46,
@@ -16,7 +16,8 @@ export function abcMixin() {
         abcNoClef: false,
         abcStemWidth: 0.7,
         abcStaffLineWidth: 0.7,
-        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth'],
+        abcZoom: 100,
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom'],
 
         convertDiatarToAbc() {
             const abc = diatarToAbc(this.diatarSource);
@@ -47,20 +48,33 @@ export function abcMixin() {
             if (this.abcNoClef) {
                 content = content.replace(/\|[|:\]]?/, '$&[K:clef=none]');
             }
-            const virtualWidth = this.getVirtualCanvasSize('abc').width;
+            const ratio = this.abcPageRatio;
+            const isFixed = this.isFixedRatio(ratio);
+            const isResponsive = this.isResponsiveRatio(ratio);
+            const canvas = this.getVirtualCanvasSize('abc');
+            const zoom = Number(this.abcZoom || 100) / 100;
+            // Paper & fixed ratios lay out to the virtual canvas width; responsive
+            // lays out to the live container width so content reflows on resize.
+            // For responsive, zoom divides the layout width so content reflowsat higher zoom (fewer notes per line, larger appearance).
+            const pageWidth = isResponsive
+                ? Math.max(200, Math.round((container.clientWidth || canvas.width) / zoom) - 4)
+                : canvas.width;
             const rawFont = (this.abcLyricFont || '').trim();
             const safeFont = /^[a-zA-Z0-9 .\-'&]+$/.test(rawFont) ? rawFont : DEFAULT_ABC_FONT;
             const fontName = /[ .\-'&]/.test(safeFont) ? `"${safeFont}"` : safeFont;
             const boldStr = this.abcLyricBold ? ' bold' : '';
             const lyricSize = this.abcLyricSize > 0 ? this.abcLyricSize : 12;
             const vocalfontLine = `%%vocalfont ${fontName} ${boldStr} ${lyricSize}`;
-            const preamble = `%%fullsvg 1\n%%pagewidth ${virtualWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${this.abcPageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
-            const pages = this.splitPages(content, 'abc', this.abcPageRatio);
+            const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${this.abcPageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
+            const pages = this.splitPages(content, 'abc', ratio);
             pages.forEach((pageContent, idx) => {
                 const pageEl = document.createElement('div');
-                pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
-                if (this.abcPageRatio !== 'auto') {
-                    pageEl.style.aspectRatio = this.abcPageRatio;
+                if (isFixed) {
+                    this.applyProjectorFrame(pageEl, ratio);
+                } else if (isResponsive) {
+                    pageEl.className = 'overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                } else {
+                    pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 }
                 container.appendChild(pageEl);
                 try {
@@ -78,29 +92,52 @@ export function abcMixin() {
                     if (errs.length) {
                         console.warn('[score-editor] abc2svg warnings:', errs);
                     }
-                    const svgs = pageEl.querySelectorAll('svg');
-                    svgs.forEach((svg, svgIdx) => {
-                        const svgId = `abc-svg-${idx}-${svgIdx}-${Date.now()}`;
-                        svg.id = svgId;
-                        const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-                        style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${this.abcStemWidth}!important}#${svgId} .slW{stroke-width:${this.abcStaffLineWidth}!important}`;
-                        svg.appendChild(style);
+                    const svgs = Array.from(pageEl.querySelectorAll('svg'));
+                    svgs.forEach((svg) => {
                         if (!svg.getAttribute('viewBox')) {
-                            const w = parseFloat(svg.getAttribute('width')) || virtualWidth;
+                            const w = parseFloat(svg.getAttribute('width')) || pageWidth;
                             const h = parseFloat(svg.getAttribute('height')) || 0;
                             if (h) {
                                 svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
                             }
                         }
-                        svg.setAttribute('width', '100%');
-                        svg.removeAttribute('height');
-                        svg.style.display = 'block';
                     });
-                    if (svgs.length > 0) { this.hasPages = true; }
+                    if (isFixed && svgs.length > 0) {
+                        const { svg: merged, totalHeight } = this.mergeAbcSvgsToElement(svgs);
+                        const svgId = `abc-svg-${idx}-${Date.now()}`;
+                        merged.id = svgId;
+                        const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+                        style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${this.abcStemWidth}!important}#${svgId} .slW{stroke-width:${this.abcStaffLineWidth}!important}`;
+                        merged.appendChild(style);
+                        merged.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
+                        merged.setAttribute('width', '100%');
+                        merged.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+                        merged.style.display = 'block';
+                        merged.style.width = '100%';
+                        merged.style.height = '100%';
+                        pageEl.innerHTML = '';
+                        pageEl.appendChild(merged);
+                        if (totalHeight > canvas.height + 2) {
+                            this.appendClipWarning(pageEl);
+                        }
+                        this.hasPages = true;
+                    } else {
+                        svgs.forEach((svg, svgIdx) => {
+                            const svgId = `abc-svg-${idx}-${svgIdx}-${Date.now()}`;
+                            svg.id = svgId;
+                            const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+                            style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${this.abcStemWidth}!important}#${svgId} .slW{stroke-width:${this.abcStaffLineWidth}!important}`;
+                            svg.appendChild(style);
+                            svg.setAttribute('width', '100%');
+                            svg.removeAttribute('height');
+                            svg.style.display = 'block';
+                        });
+                        if (svgs.length > 0) { this.hasPages = true; }
+                    }
                 } catch (e) {
                     console.error('[score-editor] abc2svg error:', e);
                 }
-                this.addPageControls(pageEl, idx + 1, pages.length, 'abc');
+                this.addPageControls(pageEl, idx + 1, pages.length, 'abc', { fullscreen: isFixed, ratio });
             });
         },
     };

@@ -201,8 +201,43 @@ document.addEventListener('alpine:init', () => {
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
                 this.scheduleRender();
-                this.initAretinoResizeObserver();
+                this.initResponsiveResizeObservers();
             });
+        },
+
+        // Re-render the active format when its preview container resizes, but
+        // only in 'responsive' mode (where layout width tracks the container).
+        _resizeObservers: [],
+        _resizeTimer: null,
+        initResponsiveResizeObservers() {
+            if (!window.ResizeObserver) { return; }
+            const refs = [this.$refs.preview, this.$refs.abcPreview, this.$refs.aretinoPreview];
+            this._resizeObservers = [];
+            refs.forEach((container) => {
+                if (!container) { return; }
+                const ro = new ResizeObserver((entries) => {
+                    if (!this.isResponsiveRatio(this.ratioForFormat(this.$wire.format))) { return; }
+                    const width = entries[0]?.contentRect?.width ?? 0;
+                    if (width === 0) { return; }
+                    clearTimeout(this._resizeTimer);
+                    this._resizeTimer = setTimeout(() => this.renderPreview(), 300);
+                });
+                ro.observe(container);
+                this._resizeObservers.push(ro);
+            });
+            this.$cleanup(() => {
+                this._resizeObservers.forEach(ro => ro.disconnect());
+                this._resizeObservers = [];
+                clearTimeout(this._resizeTimer);
+            });
+        },
+
+        // Paper & Responsive share one stored settings bucket; legacy scores
+        // stored the paper-equivalent under 'auto'. Reads fall back across both
+        // keys (see applyRatioSettings); writes always use the canonical 'paper'.
+        effectiveRatioKey(ratio) {
+            if (ratio === 'responsive' || ratio === 'auto') { return 'paper'; }
+            return ratio;
         },
 
         collectSettings() {
@@ -220,7 +255,7 @@ document.addEventListener('alpine:init', () => {
                         spaceBetweenSystems: Number(this.spaceBetweenSystems),
                         minSpaceBelowStaff: Number(this.minSpaceBelowStaff),
                     },
-                    ratio: this.pageRatio,
+                    ratio: this.effectiveRatioKey(this.pageRatio),
                 };
             }
             if (this.$wire.format === 'abc') {
@@ -236,7 +271,7 @@ document.addEventListener('alpine:init', () => {
                         abcStemWidth: Number(this.abcStemWidth),
                         abcStaffLineWidth: Number(this.abcStaffLineWidth),
                     },
-                    ratio: this.abcPageRatio,
+                    ratio: this.effectiveRatioKey(this.abcPageRatio),
                 };
             }
             if (this.$wire.format === 'chordpro') {
@@ -262,24 +297,60 @@ document.addEventListener('alpine:init', () => {
                         aretinoStaffGap: Number(this.aretinoStaffGap),
                         aretinoHideRepeatClef: !!this.aretinoHideRepeatClef,
                     },
-                    ratio: this.aretinoPageRatio === 'responsive' ? 'paper' : this.aretinoPageRatio,
+                    ratio: this.effectiveRatioKey(this.aretinoPageRatio),
                 };
             }
             return { settings: {}, ratio: 'auto' };
         },
 
+        ratioForFormat(format) {
+            if (format === 'abc') { return this.abcPageRatio; }
+            if (format === 'aretino') { return this.aretinoPageRatio; }
+            return this.pageRatio;
+        },
+
+        isFixedRatio(ratio) {
+            return ratio === '16/9' || ratio === '4/3' || ratio === '1/1';
+        },
+
+        isResponsiveRatio(ratio) {
+            return ratio === 'responsive';
+        },
+
+        isPaperRatio(ratio) {
+            return ratio === 'paper' || ratio === 'auto';
+        },
+
         getVirtualCanvasSize(format) {
-            if (format === 'abc') { return { width: 1920, height: null }; }
+            const ratio = this.ratioForFormat(format);
+            if (format === 'aretino') {
+                // Projector screens: constant height, width varies by ratio.
+                const screens = {
+                    '16/9': { width: 960, height: 540 },
+                    '4/3': { width: 720, height: 540 },
+                    '1/1': { width: 540, height: 540 },
+                };
+                return screens[ratio] ?? { width: 1920, height: null };
+            }
+            // ABC / GABC: constant width, height varies by ratio.
             const width = 1920;
             const heights = { '16/9': 1080, '4/3': 1440, '1/1': 1920 };
-            if (format === 'aretino') {
-                return { width, height: heights[this.aretinoPageRatio] ?? null };
-            }
-            return { width, height: heights[this.pageRatio] ?? null };
+            return { width, height: heights[ratio] ?? null };
         },
 
         getRenderWidth() {
             return this.getVirtualCanvasSize(this.$wire.format).width;
+        },
+
+        // Projector-screen frame shared by every fixed-ratio (16/9, 4/3, 1/1)
+        // preview across formats: dark bezel, rounded corners, drop shadow.
+        applyProjectorFrame(pageEl, ratio) {
+            pageEl.className = 'overflow-hidden bg-white';
+            pageEl.style.aspectRatio = ratio;
+            pageEl.style.width = '100%';
+            pageEl.style.border = '8px solid #374151';
+            pageEl.style.borderRadius = '4px';
+            pageEl.style.boxShadow = '0 8px 32px rgba(0,0,0,0.45)';
         },
 
         getFormatDefaults(format) {
@@ -291,7 +362,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         captureCurrentSettings(format, ratio) {
-            const effectiveRatio = (format === 'aretino' && ratio === 'responsive') ? 'paper' : ratio;
+            const effectiveRatio = this.effectiveRatioKey(ratio);
             const ratioFields = new Set(['pageRatio', 'abcPageRatio', 'aretinoPageRatio']);
             const { fields } = this.getFormatDefaults(format);
             const snap = {};
@@ -300,11 +371,24 @@ document.addEventListener('alpine:init', () => {
             this.tempSettings[format][effectiveRatio] = snap;
         },
 
+        // Returns the stored settings bucket for a format+ratio. The paper
+        // bucket is read from both 'paper' and the legacy 'auto' key so older
+        // GABC/ABC scores keep loading their saved values.
+        readRatioBucket(store, format, effectiveRatio) {
+            if (!store || !store[format]) { return null; }
+            const fmt = store[format];
+            if (effectiveRatio === 'paper') {
+                if (fmt.auto || fmt.paper) { return { ...(fmt.auto || {}), ...(fmt.paper || {}) }; }
+                return null;
+            }
+            return fmt[effectiveRatio] || null;
+        },
+
         applyRatioSettings(format, ratio) {
-            const effectiveRatio = (format === 'aretino' && ratio === 'responsive') ? 'paper' : ratio;
-            const score = (this.scoreSettings && this.scoreSettings[format] && this.scoreSettings[format][effectiveRatio]) || null;
-            const user = (this.userDefaults && this.userDefaults[format] && this.userDefaults[format][effectiveRatio]) || null;
-            const temp = (this.tempSettings && this.tempSettings[format] && this.tempSettings[format][effectiveRatio]) || null;
+            const effectiveRatio = this.effectiveRatioKey(ratio);
+            const score = this.readRatioBucket(this.scoreSettings, format, effectiveRatio);
+            const user = this.readRatioBucket(this.userDefaults, format, effectiveRatio);
+            const temp = this.readRatioBucket(this.tempSettings, format, effectiveRatio);
             const ratioFields = new Set(['pageRatio', 'abcPageRatio', 'aretinoPageRatio']);
             const { fields, defaults } = this.getFormatDefaults(format);
             const merged = {};
@@ -771,6 +855,70 @@ document.addEventListener('alpine:init', () => {
 
             await injectWebFontsIntoSvg(wrapper, [this.abcLyricFont]);
             return new XMLSerializer().serializeToString(wrapper);
+        },
+
+        // Stack multiple abc2svg output chunks into a single <svg> element for
+        // the fixed-ratio preview, so projector-frame scaling, clipping and
+        // fullscreen treat the page as one unit. Returns { svg, totalHeight }.
+        mergeAbcSvgsToElement(svgs) {
+            const dims = svgs.map(svg => {
+                const vb = svg.getAttribute('viewBox');
+                if (vb) {
+                    const [x, y, w, h] = vb.split(/\s+/).map(Number);
+                    return { x, y, w, h };
+                }
+                return { x: 0, y: 0, w: 1920, h: 200 };
+            });
+            const maxW = Math.max(...dims.map(d => d.w));
+            const totalH = dims.reduce((sum, d) => sum + d.h, 0);
+            const ns = 'http://www.w3.org/2000/svg';
+            const wrapper = document.createElementNS(ns, 'svg');
+            wrapper.setAttribute('xmlns', ns);
+            wrapper.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:xlink', 'http://www.w3.org/1999/xlink');
+            wrapper.setAttribute('viewBox', `0 0 ${maxW} ${totalH}`);
+            wrapper.setAttribute('color', '#000');
+            wrapper.setAttribute('fill', 'currentColor');
+            let combinedStyle = `.sW{stroke-width:${this.abcStemWidth}!important}.slW{stroke-width:${this.abcStaffLineWidth}!important}\n`;
+            const mergedDefs = document.createElementNS(ns, 'defs');
+            const seenIds = new Set();
+            let yOffset = 0;
+            svgs.forEach((svg, i) => {
+                const d = dims[i];
+                const clone = svg.cloneNode(true);
+                const g = document.createElementNS(ns, 'g');
+                g.setAttribute('transform', `translate(${-d.x} ${yOffset - d.y})`);
+                ['class', 'fill', 'stroke-width', 'color'].forEach(attr => {
+                    const val = clone.getAttribute(attr);
+                    if (val) { g.setAttribute(attr, val); }
+                });
+                Array.from(clone.childNodes).forEach(child => {
+                    const tag = child.nodeName.toLowerCase();
+                    if (tag === 'style') {
+                        combinedStyle += child.textContent + '\n';
+                    } else if (tag === 'defs') {
+                        Array.from(child.childNodes).forEach(def => {
+                            if (def.nodeType !== 1) { return; }
+                            const id = def.getAttribute && def.getAttribute('id');
+                            if (id) {
+                                if (seenIds.has(id)) { return; }
+                                seenIds.add(id);
+                            }
+                            mergedDefs.appendChild(def.cloneNode(true));
+                        });
+                    } else {
+                        g.appendChild(child);
+                    }
+                });
+                wrapper.appendChild(g);
+                yOffset += d.h;
+            });
+            const styleEl = document.createElementNS(ns, 'style');
+            styleEl.textContent = combinedStyle;
+            wrapper.insertBefore(styleEl, wrapper.firstChild);
+            if (mergedDefs.childNodes.length) {
+                wrapper.insertBefore(mergedDefs, wrapper.firstChild);
+            }
+            return { svg: wrapper, totalHeight: totalH, width: maxW };
         },
 
         async copyPageImage(pageEl, format, showFeedback) {

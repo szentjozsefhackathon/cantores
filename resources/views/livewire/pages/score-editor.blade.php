@@ -146,7 +146,7 @@ window.abc2svg = window.abc2svg || {};
                         <div class="space-y-4">
                             <flux:heading size="lg">{{ __('Import from Diatar') }}</flux:heading>
                             <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">
-                                {{ __('Paste a Diatar score below. Converting replaces the editor content with the generated ABC notation.') }}
+                                {{ __('Paste a Diatar score below. Converting replaces the editor content with the generated ABC notation. Not everything may be converted correctly, so please check the result.') }}
                             </flux:text>
                             <flux:textarea x-model="diatarSource" rows="8" class="font-mono text-sm" placeholder="\K-5kGE2[?r81f;Ki\K1d;ált\K1f]?;sunk,"></flux:textarea>
                             <div class="flex justify-end gap-2">
@@ -292,8 +292,9 @@ window.abc2svg = window.abc2svg || {};
                             <flux:tooltip :content="__('Page ratio')">
                                 <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:select size="sm" x-model="pageRatio" class="w-20 text-xs">
-                                <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
+                            <flux:select size="sm" x-model="pageRatio" class="w-28 text-xs">
+                                <flux:select.option value="paper">{{ __('Paper') }}</flux:select.option>
+                                <flux:select.option value="responsive">{{ __('Responsive') }}</flux:select.option>
                                 <flux:select.option value="16/9">16:9</flux:select.option>
                                 <flux:select.option value="4/3">4:3</flux:select.option>
                                 <flux:select.option value="1/1">1:1</flux:select.option>
@@ -347,7 +348,7 @@ window.abc2svg = window.abc2svg || {};
                             <flux:input size="sm" type="number" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="w-16" />
                         </div>
 
-                        <div class="flex items-center gap-1">
+                        <div class="flex items-center gap-1" x-show="!['16/9', '4/3', '1/1'].includes(pageRatio)">
                             <flux:tooltip :content="__('Zoom (%)')">
                                 <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
@@ -454,8 +455,9 @@ window.abc2svg = window.abc2svg || {};
                             <flux:tooltip :content="__('Page ratio')">
                                 <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:select size="sm" x-model="abcPageRatio" class="w-20 text-xs">
-                                <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
+                            <flux:select size="sm" x-model="abcPageRatio" class="w-28 text-xs">
+                                <flux:select.option value="paper">{{ __('Paper') }}</flux:select.option>
+                                <flux:select.option value="responsive">{{ __('Responsive') }}</flux:select.option>
                                 <flux:select.option value="16/9">16:9</flux:select.option>
                                 <flux:select.option value="4/3">4:3</flux:select.option>
                                 <flux:select.option value="1/1">1:1</flux:select.option>
