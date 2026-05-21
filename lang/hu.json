@@ -756,7 +756,10 @@
     "ChordPro guide": "ChordPro útmutató",
     "Export SVG": "Exportálás SVG-be",
     "Import from Diatar": "Importálás Diatárból",
-    "Paste a Diatar score below. Converting replaces the editor content with the generated ABC notation. Not everything may be converted correctly, so please check the result.": "Illessz be egy Diatár kottát alább. A konvertálás lecseréli a szerkesztő tartalmát a generált ABC jelöléssel. Nem mindent lehet helyesen konvertálni, ezért ellenőrizd a végeredményt."
+    "Paste a Diatar score below. Converting replaces the editor content with the generated ABC notation. Not everything may be converted correctly, so please check the result.": "Illessz be egy Diatár kottát alább. A konvertálás lecseréli a szerkesztő tartalmát a generált ABC jelöléssel. Nem mindent lehet helyesen konvertálni, ezért ellenőrizd a végeredményt.",
+    "Paper": "Papír",
+    "Fullscreen": "Teljes képernyő",
+    "ABC notation": "ABC kottázás"
 
 
 }

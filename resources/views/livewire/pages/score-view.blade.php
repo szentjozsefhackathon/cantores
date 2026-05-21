@@ -311,12 +311,20 @@
                         <flux:tooltip :content="__('Page ratio')">
                             <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>
-                        <flux:select size="sm" x-model="aretinoPageRatio" class="w-20 text-xs">
-                            <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
+                        <flux:select size="sm" x-model="aretinoPageRatio" class="w-28 text-xs">
+                            <flux:select.option value="paper">{{ __('Paper') }}</flux:select.option>
+                            <flux:select.option value="responsive">{{ __('Responsive') }}</flux:select.option>
                             <flux:select.option value="16/9">16:9</flux:select.option>
                             <flux:select.option value="4/3">4:3</flux:select.option>
                             <flux:select.option value="1/1">1:1</flux:select.option>
                         </flux:select>
+                    </div>
+
+                    <div class="flex items-center gap-1" x-show="aretinoPageRatio === 'paper'">
+                        <flux:tooltip :content="__('Staff width (mm)')">
+                            <flux:icon name="ruler" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                        </flux:tooltip>
+                        <flux:input size="sm" type="number" x-model="aretinoStaffWidth" min="50" max="400" step="1" class="w-16" />
                     </div>
 
                     <div class="flex items-center gap-1">

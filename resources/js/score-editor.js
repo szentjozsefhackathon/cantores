@@ -104,9 +104,11 @@ document.addEventListener('alpine:init', () => {
         copyAsImageText: config.copyAsImageText ?? '',
         exportPngText: config.exportPngText ?? '',
         exportSvgText: config.exportSvgText ?? '',
+        fullscreenText: config.fullscreenText ?? '',
         renderTimer: null,
         scoreSettings: config.scoreSettings ?? {},
         userDefaults: config.userDefaults ?? {},
+        tempSettings: {},
         copyFeedback: '',
         copyFeedbackTimer: null,
         shareUrl: '',
@@ -164,7 +166,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('lyricSize', () => this.scheduleRender());
             this.$watch('staffSize', () => this.scheduleRender());
             this.$watch('lyricFont', () => this.scheduleRender());
-            this.$watch('pageRatio', (val) => { this.applyRatioSettings('gabc', val); this.$nextTick(() => this.scheduleRender()); });
+            this.$watch('pageRatio', (val, old) => { this.captureCurrentSettings('gabc', old); this.applyRatioSettings('gabc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('dropCaps', () => this.scheduleRender());
             this.$watch('minLyricWordSpacing', () => this.scheduleRender());
             this.$watch('hyphenWidth', () => this.scheduleRender());
@@ -182,7 +184,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcPageScale', () => this.scheduleRender());
             this.$watch('abcStemWidth', () => this.scheduleRender());
             this.$watch('abcStaffLineWidth', () => this.scheduleRender());
-            this.$watch('abcPageRatio', (val) => { this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
+            this.$watch('abcPageRatio', (val, old) => { this.captureCurrentSettings('abc', old); this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('chordproFontSize', () => this.scheduleRender());
             this.$watch('chordproFontFamily', () => this.scheduleRender());
             this.$watch('chordproColumns', () => this.scheduleRender());
@@ -192,9 +194,10 @@ document.addEventListener('alpine:init', () => {
             this.$watch('aretinoLyricSize', () => this.scheduleRender());
             this.$watch('aretinoStaffSize', () => this.scheduleRender());
             this.$watch('aretinoZoom', () => this.scheduleRender());
+            this.$watch('aretinoStaffWidth', () => this.scheduleRender());
             this.$watch('aretinoStaffGap', () => this.scheduleRender());
             this.$watch('aretinoHideRepeatClef', () => this.scheduleRender());
-            this.$watch('aretinoPageRatio', (val) => { this.applyRatioSettings('aretino', val); this.$nextTick(() => this.scheduleRender()); });
+            this.$watch('aretinoPageRatio', (val, old) => { this.captureCurrentSettings('aretino', old); this.applyRatioSettings('aretino', val); this.$nextTick(() => this.scheduleRender()); });
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
                 this.scheduleRender();
@@ -254,10 +257,11 @@ document.addEventListener('alpine:init', () => {
                         aretinoLyricSize: Number(this.aretinoLyricSize),
                         aretinoStaffSize: Number(this.aretinoStaffSize),
                         aretinoZoom: Number(this.aretinoZoom),
+                        aretinoStaffWidth: Number(this.aretinoStaffWidth),
                         aretinoStaffGap: Number(this.aretinoStaffGap),
                         aretinoHideRepeatClef: !!this.aretinoHideRepeatClef,
                     },
-                    ratio: this.aretinoPageRatio,
+                    ratio: this.aretinoPageRatio === 'responsive' ? 'paper' : this.aretinoPageRatio,
                 };
             }
             return { settings: {}, ratio: 'auto' };
@@ -277,10 +281,36 @@ document.addEventListener('alpine:init', () => {
             return this.getVirtualCanvasSize(this.$wire.format).width;
         },
 
+        getFormatDefaults(format) {
+            if (format === 'gabc') { const m = gabcMixin(); return { fields: m.gabcFields, defaults: m }; }
+            if (format === 'abc') { const m = abcMixin(); return { fields: m.abcFields, defaults: m }; }
+            if (format === 'chordpro') { const m = chordproMixin(); return { fields: m.chordproFields, defaults: m }; }
+            if (format === 'aretino') { const m = aretinoMixin(); return { fields: m.aretinoFields, defaults: m }; }
+            return { fields: [], defaults: {} };
+        },
+
+        captureCurrentSettings(format, ratio) {
+            const effectiveRatio = (format === 'aretino' && ratio === 'responsive') ? 'paper' : ratio;
+            const ratioFields = new Set(['pageRatio', 'abcPageRatio', 'aretinoPageRatio']);
+            const { fields } = this.getFormatDefaults(format);
+            const snap = {};
+            fields.forEach(f => { if (!ratioFields.has(f) && f in this) { snap[f] = this[f]; } });
+            if (!this.tempSettings[format]) { this.tempSettings[format] = {}; }
+            this.tempSettings[format][effectiveRatio] = snap;
+        },
+
         applyRatioSettings(format, ratio) {
-            const score = (this.scoreSettings && this.scoreSettings[format] && this.scoreSettings[format][ratio]) || null;
-            const user = (this.userDefaults && this.userDefaults[format] && this.userDefaults[format][ratio]) || null;
-            const merged = { ...(user || {}), ...(score || {}) };
+            const effectiveRatio = (format === 'aretino' && ratio === 'responsive') ? 'paper' : ratio;
+            const score = (this.scoreSettings && this.scoreSettings[format] && this.scoreSettings[format][effectiveRatio]) || null;
+            const user = (this.userDefaults && this.userDefaults[format] && this.userDefaults[format][effectiveRatio]) || null;
+            const temp = (this.tempSettings && this.tempSettings[format] && this.tempSettings[format][effectiveRatio]) || null;
+            const ratioFields = new Set(['pageRatio', 'abcPageRatio', 'aretinoPageRatio']);
+            const { fields, defaults } = this.getFormatDefaults(format);
+            const merged = {};
+            fields.forEach(f => { if (f in defaults && !ratioFields.has(f)) { merged[f] = defaults[f]; } });
+            Object.assign(merged, user || {});
+            Object.assign(merged, score || {});
+            Object.assign(merged, temp || {});
             Object.keys(merged).forEach(k => { if (k in this) { this[k] = merged[k]; } });
         },
 
@@ -426,7 +456,7 @@ document.addEventListener('alpine:init', () => {
             pageEl.insertAdjacentElement('afterend', warn);
         },
 
-        addPageControls(pageEl, pageIdx, totalPages, format) {
+        addPageControls(pageEl, pageIdx, totalPages, format, opts = {}) {
             const bar = document.createElement('div');
             bar.className = 'mt-1 mb-2 flex flex-wrap items-center justify-end gap-2';
 
@@ -468,6 +498,82 @@ document.addEventListener('alpine:init', () => {
             bar.appendChild(copyBtn);
             bar.appendChild(exportBtn);
             bar.appendChild(exportSvgBtn);
+
+            if (opts.fullscreen && document.documentElement.requestFullscreen) {
+                const fsIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>';
+                const fsBtn = document.createElement('button');
+                fsBtn.type = 'button';
+                fsBtn.className = btnClass;
+                fsBtn.innerHTML = fsIcon + this.fullscreenText;
+
+                const ratio = opts.ratio;
+                const svgEl = pageEl.querySelector('svg');
+
+                let fsWrapper = null;
+
+                const onFullscreenChange = () => {
+                    if (document.fullscreenElement === pageEl) {
+                        pageEl.style.border = 'none';
+                        pageEl.style.borderRadius = '0';
+                        pageEl.style.boxShadow = 'none';
+                        pageEl.style.aspectRatio = '';
+                        pageEl.style.width = '100%';
+                        pageEl.style.height = '100%';
+                        pageEl.style.background = '#000';
+                        pageEl.style.display = 'flex';
+                        pageEl.style.alignItems = 'center';
+                        pageEl.style.justifyContent = 'center';
+                        if (svgEl) {
+                            fsWrapper = document.createElement('div');
+                            fsWrapper.style.aspectRatio = ratio;
+                            fsWrapper.style.height = '100%';
+                            fsWrapper.style.maxWidth = '100%';
+                            fsWrapper.style.background = 'white';
+                            svgEl.parentNode.insertBefore(fsWrapper, svgEl);
+                            fsWrapper.appendChild(svgEl);
+                            svgEl.style.width = '100%';
+                            svgEl.style.height = '100%';
+                            svgEl.style.maxWidth = '';
+                            svgEl.style.maxHeight = '';
+                            svgEl.style.background = '';
+                        }
+                    } else {
+                        pageEl.style.border = '8px solid #374151';
+                        pageEl.style.borderRadius = '4px';
+                        pageEl.style.boxShadow = '0 8px 32px rgba(0,0,0,0.45)';
+                        pageEl.style.aspectRatio = ratio;
+                        pageEl.style.width = '100%';
+                        pageEl.style.height = '';
+                        pageEl.style.background = '';
+                        pageEl.style.display = '';
+                        pageEl.style.alignItems = '';
+                        pageEl.style.justifyContent = '';
+                        if (svgEl && fsWrapper) {
+                            fsWrapper.parentNode.insertBefore(svgEl, fsWrapper);
+                            fsWrapper.remove();
+                            fsWrapper = null;
+                            svgEl.style.width = '100%';
+                            svgEl.style.height = '100%';
+                            svgEl.style.maxWidth = '';
+                            svgEl.style.maxHeight = '';
+                            svgEl.style.background = '';
+                        }
+                        document.removeEventListener('fullscreenchange', onFullscreenChange);
+                    }
+                };
+
+                fsBtn.addEventListener('click', () => {
+                    if (document.fullscreenElement) { return; }
+                    document.addEventListener('fullscreenchange', onFullscreenChange);
+                    pageEl.requestFullscreen().catch(err => {
+                        console.error('[score-editor] fullscreen error:', err);
+                        document.removeEventListener('fullscreenchange', onFullscreenChange);
+                    });
+                });
+
+                bar.appendChild(fsBtn);
+            }
+
             pageEl.insertAdjacentElement('afterend', bar);
         },
 
@@ -498,7 +604,9 @@ document.addEventListener('alpine:init', () => {
 
         async svgToCanvas(svgEl) {
             const renderWidth = this.getRenderWidth();
-            const scale = 1;
+            const isPaperAretino = this.$wire.format === 'aretino' &&
+                (this.aretinoPageRatio === 'paper' || this.aretinoPageRatio === 'auto');
+            const scale = isPaperAretino ? 600 / 96 : 2;
             const margin = 20;
             const viewBox = svgEl.getAttribute('viewBox');
             let svgWidth = renderWidth;
@@ -714,12 +822,14 @@ document.addEventListener('alpine:init', () => {
                 });
             });
             return Promise.all(promises).then(results => {
+                const scale = 2;
                 const canvas = document.createElement('canvas');
-                canvas.width = maxW + margin * 2;
-                canvas.height = totalH + margin * 2;
+                canvas.width = (maxW + margin * 2) * scale;
+                canvas.height = (totalH + margin * 2) * scale;
                 const ctx = canvas.getContext('2d');
+                ctx.scale(scale, scale);
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillRect(0, 0, maxW + margin * 2, totalH + margin * 2);
                 let y = margin;
                 results.forEach(r => {
                     ctx.drawImage(r.img, margin, y, r.w, r.h);

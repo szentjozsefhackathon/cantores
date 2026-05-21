@@ -127,6 +127,7 @@ window.abc2svg = window.abc2svg || {};
                         copyAsImageText: @js(__('Copy as Image')),
                         exportPngText: @js(__('Export PNG')),
                         exportSvgText: @js(__('Export SVG')),
+                        fullscreenText: @js(__('Fullscreen')),
                     })"
                 >
                     <div x-show="$wire.format === 'abc'" x-cloak class="mb-2 flex items-center gap-4">
@@ -576,7 +577,7 @@ window.abc2svg = window.abc2svg || {};
 
                     {{-- Aretino Settings Toolbar --}}
                     <div x-show="$wire.format === 'aretino'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
-                        <div class="flex items-center gap-1">
+                        <div class="flex items-center gap-1" x-show="!['16/9', '4/3', '1/1'].includes(aretinoPageRatio)">
                             <flux:tooltip :content="__('Zoom (%)')">
                                 <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
@@ -613,12 +614,20 @@ window.abc2svg = window.abc2svg || {};
                             <flux:tooltip :content="__('Page ratio')">
                                 <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:select size="sm" x-model="aretinoPageRatio" class="w-20 text-xs">
-                                <flux:select.option value="auto">{{ __('Auto') }}</flux:select.option>
+                            <flux:select size="sm" x-model="aretinoPageRatio" class="w-28 text-xs">
+                                <flux:select.option value="paper">{{ __('Paper') }}</flux:select.option>
+                                <flux:select.option value="responsive">{{ __('Responsive') }}</flux:select.option>
                                 <flux:select.option value="16/9">16:9</flux:select.option>
                                 <flux:select.option value="4/3">4:3</flux:select.option>
                                 <flux:select.option value="1/1">1:1</flux:select.option>
                             </flux:select>
+                        </div>
+
+                        <div class="flex items-center gap-1" x-show="aretinoPageRatio === 'paper'">
+                            <flux:tooltip :content="__('Staff width (mm)')">
+                                <flux:icon name="ruler" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="aretinoStaffWidth" min="50" max="400" step="1" class="w-16" />
                         </div>
 
                         <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
