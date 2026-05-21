@@ -182,8 +182,10 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcVocalSpace', () => this.scheduleRender());
             this.$watch('abcNoClef', () => this.scheduleRender());
             this.$watch('abcPageScale', () => this.scheduleRender());
+            this.$watch('abcPageWidth', () => this.scheduleRender());
             this.$watch('abcStemWidth', () => this.scheduleRender());
             this.$watch('abcStaffLineWidth', () => this.scheduleRender());
+            this.$watch('abcZoom', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val, old) => { this.captureCurrentSettings('abc', old); this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('chordproFontSize', () => this.scheduleRender());
             this.$watch('chordproFontFamily', () => this.scheduleRender());
@@ -264,12 +266,15 @@ document.addEventListener('alpine:init', () => {
                         abcLyricFont: this.abcLyricFont,
                         abcLyricSize: Number(this.abcLyricSize),
                         abcLyricBold: !!this.abcLyricBold,
+                        abcPageScale: Number(this.abcPageScale),
+                        abcPageWidth: Number(this.abcPageWidth),
                         abcNoteSpacing: Number(this.abcNoteSpacing),
                         abcStaffSep: Number(this.abcStaffSep),
                         abcVocalSpace: Number(this.abcVocalSpace),
                         abcNoClef: !!this.abcNoClef,
                         abcStemWidth: Number(this.abcStemWidth),
                         abcStaffLineWidth: Number(this.abcStaffLineWidth),
+                        abcZoom: Number(this.abcZoom),
                     },
                     ratio: this.effectiveRatioKey(this.abcPageRatio),
                 };

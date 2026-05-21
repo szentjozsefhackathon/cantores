@@ -518,6 +518,20 @@ window.abc2svg = window.abc2svg || {};
                             <flux:input size="sm" type="number" x-model="abcPageScale" min="1" max="5" step="0.1" class="w-16" />
                         </div>
 
+                        <div class="flex items-center gap-1" x-show="abcPageRatio === 'paper'">
+                            <flux:tooltip :content="__('Page width (px)')">
+                                <flux:icon name="ruler" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="abcPageWidth" min="400" max="4000" step="10" class="w-20" />
+                        </div>
+
+                        <div class="flex items-center gap-1" x-show="!['16/9', '4/3', '1/1'].includes(abcPageRatio)">
+                            <flux:tooltip :content="__('Zoom (%)')">
+                                <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            </flux:tooltip>
+                            <flux:input size="sm" type="number" x-model="abcZoom" min="50" max="300" step="5" class="w-16" />
+                        </div>
+
                         <div class="flex items-center gap-1">
                             <flux:tooltip :content="__('Hide clefs from second measure onward')">
                                 <flux:icon name="clef-none" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />

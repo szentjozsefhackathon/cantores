@@ -10,6 +10,7 @@ export function abcMixin() {
         abcLyricBold: false,
         abcPageRatio: 'paper',
         abcPageScale: 3,
+        abcPageWidth: 1800,
         abcNoteSpacing: 1.4,
         abcStaffSep: 46,
         abcVocalSpace: 10,
@@ -17,7 +18,7 @@ export function abcMixin() {
         abcStemWidth: 0.7,
         abcStaffLineWidth: 0.7,
         abcZoom: 100,
-        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom'],
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom'],
 
         convertDiatarToAbc() {
             const abc = diatarToAbc(this.diatarSource);
@@ -51,21 +52,32 @@ export function abcMixin() {
             const ratio = this.abcPageRatio;
             const isFixed = this.isFixedRatio(ratio);
             const isResponsive = this.isResponsiveRatio(ratio);
+            const isPaper = this.isPaperRatio(ratio);
             const canvas = this.getVirtualCanvasSize('abc');
             const zoom = Number(this.abcZoom || 100) / 100;
-            // Paper & fixed ratios lay out to the virtual canvas width; responsive
-            // lays out to the live container width so content reflows on resize.
-            // For responsive, zoom divides the layout width so content reflowsat higher zoom (fewer notes per line, larger appearance).
+            const paperWidth = canvas.width / 2;
+            const zoomedPaperWidth = Math.round(paperWidth * zoom);
+            const availableWidth = Math.max(200, Math.round((container.clientWidth || zoomedPaperWidth) - 4));
+            const paperPageWidth = Number(this.abcPageWidth) > 0 ? Number(this.abcPageWidth) : canvas.width;
+            const renderWidth = isResponsive
+                ? Math.min(zoomedPaperWidth, availableWidth)
+                : isPaper
+                    ? Math.round(zoomedPaperWidth * paperPageWidth / canvas.width)
+                    : zoomedPaperWidth;
+            const renderScale = zoomedPaperWidth / canvas.width;
             const pageWidth = isResponsive
-                ? Math.max(200, Math.round((container.clientWidth || canvas.width) / zoom) - 4)
+                ? Math.max(200, Math.round(renderWidth / renderScale))
+                : isPaper
+                    ? paperPageWidth
                 : canvas.width;
             const rawFont = (this.abcLyricFont || '').trim();
             const safeFont = /^[a-zA-Z0-9 .\-'&]+$/.test(rawFont) ? rawFont : DEFAULT_ABC_FONT;
             const fontName = /[ .\-'&]/.test(safeFont) ? `"${safeFont}"` : safeFont;
-            const boldStr = this.abcLyricBold ? ' bold' : '';
-            const lyricSize = this.abcLyricSize > 0 ? this.abcLyricSize : 12;
-            const vocalfontLine = `%%vocalfont ${fontName} ${boldStr} ${lyricSize}`;
-            const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${this.abcPageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
+            const pageScale = Number(this.abcPageScale) > 0 ? Number(this.abcPageScale) : 1;
+            const rawLyricSize = Number(this.abcLyricSize) > 0 ? Number(this.abcLyricSize) : 12;
+            const lyricSize = Number((rawLyricSize / pageScale).toFixed(3));
+            const vocalfontLine = ['%%vocalfont', fontName, this.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
+            const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
             const pages = this.splitPages(content, 'abc', ratio);
             pages.forEach((pageContent, idx) => {
                 const pageEl = document.createElement('div');
@@ -74,7 +86,12 @@ export function abcMixin() {
                 } else if (isResponsive) {
                     pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 } else {
-                    pageEl.className = 'score-preview-page overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                    pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                }
+                if (!isFixed) {
+                    pageEl.style.width = '100%';
+                    pageEl.style.maxWidth = '100%';
+                    pageEl.style.minWidth = '0';
                 }
                 container.appendChild(pageEl);
                 try {
@@ -132,6 +149,13 @@ export function abcMixin() {
                             svg.removeAttribute('height');
                             svg.style.display = 'block';
                         });
+                        if (svgs.length > 0) {
+                            const zoomFrame = document.createElement('div');
+                            zoomFrame.style.width = renderWidth + 'px';
+                            zoomFrame.style.maxWidth = 'none';
+                            pageEl.replaceChildren(zoomFrame);
+                            svgs.forEach(svg => zoomFrame.appendChild(svg));
+                        }
                         if (svgs.length > 0) { this.hasPages = true; }
                     }
                 } catch (e) {
