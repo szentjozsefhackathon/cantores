@@ -1,4 +1,4 @@
-import { abcMixin } from './score-editor-abc.js';
+import { abcMixin, ABC_RATIO_DEFAULTS } from './score-editor-abc.js';
 import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -227,11 +227,15 @@ document.addEventListener('alpine:init', () => {
                 ro.observe(container);
                 this._resizeObservers.push(ro);
             });
-            this.$cleanup(() => {
-                this._resizeObservers.forEach(ro => ro.disconnect());
-                this._resizeObservers = [];
-                clearTimeout(this._resizeTimer);
-            });
+        },
+
+        destroy() {
+            this._resizeObservers.forEach(ro => ro.disconnect());
+            this._resizeObservers = [];
+            clearTimeout(this._resizeTimer);
+            this._aretinoResizeObserver?.disconnect();
+            this._aretinoResizeObserver = null;
+            clearTimeout(this._aretinoResizeTimer);
         },
 
         // Paper & Responsive share one stored settings bucket; legacy scores
@@ -336,8 +340,17 @@ document.addEventListener('alpine:init', () => {
                     '1/1': { width: 540, height: 540 },
                 };
                 return screens[ratio] ?? { width: 1920, height: null };
+            } else if (format === 'abc') {
+                const screens = {
+                    '16/9': { width: 1920, height: 1080 },
+                    '4/3': { width: 1440, height: 1080 },
+                    '1/1': { width: 1080, height: 1080 },
+                };
+                return screens[ratio] ?? { width: 1920, height: null };
+
             }
-            // ABC / GABC: constant width, height varies by ratio.
+
+            // GABC: constant width, height varies by ratio.
             const width = 1920;
             const heights = { '16/9': 1080, '4/3': 1440, '1/1': 1920 };
             return { width, height: heights[ratio] ?? null };
@@ -398,6 +411,9 @@ document.addEventListener('alpine:init', () => {
             const { fields, defaults } = this.getFormatDefaults(format);
             const merged = {};
             fields.forEach(f => { if (f in defaults && !ratioFields.has(f)) { merged[f] = defaults[f]; } });
+            if (format === 'abc' && ABC_RATIO_DEFAULTS[effectiveRatio]) {
+                Object.assign(merged, ABC_RATIO_DEFAULTS[effectiveRatio]);
+            }
             Object.assign(merged, user || {});
             Object.assign(merged, score || {});
             Object.assign(merged, temp || {});
@@ -487,6 +503,13 @@ document.addEventListener('alpine:init', () => {
                 fields.forEach(field => {
                     if (field in defaults) { this[field] = defaults[field]; }
                 });
+                if (format === 'abc') {
+                    const effectiveRatio = this.effectiveRatioKey(this.abcPageRatio);
+                    const ratioOverrides = ABC_RATIO_DEFAULTS[effectiveRatio];
+                    if (ratioOverrides) {
+                        Object.keys(ratioOverrides).forEach(k => { if (k in this) { this[k] = ratioOverrides[k]; } });
+                    }
+                }
             };
 
             applyDefaults();

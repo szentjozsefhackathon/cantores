@@ -2,6 +2,56 @@ import { diatarToAbc } from './diatar-to-abc.js';
 
 const DEFAULT_ABC_FONT = 'EB Garamond';
 
+// Per-ratio factory defaults for ABC. Keys match effectiveRatioKey() output.
+// The 'paper' entry is the baseline; fixed-ratio entries override only the
+// fields that need to differ from the paper defaults.
+const ABC_RATIO_DEFAULTS = {
+    '16/9': {
+        abcLyricFont: 'Barlow Condensed',
+        abcLyricSize: 31,
+        abcLyricBold: false,
+        abcPageScale: 3.1,
+        abcPageWidth: 1920,
+        abcNoteSpacing: 1.1,
+        abcStaffSep: 15,
+        abcVocalSpace: 0,
+        abcNoClef: true,
+        abcStemWidth: 1.4,
+        abcStaffLineWidth: 1,
+        abcZoom: 100,
+    },
+    '4/3': {
+        abcLyricFont: 'Barlow Condensed',
+        abcLyricSize: 26,
+        abcLyricBold: false,
+        abcPageScale: 2.3,
+        abcPageWidth: 1440,
+        abcNoteSpacing: 1.1,
+        abcStaffSep: 15,
+        abcVocalSpace: 0,
+        abcNoClef: true,
+        abcStemWidth: 1.4,
+        abcStaffLineWidth: 1,
+        abcZoom: 100,
+    },
+    '1/1': {
+        abcLyricFont: 'Barlow Condensed',
+        abcLyricSize: 23,
+        abcLyricBold: false,
+        abcPageScale: 2.1,  
+        abcPageWidth: 1080,
+        abcNoteSpacing: 1.1,
+        abcStaffSep: 15,
+        abcVocalSpace: 0,
+        abcNoClef: true,
+        abcStemWidth: 1.4,
+        abcStaffLineWidth: 1,
+        abcZoom: 100,
+    },
+};
+
+export { ABC_RATIO_DEFAULTS };
+
 export function abcMixin() {
     return {
         diatarSource: '',
@@ -69,7 +119,7 @@ export function abcMixin() {
                 ? Math.max(200, Math.round(renderWidth / renderScale))
                 : isPaper
                     ? paperPageWidth
-                : canvas.width;
+                    : canvas.width;
             const rawFont = (this.abcLyricFont || '').trim();
             const safeFont = /^[a-zA-Z0-9 .\-'&]+$/.test(rawFont) ? rawFont : DEFAULT_ABC_FONT;
             const fontName = /[ .\-'&]/.test(safeFont) ? `"${safeFont}"` : safeFont;
@@ -77,7 +127,8 @@ export function abcMixin() {
             const rawLyricSize = Number(this.abcLyricSize) > 0 ? Number(this.abcLyricSize) : 12;
             const lyricSize = Number((rawLyricSize / pageScale * 3).toFixed(3));
             const vocalfontLine = ['%%vocalfont', fontName, this.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
-            const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 15px\n%%rightmargin 50px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
+            const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
+            console.log('[score-editor] ABC render options:', { pageWidth, pageScale, lyricSize, vocalfontLine, renderWidth, renderScale });
             const pages = this.splitPages(content, 'abc', ratio);
             pages.forEach((pageContent, idx) => {
                 const pageEl = document.createElement('div');

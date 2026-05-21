@@ -35,11 +35,6 @@ export function aretinoMixin() {
                 this._aretinoResizeTimer = setTimeout(() => this.renderAretinoPreview(), 300);
             });
             this._aretinoResizeObserver.observe(container);
-            this.$cleanup(() => {
-                this._aretinoResizeObserver?.disconnect();
-                this._aretinoResizeObserver = null;
-                clearTimeout(this._aretinoResizeTimer);
-            });
         },
 
         async renderAretinoPreview() {
