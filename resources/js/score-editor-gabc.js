@@ -36,11 +36,11 @@ export function gabcMixin() {
                 const pageEl = document.createElement('div');
                 if (isFixed) {
                     this.applyProjectorFrame(pageEl, ratio);
-                    pageEl.className = 'overflow-auto bg-white';
+                    pageEl.className = 'score-preview-page overflow-auto bg-white';
                 } else if (isResponsive) {
-                    pageEl.className = 'overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                    pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 } else {
-                    pageEl.className = 'overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                    pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 }
                 pageEl.style.width = '100%';
                 pageEl.style.maxWidth = '100%';

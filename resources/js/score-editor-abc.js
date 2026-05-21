@@ -72,9 +72,9 @@ export function abcMixin() {
                 if (isFixed) {
                     this.applyProjectorFrame(pageEl, ratio);
                 } else if (isResponsive) {
-                    pageEl.className = 'overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                    pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 } else {
-                    pageEl.className = 'overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                    pageEl.className = 'score-preview-page overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 }
                 container.appendChild(pageEl);
                 try {
