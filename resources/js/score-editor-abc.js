@@ -56,10 +56,10 @@ export function abcMixin() {
     return {
         diatarSource: '',
         abcLyricFont: 'EB Garamond',
-        abcLyricSize: 13,
+        abcLyricSize: 12,
         abcLyricBold: false,
         abcPageRatio: 'paper',
-        abcPageScale: 3,
+        abcPageScale: 2.3,
         abcPageWidth: 1800,
         abcNoteSpacing: 1.4,
         abcStaffSep: 46,
@@ -68,7 +68,8 @@ export function abcMixin() {
         abcStemWidth: 0.7,
         abcStaffLineWidth: 0.7,
         abcZoom: 100,
-        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom'],
+        abcTranspose: 0,
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose'],
 
         convertDiatarToAbc() {
             const abc = diatarToAbc(this.diatarSource);
@@ -127,7 +128,9 @@ export function abcMixin() {
             const rawLyricSize = Number(this.abcLyricSize) > 0 ? Number(this.abcLyricSize) : 12;
             const lyricSize = Number((rawLyricSize / pageScale * 3).toFixed(3));
             const vocalfontLine = ['%%vocalfont', fontName, this.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
-            const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n`;
+            const transposeSemitones = Number(this.abcTranspose) || 0;
+            const transposeLine = transposeSemitones !== 0 ? `%%transpose ${transposeSemitones}\n` : '';
+            const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n${transposeLine}`;
             console.log('[score-editor] ABC render options:', { pageWidth, pageScale, lyricSize, vocalfontLine, renderWidth, renderScale });
             const pages = this.splitPages(content, 'abc', ratio);
             pages.forEach((pageContent, idx) => {

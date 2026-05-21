@@ -186,6 +186,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcStemWidth', () => this.scheduleRender());
             this.$watch('abcStaffLineWidth', () => this.scheduleRender());
             this.$watch('abcZoom', () => this.scheduleRender());
+            this.$watch('abcTranspose', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val, old) => { this.captureCurrentSettings('abc', old); this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('chordproFontSize', () => this.scheduleRender());
             this.$watch('chordproFontFamily', () => this.scheduleRender());
