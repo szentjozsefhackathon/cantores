@@ -201,6 +201,7 @@ document.addEventListener('alpine:init', () => {
             this.$nextTick(() => {
                 console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
                 this.scheduleRender();
+                this.initAretinoResizeObserver();
             });
         },
 

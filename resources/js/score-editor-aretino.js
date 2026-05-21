@@ -21,6 +21,26 @@ export function aretinoMixin() {
         aretinoStaffGap: 2.5,
         aretinoHideRepeatClef: false,
         aretinoFields: ['aretinoLyricFont', 'aretinoLyricSize', 'aretinoStaffSize', 'aretinoZoom', 'aretinoPageRatio', 'aretinoStaffWidth', 'aretinoStaffGap', 'aretinoHideRepeatClef'],
+        _aretinoResizeObserver: null,
+        _aretinoResizeTimer: null,
+
+        initAretinoResizeObserver() {
+            const container = this.$refs.aretinoPreview;
+            if (!container || !window.ResizeObserver) { return; }
+            this._aretinoResizeObserver = new ResizeObserver((entries) => {
+                if (this.aretinoPageRatio !== 'responsive') { return; }
+                const width = entries[0]?.contentRect?.width ?? 0;
+                if (width === 0) { return; }
+                clearTimeout(this._aretinoResizeTimer);
+                this._aretinoResizeTimer = setTimeout(() => this.renderAretinoPreview(), 300);
+            });
+            this._aretinoResizeObserver.observe(container);
+            this.$cleanup(() => {
+                this._aretinoResizeObserver?.disconnect();
+                this._aretinoResizeObserver = null;
+                clearTimeout(this._aretinoResizeTimer);
+            });
+        },
 
         async renderAretinoPreview() {
             const container = this.$refs.aretinoPreview;
