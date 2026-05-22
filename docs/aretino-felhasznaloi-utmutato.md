@@ -4,7 +4,7 @@
 > Verzió: 1.1 · Utolsó frissítés: 2026-05-22
 
 ```aretino
-(g2) g h i g. hi h g e_d_ , g hi a'g g. ||
+(g2) g h i g. hi h g e_d_ , g hi Ag g. ||
 w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
 ```
 
@@ -194,7 +194,7 @@ torculus, `4 u U 6` = másik torculus, stb. Ráadásul bizonyos jelöléseket í
 Ugyanez Aretino-val, egyszerűen megadjuk a hangok neveit és minden automatikus:
 
 ```aretino
-(g2) g gh hg H/g hf he hih gji jjihg
+(g2) g gh hg h'/g hf he hih gji jjihg
 ```
 
 ### Mit hozott a Guido?
@@ -273,24 +273,24 @@ tartalomra kell figyelnie.
 ## 5. Első kotta
 
 ```aretino
-(g2) d f g h.
+(g2) c e g A g.
 ```
 
-Ez egy violinkulcsot (G a 2. vonalon), majd négy punctumot rajzol —
+Ez egy violinkulcsot (G a 2. vonalon), majd öt punctumot rajzol —
 az utolsóra morával (nyújtóponttal).
 
 Egy minimum-példa szöveggel és fejléccel:
 
 ```aretino
-%title: Első kísérlet
+%title: Salve, Regina
 %%
-(g2) d f g h.
-w:   Pró-ba kot-ta.
+(g2) c e g A g.
+w:   Sal-ve, Re-gí-na,
 ```
 
 A három fő építőelem:
 
-1. **Fejléc** — elhagyható, `;kulcs: érték` sorok, `%%` zárja.
+1. **Fejléc** — elhagyható, `%kulcs: érték` sorok, `%%` zárja.
 2. **Dallam-sor** — hangok, ligatúrák, vonalak. Az első zárójeles elem
    a kulcs (`(g2)`, `(f4)`, `(c3)`).
 3. **Szöveg-sor** — `w:` előtaggal, közvetlenül a dallam alatt.
@@ -305,9 +305,10 @@ A fejléc-sorok pontosvesszővel kezdődnek (`;kulcs: érték`), és a `%%` lez�
 |---|---|---|
 | `title` | Cím, középre igazítva, félkövér. |
 | `caption` | Felirat, jobbra igazítva, dőlt. |
-| `indent` | Behúzás az első sor elején. Ha értéket adsz (pl. `I.d`), kis betűvel jelenik meg. |
-| `rubric` | Jobbra igazított, kiskapitális felirat |
+| `indent` | Behúzás az első sor elején. Ha értéket adsz (pl. `I.d`), megjelenik ezen a részen. |
+| `rubric` | Balra igazított, kiskapitális felirat |
 
+Formázási információkat is tartalmazhatnak ezek a sorok (ld. később).
 
 ```aretino
 %title: Vigília
@@ -346,8 +347,7 @@ aktuális kulcsot.
 
 ## 8. Hangmagasság
 
-A hangokat **a–n** kisbetűk jelölik. A betű mindig ugyanazt a sort/vonalközt
-jelenti, **függetlenül a kulcstól**:
+A hangokat **a–n** kisbetűk, illetve az **A-N** nagybetűk jelölik. A betű mindig ugyanazt a sort/vonalközt jelenti, **függetlenül a kulcstól**:
 
 ```aretino
 a b c d e f g h i j k l m n
@@ -358,11 +358,11 @@ Tehát G-kulcsban `c` az 1. vonalon C-hang, `g` a 3. vonalon B-hang stb.
 F-kulcsban ugyanaz a `c` az 1. vonalon E-hang lesz (mert a kulcs változik,
 de a vonal-pozíció nem).
 
-### Emelt oktáv — aposztrof
+### Emelt oktáv — nagybetűvel
 
 ```aretino
-a' b' c' d' e' f' g' h'
-w: a' b' c' d' e' f' g' h'
+A B C D E F G H
+w: A B C D E F G H
 ```
 
 ---
@@ -374,7 +374,7 @@ A kottafej alapformáját egy **utótag-karakter** módosítja a betű után:
 | Forrás | Név | Rajz |
 |---|---|---|
 | `d` | **punctum** | töltött kerek kottafej, szár nélkül |
-| `D` | **virga** | punctum bal oldalán lefelé mutató szárral (nagybetű!) |
+| `d'` | **virga** | punctum bal oldalán lefelé mutató szárral (felsővessző) |
 | `dw` | **quilisma** | csíkozott, cikkcakkos kontúrú kottafej |
 | `dt` | **tenor-hang** | üres kottafej, két oldalán függőleges vonalkák |
 | `ds` | **kiskotta** | kis méretű kottafej |
@@ -382,7 +382,7 @@ A kottafej alapformáját egy **utótag-karakter** módosítja a betű után:
 ### Példák
 
 ```aretino
-(g2) d D dw dt ds
+(g2) d d' dw dt ds
 ```
 
 Bal → jobb: punctum, virga, quilisma, tenor-hang — mind ugyanazon a magasságon (D).
@@ -426,7 +426,7 @@ alkotnak. Ez az Aretino egyik leglényegesebb mechanizmusa.
 | `df` | **podatus** | felfelé lépő kettős, alsóról a felsőre vivő ívvel |
 | `fd` | **clivis** | lefelé lépő kettős, ívelt kalligrafikus vonallal |
 | `dfd` | **torculus** | hármas: fel-le |
-| `fdf` | (völgy hármas) | le-fel — egyedi ligatúraként rajzolódik |
+| `fdf` | (völgy hármas) | hármas: le-fel |
 | `dfgf` | hosszabb neuma | tetszőleges hosszú ligatúra |
 
 ### Egy hang vs. ligatúra
@@ -494,7 +494,7 @@ lehet.
 Ha a szövegben zárójelben szerepel valami, azt a következő ütemvonal alá rendezzük, a lenti példában a `(*)` jelöli, hogy a rövid vonal alá kell írni egy * jelet.
 
 ```aretino
-(g2) (K:fb#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. || (Z) ht i ht g ht ||
+(g2) (K:f#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. || (Z) ht i ht g ht ||
 w: Men-je-tek, és vi-gyé-tek hí-rül: (*) föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja!
 ```
 <small>Forrás: A húsvéti Szent Három Nap liturgiája, © Bencés Kiadó</small>
@@ -574,9 +574,9 @@ csak a darab elején van leírva.
 
 | Forrás | Jelentés |
 |---|---|
-| `(K:b)` vagy `(K:ib)` | b-előjegyzés az `i` magasságon |
+| `(K:b)` vagy `(K:ib)` vagy `(K:Bb)` | b-előjegyzés az `i`/`B` magasságon |
 | `(K:eb)` | b az E hangon |
-| `(K:b e#)` | több módosítójel — szóközzel elválasztva |
+| `(K:F# C#)` | több módosítójel — szóközzel elválasztva |
 | `(K:)` | előjegyzés törlése |
 
 ```aretino
@@ -585,9 +585,7 @@ csak a darab elején van leírva.
 (g2) (K:m# j#) d e f g h i j k (||)
 ```
 
-Az `(K:b)` minden új sor elején megismétlődik. Egy újabb `(K:…)` token
-megváltoztatja az előjegyzést onnantól (helyben is megjelenik, és a
-következő sorok elején is az új jel szerepel). `(K:)` törli az
+Egy újabb `(K:…)` token megváltoztatja az előjegyzést onnantól (helyben is megjelenik, és a következő sorok elején is az új jel szerepel). `(K:)` törli az
 előjegyzést.
 
 ---
@@ -607,11 +605,11 @@ egy különálló punctum (pl. `d` szóközökkel a két oldalán) szintén egy
 egységnek számít, és egy szótag jut rá.
 
 ```aretino
-(g2) dghfe ed , g hg ghj h hghgfg(ib)ihig fhgfgfe e:
+(g2) dghfe ed , g hg ghj h hghgfg(b)ihig fhgfgfe e :
 w: Hús-vét ün-ne-pe e-lőtt tör-tént:
 ```
 
-A tördelő algoritmus megpróbálja a gazdaságosan és esztétikusan elhelyezni a szöveget. Ez azt jelenti, hogy ha megoldható, a szótagokat megpróbálja összevonni. Az egyes szótagokat punctum alatt középre rendezi, neumák alatt, tenorhang alatt és mora-s punctum alatt pedig balra rendezi.
+A tördelő algoritmus megpróbálja a gazdaságosan és esztétikusan elhelyezni a szöveget. Ez azt jelenti, hogy ha megoldható, a szótagokat megpróbálja összevonni. Az egyes szótagokat punctum alatt középre rendezi, neumák alatt, tenorhang alatt alatt pedig balra rendezi.
 
 ### Több versszak
 
@@ -631,7 +629,7 @@ használata zsoltárverseknél és responzóriumoknál.
 ```aretino
 %indent: VI. f.
 (g2) f g h f. gh g f d_c_ , f gh gf f. || (Z) f g | ht = g. , ht = g h- fs f. | ht = f g gs h g fs f. ||
-w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja. ~ ~ ~ + ~ ~ ~ ~ ~ (*
+w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja. ~ ~ ~ + ~ ~ ~ ~ ~ (*)
 W: <Jézus> mond[ja]: + szeressétek egymást, ez az [én] parancsom *
 amint én szerette[lek] benneteket!
 W: Arról ismerje meg mindenki, hogy az én tanítványa[im] vagytok: *
@@ -689,13 +687,37 @@ A szöveges sorokba egyszerű formázó jelöléseket is tehetünk:
 A formázás tetszőleges szótagokra alkalmazható, és a szótaghatáron át is érvényes marad, amíg a záró tag meg nem jelenik.
 
 ```aretino
-(g2) g h i g. hi h g e_d_ , g hi a'g g. ||
+(g2) g h i g. hi h g e_d_ , g hi Ag g. ||
 w: {\R}~~Al-le-lu-ja, al-le-lu-ja>, (\red{{*}}) al-[le-lu]-ja.
 ```
 
+### Feliratok
+
+**Felirat**: rövid szöveg, amely egy hang vagy neuma fölött jelenik meg. A feliratot idézőjelek közé téve, közvetlenül a hang vagy ligatúra után (szóköz nélkül) kell írni:
+
+```aretino
+(g2) hg"Felirat" d f"\red{{!}}" gh"2x"
+```
+
+A felirat bármilyen (akár formázott) szöveg lehet; a megfelelő hang vagy ligatúra fölött jelenik meg.
+
 ---
 
-## 17. Hosszabb példák
+## 18. Zárójelezett hangok
+
+Egy vagy több hangot (vagy egész neumát) `[` … `]` közé téve **tipográfiai zárójelek** jelennek meg körülöttük.
+
+| Forrás | Jelentés |
+|---|---|
+| `[h]` | egyetlen hang zárójelben |
+| `[hg]` | ligatúra (neuma) zárójelben |
+| `[h i j]` | több elem zárójelben (szóközök megengedettek) |
+
+```aretino
+(g2) d [h] g [hg] d [h i j] g
+```
+
+## 19. Hosszabb példák
 
 ### Egyszerű Kyrie
 
@@ -735,7 +757,7 @@ w: ~ ~ ~ † (*)
 <small>Forrás: Népénektár, © Gödöllői Premontrei Apátság</small>
 ---
 
-## 18. A szerkesztő használata
+## 20. A szerkesztő használata
 
 Az Aretino formátum a [kottaszerkesztőben](/score/preview) elérhető — a formátumválasztóban
 válaszd ki az **Aretino** opciót. Élő előnézet jelenik meg a forrás alatt.
@@ -769,52 +791,8 @@ Ha az oldalarányt `16:9`, `4:3` vagy `1:1` értékre állítod, a forrásban `%
 
 A kotta SVG és PNG formátumban exportálható és képként másolható is. Így szöveg- és kiadványszerkesztőben akár professzionális nyomtatással is előállítható.
 
----
+## 21. Visszajelzés, hibajelentés
 
-## 19. Gyakori hibák és tippek
+Az Aretino formátumnak és a megjelenítő szoftvernek saját honlapja van: [aretino-chant.github.io](https://aretino-chant.github.io), ahol hibákat is lehet jelenteni, illetve fejlesztési javaslatokat is szívesen fogadunk.
 
-### "A ligatúra nem áll össze"
-
-**Tünet:** két hang közé szándékodnál hosszabb rés került.
-**Ok:** szóköz van a hangok között.
-**Megoldás:** írd egybe — `d f` (két punctum) helyett `df` (podatus).
-
-### "Túl sok virga-szár jelent meg"
-
-**Tünet:** ligatúra-csúcsokon kéretlenül szárak jelennek meg.
-**Ok:** ez a normál viselkedés — az auto-virga minden csúcsra szárat tesz.
-**Megoldás:** ha tudatosan nem akarsz virga-csúcsot, írd át a ligatúrát
-külön punctum-okra (szóközzel) ott, ahol nem akarod az automatikust.
-
-### "A szöveg nem igazodik a hangokhoz"
-
-**Tünet:** szótagok nem a megfelelő egység alá kerülnek.
-**Ok:** valószínűleg a szótag-tagolás nem stimmel — vagy hiányoznak a
-kötőjelek (`Kyrie` helyett `Ky-ri-e`), vagy ott írtál ligatúrát, ahol
-külön hangokat kéne (vagy fordítva).
-**Megoldás:** ellenőrizd, hogy minden szótaghoz **pontosan egy** neuma
-vagy különálló hang tartozik-e. Ha egy szótag alá több hang kell, írd
-őket ligatúrába (szóköz nélkül egybe).
-
-### "A módosító nem jelenik meg a megfelelő hangon"
-
-**Tünet:** mora vagy episema nem ott jelenik meg, ahol kellene.
-**Ok:** az utótag-karakter csak az **előtte álló** hangra vonatkozik.
-**Megoldás:** `df.` → az `f`-hez tartozik a mora. Ha a `d`-hez szeretnéd,
-írd `d.f`-nek (de figyelj: a szóköz nélküli ligatúrában a `d.` előbbi
-hangot módosít, és a `f` a következő hang).
-
-### "Üres sor lett a kotta közepén"
-
-**Tünet:** váratlan kötőjel a két szakasz között, vagy szétesik az
-illesztés.
-**Ok:** üres sor **új szakaszt** indít a parserben.
-**Megoldás:** ha nem akarsz új szakaszt, ne hagyj üres sort a dallam
-és szöveg között.
-
-## 20. Visszajelzés, hibajelentés
-
-Az Aretino formátumot és a megjelenítő szoftvert a Szent József Hackathon keretében, önkéntes fejlesztők készítik.
-A forráskód szabadon elérhető a [GitHubon](https://github.com/szentjozsefhackathon/cantores), ahol hibákat is lehet jelenteni, illetve fejlesztési javaslatokat is szívesen fogadunk.
-
-Ha kérdésed/javaslatod van, írj nekünk az [info@cantores.hu](mailto:info@cantores.hu) címre, vagy a [Facebook](https://www.facebook.com/people/Cantoreshu/61588419360930/) oldalunkon.
+Ha kérdésed/javaslatod van, írhatsz nekünk az [info@cantores.hu](mailto:info@cantores.hu) címre, vagy a [Facebook](https://www.facebook.com/people/Cantoreshu/61588419360930/) oldalunkon is.

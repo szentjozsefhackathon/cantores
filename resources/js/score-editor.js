@@ -202,7 +202,6 @@ document.addEventListener('alpine:init', () => {
             this.$watch('aretinoHideRepeatClef', () => this.scheduleRender());
             this.$watch('aretinoPageRatio', (val, old) => { this.captureCurrentSettings('aretino', old); this.applyRatioSettings('aretino', val); this.$nextTick(() => this.scheduleRender()); });
             this.$nextTick(() => {
-                console.log('[score-editor] nextTick, exsurge available:', !!window.exsurge);
                 this.scheduleRender();
                 this.initResponsiveResizeObservers();
             });

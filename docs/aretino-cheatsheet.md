@@ -5,13 +5,13 @@
 |Hangmagasság||
 |---|---|
 | `a b c d e f g h i j k l m n` | 14 pozíció alulról felfelé |
-| `a' b' … h'` | emelt oktáv (aposztróffal) |
+| `A B … H` | emelt oktáv (nagybetű) |
 
 
 |Kottafej||
 |---|---|
-| `d`, `D`, `dt` | punctum, virga, tenor |
-| `dw`, `dt`, `ds` | quilisma, kiskotta |
+| `d`, `d'`, `dt` | punctum, virga, tenor |
+| `dw`, `ds` | quilisma, kiskotta |
 
 | Utótag ||
 |---|---|
@@ -34,12 +34,11 @@
 | `= (sp) (sp2)` | fix rés (szorzóval skálázható) |
 | `*` | rugalmas rés (sorkizáráshoz) |
 
-
 | Módosítójelek és előjegyzés | |
 |---|---|
-| `(b)` `(n)` `(#)` | b, feloldó, kereszt (hangbetű nélkül: `i` magasság) |
+| `(b)` `{n)` `(#)` | b, feloldó, kereszt (hangbetű nélkül: `i` magasság) |
 | `(fb)` `(in)` `(m#)` | hanghoz kötött módosítójel |
-| `(K:b e#)` | előjegyzés (minden sor elején ismétlődik) |
+| `(K:F# C#)` | előjegyzés (minden sor elején ismétlődik) |
 | `(K:)` | előjegyzés törlése |
 
 | Szöveg | |
@@ -52,9 +51,10 @@
 | `\R` `\V` `+` `++` | ℟, ℣, kereszt, kettős kereszt jel |
 | `{}` `<>` `[]` | félkövér, dőlt, aláhúzott formázás |
 | `\red{...}` `\color:green{...}` | színezett szöveg |
+| `c"Felirat"` | felirat a hangjegy fölé
 
 
 | Fejléc | Jelentés |
 |---|---|
-| `%title: Cím` | cím (középre, félkövéren) |
+| `%title: Cím` | cím (középre, félkövéren), továbbiak: rubric, caption |
 | `%%` | fejléc lezárása |
