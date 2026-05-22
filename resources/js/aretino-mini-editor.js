@@ -22,12 +22,12 @@ document.addEventListener('alpine:init', () => {
             preview.innerHTML = '';
             if (!this.content.trim()) { return; }
             try {
-                const width = preview.clientWidth || 700;
-                const staffSize = width < 500 ? 50 : (width < 700 ? 70 : 90);
+                const ZOOM = 1.4;
+                const containerWidth = preview.clientWidth || 800;
+                const width = Math.max(120, Math.round(containerWidth / ZOOM));
                 const svg = renderAretino(this.content, {
-                    canvasWidth: width,
-                    staffSize,
-                    lyricSize: 16,
+                    width,
+                    zoom: ZOOM,
                     lyricFont: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
                 });
                 preview.innerHTML = svg;
