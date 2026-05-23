@@ -2,6 +2,11 @@ import { abcMixin, ABC_RATIO_DEFAULTS } from './score-editor-abc.js';
 import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
+import { AretinoEditor } from '@aretino-chant/editor';
+
+if (!customElements.get('aretino-editor')) {
+    customElements.define('aretino-editor', AretinoEditor);
+}
 
 const LATIN_EXT = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
 const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
@@ -127,12 +132,42 @@ document.addEventListener('alpine:init', () => {
             chordpro: '{title: }\n[C]Glo-ri-[G]a [C]Deo\n',
         },
 
+        handleEditorContentInput(value) {
+            this.setEditorContent(value, { modified: true });
+        },
+
+        setEditorContent(value, options = {}) {
+            const content = String(value ?? '');
+            this.localContent = content;
+            this.$wire.content = content;
+            if (Object.hasOwn(options, 'modified')) {
+                this.isContentUserModified = !!options.modified;
+            }
+            this.syncAretinoEditor();
+            this.scheduleRender();
+            if (this.$wire.format === 'aretino') {
+                this.updateAretinoHighlight();
+            }
+        },
+
+        syncAretinoEditor() {
+            this.$nextTick(() => {
+                const editor = this.$refs.aretinoEditor;
+                if (!editor) { return; }
+                if (editor.value !== this.localContent) {
+                    editor.value = this.localContent ?? '';
+                }
+                const zoom = Number(this.aretinoZoom) / 100;
+                if (Number(editor.zoom) !== zoom) {
+                    editor.zoom = zoom;
+                }
+            });
+        },
+
         fillMinimalExample() {
             const example = this.minimalExamples[this.$wire.format] ?? '';
             if (!example) { return; }
-            this.$wire.content = example;
-            this.localContent = example;
-            this.scheduleRender();
+            this.setEditorContent(example, { modified: false });
         },
 
         init() {
@@ -144,9 +179,11 @@ document.addEventListener('alpine:init', () => {
                 this.fillMinimalExample();
             } else {
                 this.isContentUserModified = true;
+                this.syncAretinoEditor();
             }
             this.$watch('$wire.content', (val) => {
-                this.localContent = val;
+                this.localContent = String(val ?? '');
+                this.syncAretinoEditor();
                 this.scheduleRender();
             });
             this.$watch('$wire.format', (val) => {
@@ -156,6 +193,7 @@ document.addEventListener('alpine:init', () => {
                 if (val === 'chordpro') {
                     this.syncChordproTitle(this.$wire.title);
                 }
+                this.syncAretinoEditor();
                 this.scheduleRender();
             });
             this.$watch('$wire.title', (val) => {
@@ -196,7 +234,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('aretinoLyricFont', () => this.scheduleRender());
             this.$watch('aretinoLyricSize', () => this.scheduleRender());
             this.$watch('aretinoStaffSize', () => this.scheduleRender());
-            this.$watch('aretinoZoom', () => this.scheduleRender());
+            this.$watch('aretinoZoom', () => { this.syncAretinoEditor(); this.scheduleRender(); });
             this.$watch('aretinoStaffWidth', () => this.scheduleRender());
             this.$watch('aretinoStaffGap', () => this.scheduleRender());
             this.$watch('aretinoHideRepeatClef', () => this.scheduleRender());
@@ -1042,9 +1080,7 @@ Refr.
             };
             const example = examples[this.$wire.format] ?? '';
             if (!example) { return; }
-            this.$wire.content = example;
-            this.localContent = example;
-            this.scheduleRender();
+            this.setEditorContent(example);
         },
 
     }));

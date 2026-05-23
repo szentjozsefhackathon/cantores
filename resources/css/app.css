@@ -360,3 +360,25 @@ select:focus[data-flux-control] {
     pre { @apply bg-zinc-100 dark:bg-zinc-800 rounded-lg p-4 overflow-x-auto mb-4; }
     pre code { @apply bg-transparent p-0; }
 }
+
+aretino-editor.score-editor-aretino-source {
+    width: 100%;
+    height: clamp(22rem, 55vh, 31.25rem) !important;
+    min-height: 22rem;
+    overflow: hidden;
+    border: 1px solid var(--color-zinc-200);
+    border-radius: 0.5rem;
+    background: #ffffff;
+}
+
+.dark aretino-editor.score-editor-aretino-source {
+    border-color: var(--color-zinc-700);
+}
+
+aretino-editor.score-editor-aretino-source::part(editor) {
+    flex: 1 1 auto;
+}
+
+aretino-editor.score-editor-aretino-source::part(preview) {
+    display: none;
+}

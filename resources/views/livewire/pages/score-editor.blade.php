@@ -266,20 +266,35 @@ window.abc2svg = window.abc2svg || {};
                         </div>
                     </flux:modal>
 
-                    {{-- Textarea --}}
+                    {{-- Source editor --}}
                     <flux:field required>
-                        <flux:textarea
-                            wire:model="content"
-                            rows="10"
-                            class="font-mono text-sm xl:min-h-[500px]"
-                            :placeholder="__('Type the score here')"
-                            x-ref="contentTextarea"
-                            x-on:input="isContentUserModified = true; localContent = $event.target.value; scheduleRender(); updateAretinoHighlight && updateAretinoHighlight()"
+                        <div x-show="$wire.format !== 'aretino'" x-cloak>
+                            <flux:textarea
+                                wire:model="content"
+                                rows="10"
+                                class="font-mono text-sm xl:min-h-[500px]"
+                                :placeholder="__('Type the score here')"
+                                x-ref="contentTextarea"
+                                x-on:input="handleEditorContentInput($event.target.value)"
+                                x-on:click="updateAretinoHighlight && updateAretinoHighlight()"
+                                x-on:keyup="updateAretinoHighlight && updateAretinoHighlight()"
+                                x-on:select="updateAretinoHighlight && updateAretinoHighlight()"
+                                x-on:focus="updateAretinoHighlight && updateAretinoHighlight()"
+                            />
+                        </div>
+
+                        <aretino-editor
+                            x-show="$wire.format === 'aretino'"
+                            x-cloak
+                            x-ref="aretinoEditor"
+                            wire:ignore
+                            class="score-editor-aretino-source"
+                            x-on:change="handleEditorContentInput($event.detail.value)"
                             x-on:click="updateAretinoHighlight && updateAretinoHighlight()"
                             x-on:keyup="updateAretinoHighlight && updateAretinoHighlight()"
-                            x-on:select="updateAretinoHighlight && updateAretinoHighlight()"
-                            x-on:focus="updateAretinoHighlight && updateAretinoHighlight()"
-                        />
+                            x-on:focusin="updateAretinoHighlight && updateAretinoHighlight()"
+                        ></aretino-editor>
+
                         <flux:error name="content" />
                     </flux:field>
 

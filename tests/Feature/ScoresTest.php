@@ -247,6 +247,18 @@ it('renders reset to defaults button in each format toolbar', function () {
         ->assertSeeHtml('resetToDefaults()');
 });
 
+it('renders the Aretino custom editor while keeping the shared textarea for other formats', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->assertSeeHtml('<aretino-editor')
+        ->assertSeeHtml('score-editor-aretino-source')
+        ->assertSeeHtml('handleEditorContentInput($event.detail.value)')
+        ->assertSeeHtml('wire:model="content"');
+});
+
 it('does not allow attaching a score to a private music piece the user cannot view', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
