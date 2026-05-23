@@ -1024,7 +1024,7 @@ ABAG | A G2 z | A A G (A1/2G1/2) | F2 E2 | ABAG | A G2 z | A A G (A1/2G1/2) | F2
 w: Bol-dog-asz-szony a-nyánk, ré-gi nagy pát-_ró-nánk! Nagy ín-ség-ben lé-vén így szó-lít meg_ ha-zánk: Ma-gyar-or-szág-ról, é-des ha-zánk-ról, ne fe-lejt-kez-zél el sze-gény ma-gya-rok-ról!`,
                 gabc: `(c3) KY(d)ri(gxfgh)e(h.ivHGh.) *(kvIH'Ghih.) (,) e(gxhvFE'Dgf)lé(e')i(e)son.(d.) (::)
 `,
-                aretino: `(g2) g h i g. hi h g e_d_ , g hi a'g g. ||
+                aretino: `(g2) g A B g. AB A g e_d_ , g AB Ag g. ||
 w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
 `,
                 chordpro: `{title: Minden, mi él}
