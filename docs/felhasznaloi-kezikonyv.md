@@ -1,7 +1,6 @@
 # Cantores.hu – Felhasználói kézikönyv
 
 > **Cantores.hu** – Magyar katolikus kántorok zenei tervező platformja  
-> Verzió: 1.0 | Utolsó frissítés: 2026-02-23
 
 ---
 

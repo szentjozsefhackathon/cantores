@@ -1,7 +1,6 @@
 # Aretino — felhasználói útmutató
 
 > Magyar katolikus gregorián notáció szöveges formátumban.
-> Verzió: 1.1 · Utolsó frissítés: 2026-05-22
 
 ```aretino
 (g2) g h i g. hi h g e_d_ , g hi Ag g. ||
