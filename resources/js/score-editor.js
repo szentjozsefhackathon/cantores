@@ -2,10 +2,29 @@ import { abcMixin, ABC_RATIO_DEFAULTS } from './score-editor-abc.js';
 import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
-import { AretinoEditor } from '@aretino-chant/editor';
 
-if (!customElements.get('aretino-editor')) {
-    customElements.define('aretino-editor', AretinoEditor);
+let aretinoEditorDefinitionPromise = null;
+
+function ensureAretinoEditor() {
+    if (customElements.get('aretino-editor')) {
+        return Promise.resolve();
+    }
+
+    if (!aretinoEditorDefinitionPromise) {
+        aretinoEditorDefinitionPromise = import('@aretino-chant/editor')
+            .then(({ AretinoEditor }) => {
+                if (!customElements.get('aretino-editor')) {
+                    customElements.define('aretino-editor', AretinoEditor);
+                }
+            })
+            .catch((error) => {
+                aretinoEditorDefinitionPromise = null;
+                console.error('[score-editor] could not load Aretino editor:', error);
+                throw error;
+            });
+    }
+
+    return aretinoEditorDefinitionPromise;
 }
 
 const ARETINO_CODEMIRROR_FONT_STYLE_ID = 'score-editor-aretino-codemirror-font-size';
@@ -170,17 +189,22 @@ document.addEventListener('alpine:init', () => {
         },
 
         syncAretinoEditor() {
+            if (this.$wire.format !== 'aretino') { return; }
             this.$nextTick(() => {
                 const editor = this.$refs.aretinoEditor;
                 if (!editor) { return; }
-                applyAretinoCodeMirrorFontSize(editor);
-                if (editor.value !== this.localContent) {
-                    editor.value = this.localContent ?? '';
-                }
-                const zoom = Number(this.aretinoZoom) / 100;
-                if (Number(editor.zoom) !== zoom) {
-                    editor.zoom = zoom;
-                }
+                ensureAretinoEditor().then(() => {
+                    if (this.$wire.format !== 'aretino') { return; }
+                    applyAretinoCodeMirrorFontSize(editor);
+                    if (editor.value !== this.localContent) {
+                        editor.value = this.localContent ?? '';
+                    }
+                    const zoom = Number(this.aretinoZoom) / 100;
+                    if (Number(editor.zoom) !== zoom) {
+                        editor.zoom = zoom;
+                    }
+                    this.updateAretinoHighlight();
+                }).catch(() => {});
             });
         },
 
