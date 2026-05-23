@@ -1,6 +1,6 @@
 <div class="py-8">
-    <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <flux:card class="p-4 lg:p-6">
+    <div class="mx-auto max-w-5xl xl:max-w-none">
+        <flux:card class="p-4 lg:p-4">
             <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                     <flux:heading size="2xl">
@@ -130,6 +130,9 @@ window.abc2svg = window.abc2svg || {};
                         fullscreenText: @js(__('Fullscreen')),
                     })"
                 >
+                    <div class="xl:grid xl:grid-cols-12 xl:gap-6">
+                    <div class="xl:col-span-5">
+
                     <div x-show="$wire.format === 'abc'" x-cloak class="mb-2 flex items-center gap-4">
                         <flux:link href="https://abcplus.sourceforge.net" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('ABC guide') }}
@@ -268,7 +271,7 @@ window.abc2svg = window.abc2svg || {};
                         <flux:textarea
                             wire:model="content"
                             rows="10"
-                            class="font-mono text-sm"
+                            class="font-mono text-sm xl:min-h-[500px]"
                             :placeholder="__('Type the score here')"
                             x-ref="contentTextarea"
                             x-on:input="isContentUserModified = true; localContent = $event.target.value; scheduleRender(); updateAretinoHighlight && updateAretinoHighlight()"
@@ -285,6 +288,9 @@ window.abc2svg = window.abc2svg || {};
                             {{ __('Show me an example') }}
                         </flux:button>
                     </div>
+                    </div>{{-- end editor col --}}
+
+                    <div class="mt-4 xl:mt-0 xl:col-span-7">
 
                     {{-- GABC Settings Toolbar --}}
                     <div x-show="$wire.format === 'gabc'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
@@ -708,6 +714,8 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                     </div>
+                    </div>{{-- end preview col --}}
+                    </div>{{-- end two-col grid --}}
 
                     <flux:modal name="share-link-modal" class="max-w-md">
                         <div class="space-y-4">

@@ -15,7 +15,7 @@ export function aretinoMixin() {
         aretinoLyricFont: "'EB Garamond'",
         aretinoLyricSize: 10,
         aretinoStaffSize: 7,
-        aretinoZoom: 140,
+        aretinoZoom: 120,
         aretinoPageRatio: 'paper',
         aretinoStaffWidth: 170,
         aretinoStaffGap: 2.5,
