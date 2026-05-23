@@ -620,6 +620,18 @@ w: Vic-ti-mae pas-cha-li lau-des
 w: A hús-vé-ti szent Bá-rány-nak
 ```
 
+### Soronként 1-2 ütem beírása
+
+Hosszabb kottáknál vagy antifóna/zsoltárvers kottáknál célszerű lehet használni azt a funkciót, hogy az `n:` bevezetéssel tudjuk folytatni az előző zenei sort. Így egyértelműen látszik, hogy melyik szöveg melyik zenei részhez tartozik.
+
+```aretino
+(g2) (K:b) 
+cf f f fghigf fj jklmkj j , 
+w: {V}a-dis,~{*} pro-pi-ti-á-tor, 
+n: fj j jk k kj j hijih gh igf ; 
+w: ad im-mo-lán-dum pro ó-mni-bus. 
+```
+
 ### Zsoltárvers-sorok (`W:`)
 
 A `W:` sor nem szótagolt, hanem folyó szövegként tördelődik. Tipikus
@@ -627,8 +639,11 @@ használata zsoltárverseknél és responzóriumoknál.
 
 ```aretino
 %indent: VI. f.
-(g2) f g h f. gh g f d_c_ , f gh gf f. || (Z) f g | ht = g. , ht = g h- fs f. | ht = f g gs h g fs f. ||
-w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja. ~ ~ ~ + ~ ~ ~ ~ ~ (*)
+(g2) f g h f. gh g f d_c_ , f gh gf f. || 
+w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja. 
+
+(Z) f g | ht = g. , ht = g h- fs f. | ht = f g gs h g fs f. ||
+w: ~ ~ ~ + ~ ~ ~ ~ ~ (*)
 W: <Jézus> mond[ja]: + szeressétek egymást, ez az [én] parancsom *
 amint én szerette[lek] benneteket!
 W: Arról ismerje meg mindenki, hogy az én tanítványa[im] vagytok: *
@@ -753,7 +768,25 @@ w: Hints meg en-gem U-ram, i-zsóp-pal és meg-tisz-tu-lok, moss meg en-gem, és
 f g ht gs ht g h i- gs g | ht i h gs- gf e ||
 w: ~ ~ ~ † (*)
 ```
+
 <small>Forrás: Népénektár, © Gödöllői Premontrei Apátság</small>
+
+### Kyrie VIII
+
+```aretino
+(g2) (K:b) 
+   f  ABC C./DCBC./FDCB/CDC. ,  CAgfBA g  g f. ||
+w: Ky-ri-e                 (*)  e-le-i-son. (<bis>)
+n: A    Agfef.,fABC./DCBC., CAgfBA g g f. ||
+w: Chris-te ~               e-le-i-son. (<bis>)
+n: F  E  FEDEFC. , FCD.ABC. , CAgfBA g g f. ||
+w: Ky-ri-e      (*)         ~ e-le-i-son.
+n: F  E  FEDEFC. , FE/FEDEFC. ,  FCD.ABC. , CAgfBA g g f. ||
+w: Ky-ri-e      (*)                  ~ ~ (*)e-le-i-son.
+```
+
+Itt látható, hogy ha akarjuk, szóközökkel jelölhetjük, hogy melyik szövegrész hova esik.
+
 ---
 
 ## 20. A szerkesztő használata
