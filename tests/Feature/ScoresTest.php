@@ -259,6 +259,16 @@ it('renders the Aretino custom editor while keeping the shared textarea for othe
         ->assertSeeHtml('wire:model="content"');
 });
 
+it('sets the Aretino CodeMirror editor font size', function () {
+    $source = file_get_contents(resource_path('js/score-editor.js'));
+
+    expect($source)
+        ->toContain("const ARETINO_CODEMIRROR_FONT_SIZE = '0.8rem';")
+        ->toContain('function applyAretinoCodeMirrorFontSize(editor)')
+        ->toContain('.editor-pane .cm-content')
+        ->toContain('font-size: ${ARETINO_CODEMIRROR_FONT_SIZE} !important;');
+});
+
 it('does not allow attaching a score to a private music piece the user cannot view', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();

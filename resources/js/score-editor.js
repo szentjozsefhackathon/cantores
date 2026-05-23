@@ -8,6 +8,8 @@ if (!customElements.get('aretino-editor')) {
     customElements.define('aretino-editor', AretinoEditor);
 }
 
+const ARETINO_CODEMIRROR_FONT_STYLE_ID = 'score-editor-aretino-codemirror-font-size';
+const ARETINO_CODEMIRROR_FONT_SIZE = '14px';
 const LATIN_EXT = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
 const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
 
@@ -59,6 +61,23 @@ async function fetchFontBase64(url) {
 
 function parsePrimaryFontFamily(fontValue) {
     return (fontValue ?? '').split(',')[0].trim().replace(/['"]/g, '');
+}
+
+function applyAretinoCodeMirrorFontSize(editor) {
+    const root = editor?.shadowRoot;
+    if (!root || root.getElementById(ARETINO_CODEMIRROR_FONT_STYLE_ID)) { return; }
+
+    const style = document.createElement('style');
+    style.id = ARETINO_CODEMIRROR_FONT_STYLE_ID;
+    style.textContent = `
+.editor-pane .cm-editor,
+.editor-pane .cm-content,
+.editor-pane .cm-line {
+  font-size: ${ARETINO_CODEMIRROR_FONT_SIZE} !important;
+}
+`;
+    root.append(style);
+    editor._view?.requestMeasure?.();
 }
 
 async function injectWebFontsIntoSvg(svgEl, fontValues) {
@@ -154,6 +173,7 @@ document.addEventListener('alpine:init', () => {
             this.$nextTick(() => {
                 const editor = this.$refs.aretinoEditor;
                 if (!editor) { return; }
+                applyAretinoCodeMirrorFontSize(editor);
                 if (editor.value !== this.localContent) {
                     editor.value = this.localContent ?? '';
                 }
