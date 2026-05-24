@@ -238,12 +238,15 @@ window.abc2svg = window.abc2svg || {};
                         </div>
                     </flux:modal>
 
-                    <div x-show="$wire.format === 'aretino'" x-cloak class="mb-2 flex items-center gap-4">
+                    <div x-show="$wire.format === 'aretino'" x-cloak class="mb-2 flex flex-wrap items-center gap-4">
                         <flux:link href="/aretino/guide" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('Aretino guide') }}
                         </flux:link>
                         <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('aretino-cheatsheet').show()">
                             {{ __('Cheatsheet') }}
+                        </flux:button>
+                        <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveAretinoFile()">
+                            {{ __('Save as .aretino file') }}
                         </flux:button>
                     </div>
 

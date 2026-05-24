@@ -2,6 +2,8 @@ import { abcMixin, ABC_RATIO_DEFAULTS, normalizeAbcPageWidth } from './score-edi
 import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
+import { removeEditorOnlySvgMarkup } from './score-editor-export.js';
+import { downloadTextFile, scoreSourceFilename } from './score-editor-file.js';
 
 let aretinoEditorDefinitionPromise = null;
 
@@ -514,6 +516,23 @@ document.addEventListener('alpine:init', () => {
             this.$wire.call('save', c.settings, c.ratio);
         },
 
+        currentEditorContent() {
+            const editor = this.$refs.aretinoEditor;
+            if (this.$wire.format === 'aretino' && editor && 'value' in editor) {
+                return String(editor.value ?? '');
+            }
+
+            return String(this.localContent ?? '');
+        },
+
+        saveAretinoFile() {
+            const content = this.currentEditorContent();
+            this.localContent = content;
+            this.$wire.content = content;
+
+            downloadTextFile(content, scoreSourceFilename(this.$wire.title, 'aretino'));
+        },
+
         getShareData() {
             const { settings, ratio } = this.collectSettings();
             const format = this.$wire.format;
@@ -824,6 +843,7 @@ document.addEventListener('alpine:init', () => {
             const paddedWidth = svgWidth + margin * 2;
             const paddedHeight = svgHeight + margin * 2;
             const clonedSvg = svgEl.cloneNode(true);
+            removeEditorOnlySvgMarkup(clonedSvg);
             clonedSvg.setAttribute('width', String(paddedWidth));
             clonedSvg.setAttribute('height', String(paddedHeight));
             if (paddedViewBox) {
@@ -877,6 +897,7 @@ document.addEventListener('alpine:init', () => {
                     svgData = await this.buildMergedSvg(svgs);
                 } else {
                     const clone = svgs[0].cloneNode(true);
+                    removeEditorOnlySvgMarkup(clone);
                     let lyricFont;
                     if (format === 'aretino') { lyricFont = this.aretinoLyricFont; }
                     else if (format === 'abc') { lyricFont = this.abcLyricFont; }

@@ -748,6 +748,7 @@
     "Anyone with this link can view the score (read-only). Delete the link to revoke access.": "Bárki megtekintheti a kottát ezzel a linkkel (csak olvasható). Töröld a linket a hozzáférés visszavonásához.",
     "Generate a secret link to share this score as a read-only preview.": "Generálj titkos linket a kotta csak olvasható előnézetként való megosztásához.",
     "Aretino guide": "Aretino útmutató",
+    "Save as .aretino file": "Mentés .aretino fájlként",
     "Private scores created by you.": "Általad létrehozott privát kották",
     "Format": "Formátum",
     "Cheatsheet": "Gyorssegéd",

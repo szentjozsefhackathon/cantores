@@ -259,6 +259,16 @@ it('renders the Aretino custom editor while keeping the shared textarea for othe
         ->assertSeeHtml('wire:model="content"');
 });
 
+it('renders the Aretino file download action', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->assertSee(__('Save as .aretino file'))
+        ->assertSeeHtml('saveAretinoFile()');
+});
+
 it('sets the Aretino CodeMirror editor font size', function () {
     $source = file_get_contents(resource_path('js/score-editor.js'));
 
