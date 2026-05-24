@@ -363,9 +363,11 @@ select:focus[data-flux-control] {
 
 aretino-editor.score-editor-aretino-source {
     width: 100%;
-    height: clamp(22rem, 55vh, 31.25rem) !important;
-    min-height: 22rem;
-    overflow: hidden;
+    height: clamp(14rem, 35vh, 22rem);
+    min-height: 12rem;
+    max-height: 80vh;
+    overflow: auto;
+    resize: vertical;
     border: 1px solid var(--color-zinc-200);
     border-radius: 0.5rem;
     background: #ffffff;

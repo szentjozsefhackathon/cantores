@@ -268,6 +268,18 @@ it('sets the Aretino CodeMirror editor font size', function () {
         ->toContain('font-size: ${ARETINO_CODEMIRROR_FONT_SIZE} !important;');
 });
 
+it('makes the Aretino CodeMirror editor smaller and vertically resizable', function () {
+    $styles = file_get_contents(resource_path('css/app.css'));
+
+    expect($styles)
+        ->toContain('aretino-editor.score-editor-aretino-source')
+        ->toContain('height: clamp(14rem, 35vh, 22rem);')
+        ->toContain('min-height: 12rem;')
+        ->toContain('max-height: 80vh;')
+        ->toContain('overflow: auto;')
+        ->toContain('resize: vertical;');
+});
+
 it('does not allow attaching a score to a private music piece the user cannot view', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
