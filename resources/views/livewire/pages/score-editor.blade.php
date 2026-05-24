@@ -700,7 +700,7 @@ window.abc2svg = window.abc2svg || {};
 
                         <div class="ml-auto flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                             <flux:icon name="cursor-arrow-rays" variant="micro" class="shrink-0" />
-                            {{ __('Click a note to jump to it in the editor') }}
+                            {{ __('Click a note/lyrics to jump to it in the editor') }}
                         </div>
                     </div>
 

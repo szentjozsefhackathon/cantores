@@ -762,7 +762,8 @@
     "Fullscreen": "Teljes képernyő",
     "ABC notation": "ABC kottázás",
     "Staff width (mm)": "Kottasor szélessége (mm)",
-    "Convert": "Konvertálás"
+    "Convert": "Konvertálás",
+    "Click a note/lyrics to jump to it in the editor": "Kattints egy hangjegyre/szövegre, hogy a szerkesztőbe ugorj"
 
 
 }
