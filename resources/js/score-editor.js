@@ -1,3 +1,4 @@
+import { applyConditionalBlocks } from './score-editor-pages.js';
 import { abcMixin, ABC_RATIO_DEFAULTS, normalizeAbcPageWidth } from './score-editor-abc.js';
 import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
@@ -623,6 +624,7 @@ document.addEventListener('alpine:init', () => {
         splitPages(content, format, ratio) {
             const ratioSuffix = { '16/9': '169', '4/3': '43', '1/1': '11' };
             const targetSuffix = ratioSuffix[ratio];
+            content = applyConditionalBlocks(content, ratio);
             const isAuto = !targetSuffix;
             const lines = content.split('\n');
             let headerEnd = -1;
