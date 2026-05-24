@@ -127,62 +127,26 @@ export function aretinoMixin() {
             this.updateAretinoHighlight();
         },
 
-        // Highlights the SVG element whose source range contains the active
-        // editor cursor position. Re-run on cursor moves and after each re-render.
         updateAretinoHighlight() {
             if (this.$wire.format !== 'aretino') { return; }
             const container = this.$refs.aretinoPreview;
+            if (!container || !this._aretinoHighlightAtCaret) { return; }
             const editor = this.$refs.aretinoEditor;
             const textarea = this.$refs.contentTextarea;
-            const pos = editor?._view?.state.selection.main.head ?? textarea?.selectionStart;
-            if (!container || pos === null || pos === undefined) { return; }
-            container.querySelectorAll('.aretino-active').forEach(el => el.classList.remove('aretino-active'));
-            container.querySelectorAll('.aretino-cursor-bg').forEach(el => el.remove());
-
-            // Walk all source-tagged elements; pick the smallest range that
-            // contains the cursor (notes nest inside ligatures).
-            let best = null;
-            let bestSize = Infinity;
-            container.querySelectorAll('[data-src-start]').forEach(el => {
-                const s = Number(el.dataset.srcStart);
-                const e = Number(el.dataset.srcEnd);
-                if (pos < s || pos > e) { return; }
-                const size = e - s;
-                if (size < bestSize) {
-                    best = el;
-                    bestSize = size;
-                }
-            });
-            if (best) {
-                best.classList.add('aretino-active');
-                this.drawAretinoCursorBg(best);
-            }
+            const caret = editor?.caret ?? textarea?.selectionStart;
+            if (caret === null || caret === undefined) { return; }
+            this._aretinoHighlightAtCaret(container, caret);
         },
 
-        // Insert a translucent rect behind the active element so the cursor
-        // location reads at a glance, even when the underlying glyph is small.
-        drawAretinoCursorBg(el) {
-            let bbox;
-            try {
-                bbox = el.getBBox();
-            } catch (e) {
-                return;
+        handleAretinoPreviewClick(event) {
+            if (!this._aretinoSourceSpanFromPreviewClick) { return; }
+            const container = this.$refs.aretinoPreview;
+            const span = this._aretinoSourceSpanFromPreviewClick(event, container);
+            if (!span) { return; }
+            const editor = this.$refs.aretinoEditor;
+            if (editor) {
+                editor.caret = span.srcEnd;
             }
-            if (!bbox || (bbox.width === 0 && bbox.height === 0)) { return; }
-            const pad = 4;
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('class', 'aretino-cursor-bg');
-            rect.setAttribute('x', bbox.x - pad);
-            rect.setAttribute('y', bbox.y - pad);
-            rect.setAttribute('width', bbox.width + pad * 2);
-            rect.setAttribute('height', bbox.height + pad * 2);
-            rect.setAttribute('rx', 3);
-            rect.setAttribute('ry', 3);
-            rect.setAttribute('fill', 'rgba(0, 122, 204, 0.25)');
-            rect.setAttribute('stroke', '#007acc');
-            rect.setAttribute('stroke-width', 2);
-            rect.setAttribute('pointer-events', 'none');
-            el.insertBefore(rect, el.firstChild);
         },
     };
 }

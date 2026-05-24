@@ -384,3 +384,7 @@ aretino-editor.score-editor-aretino-source::part(editor) {
 aretino-editor.score-editor-aretino-source::part(preview) {
     display: none;
 }
+
+[data-src-start] {
+    cursor: pointer;
+}

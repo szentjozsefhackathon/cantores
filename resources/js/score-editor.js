@@ -7,18 +7,21 @@ import { removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, scoreSourceFilename } from './score-editor-file.js';
 
 let aretinoEditorDefinitionPromise = null;
+let aretinoHelpers = null;
 
 function ensureAretinoEditor() {
-    if (customElements.get('aretino-editor')) {
-        return Promise.resolve();
+    if (aretinoHelpers && customElements.get('aretino-editor')) {
+        return Promise.resolve(aretinoHelpers);
     }
 
     if (!aretinoEditorDefinitionPromise) {
         aretinoEditorDefinitionPromise = import('@aretino-chant/editor')
-            .then(({ AretinoEditor }) => {
+            .then(({ AretinoEditor, highlightAtCaret, sourceSpanFromPreviewClick }) => {
+                aretinoHelpers = { highlightAtCaret, sourceSpanFromPreviewClick };
                 if (!customElements.get('aretino-editor')) {
                     customElements.define('aretino-editor', AretinoEditor);
                 }
+                return aretinoHelpers;
             })
             .catch((error) => {
                 aretinoEditorDefinitionPromise = null;
@@ -196,8 +199,10 @@ document.addEventListener('alpine:init', () => {
             this.$nextTick(() => {
                 const editor = this.$refs.aretinoEditor;
                 if (!editor) { return; }
-                ensureAretinoEditor().then(() => {
+                ensureAretinoEditor().then(({ highlightAtCaret, sourceSpanFromPreviewClick }) => {
                     if (this.$wire.format !== 'aretino') { return; }
+                    this._aretinoHighlightAtCaret = highlightAtCaret;
+                    this._aretinoSourceSpanFromPreviewClick = sourceSpanFromPreviewClick;
                     applyAretinoCodeMirrorFontSize(editor);
                     if (editor.value !== this.localContent) {
                         editor.value = this.localContent ?? '';

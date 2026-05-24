@@ -294,9 +294,7 @@ window.abc2svg = window.abc2svg || {};
                             wire:ignore
                             class="score-editor-aretino-source"
                             x-on:change="handleEditorContentInput($event.detail.value)"
-                            x-on:click="updateAretinoHighlight && updateAretinoHighlight()"
-                            x-on:keyup="updateAretinoHighlight && updateAretinoHighlight()"
-                            x-on:focusin="updateAretinoHighlight && updateAretinoHighlight()"
+                            x-on:selectionchange="updateAretinoHighlight()"
                         ></aretino-editor>
 
                         <flux:error name="content" />
@@ -699,11 +697,16 @@ window.abc2svg = window.abc2svg || {};
                             <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
                         </flux:tooltip>
                         @endif
+
+                        <div class="ml-auto flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                            <flux:icon name="cursor-arrow-rays" variant="micro" class="shrink-0" />
+                            {{ __('Click a note to jump to it in the editor') }}
+                        </div>
                     </div>
 
                     {{-- Aretino Preview --}}
                     <div x-show="$wire.format === 'aretino'" x-cloak class="mt-4">
-                        <div x-ref="aretinoPreview" class="min-h-16 space-y-4" wire:ignore></div>
+                        <div x-ref="aretinoPreview" class="min-h-16 space-y-4" wire:ignore x-on:click="handleAretinoPreviewClick($event)"></div>
 
                         <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
                             <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
