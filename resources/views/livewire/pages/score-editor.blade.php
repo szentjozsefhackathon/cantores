@@ -284,6 +284,7 @@ window.abc2svg = window.abc2svg || {};
                         </div>
 
                         <aretino-editor
+                            preview="false"
                             x-show="$wire.format === 'aretino'"
                             x-cloak
                             x-ref="aretinoEditor"
