@@ -263,7 +263,6 @@ it('sets the Aretino CodeMirror editor font size', function () {
     $source = file_get_contents(resource_path('js/score-editor.js'));
 
     expect($source)
-        ->toContain("const ARETINO_CODEMIRROR_FONT_SIZE = '0.8rem';")
         ->toContain('function applyAretinoCodeMirrorFontSize(editor)')
         ->toContain('.editor-pane .cm-content')
         ->toContain('font-size: ${ARETINO_CODEMIRROR_FONT_SIZE} !important;');

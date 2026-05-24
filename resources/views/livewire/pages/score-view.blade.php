@@ -266,7 +266,7 @@
                         <flux:tooltip :content="__('Page width (px)')">
                             <flux:icon name="ruler" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>
-                        <flux:input size="sm" type="number" x-model="abcPageWidth" min="400" max="4000" step="10" class="w-20" />
+                        <flux:input size="sm" type="number" x-model="abcPageWidth" x-on:change="abcPageWidth = normalizeAbcPageWidth(abcPageWidth)" min="400" max="4000" step="10" class="w-20" />
                     </div>
 
                     <div class="flex items-center gap-1" x-show="!['16/9', '4/3', '1/1'].includes(abcPageRatio)">

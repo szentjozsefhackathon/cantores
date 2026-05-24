@@ -1,6 +1,22 @@
 import { diatarToAbc } from './diatar-to-abc.js';
 
 const DEFAULT_ABC_FONT = 'EB Garamond';
+const ABC_PAGE_WIDTH_MIN = 400;
+const ABC_PAGE_WIDTH_MAX = 4000;
+const ABC_PAGE_WIDTH_DEFAULT = 1800;
+
+export function normalizeAbcPageWidth(value) {
+    if (value === null || value === undefined || String(value).trim() === '') {
+        return ABC_PAGE_WIDTH_DEFAULT;
+    }
+
+    const width = Number(value);
+    if (!Number.isFinite(width)) {
+        return ABC_PAGE_WIDTH_DEFAULT;
+    }
+
+    return Math.min(ABC_PAGE_WIDTH_MAX, Math.max(ABC_PAGE_WIDTH_MIN, Math.round(width)));
+}
 
 // Per-ratio factory defaults for ABC. Keys match effectiveRatioKey() output.
 // The 'paper' entry is the baseline; fixed-ratio entries override only the
@@ -71,6 +87,8 @@ export function abcMixin() {
         abcTranspose: 0,
         abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose'],
 
+        normalizeAbcPageWidth,
+
         convertDiatarToAbc() {
             const abc = diatarToAbc(this.diatarSource);
             if (!abc.trim()) { return; }
@@ -109,7 +127,7 @@ export function abcMixin() {
             const paperWidth = canvas.width / 2;
             const zoomedPaperWidth = Math.round(paperWidth * zoom);
             const availableWidth = Math.max(200, Math.round((container.clientWidth || zoomedPaperWidth) - 4));
-            const paperPageWidth = Number(this.abcPageWidth) > 0 ? Number(this.abcPageWidth) : canvas.width;
+            const paperPageWidth = normalizeAbcPageWidth(this.abcPageWidth);
             const renderWidth = isResponsive
                 ? Math.min(zoomedPaperWidth, availableWidth)
                 : isPaper

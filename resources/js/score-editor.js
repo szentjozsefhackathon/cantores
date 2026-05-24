@@ -1,4 +1,4 @@
-import { abcMixin, ABC_RATIO_DEFAULTS } from './score-editor-abc.js';
+import { abcMixin, ABC_RATIO_DEFAULTS, normalizeAbcPageWidth } from './score-editor-abc.js';
 import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -353,7 +353,7 @@ document.addEventListener('alpine:init', () => {
                         abcLyricSize: Number(this.abcLyricSize),
                         abcLyricBold: !!this.abcLyricBold,
                         abcPageScale: Number(this.abcPageScale),
-                        abcPageWidth: Number(this.abcPageWidth),
+                        abcPageWidth: normalizeAbcPageWidth(this.abcPageWidth),
                         abcNoteSpacing: Number(this.abcNoteSpacing),
                         abcStaffSep: Number(this.abcStaffSep),
                         abcVocalSpace: Number(this.abcVocalSpace),
