@@ -5,6 +5,7 @@ import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, scoreSourceFilename } from './score-editor-file.js';
+import { renderCurrentPreview } from './score-editor-render.js';
 
 let aretinoEditorDefinitionPromise = null;
 let aretinoHelpers = null;
@@ -803,18 +804,8 @@ document.addEventListener('alpine:init', () => {
             this.renderTimer = setTimeout(() => this.renderPreview(), 600);
         },
 
-        renderPreview() {
-            const scrollY = window.scrollY;
-            if (this.$wire.format === 'abc') {
-                this.renderAbcPreview();
-            } else if (this.$wire.format === 'chordpro') {
-                this.renderChordproPreview();
-            } else if (this.$wire.format === 'aretino') {
-                this.renderAretinoPreview();
-            } else {
-                this.renderGabcPreview();
-            }
-            window.scrollTo(0, scrollY);
+        async renderPreview() {
+            await renderCurrentPreview(this);
         },
 
         showCopyFeedback(msg) {
