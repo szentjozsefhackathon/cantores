@@ -100,6 +100,14 @@
                 </flux:modal>
                 @endif
 
+<style>
+.score-editor-source-pane.overflow-hidden textarea {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    resize: none !important;
+}
+</style>
 <script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
 <script>
 window.abc2svg = window.abc2svg || {};
@@ -129,11 +137,31 @@ window.abc2svg = window.abc2svg || {};
                         exportSvgText: @js(__('Export SVG')),
                         fullscreenText: @js(__('Fullscreen')),
                     })"
+                    :class="splitScreen ? 'fixed inset-0 z-[60] flex flex-col overflow-hidden bg-white dark:bg-zinc-900' : ''"
                 >
-                    <div class="xl:grid xl:grid-cols-12 xl:gap-6">
-                    <div class="xl:col-span-5">
-
+                    {{-- Compact header shown only in split-screen mode --}}
+                    <div x-show="splitScreen" x-cloak class="flex h-10 shrink-0 items-center gap-3 border-b border-zinc-200 px-3 dark:border-zinc-700">
+                        <span x-text="$wire.title || '…'" class="min-w-0 truncate text-sm font-medium text-zinc-700 dark:text-zinc-200"></span>
+                        <span class="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" x-text="($wire.format ?? '').toUpperCase()"></span>
+                        <div class="ml-auto flex shrink-0 items-center gap-1">
+                            @if(!$isGuest)
+                            <flux:button size="sm" variant="primary" icon="pencil" x-on:click="saveScore()">{{ __('Save') }}</flux:button>
+                            @endif
+                            <flux:button size="sm" variant="ghost" icon="arrows-pointing-in" x-on:click="toggleSplitScreen()">{{ __('Exit') }}</flux:button>
+                        </div>
+                    </div>
+                    <div :class="splitScreen ? 'flex flex-1 flex-col overflow-hidden' : 'xl:grid xl:grid-cols-12 xl:gap-6'">
+                    <div
+                        class="score-editor-source-pane"
+                        :class="splitScreen ? 'shrink-0 overflow-hidden border-b border-zinc-200 p-3 dark:border-zinc-700 flex flex-col' : 'xl:col-span-5'"
+                        :style="splitScreen ? 'height:' + splitEditorHeight + 'px' : ''"
+                    >
                     <div x-show="$wire.format === 'abc'" x-cloak class="mb-2 flex items-center gap-4">
+                        <div x-show="!splitScreen">
+                            <flux:tooltip :content="__('Full screen editor')">
+                                <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()" />
+                            </flux:tooltip>
+                        </div>
                         <flux:link href="https://abcplus.sourceforge.net" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('ABC guide') }}
                         </flux:link>
@@ -183,6 +211,11 @@ window.abc2svg = window.abc2svg || {};
                     </flux:modal>
 
                     <div x-show="$wire.format === 'chordpro'" x-cloak class="mb-2 flex items-center gap-4">
+                        <div x-show="!splitScreen">
+                            <flux:tooltip :content="__('Full screen editor')">
+                                <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()" />
+                            </flux:tooltip>
+                        </div>
                         <flux:link href="https://www.chordpro.org/chordpro/chordpro-introduction/" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('ChordPro guide') }}
                         </flux:link>
@@ -211,6 +244,11 @@ window.abc2svg = window.abc2svg || {};
                     </flux:modal>
 
                     <div x-show="$wire.format === 'gabc'" x-cloak class="mb-2 flex items-center gap-4">
+                        <div x-show="!splitScreen">
+                            <flux:tooltip :content="__('Full screen editor')">
+                                <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()" />
+                            </flux:tooltip>
+                        </div>
                         <flux:link href="https://gregorio-project.github.io/gabc/" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('GABC guide') }}
                         </flux:link>
@@ -239,6 +277,11 @@ window.abc2svg = window.abc2svg || {};
                     </flux:modal>
 
                     <div x-show="$wire.format === 'aretino'" x-cloak class="mb-2 flex flex-wrap items-center gap-4">
+                        <div x-show="!splitScreen">
+                            <flux:tooltip :content="__('Full screen editor')">
+                                <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()" />
+                            </flux:tooltip>
+                        </div>
                         <flux:link href="/aretino/guide" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('Aretino guide') }}
                         </flux:link>
@@ -270,12 +313,12 @@ window.abc2svg = window.abc2svg || {};
                     </flux:modal>
 
                     {{-- Source editor --}}
-                    <flux:field required>
-                        <div x-show="$wire.format !== 'aretino'" x-cloak>
+                    <flux:field required x-bind:class="splitScreen ? 'flex-1 min-h-0 flex flex-col' : ''">
+                        <div x-show="$wire.format !== 'aretino'" x-cloak x-bind:class="splitScreen ? 'flex-1 min-h-0 flex flex-col' : ''">
                             <flux:textarea
                                 wire:model="content"
                                 rows="10"
-                                class="font-mono text-sm xl:min-h-[500px]"
+                                x-bind:class="splitScreen ? 'font-mono text-sm flex-1 min-h-0' : 'font-mono text-sm xl:min-h-[500px]'"
                                 :placeholder="__('Type the score here')"
                                 x-ref="contentTextarea"
                                 x-on:input="handleEditorContentInput($event.target.value)"
@@ -292,7 +335,7 @@ window.abc2svg = window.abc2svg || {};
                             x-cloak
                             x-ref="aretinoEditor"
                             wire:ignore
-                            class="score-editor-aretino-source"
+                            :class="splitScreen ? 'score-editor-aretino-source flex-1 min-h-0' : 'score-editor-aretino-source'"
                             x-on:change="handleEditorContentInput($event.detail.value)"
                             x-on:selectionchange="updateAretinoHighlight()"
                         ></aretino-editor>
@@ -307,7 +350,18 @@ window.abc2svg = window.abc2svg || {};
                     </div>
                     </div>{{-- end editor col --}}
 
-                    <div class="mt-4 xl:mt-0 xl:col-span-7">
+                    {{-- Drag handle (split-screen mode only) --}}
+                    <div
+                        x-show="splitScreen"
+                        x-cloak
+                        class="group flex h-2.5 shrink-0 cursor-row-resize select-none items-center justify-center bg-zinc-200 transition-colors hover:bg-blue-400 dark:bg-zinc-700 dark:hover:bg-blue-600"
+                        @mousedown.prevent="splitDragStart($event)"
+                        @touchstart.prevent="splitDragStart($event)"
+                    >
+                        <div class="h-1 w-10 rounded-full bg-zinc-400 transition-colors group-hover:bg-white dark:bg-zinc-500 dark:group-hover:bg-white"></div>
+                    </div>
+
+                    <div :class="splitScreen ? 'flex-1 overflow-y-auto overflow-x-hidden p-4' : 'mt-4 xl:mt-0 xl:col-span-7'">
 
                     {{-- GABC Settings Toolbar --}}
                     <div x-show="$wire.format === 'gabc'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
@@ -804,7 +858,7 @@ window.abc2svg = window.abc2svg || {};
 
                     @if(!$isGuest && $score)
                     {{-- URL Management --}}
-                    <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                    <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700" x-show="!splitScreen">
                         <flux:heading size="sm" class="mb-3">{{ __('Links') }}</flux:heading>
 
                         @if($this->scoreUrls->isNotEmpty())
@@ -873,7 +927,7 @@ window.abc2svg = window.abc2svg || {};
                     @endif
 
                     @if(!$isGuest)
-                    <div class="mt-4 flex justify-end gap-3">
+                    <div class="mt-4 flex justify-end gap-3" x-show="!splitScreen">
                         <flux:button variant="ghost" :href="route('scores')" wire:navigate>
                             {{ __('Cancel') }}
                         </flux:button>

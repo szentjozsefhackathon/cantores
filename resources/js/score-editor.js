@@ -164,6 +164,11 @@ document.addEventListener('alpine:init', () => {
         shareUrl: '',
         shareUrlLoading: false,
         shareModalCopied: false,
+        splitScreen: false,
+        splitEditorHeight: 380,
+        _splitDragging: false,
+        _splitDragStartY: 0,
+        _splitDragStartH: 0,
 
         ...abcMixin(),
         ...gabcMixin(),
@@ -225,6 +230,10 @@ document.addEventListener('alpine:init', () => {
 
         init() {
             console.log('[score-editor] init, exsurge available:', !!window.exsurge, 'format:', this.$wire.format);
+            this._splitEscHandler = (e) => {
+                if (e.key === 'Escape' && this.splitScreen) { this.toggleSplitScreen(); }
+            };
+            document.addEventListener('keydown', this._splitEscHandler);
             this.applyInitialSettings();
             this.localContent = this.$wire.content;
             if (this.localContent.trim() === '') {
@@ -327,6 +336,10 @@ document.addEventListener('alpine:init', () => {
             this._aretinoResizeObserver?.disconnect();
             this._aretinoResizeObserver = null;
             clearTimeout(this._aretinoResizeTimer);
+            if (this._splitEscHandler) {
+                document.removeEventListener('keydown', this._splitEscHandler);
+            }
+            document.body.style.overflow = '';
         },
 
         // Paper & Responsive share one stored settings bucket; legacy scores
@@ -521,6 +534,37 @@ document.addEventListener('alpine:init', () => {
         saveScore() {
             const c = this.collectSettings();
             this.$wire.call('save', c.settings, c.ratio);
+        },
+
+        toggleSplitScreen() {
+            this.splitScreen = !this.splitScreen;
+            document.body.style.overflow = this.splitScreen ? 'hidden' : '';
+            this.$nextTick(() => this.scheduleRender());
+        },
+
+        splitDragStart(e) {
+            this._splitDragging = true;
+            this._splitDragStartY = e.touches ? e.touches[0].clientY : e.clientY;
+            this._splitDragStartH = this.splitEditorHeight;
+            const onMove = (ev) => {
+                if (!this._splitDragging) { return; }
+                const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                const delta = clientY - this._splitDragStartY;
+                const minH = 80;
+                const maxH = window.innerHeight - 120;
+                this.splitEditorHeight = Math.max(minH, Math.min(maxH, this._splitDragStartH + delta));
+            };
+            const onUp = () => {
+                this._splitDragging = false;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onUp);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.addEventListener('touchmove', onMove, { passive: false });
+            document.addEventListener('touchend', onUp);
         },
 
         currentEditorContent() {
