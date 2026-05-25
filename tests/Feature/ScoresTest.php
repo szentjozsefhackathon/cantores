@@ -247,6 +247,20 @@ it('renders reset to defaults button in each format toolbar', function () {
         ->assertSeeHtml('resetToDefaults()');
 });
 
+it('uses important width utilities for score editor numeric toolbar inputs', function () {
+    $source = file_get_contents(resource_path('views/livewire/pages/score-editor.blade.php'));
+
+    preg_match_all('/<flux:input[^\n]+class="w-16!"/', $source, $importantWidthInputs);
+    preg_match_all('/<flux:input[^\n]+class="w-16"/', $source, $plainWidthInputs);
+
+    expect($importantWidthInputs[0])->not->toBeEmpty();
+    expect($plainWidthInputs[0])->toBeEmpty();
+    expect($source)
+        ->toContain('x-model="lyricSize" min="8" max="60" step="1" class="w-16!"')
+        ->toContain('x-model="abcStemWidth" min="0.1" max="3" step="0.1" class="w-16!"')
+        ->toContain('x-model="aretinoZoom" min="50" max="300" step="5" class="w-16!"');
+});
+
 it('renders the Aretino custom editor while keeping the shared textarea for other formats', function () {
     $user = User::factory()->create();
 
