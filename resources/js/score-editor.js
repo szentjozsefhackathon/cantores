@@ -801,7 +801,9 @@ document.addEventListener('alpine:init', () => {
 
         scheduleRender() {
             clearTimeout(this.renderTimer);
-            this.renderTimer = setTimeout(() => this.renderPreview(), 600);
+            const format = this.$wire?.format;
+            const delay = (format === 'aretino' || format === 'chordpro') ? 100 : 600;
+            this.renderTimer = setTimeout(() => this.renderPreview(), delay);
         },
 
         async renderPreview() {
