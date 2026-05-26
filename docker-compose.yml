@@ -9,11 +9,15 @@ services:
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     env_file:
-      - path: ./.env.docker        
+      - path: ./.env.docker
         required: false
     volumes:
       - .:/var/www/html
     command: touch .devcontainer/.bash_history
+    deploy:
+      resources:
+        limits:
+          memory: 128M
   app:
     image: creshu-app-dev
     env_file:
@@ -36,11 +40,11 @@ services:
       database:
         condition: service_healthy
       migrator:
-        condition: service_completed_successfully        
+        condition: service_completed_successfully
   database:
     image: pgvector/pgvector:pg17
     env_file:
-      - ./.env # for the database credentials    
+      - ./.env # for the database credentials
       - path: ./.env.docker
         required: false
     environment:
@@ -58,11 +62,15 @@ services:
       start_period: 1m
       interval: 10s
       timeout: 5s
-      retries: 3      
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M      
   database_testing:
     image: pgvector/pgvector:pg17
     env_file:
-      - ./.env.testing # for the database credentials    
+      - ./.env.testing # for the database credentials
       - path: ./.env.docker
         required: false
     environment:
@@ -76,9 +84,13 @@ services:
       start_period: 1m
       interval: 10s
       timeout: 5s
-      retries: 3  
+      retries: 3
     volumes:
       - db-testing-data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
   composer:
     image: creshu-app-dev
     env_file:
@@ -92,6 +104,10 @@ services:
       database:
         condition: service_healthy
     command: bash -c "source $$NVM_DIR/nvm.sh && npm install && npm run build && composer install --no-interaction"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
   migrator:
     image: creshu-app-dev
     env_file:
@@ -109,6 +125,10 @@ services:
         condition: service_completed_successfully
     networks:
       - creshu-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
   migrator_testing:
      image: creshu-app-dev
      env_file:
@@ -124,28 +144,28 @@ services:
        composer:
          condition: service_completed_successfully
      networks:
-       - creshu-network      
+       - creshu-network
      command: php artisan migrate:refresh --seed --seeder="Database\\Seeders\\DatabaseSeeder" --env=testing
+     deploy:
+       resources:
+         limits:
+           memory: 256M
   mailpit:
     image: axllent/mailpit:latest
     ports:
       - "${MAILPIT_EXTERNAL_PORT:-8025}:8025" # Web UI (optional, defaults to 8025)
     networks:
       - creshu-network
+    deploy:
+      resources:
+        limits:
+          memory: 64M
   memcached:
     image: memcached:1.6
     command:
       - --memory-limit=32
     networks:
       - creshu-network    
-  qdrant:
-    image: qdrant/qdrant
-    ports:
-      - "6333:6333"
-    volumes:
-      - qdrant_storage:/qdrant/storage
-    networks:
-      - creshu-network
   webgrind:
     image: jokkedk/webgrind:latest
     ports:
@@ -154,6 +174,10 @@ services:
       - xdebug-profiles:/tmp
     networks:
       - creshu-network
+    deploy:
+      resources:
+        limits:
+          memory: 64M
   queue:
     image: creshu-app-dev
     env_file:
@@ -172,6 +196,10 @@ services:
       - creshu-network
     command: php artisan queue:work --sleep=15 --tries=3 --timeout=3600
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
 volumes:
   db-data:
   db-testing-data:
