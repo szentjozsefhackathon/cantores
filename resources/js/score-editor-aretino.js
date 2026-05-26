@@ -136,6 +136,7 @@ export function aretinoMixin() {
             const selection = editor?.selection ?? (textarea ? { from: textarea.selectionStart, to: textarea.selectionEnd } : null);
             if (selection === null || selection === undefined) { return; }
             this._aretinoHighlightAtSelection(container, selection);
+            this._updateSvgTooltip(container);
         },
 
         handleAretinoPreviewClick(event) {

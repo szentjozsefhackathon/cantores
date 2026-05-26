@@ -169,6 +169,11 @@ document.addEventListener('alpine:init', () => {
         _splitDragging: false,
         _splitDragStartY: 0,
         _splitDragStartH: 0,
+        svgHoverTooltip: false,
+        _hoverTooltipEl: null,
+        _hoverTooltipShadow: null,
+        _hoverTooltipLine: null,
+        _hoverThrottle: null,
 
         ...abcMixin(),
         ...gabcMixin(),
@@ -340,6 +345,7 @@ document.addEventListener('alpine:init', () => {
                 document.removeEventListener('keydown', this._splitEscHandler);
             }
             document.body.style.overflow = '';
+            this.destroySvgHoverTooltip();
         },
 
         // Paper & Responsive share one stored settings bucket; legacy scores
@@ -841,6 +847,115 @@ document.addEventListener('alpine:init', () => {
             }
 
             pageEl.insertAdjacentElement('afterend', bar);
+        },
+
+        _initSvgHoverTooltip() {
+            if (this._hoverTooltipEl) { return; }
+            const el = document.createElement('div');
+            el.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;display:none;';
+            document.body.appendChild(el);
+            const shadow = el.attachShadow({ mode: 'open' });
+            shadow.innerHTML = `<style>
+:host{all:initial;display:inline-block}
+.b{display:inline-block;padding:4px 10px;border:1px solid #e4e4e7;border-radius:6px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.13);white-space:nowrap;overflow:hidden;max-width:500px}
+.cm-line{display:inline;padding:0;font-family:'Inter',system-ui,sans-serif;font-size:13px;line-height:1.4}
+.cur{font-weight:700;color:rgba(234,88,12,0.85);font-size:1.2em;line-height:1}
+</style><div class="b"><span class="cm-line"></span></div>`;
+            this._hoverTooltipEl = el;
+            this._hoverTooltipShadow = shadow;
+            this._hoverTooltipLine = shadow.querySelector('.cm-line');
+        },
+
+        destroySvgHoverTooltip() {
+            clearTimeout(this._hoverThrottle);
+            this._hoverTooltipEl?.remove();
+            this._hoverTooltipEl = null;
+            this._hoverTooltipShadow = null;
+            this._hoverTooltipLine = null;
+        },
+
+        hideSvgHoverTooltip() {
+            if (this._hoverTooltipEl) { this._hoverTooltipEl.style.display = 'none'; }
+        },
+
+        _extractCmHtml(view, from, to) {
+            if (from >= to) { return ''; }
+            try {
+                const a = view.domAtPos(from);
+                const b = view.domAtPos(to);
+                const range = document.createRange();
+                range.setStart(a.node, a.offset);
+                range.setEnd(b.node, b.offset);
+                const frag = range.cloneContents();
+                const wrap = document.createElement('span');
+                wrap.appendChild(frag);
+                // Flatten cm-line blocks; insert a space in place of each line boundary
+                wrap.querySelectorAll('.cm-line').forEach(line => {
+                    while (line.firstChild) { line.parentNode.insertBefore(line.firstChild, line); }
+                    line.parentNode.insertBefore(document.createTextNode(' '), line);
+                    line.remove();
+                });
+                return wrap.innerHTML;
+            } catch (_e) {
+                const t = view.state.doc.sliceString(from, to);
+                return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+        },
+
+        _updateSvgTooltip(container) {
+            if (!this.svgHoverTooltip || this.$wire.format !== 'aretino') {
+                this.hideSvgHoverTooltip();
+                return;
+            }
+
+            const editor = this.$refs.aretinoEditor;
+            const view = editor?._view;
+            if (!view) { this.hideSvgHoverTooltip(); return; }
+
+            const sel = view.state.selection.main;
+            const caretPos = sel.head;
+            const doc = view.state.doc;
+            const from = Math.max(0, caretPos - 10);
+            const to = Math.min(doc.length, caretPos + 10);
+
+            const html = this._extractCmHtml(view, from, caretPos)
+                + '<b class="cur">|</b>'
+                + this._extractCmHtml(view, caretPos, to);
+
+            if (!html) { this.hideSvgHoverTooltip(); return; }
+
+            this._initSvgHoverTooltip();
+
+            const edShadow = editor.shadowRoot;
+            if (edShadow?.adoptedStyleSheets?.length) {
+                this._hoverTooltipShadow.adoptedStyleSheets = Array.from(edShadow.adoptedStyleSheets);
+            }
+
+            this._hoverTooltipLine.innerHTML = html;
+
+            const el = this._hoverTooltipEl;
+            el.style.display = 'block';
+
+            // Position centered above the SVG caret marker drawn by highlightAtSelection
+            const svgCaret = container?.querySelector('.aretino-cursor-rect, .aretino-cursor-line');
+            const anchor = svgCaret ?? container?.querySelector('.aretino-active');
+            if (anchor) {
+                const tipRect = el.getBoundingClientRect();
+                const tipW = tipRect.width || 300;
+                const tipH = tipRect.height || 32;
+                const anchorRect = anchor.getBoundingClientRect();
+                const cx = anchorRect.left + anchorRect.width / 2;
+                const x = Math.max(4, Math.min(cx - tipW / 2, window.innerWidth - tipW - 8));
+                const yAbove = anchorRect.top - tipH - 8;
+                el.style.left = x + 'px';
+                el.style.top = (yAbove >= 4 ? yAbove : anchorRect.bottom + 8) + 'px';
+            } else {
+                const previewRect = container?.getBoundingClientRect();
+                if (previewRect) {
+                    el.style.left = Math.max(4, previewRect.left) + 'px';
+                    el.style.top = Math.max(4, previewRect.top - 48) + 'px';
+                }
+            }
         },
 
         scheduleRender() {
