@@ -753,7 +753,7 @@ window.abc2svg = window.abc2svg || {};
                         @endif
 
                         <flux:tooltip :content="__('Show source tooltip on hover')">
-                            <flux:button icon="eye" variant="ghost" x-on:click="svgHoverTooltip = !svgHoverTooltip; svgHoverTooltip ? updateAretinoHighlight() : hideSvgHoverTooltip()" x-bind:class="svgHoverTooltip ? '!text-blue-600 dark:!text-blue-400' : ''" />
+                            <flux:button icon="eye" variant="ghost" x-on:click="svgHoverTooltip = !svgHoverTooltip; svgHoverTooltip ? updateAretinoHighlight() : hideSvgHoverTooltip(); $nextTick(() => $refs.aretinoEditor?.focus())" x-bind:class="svgHoverTooltip ? '!text-blue-600 dark:!text-blue-400' : ''" />
                         </flux:tooltip>
 
                         <div class="ml-auto flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
