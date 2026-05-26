@@ -130,12 +130,12 @@ export function aretinoMixin() {
         updateAretinoHighlight() {
             if (this.$wire.format !== 'aretino') { return; }
             const container = this.$refs.aretinoPreview;
-            if (!container || !this._aretinoHighlightAtCaret) { return; }
+            if (!container || !this._aretinoHighlightAtSelection) { return; }
             const editor = this.$refs.aretinoEditor;
             const textarea = this.$refs.contentTextarea;
-            const caret = editor?.caret ?? textarea?.selectionStart;
-            if (caret === null || caret === undefined) { return; }
-            this._aretinoHighlightAtCaret(container, caret);
+            const selection = editor?.selection ?? (textarea ? { from: textarea.selectionStart, to: textarea.selectionEnd } : null);
+            if (selection === null || selection === undefined) { return; }
+            this._aretinoHighlightAtSelection(container, selection);
         },
 
         handleAretinoPreviewClick(event) {

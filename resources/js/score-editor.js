@@ -17,8 +17,8 @@ function ensureAretinoEditor() {
 
     if (!aretinoEditorDefinitionPromise) {
         aretinoEditorDefinitionPromise = import('@aretino-chant/editor')
-            .then(({ AretinoEditor, highlightAtCaret, sourceSpanFromPreviewClick }) => {
-                aretinoHelpers = { highlightAtCaret, sourceSpanFromPreviewClick };
+            .then(({ AretinoEditor, highlightAtSelection, sourceSpanFromPreviewClick }) => {
+                aretinoHelpers = { highlightAtSelection, sourceSpanFromPreviewClick };
                 if (!customElements.get('aretino-editor')) {
                     customElements.define('aretino-editor', AretinoEditor);
                 }
@@ -205,9 +205,9 @@ document.addEventListener('alpine:init', () => {
             this.$nextTick(() => {
                 const editor = this.$refs.aretinoEditor;
                 if (!editor) { return; }
-                ensureAretinoEditor().then(({ highlightAtCaret, sourceSpanFromPreviewClick }) => {
+                ensureAretinoEditor().then(({ highlightAtSelection, sourceSpanFromPreviewClick }) => {
                     if (this.$wire.format !== 'aretino') { return; }
-                    this._aretinoHighlightAtCaret = highlightAtCaret;
+                    this._aretinoHighlightAtSelection = highlightAtSelection;
                     this._aretinoSourceSpanFromPreviewClick = sourceSpanFromPreviewClick;
                     applyAretinoCodeMirrorFontSize(editor);
                     if (editor.value !== this.localContent) {

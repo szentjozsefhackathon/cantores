@@ -158,9 +158,9 @@ window.abc2svg = window.abc2svg || {};
                     >
                     <div x-show="$wire.format === 'abc'" x-cloak class="mb-2 flex items-center gap-4">
                         <div x-show="!splitScreen">
-                            <flux:tooltip :content="__('Full screen editor')">
-                                <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()" />
-                            </flux:tooltip>
+                            <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()">
+                                {{ __('Full screen editor')}}
+                            </flux:button>
                         </div>
                         <flux:link href="https://abcplus.sourceforge.net" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('ABC guide') }}
@@ -212,9 +212,9 @@ window.abc2svg = window.abc2svg || {};
 
                     <div x-show="$wire.format === 'chordpro'" x-cloak class="mb-2 flex items-center gap-4">
                         <div x-show="!splitScreen">
-                            <flux:tooltip :content="__('Full screen editor')">
-                                <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()" />
-                            </flux:tooltip>
+                            <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()">
+                                {{ __('Full screen editor')}}
+                            </flux:button>
                         </div>
                         <flux:link href="https://www.chordpro.org/chordpro/chordpro-introduction/" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('ChordPro guide') }}
@@ -245,9 +245,9 @@ window.abc2svg = window.abc2svg || {};
 
                     <div x-show="$wire.format === 'gabc'" x-cloak class="mb-2 flex items-center gap-4">
                         <div x-show="!splitScreen">
-                            <flux:tooltip :content="__('Full screen editor')">
-                                <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()" />
-                            </flux:tooltip>
+                            <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()">
+                                {{ __('Full screen editor')}}
+                            </flux:button>
                         </div>
                         <flux:link href="https://gregorio-project.github.io/gabc/" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('GABC guide') }}
@@ -278,9 +278,9 @@ window.abc2svg = window.abc2svg || {};
 
                     <div x-show="$wire.format === 'aretino'" x-cloak class="mb-2 flex flex-wrap items-center gap-4">
                         <div x-show="!splitScreen">
-                            <flux:tooltip :content="__('Full screen editor')">
-                                <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()" />
-                            </flux:tooltip>
+                            <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()">
+                                {{ __('Full screen editor')}}
+                            </flux:button>
                         </div>
                         <flux:link href="/aretino/guide" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('Aretino guide') }}
