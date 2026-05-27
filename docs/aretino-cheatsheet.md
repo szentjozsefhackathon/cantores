@@ -11,11 +11,11 @@
 |Kottafej||
 |---|---|
 | `d`, `d'`, `dt` | punctum, virga, tenor |
-| `dw`, `ds` | quilisma, kiskotta |
+| `dw`, `ds` | quilisma, kiskotta (liquescens átírásához) |
 
 | Utótag ||
 |---|---|
-| `d.`, `d_`, `d-`, `d~` | mora, episema, ictus, liquescens |
+| `d.`, `d_`, `d-`, `d~` | mora, episema, ictus, plica |
 | `df/gh` | `/` = neuma-tagoló |
 
 | Tagolás/ütem | |

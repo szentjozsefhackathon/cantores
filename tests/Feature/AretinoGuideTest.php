@@ -47,3 +47,21 @@ it('aretino sections contain valid content', function () {
     }
 });
 
+it('documents plica as the tilde suffix and liquescentia as small noteheads', function () {
+    $markdown = (string) file_get_contents(base_path('docs/aretino-felhasznaloi-utmutato.md'));
+
+    expect($markdown)
+        ->toContain('| `~` | **plica** |')
+        ->toContain('| `ds` | **kiskotta** | liquescens átírására használt kis méretű kottafej |')
+        ->toContain('Itt a `d~` plicát jelöl. Liquescens átírásához a kiskotta (`ds`) való.')
+        ->not->toContain('| `~` | **liquescens** |');
+});
+
+it('documents plica and liquescentia correctly in the Aretino cheatsheet', function () {
+    $markdown = (string) file_get_contents(base_path('docs/aretino-cheatsheet.md'));
+
+    expect($markdown)
+        ->toContain('| `d.`, `d_`, `d-`, `d~` | mora, episema, ictus, plica |')
+        ->toContain('| `dw`, `ds` | quilisma, kiskotta (liquescens átírásához) |')
+        ->not->toContain('ictus, liquescens');
+});

@@ -27,7 +27,7 @@ Az Aretino kottaformátum szabadon felhasználható, nyilvános anyagokban kérj
 7. [Kulcsok](#7-kulcsok)
 8. [Hangmagasság](#8-hangmagasság)
 9. [Kottafej-típusok](#9-kottafej-típusok)
-10. [Módosító utótagok (mora, episema, ictus, liquescens)](#10-módosító-utótagok)
+10. [Módosító utótagok (mora, episema, ictus, plica)](#10-módosító-utótagok)
 11. [Ligatúrák — neumák](#11-ligatúrák--neumák)
 12. [Neuma-tagoló rés (`/`)](#12-neuma-tagoló-rés)
 13. [Vonalak és tagolójelek](#13-vonalak-és-tagolójelek)
@@ -258,8 +258,8 @@ Mindent, ami a Dobszay–Szendrei iskola lényege:
 - **virga-szár** (4. pont) — automatikusan, minden helyi maximumra;
 - **ereszkedő összekötő vonal** (5. pont) — automatikusan, hangköz szerint;
 - **neuma-tagolás kottafejnyi réssel** (6. pont) — a `/` operátor;
-- **mora, episema, liquescentia, quilisma** (8–9. pont) —
-  utótag-karakterek formájában;
+- **mora, episema, ictus és plica** utótagként, **quilisma és
+  liquescentia** kottafej-típusként (8–9. pont);
 - **a vonalak és kulcsok kérdésének függetlensége** (10. pont) —
   kulcs cserélhető, és nem érinti az `a–n` jelölést.
 
@@ -376,7 +376,7 @@ A kottafej alapformáját egy **utótag-karakter** módosítja a betű után:
 | `d'` | **virga** | punctum bal oldalán lefelé mutató szárral (felsővessző) |
 | `dw` | **quilisma** | csíkozott, cikkcakkos kontúrú kottafej |
 | `dt` | **tenor-hang** | üres kottafej, két oldalán függőleges vonalkák |
-| `ds` | **kiskotta** | kis méretű kottafej |
+| `ds` | **kiskotta** | liquescens átírására használt kis méretű kottafej |
 
 ### Példák
 
@@ -384,7 +384,7 @@ A kottafej alapformáját egy **utótag-karakter** módosítja a betű után:
 (g2) d d' dw dt ds
 ```
 
-Bal → jobb: punctum, virga, quilisma, tenor-hang — mind ugyanazon a magasságon (D).
+Bal → jobb: punctum, virga, quilisma, tenor-hang, kiskotta — mind ugyanazon a magasságon (D).
 
 A **virga** gyakran ligatúra-csúcsokon jelenik meg automatikusan (lásd a [Ligatúrák](#11-ligatúrák--neumák) szakaszt), de manuálisan is használhatjuk arra, hogy hosszabb melizmák belső tagolódását jelezzük.
 
@@ -407,11 +407,13 @@ A kottafej után, **szóköz nélkül**, kombinálható utótagok:
 | `.` | **mora** (nyújtópont) | jobbra a kottafejtől, hosszú hangot jelez |
 | `_` | **episema** | rövid vízszintes vonal a kottafej fölött. Egymást követő episema-kat a rendszer összevon. |
 | `-` | **ictus** | kis függőleges vonal a kottafej fölött (a vonalközben) |
-| `~` | **liquescens** | kis „farok” a kottafej jobb felső sarkán |
+| `~` | **plica** | kis „farok” a kottafej jobb felső sarkán |
 
 ```aretino
 (g2) d d. d_ d- d~ d_e_d_
 ```
+
+Itt a `d~` plicát jelöl. Liquescens átírásához a kiskotta (`ds`) való.
 
 ---
 
