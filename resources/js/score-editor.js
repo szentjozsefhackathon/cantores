@@ -188,6 +188,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         handleEditorContentInput(value) {
+            if (value === this.localContent) { return; }
             this.setEditorContent(value, { modified: true });
         },
 
