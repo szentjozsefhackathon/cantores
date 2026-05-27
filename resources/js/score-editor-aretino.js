@@ -75,6 +75,8 @@ export function aretinoMixin() {
                     pageEl.style.border = '8px solid #374151';
                     pageEl.style.borderRadius = '4px';
                     pageEl.style.boxShadow = '0 8px 32px rgba(0,0,0,0.45)';
+                } else if (isPaper) {
+                    pageEl.className = 'score-preview-page score-preview-paper overflow-auto';
                 } else {
                     pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                 }

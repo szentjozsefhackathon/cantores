@@ -3,7 +3,7 @@ import { diatarToAbc } from './diatar-to-abc.js';
 const DEFAULT_ABC_FONT = 'EB Garamond';
 const ABC_PAGE_WIDTH_MIN = 400;
 const ABC_PAGE_WIDTH_MAX = 4000;
-const ABC_PAGE_WIDTH_DEFAULT = 1800;
+const ABC_PAGE_WIDTH_DEFAULT = 1700;
 
 export function normalizeAbcPageWidth(value) {
     if (value === null || value === undefined || String(value).trim() === '') {
@@ -76,7 +76,7 @@ export function abcMixin() {
         abcLyricBold: false,
         abcPageRatio: 'paper',
         abcPageScale: 2.3,
-        abcPageWidth: 1800,
+        abcPageWidth: 1700,
         abcNoteSpacing: 1.4,
         abcStaffSep: 46,
         abcVocalSpace: 10,
@@ -157,13 +157,11 @@ export function abcMixin() {
                     this.applyProjectorFrame(pageEl, ratio);
                 } else if (isResponsive) {
                     pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
-                } else {
-                    pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
-                }
-                if (!isFixed) {
                     pageEl.style.width = '100%';
                     pageEl.style.maxWidth = '100%';
                     pageEl.style.minWidth = '0';
+                } else {
+                    pageEl.className = 'score-preview-page score-preview-paper overflow-auto';
                 }
                 container.appendChild(pageEl);
                 try {

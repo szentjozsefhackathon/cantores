@@ -846,7 +846,11 @@ document.addEventListener('alpine:init', () => {
                 bar.appendChild(fsBtn);
             }
 
-            pageEl.insertAdjacentElement('afterend', bar);
+            const scrollWrap = document.createElement('div');
+            scrollWrap.className = 'overflow-x-auto';
+            pageEl.before(scrollWrap);
+            scrollWrap.appendChild(pageEl);
+            scrollWrap.insertAdjacentElement('afterend', bar);
         },
 
         _initSvgHoverTooltip() {

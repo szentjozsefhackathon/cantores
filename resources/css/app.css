@@ -310,6 +310,15 @@ select:focus[data-flux-control] {
 .score-preview-page::-webkit-scrollbar-thumb { background-color: rgb(113 113 122 / 0.6); border-radius: 4px; }
 .score-preview-page::-webkit-scrollbar-thumb:hover { background-color: rgb(113 113 122 / 0.9); }
 
+/* Paper mode — simulates a physical sheet of paper floating on the page */
+.score-preview-paper { 
+    width: fit-content; 
+    background: #faf9f7; 
+    border-radius: 2px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.10), 0 8px 32px rgba(0,0,0,0.05); 
+    margin: 16px 32px 32px 16px;
+}
+
 /* ChordPro preview styles */
 .chordpro-preview h1.title { font-size: 1.6em; font-weight: bold; margin: 0 0 0.2em; }
 .chordpro-preview h2.subtitle { font-size: 1.1em; font-weight: normal; margin: 0 0 0.2em; }

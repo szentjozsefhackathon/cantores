@@ -1,8 +1,8 @@
 export function gabcMixin() {
     return {
-        zoom: 100,
+        zoom: 90,
         lyricSize: 12,
-        staffSize: 100,
+        staffSize: 80,
         minLyricWordSpacing: 0,
         hyphenWidth: 0,
         condensingTolerance: 0.9,
@@ -42,14 +42,17 @@ export function gabcMixin() {
                 if (isFixed) {
                     this.applyProjectorFrame(pageEl, ratio);
                     pageEl.className = 'score-preview-page overflow-auto bg-white';
+                    pageEl.style.width = '100%';
+                    pageEl.style.maxWidth = '100%';
+                    pageEl.style.minWidth = '0';
                 } else if (isResponsive) {
                     pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                    pageEl.style.width = '100%';
+                    pageEl.style.maxWidth = '100%';
+                    pageEl.style.minWidth = '0';
                 } else {
-                    pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                    pageEl.className = 'score-preview-page score-preview-paper overflow-auto';
                 }
-                pageEl.style.width = '100%';
-                pageEl.style.maxWidth = '100%';
-                pageEl.style.minWidth = '0';
                 container.appendChild(pageEl);
                 return pageEl;
             });
