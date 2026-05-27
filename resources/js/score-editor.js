@@ -938,7 +938,8 @@ document.addEventListener('alpine:init', () => {
 
             // Position centered above the SVG caret marker drawn by highlightAtSelection
             const svgCaret = container?.querySelector('.aretino-cursor-rect, .aretino-cursor-line');
-            const anchor = svgCaret ?? container?.querySelector('.aretino-active');
+            const activeEl = container?.querySelector('.aretino-active');
+            const anchor = svgCaret ?? activeEl;
             if (anchor) {
                 const tipRect = el.getBoundingClientRect();
                 const tipW = tipRect.width || 300;
@@ -946,9 +947,74 @@ document.addEventListener('alpine:init', () => {
                 const anchorRect = anchor.getBoundingClientRect();
                 const cx = anchorRect.left + anchorRect.width / 2;
                 const x = Math.max(4, Math.min(cx - tipW / 2, window.innerWidth - tipW - 8));
-                const yAbove = anchorRect.top - tipH - 8;
+
+                // Lyric elements have no data-staff-bottom on their SVG target.
+                // All music elements (note bands, caret lines, modifier boxes) are staff-anchored.
+                const isLyric = (() => {
+                    if (anchor.classList.contains('aretino-cursor-line')) { return false; }
+                    if (anchor.classList.contains('aretino-cursor-modbox')) { return false; }
+                    if (anchor.classList.contains('aretino-cursor-bg')) {
+                        const parent = anchor.parentElement;
+                        return !parent || !('staffBottom' in (parent.dataset ?? {}));
+                    }
+                    return !('staffBottom' in (anchor.dataset ?? {}));
+                })();
+
+                let y;
+                if (isLyric) {
+                    // Below the lyric line; fall back above if it clips the viewport bottom
+                    const yBelow = anchorRect.bottom + 8;
+                    y = (yBelow + tipH <= window.innerHeight - 4)
+                        ? yBelow
+                        : Math.max(4, anchorRect.top - tipH - 8);
+                } else {
+                    // Music elements: pin tooltip just above the specific staff that holds
+                    // the cursor. cursor-bg and cursor-line span the full staff height so
+                    // their anchorRect.top IS the staff top. cursor-modbox is a small box
+                    // around a modifier glyph; reconstruct the staff top from the nearest
+                    // staff token's data-staff-bottom/data-staff-height via SVG CTM.
+                    let staffTopPx;
+                    if (anchor.classList.contains('aretino-cursor-modbox')) {
+                        staffTopPx = null;
+                        const svgEl = anchor.closest?.('svg');
+                        if (svgEl) {
+                            const tokens = svgEl.querySelectorAll('[data-staff-bottom][data-staff-height]');
+                            if (tokens.length) {
+                                const modboxCx = anchorRect.left + anchorRect.width / 2;
+                                const modboxCy = anchorRect.top + anchorRect.height / 2;
+                                let bestToken = null, bestDist = Infinity;
+                                for (const token of tokens) {
+                                    const r = token.getBoundingClientRect();
+                                    const dx = Math.abs(r.left + r.width / 2 - modboxCx);
+                                    const dy = Math.abs(r.top + r.height / 2 - modboxCy);
+                                    // Weight Y strongly: tokens from a different staff line
+                                    // are always far apart in Y so this pins to the same staff.
+                                    const dist = dy * 3 + dx;
+                                    if (dist < bestDist) { bestDist = dist; bestToken = token; }
+                                }
+                                if (bestToken) {
+                                    const sb = Number(bestToken.dataset.staffBottom);
+                                    const sh = Number(bestToken.dataset.staffHeight);
+                                    if (Number.isFinite(sb) && Number.isFinite(sh)) {
+                                        try {
+                                            const ctm = svgEl.getScreenCTM?.();
+                                            // 1.25 matches the 0.25 vertical padding added by cursor-bg
+                                            if (ctm) { staffTopPx = ctm.d * (sb - sh * 1.25) + ctm.f; }
+                                        } catch (_) { /* ignore */ }
+                                    }
+                                }
+                            }
+                        }
+                        if (staffTopPx === null) { staffTopPx = anchorRect.top; }
+                    } else {
+                        staffTopPx = anchorRect.top;
+                    }
+                    const yAbove = staffTopPx - tipH - 8;
+                    y = yAbove >= 4 ? yAbove : staffTopPx + 8;
+                }
+
                 el.style.left = x + 'px';
-                el.style.top = (yAbove >= 4 ? yAbove : anchorRect.bottom + 8) + 'px';
+                el.style.top = y + 'px';
             } else {
                 const previewRect = container?.getBoundingClientRect();
                 if (previewRect) {
