@@ -153,7 +153,8 @@ services:
   mailpit:
     image: axllent/mailpit:latest
     ports:
-      - "${MAILPIT_EXTERNAL_PORT:-8025}:8025" # Web UI (optional, defaults to 8025)
+      - "${MAILPIT_WEBUI_PORT:-8025}:8025" # Web UI (optional, defaults to 8025)
+      - "${MAILPIT_SMTP_PORT:-1025}:1025" # SMTP (optional, defaults to 1025)
     networks:
       - creshu-network
     deploy:
