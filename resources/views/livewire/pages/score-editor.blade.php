@@ -338,6 +338,7 @@ window.abc2svg = window.abc2svg || {};
                             :class="splitScreen ? 'score-editor-aretino-source flex-1 min-h-0' : 'score-editor-aretino-source'"
                             x-on:change="handleEditorContentInput($event.detail.value)"
                             x-on:selectionchange="updateAretinoHighlight()"
+                            x-on:focusout="hideSvgHoverTooltip()"
                         ></aretino-editor>
 
                         <flux:error name="content" />
@@ -753,7 +754,7 @@ window.abc2svg = window.abc2svg || {};
                         @endif
 
                         <flux:tooltip :content="__('Show source tooltip on hover')">
-                            <flux:button icon="eye" variant="ghost" x-on:click="svgHoverTooltip = !svgHoverTooltip; svgHoverTooltip ? updateAretinoHighlight() : hideSvgHoverTooltip(); $nextTick(() => $refs.aretinoEditor?.focus())" x-bind:class="svgHoverTooltip ? '!text-blue-600 dark:!text-blue-400' : ''" />
+                            <flux:button icon="eye" variant="ghost" x-on:click="svgHoverTooltip = !svgHoverTooltip; svgHoverTooltip ? $nextTick(() => { $refs.aretinoEditor?.focus(); updateAretinoHighlight(); }) : hideSvgHoverTooltip()" x-bind:class="svgHoverTooltip ? '!text-blue-600 dark:!text-blue-400' : ''" />
                         </flux:tooltip>
 
                         <div class="ml-auto flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">

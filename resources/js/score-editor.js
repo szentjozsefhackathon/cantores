@@ -864,7 +864,7 @@ document.addEventListener('alpine:init', () => {
 :host{all:initial;display:inline-block}
 .b{display:inline-block;padding:4px 10px;border:1px solid #e4e4e7;border-radius:6px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.13);white-space:nowrap;overflow:hidden;max-width:500px}
 .cm-line{display:inline;padding:0;font-family:'Inter',system-ui,sans-serif;font-size:13px;line-height:1.4}
-.cur{font-weight:700;color:rgba(234,88,12,0.85);font-size:1.2em;line-height:1}
+.cur{font-weight:700;color:rgba(234,88,12,0.85);transform:scaleY(2);display:inline-block;}
 </style><div class="b"><span class="cm-line"></span></div>`;
             this._hoverTooltipEl = el;
             this._hoverTooltipShadow = shadow;
@@ -916,6 +916,7 @@ document.addEventListener('alpine:init', () => {
             const editor = this.$refs.aretinoEditor;
             const view = editor?._view;
             if (!view) { this.hideSvgHoverTooltip(); return; }
+            if (!view.hasFocus) { this.hideSvgHoverTooltip(); return; }
 
             const sel = view.state.selection.main;
             const caretPos = sel.head;

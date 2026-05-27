@@ -149,6 +149,9 @@ export function aretinoMixin() {
             const editor = this.$refs.aretinoEditor;
             if (editor) {
                 editor.caret = span.srcEnd;
+                // caret setter restores focus synchronously; re-run highlight so
+                // the tooltip check sees view.hasFocus = true
+                this.updateAretinoHighlight();
             }
         },
     };

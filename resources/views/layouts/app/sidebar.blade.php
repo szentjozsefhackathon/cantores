@@ -80,7 +80,7 @@
                 <flux:sidebar.item icon="music" :href="route('musics')" :current="request()->routeIs('musics')" wire:navigate>
                     {{ __('Music Pieces') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="book-open-text" :href="route('scores')" :current="request()->routeIs('scores', 'scores.*')" wire:navigate>
+                <flux:sidebar.item icon="file-music" :href="route('scores')" :current="request()->routeIs('scores', 'scores.*')" wire:navigate>
                     {{ __('My Scores') }}
                 </flux:sidebar.item>
                 <flux:sidebar.item icon="book-open" :href="route('collections')" :current="request()->routeIs('collections')" wire:navigate>
