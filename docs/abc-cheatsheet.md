@@ -3,7 +3,10 @@
 | `K:G` | hangnem (kötelező, lezárja a fejlécet) |
 | `T:Cím` | cím |
 | `C:Szerző` | szerző/zeneszerző |
-| `M:4/4` | ütemmutató (`C` = common, `C\|` = alla breve) |
+| `M:4/4` | ütemmutató: négy negyed egy ütemben |
+| `M:C` | common time, azaz 4/4 |
+| `M:C\|` | alla breve, azaz 2/2 |
+| `M:6/8` | hat nyolcad egy ütemben |
 | `L:1/8` | alapértékű hanghossz |
 | `Q:120` | tempó (ütés/perc), pl. `Q:1/4=120` |
 
@@ -53,7 +56,9 @@
 |---|---|
 | `[CEG]` | akkord (egyszerre szóló hangok) |
 | `V:1` `V:2` | szólam jelölés (külön sorban) |
-| `&C` | Alsó szólam
+| `%%score (Felso Also)` | két megnevezett szólam egy kottasoron |
+| `%%score (S A) (T B)` | SATB két kottasoron: fent SA, lent TB |
+| `C E G c & E, G, C E` | ideiglenes alsó szólam egy ütemben |
 
 | Szöveg | |
 |---|---|

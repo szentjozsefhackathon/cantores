@@ -29,6 +29,23 @@ A `K:` sor zárja le a fejlécet.
 | `L:` | alap hanghossz | `L:1/4` |
 | `K:` | hangnem | `K:G` |
 
+### Ütemmutató (`M:`)
+
+Az `M:` sor a metrumot adja meg. Az első szám azt mutatja, hány ilyen egység
+van egy ütemben, az alsó szám pedig azt, hogy milyen hangértékkel számoljuk az
+ütemet. Például az `M:3/4` három negyedet, az `M:6/8` hat nyolcadot jelent egy
+ütemben.
+
+| Jel | Jelentés |
+|---|---|
+| `M:2/4` | két negyed egy ütemben |
+| `M:3/4` | három negyed egy ütemben |
+| `M:4/4` vagy `M:C` | négy negyed, common time |
+| `M:C\|` | alla breve, azaz 2/2 |
+| `M:6/8` | hat nyolcad egy ütemben |
+| `M:(2+3+2)/8` | összetett 7/8, a hangsúlycsoportokkal együtt |
+| `M:none` | szabad metrum, ütemmutató nélkül |
+
 ```abc
 X:1
 T:Alap szerkezet
@@ -110,12 +127,12 @@ F G z A | B2 z2 | c B A G | F4 |]
 
 | Jel | Jelentés |
 |---|---|
-| `|` | ütemvonal |
-| `||` | kettős vonal |
-| `|]` | záróvonal |
-| `|:` | ismétlés kezdete |
-| `:|` | ismétlés vége |
-| `:|:` | ismétlés vége és új ismétlés kezdete |
+| `\|` | ütemvonal |
+| `\|\|` | kettős vonal |
+| `\|]` | záróvonal |
+| `\|:` | ismétlés kezdete |
+| `:\|` | ismétlés vége |
+| `:\|:` | ismétlés vége és új ismétlés kezdete |
 
 ```abc
 X:1
@@ -271,6 +288,60 @@ V:2 name="Alsó" clef=bass
 [V:2] C2 G, | C2 F, | C3 |]
 ```
 
+### Polifónia egy kottasorban
+
+Ha két önálló szólam ugyanazon a kottasoron jelenjen meg, nevezd el a
+szólamokat, majd a `%%score (Felso Also)` sorral kérd őket egy közös
+kottasorra. A `stem=up` és `stem=down` segít olvashatóvá tenni, melyik hang
+melyik szólamhoz tartozik.
+
+```abc
+X:1
+T:Két szólam egy kottasoron
+M:4/4
+L:1/4
+K:C
+%%score (Felso Also)
+V:Felso stem=up
+V:Also stem=down
+[V:Felso] C E G c | d2 c2 |]
+[V:Also] E, G, C E | F2 E2 |]
+```
+
+Tipikus SATB lejegyzésnél két kétszólamú kottasort használhatsz: felül a
+szoprán és alt (`S A`), alul a tenor és basszus (`T B`) kerül egy-egy közös
+kottasorra.
+
+```abc
+X:1
+T:SATB - két kottasor
+M:4/4
+L:1/4
+K:C
+%%score (S A) (T B)
+V:S name="S" stem=up
+V:A name="A" stem=down
+V:T name="T" clef=bass stem=up
+V:B name="B" clef=bass stem=down
+[V:S] E F G G | A G F E | D E F G | E4 |]
+[V:A] C C D E | F E D C | B, C D E | C4 |]
+[V:T] G, A, B, C | C C B, G, | G, G, A, B, | G,4 |]
+[V:B] C, F, E, C, | F, C, G,, C, | G,, C, F,, G,, | C,4 |]
+```
+
+Rövidebb, csak egy ütemre vonatkozó polifón beíráshoz az `&` jel is használható.
+Az `&` az előző ütemvonalhoz ugrik vissza, ezért utána egy teljes ütemnyi
+párhuzamos zenei anyag következzen.
+
+```abc
+X:1
+T:Egy ütemnyi alsó szólam
+M:4/4
+L:1/4
+K:C
+C E G c & E, G, C E |]
+```
+
 ## 13. Oldaltörés a Cantores.hu szerkesztőben
 
 Vetítéshez használhatsz kézi oldaltörést. A sima `%pagebreak` minden rögzített
@@ -305,3 +376,9 @@ w: Má-so-dik di-a-sor
 | kevés a szótag | elcsúszik a szöveg | használj `*` jelet |
 | melizma nincs jelölve | a szótag túl hamar véget ér | használj `_` jelet |
 | kötőív és legato összekeveredik | rossz ív jelenik meg | azonos hanghoz `G-G`, dallamívhez `(G A)` |
+
+## 15. Hivatalos leírás
+
+Részletes, verziókövető hivatkozásként az [ABC szabvány hivatalos oldala](https://abcnotation.com/wiki/abc:standard)
+használható. Ez a legjobb kiindulópont, mert mindig az aktuális szabványhoz és
+a kapcsolódó változatokhoz vezet.

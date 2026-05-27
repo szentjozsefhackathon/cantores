@@ -74,3 +74,30 @@ it('documents abc pitch and duration without confusing c2 for an octave', functi
         ->toContain("| `c' d'` | kétvonalas oktáv")
         ->not->toContain('`c2 d2`| kétvonalas oktáv');
 });
+
+it('documents abc meter, same-staff polyphony, and the official standard link', function () {
+    $guide = (string) file_get_contents(base_path('docs/abc-felhasznaloi-utmutato.md'));
+    $cheatsheet = (string) file_get_contents(base_path('docs/abc-cheatsheet.md'));
+
+    expect($guide)
+        ->toContain('### Ütemmutató (`M:`)')
+        ->toContain('| `M:C\|` | alla breve, azaz 2/2 |')
+        ->toContain('| `M:6/8` | hat nyolcad egy ütemben |')
+        ->toContain('### Polifónia egy kottasorban')
+        ->toContain('%%score (Felso Also)')
+        ->toContain('[V:Felso] C E G c | d2 c2 |]')
+        ->toContain('T:SATB - két kottasor')
+        ->toContain('%%score (S A) (T B)')
+        ->toContain('V:S name="S" stem=up')
+        ->toContain('V:T name="T" clef=bass stem=up')
+        ->toContain('[V:B] C, F, E, C, | F, C, G,, C, | G,, C, F,, G,, | C,4 |]')
+        ->toContain('C E G c & E, G, C E')
+        ->toContain('https://abcnotation.com/wiki/abc:standard');
+
+    expect($cheatsheet)
+        ->toContain('| `M:C\|` | alla breve, azaz 2/2 |')
+        ->toContain('| `%%score (Felso Also)` | két megnevezett szólam egy kottasoron |')
+        ->toContain('| `%%score (S A) (T B)` | SATB két kottasoron: fent SA, lent TB |')
+        ->toContain('| `C E G c & E, G, C E` | ideiglenes alsó szólam egy ütemben |')
+        ->not->toContain('| `&C` | Alsó szólam');
+});
