@@ -149,7 +149,6 @@ export function abcMixin() {
             const transposeSemitones = Number(this.abcTranspose) || 0;
             const transposeLine = transposeSemitones !== 0 ? `%%transpose ${transposeSemitones}\n` : '';
             const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n${transposeLine}`;
-            console.log('[score-editor] ABC render options:', { pageWidth, pageScale, lyricSize, vocalfontLine, renderWidth, renderScale });
             const pages = this.splitPages(content, 'abc', ratio);
             pages.forEach((pageContent, idx) => {
                 const pageEl = document.createElement('div');

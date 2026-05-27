@@ -101,10 +101,21 @@
                     <flux:dropdown align="end">
                         <flux:button variant="ghost" square icon="bars-3" aria-label="Menu" />
                         <flux:menu>
+                            <flux:menu.item href="{{ route('score.preview') }}" icon="musical-note">
+                                Kottaszerkesztő
+                            </flux:menu.item>
                             <flux:menu.item href="{{ url('/about') }}" icon="information-circle">
                                 Rólunk
                             </flux:menu.item>
-                            
+                            @auth
+                                <flux:menu.item href="{{ url('/dashboard') }}" icon="home">
+                                    Irányítópult
+                                </flux:menu.item>
+                            @else
+                                <flux:menu.item href="{{ route('login') }}" icon="log-in">
+                                    {{ __('Log in') }}
+                                </flux:menu.item>
+                            @endauth
                             <flux:menu.separator />
                             <flux:menu.radio.group x-model="$flux.appearance">
                                 <flux:menu.radio value="light"><flux:icon name="sun" class="inline" variant="mini"></flux:icon></flux:menu.radio>
@@ -112,19 +123,6 @@
                                 <flux:menu.radio value="system"><flux:icon name="computer-desktop" class="inline" variant="mini"></flux:icon></flux:menu.radio>
                             </flux:menu.radio.group>
                             <flux:menu.separator />
-                            
-                            @auth
-                                <flux:menu.item href="{{ url('/dashboard') }}" icon="home">
-                                    Irányítópult
-                                </flux:menu.item>
-                            @else
-                                <flux:menu.item href="{{ route('score.preview') }}" icon="musical-note">
-                                    Kottaszerkesztő
-                                </flux:menu.item>
-                                <flux:menu.item href="{{ route('login') }}" icon="log-in">
-                                    {{ __('Log in') }}
-                                </flux:menu.item>
-                            @endauth
                         </flux:menu>
                     </flux:dropdown>
                 </div>

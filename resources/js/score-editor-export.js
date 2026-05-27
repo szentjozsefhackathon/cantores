@@ -3,7 +3,14 @@ export function removeEditorOnlySvgMarkup(svgEl) {
         return svgEl;
     }
 
-    svgEl.querySelectorAll?.('.aretino-cursor-bg').forEach(el => el.remove());
+    [
+        'aretino-cursor-rect',
+        'aretino-cursor-bg',
+        'aretino-cursor-line',
+        'aretino-cursor-modbox',
+    ].forEach(className => {
+        svgEl.querySelectorAll?.(`.${className}`).forEach(el => el.remove());
+    });
 
     const activeElements = [];
     if (svgEl.classList?.contains('aretino-active')) {

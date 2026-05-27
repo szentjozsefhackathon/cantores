@@ -87,14 +87,23 @@ test('removes Aretino cursor highlight markup from SVG clones', () => {
     const svg = new TestElement();
     const activeNote = svg.appendChild(new TestElement('aretino-active'));
     const highlightedLigature = activeNote.appendChild(new TestElement('note aretino-active'));
-    const cursorBackground = activeNote.appendChild(new TestElement('aretino-cursor-bg'));
+    const cursorBackground = activeNote.appendChild(new TestElement('aretino-cursor-rect aretino-cursor-bg'));
+    const cursorLine = svg.appendChild(new TestElement('aretino-cursor-rect aretino-cursor-line'));
+    const modifierBox = highlightedLigature.appendChild(new TestElement('aretino-cursor-rect aretino-cursor-modbox'));
+    const genericCursor = svg.appendChild(new TestElement('aretino-cursor-rect'));
 
     assert.equal(removeEditorOnlySvgMarkup(svg), svg);
 
     assert.equal(cursorBackground.removed, true);
+    assert.equal(cursorLine.removed, true);
+    assert.equal(modifierBox.removed, true);
+    assert.equal(genericCursor.removed, true);
     assert.equal(activeNote.getAttribute('class'), null);
     assert.equal(highlightedLigature.getAttribute('class'), 'note');
+    assert.equal(svg.querySelectorAll('.aretino-cursor-rect').length, 0);
     assert.equal(svg.querySelectorAll('.aretino-cursor-bg').length, 0);
+    assert.equal(svg.querySelectorAll('.aretino-cursor-line').length, 0);
+    assert.equal(svg.querySelectorAll('.aretino-cursor-modbox').length, 0);
     assert.equal(svg.querySelectorAll('.aretino-active').length, 0);
 });
 
