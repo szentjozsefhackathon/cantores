@@ -132,6 +132,10 @@
                 Aretino útmutató
             </flux:sidebar.item>
 
+            <flux:sidebar.item icon="document-text" :href="route('abc.guide')" :current="request()->routeIs('abc.guide')" wire:navigate>
+                ABC útmutató
+            </flux:sidebar.item>
+
             <flux:sidebar.item
                 icon="envelope"
                 as="button"

@@ -162,7 +162,7 @@ window.abc2svg = window.abc2svg || {};
                                 {{ __('Full screen editor')}}
                             </flux:button>
                         </div>
-                        <flux:link href="https://abcplus.sourceforge.net" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+                        <flux:link :href="route('abc.guide')" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('ABC guide') }}
                         </flux:link>
                         <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('abc-cheatsheet').show()">
@@ -282,7 +282,7 @@ window.abc2svg = window.abc2svg || {};
                                 {{ __('Full screen editor')}}
                             </flux:button>
                         </div>
-                        <flux:link href="/aretino/guide" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+                        <flux:link :href="route('aretino.guide')" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
                             <flux:icon name="book-open" class="mr-1 inline" />{{ __('Aretino guide') }}
                         </flux:link>
                         <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('aretino-cheatsheet').show()">

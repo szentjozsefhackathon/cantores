@@ -3,15 +3,15 @@
 | `K:G` | hangnem (kötelező, lezárja a fejlécet) |
 | `T:Cím` | cím |
 | `C:Szerző` | szerző/zeneszerző |
-| `M:4/4` | ütemmutatő (`C` = common, `C\|` = alla breve) |
+| `M:4/4` | ütemmutató (`C` = common, `C\|` = alla breve) |
 | `L:1/8` | alapértékű hanghossz |
 | `Q:120` | tempó (ütés/perc), pl. `Q:1/4=120` |
 
 | Hangmagasság | |
 |---|---|
 | `C D E F G A B` | kis oktáv (nagy betű) |
-| `c d e f g a b` | egévonalas oktáv (kis betű) |
-| `c' d'` vagy `c2 d2`| kétvonalas oktáv (aposztróf vagy vesszővel feljebb) |
+| `c d e f g a b` | egyvonalas oktáv (kis betű) |
+| `c' d'` | kétvonalas oktáv (aposztróf = egy oktávval feljebb) |
 | `C,` | kontra-oktáv (vessző = egy oktávval lejjebb) |
 
 | Hanghossz | |
