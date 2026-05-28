@@ -700,7 +700,7 @@ window.abc2svg = window.abc2svg || {};
                             <flux:tooltip :content="__('Font')">
                                 <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             </flux:tooltip>
-                            <flux:select size="sm" x-model="aretinoLyricFont" class="w-40 text-xs">
+                            <flux:select size="sm" x-model="aretinoTextFont" class="w-40 text-xs">
                                 <flux:select.option value="'EB Garamond'">EB Garamond</flux:select.option>
                                 <flux:select.option value="'Lora'">Lora</flux:select.option>
                                 <flux:select.option value="'Inter'">Inter</flux:select.option>

@@ -12,7 +12,7 @@ const ARETINO_SCREEN_CANVAS = {
 
 export function aretinoMixin() {
     return {
-        aretinoLyricFont: "'EB Garamond'",
+        aretinoTextFont: "'EB Garamond'",
         aretinoLyricSize: 10,
         aretinoStaffSize: 7,
         aretinoZoom: 120,
@@ -20,7 +20,7 @@ export function aretinoMixin() {
         aretinoStaffWidth: 170,
         aretinoStaffGap: 2.5,
         aretinoHideRepeatClef: false,
-        aretinoFields: ['aretinoLyricFont', 'aretinoLyricSize', 'aretinoStaffSize', 'aretinoZoom', 'aretinoPageRatio', 'aretinoStaffWidth', 'aretinoStaffGap', 'aretinoHideRepeatClef'],
+        aretinoFields: ['aretinoTextFont', 'aretinoLyricSize', 'aretinoStaffSize', 'aretinoZoom', 'aretinoPageRatio', 'aretinoStaffWidth', 'aretinoStaffGap', 'aretinoHideRepeatClef'],
         _aretinoResizeObserver: null,
         _aretinoResizeTimer: null,
 
@@ -46,7 +46,7 @@ export function aretinoMixin() {
             if (!content || !content.trim()) { return; }
 
             if (document.fonts) {
-                const primaryFamily = this.aretinoLyricFont.split(',')[0].trim().replace(/['"]/g, '');
+                const primaryFamily = this.aretinoTextFont.split(',')[0].trim().replace(/['"]/g, '');
                 try {
                     await document.fonts.load(`${this.aretinoLyricSize}px "${primaryFamily}"`);
                 } catch (_e) {
@@ -101,7 +101,7 @@ export function aretinoMixin() {
                         zoom: zoom,
                         staffSpaceMm: Number(this.aretinoStaffSize) / 4.0,
                         lyricSize: Number(this.aretinoLyricSize),
-                        lyricFont: this.aretinoLyricFont,
+                        textFont: this.aretinoTextFont,
                         staffGap: Number(this.aretinoStaffGap),
                         hideRepeatClef: !!this.aretinoHideRepeatClef,
                     });

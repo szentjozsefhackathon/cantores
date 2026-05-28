@@ -299,7 +299,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('chordproColumns', () => this.scheduleRender());
             this.$watch('chordproTranspose', () => this.scheduleRender());
             this.$watch('chordproGermanNotation', () => this.scheduleRender());
-            this.$watch('aretinoLyricFont', () => this.scheduleRender());
+            this.$watch('aretinoTextFont', () => this.scheduleRender());
             this.$watch('aretinoLyricSize', () => this.scheduleRender());
             this.$watch('aretinoStaffSize', () => this.scheduleRender());
             this.$watch('aretinoZoom', () => { this.syncAretinoEditor(); this.scheduleRender(); });
@@ -409,7 +409,7 @@ document.addEventListener('alpine:init', () => {
             if (this.$wire.format === 'aretino') {
                 return {
                     settings: {
-                        aretinoLyricFont: this.aretinoLyricFont,
+                        aretinoTextFont: this.aretinoTextFont,
                         aretinoLyricSize: Number(this.aretinoLyricSize),
                         aretinoStaffSize: Number(this.aretinoStaffSize),
                         aretinoZoom: Number(this.aretinoZoom),
@@ -1080,7 +1080,7 @@ document.addEventListener('alpine:init', () => {
             if (paddedViewBox) {
                 clonedSvg.setAttribute('viewBox', paddedViewBox);
             }
-            const lyricFont = this.$wire.format === 'aretino' ? this.aretinoLyricFont : this.lyricFont;
+            const lyricFont = this.$wire.format === 'aretino' ? this.aretinoTextFont : this.lyricFont;
             await injectWebFontsIntoSvg(clonedSvg, [lyricFont]);
             const svgData = new XMLSerializer().serializeToString(clonedSvg);
             const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
@@ -1130,7 +1130,7 @@ document.addEventListener('alpine:init', () => {
                     const clone = svgs[0].cloneNode(true);
                     removeEditorOnlySvgMarkup(clone);
                     let lyricFont;
-                    if (format === 'aretino') { lyricFont = this.aretinoLyricFont; }
+                    if (format === 'aretino') { lyricFont = this.aretinoTextFont; }
                     else if (format === 'abc') { lyricFont = this.abcLyricFont; }
                     else { lyricFont = this.lyricFont; }
                     await injectWebFontsIntoSvg(clone, [lyricFont]);

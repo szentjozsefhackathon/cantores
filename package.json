@@ -7,8 +7,8 @@
         "dev": "vite"
     },
     "dependencies": {
-        "@aretino-chant/core": "^0.9.1",
-        "@aretino-chant/editor": "^0.3.1",
+        "@aretino-chant/core": "^0.10.0",
+        "@aretino-chant/editor": "^0.5.0",
         "autoprefixer": "^10.4.20",
         "axios": "^1.7.4",
         "chordsheetjs": "^15.1.1",

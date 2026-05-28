@@ -28,7 +28,7 @@ document.addEventListener('alpine:init', () => {
                 const svg = renderAretino(this.content, {
                     width,
                     zoom: ZOOM,
-                    lyricFont: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+                    textFont: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
                 });
                 preview.innerHTML = svg;
             } catch (e) {

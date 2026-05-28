@@ -59,7 +59,7 @@ self::Aretino => __('Aretino (magyar gregorián)'),
 — `aretinoMixin()`-t exportál a többi mixin mintájára.
 
 State (Alpine adat):
-- `aretinoLyricFont` — alapértelmezett `'Palatino Linotype', serif`
+- `aretinoTextFont` — alapértelmezett `'Palatino Linotype', serif`
 - `aretinoLyricSize` — 10 (pt)
 - `aretinoStaffSize` — 7 (milliméter)
 - `aretinoZoom` — 100
