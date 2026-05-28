@@ -47,11 +47,13 @@ export function aretinoMixin() {
 
             if (document.fonts) {
                 const primaryFamily = this.aretinoTextFont.split(',')[0].trim().replace(/['"]/g, '');
-                try {
-                    await document.fonts.load(`${this.aretinoLyricSize}px "${primaryFamily}"`);
-                } catch (_e) {
-                    // proceed anyway if font load fails
-                }
+                const sz = `${this.aretinoLyricSize}px "${primaryFamily}"`;
+                await Promise.allSettled([
+                    document.fonts.load(sz),
+                    document.fonts.load(`italic ${sz}`),
+                    document.fonts.load(`bold ${sz}`),
+                    document.fonts.load(`italic bold ${sz}`),
+                ]);
             }
 
             const ratio = this.aretinoPageRatio;
