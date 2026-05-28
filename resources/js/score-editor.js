@@ -864,7 +864,7 @@ document.addEventListener('alpine:init', () => {
 :host{all:initial;display:inline-block}
 .b{display:inline-block;padding:4px 10px;border:1px solid #e4e4e7;border-radius:6px;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.13);white-space:nowrap;overflow:hidden;max-width:500px}
 .cm-line{display:inline;padding:0;font-family:'Inter',system-ui,sans-serif;font-size:13px;line-height:1.4}
-.cur{font-weight:700;color:rgba(234,88,12,0.85);transform:scaleY(2);display:inline-block;}
+.cur{display:inline-block;width:0;position:relative;vertical-align:text-bottom;}.cur::before{content:'';position:absolute;left:0;top:-9999px;bottom:-9999px;width:1px;background:rgba(234,88,12,0.85);}
 </style><div class="b"><span class="cm-line"></span></div>`;
             this._hoverTooltipEl = el;
             this._hoverTooltipShadow = shadow;
@@ -894,10 +894,12 @@ document.addEventListener('alpine:init', () => {
                 const frag = range.cloneContents();
                 const wrap = document.createElement('span');
                 wrap.appendChild(frag);
-                // Flatten cm-line blocks; insert a space in place of each line boundary
+                // Flatten cm-line blocks; insert a space between line boundaries (not before the first line)
+                let firstLine = true;
                 wrap.querySelectorAll('.cm-line').forEach(line => {
+                    if (!firstLine) { line.parentNode.insertBefore(document.createTextNode(' '), line); }
                     while (line.firstChild) { line.parentNode.insertBefore(line.firstChild, line); }
-                    line.parentNode.insertBefore(document.createTextNode(' '), line);
+                    firstLine = false;
                     line.remove();
                 });
                 return wrap.innerHTML;
@@ -925,7 +927,7 @@ document.addEventListener('alpine:init', () => {
             const to = Math.min(doc.length, caretPos + 10);
 
             const html = this._extractCmHtml(view, from, caretPos)
-                + '<b class="cur">|</b>'
+                + '<b class="cur"></b>'
                 + this._extractCmHtml(view, caretPos, to);
 
             if (!html) { this.hideSvgHoverTooltip(); return; }
