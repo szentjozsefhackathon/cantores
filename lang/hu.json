@@ -766,7 +766,8 @@
     "Click a note/lyrics to jump to it in the editor": "Kattints egy hangjegyre/szövegre, hogy a szerkesztőbe ugorj",
     "Full screen editor": "Teljes képernyős szerkesztő",
     "Score Editor": "Kottaszerkesztő",
-    "Delete Score": "Kotta törlése"
+    "Delete Score": "Kotta törlése",
+    "Show incipit on public listings of the music": "Incipit megjelenítése a zeneművek nyilvános listázásán"
 
 
 }
