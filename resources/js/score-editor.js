@@ -571,21 +571,25 @@ document.addEventListener('alpine:init', () => {
 
             // Crop away any header text (titles, subtitles) above the first staff
             // by adjusting the viewBox to start at the top of the first drawn element.
+            // Use getBBox() on the live SVG (not the clone) so that path geometry and
+            // parent-transform offsets are included — getAttribute('y') misses path elements.
             const vbAttr = svg.getAttribute('viewBox');
             if (vbAttr) {
                 const [vbX, vbY, vbW, vbH] = vbAttr.split(/\s+/).map(Number);
-                const drawnEls = Array.from(clone.querySelectorAll('path, use, line, rect'));
-                if (drawnEls.length > 0) {
-                    const minY = drawnEls.reduce((best, el) => {
-                        const y = parseFloat(el.getAttribute('y') ?? el.getAttribute('y1') ?? '');
-                        return Number.isFinite(y) ? Math.min(best, y) : best;
-                    }, Infinity);
-                    const padding = 4;
-                    const cropY = Number.isFinite(minY) && minY > vbY + 5 ? minY - padding : vbY;
-                    const newH = vbH - (cropY - vbY);
-                    clone.setAttribute('viewBox', `${vbX} ${cropY} ${vbW} ${newH}`);
-                    clone.setAttribute('height', String(newH));
+                let minY = Infinity;
+                for (const el of svg.querySelectorAll('path, use, line, rect')) {
+                    try {
+                        const bb = el.getBBox();
+                        if (bb.width > 0 || bb.height > 0) {
+                            minY = Math.min(minY, bb.y);
+                        }
+                    } catch (_) {}
                 }
+                const padding = 4;
+                const cropY = Number.isFinite(minY) && minY > vbY + 5 ? minY - padding : vbY;
+                const newH = vbH - (cropY - vbY);
+                clone.setAttribute('viewBox', `${vbX} ${cropY} ${vbW} ${newH}`);
+                clone.setAttribute('height', String(newH));
             }
 
             // For aretino, crop the bottom to only the first staff row using the

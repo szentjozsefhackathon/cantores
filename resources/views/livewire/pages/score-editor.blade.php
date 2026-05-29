@@ -329,6 +329,7 @@
 
                             <aretino-editor
                                 preview="false"
+                                toolbar="false"
                                 x-show="$wire.format === 'aretino'"
                                 x-cloak
                                 x-ref="aretinoEditor"
