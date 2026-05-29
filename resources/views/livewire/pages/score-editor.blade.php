@@ -1,8 +1,28 @@
-<div class="py-8">
+<div class="py-8" x-data="scoreEditor({
+        scoreSettings: @js($settings ?: (object) []),
+        userDefaults: @js($userDefaults ?: (object) []),
+        clippedWarningText: @js(__('Content does not fit on page')),
+        clipboardNotSupported: @js(__('Clipboard not supported in this browser')),
+        imageCopied: @js(__('Image copied to clipboard')),
+        failedToCopy: @js(__('Failed to copy image')),
+        shareLinkCopied: @js(__('Share link copied!')),
+        linkCopyFailed: @js(__('Failed to copy link')),
+        htmlCopied: @js(__('HTML copied to clipboard!')),
+        plainTextCopied: @js(__('Plain text copied to clipboard!')),
+        copyAsImageText: @js(__('Copy as Image')),
+        exportPngText: @js(__('Export PNG')),
+        exportSvgText: @js(__('Export SVG')),
+        fullscreenText: @js(__('Fullscreen')),
+    })">
     <div class="mx-auto max-w-5xl xl:max-w-none">
         <flux:card class="p-4 lg:p-4">
             <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
+                    @if(!$isGuest)
+                        <flux:button variant="ghost" icon="arrow-left" :href="route('scores')" wire:navigate class="mb-2">
+                            {{ __('Back to Scores') }}
+                        </flux:button>
+                    @endif
                     <flux:heading size="2xl">
                         @if($score)
                             {{ __('Edit Score') }}
@@ -29,13 +49,8 @@
 
                 <div class="flex flex-wrap gap-2">
                     @if(!$isGuest)
-                        <flux:button variant="ghost" icon="arrow-left" :href="route('scores')" wire:navigate>
-                            {{ __('Back to Scores') }}
-                        </flux:button>
-                    @endif
-                    @if($score)
-                        <flux:button variant="danger" icon="trash" wire:click="delete" wire:confirm="{{ __('Are you sure you want to delete this score?') }}">
-                            {{ __('Delete') }}
+                        <flux:button variant="filled" variant="primary" icon="check" x-on:click="saveScore()" x-bind:disabled="savingScore">
+                            {{ __('Save Score') }}
                         </flux:button>
                     @endif
                 </div>
@@ -121,22 +136,6 @@ window.abc2svg = window.abc2svg || {};
 <script src="{{ asset('js/abc2svg-1.js') }}"></script>
 
                 <div
-                    x-data="scoreEditor({
-                        scoreSettings: @js($settings ?: (object) []),
-                        userDefaults: @js($userDefaults ?: (object) []),
-                        clippedWarningText: @js(__('Content does not fit on page')),
-                        clipboardNotSupported: @js(__('Clipboard not supported in this browser')),
-                        imageCopied: @js(__('Image copied to clipboard')),
-                        failedToCopy: @js(__('Failed to copy image')),
-                        shareLinkCopied: @js(__('Share link copied!')),
-                        linkCopyFailed: @js(__('Failed to copy link')),
-                        htmlCopied: @js(__('HTML copied to clipboard!')),
-                        plainTextCopied: @js(__('Plain text copied to clipboard!')),
-                        copyAsImageText: @js(__('Copy as Image')),
-                        exportPngText: @js(__('Export PNG')),
-                        exportSvgText: @js(__('Export SVG')),
-                        fullscreenText: @js(__('Fullscreen')),
-                    })"
                     :class="splitScreen ? 'fixed inset-0 z-[60] flex flex-col overflow-hidden bg-white dark:bg-zinc-900' : ''"
                 >
                     {{-- Compact header shown only in split-screen mode --}}
@@ -145,7 +144,7 @@ window.abc2svg = window.abc2svg || {};
                         <span class="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400" x-text="($wire.format ?? '').toUpperCase()"></span>
                         <div class="ml-auto flex shrink-0 items-center gap-1">
                             @if(!$isGuest)
-                            <flux:button size="sm" variant="primary" icon="pencil" x-on:click="saveScore()">{{ __('Save') }}</flux:button>
+                            <flux:button size="sm" variant="primary" icon="pencil" x-on:click="saveScore()" x-bind:disabled="savingScore">{{ __('Save') }}</flux:button>
                             @endif
                             <flux:button size="sm" variant="ghost" icon="arrows-pointing-in" x-on:click="toggleSplitScreen()">{{ __('Exit') }}</flux:button>
                         </div>
@@ -931,16 +930,14 @@ window.abc2svg = window.abc2svg || {};
                     </div>
                     @endif
 
-                    @if(!$isGuest)
-                    <div class="mt-4 flex justify-end gap-3" x-show="!splitScreen">
-                        <flux:button variant="ghost" :href="route('scores')" wire:navigate>
-                            {{ __('Cancel') }}
-                        </flux:button>
-                        <flux:button variant="primary" icon="pencil" x-on:click="saveScore()">
-                            {{ __('Save Score') }}
+                    @if($score)
+                    <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700" x-show="!splitScreen">
+                        <flux:button variant="danger" icon="trash" wire:click="delete" wire:confirm="{{ __('Are you sure you want to delete this score?') }}">
+                            {{ __('Delete Score') }}
                         </flux:button>
                     </div>
                     @endif
+
                 </div>
             </div>
         </flux:card>

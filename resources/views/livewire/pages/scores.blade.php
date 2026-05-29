@@ -34,22 +34,25 @@
                 <flux:table>
                     <flux:table.columns>
                         <flux:table.column>{{ __('Title') }}</flux:table.column>
-                        <flux:table.column>{{ __('Format') }}</flux:table.column>
-                        <flux:table.column>{{ __('Updated') }}</flux:table.column>
+                        <flux:table.column class="hidden sm:table-cell">{{ __('Updated') }}</flux:table.column>
                     </flux:table.columns>
 
                     <flux:table.rows>
                         @foreach($scores as $score)
                             <flux:table.row wire:key="score-row-{{ $score->id }}">
                                 <flux:table.cell>
-                                    <div class="flex items-center gap-1.5 font-medium">
+                                    <div class="flex flex-wrap items-center gap-1.5 font-medium">
                                         <a href="{{ route('scores.edit', ['score' => $score->id]) }}" wire:navigate class="hover:underline">
                                             {{ $score->title }}
                                         </a>
+                                        <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
                                         @if($score->share_token)
                                             <flux:icon name="link" size="sm" class="text-blue-500 dark:text-blue-400" :title="__('Secret link active')" />
                                         @endif
                                     </div>
+                                    @if($score->hasIncipit())
+                                        <img src="{{ route('scores.incipit', $score) }}" alt="{{ __('Incipit') }}" class="mt-1 block h-20 w-full max-w-[400px] object-cover object-left-top" />
+                                    @endif
                                     @if($score->music)
                                         <div class="mt-1">
                                             <a href="{{ route('music-view', $score->music) }}" wire:navigate class="text-sm text-blue-600 hover:underline dark:text-blue-400">
@@ -58,10 +61,7 @@
                                         </div>
                                     @endif
                                 </flux:table.cell>
-                                <flux:table.cell>
-                                    <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
-                                </flux:table.cell>
-                                <flux:table.cell>
+                                <flux:table.cell class="hidden sm:table-cell">
                                     <span class="text-sm text-gray-600 dark:text-gray-400">{{ $score->updated_at->translatedFormat('Y-m-d H:i') }}</span>
                                 </flux:table.cell>
                             </flux:table.row>

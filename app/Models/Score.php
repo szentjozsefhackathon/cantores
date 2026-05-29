@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
  * @property string $content
  * @property array<string, array<string, array<string, mixed>>>|null $settings
  * @property string|null $share_token
+ * @property-read string $incipit_path
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreUrl> $urls
@@ -79,6 +81,16 @@ class Score extends Model
     public function urls(): HasMany
     {
         return $this->hasMany(ScoreUrl::class);
+    }
+
+    public function getIncipitPathAttribute(): string
+    {
+        return "incipits/{$this->id}.png";
+    }
+
+    public function hasIncipit(): bool
+    {
+        return Storage::exists($this->incipit_path);
     }
 
     public function scopeMine(\Illuminate\Database\Eloquent\Builder $query, ?User $user = null): void

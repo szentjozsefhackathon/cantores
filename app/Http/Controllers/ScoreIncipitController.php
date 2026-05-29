@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Score;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class ScoreIncipitController extends Controller
+{
+    use AuthorizesRequests;
+
+    public function __invoke(Score $score): StreamedResponse
+    {
+        $this->authorize('view', $score);
+
+        abort_unless(Storage::exists($score->incipit_path), 404);
+
+        return Storage::response($score->incipit_path, headers: ['Content-Type' => 'image/png']);
+    }
+}

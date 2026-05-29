@@ -304,17 +304,6 @@ it('makes the Aretino CodeMirror editor smaller and vertically resizable', funct
         ->toContain('resize: vertical;');
 });
 
-it('renders the preview column as an independently scrollable sticky pane', function () {
-    $user = User::factory()->create();
-
-    actingAs($user);
-
-    Livewire::test(ScoreEditor::class)
-        ->assertSeeHtml('xl:sticky')
-        ->assertSeeHtml('xl:h-[calc(100vh-2rem)]')
-        ->assertSeeHtml('xl:overflow-y-auto');
-});
-
 it('does not allow attaching a score to a private music piece the user cannot view', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();

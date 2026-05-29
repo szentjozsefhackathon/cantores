@@ -146,6 +146,10 @@ Route::livewire('/scores/{score}/edit', \App\Livewire\Pages\ScoreEditor::class)
     ->middleware(['auth', 'verified'])
     ->name('scores.edit');
 
+Route::get('/scores/{score}/incipit', \App\Http\Controllers\ScoreIncipitController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('scores.incipit');
+
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');

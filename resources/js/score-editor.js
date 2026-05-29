@@ -164,6 +164,7 @@ document.addEventListener('alpine:init', () => {
         shareUrl: '',
         shareUrlLoading: false,
         shareModalCopied: false,
+        savingScore: false,
         splitScreen: false,
         splitEditorHeight: 380,
         _splitDragging: false,
@@ -538,9 +539,106 @@ document.addEventListener('alpine:init', () => {
             this.applyRatioSettings('aretino', this.aretinoPageRatio);
         },
 
-        saveScore() {
-            const c = this.collectSettings();
-            this.$wire.call('save', c.settings, c.ratio);
+        async saveScore() {
+            if (this.savingScore) { return; }
+            this.savingScore = true;
+            try {
+                const c = this.collectSettings();
+                const incipit = await this.generateIncipit().catch(() => null);
+                this.$wire.call('save', c.settings, c.ratio, incipit);
+            } finally {
+                setTimeout(() => { this.savingScore = false; }, 5000);
+            }
+        },
+
+        async generateIncipit() {
+            const refMap = {
+                abc: this.$refs.abcPreview,
+                gabc: this.$refs.preview,
+                aretino: this.$refs.aretinoPreview,
+            };
+            const container = refMap[this.$wire.format];
+            if (!container) { return null; }
+
+            const svg = container.querySelector('svg');
+            if (!svg) { return null; }
+
+            const clone = svg.cloneNode(true);
+            removeEditorOnlySvgMarkup(clone);
+
+            // Crop away any header text (titles, subtitles) above the first staff
+            // by adjusting the viewBox to start at the top of the first drawn element.
+            const vbAttr = svg.getAttribute('viewBox');
+            if (vbAttr) {
+                const [vbX, vbY, vbW, vbH] = vbAttr.split(/\s+/).map(Number);
+                const drawnEls = Array.from(clone.querySelectorAll('path, use, line, rect'));
+                if (drawnEls.length > 0) {
+                    const minY = drawnEls.reduce((best, el) => {
+                        const y = parseFloat(el.getAttribute('y') ?? el.getAttribute('y1') ?? '');
+                        return Number.isFinite(y) ? Math.min(best, y) : best;
+                    }, Infinity);
+                    const padding = 4;
+                    const cropY = Number.isFinite(minY) && minY > vbY + 5 ? minY - padding : vbY;
+                    const newH = vbH - (cropY - vbY);
+                    clone.setAttribute('viewBox', `${vbX} ${cropY} ${vbW} ${newH}`);
+                    clone.setAttribute('height', String(newH));
+                }
+            }
+
+            // For aretino, crop the bottom to only the first staff row using the
+            // <!-- aretino-row 1 Y --> marker emitted by the renderer.
+            if (this.$wire.format === 'aretino') {
+                const svgText = new XMLSerializer().serializeToString(svg);
+                const rowMatch = svgText.match(/<!--\s*aretino-row\s+1\s+([\d.]+)/);
+                if (rowMatch) {
+                    const row1StartY = parseFloat(rowMatch[1]);
+                    const currentVb = clone.getAttribute('viewBox');
+                    if (currentVb) {
+                        const [cvbX, cvbY, cvbW, cvbH] = currentVb.split(/\s+/).map(Number);
+                        const firstRowH = row1StartY - cvbY;
+                        if (firstRowH > 0 && firstRowH < cvbH) {
+                            clone.setAttribute('viewBox', `${cvbX} ${cvbY} ${cvbW} ${firstRowH}`);
+                            clone.setAttribute('height', String(firstRowH));
+                        }
+                    }
+                }
+            }
+
+            const targetWidth = 800;
+            const vbFinal = clone.getAttribute('viewBox');
+            let outputHeight = 200;
+            if (vbFinal) {
+                const parts = vbFinal.split(/\s+/).map(Number);
+                if (parts.length === 4 && parts[2] > 0) {
+                    outputHeight = Math.round(parts[3] * (targetWidth / parts[2]));
+                }
+            }
+            clone.setAttribute('width', String(targetWidth));
+            clone.setAttribute('height', String(outputHeight));
+
+            const lyricFont = this.$wire.format === 'aretino' ? this.aretinoTextFont : this.lyricFont;
+            await injectWebFontsIntoSvg(clone, [lyricFont]);
+
+            const svgData = new XMLSerializer().serializeToString(clone);
+            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = targetWidth;
+                    canvas.height = outputHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    URL.revokeObjectURL(url);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+                img.src = url;
+            });
         },
 
         toggleSplitScreen() {

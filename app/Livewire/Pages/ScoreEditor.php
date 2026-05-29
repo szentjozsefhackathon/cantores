@@ -10,6 +10,7 @@ use App\MusicUrlLabel;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -115,7 +116,7 @@ class ScoreEditor extends Component
     /**
      * @param  array<string, mixed>|null  $ratioSettings
      */
-    public function save(?array $ratioSettings = null, ?string $ratio = null): void
+    public function save(?array $ratioSettings = null, ?string $ratio = null, ?string $incipitDataUrl = null): void
     {
         $this->authorize($this->score ? 'update' : 'create', $this->score ?? Score::class);
 
@@ -143,6 +144,8 @@ class ScoreEditor extends Component
         ]);
         $score->user_id = $score->user_id ?: Auth::id();
         $score->save();
+
+        $this->storeIncipit($score, $incipitDataUrl);
 
         $this->settings = $settings;
 
@@ -356,6 +359,23 @@ class ScoreEditor extends Component
             'isSharedLink' => $this->isSharedLink,
             'isGuest' => ! Auth::check(),
         ]);
+    }
+
+    private function storeIncipit(Score $score, ?string $incipitDataUrl): void
+    {
+        $prefix = 'data:image/png;base64,';
+
+        if (! is_string($incipitDataUrl) || ! str_starts_with($incipitDataUrl, $prefix)) {
+            return;
+        }
+
+        $bytes = base64_decode(substr($incipitDataUrl, strlen($prefix)), strict: true);
+
+        if ($bytes === false || strlen($bytes) > 2_000_000) {
+            return;
+        }
+
+        Storage::put($score->incipit_path, $bytes);
     }
 
     private function loadFromSharedData(string $d): void
