@@ -193,7 +193,7 @@ torculus, `4 u U 6` = másik torculus, stb. Ráadásul bizonyos jelöléseket í
 Ugyanez Aretino-val, egyszerűen megadjuk a hangok neveit és minden automatikus:
 
 ```aretino
-(g2) g ga ag a'/g af ae aba gCB CCbag
+(g2) g ga ag a'/g af ae aba gCb CCbag
 ```
 
 ### Mit hozott a Guido?
@@ -351,7 +351,7 @@ A hangokat **a–g** kisbetűk, illetve az **A-G** nagybetűk jelölik. A kisbet
 
 ```aretino
 A B c d e f g a b C D E F G
-w: a b c d e f g h i j k l m n
+w: A B c d e f g a b C D E F G
 ```
 
 Tehát G-kulcsban `c` az 1. vonalon C-hang, `g` a 3. vonalon B-hang stb.
@@ -489,7 +489,7 @@ lehet.
 Ha a szövegben zárójelben szerepel valami, azt a következő ütemvonal alá rendezzük, a lenti példában a `(*)` jelöli, hogy a rövid vonal alá kell írni egy * jelet.
 
 ```aretino
-(g2) (K:f#) h h h f h i j ih h_ , h h h f g hg e d. d. ; f f f g e g f_ , e d e e e g f d. d. || (Z) ht i ht g ht ||
+(g2) (K:f#) a a a f a b C ba a_ , a a a f g ag e d. d. ; f f f g e g f_ , e d e e e g f d. d. || (Z) at b at g at ||
 w: Men-je-tek, és vi-gyé-tek hí-rül: (*) föl-tá-madt az Úr, al-le-lu-ja! Néz-zé-tek ü-res sír-ját, a-hol nyu-go-dott, al-le-lu-ja!
 ```
 <small>Forrás: A húsvéti Szent Három Nap liturgiája, © Bencés Kiadó</small>
@@ -505,7 +505,7 @@ Az Aretino megjelenítő igyekszik kedvezően elosztani a neumákat/szótagokat,
 A `*` egy üres, „rugalmas” szakasz, amellyel befolyásolhatjuk, hogy egy sorkizárt szakasz hol legyen szellősebb:
 
 ```aretino
-(g2) d f * g h * g (z) f d  (||)
+(g2) d f * g a * g (z) f d  (||)
 ```
 
 Több `*` is használható egy sorban; a maradék helyet egyenlően elosztja
@@ -518,7 +518,7 @@ a `(sp)` direktívát. Szorzóval is megadható: `(sp2)` = 2× alapszélesség,
 `(sp0.5)` = fél szélesség, illetve az `(sp)`-nek azonos jelentésű a `=` jel.
 
 ```aretino
-(g2) d f (sp2) g = h ==== f
+(g2) d f (sp2) g = a ==== f
 ```
 
 ### Explicit sortörés `(z)` és `(Z)`
@@ -535,7 +535,7 @@ A `(z)` formát használd ott, ahol a frázis-vége természetesen indokol
 sortörést.
 
 ```aretino
-(g2) g h i j (z) g h i j (Z) g h i j ||
+(g2) g a b C (z) g a b C (Z) g a b C ||
 ```
 
 
@@ -549,14 +549,14 @@ sortörést.
 | `(n)` vagy `(in)` | feloldó | a megelőző alteráció feloldása |
 | `(#)` vagy `(i#)` | kereszt | félhanggal emelt |
 
-A jel elé írhatod a céltartományt (`(fb)`, `(in)`, `(m#)`). Ha elhagyod a
-hangbetűt, az alapértelmezett pozíció `i`, tehát `(b)`, `(n)`, `(#)` az `i`
+A jel elé írhatod a céltartományt (`(fb)`, `(bn)`, `(G#)`). Ha elhagyod a
+hangbetűt, az alapértelmezett pozíció `i`, tehát `(b)`, `(n)`, `(#)` a `b`
 magasságon jelenik meg.
 
 ### Példa
 
 ```aretino
-(g2) (ib) (sp) (in) (sp) (i#) (sp) : h (ib) hih fgh. g(ib)hih
+(g2) (b) (sp) (bn) (sp) (b#) (sp) : a (bb) aba fga. g(bb)aba
 ```
 
 A módosítójeleket a következő neumával egyben tartjuk. (Neumán belül is használható módosítójel.)
@@ -569,7 +569,7 @@ csak a darab elején van leírva.
 
 | Forrás | Jelentés |
 |---|---|
-| `(K:b)` vagy `(K:ib)` vagy `(K:Bb)` | b-előjegyzés az `i`/`B` magasságon |
+| `(K:b)` vagy `(K:bb)` | b-előjegyzés a `b` magasságon |
 | `(K:eb)` | b az E hangon |
 | `(K:F# C#)` | több módosítójel — szóközzel elválasztva |
 | `(K:)` | előjegyzés törlése |
@@ -577,7 +577,7 @@ csak a darab elején van leírva.
 ```aretino
 %title: Példa előjegyzéssel
 %%
-(g2) (K:m# j#) d e f g h i j k (||)
+(g2) (K:F# C#) d e f g a b C D (||)
 ```
 
 Egy újabb `(K:…)` token megváltoztatja az előjegyzést onnantól (helyben is megjelenik, és a következő sorok elején is az új jel szerepel). `(K:)` törli az
@@ -600,7 +600,7 @@ egy különálló punctum (pl. `d` szóközökkel a két oldalán) szintén egy
 egységnek számít, és egy szótag jut rá.
 
 ```aretino
-(g2) dghfe ed , g hg ghj h hghgfg(b)ihig fhgfgfe e :
+(g2) dgafe ed , g ag gaC a agagfg(b)babg fagfgfe e :
 w: Hús-vét ün-ne-pe e-lőtt tör-tént:
 ```
 
@@ -622,9 +622,9 @@ Hosszabb kottáknál vagy antifóna/zsoltárvers kottáknál célszerű lehet ha
 
 ```aretino
 (g2) (K:b) 
-cf f f fghigf fj jklmkj j , 
+cf f f fgabgf fC CDEFDC C , 
 w: {V}a-dis,~{*} pro-pi-ti-á-tor, 
-n: fj j jk k kj j hijih gh igf ; 
+n: fC C CD D DC C abCba ga bgf ; 
 w: ad im-mo-lán-dum pro ó-mni-bus. 
 ```
 
@@ -635,10 +635,10 @@ használata zsoltárverseknél és responzóriumoknál.
 
 ```aretino
 %indent: VI. f.
-(g2) f g h f. gh g f d_c_ , f gh gf f. || 
+(g2) f g a f. ga g f d_c_ , f ga gf f. || 
 w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja. 
 
-(Z) f g | ht = g. , ht = g h- fs f. | ht = f g gs h g fs f. ||
+(Z) f g | at = g. , at = g a- fs f. | at = f g gs a g fs f. ||
 w: ~ ~ ~ + ~ ~ ~ ~ ~ (*)
 W: <Jézus> mond[ja]: + szeressétek egymást, ez az [én] parancsom *
 amint én szerette[lek] benneteket!
@@ -655,14 +655,14 @@ Ha több szót (szótagot) kell **egyetlen hangra** írni — például recitál
 tenor-hang alatt —, kösd össze őket `~` jellel szóköz nélkül:
 
 ```aretino
-(g2) f g ht h g h :
+(g2) f g at a g a :
 w: szent vagy, mindenség~Ura, Is-te-ne!
 ```
 
 A `~` jel arra is használható, hogy átugorjunk hangokat, kihagyjunk szöveget:
 
 ```aretino
-f g ; h g
+f g ; a g
 w: ~ ~ szö-veg
 ```
 
@@ -672,7 +672,7 @@ Hogy a szöveg tördelését ne zavarják a verszakok számai és egyéb rövid 
 a `~~` jellel kell összekötnünk. Első versszak esetén manuális térköz kellhet.
 
 ```aretino
-(g2) = g g g h g gj j ' jt
+(g2) = g g g a g gC C ' Ct
 w: 1.~~Ki-rá-lyok-nak Ki-rá-lya (†) és~Atyja...
 ```
 
@@ -697,7 +697,7 @@ A szöveges sorokba egyszerű formázó jelöléseket is tehetünk:
 A formázás tetszőleges szótagokra alkalmazható, és a szótaghatáron át is érvényes marad, amíg a záró tag meg nem jelenik.
 
 ```aretino
-(g2) g h i g. hi h g e_d_ , g hi Ag g. ||
+(g2) g a b g. ab a g e_d_ , g ab ag g. ||
 w: {\R}~~Al-le-lu-ja, al-le-lu-ja>, (\red{{*}}) al-[le-lu]-ja.
 ```
 
@@ -706,7 +706,7 @@ w: {\R}~~Al-le-lu-ja, al-le-lu-ja>, (\red{{*}}) al-[le-lu]-ja.
 **Felirat**: rövid szöveg, amely egy hang vagy neuma fölött jelenik meg. A feliratot idézőjelek közé téve, közvetlenül a hang vagy ligatúra után (szóköz nélkül) kell írni:
 
 ```aretino
-(g2) hg"Felirat" d f"\red{{!}}" gh"2x"
+(g2) ag"Felirat" d f"\red{{!}}" ga"2x"
 ```
 
 A felirat bármilyen (akár formázott) szöveg lehet; a megfelelő hang vagy ligatúra fölött jelenik meg.
@@ -719,12 +719,12 @@ Egy vagy több hangot (vagy egész neumát) `[` … `]` közé téve **tipográf
 
 | Forrás | Jelentés |
 |---|---|
-| `[h]` | egyetlen hang zárójelben |
-| `[hg]` | ligatúra (neuma) zárójelben |
-| `[h i j]` | több elem zárójelben (szóközök megengedettek) |
+| `[a]` | egyetlen hang zárójelben |
+| `[ag]` | ligatúra (neuma) zárójelben |
+| `[a b C]` | több elem zárójelben (szóközök megengedettek) |
 
 ```aretino
-(g2) d [h] g [hg] d [h i j] g
+(g2) d [a] g [ag] d [a b C] g
 ```
 
 ## 19. Hosszabb példák
@@ -734,16 +734,16 @@ Egy vagy több hangot (vagy egész neumát) `[` … `]` közé téve **tipográf
 ```aretino
 %title: Uram, irgalmazz (XVI.)
 %%
-(g2) (K:ib) h h h g h fg h ||
+(g2) (K:b) a a a g a fg a ||
 w: U-ram, ir-gal-mazz né-künk! (<3x>)
 
-h h h g h fg h ||
+a a a g a fg a ||
 w: Krisz-tus, ke-gyel-mezz né-künk! (<3x>)
 
-h h h g h fg h ||
+a a a g a fg a ||
 w: U-ram, ir-gal-mazz né-künk! (<2x>)
 
-h g i g f gh h ||
+a g b g f ga a ||
 w: U-ram, ir-gal-mazz né-künk!
 ```
 
@@ -758,10 +758,10 @@ w: U-ram, ir-gal-mazz né-künk!
 ```aretino
 %title: Hints meg engem
 %%
-(g2) (K:m#) d e g f gh h , i j i h i h ge d | d e gfgh h , i g ge ggfg h g e d d ||
+(g2) (K:F#) d e g f ga a , b C b a b a ge d | d e gfga a , b g ge ggfg a g e d d ||
 w: Hints meg en-gem U-ram, i-zsóp-pal és meg-tisz-tu-lok, moss meg en-gem, és fe-hé-rebb le-szek a hó-nál.
 
-f g ht gs ht g h i- gs g | ht i h gs- gf e ||
+f g at gs at g a b- gs g | at b a gs- gf e ||
 w: ~ ~ ~ † (*)
 ```
 
@@ -771,13 +771,13 @@ w: ~ ~ ~ † (*)
 
 ```aretino
 (g2) (K:b) 
-   f  ABC C./DCBC./FDCB/CDC. ,  CAgfBA g  g f. ||
+   f  abC C./DCbC./FDCb/CDC. ,  Cagfba g  g f. ||
 w: Ky-ri-e                 (*)  e-le-i-son. (<bis>)
-n: A    Agfef.,fABC./DCBC., CAgfBA g g f. ||
+n: a    agfef.,fabC./DCbC., Cagfba g g f. ||
 w: Chris-te ~               e-le-i-son. (<bis>)
-n: F  E  FEDEFC. , FCD.ABC. , CAgfBA g g f. ||
+n: F  E  FEDEFC. , FCD.abC. , Cagfba g g f. ||
 w: Ky-ri-e      (*)         ~ e-le-i-son.
-n: F  E  FEDEFC. , FE/FEDEFC. ,  FCD.ABC. , CAgfBA g g f. ||
+n: F  E  FEDEFC. , FE/FEDEFC. ,  FCD.abC. , Cagfba g g f. ||
 w: Ky-ri-e      (*)                  ~ ~ (*)e-le-i-son.
 ```
 

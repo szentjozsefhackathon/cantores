@@ -765,9 +765,13 @@
     "Convert": "Konvertálás",
     "Click a note/lyrics to jump to it in the editor": "Kattints egy hangjegyre/szövegre, hogy a szerkesztőbe ugorj",
     "Full screen editor": "Teljes képernyős szerkesztő",
+    "Full screen": "Teljes képernyő",
     "Score Editor": "Kottaszerkesztő",
     "Delete Score": "Kotta törlése",
-    "Show incipit on public listings of the music": "Incipit megjelenítése a zeneművek nyilvános listázásán"
+    "Show incipit on public listings of the music": "Incipit megjelenítése a zeneművek nyilvános listázásán",
+    "Guide": "Útmutató",
+    "Show source tooltip on hover": "Lebegő forráskód megjelenítése",
+    "Reset to defaults": "Alapértelmezettre visszaállítás"
 
 
 }

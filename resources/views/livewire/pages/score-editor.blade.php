@@ -278,11 +278,11 @@
                         <div x-show="$wire.format === 'aretino'" x-cloak class="mb-2 flex flex-wrap items-center gap-4">
                             <div x-show="!splitScreen">
                                 <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()">
-                                    {{ __('Full screen editor')}}
+                                    {{ __('Full screen')}}
                                 </flux:button>
                             </div>
                             <flux:link :href="route('aretino.guide')" target="_blank" class="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
-                                <flux:icon name="book-open" class="mr-1 inline" />{{ __('Aretino guide') }}
+                                <flux:icon name="book-open" class="mr-1 inline" />{{ __('Guide') }}
                             </flux:link>
                             <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('aretino-cheatsheet').show()">
                                 {{ __('Cheatsheet') }}
@@ -326,7 +326,7 @@
                                     x-on:select="updateAretinoHighlight && updateAretinoHighlight()"
                                     x-on:focus="updateAretinoHighlight && updateAretinoHighlight()" />
                             </div>
-
+                            <flux:text>Használd a <kbd>Ctrl</kbd>+<kbd>Space</kbd>-t az automatikus kiegészítéshez</flux:text>
                             <aretino-editor
                                 preview="false"
                                 toolbar="false"

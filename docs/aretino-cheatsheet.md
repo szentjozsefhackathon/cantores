@@ -4,9 +4,7 @@
 
 |Hangmagasság||
 |---|---|
-| `a b c d e f g h i j k l m n` | 14 pozíció alulról felfelé |
-| `A B … H` | emelt oktáv (nagybetű) |
-
+| `A B c d e f g a b C D E F G` | 14 pozíció alulról felfelé |
 
 |Kottafej||
 |---|---|
@@ -16,7 +14,7 @@
 | Utótag ||
 |---|---|
 | `d.`, `d_`, `d-`, `d~` | mora, episema, ictus, plica |
-| `df/gh` | `/` = neuma-tagoló |
+| `df/ga` | `/` = neuma-tagoló |
 
 | Tagolás/ütem | |
 |---|---|
@@ -37,7 +35,7 @@
 | Módosítójelek és előjegyzés | |
 |---|---|
 | `(b)` `{n)` `(#)` | b, feloldó, kereszt (hangbetű nélkül: `i` magasság) |
-| `(fb)` `(in)` `(m#)` | hanghoz kötött módosítójel |
+| `(fb)` `(dn)` `(G#)` | hanghoz kötött módosítójel |
 | `(K:F# C#)` | előjegyzés (minden sor elején ismétlődik) |
 | `(K:)` | előjegyzés törlése |
 
