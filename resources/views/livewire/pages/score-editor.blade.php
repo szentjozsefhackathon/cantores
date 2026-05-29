@@ -333,7 +333,7 @@
                                 x-cloak
                                 x-ref="aretinoEditor"
                                 wire:ignore
-                                :class="splitScreen ? 'score-editor-aretino-source flex-1 min-h-0' : 'score-editor-aretino-source'"
+                                :class="splitScreen ? 'score-editor-aretino-source flex-1 min-h-0 split-screen' : 'score-editor-aretino-source'"
                                 x-on:change="handleEditorContentInput($event.detail.value)"
                                 x-on:selectionchange="updateAretinoHighlight()"
                                 x-on:focusout="hideSvgHoverTooltip()"></aretino-editor>

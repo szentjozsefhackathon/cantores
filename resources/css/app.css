@@ -402,6 +402,10 @@ aretino-editor::part(toolbar) {
   box-sizing: border-box;
 }
 
+aretino-editor.split-screen::part(toolbar) {
+  height: calc(28px + 6px);
+}
+
 
 [data-src-start] {
     cursor: pointer;
