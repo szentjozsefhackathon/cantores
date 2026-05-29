@@ -3,7 +3,7 @@
 > Magyar katolikus gregorián notáció szöveges formátumban.
 
 ```aretino
-(g2) g h i g. hi h g e_d_ , g hi Ag g. ||
+(g2) g a b g. ab a g e_d_ , g ab ag g. ||
 w: Al-le-lu-ja, al-le-lu-ja, al-le-lu-ja.
 ```
 
@@ -193,7 +193,7 @@ torculus, `4 u U 6` = másik torculus, stb. Ráadásul bizonyos jelöléseket í
 Ugyanez Aretino-val, egyszerűen megadjuk a hangok neveit és minden automatikus:
 
 ```aretino
-(g2) g gh hg h'/g hf he hih gji jjihg
+(g2) g ga ag a'/g af ae aba gCB CCbag
 ```
 
 ### Mit hozott a Guido?
@@ -272,7 +272,7 @@ tartalomra kell figyelnie.
 ## 5. Első kotta
 
 ```aretino
-(g2) c e g A g.
+(g2) c e g a g.
 ```
 
 Ez egy violinkulcsot (G a 2. vonalon), majd öt punctumot rajzol —
@@ -283,7 +283,7 @@ Egy minimum-példa szöveggel és fejléccel:
 ```aretino
 %title: Salve, Regina
 %%
-(g2) c e g A g.
+(g2) c e g a g.
 w:   Sal-ve, Re-gí-na,
 ```
 
@@ -298,11 +298,12 @@ A három fő építőelem:
 
 ## 6. Fejléc
 
-A fejléc-sorok pontosvesszővel kezdődnek (`;kulcs: érték`), és a `%%` lezárja:
+A fejléc-sorok pontosvesszővel kezdődnek (`%kulcs: érték`), és a `%%` lezárja:
 
 | Kulcs | Leírás |
 |---|---|---|
 | `title` | Cím, középre igazítva, félkövér. |
+| `subtitle` | Alcím, kisebb betűmérettel, félkövér. |
 | `caption` | Felirat, jobbra igazítva, dőlt. |
 | `indent` | Behúzás az első sor elején. Ha értéket adsz (pl. `I.d`), megjelenik ezen a részen. |
 | `rubric` | Balra igazított, kiskapitális felirat |
@@ -315,7 +316,7 @@ Formázási információkat is tartalmazhatnak ezek a sorok (ld. később).
 %indent: VII.
 %rubric: Kezdés
 %%
-(g2) h h h g h j i g h. ||
+(g2) a a a g a C b g a. ||
 w: Is-te-nem, hall-gass hí-vá-som-ra!
 ```
 
@@ -336,7 +337,7 @@ A kulcsot zárójelben adod meg: betű + sorszám.
 A kulcs általában a dallamsor első eleme. Sor közben is válthatsz kulcsot:
 
 ```aretino
-(g2) d f g h  (c3) e g h (f4) i h g
+(g2) d f g a  (c3) e g a (f4) b a g
 ```
 
 Sortörés után a megjelenítő automatikusan kirajzolja az
@@ -346,23 +347,16 @@ aktuális kulcsot.
 
 ## 8. Hangmagasság
 
-A hangokat **a–n** kisbetűk, illetve az **A-N** nagybetűk jelölik. A betű mindig ugyanazt a sort/vonalközt jelenti, **függetlenül a kulcstól**:
+A hangokat **a–g** kisbetűk, illetve az **A-G** nagybetűk jelölik. A kisbetűk az egyvonalas oktávot jelentik (violinkulcsban olvasva), a nagybetűk az ezen kívül eső oktávot. A betű mindig ugyanazt a sort/vonalközt jelenti, **függetlenül a kulcstól**:
 
 ```aretino
-a b c d e f g h i j k l m n
+A B c d e f g a b C D E F G
 w: a b c d e f g h i j k l m n
 ```
 
 Tehát G-kulcsban `c` az 1. vonalon C-hang, `g` a 3. vonalon B-hang stb.
 F-kulcsban ugyanaz a `c` az 1. vonalon E-hang lesz (mert a kulcs változik,
 de a vonal-pozíció nem).
-
-### Emelt oktáv — nagybetűvel
-
-```aretino
-A B C D E F G H
-w: A B C D E F G H
-```
 
 ---
 

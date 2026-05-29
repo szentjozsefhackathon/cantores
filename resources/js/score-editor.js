@@ -604,6 +604,25 @@ document.addEventListener('alpine:init', () => {
                             clone.setAttribute('height', String(firstRowH));
                         }
                     }
+                } else {
+                    // Single row: the SVG viewBox has extra staffGap+staffSpace padding below
+                    // the content. Use getBBox() on the live DOM element to find the actual
+                    // ink bottom and crop to it.
+                    try {
+                        const bbox = svg.getBBox();
+                        if (bbox && bbox.height > 0) {
+                            const currentVb = clone.getAttribute('viewBox');
+                            if (currentVb) {
+                                const [cvbX, cvbY, cvbW, cvbH] = currentVb.split(/\s+/).map(Number);
+                                const padding = 4;
+                                const newH = (bbox.y + bbox.height + padding) - cvbY;
+                                if (newH > 0 && newH < cvbH) {
+                                    clone.setAttribute('viewBox', `${cvbX} ${cvbY} ${cvbW} ${newH}`);
+                                    clone.setAttribute('height', String(newH));
+                                }
+                            }
+                        }
+                    } catch (_) { /* getBBox() unavailable on detached SVG */ }
                 }
             }
 

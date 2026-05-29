@@ -394,6 +394,15 @@ aretino-editor.score-editor-aretino-source::part(preview) {
     display: none;
 }
 
+aretino-editor::part(toolbar) {
+  height: calc(2 * 28px + 2 * 2px + 6px);
+  overflow: hidden;
+  align-items: flex-start;
+  align-content: flex-start;
+  box-sizing: border-box;
+}
+
+
 [data-src-start] {
     cursor: pointer;
 }
