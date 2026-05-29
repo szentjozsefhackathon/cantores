@@ -560,7 +560,10 @@ document.addEventListener('alpine:init', () => {
             const container = refMap[this.$wire.format];
             if (!container) { return null; }
 
-            const svg = container.querySelector('svg');
+            // For ABC, skip title-only SVG blocks; the first staff SVG has <defs class="slW">.
+            const svg = this.$wire.format === 'abc'
+                ? (Array.from(container.querySelectorAll('svg')).find(s => s.querySelector('.slW')) ?? container.querySelector('svg'))
+                : container.querySelector('svg');
             if (!svg) { return null; }
 
             const clone = svg.cloneNode(true);
@@ -626,13 +629,20 @@ document.addEventListener('alpine:init', () => {
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.onload = () => {
+                    const fullCanvas = document.createElement('canvas');
+                    fullCanvas.width = targetWidth;
+                    fullCanvas.height = outputHeight;
+                    const fullCtx = fullCanvas.getContext('2d');
+                    fullCtx.fillStyle = '#ffffff';
+                    fullCtx.fillRect(0, 0, targetWidth, outputHeight);
+                    fullCtx.drawImage(img, 0, 0, targetWidth, outputHeight);
+
+                    const croppedWidth = Math.min(targetWidth, 400);
                     const canvas = document.createElement('canvas');
-                    canvas.width = targetWidth;
+                    canvas.width = croppedWidth;
                     canvas.height = outputHeight;
                     const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
+                    ctx.drawImage(fullCanvas, 0, 0, croppedWidth, outputHeight, 0, 0, croppedWidth, outputHeight);
                     URL.revokeObjectURL(url);
                     resolve(canvas.toDataURL('image/png'));
                 };
