@@ -12,9 +12,9 @@ enum ScoreFormat: string
     public function label(): string
     {
         return match ($this) {
-            self::Abc => __('ABC notation'),
-            self::Aretino => __('Aretino (magyar gregorián)'),
-            self::Gabc => __('Gregorio GABC'),
+            self::Abc => __('ABC'),
+            self::Aretino => __('Aretino'),
+            self::Gabc => __('Gregorio'),
             self::ChordPro => __('ChordPro')
         };
     }
