@@ -17,6 +17,14 @@ class ScoreIncipitController extends Controller
 
         abort_unless(Storage::exists($score->incipit_path), 404);
 
-        return Storage::response($score->incipit_path, headers: ['Content-Type' => 'image/png']);
+        $lastModified = new \DateTimeImmutable('@'.Storage::lastModified($score->incipit_path));
+
+        $response = Storage::response($score->incipit_path, headers: ['Content-Type' => 'image/png']);
+        $response->setLastModified($lastModified);
+        $response->setPrivate();
+        $response->headers->addCacheControlDirective('no-cache');
+        $response->isNotModified(request());
+
+        return $response;
     }
 }

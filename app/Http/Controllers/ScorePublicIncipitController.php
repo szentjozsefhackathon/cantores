@@ -13,6 +13,14 @@ class ScorePublicIncipitController extends Controller
         abort_unless($score->public_preview, 403);
         abort_unless(Storage::exists($score->incipit_path), 404);
 
-        return Storage::response($score->incipit_path, headers: ['Content-Type' => 'image/png']);
+        $lastModified = new \DateTimeImmutable('@'.Storage::lastModified($score->incipit_path));
+
+        $response = Storage::response($score->incipit_path, headers: ['Content-Type' => 'image/png']);
+        $response->setLastModified($lastModified);
+        $response->setPublic();
+        $response->headers->addCacheControlDirective('no-cache');
+        $response->isNotModified(request());
+
+        return $response;
     }
 }
