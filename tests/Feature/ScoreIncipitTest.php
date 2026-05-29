@@ -97,3 +97,58 @@ it('returns 404 when the incipit file does not exist', function () {
 
     get(route('scores.incipit', $score))->assertNotFound();
 });
+
+it('serves the incipit publicly via public-incipit route for a public_preview score', function () {
+    $owner = User::factory()->create();
+    $score = Score::factory()->unattached()->create(['user_id' => $owner->id, 'public_preview' => true]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+
+    get(route('scores.public-incipit', $score))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png');
+});
+
+it('returns 403 on public-incipit route for a non-public_preview score', function () {
+    $owner = User::factory()->create();
+    $score = Score::factory()->unattached()->create(['user_id' => $owner->id, 'public_preview' => false]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+
+    get(route('scores.public-incipit', $score))->assertForbidden();
+});
+
+it('saves public_preview flag when saving a score with a music attached', function () {
+    $user = User::factory()->create();
+    $music = \App\Models\Music::factory()->create();
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->set('title', 'Preview Score')
+        ->set('format', \App\Enums\ScoreFormat::Abc->value)
+        ->set('content', "X:1\nK:C\nC D E F|")
+        ->set('musicId', $music->id)
+        ->set('publicPreview', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $score = Score::query()->firstWhere('title', 'Preview Score');
+    expect($score)->not->toBeNull();
+    expect($score->public_preview)->toBeTrue();
+    expect($score->music_id)->toBe($music->id);
+});
+
+it('does not set public_preview when no music is attached', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->set('title', 'No Music Score')
+        ->set('format', \App\Enums\ScoreFormat::Abc->value)
+        ->set('content', "X:1\nK:C\nC D E F|")
+        ->set('publicPreview', true)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $score = Score::query()->firstWhere('title', 'No Music Score');
+    expect($score)->not->toBeNull();
+    expect($score->public_preview)->toBeFalse();
+});

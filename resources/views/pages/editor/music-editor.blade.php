@@ -193,7 +193,7 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->authorize('view', $music);
-        $this->music = $music->load(['collections', 'genres', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music', 'tags']);
+        $this->music = $music->load(['collections', 'genres', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music', 'tags', 'publicPreviewScores.user']);
         $this->title = $music->title;
         $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
@@ -578,6 +578,23 @@ new class extends Component
             ->latest()
             ->get();
         $this->showAuditModal = true;
+    }
+
+    /**
+     * Revoke public preview on a score linked to this music (editor only).
+     */
+    public function revokePublicPreview(int $scoreId): void
+    {
+        $this->authorize('update', $this->music);
+
+        $score = $this->music->publicPreviewScores()->find($scoreId);
+        abort_if($score === null, 404);
+
+        $score->update(['public_preview' => false]);
+
+        $this->music->load('publicPreviewScores.user');
+
+        $this->dispatch('public-preview-revoked');
     }
 
     /**
@@ -1146,6 +1163,144 @@ new class extends Component
                 </div>
             </div>
         </flux:card>
+
+        <!-- My Private Scores -->
+        @auth
+        @php
+            $myPrivateScores = $music->scores()->where('user_id', auth()->id())->latest('updated_at')->get();
+        @endphp
+        <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
+            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <flux:heading size="md" class="md:size-lg">{{ __('My Private Scores') }}</flux:heading>
+                    <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400">{{ __('Your scores attached to this music piece.') }}</flux:text>
+                </div>
+                <flux:button size="sm" variant="primary" icon="plus" :href="route('scores.create', ['music' => $music->id])" wire:navigate>
+                    {{ __('Create Score') }}
+                </flux:button>
+            </div>
+
+            @if($myPrivateScores->isNotEmpty())
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Score') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">{{ __('Incipit') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($myPrivateScores as $myScore)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <td class="px-3 py-2 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <a href="{{ route('scores.edit', $myScore) }}" wire:navigate class="hover:underline text-blue-600 dark:text-blue-400">
+                                    {{ $myScore->title }}
+                                </a>
+                                <div class="mt-0.5 flex flex-wrap items-center gap-2">
+                                    <flux:badge color="zinc" size="sm">{{ $myScore->format->label() }}</flux:badge>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ $myScore->updated_at->translatedFormat('Y-m-d') }}</span>
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 hidden md:table-cell">
+                                @if($myScore->hasIncipit())
+                                <img src="{{ route('scores.incipit', $myScore) }}"
+                                     alt="{{ __('Incipit') }}"
+                                     class="h-auto max-h-12 w-auto max-w-[200px]" />
+                                @else
+                                <span class="text-xs text-gray-400 dark:text-gray-500">{{ __('No incipit') }}</span>
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 text-xs md:text-sm">
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="pencil"
+                                    :href="route('scores.edit', $myScore)"
+                                    wire:navigate
+                                    :title="__('Edit')" />
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @else
+            <div class="text-center py-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                <flux:icon name="document-text" class="mx-auto h-6 w-6 text-gray-400 dark:text-gray-500" />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('No scores attached yet. Create one to get started.') }}</p>
+            </div>
+            @endif
+        </flux:card>
+        @endauth
+
+        <!-- Public Preview Scores (editor only) -->
+        @if(auth()->check() && auth()->user()->isEditor)
+        <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
+            <flux:heading size="md" class="md:size-lg">{{ __('Public Preview Scores') }}</flux:heading>
+            <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Scores marked as public preview — their incipit is shown on music listings. You can revoke the public preview here.') }}</flux:text>
+
+            @if($music->publicPreviewScores->isNotEmpty())
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Score') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">{{ __('Owner') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">{{ __('Incipit') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($music->publicPreviewScores as $previewScore)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <td class="px-3 py-2 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">
+                                <a href="{{ route('scores.edit', $previewScore) }}" wire:navigate class="hover:underline text-blue-600 dark:text-blue-400">
+                                    {{ $previewScore->title }}
+                                </a>
+                                <div class="mt-0.5">
+                                    <flux:badge color="zinc" size="sm">{{ $previewScore->format->label() }}</flux:badge>
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                                {{ $previewScore->user->display_name ?? '—' }}
+                            </td>
+                            <td class="px-3 py-2 hidden md:table-cell">
+                                @if($previewScore->hasIncipit())
+                                <img src="{{ route('scores.incipit', $previewScore) }}"
+                                     alt="{{ __('Incipit') }}"
+                                     class="h-auto max-h-12 w-auto max-w-[200px]" />
+                                @else
+                                <span class="text-xs text-gray-400 dark:text-gray-500">{{ __('No incipit') }}</span>
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 text-xs md:text-sm">
+                                <flux:button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon="eye-slash"
+                                    wire:click="revokePublicPreview({{ $previewScore->id }})"
+                                    wire:confirm="{{ __('Remove this score from public preview?') }}"
+                                    :title="__('Revoke Public Preview')" />
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex justify-end">
+                <x-action-message on="public-preview-revoked">
+                    {{ __('Public preview revoked.') }}
+                </x-action-message>
+            </div>
+            @else
+            <div class="text-center py-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                <flux:icon name="eye" class="mx-auto h-6 w-6 text-gray-400 dark:text-gray-500" />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('No scores are currently marked as public preview for this music.') }}</p>
+            </div>
+            @endif
+        </flux:card>
+        @endif
 
         <!-- Related Music Connections -->
         <flux:card class="p-4 md:p-5 mt-4 md:mt-6">

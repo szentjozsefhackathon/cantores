@@ -113,6 +113,18 @@
                         </flux:button>
                     </div>
                 </flux:modal>
+
+                @if($musicId)
+                <flux:field>
+                    <flux:label>{{ __('Public Preview') }}</flux:label>
+                    <flux:description class="text-xs">{{ __('Show this score\'s incipit as a public preview on music listings.') }}</flux:description>
+                    <flux:checkbox
+                        wire:model="publicPreview"
+                        :label="__('Show as public preview incipit')" />
+                    <flux:error name="publicPreview" />
+                </flux:field>
+                @endif
+
                 @endif
 
 <style>

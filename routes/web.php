@@ -150,6 +150,9 @@ Route::get('/scores/{score}/incipit', \App\Http\Controllers\ScoreIncipitControll
     ->middleware(['auth', 'verified'])
     ->name('scores.incipit');
 
+Route::get('/scores/{score}/public-incipit', \App\Http\Controllers\ScorePublicIncipitController::class)
+    ->name('scores.public-incipit');
+
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');

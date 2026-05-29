@@ -201,6 +201,14 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Get scores marked as public preview for this music.
+     */
+    public function publicPreviewScores(): HasMany
+    {
+        return $this->hasMany(Score::class)->where('public_preview', true);
+    }
+
+    /**
      * Get the music plan slot assignments for this music.
      */
     public function musicPlanSlotAssignments(): HasMany

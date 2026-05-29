@@ -12,7 +12,7 @@ new class extends Component
 
     public function mount(Music $music, ?int $score = null, ?string $scope_label = null): void
     {
-        $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections']);
+        $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
         $this->score = $score;
         $this->scope_label = $scope_label;
     }
@@ -23,9 +23,10 @@ new class extends Component
     #[On('collection-updated')]
     #[On('tag-added')]
     #[On('tag-removed')]
+    #[On('public-preview-revoked')]
     public function refreshMusic(): void
     {
-        $this->music->refresh()->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections']);
+        $this->music->refresh()->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
     }
 }
 ?>
@@ -111,6 +112,43 @@ new class extends Component
             </div>
         </div>
     </div>
+
+    @php
+        $incipitScores = $music->publicPreviewScores->filter(fn($s) => $s->hasIncipit())->values();
+    @endphp
+    @if($incipitScores->isNotEmpty())
+    <div class="border-b border-gray-200 dark:border-gray-700 px-3 py-2"
+         x-data="{ current: 0, total: {{ $incipitScores->count() }} }">
+        <div class="flex items-center gap-1">
+            @if($incipitScores->count() > 1)
+            <button
+                x-on:click.prevent="current = (current - 1 + total) % total"
+                class="relative z-10 shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
+                :title="'{{ __('Previous') }}'">
+                <flux:icon name="chevron-left" class="h-4 w-4" />
+            </button>
+            @endif
+            <div class="overflow-hidden" style="max-width: 400px; max-height: 80px;">
+                @foreach($incipitScores as $i => $previewScore)
+                <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
+                    <img src="{{ route('scores.public-incipit', $previewScore) }}"
+                         alt="{{ $previewScore->title }}"
+                         class="block h-auto max-h-14 w-auto"
+                         style="max-width: 400px;" />
+                </div>
+                @endforeach
+            </div>
+            @if($incipitScores->count() > 1)
+            <button
+                x-on:click.prevent="current = (current + 1) % total"
+                class="relative z-10 shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
+                :title="'{{ __('Next') }}'">
+                <flux:icon name="chevron-right" class="h-4 w-4" />
+            </button>
+            @endif
+        </div>
+    </div>
+    @endif
 
     @if($music->authors->isNotEmpty() || $music->urls->isNotEmpty() || $music->allMusicRelations()->isNotEmpty())
     <div class="px-4 py-3 space-y-2">

@@ -214,7 +214,7 @@
                 @auth
                 <!-- Private Scores -->
                 <div>
-                    <div class="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400">{{ __('My Private Scores') }}</flux:heading>
                         <flux:button size="sm" variant="primary" icon="plus" :href="route('scores.create', ['music' => $music->id])" wire:navigate>
                             {{ __('Create Score') }}
@@ -229,23 +229,49 @@
                     @endphp
 
                     @if($myScores->isNotEmpty())
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            @foreach($myScores as $score)
-                                <flux:card class="p-4" variant="outline" wire:key="score-{{ $score->id }}">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <flux:text class="font-medium truncate">{{ $score->title }}</flux:text>
-                                            <div class="mt-1 flex flex-wrap items-center gap-2">
-                                                <flux:badge size="sm" color="zinc">{{ $score->format->label() }}</flux:badge>
-                                                <flux:text class="text-xs text-gray-500 dark:text-gray-400">
-                                                    {{ $score->updated_at->translatedFormat('Y-m-d') }}
-                                                </flux:text>
+                        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Score') }}</th>
+                                        <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">{{ __('Incipit') }}</th>
+                                        <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                    @foreach($myScores as $score)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        <td class="px-3 py-2 text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            <a href="{{ route('scores.edit', $score) }}" wire:navigate class="hover:underline text-blue-600 dark:text-blue-400">
+                                                {{ $score->title }}
+                                            </a>
+                                            <div class="mt-0.5 flex flex-wrap items-center gap-2">
+                                                <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">{{ $score->updated_at->translatedFormat('Y-m-d') }}</span>
                                             </div>
-                                        </div>
-                                        <flux:button size="sm" variant="ghost" icon="pencil" :href="route('scores.edit', ['score' => $score->id])" wire:navigate :title="__('Edit')" />
-                                    </div>
-                                </flux:card>
-                            @endforeach
+                                        </td>
+                                        <td class="px-3 py-2 hidden md:table-cell">
+                                            @if($score->hasIncipit())
+                                            <img src="{{ route('scores.incipit', $score) }}"
+                                                 alt="{{ __('Incipit') }}"
+                                                 class="h-auto max-h-12 w-auto max-w-[200px]" />
+                                            @else
+                                            <span class="text-xs text-gray-400 dark:text-gray-500">{{ __('No incipit') }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-3 py-2 text-xs md:text-sm">
+                                            <flux:button
+                                                size="sm"
+                                                variant="ghost"
+                                                icon="pencil"
+                                                :href="route('scores.edit', $score)"
+                                                wire:navigate
+                                                :title="__('Edit')" />
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
                     @else
                         <flux:callout color="zinc" variant="soft">

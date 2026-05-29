@@ -41,6 +41,8 @@ class ScoreEditor extends Component
     /** @var array<string, array<string, array<string, mixed>>> */
     public array $settings = [];
 
+    public bool $publicPreview = false;
+
     public bool $isSharedLink = false;
 
     public ?string $secretLinkUrl = null;
@@ -73,6 +75,7 @@ class ScoreEditor extends Component
             $this->format = $score->format->value;
             $this->content = $score->content;
             $this->settings = $score->settings ?? [];
+            $this->publicPreview = $score->public_preview;
             $this->secretLinkUrl = $score->share_token !== null
                 ? route('score.share', ['token' => $score->share_token])
                 : null;
@@ -125,6 +128,7 @@ class ScoreEditor extends Component
             'format' => ['required', Rule::enum(ScoreFormat::class)],
             'content' => ['required', 'string'],
             'musicId' => ['nullable', 'integer'],
+            'publicPreview' => ['boolean'],
         ]);
 
         $musicId = $this->resolveMusicId($validated['musicId']);
@@ -141,6 +145,7 @@ class ScoreEditor extends Component
             'format' => $validated['format'],
             'content' => $validated['content'],
             'settings' => $settings ?: null,
+            'public_preview' => $musicId !== null && ($validated['publicPreview'] ?? false),
         ]);
         $score->user_id = $score->user_id ?: Auth::id();
         $score->save();

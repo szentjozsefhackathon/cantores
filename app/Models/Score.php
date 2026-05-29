@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string $content
  * @property array<string, array<string, array<string, mixed>>>|null $settings
  * @property string|null $share_token
+ * @property bool $public_preview
  * @property-read string $incipit_path
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
@@ -53,6 +54,7 @@ class Score extends Model
         'content',
         'settings',
         'share_token',
+        'public_preview',
     ];
 
     /**
@@ -65,6 +67,7 @@ class Score extends Model
         return [
             'format' => ScoreFormat::class,
             'settings' => 'array',
+            'public_preview' => 'boolean',
         ];
     }
 
@@ -91,6 +94,11 @@ class Score extends Model
     public function hasIncipit(): bool
     {
         return Storage::exists($this->incipit_path);
+    }
+
+    public function scopePublicPreview(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->where('public_preview', true);
     }
 
     public function scopeMine(\Illuminate\Database\Eloquent\Builder $query, ?User $user = null): void
