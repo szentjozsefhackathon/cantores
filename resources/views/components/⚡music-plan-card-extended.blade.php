@@ -98,9 +98,7 @@ new class extends Component
                         <span class="flex items-center gap-0.5">
                             <flux:icon name="{{ !$musicPlan->is_private ? 'globe' : 'globe-lock' }}" class="h-3 w-3" variant="mini" />
                             {{ !$musicPlan->is_private ? 'Publikus' : 'Privát' }}
-                            @if($isOwner)
-                                <x-user-badge :user="$musicPlan->user" class="ml-1" />
-                            @endif
+                            <x-user-badge :user="$musicPlan->user" class="ml-1" />
                         </span>
                     </div>
                 </div>

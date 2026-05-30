@@ -326,7 +326,7 @@
                                     x-on:select="updateAretinoHighlight && updateAretinoHighlight()"
                                     x-on:focus="updateAretinoHighlight && updateAretinoHighlight()" />
                             </div>
-                            <flux:text>Használd a <kbd>Ctrl</kbd>+<kbd>Space</kbd>-t az automatikus kiegészítéshez</flux:text>
+                            <flux:text x-show="$wire.format === 'aretino'">Használd a <kbd>Ctrl</kbd>+<kbd>Space</kbd>-t az automatikus kiegészítéshez</flux:text>
                             <aretino-editor
                                 preview="false"
                                 toolbar="false"

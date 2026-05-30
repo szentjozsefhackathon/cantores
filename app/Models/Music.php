@@ -209,6 +209,29 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Get all incipit scores visible to the given user: public previews plus the user's own non-public scores.
+     *
+     * @return \Illuminate\Support\Collection<int, Score>
+     */
+    public function visibleIncipitScores(?User $user): \Illuminate\Support\Collection
+    {
+        $publicIncipits = $this->publicPreviewScores->filter(fn (Score $s) => $s->hasIncipit())->values();
+
+        $ownIncipits = collect();
+        if ($user !== null) {
+            $publicIds = $publicIncipits->pluck('id')->all();
+            $ownIncipits = $this->scores()
+                ->where('user_id', $user->id)
+                ->whereNotIn('id', $publicIds)
+                ->get()
+                ->filter(fn (Score $s) => $s->hasIncipit())
+                ->values();
+        }
+
+        return $publicIncipits->concat($ownIncipits);
+    }
+
+    /**
      * Get the music plan slot assignments for this music.
      */
     public function musicPlanSlotAssignments(): HasMany

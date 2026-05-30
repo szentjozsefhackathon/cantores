@@ -114,19 +114,8 @@ new class extends Component
     </div>
 
     @php
-        $publicIncipits = $music->publicPreviewScores->filter(fn($s) => $s->hasIncipit())->values();
-        $ownIncipits = collect();
-        if (auth()->check()) {
-            $publicIds = $publicIncipits->pluck('id')->all();
-            $ownIncipits = $music->scores()
-                ->where('user_id', auth()->id())
-                ->whereNotIn('id', $publicIds)
-                ->get()
-                ->filter(fn($s) => $s->hasIncipit())
-                ->values();
-        }
-        $incipitScores = $publicIncipits->map(fn($s) => ['score' => $s, 'url' => route('scores.public-incipit', $s)])
-            ->concat($ownIncipits->map(fn($s) => ['score' => $s, 'url' => route('scores.incipit', $s)]));
+        $incipitScores = $music->visibleIncipitScores(auth()->user())
+            ->map(fn($s) => ['score' => $s, 'url' => $s->public_preview ? route('scores.public-incipit', $s) : route('scores.incipit', $s)]);
     @endphp
     @if($incipitScores->isNotEmpty())
     <div class="border-b border-gray-200 dark:border-gray-700 px-3 py-2"

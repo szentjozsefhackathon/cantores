@@ -53,7 +53,7 @@ new class extends Component
     public function recentMusics(): \Illuminate\Support\Collection
     {
         return Music::public()
-            ->with(['authors', 'collections', 'genres'])
+            ->with(['authors', 'collections', 'genres', 'publicPreviewScores'])
             ->latest()
             ->limit(8)
             ->get();
@@ -153,6 +153,7 @@ new class extends Component
                                     <flux:icon name="music" variant="mini" class="h-4 w-4 text-indigo-400" />
                                 @endif
                             </div>
+                            @php $incipitScore = $music->publicPreviewScores->first(fn($s) => $s->hasIncipit()); @endphp
                             <div class="min-w-0 flex-1">
                                 <div class="font-medium text-gray-900 group-hover:text-indigo-700 dark:text-gray-100 dark:group-hover:text-indigo-300 truncate">
                                     {{ $music->title }}
@@ -164,7 +165,17 @@ new class extends Component
                                         @if ($music->authors->isNotEmpty()){{ $music->authors->pluck('name')->join(', ') }}@endif
                                     </div>
                                 @endif
+                                @if ($incipitScore)
+                                    <img src="{{ route('scores.public-incipit', $incipitScore) }}"
+                                         alt="{{ $incipitScore->title }}"
+                                         class="sm:hidden mt-1.5 h-10 w-auto max-w-full object-contain" />
+                                @endif
                             </div>
+                            @if ($incipitScore)
+                                <img src="{{ route('scores.public-incipit', $incipitScore) }}"
+                                     alt="{{ $incipitScore->title }}"
+                                     class="hidden sm:block h-10 w-auto max-w-[160px] object-contain shrink-0" />
+                            @endif
                             @if ($firstCollection = $music->collections->first())
                             @can('view', $firstCollection)
                                 <span class="hidden shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 sm:inline dark:bg-zinc-700 dark:text-gray-400">

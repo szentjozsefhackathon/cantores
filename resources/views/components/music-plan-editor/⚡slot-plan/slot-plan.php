@@ -127,7 +127,7 @@ new class extends Component
 
         $dbAssignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $this->slotPlan->id)
             ->orderBy('music_sequence')
-            ->with(['music.collections', 'music.tags', 'music.genres', 'music.authors', 'flag', 'scopes'])
+            ->with(['music.collections', 'music.tags', 'music.genres', 'music.authors', 'music.publicPreviewScores', 'flag', 'scopes'])
             ->get();
 
         $this->assignments = $dbAssignments->map(function ($assignment) use ($user) {
@@ -179,6 +179,9 @@ new class extends Component
                 ])->toArray(),
                 'can_view_music' => $user === null ? (! $music->is_private) : $user->can('view', $music),
                 'can_edit_music' => $user !== null && $user->can('update', $music),
+                'music_incipits' => $music->visibleIncipitScores($user)
+                    ->map(fn ($s) => ['url' => $s->public_preview ? route('scores.public-incipit', $s) : route('scores.incipit', $s), 'title' => $s->title])
+                    ->toArray(),
             ];
         })->toArray();
     }

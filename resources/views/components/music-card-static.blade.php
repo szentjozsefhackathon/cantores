@@ -68,6 +68,39 @@
         </div>
     </div>
 
+    @if(!empty($assignment['music_incipits']))
+    @php $incipits = $assignment['music_incipits']; @endphp
+    <div class="border-b border-gray-200 dark:border-gray-700 px-3 py-2"
+         x-data="{ current: 0, total: {{ count($incipits) }} }">
+        <div class="flex items-center gap-1">
+            @if(count($incipits) > 1)
+            <button
+                x-on:click="current = (current - 1 + total) % total"
+                class="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors">
+                <flux:icon name="chevron-left" class="h-4 w-4" />
+            </button>
+            @endif
+            <div class="overflow-hidden" style="max-width: 400px; max-height: 80px;">
+                @foreach($incipits as $i => $incipit)
+                <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
+                    <img src="{{ $incipit['url'] }}"
+                         alt="{{ $incipit['title'] }}"
+                         class="block h-auto max-h-14 w-auto"
+                         style="max-width: 400px;" />
+                </div>
+                @endforeach
+            </div>
+            @if(count($incipits) > 1)
+            <button
+                x-on:click="current = (current + 1) % total"
+                class="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors">
+                <flux:icon name="chevron-right" class="h-4 w-4" />
+            </button>
+            @endif
+        </div>
+    </div>
+    @endif
+
     @if((isset($assignment['music_authors']) && !empty($assignment['music_authors'])) || (isset($assignment['music_urls']) && !empty($assignment['music_urls'])) || (isset($assignment['music_relations']) && !empty($assignment['music_relations'])))
     <div class="px-4 py-3 space-y-2">
         @if(isset($assignment['music_authors']) && !empty($assignment['music_authors']))
