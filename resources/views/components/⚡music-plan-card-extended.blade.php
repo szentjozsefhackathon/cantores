@@ -56,13 +56,17 @@ new class extends Component
                     'description' => $slot->description,
                     'sequence' => $slot->pivot->sequence,
                     'assignments' => $assignments->map(function ($assignment) {
+                        $music = $assignment->music;
                         return [
                             'id' => $assignment->id,
                             'music_id' => $assignment->music_id,
                             'music_sequence' => $assignment->music_sequence,
                             'notes' => $assignment->notes,
-                            'music' => $assignment->music,
+                            'music' => $music,
                             'scope_label' => $assignment->scope_label,
+                            'music_incipits' => $music ? $music->visibleIncipitScores(Auth::user())
+                                ->map(fn ($s) => ['url' => $s->public_preview ? route('scores.public-incipit', $s) : route('scores.incipit', $s), 'title' => $s->title])
+                                ->all() : [],
                         ];
                     })->all(),
                 ];
@@ -196,6 +200,34 @@ new class extends Component
                                     @if($assignment['music']->subtitle)
                                     <div class="text-gray-600 dark:text-gray-400 line-clamp-1">
                                         {{ Str::limit($assignment['music']->subtitle, 50) }}
+                                    </div>
+                                    @endif
+
+                                    @if(!empty($assignment['music_incipits']))
+                                    @php $incipits = $assignment['music_incipits']; @endphp
+                                    <div class="mt-1" x-data="{ current: 0, total: {{ count($incipits) }} }">
+                                        <div class="flex items-center gap-0.5">
+                                            @if(count($incipits) > 1)
+                                            <button x-on:click.prevent="current = (current - 1 + total) % total"
+                                                class="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors">
+                                                <flux:icon name="chevron-left" class="h-3 w-3" />
+                                            </button>
+                                            @endif
+                                            <div class="overflow-hidden">
+                                                @foreach($incipits as $i => $incipit)
+                                                <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
+                                                    <img src="{{ $incipit['url'] }}" alt="{{ $incipit['title'] }}"
+                                                         class="block h-auto max-h-10 w-auto" />
+                                                </div>
+                                                @endforeach
+                                            </div>
+                                            @if(count($incipits) > 1)
+                                            <button x-on:click.prevent="current = (current + 1) % total"
+                                                class="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors">
+                                                <flux:icon name="chevron-right" class="h-3 w-3" />
+                                            </button>
+                                            @endif
+                                        </div>
                                     </div>
                                     @endif
 
