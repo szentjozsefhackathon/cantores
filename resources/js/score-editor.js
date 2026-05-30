@@ -6,6 +6,7 @@ import { aretinoMixin } from './score-editor-aretino.js';
 import { removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
+import { renderFirstRow } from '@aretino-chant/core';
 
 let aretinoEditorDefinitionPromise = null;
 let aretinoHelpers = null;
@@ -552,85 +553,65 @@ document.addEventListener('alpine:init', () => {
         },
 
         async generateIncipit() {
-            const refMap = {
-                abc: this.$refs.abcPreview,
-                gabc: this.$refs.preview,
-                aretino: this.$refs.aretinoPreview,
-            };
-            const container = refMap[this.$wire.format];
-            if (!container) { return null; }
-
-            // For ABC, skip title-only SVG blocks; the first staff SVG has <defs class="slW">.
-            const svg = this.$wire.format === 'abc'
-                ? (Array.from(container.querySelectorAll('svg')).find(s => s.querySelector('.slW')) ?? container.querySelector('svg'))
-                : container.querySelector('svg');
-            if (!svg) { return null; }
-
-            const clone = svg.cloneNode(true);
-            removeEditorOnlySvgMarkup(clone);
-
-            // Crop away any header text (titles, subtitles) above the first staff
-            // by adjusting the viewBox to start at the top of the first drawn element.
-            // Use getBBox() on the live SVG (not the clone) so that path geometry and
-            // parent-transform offsets are included — getAttribute('y') misses path elements.
-            const vbAttr = svg.getAttribute('viewBox');
-            if (vbAttr) {
-                const [vbX, vbY, vbW, vbH] = vbAttr.split(/\s+/).map(Number);
-                let minY = Infinity;
-                for (const el of svg.querySelectorAll('path, use, line, rect')) {
-                    try {
-                        const bb = el.getBBox();
-                        if (bb.width > 0 || bb.height > 0) {
-                            minY = Math.min(minY, bb.y);
-                        }
-                    } catch (_) {}
-                }
-                const padding = 4;
-                const cropY = Number.isFinite(minY) && minY > vbY + 5 ? minY - padding : vbY;
-                const newH = vbH - (cropY - vbY);
-                clone.setAttribute('viewBox', `${vbX} ${cropY} ${vbW} ${newH}`);
-                clone.setAttribute('height', String(newH));
-            }
-
-            // For aretino, crop the bottom to only the first staff row using the
-            // <!-- aretino-row 1 Y --> marker emitted by the renderer.
-            if (this.$wire.format === 'aretino') {
-                const svgText = new XMLSerializer().serializeToString(svg);
-                const rowMatch = svgText.match(/<!--\s*aretino-row\s+1\s+([\d.]+)/);
-                if (rowMatch) {
-                    const row1StartY = parseFloat(rowMatch[1]);
-                    const currentVb = clone.getAttribute('viewBox');
-                    if (currentVb) {
-                        const [cvbX, cvbY, cvbW, cvbH] = currentVb.split(/\s+/).map(Number);
-                        const firstRowH = row1StartY - cvbY;
-                        if (firstRowH > 0 && firstRowH < cvbH) {
-                            clone.setAttribute('viewBox', `${cvbX} ${cvbY} ${cvbW} ${firstRowH}`);
-                            clone.setAttribute('height', String(firstRowH));
-                        }
-                    }
-                } else {
-                    // Single row: the SVG viewBox has extra staffGap+staffSpace padding below
-                    // the content. Use getBBox() on the live DOM element to find the actual
-                    // ink bottom and crop to it.
-                    try {
-                        const bbox = svg.getBBox();
-                        if (bbox && bbox.height > 0) {
-                            const currentVb = clone.getAttribute('viewBox');
-                            if (currentVb) {
-                                const [cvbX, cvbY, cvbW, cvbH] = currentVb.split(/\s+/).map(Number);
-                                const padding = 4;
-                                const newH = (bbox.y + bbox.height + padding) - cvbY;
-                                if (newH > 0 && newH < cvbH) {
-                                    clone.setAttribute('viewBox', `${cvbX} ${cvbY} ${cvbW} ${newH}`);
-                                    clone.setAttribute('height', String(newH));
-                                }
-                            }
-                        }
-                    } catch (_) { /* getBBox() unavailable on detached SVG */ }
-                }
-            }
-
             const targetWidth = 800;
+            let clone;
+
+            if (this.$wire.format === 'aretino') {
+                const source = this.splitPages(this.localContent, 'aretino', this.aretinoPageRatio)[0] ?? this.localContent;
+                if (!source?.trim()) { return null; }
+                const zoom = Number(this.aretinoZoom) / 100;
+                const firstRowSvg = renderFirstRow(source, {
+                    width: targetWidth,
+                    zoom,
+                    staffSpaceMm: Number(this.aretinoStaffSize) / 4.0,
+                    lyricSize: Number(this.aretinoLyricSize),
+                    textFont: this.aretinoTextFont,
+                    staffGap: Number(this.aretinoStaffGap),
+                    hideRepeatClef: !!this.aretinoHideRepeatClef,
+                });
+                if (!firstRowSvg) { return null; }
+                clone = new DOMParser().parseFromString(firstRowSvg, 'image/svg+xml').documentElement;
+            } else {
+                const refMap = {
+                    abc: this.$refs.abcPreview,
+                    gabc: this.$refs.preview,
+                };
+                const container = refMap[this.$wire.format];
+                if (!container) { return null; }
+
+                // For ABC, skip title-only SVG blocks; the first staff SVG has <defs class="slW">.
+                const svg = this.$wire.format === 'abc'
+                    ? (Array.from(container.querySelectorAll('svg')).find(s => s.querySelector('.slW')) ?? container.querySelector('svg'))
+                    : container.querySelector('svg');
+                if (!svg) { return null; }
+
+                clone = svg.cloneNode(true);
+                removeEditorOnlySvgMarkup(clone);
+
+                // Crop away any header text (titles, subtitles) above the first staff
+                // by adjusting the viewBox to start at the top of the first drawn element.
+                // Use getBBox() on the live SVG (not the clone) so that path geometry and
+                // parent-transform offsets are included — getAttribute('y') misses path elements.
+                const vbAttr = svg.getAttribute('viewBox');
+                if (vbAttr) {
+                    const [vbX, vbY, vbW, vbH] = vbAttr.split(/\s+/).map(Number);
+                    let minY = Infinity;
+                    for (const el of svg.querySelectorAll('path, use, line, rect')) {
+                        try {
+                            const bb = el.getBBox();
+                            if (bb.width > 0 || bb.height > 0) {
+                                minY = Math.min(minY, bb.y);
+                            }
+                        } catch (_) {}
+                    }
+                    const padding = 4;
+                    const cropY = Number.isFinite(minY) && minY > vbY + 5 ? minY - padding : vbY;
+                    const newH = vbH - (cropY - vbY);
+                    clone.setAttribute('viewBox', `${vbX} ${cropY} ${vbW} ${newH}`);
+                    clone.setAttribute('height', String(newH));
+                }
+            }
+
             const vbFinal = clone.getAttribute('viewBox');
             let outputHeight = 200;
             if (vbFinal) {
