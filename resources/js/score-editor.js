@@ -559,16 +559,7 @@ document.addEventListener('alpine:init', () => {
             if (this.$wire.format === 'aretino') {
                 const source = this.splitPages(this.localContent, 'aretino', this.aretinoPageRatio)[0] ?? this.localContent;
                 if (!source?.trim()) { return null; }
-                const zoom = Number(this.aretinoZoom) / 100;
-                const firstRowSvg = renderFirstRow(source, {
-                    width: targetWidth,
-                    zoom,
-                    staffSpaceMm: Number(this.aretinoStaffSize) / 4.0,
-                    lyricSize: Number(this.aretinoLyricSize),
-                    textFont: this.aretinoTextFont,
-                    staffGap: Number(this.aretinoStaffGap),
-                    hideRepeatClef: !!this.aretinoHideRepeatClef,
-                });
+                const firstRowSvg = renderFirstRow(source, { width: targetWidth, textFont: 'EB Garamond' });
                 if (!firstRowSvg) { return null; }
                 clone = new DOMParser().parseFromString(firstRowSvg, 'image/svg+xml').documentElement;
             } else {
@@ -623,7 +614,7 @@ document.addEventListener('alpine:init', () => {
             clone.setAttribute('width', String(targetWidth));
             clone.setAttribute('height', String(outputHeight));
 
-            const lyricFont = this.$wire.format === 'aretino' ? this.aretinoTextFont : this.lyricFont;
+            const lyricFont = this.$wire.format === 'aretino' ? 'EB Garamond' : this.lyricFont;
             await injectWebFontsIntoSvg(clone, [lyricFont]);
 
             const svgData = new XMLSerializer().serializeToString(clone);
