@@ -329,7 +329,7 @@
                             <flux:text x-show="$wire.format === 'aretino'">Használd a <kbd>Ctrl</kbd>+<kbd>Space</kbd>-t az automatikus kiegészítéshez</flux:text>
                             <aretino-editor
                                 preview="false"
-                                toolbar="false"
+                                toolbar="true"
                                 x-show="$wire.format === 'aretino'"
                                 x-cloak
                                 x-ref="aretinoEditor"
