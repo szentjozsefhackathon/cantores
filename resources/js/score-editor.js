@@ -1157,7 +1157,7 @@ document.addEventListener('alpine:init', () => {
             const isPaperAretino = this.$wire.format === 'aretino' &&
                 (this.aretinoPageRatio === 'paper' || this.aretinoPageRatio === 'auto');
             const scale = isPaperAretino ? 600 / 96 : 2;
-            const margin = 20;
+            const margin = 0;
             const viewBox = svgEl.getAttribute('viewBox');
             let svgWidth = renderWidth;
             let svgHeight = renderWidth * 9 / 16;
@@ -1409,7 +1409,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         buildAbcCanvas(svgs) {
-            const margin = 20;
+            const margin = 0;
             const dims = svgs.map(svg => {
                 const vb = svg.getAttribute('viewBox');
                 if (vb) {

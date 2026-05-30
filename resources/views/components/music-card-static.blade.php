@@ -83,10 +83,10 @@
             <div class="overflow-hidden" style="max-width: 400px; max-height: 80px;">
                 @foreach($incipits as $i => $incipit)
                 <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
-                    <img src="{{ $incipit['url'] }}"
-                         alt="{{ $incipit['title'] }}"
-                         class="block h-auto max-h-14 w-auto"
-                         style="max-width: 400px;" />
+                    <x-incipit-image :src="$incipit['url']"
+                         :alt="$incipit['title']"
+                         img-class="block h-auto max-h-14 w-auto"
+                         img-style="max-width: 400px;" />
                 </div>
                 @endforeach
             </div>

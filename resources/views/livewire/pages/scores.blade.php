@@ -51,9 +51,9 @@
                                         @endif
                                     </div>
                                     @if($score->hasIncipit())
-                                        <div class="mt-1 max-w-[400px]">
-                                            <img src="{{ route('scores.incipit', $score) }}" alt="{{ __('Incipit') }}" class="block h-auto max-h-20 w-auto max-w-full" />
-                                        </div>
+                                        <x-incipit-image :src="route('scores.incipit', $score)" :alt="__('Incipit')"
+                                            class="mt-1 max-w-[400px]"
+                                            img-class="block h-auto max-h-20 w-auto max-w-full" />
                                     @endif
                                     @if($score->music)
                                         <div class="mt-1">

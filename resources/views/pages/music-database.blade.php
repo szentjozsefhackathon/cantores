@@ -166,15 +166,17 @@ new class extends Component
                                     </div>
                                 @endif
                                 @if ($incipitScore)
-                                    <img src="{{ route('scores.public-incipit', $incipitScore) }}"
-                                         alt="{{ $incipitScore->title }}"
-                                         class="sm:hidden mt-1.5 h-10 w-auto max-w-full object-contain" />
+                                    <x-incipit-image :src="route('scores.public-incipit', $incipitScore)"
+                                         :alt="$incipitScore->title"
+                                         class="sm:hidden mt-1.5"
+                                         img-class="h-10 w-auto max-w-full object-contain" />
                                 @endif
                             </div>
                             @if ($incipitScore)
-                                <img src="{{ route('scores.public-incipit', $incipitScore) }}"
-                                     alt="{{ $incipitScore->title }}"
-                                     class="hidden sm:block h-10 w-auto max-w-[160px] object-contain shrink-0" />
+                                <x-incipit-image :src="route('scores.public-incipit', $incipitScore)"
+                                     :alt="$incipitScore->title"
+                                     class="hidden sm:inline-block shrink-0"
+                                     img-class="h-10 w-auto max-w-[160px] object-contain" />
                             @endif
                             @if ($firstCollection = $music->collections->first())
                             @can('view', $firstCollection)

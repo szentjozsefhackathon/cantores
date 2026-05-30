@@ -132,10 +132,10 @@ new class extends Component
             <div class="overflow-hidden" style="max-width: 400px; max-height: 80px;">
                 @foreach($incipitScores as $i => $incipitItem)
                 <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
-                    <img src="{{ $incipitItem['url'] }}"
-                         alt="{{ $incipitItem['score']->title }}"
-                         class="block h-auto max-h-14 w-auto"
-                         style="max-width: 400px;" />
+                    <x-incipit-image :src="$incipitItem['url']"
+                         :alt="$incipitItem['score']->title"
+                         img-class="block h-auto max-h-14 w-auto"
+                         img-style="max-width: 400px;" />
                 </div>
                 @endforeach
             </div>
