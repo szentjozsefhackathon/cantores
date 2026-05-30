@@ -114,7 +114,19 @@ new class extends Component
     </div>
 
     @php
-        $incipitScores = $music->publicPreviewScores->filter(fn($s) => $s->hasIncipit())->values();
+        $publicIncipits = $music->publicPreviewScores->filter(fn($s) => $s->hasIncipit())->values();
+        $ownIncipits = collect();
+        if (auth()->check()) {
+            $publicIds = $publicIncipits->pluck('id')->all();
+            $ownIncipits = $music->scores()
+                ->where('user_id', auth()->id())
+                ->whereNotIn('id', $publicIds)
+                ->get()
+                ->filter(fn($s) => $s->hasIncipit())
+                ->values();
+        }
+        $incipitScores = $publicIncipits->map(fn($s) => ['score' => $s, 'url' => route('scores.public-incipit', $s)])
+            ->concat($ownIncipits->map(fn($s) => ['score' => $s, 'url' => route('scores.incipit', $s)]));
     @endphp
     @if($incipitScores->isNotEmpty())
     <div class="border-b border-gray-200 dark:border-gray-700 px-3 py-2"
@@ -129,10 +141,10 @@ new class extends Component
             </button>
             @endif
             <div class="overflow-hidden" style="max-width: 400px; max-height: 80px;">
-                @foreach($incipitScores as $i => $previewScore)
+                @foreach($incipitScores as $i => $incipitItem)
                 <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
-                    <img src="{{ route('scores.public-incipit', $previewScore) }}"
-                         alt="{{ $previewScore->title }}"
+                    <img src="{{ $incipitItem['url'] }}"
+                         alt="{{ $incipitItem['score']->title }}"
                          class="block h-auto max-h-14 w-auto"
                          style="max-width: 400px;" />
                 </div>

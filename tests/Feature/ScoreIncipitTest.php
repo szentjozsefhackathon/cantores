@@ -2,6 +2,7 @@
 
 use App\Enums\ScoreFormat;
 use App\Livewire\Pages\ScoreEditor;
+use App\Models\Music;
 use App\Models\Score;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
@@ -134,6 +135,54 @@ it('saves public_preview flag when saving a score with a music attached', functi
     expect($score)->not->toBeNull();
     expect($score->public_preview)->toBeTrue();
     expect($score->music_id)->toBe($music->id);
+});
+
+it('shows private score incipit to its owner in the music card', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+    $score = Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id, 'public_preview' => false]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+
+    actingAs($user);
+
+    Livewire::test('music-card', ['music' => $music])
+        ->assertSee(route('scores.incipit', $score), false);
+});
+
+it('does not show private score incipit to another user in the music card', function () {
+    $owner = User::factory()->create();
+    $other = User::factory()->create();
+    $music = Music::factory()->create();
+    $score = Score::factory()->create(['user_id' => $owner->id, 'music_id' => $music->id, 'public_preview' => false]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+
+    actingAs($other);
+
+    Livewire::test('music-card', ['music' => $music])
+        ->assertDontSee(route('scores.incipit', $score), false);
+});
+
+it('does not show private score incipit to guests in the music card', function () {
+    $owner = User::factory()->create();
+    $music = Music::factory()->create();
+    $score = Score::factory()->create(['user_id' => $owner->id, 'music_id' => $music->id, 'public_preview' => false]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+
+    Livewire::test('music-card', ['music' => $music])
+        ->assertDontSee(route('scores.incipit', $score), false);
+});
+
+it('does not duplicate a public_preview score via scores.incipit when it is already shown via public-incipit', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+    $score = Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id, 'public_preview' => true]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+
+    actingAs($user);
+
+    Livewire::test('music-card', ['music' => $music])
+        ->assertSee(route('scores.public-incipit', $score), false)
+        ->assertDontSee(route('scores.incipit', $score), false);
 });
 
 it('does not set public_preview when no music is attached', function () {
