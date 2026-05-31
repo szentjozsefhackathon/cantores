@@ -107,7 +107,10 @@ trait HasMusicSearchScopes
         $query = $query
             ->forCurrentGenre()
             ->select(['id', 'title', 'subtitle', 'custom_id', 'user_id', 'is_private'])
-            ->with(['genres', 'collections', 'authors', 'tags', 'urls'])
+            ->with(['genres', 'collections', 'authors', 'tags', 'urls', 'publicPreviewScores'])
+            ->when(Auth::id(), function ($q, $userId) {
+                $q->with(['scores' => fn ($scoreQuery) => $scoreQuery->where('user_id', $userId)]);
+            })
             ->withCount('collections')
             ->withCount(['verifications as verified_verifications_count' => function ($q) {
                 $q->where('status', 'verified');

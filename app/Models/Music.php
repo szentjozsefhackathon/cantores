@@ -220,10 +220,11 @@ class Music extends Model implements Auditable
         $ownIncipits = collect();
         if ($user !== null) {
             $publicIds = $publicIncipits->pluck('id')->all();
-            $ownIncipits = $this->scores()
-                ->where('user_id', $user->id)
+            $ownScores = $this->relationLoaded('scores')
+                ? $this->scores->where('user_id', $user->id)
+                : $this->scores()->where('user_id', $user->id)->get();
+            $ownIncipits = $ownScores
                 ->whereNotIn('id', $publicIds)
-                ->get()
                 ->filter(fn (Score $s) => $s->hasIncipit())
                 ->values();
         }

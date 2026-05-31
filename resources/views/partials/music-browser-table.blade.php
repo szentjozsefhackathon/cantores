@@ -104,6 +104,15 @@
                                 @endif
                             @endauth
                         </div>
+
+                        @php $incipitScore = $music->visibleIncipitScores(auth()->user())->first(); @endphp
+                        @if ($incipitScore)
+                            <div class="mt-1.5">
+                                <x-incipit-image :src="$incipitScore->public_preview ? route('scores.public-incipit', $incipitScore) : route('scores.incipit', $incipitScore)"
+                                     :alt="$incipitScore->title"
+                                     img-class="h-12 w-auto max-w-full object-contain" />
+                            </div>
+                        @endif
                     </div>
                 </flux:table.cell>
 
