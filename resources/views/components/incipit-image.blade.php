@@ -20,13 +20,14 @@
         <flux:icon name="magnifying-glass" class="h-3.5 w-3.5" />
     </button>
 
+    {{-- Rendered as a native <dialog> opened with showModal() so it joins the browser's
+         top layer and paints above Flux modals (which are themselves top-layer dialogs). --}}
     <template x-teleport="body">
-        <div x-show="incipitZoom"
-             x-cloak
-             x-on:click="incipitZoom = false"
-             x-on:keydown.escape.window="incipitZoom = false"
-             x-transition.opacity
-             class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
+        <dialog x-ref="incipitZoomDialog"
+                x-effect="incipitZoom ? (! $el.open && $el.showModal()) : ($el.open && $el.close())"
+                x-on:close="incipitZoom = false"
+                x-on:click="incipitZoom = false"
+                class="fixed inset-0 z-[100] m-0 h-full max-h-none w-full max-w-none items-center justify-center bg-black/80 p-4 backdrop:bg-transparent open:flex">
             <img src="{{ $src }}"
                  alt="{{ $alt }}"
                  x-on:click.stop
@@ -37,6 +38,6 @@
                     aria-label="{{ __('Close') }}">
                 <flux:icon name="x-mark" class="h-5 w-5" />
             </button>
-        </div>
+        </dialog>
     </template>
 </div>

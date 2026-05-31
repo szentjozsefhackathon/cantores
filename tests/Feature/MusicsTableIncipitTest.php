@@ -42,6 +42,20 @@ test('it shows the current user own private incipit in the title column', functi
         ->assertSee(route('scores.incipit', $score), false);
 });
 
+test('it renders the incipit zoom overlay as a top-layer dialog', function () {
+    $music = Music::factory()->create(['user_id' => $this->user->id]);
+    $score = Score::factory()->create([
+        'user_id' => $this->user->id,
+        'music_id' => $music->id,
+        'public_preview' => true,
+    ]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+
+    Livewire::test(MusicsTable::class)
+        ->assertSeeHtml('x-ref="incipitZoomDialog"')
+        ->assertSeeHtml('$el.showModal()');
+});
+
 test('it does not show another user private incipit', function () {
     $other = User::factory()->create();
     $music = Music::factory()->create(['user_id' => $other->id]);
