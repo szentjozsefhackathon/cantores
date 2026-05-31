@@ -18,6 +18,7 @@ new class extends Component {
 
     public string $name = '';
     public string $email = '';
+    public bool $emailNotificationsEnabled = true;
     public ?int $cityId = null;
     public ?int $firstNameId = null;
 
@@ -39,6 +40,7 @@ new class extends Component {
         $user = Auth::user();
         $this->name = $user->name;
         $this->email = $user->email;
+        $this->emailNotificationsEnabled = $user->email_notifications_enabled;
         $this->cityId = $user->city_id;
         $this->firstNameId = $user->first_name_id;
     }
@@ -52,6 +54,7 @@ new class extends Component {
 
         $rules = [
             ...$this->profileRules($user->id),
+            'emailNotificationsEnabled' => ['boolean'],
             'cityId' => ['required', 'integer', 'exists:cities,id'],
             'firstNameId' => ['required', 'integer', 'exists:first_names,id'],
         ];
@@ -76,6 +79,7 @@ new class extends Component {
         $user->fill([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'email_notifications_enabled' => (bool) $validated['emailNotificationsEnabled'],
             'city_id' => $validated['cityId'],
             'first_name_id' => $validated['firstNameId'],
         ]);
@@ -431,6 +435,14 @@ new class extends Component {
                     </div>
                 @endif
             </div>
+
+            <flux:field>
+                <flux:checkbox
+                    wire:model="emailNotificationsEnabled"
+                    :label="__('Email me when I receive an in-system notification')" />
+                <flux:description>{{ __('You will still receive notifications inside the application when this is turned off.') }}</flux:description>
+                <flux:error name="emailNotificationsEnabled" />
+            </flux:field>
 
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">

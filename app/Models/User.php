@@ -15,6 +15,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string $name
  * @property string $email
  * @property \Carbon\CarbonImmutable|null $email_verified_at
+ * @property bool $email_notifications_enabled
  * @property string $password
  * @property string|null $remember_token
  * @property \Carbon\CarbonImmutable|null $created_at
@@ -65,6 +66,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereCurrentGenreId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereEmail($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereEmailVerifiedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereEmailNotificationsEnabled($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereFirstNameId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereName($value)
@@ -85,6 +87,15 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasFactory, HasRoles, Notifiable, TwoFactorAuthenticatable;
 
     /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'email_notifications_enabled' => true,
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -92,6 +103,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = [
         'name',
         'email',
+        'email_notifications_enabled',
         'password',
         'city_id',
         'first_name_id',
@@ -123,6 +135,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'email_notifications_enabled' => 'boolean',
             'password' => 'hashed',
             'blocked' => 'boolean',
             'blocked_at' => 'datetime',

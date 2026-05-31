@@ -44,6 +44,26 @@ test('email verification status is unchanged when email address is unchanged', f
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
 
+test('email notifications are enabled by default', function () {
+    $user = User::factory()->create();
+
+    expect($user->refresh()->email_notifications_enabled)->toBeTrue();
+});
+
+test('email notification setting can be updated', function () {
+    $user = User::factory()->create(['email_notifications_enabled' => true]);
+
+    $this->actingAs($user);
+
+    $response = Livewire::test('pages::settings.profile')
+        ->set('emailNotificationsEnabled', false)
+        ->call('updateProfileInformation');
+
+    $response->assertHasNoErrors();
+
+    expect($user->refresh()->email_notifications_enabled)->toBeFalse();
+});
+
 test('user can delete their account', function () {
     $user = User::factory()->create();
 

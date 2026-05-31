@@ -3,11 +3,13 @@
 namespace App\Services;
 
 use App\Enums\NotificationType;
+use App\Mail\InSystemNotificationMail;
 use App\Models\Notification;
 use App\Models\NotificationReply;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
@@ -16,7 +18,9 @@ class NotificationService
      */
     public function createErrorReport(User $reporter, Model $resource, string $message): Notification
     {
-        return DB::transaction(function () use ($reporter, $resource, $message) {
+        $recipientIds = [];
+
+        $notification = DB::transaction(function () use ($reporter, $resource, $message, &$recipientIds) {
             $notification = Notification::create([
                 'type' => NotificationType::ERROR_REPORT,
                 'message' => $message,
@@ -26,6 +30,7 @@ class NotificationService
             ]);
 
             $recipients = $this->getRecipientsForErrorReport($resource);
+            $recipientIds = array_keys($recipients);
             $notification->recipients()->attach($recipients);
 
             // Dispatch event for real-time updates (optional)
@@ -33,6 +38,10 @@ class NotificationService
 
             return $notification;
         });
+
+        $this->queueEmailNotifications($notification, $recipientIds, $reporter);
+
+        return $notification;
     }
 
     /**
@@ -61,7 +70,9 @@ class NotificationService
      */
     public function reply(Notification $notification, User $author, string $body): NotificationReply
     {
-        return DB::transaction(function () use ($notification, $author, $body) {
+        $recipientIds = [];
+
+        $reply = DB::transaction(function () use ($notification, $author, $body, &$recipientIds) {
             $reply = $notification->replies()->create([
                 'user_id' => $author->id,
                 'body' => $body,
@@ -89,8 +100,17 @@ class NotificationService
                 ->where('user_id', '!=', $author->id)
                 ->update(['read_at' => null]);
 
+            $recipientIds = $notification->recipients()
+                ->where('users.id', '!=', $author->id)
+                ->pluck('users.id')
+                ->all();
+
             return $reply;
         });
+
+        $this->queueEmailNotifications($notification, $recipientIds, $author, $reply);
+
+        return $reply;
     }
 
     /**
@@ -146,7 +166,9 @@ class NotificationService
      */
     public function createContactMessage(User $sender, string $subject, string $message): Notification
     {
-        return DB::transaction(function () use ($sender, $subject, $message) {
+        $recipientIds = [];
+
+        $notification = DB::transaction(function () use ($sender, $subject, $message, &$recipientIds) {
             $notification = Notification::create([
                 'type' => NotificationType::CONTACT_MESSAGE,
                 'message' => $subject.': '.$message,
@@ -156,10 +178,15 @@ class NotificationService
             ]);
 
             $recipients = $this->getRecipientsForContactMessage();
+            $recipientIds = array_keys($recipients);
             $notification->recipients()->attach($recipients);
 
             return $notification;
         });
+
+        $this->queueEmailNotifications($notification, $recipientIds, $sender);
+
+        return $notification;
     }
 
     /**
@@ -176,5 +203,28 @@ class NotificationService
         }
 
         return $recipients;
+    }
+
+    /**
+     * Queue email copies for recipients who have email notifications enabled.
+     *
+     * @param  array<int, int>  $recipientIds
+     */
+    protected function queueEmailNotifications(Notification $notification, array $recipientIds, User $messageSender, ?NotificationReply $reply = null): void
+    {
+        $recipientIds = array_values(array_unique($recipientIds));
+
+        if ($recipientIds === []) {
+            return;
+        }
+
+        User::query()
+            ->whereKey($recipientIds)
+            ->whereKeyNot($messageSender)
+            ->where('email_notifications_enabled', true)
+            ->get()
+            ->each(function (User $recipient) use ($notification, $messageSender, $reply): void {
+                Mail::to($recipient)->queue(new InSystemNotificationMail($notification, $recipient, $messageSender, $reply));
+            });
     }
 }
