@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\NotificationType;
 use App\Models\Notification;
+use App\Models\NotificationReply;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +57,43 @@ class NotificationService
     }
 
     /**
+     * Add a reply to a notification and deliver it to everyone else in the thread.
+     */
+    public function reply(Notification $notification, User $author, string $body): NotificationReply
+    {
+        return DB::transaction(function () use ($notification, $author, $body) {
+            $reply = $notification->replies()->create([
+                'user_id' => $author->id,
+                'body' => $body,
+            ]);
+
+            // Make sure the author is part of the conversation, with their own copy read.
+            $notification->recipients()->syncWithoutDetaching([
+                $author->id => ['created_at' => now()],
+            ]);
+            $notification->recipients()->updateExistingPivot($author->id, [
+                'read_at' => now(),
+            ]);
+
+            // Make sure the original reporter is part of the conversation.
+            if ($notification->reporter_id && $notification->reporter_id !== $author->id) {
+                $notification->recipients()->syncWithoutDetaching([
+                    $notification->reporter_id => ['created_at' => now()],
+                ]);
+            }
+
+            // Notify everyone else in the thread by marking their copy unread.
+            $notification->recipients()
+                ->newPivotStatement()
+                ->where('notification_id', $notification->id)
+                ->where('user_id', '!=', $author->id)
+                ->update(['read_at' => null]);
+
+            return $reply;
+        });
+    }
+
+    /**
      * Mark a notification as read for a user.
      */
     public function markAsRead(Notification $notification, User $user): void
@@ -90,7 +128,7 @@ class NotificationService
     public function getNotificationsForUser(User $user, int $limit = 50)
     {
         return $user->receivedNotifications()
-            ->with(['reporter', 'notifiable'])
+            ->with(['reporter', 'notifiable', 'recipients', 'replies.user.firstName', 'replies.user.city'])
             ->orderByPivot('created_at', 'desc')
             ->paginate($limit);
     }

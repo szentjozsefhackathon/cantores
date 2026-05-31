@@ -46,6 +46,41 @@
                             </button>
                         @endif
                     </div>
+
+                    @if($notification->replies->isNotEmpty())
+                        <div class="mt-4 space-y-3 border-t border-gray-100 pt-3">
+                            @foreach($notification->replies as $reply)
+                                <div class="rounded-md bg-gray-50 p-3" wire:key="reply-{{ $reply->id }}">
+                                    <p class="text-sm text-gray-800 whitespace-pre-line">{{ $reply->body }}</p>
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        {{ $reply->user?->display_name ?? __('Unknown') }}
+                                        · {{ $reply->created_at->diffForHumans() }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if($notification->canBeRepliedBy(auth()->user()))
+                        <div class="mt-3 border-t border-gray-100 pt-3">
+                            <flux:textarea
+                                wire:model="replyBodies.{{ $notification->id }}"
+                                :placeholder="__('Write a reply...')"
+                                rows="2"
+                            />
+                            <flux:error name="replyBodies.{{ $notification->id }}" />
+                            <div class="mt-2 flex justify-end">
+                                <flux:button
+                                    size="sm"
+                                    variant="primary"
+                                    wire:click="reply({{ $notification->id }})"
+                                    wire:loading.attr="disabled"
+                                >
+                                    {{ __('Send reply') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endforeach
         </div>

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
@@ -21,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property-read string|null $resource_title
  * @property-read string $resource_type
  * @property-read Model|\Eloquent|null $notifiable
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\NotificationReply> $replies
+ * @property-read int|null $replies_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $recipients
  * @property-read int|null $recipients_count
  * @property-read \App\Models\User|null $reporter
@@ -89,6 +92,14 @@ class Notification extends Model
     }
 
     /**
+     * Get the replies left on this notification.
+     */
+    public function replies(): HasMany
+    {
+        return $this->hasMany(NotificationReply::class)->oldest();
+    }
+
+    /**
      * Get the users who received this notification.
      */
     public function recipients(): BelongsToMany
@@ -125,6 +136,26 @@ class Notification extends Model
     public function getResourceTitleAttribute(): ?string
     {
         return $this->notifiable?->title ?? $this->notifiable?->name ?? null;
+    }
+
+    /**
+     * Determine if a user is allowed to reply to this notification.
+     */
+    public function canBeRepliedBy(User $user): bool
+    {
+        if ($user->is_editor || $user->is_admin) {
+            return true;
+        }
+
+        if ($this->reporter_id === $user->id) {
+            return true;
+        }
+
+        if ($this->relationLoaded('recipients')) {
+            return $this->recipients->contains('id', $user->id);
+        }
+
+        return $this->recipients()->where('user_id', $user->id)->exists();
     }
 
     /**
