@@ -85,23 +85,9 @@ return new class extends Component
      */
     private function loadMusicById(int $musicId, string $side): void
     {
-        \Log::info('loadMusicById called', [
-            'musicId' => $musicId,
-            'side' => $side,
-            'userId' => Auth::id(),
-        ]);
-
         $music = Music::with(['collections', 'genres', 'urls', 'tags', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music'])
             ->visibleTo(Auth::user())
             ->findOrFail($musicId);
-
-        \Log::info('Music loaded', [
-            'requestedId' => $musicId,
-            'loadedId' => $music->id,
-            'loadedTitle' => $music->titles,
-            'isPrivate' => $music->is_private,
-            'userId' => $music->user_id,
-        ]);
 
         $this->authorize('update', $music);
 
@@ -507,6 +493,8 @@ return new class extends Component
                 ->where('music_id', $this->rightMusic->id)
                 ->update(['music_id' => $this->leftMusic->id]);
 
+            $this->repointReferences();
+
             // Delete right music
             $this->rightMusic->delete();
         });
@@ -516,6 +504,42 @@ return new class extends Component
 
         // Redirect to left music editor
         $this->redirectRoute('music-editor', ['music' => $this->leftMusic->id]);
+    }
+
+    /**
+     * Repoint every reference to the to-be-deleted (right) music onto the surviving (left) music.
+     *
+     * Pivots with a cascading delete (collections, genres, tags, urls, relations) are rebuilt
+     * elsewhere in the merge; this handles the references that would otherwise be orphaned or lost:
+     * scores (set null on delete), authors, verifications, notifications, and audit history.
+     */
+    private function repointReferences(): void
+    {
+        $rightId = $this->rightMusic->id;
+        $leftId = $this->leftMusic->id;
+
+        // Scores would be orphaned (music_id set to null) on delete: repoint all of them.
+        \App\Models\Score::where('music_id', $rightId)->update(['music_id' => $leftId]);
+
+        // Authors: union into left, skipping any the left already has (author_music is unique per author+music).
+        $leftAuthorIds = $this->leftMusic->authors()->pluck('authors.id')->all();
+        $rightAuthorIds = $this->rightMusic->authors()->pluck('authors.id')->all();
+        foreach (array_diff($rightAuthorIds, $leftAuthorIds) as $authorId) {
+            $this->leftMusic->authors()->attach($authorId, ['user_id' => Auth::id()]);
+        }
+
+        // Verifications: no uniqueness constraint, repoint all.
+        \App\Models\MusicVerification::where('music_id', $rightId)->update(['music_id' => $leftId]);
+
+        // Notifications (polymorphic, no FK cascade): repoint so reports/replies survive.
+        \App\Models\Notification::where('notifiable_type', Music::class)
+            ->where('notifiable_id', $rightId)
+            ->update(['notifiable_id' => $leftId]);
+
+        // Audit history (polymorphic, no FK cascade): repoint onto the surviving music.
+        \OwenIt\Auditing\Models\Audit::where('auditable_type', Music::class)
+            ->where('auditable_id', $rightId)
+            ->update(['auditable_id' => $leftId]);
     }
 
     /**
