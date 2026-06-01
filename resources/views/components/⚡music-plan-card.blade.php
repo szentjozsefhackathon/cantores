@@ -26,7 +26,7 @@ new class extends Component
             <!-- Header with icon and title -->
             <div class="flex items-start justify-between">
                 <div class="flex items-center gap-4">
-                    <livewire:music-plan-setting-icon :genreId="$musicPlan->genre_id" />
+                    <x-genre-icon :genre-id="$musicPlan->genre_id" />
                     <div class="flex-1">
                         <flux:heading size="lg" class="mb-1">
                             {{ $musicPlan->celebration_name ?? '–' }}

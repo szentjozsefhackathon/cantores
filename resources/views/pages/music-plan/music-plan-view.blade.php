@@ -123,7 +123,7 @@ new class extends Component
 
         <flux:card class="p-5">
             <div class="flex flex-wrap items-center gap-4 mb-4">
-                <livewire:music-plan-setting-icon :genreId="$musicPlan->genre_id" />
+                <x-genre-icon :genre-id="$musicPlan->genre_id" />
                 <flux:heading size="xl">Énekrend</flux:heading>
                 <x-user-badge :user="$musicPlan->user" />
 

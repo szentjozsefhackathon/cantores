@@ -10,6 +10,7 @@ new class extends Component
 {
     public MusicPlan $musicPlan;
     public array $planSlots = [];
+    public int $assignmentCount = 0;
     public bool $isOwner = false;
     public bool $showOpenButton = false;
     public ?int $musicPlanId = null;
@@ -39,6 +40,8 @@ new class extends Component
             ->orderBy('music_sequence')
             ->get()
             ->groupBy('music_plan_slot_plan_id');
+
+        $this->assignmentCount = $assignmentsByPivot->flatten()->count();
 
         $this->planSlots = $this->musicPlan->slots()
             ->visibleToUser($user)
@@ -89,7 +92,7 @@ new class extends Component
     <div class="p-3 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-start justify-between gap-2">
             <div class="flex items-center gap-2 flex-1 min-w-0">
-                <livewire:music-plan-setting-icon :genreId="$musicPlan->genre_id" />
+                <x-genre-icon :genre-id="$musicPlan->genre_id" />
                 <div class="flex-1 min-w-0">
                     <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                         {{ $musicPlan->celebration_name ?? '–' }}
@@ -290,7 +293,7 @@ new class extends Component
         <div class="flex items-center gap-3 pt-1 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400">
             <div class="flex items-center gap-1">
                 <flux:icon name="musical-note" class="h-3 w-3" variant="mini" />
-                <span>{{ $musicPlan->musicAssignments()->count() }}</span>
+                <span>{{ $assignmentCount }}</span>
             </div>
             <div class="flex items-center gap-1">
                 <flux:icon name="calendar-days" class="h-3 w-3" variant="mini" />

@@ -1,24 +1,13 @@
-<?php
+@props(['genreId' => null])
 
-use App\Models\Genre;
-use Livewire\Component;
-
-new class extends Component
-{
-
-    public ?int $genreId = null;
-
-    public function getIconProperty(): string
-    {
-        if (! $this->genreId) return 'musical-note';
-
-        return Genre::findCached($this->genreId)?->icon() ?? 'musical-note';
-    }
-};
-?>
+@php
+    $iconName = $genreId
+        ? (\App\Models\Genre::findCached($genreId)?->icon() ?? 'musical-note')
+        : 'musical-note';
+@endphp
 
 <div>
-    @switch($this->icon)
+    @switch($iconName)
         @case('organist')
             <flux:icon name="organist" class="h-10 w-10" />
             @break

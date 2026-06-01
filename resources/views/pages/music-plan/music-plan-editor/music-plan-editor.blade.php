@@ -2,7 +2,7 @@
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <flux:card class="p-5" wire:loading.class="opacity-50" wire:target="isPublished">
             <div class="flex items-center gap-4 mb-4">
-                <livewire:music-plan-setting-icon :genreId="$genreId" :wire:key="'setting-icon-'.$genreId" />
+                <x-genre-icon :genre-id="$genreId" />
                 <flux:heading size="xl">Énekrend szerkesztése</flux:heading>
             </div>
 
