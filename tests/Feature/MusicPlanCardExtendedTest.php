@@ -58,6 +58,35 @@ test('assignment count reflects loaded data without a separate query on render',
         ->assertSet('assignmentCount', 2);
 });
 
+test('card eager loads scores so incipit lookups do not scale per music', function () {
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id, 'is_private' => false]);
+
+    foreach (range(1, 4) as $i) {
+        $music = Music::factory()->create(['user_id' => $owner->id]);
+        \App\Models\Score::factory()->create([
+            'user_id' => $owner->id,
+            'music_id' => $music->id,
+            'public_preview' => true,
+        ]);
+        attachAssignment($plan, MusicPlanSlot::factory()->create(), $music);
+    }
+
+    DB::enableQueryLog();
+
+    Livewire::actingAs($owner)
+        ->test('music-plan-card-extended', ['musicPlan' => $plan])
+        ->assertSet('assignmentCount', 4);
+
+    $scoreQueries = collect(DB::getQueryLog())
+        ->filter(fn ($q) => str_contains($q['query'], '"scores"'))
+        ->count();
+
+    DB::disableQueryLog();
+
+    expect($scoreQueries)->toBeLessThanOrEqual(2);
+});
+
 test('genre-icon renders the organist icon for an organist genre as plain markup', function () {
     $genre = Genre::firstOrCreate(['name' => 'organist']);
 
