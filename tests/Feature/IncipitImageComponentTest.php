@@ -18,6 +18,20 @@ it('renders the incipit image with a magnifier overlay and a full-image lightbox
     expect(substr_count($html, 'https://example.test/incipits/42.png'))->toBe(2);
 });
 
+it('anchors the zoom over the original incipit instead of a full-window overlay', function (): void {
+    $html = Blade::render(
+        '<x-incipit-image :src="$src" :alt="$alt" img-class="block max-h-14" />',
+        ['src' => 'https://example.test/incipits/42.png', 'alt' => 'Kyrie']
+    );
+
+    expect($html)
+        ->toContain('x-ref="incipitTrigger"')
+        ->toContain('positionZoom()')
+        ->toContain(':style="zoomStyle"')
+        ->toContain(':class="zoomStyle ? \'opacity-100\' : \'opacity-0\'"')
+        ->not->toContain('bg-black/80');
+});
+
 it('applies passed attribute classes to the wrapper, not the image', function (): void {
     $html = Blade::render(
         '<x-incipit-image :src="$src" class="hidden sm:inline-block" img-class="h-10 object-contain" />',
