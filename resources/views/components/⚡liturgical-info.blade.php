@@ -53,6 +53,24 @@ new class extends Component
         $this->fetchLiturgicalInfo();
     }
 
+    /**
+     * Placeholder rendered while the component is lazy-loaded, so the dashboard
+     * request returns immediately instead of blocking on the remote fetch.
+     */
+    public function placeholder(): string
+    {
+        return <<<'HTML'
+        <div>
+            <flux:card class="liturgical-info p-0 overflow-hidden border-0 shadow-xl dark:shadow-neutral-900/30">
+                <div class="text-center py-16 space-y-4">
+                    <flux:icon.loading class="h-12 w-12 mx-auto text-blue-600" />
+                    <flux:heading size="md">Liturgikus információk betöltése…</flux:heading>
+                </div>
+            </flux:card>
+        </div>
+        HTML;
+    }
+
     public function fetchLiturgicalInfo(): void
     {
         $this->loading = true;

@@ -15,23 +15,50 @@ class LiturgicalInfoService
     protected const BASE_URL = 'https://szentjozsefhackathon.github.io/napi-lelki-batyu';
 
     /**
-     * Cache TTL in seconds (1 day).
+     * Fresh cache TTL in seconds (1 day).
      */
     protected const CACHE_TTL = 86400;
 
     /**
+     * Stale fallback TTL in seconds (30 days). Used to serve the last known
+     * response when the upstream API is unavailable.
+     */
+    protected const STALE_TTL = 2592000;
+
+    /**
      * Fetch liturgical information for a specific date.
+     *
+     * Serves the fresh cache when available. On a miss it fetches from the API,
+     * priming both the fresh and the long-lived stale caches. When the API is
+     * unavailable it falls back to the last successfully cached response so the
+     * request never blocks on a failing upstream beyond a single timeout.
      *
      * @param  string  $date  Date in Y-m-d format
      * @return array<string, mixed>|null
      */
-    public function getForDate(string $date): ?array
+    public function getForDate(string $date, bool $forceRefresh = false): ?array
     {
         $cacheKey = CacheKey::forModel('liturgical_info', 'date', ['date' => $date]);
+        $staleKey = CacheKey::forModel('liturgical_info', 'stale', ['date' => $date]);
 
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($date) {
-            return $this->fetchFromApi($date);
-        });
+        if (! $forceRefresh) {
+            $cached = Cache::get($cacheKey);
+
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        $data = $this->fetchFromApi($date);
+
+        if ($data !== null) {
+            Cache::put($cacheKey, $data, self::CACHE_TTL);
+            Cache::put($staleKey, $data, self::STALE_TTL);
+
+            return $data;
+        }
+
+        return Cache::get($staleKey);
     }
 
     /**
