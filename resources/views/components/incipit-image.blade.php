@@ -41,6 +41,8 @@
 
     <button type="button"
             x-on:click.prevent.stop="openZoom()"
+            x-on:mousedown.prevent.stop
+            x-on:mouseup.stop
             class="absolute right-0.5 top-0.5 z-20 flex items-center justify-center rounded-md bg-white/80 p-1 text-gray-600 opacity-70 shadow-sm ring-1 ring-gray-200 backdrop-blur-sm transition hover:bg-white hover:text-gray-900 group-hover/incipit:opacity-100 dark:bg-gray-900/70 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-900 dark:hover:text-white"
             :title="'{{ __('View full image') }}'"
             aria-label="{{ __('View full image') }}">

@@ -32,6 +32,17 @@ it('anchors the zoom over the original incipit instead of a full-window overlay'
         ->not->toContain('bg-black/80');
 });
 
+it('stops the zoom button from triggering an enclosing wire:navigate link', function (): void {
+    $html = Blade::render(
+        '<x-incipit-image :src="$src" :alt="$alt" img-class="block max-h-14" />',
+        ['src' => 'https://example.test/incipits/42.png', 'alt' => 'Kyrie']
+    );
+
+    expect($html)
+        ->toContain('x-on:mousedown.prevent.stop')
+        ->toContain('x-on:mouseup.stop');
+});
+
 it('applies passed attribute classes to the wrapper, not the image', function (): void {
     $html = Blade::render(
         '<x-incipit-image :src="$src" class="hidden sm:inline-block" img-class="h-10 object-contain" />',
