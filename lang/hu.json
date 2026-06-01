@@ -785,7 +785,15 @@
     "Show incipit on public listings of the music": "Incipit megjelenítése a zeneművek nyilvános listázásán",
     "Guide": "Útmutató",
     "Show source tooltip on hover": "Lebegő forráskód megjelenítése",
-    "Reset to defaults": "Alapértelmezettre visszaállítás"
+    "Reset to defaults": "Alapértelmezettre visszaállítás",
+    "Notation": "Hangjegyek",
+    "Lyrics": "Szöveg",
+    "Paste the Guido notes and lyrics separately below. Converting replaces the editor content with the generated Aretino notation. Not everything may be converted correctly, so please check the result.": "Illesszd be külön a Guido hangjegyeket és szöveget alább. A konvertálás lecseréli a szerkesztő tartalmát a generált Aretino jelöléssel. Nem mindent lehet helyesen konvertálni, ezért ellenőrizd a végeredményt.",
+    "Import from Gregorio": "Importálás Gregorioból",
+    "Paste a Gregorio (GABC) score below. Converting replaces the editor content with the generated Aretino notation. Not everything may be converted correctly, so please check the result.": "Illessz be egy Gregorio (GABC) kottát alább. A konvertálás lecseréli a szerkesztő tartalmát a generált Aretino jelöléssel. Nem mindent lehet helyesen konvertálni, ezért ellenőrizd a végeredményt.",
+    "Import from Guido": "Importálás Guidóból"
+
+
 
 
 }

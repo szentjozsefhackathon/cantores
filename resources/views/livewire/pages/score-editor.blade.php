@@ -322,7 +322,7 @@
                                 <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">
                                     {{ __('Paste the Guido notes and lyrics separately below. Converting replaces the editor content with the generated Aretino notation. Not everything may be converted correctly, so please check the result.') }}
                                 </flux:text>
-                                <flux:textarea x-model="guidoNotesSource" rows="6" class="font-mono text-sm" :label="__('Notes')"></flux:textarea>
+                                <flux:textarea x-model="guidoNotesSource" rows="6" class="font-mono text-sm" :label="__('Notation')"></flux:textarea>
                                 <flux:textarea x-model="guidoTextSource" rows="6" class="font-mono text-sm" :label="__('Lyrics')"></flux:textarea>
                                 <div class="flex justify-end gap-2">
                                     <flux:button variant="ghost" x-on:click="$flux.modal('guido-import').close()">
