@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Collection;
 class CelebrationSearchService
 {
     /**
+     * Memoized collection of all celebrations, loaded once per service instance.
+     *
+     * @var Collection<int, Celebration>|null
+     */
+    private ?Collection $allCelebrations = null;
+
+    /**
      * Find celebrations related to the given criteria, scoring each match.
      *
      * The criteria can include any of the celebration attributes:
@@ -37,14 +44,9 @@ class CelebrationSearchService
      */
     public function findRelated(array $criteria): Collection
     {
-        // Fetch all celebrations (including custom celebrations)
-        $query = Celebration::query();
-
-        // Optionally, we could filter out the exact match if we have a celebration_key
-        // but the requirement is to find related celebrations, not self.
-        // For simplicity, we include all celebrations; duplicates will have high scores.
-
-        $allCelebrations = $query->get();
+        // Fetch all celebrations (including custom celebrations) once per instance.
+        // Subsequent calls within the same render reuse the memoized collection.
+        $allCelebrations = $this->allCelebrations ??= Celebration::query()->get();
 
         // Cast numeric criteria to integers for proper type comparison
         if (isset($criteria['season'])) {

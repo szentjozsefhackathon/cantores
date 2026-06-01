@@ -24,6 +24,27 @@ new class extends Component
 
     public bool $welcome = false;
 
+    /**
+     * Memoized map of exact-match Celebration models keyed by "name|date", built once per render.
+     *
+     * @var \Illuminate\Support\Collection<string, Celebration>|null
+     */
+    private ?\Illuminate\Support\Collection $exactCelebrations = null;
+
+    /**
+     * Memoized music plans for the displayed celebrations, grouped by celebration ID.
+     *
+     * @var \Illuminate\Support\Collection<int, \Illuminate\Support\Collection<int, MusicPlan>>|null
+     */
+    private ?\Illuminate\Support\Collection $plansByCelebrationId = null;
+
+    /**
+     * Memoized suggestion-existence flags keyed by celebration loop index.
+     *
+     * @var array<int, bool>|null
+     */
+    private ?array $suggestionFlags = null;
+
     public function mount(bool $selectable = false, bool $welcome = false): void
     {
         $this->welcome = $welcome;
@@ -198,145 +219,229 @@ new class extends Component
         $this->dispatch('celebration-selected', celebrationId: $celebration->id);
     }
 
-    public function getExistingMusicPlans(array $celebrationData): \Illuminate\Database\Eloquent\Collection
+    /**
+     * Build the "name|date" lookup key for a celebration payload.
+     */
+    private function celebrationKey(array $celebrationData): ?string
     {
-        $user = Auth::user();
-        if (! $user) {
-            return new \Illuminate\Database\Eloquent\Collection;
+        $name = $celebrationData['name'] ?? $celebrationData['title'] ?? null;
+        if (! $name) {
+            return null;
         }
 
-        $celebrationName = $celebrationData['name'] ?? $celebrationData['title'] ?? null;
-        $dateISO = $celebrationData['dateISO'] ?? $this->date;
-
-        if (! $celebrationName) {
-            return new \Illuminate\Database\Eloquent\Collection;
-        }
-
-        // Find the celebration first
-        $celebration = Celebration::where('name', $celebrationName)
-            ->where('actual_date', $dateISO)
-            ->first();
-
-        if (! $celebration) {
-            return new \Illuminate\Database\Eloquent\Collection;
-        }
-
-        // Get music plans through the relationship
-        $query = $celebration->musicPlans()
-            ->where('user_id', $user->id)
-            ->with(['user', 'genre', 'celebration'])
-            ->withCount(['slots', 'musicAssignments']);
-
-        // Filter by current genre
-        $genreId = GenreContext::getId();
-        if ($genreId !== null) {
-            // Show plans that belong to the current genre OR have no genre (belongs to all)
-            $query->where(function ($q) use ($genreId) {
-                $q->whereNull('genre_id')
-                    ->orWhere('genre_id', $genreId);
-            });
-        }
-        // If $genreId is null, no filtering applied (show all plans)
-
-        return $query->orderBy('created_at', 'desc')->get();
-    }
-
-    public function getPublishedMusicPlans(array $celebrationData): \Illuminate\Database\Eloquent\Collection
-    {
-        $user = Auth::user();
-        $celebrationName = $celebrationData['name'] ?? $celebrationData['title'] ?? null;
-        $dateISO = $celebrationData['dateISO'] ?? $this->date;
-
-        if (! $celebrationName) {
-            return new \Illuminate\Database\Eloquent\Collection;
-        }
-
-        // Find the celebration first
-        $celebration = Celebration::where('name', $celebrationName)
-            ->where('actual_date', $dateISO)
-            ->first();
-
-        if (! $celebration) {
-            return new \Illuminate\Database\Eloquent\Collection;
-        }
-
-        // Get published music plans
-        $query = $celebration->musicPlans()
-            ->where('is_private', false)
-            ->with(['user', 'genre', 'celebration'])
-            ->withCount(['slots', 'musicAssignments']);
-
-        // Exclude the authenticated user's own plans (if logged in)
-        if ($user) {
-            $query->where('user_id', '!=', $user->id);
-        }
-
-        // Determine genre filter
-        $genreId = GenreContext::getId();
-        if ($genreId !== null) {
-            // Show plans that belong to the current genre OR have no genre (belongs to all)
-            $query->where(function ($q) use ($genreId) {
-                $q->whereNull('genre_id')
-                    ->orWhere('genre_id', $genreId);
-            });
-        }
-        // If $genreId is null, no filtering applied (show all plans)
-
-        return $query->orderBy('created_at', 'desc')->get();
+        return $name.'|'.($celebrationData['dateISO'] ?? $this->date);
     }
 
     /**
-     * Check if there are any music plan suggestions for the given celebration data.
-     * Returns true only if there is at least one published music plan attached
-     * or at least one of the authenticated user's own music plans attached.
+     * Load every exact-match Celebration for the displayed celebrations in a single query,
+     * keyed by "name|date". Memoized so it runs once per render.
+     *
+     * @return \Illuminate\Support\Collection<string, Celebration>
      */
-    public function hasSuggestions(array $celebrationData): bool
+    private function exactCelebrations(): \Illuminate\Support\Collection
     {
-        $criteria = [
-            'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
-            'season' => isset($celebrationData['season']) ? (int) $celebrationData['season'] : null,
-            'week' => isset($celebrationData['week']) ? (int) $celebrationData['week'] : null,
-            'day' => isset($celebrationData['dayofWeek']) ? (int) $celebrationData['dayofWeek'] : null,
-            'readings_code' => $celebrationData['readingsId'] ?? null,
-            'year_letter' => $celebrationData['yearLetter'] ?? null,
-            'year_parity' => $celebrationData['yearParity'] ?? null,
-        ];
-
-        // Remove null values
-        $criteria = array_filter($criteria, fn($value) => $value !== null);
-
-        $service = app(CelebrationSearchService::class);
-        $related = $service->findRelated($criteria);
-
-        if ($related->isEmpty()) {
-            return false;
+        if ($this->exactCelebrations !== null) {
+            return $this->exactCelebrations;
         }
 
-        $celebrationIds = $related->pluck('id')->toArray();
+        $pairs = collect($this->celebrations)
+            ->map(fn (array $celebrationData): array => [
+                'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
+                'date' => $celebrationData['dateISO'] ?? $this->date,
+            ])
+            ->filter(fn (array $pair): bool => $pair['name'] !== null);
+
+        if ($pairs->isEmpty()) {
+            return $this->exactCelebrations = collect();
+        }
+
+        $query = Celebration::query();
+        foreach ($pairs as $pair) {
+            $query->orWhere(function ($q) use ($pair) {
+                $q->where('name', $pair['name'])->where('actual_date', $pair['date']);
+            });
+        }
+
+        return $this->exactCelebrations = $query->get()
+            ->keyBy(fn (Celebration $celebration): string => $celebration->name.'|'.$celebration->actual_date->format('Y-m-d'));
+    }
+
+    /**
+     * Load all music plans for the displayed celebrations in one query, grouped by celebration ID.
+     * Memoized so it runs once per render.
+     *
+     * @return \Illuminate\Support\Collection<int, \Illuminate\Support\Collection<int, MusicPlan>>
+     */
+    private function plansByCelebrationId(): \Illuminate\Support\Collection
+    {
+        if ($this->plansByCelebrationId !== null) {
+            return $this->plansByCelebrationId;
+        }
+
+        $celebrationIds = $this->exactCelebrations()->pluck('id')->all();
+
+        if ($celebrationIds === []) {
+            return $this->plansByCelebrationId = collect();
+        }
+
+        return $this->plansByCelebrationId = MusicPlan::whereIn('celebration_id', $celebrationIds)
+            ->with(['user', 'genre', 'celebration'])
+            ->withCount(['slots', 'musicAssignments'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy('celebration_id');
+    }
+
+    /**
+     * Get the music plans attached to a celebration from the memoized, pre-grouped collection.
+     *
+     * @return \Illuminate\Support\Collection<int, MusicPlan>
+     */
+    private function plansForCelebration(array $celebrationData): \Illuminate\Support\Collection
+    {
+        $key = $this->celebrationKey($celebrationData);
+        $celebration = $key !== null ? $this->exactCelebrations()->get($key) : null;
+
+        if (! $celebration) {
+            return collect();
+        }
+
+        return $this->plansByCelebrationId()->get($celebration->id, collect());
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, MusicPlan>
+     */
+    public function getExistingMusicPlans(array $celebrationData): \Illuminate\Support\Collection
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return collect();
+        }
+
+        $genreId = GenreContext::getId();
+
+        return $this->plansForCelebration($celebrationData)
+            ->filter(function (MusicPlan $plan) use ($user, $genreId): bool {
+                if ((int) $plan->user_id !== (int) $user->id) {
+                    return false;
+                }
+
+                // Show plans that belong to the current genre OR have no genre (belongs to all).
+                return $genreId === null || $plan->genre_id === null || (int) $plan->genre_id === $genreId;
+            })
+            ->values();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, MusicPlan>
+     */
+    public function getPublishedMusicPlans(array $celebrationData): \Illuminate\Support\Collection
+    {
         $user = Auth::user();
         $genreId = GenreContext::getId();
 
-        $query = MusicPlan::whereIn('celebration_id', $celebrationIds);
+        return $this->plansForCelebration($celebrationData)
+            ->filter(function (MusicPlan $plan) use ($user, $genreId): bool {
+                if ($plan->is_private) {
+                    return false;
+                }
 
-        // Filter by genre: include plans that belong to the current genre OR have no genre
-        if ($genreId !== null) {
-            $query->where(function ($q) use ($genreId) {
-                $q->whereNull('genre_id')
-                    ->orWhere('genre_id', $genreId);
-            });
+                // Exclude the authenticated user's own plans (if logged in).
+                if ($user && (int) $plan->user_id === (int) $user->id) {
+                    return false;
+                }
+
+                // Show plans that belong to the current genre OR have no genre (belongs to all).
+                return $genreId === null || $plan->genre_id === null || (int) $plan->genre_id === $genreId;
+            })
+            ->values();
+    }
+
+    /**
+     * Check whether a celebration (by loop index) has any music plan suggestions.
+     * Returns true when at least one related celebration has a published plan attached
+     * or one of the authenticated user's own plans attached.
+     */
+    public function hasSuggestions(int $celebrationIndex): bool
+    {
+        return $this->suggestionFlags()[$celebrationIndex] ?? false;
+    }
+
+    /**
+     * Compute suggestion-existence flags for every displayed celebration at once.
+     *
+     * Related celebrations are scored against the (memoized) full celebration list, then a single
+     * query resolves which of the unioned related IDs actually carry a matching plan. Memoized so
+     * the full-table scan and the existence query each run once per render rather than per card.
+     *
+     * @return array<int, bool>
+     */
+    private function suggestionFlags(): array
+    {
+        if ($this->suggestionFlags !== null) {
+            return $this->suggestionFlags;
         }
 
-        // Include published plans OR user's own plans (if logged in)
-        if ($user) {
-            $query->where(function ($q) use ($user) {
-                $q->where('is_private', false)
-                    ->orWhere('user_id', $user->id);
-            });
-        } else {
-            $query->where('is_private', false);
+        $service = app(CelebrationSearchService::class);
+
+        $relatedIdsPerIndex = [];
+        $allRelatedIds = [];
+
+        foreach ($this->celebrations as $index => $celebrationData) {
+            $criteria = array_filter([
+                'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
+                'season' => isset($celebrationData['season']) ? (int) $celebrationData['season'] : null,
+                'week' => isset($celebrationData['week']) ? (int) $celebrationData['week'] : null,
+                'day' => isset($celebrationData['dayofWeek']) ? (int) $celebrationData['dayofWeek'] : null,
+                'readings_code' => $celebrationData['readingsId'] ?? null,
+                'year_letter' => $celebrationData['yearLetter'] ?? null,
+                'year_parity' => $celebrationData['yearParity'] ?? null,
+            ], fn ($value): bool => $value !== null);
+
+            $ids = $service->findRelated($criteria)->pluck('id')->all();
+            $relatedIdsPerIndex[$index] = $ids;
+            $allRelatedIds = array_merge($allRelatedIds, $ids);
         }
 
-        return $query->exists();
+        $allRelatedIds = array_values(array_unique($allRelatedIds));
+
+        $celebrationIdsWithPlans = [];
+        if ($allRelatedIds !== []) {
+            $user = Auth::user();
+            $genreId = GenreContext::getId();
+
+            $query = MusicPlan::whereIn('celebration_id', $allRelatedIds);
+
+            // Filter by genre: include plans that belong to the current genre OR have no genre.
+            if ($genreId !== null) {
+                $query->where(function ($q) use ($genreId) {
+                    $q->whereNull('genre_id')
+                        ->orWhere('genre_id', $genreId);
+                });
+            }
+
+            // Include published plans OR the user's own plans (if logged in).
+            if ($user) {
+                $query->where(function ($q) use ($user) {
+                    $q->where('is_private', false)
+                        ->orWhere('user_id', $user->id);
+                });
+            } else {
+                $query->where('is_private', false);
+            }
+
+            $celebrationIdsWithPlans = $query->distinct()->pluck('celebration_id')->all();
+        }
+
+        $withPlans = array_flip($celebrationIdsWithPlans);
+
+        $flags = [];
+        foreach ($relatedIdsPerIndex as $index => $ids) {
+            $flags[$index] = array_intersect_key($withPlans, array_flip($ids)) !== [];
+        }
+
+        return $this->suggestionFlags = $flags;
     }
 
     /**
@@ -688,7 +793,7 @@ new class extends Component
                             </flux:button>
                             @endauth
                             @php
-                            $hasSuggestions = $this->hasSuggestions($celebration);
+                            $hasSuggestions = $this->hasSuggestions($loop->index);
                             @endphp
                             @if($hasSuggestions)
                             <flux:button
