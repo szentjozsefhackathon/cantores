@@ -290,7 +290,50 @@
                             <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveAretinoFile()">
                                 {{ __('Save as .aretino file') }}
                             </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-down-on-square" x-on:click="$flux.modal('gabc-import').show()">
+                                {{ __('Import from Gregorio') }}
+                            </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-down-on-square" x-on:click="$flux.modal('guido-import').show()">
+                                {{ __('Import from Guido') }}
+                            </flux:button>
                         </div>
+
+                        <flux:modal name="gabc-import" class="max-w-2xl">
+                            <div class="space-y-4">
+                                <flux:heading size="lg">{{ __('Import from Gregorio') }}</flux:heading>
+                                <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">
+                                    {{ __('Paste a Gregorio (GABC) score below. Converting replaces the editor content with the generated Aretino notation. Not everything may be converted correctly, so please check the result.') }}
+                                </flux:text>
+                                <flux:textarea x-model="gabcSource" rows="8" class="font-mono text-sm" placeholder="(c3) Ky(f)ri(g)e(h) e(j)le(i)i(h)son(g.)"></flux:textarea>
+                                <div class="flex justify-end gap-2">
+                                    <flux:button variant="ghost" x-on:click="$flux.modal('gabc-import').close()">
+                                        {{ __('Cancel') }}
+                                    </flux:button>
+                                    <flux:button variant="primary" icon="arrow-right" x-on:click="convertGabcToAretino()" x-bind:disabled="!gabcSource.trim()">
+                                        {{ __('Convert') }}
+                                    </flux:button>
+                                </div>
+                            </div>
+                        </flux:modal>
+
+                        <flux:modal name="guido-import" class="max-w-2xl">
+                            <div class="space-y-4">
+                                <flux:heading size="lg">{{ __('Import from Guido') }}</flux:heading>
+                                <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">
+                                    {{ __('Paste the Guido notes and lyrics separately below. Converting replaces the editor content with the generated Aretino notation. Not everything may be converted correctly, so please check the result.') }}
+                                </flux:text>
+                                <flux:textarea x-model="guidoNotesSource" rows="6" class="font-mono text-sm" :label="__('Notes')"></flux:textarea>
+                                <flux:textarea x-model="guidoTextSource" rows="6" class="font-mono text-sm" :label="__('Lyrics')"></flux:textarea>
+                                <div class="flex justify-end gap-2">
+                                    <flux:button variant="ghost" x-on:click="$flux.modal('guido-import').close()">
+                                        {{ __('Cancel') }}
+                                    </flux:button>
+                                    <flux:button variant="primary" icon="arrow-right" x-on:click="convertGuidoToAretino()" x-bind:disabled="!guidoNotesSource.trim() && !guidoTextSource.trim()">
+                                        {{ __('Convert') }}
+                                    </flux:button>
+                                </div>
+                            </div>
+                        </flux:modal>
 
                         <flux:modal name="aretino-cheatsheet" class="max-w-2xl">
                             <div class="space-y-4">

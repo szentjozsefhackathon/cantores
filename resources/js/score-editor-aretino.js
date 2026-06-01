@@ -1,6 +1,23 @@
 import { renderAretino } from '@aretino-chant/core';
+import { gabcToAretino } from '@aretino-chant/gabc2aretino';
+import { guidoToAretino, guidoTextToAretino } from '@aretino-chant/guido2aretino';
 
 const ARETINO_STAFF_SIZE_CALIBRATION = 1.3;
+
+/**
+ * Builds an Aretino source string from Guido TTF notes and lyrics, which the
+ * guido2aretino package exposes as two separate converters. The lyrics are
+ * appended as a `w:` line when present.
+ */
+export function buildAretinoFromGuido(notesSource, textSource) {
+    const notes = guidoToAretino(notesSource ?? '');
+    const text = guidoTextToAretino(textSource ?? '');
+    if (notes.trim() === '' && text.trim() === '') {
+        return '';
+    }
+
+    return text.trim() === '' ? `${notes}\n` : `${notes}\nw: ${text}\n`;
+}
 
 // Fixed pixel canvas for each fixed-ratio (projector screen) mode.
 // All share the same height so switching ratio keeps the screen size constant.
@@ -21,8 +38,30 @@ export function aretinoMixin() {
         aretinoStaffGap: 2.5,
         aretinoHideRepeatClef: false,
         aretinoFields: ['aretinoTextFont', 'aretinoLyricSize', 'aretinoStaffSize', 'aretinoZoom', 'aretinoPageRatio', 'aretinoStaffWidth', 'aretinoStaffGap', 'aretinoHideRepeatClef'],
+        gabcSource: '',
+        guidoNotesSource: '',
+        guidoTextSource: '',
         _aretinoResizeObserver: null,
         _aretinoResizeTimer: null,
+
+        convertGabcToAretino() {
+            const aretino = gabcToAretino(this.gabcSource);
+            if (aretino.trim() === '') { return; }
+            this.$wire.format = 'aretino';
+            this.setEditorContent(aretino, { modified: true });
+            this.gabcSource = '';
+            this.$flux.modal('gabc-import').close();
+        },
+
+        convertGuidoToAretino() {
+            const aretino = buildAretinoFromGuido(this.guidoNotesSource, this.guidoTextSource);
+            if (aretino.trim() === '') { return; }
+            this.$wire.format = 'aretino';
+            this.setEditorContent(aretino, { modified: true });
+            this.guidoNotesSource = '';
+            this.guidoTextSource = '';
+            this.$flux.modal('guido-import').close();
+        },
 
         initAretinoResizeObserver() {
             const container = this.$refs.aretinoPreview;

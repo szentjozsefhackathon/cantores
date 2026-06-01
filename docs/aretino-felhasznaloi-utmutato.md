@@ -34,9 +34,11 @@ Az Aretino kottaformátum szabadon felhasználható, nyilvános anyagokban kérj
 14. [Sorvégi kiegyenlítés, manuális elosztás és sortörés](#14-sorvégi-kiegyenlítés-manuális-elosztás-és-sortörés)
 15. [Módosítójelek (b, kereszt, feloldó)](#15-módosítójelek)
 16. [Szöveg, versszakok és zsoltárversek](#16-szöveg-versszakok-és-zsoltárversek)
-17. [Hosszabb példák](#17-hosszabb-példák)
-18. [A szerkesztő használata](#18-a-szerkesztő-használata)
-19. [Gyakori hibák és tippek](#19-gyakori-hibák-és-tippek)
+17. [Zárójelezett hangok](#18-zárójelezett-hangok)
+18. [Összefogó jelek és kötőívek](#19-összefogó-jelek-és-kötőívek)
+19. [Hosszabb példák](#20-hosszabb-példák)
+20. [A szerkesztő használata](#21-a-szerkesztő-használata)
+21. [Visszajelzés, hibajelentés](#22-visszajelzés-hibajelentés)
 
 ---
 
@@ -322,6 +324,28 @@ w: Is-te-nem, hall-gass hí-vá-som-ra!
 
 A fejléc **elhagyható**, lehet rögtön dallamsorral kezdeni.
 
+### Megjelenítő-beállítások a forrásból — `%option:`
+
+A `%option:` fejlécsorral magából a forrásból állíthatók a megjelenítő
+beállításai, soronként egy beállítás, `név=érték` (vagy `név: érték`)
+alakban. Így a kotta a szerkesztő beállító-sávja nélkül is hordozza a
+saját megjelenését:
+
+```aretino
+%option: lyricSize=12
+%option: lyricDistance=0.5
+%option: hideRepeatClef=true
+%%
+(g2) a a a g a C b g a. ||
+w: O Lord, hear my hum-ble call to you!
+```
+
+A számok JavaScript-számként, a logikai értékek `true`/`false`, `1`/`0`,
+`yes`/`no`, `on`/`off` alakban adhatók meg. Ugyanaz a beállítás többször
+megadva mindig az utolsó érvényes. Az elérhető beállításnevek: `dpi`,
+`staffSpaceMm`, `lyricSize`, `textFont`, `noteSpacing`, `lyricDistance`,
+`hideRepeatClef`, `canvasHeight`, `staffGap`.
+
 ---
 
 ## 7. Kulcsok
@@ -473,6 +497,7 @@ résként értelmezi.
 | `,` | rövid vonal (negyedvonal) | kis cezúra, lélegzet |
 | `;` | félvonal | tagmondat vége |
 | `\|` | egész vonal | mondat vége |
+| `\|0` | üres vonal | láthatatlan, de egész vonal szélességű hely |
 | `\|\|` | kettős vonal | rész vége |
 | `:\| \|: :\|:` | ismétlőjel | ismétlés |
 | `\|\|\|` | záróvonal | klasszikus záró |
@@ -583,6 +608,24 @@ csak a darab elején van leírva.
 Egy újabb `(K:…)` token megváltoztatja az előjegyzést onnantól (helyben is megjelenik, és a következő sorok elején is az új jel szerepel). `(K:)` törli az
 előjegyzést.
 
+### Előjegyzés-gyorsjelek — `(Kb)`, `(K#)`
+
+A leggyakoribb előjegyzéseknél nem kell felsorolni a hangokat: a `(Kb)`,
+`(Kbb)` … a kvintkör szerint teszi ki a b-ket, a `(K#)`, `(K##)` … pedig
+a kereszteket. A `(K)` (kettőspont nélkül) törli az előjegyzést.
+
+| Forrás | Jelentés |
+|---|---|
+| `(Kb)` | egy b (a `b` hangon) |
+| `(Kbb)` | két b (`b`, `E`) |
+| `(K#)` | egy kereszt (`F`) |
+| `(K##)` | két kereszt (`F`, `C`) |
+| `(K)` | előjegyzés törlése |
+
+```aretino
+(g2) (Kb) b C D b | (Kbb) b C D b | (K#) b C D b | (K##) b C D b | (K) b C D b
+```
+
 ---
 
 ## 16. Szöveg, versszakok és zsoltárversek
@@ -605,6 +648,28 @@ w: Hús-vét ün-ne-pe e-lőtt tör-tént:
 ```
 
 A tördelő algoritmus megpróbálja a gazdaságosan és esztétikusan elhelyezni a szöveget. Ez azt jelenti, hogy ha megoldható, a szótagokat megpróbálja összevonni. Az egyes szótagokat punctum alatt középre rendezi, neumák alatt, tenorhang alatt alatt pedig balra rendezi.
+
+### Szótag-elnyújtó vonal (`_`)
+
+Ha egy szótagot **több neuma fölött** kell kitartani, a szótag végére tett
+aláhúzás(ok) elnyújtó vonalat húznak. A `ro_` a szótagot a saját neumája
+fölött tartja, minden további `_` egy újabb következő neumára nyújtja
+(`ro__` az eggyel utána lévőig, `ro___` a következő kettőig). Az elnyújtás
+után közvetlenül álló írásjel a vonal túlsó végére kerül:
+
+```aretino
+(g2) |0 , g a C b a g gC'aggC'ag a'ga'ggC'ag
+w: (...) de a ke-zem és fe-jem__.
+```
+
+### Kötelező és szó szerinti szótaghatár (`=`, `\-`)
+
+| Forrás | Jelentés |
+|---|---|
+| `-` | szótaghatár szón belül — a kötőjel csak akkor jelenik meg, ha a neumák között van rá hely |
+| `=` | **mindig látszó** szótaghatár — a kötőjel szoros tördelésnél sem tűnik el |
+| `\-` | szó szerinti kötőjel egy szótagon belül (pl. `csak\-azért`) |
+| `\_` | szó szerinti aláhúzás egy szótagon belül |
 
 ### Több versszak
 
@@ -666,6 +731,14 @@ f g ; a g
 w: ~ ~ szö-veg
 ```
 
+A hosszú tenorhangokat, ha nincs elég hely, automatikusan kettéválasztja/megkettőzi a rendszer
+
+```aretino
+(g2) (Kb) Dt b D'C CCgf | bt ,bt C'g C'bb'a g fg' g ||
+w: Csak~néznek~és~szemlél-nek en-gem, elosztották~maguk~között~ruháimat, és~köntösömre sor-sot ve-tet-tek.
+```
+
+
 ### Verszak számozás
 
 Hogy a szöveg tördelését ne zavarják a verszakok számai és egyéb rövid jelölések,
@@ -711,6 +784,12 @@ w: {\R}~~Al-le-lu-ja, al-le-lu-ja>, (\red{{*}}) al-[le-lu]-ja.
 
 A felirat bármilyen (akár formázott) szöveg lehet; a megfelelő hang vagy ligatúra fölött jelenik meg.
 
+A feliratokban további speciális karaktereket lehet használni:
+```aretino
+(g2) a"\n \b \#" g f e | {fga}"\'"
+```
+
+
 ---
 
 ## 18. Zárójelezett hangok
@@ -727,7 +806,45 @@ Egy vagy több hangot (vagy egész neumát) `[` … `]` közé téve **tipográf
 (g2) d [a] g [ag] d [a b C] g
 ```
 
-## 19. Hosszabb példák
+## 19. Összefogó jelek és kötőívek
+
+Egy hangcsoport fölé **összefogó jelet** rajzolhatunk: a jelet `{` nyitja
+és `}` zárja, a két jel közé a lefedett hangok kerülnek. Három alak közül
+választhatunk:
+
+| Forrás | Alak |
+|---|---|
+| `{ … }` | kapcsos jel (lefelé mutató kapocs) |
+| `\arc{ … }` | sima ív |
+| `\line{ … }` | egyenes vonal |
+
+A záró `}` után feliratot is megadhatunk: idézőjelben (`}"Szöveg"`) tetszőleges
+— akár formázott — szöveget, idézőjel nélkül (`}Szó`) egyetlen szót a következő
+szóközig. Az összefogó jel sortörésen át is folytatódik, a megjelenítő a
+következő sorban automatikusan folytatja.
+
+```aretino
+(g2) { g a b C } { a b C D }"melizma"
+```
+
+```aretino
+(g2) \arc{ g a b } \line{ C D E F }
+```
+
+```aretino
+(g2) { g a b C }"1." g { a b C D }"2." g
+```
+
+### Kötőívek (`\slur`, `\slurSolid`)
+
+Két hangfej közé **kötőívet** húzhatunk: a `\slur{ … }` alapból szaggatott,
+a `\slurSolid{ … }` folytonos ívet rajzol.
+
+```aretino
+(g2) \slur{f a} \slurSolid{a g}
+```
+
+## 20. Hosszabb példák
 
 ### Egyszerű Kyrie
 
@@ -785,7 +902,7 @@ Itt látható, hogy ha akarjuk, szóközökkel jelölhetjük, hogy melyik szöve
 
 ---
 
-## 20. A szerkesztő használata
+## 21. A szerkesztő használata
 
 Az Aretino formátum a [kottaszerkesztőben](/score/preview) elérhető — a formátumválasztóban
 válaszd ki az **Aretino** opciót. Élő előnézet jelenik meg a forrás alatt.
@@ -819,7 +936,7 @@ Ha az oldalarányt `16:9`, `4:3` vagy `1:1` értékre állítod, a forrásban `%
 
 A kotta SVG és PNG formátumban exportálható és képként másolható is. Így szöveg- és kiadványszerkesztőben akár professzionális nyomtatással is előállítható.
 
-## 21. Visszajelzés, hibajelentés
+## 22. Visszajelzés, hibajelentés
 
 Az Aretino formátumnak és a megjelenítő szoftvernek saját honlapja van: [aretino-chant.github.io](https://aretino-chant.github.io), ahol hibákat is lehet jelenteni, illetve fejlesztési javaslatokat is szívesen fogadunk.
 
