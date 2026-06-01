@@ -497,14 +497,16 @@ résként értelmezi.
 | `,` | rövid vonal (negyedvonal) | kis cezúra, lélegzet |
 | `;` | félvonal | tagmondat vége |
 | `\|` | egész vonal | mondat vége |
+| `'` | apró szünetjel | lélegzetvétel |
+| `~` | "plica" szünetjel | tagolás |
 | `\|0` | üres vonal | láthatatlan, de egész vonal szélességű hely |
 | `\|\|` | kettős vonal | rész vége |
 | `:\| \|: :\|:` | ismétlőjel | ismétlés |
 | `\|\|\|` | záróvonal | klasszikus záró |
-| `'` | apró szünetjel | lélegzetvétel |
+
 
 ```aretino
-' , ; | || :| |||
+' , ; ~ | || :| |||
 ```
 
 A vonalak írhatók zárójelben is: `(,)`, `(;)`, `(|)`, `(||)`, `(:|)`, `(|||)` — a hatás
