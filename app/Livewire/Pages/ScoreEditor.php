@@ -75,7 +75,7 @@ class ScoreEditor extends Component
             $this->format = $score->format->value;
             $this->content = $score->content;
             $this->settings = $score->settings ?? [];
-            $this->publicPreview = $score->public_preview;
+            $this->publicPreview = (bool) $score->public_preview;
             $this->secretLinkUrl = $score->share_token !== null
                 ? route('score.share', ['token' => $score->share_token])
                 : null;
