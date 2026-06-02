@@ -43,6 +43,7 @@ export function aretinoMixin() {
         guidoTextSource: '',
         _aretinoResizeObserver: null,
         _aretinoResizeTimer: null,
+        _aretinoPreviewDirty: false,
 
         convertGabcToAretino() {
             const aretino = gabcToAretino(this.gabcSource);
@@ -82,7 +83,7 @@ export function aretinoMixin() {
             container.innerHTML = '';
             this.hasPages = false;
             const content = this.localContent;
-            if (!content || !content.trim()) { return; }
+            if (!content || !content.trim()) { this._aretinoPreviewDirty = false; return; }
 
             if (document.fonts) {
                 const primaryFamily = this.aretinoTextFont.split(',')[0].trim().replace(/['"]/g, '');
@@ -167,11 +168,19 @@ export function aretinoMixin() {
                 this.addPageControls(pageEl, idx + 1, pages.length, 'aretino', { fullscreen: isFixedRatio, ratio });
             });
             this.hasPages = true;
+            this._aretinoPreviewDirty = false;
             this.updateAretinoHighlight();
         },
 
         updateAretinoHighlight() {
             if (this.$wire.format !== 'aretino') { return; }
+            // While a re-render is pending the SVG still carries the previous
+            // content's source-position mapping. Repositioning the caret/tooltip
+            // against it makes the marker jump to the wrong row (e.g. onto the
+            // lyric line) until renderAretinoPreview catches up. Leave the last
+            // correct highlight in place; renderAretinoPreview re-runs this once
+            // the fresh SVG exists.
+            if (this._aretinoPreviewDirty) { return; }
             const container = this.$refs.aretinoPreview;
             if (!container || !this._aretinoHighlightAtSelection) { return; }
             const editor = this.$refs.aretinoEditor;

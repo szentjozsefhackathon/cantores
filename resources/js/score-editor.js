@@ -1138,6 +1138,10 @@ document.addEventListener('alpine:init', () => {
         scheduleRender() {
             clearTimeout(this.renderTimer);
             const format = this.$wire?.format;
+            // The current Aretino SVG is now outdated; freeze the caret highlight
+            // until renderAretinoPreview rebuilds it, so the tooltip doesn't flash
+            // onto the wrong row while typing (renderAretinoPreview clears this).
+            if (format === 'aretino') { this._aretinoPreviewDirty = true; }
             const delay = (format === 'aretino' || format === 'chordpro') ? 100 : 600;
             this.renderTimer = setTimeout(() => this.renderPreview(), delay);
         },
