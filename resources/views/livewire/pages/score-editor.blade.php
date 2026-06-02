@@ -70,51 +70,61 @@
 
             <div class="space-y-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <flux:field required>
-                        <flux:label class="inline">{{ __('Score title') }}</flux:label>
-                        <flux:input wire:model="title" :placeholder="__('Score title')" autofocus />
-                        <flux:error name="title" />
-                    </flux:field>
+                    <div class="flex flex-col gap-4">
+                        <flux:field required>
+                            <flux:label class="inline">{{ __('Score title') }}</flux:label>
+                            <flux:input wire:model="title" :placeholder="__('Score title')" autofocus />
+                            <flux:error name="title" />
+                        </flux:field>
+
+                        @if(!$isGuest)
+                        <flux:field>
+                            <div class="flex items-center gap-2">
+                                <flux:input
+                                    readonly
+                                    :value="$this->selectedMusic ? $this->selectedMusic->title.($this->selectedMusic->subtitle ? ' — '.$this->selectedMusic->subtitle : '') : ''"
+                                    :placeholder="__('No music attached')"
+                                    class="flex-1" />
+                                <flux:button icon="magnifying-glass" x-on:click="$flux.modal('score-music-search').show()">
+                                    {{ __('Browse') }}
+                                </flux:button>
+                                @if($musicId)
+                                <flux:button icon="x-mark" variant="ghost" wire:click="clearMusic" :title="__('Remove')" />
+                                @endif
+                            </div>
+                            <flux:error name="musicId" />
+                        </flux:field>
+
+                        <flux:modal name="score-music-search" class="max-w-4xl">
+                            <livewire:music-search lazy selectable="true" source=".score" wire:key="score-music-search" />
+                            <div class="mt-6 flex justify-end">
+                                <flux:button x-on:click="$flux.modal('score-music-search').close()" variant="outline">
+                                    {{ __('Cancel') }}
+                                </flux:button>
+                            </div>
+                        </flux:modal>
+                        @endif
+                    </div>
 
                     <flux:field required>
                         <flux:label class="inline">{{ __('Format') }}</flux:label>
-                        <flux:select wire:model="format">
+                        <div class="flex flex-nowrap gap-2">
                             @foreach($formats as $formatOption)
-                            <flux:select.option value="{{ $formatOption->value }}">{{ $formatOption->label() }}</flux:select.option>
+                            <button
+                                type="button"
+                                wire:click="$set('format', '{{ $formatOption->value }}')"
+                                x-bind:class="$wire.format === '{{ $formatOption->value }}'
+                                    ? 'border-zinc-900 bg-zinc-100 dark:border-white dark:bg-zinc-700'
+                                    : 'border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700'"
+                                class="flex flex-1 min-w-0 basis-0 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-zinc-800 transition dark:text-zinc-100">
+                                <span class="text-sm font-medium">{{ $formatOption->label() }}</span>
+                                <img src="{{ asset($formatOption->value.'-button.png') }}" alt="{{ $formatOption->label() }}" class="h-10 w-auto object-contain" />
+                            </button>
                             @endforeach
-                        </flux:select>
+                        </div>
                         <flux:error name="format" />
                     </flux:field>
                 </div>
-
-                @if(!$isGuest)
-                <flux:field>
-                    <div class="flex items-center gap-2">
-                        <flux:input
-                            readonly
-                            :value="$this->selectedMusic ? $this->selectedMusic->title.($this->selectedMusic->subtitle ? ' — '.$this->selectedMusic->subtitle : '') : ''"
-                            :placeholder="__('No music attached')"
-                            class="flex-1" />
-                        <flux:button icon="magnifying-glass" x-on:click="$flux.modal('score-music-search').show()">
-                            {{ __('Browse') }}
-                        </flux:button>
-                        @if($musicId)
-                        <flux:button icon="x-mark" variant="ghost" wire:click="clearMusic" :title="__('Remove')" />
-                        @endif
-                    </div>
-                    <flux:error name="musicId" />
-                </flux:field>
-
-                <flux:modal name="score-music-search" class="max-w-4xl">
-                    <livewire:music-search lazy selectable="true" source=".score" wire:key="score-music-search" />
-                    <div class="mt-6 flex justify-end">
-                        <flux:button x-on:click="$flux.modal('score-music-search').close()" variant="outline">
-                            {{ __('Cancel') }}
-                        </flux:button>
-                    </div>
-                </flux:modal>
-
-                @endif
             </div>
 
             <style>
@@ -155,7 +165,7 @@
                         class="score-editor-source-pane"
                         :class="splitScreen ? 'shrink-0 overflow-hidden border-b border-zinc-200 p-3 dark:border-zinc-700 flex flex-col' : 'xl:col-span-5'"
                         :style="splitScreen ? 'height:' + splitEditorHeight + 'px' : ''">
-                        <div x-show="$wire.format === 'abc'" x-cloak class="mb-2 flex items-center gap-4">
+                        <div x-show="$wire.format === 'abc'" x-cloak class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                             <div x-show="!splitScreen">
                                 <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()">
                                     {{ __('Full screen editor')}}
@@ -209,7 +219,7 @@
                             </div>
                         </flux:modal>
 
-                        <div x-show="$wire.format === 'chordpro'" x-cloak class="mb-2 flex items-center gap-4">
+                        <div x-show="$wire.format === 'chordpro'" x-cloak class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                             <div x-show="!splitScreen">
                                 <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()">
                                     {{ __('Full screen editor')}}
@@ -242,7 +252,7 @@
                             </div>
                         </flux:modal>
 
-                        <div x-show="$wire.format === 'gabc'" x-cloak class="mb-2 flex items-center gap-4">
+                        <div x-show="$wire.format === 'gabc'" x-cloak class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                             <div x-show="!splitScreen">
                                 <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()">
                                     {{ __('Full screen editor')}}
@@ -275,7 +285,7 @@
                             </div>
                         </flux:modal>
 
-                        <div x-show="$wire.format === 'aretino'" x-cloak class="mb-2 flex flex-wrap items-center gap-4">
+                        <div x-show="$wire.format === 'aretino'" x-cloak class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                             <div x-show="!splitScreen">
                                 <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" x-on:click="toggleSplitScreen()">
                                     {{ __('Full screen')}}
