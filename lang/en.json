@@ -17,5 +17,14 @@
     "Contrafact": "Contrafact",
     "Connected": "Connected",
     "Duplicate": "Duplicate",
-    "Other": "Other"
+    "Other": "Other",
+    "Why this relevance score?": "Why this relevance score?",
+    "Relevance": "Relevance",
+    ":score points": ":score points",
+    "Same readings": "Same readings",
+    "Same celebration name": "Same celebration name",
+    "Same liturgical day and year cycle": "Same liturgical day and year cycle",
+    "Same liturgical day and year parity": "Same liturgical day and year parity",
+    "Same liturgical day": "Same liturgical day",
+    "This suggestion comes from a music plan for a related celebration.": "This suggestion comes from a music plan for a related celebration."
 }

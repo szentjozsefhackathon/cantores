@@ -10,11 +10,18 @@ new class extends Component
     public ?int $score = null;
     public ?string $scope_label = null;
 
-    public function mount(Music $music, ?int $score = null, ?string $scope_label = null): void
+    /** @var array<int, array{label: string, points: int}> */
+    public array $score_reasons = [];
+
+    /**
+     * @param  array<int, array{label: string, points: int}>  $score_reasons
+     */
+    public function mount(Music $music, ?int $score = null, ?string $scope_label = null, array $score_reasons = []): void
     {
         $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
         $this->score = $score;
         $this->scope_label = $scope_label;
+        $this->score_reasons = $score_reasons;
     }
 
     #[On('music-updated')]
@@ -53,10 +60,53 @@ new class extends Component
         @php
             $stars = $score >= 17 ? 4 : ($score >= 11 ? 3 : ($score >= 6 ? 2 : 1));
         @endphp
-        <div class="absolute top-1 right-1 flex flex-row gap-0.5 pointer-events-none" title="Relevancia: {{ $score }} pont">
-            @for ($i = 0; $i < $stars; $i++)
-                <flux:icon name="star" class="h-3 w-3 fill-amber-400 text-amber-400" />
-            @endfor
+        <div class="absolute top-1 right-1 z-20" x-data="{ showRelevance: false }">
+            <button
+                type="button"
+                x-ref="relevanceTrigger"
+                x-on:click.prevent.stop="showRelevance = !showRelevance"
+                class="flex flex-row items-center gap-0.5 rounded px-1 py-0.5 transition-colors hover:bg-amber-100/70 dark:hover:bg-amber-900/40"
+                :aria-expanded="showRelevance"
+                title="{{ __('Why this relevance score?') }}"
+            >
+                @for ($i = 0; $i < $stars; $i++)
+                    <flux:icon name="star" class="h-3 w-3 fill-amber-400 text-amber-400" />
+                @endfor
+                <flux:icon name="information-circle" class="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
+            </button>
+            <template x-teleport="body">
+                <div
+                    x-show="showRelevance"
+                    x-cloak
+                    x-anchor.bottom-end.offset.6="$refs.relevanceTrigger"
+                    x-transition.origin.top.right
+                    x-on:click.outside="showRelevance = false"
+                    x-on:keydown.escape.window="showRelevance = false"
+                    class="z-50 w-64 rounded-lg border border-gray-200 bg-white p-3 text-left shadow-xl dark:border-gray-700 dark:bg-gray-800"
+                >
+                    <div class="mb-2 flex items-center justify-between gap-2">
+                        <span class="text-xs font-semibold text-gray-900 dark:text-gray-100">{{ __('Relevance') }}</span>
+                        <span class="inline-flex items-center gap-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                            <flux:icon name="star" class="h-3 w-3 fill-amber-400 text-amber-400" />
+                            {{ __(':score points', ['score' => $score]) }}
+                        </span>
+                    </div>
+                    @if(!empty($score_reasons))
+                        <ul class="space-y-1">
+                            @foreach($score_reasons as $reason)
+                                <li class="flex items-start justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
+                                    <span>{{ $reason['label'] }}</span>
+                                    <span class="shrink-0 font-medium text-amber-600 dark:text-amber-400">+{{ $reason['points'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ __('This suggestion comes from a music plan for a related celebration.') }}
+                        </p>
+                    @endif
+                </div>
+            </template>
         </div>
     @endif
     <!-- Bottom right corner rounded rectangle with genre icons -->

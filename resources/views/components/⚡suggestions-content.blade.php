@@ -20,7 +20,7 @@ new class extends Component
     /** @var Collection<int, MusicPlan> */
     public Collection $musicPlans;
 
-    /** @var array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int, collection_info: ?string}>> */
+    /** @var array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int, collection_info: ?string, score_reasons: array<int, array{label: string, points: int}>}>> */
     public array $slotMusicMap = [];
 
     public string $activeTab = 'music';
@@ -130,6 +130,10 @@ new class extends Component
     {
         $slotMap = [];
         $genreId = GenreContext::getId();
+        $service = app(CelebrationSearchService::class);
+
+        /** @var array<int, array<int, array{label: string, points: int}>> */
+        $reasonsByCelebration = [];
 
         foreach ($this->musicPlans as $musicPlan) {
             // Determine the celebration score for this plan.
@@ -141,6 +145,11 @@ new class extends Component
                     $relatedCelebration = $item['celebration'];
                 }
             }
+
+            // Explain why this celebration scored the way it did (memoized per celebration).
+            $scoreReasons = $relatedCelebration
+                ? ($reasonsByCelebration[$relatedCelebration->id] ??= $service->scoreBreakdown($relatedCelebration, $this->criteria))
+                : [];
 
             // Iterate through assignments
             foreach ($musicPlan->musicAssignments as $assignment) {
@@ -203,6 +212,7 @@ new class extends Component
                             'collection_info' => $collectionInfo,
                             'celebration' => $relatedCelebration,
                             'scope_label' => $assignment->scope_label,
+                            'score_reasons' => $scoreReasons,
                         ];
                     }
                     // else keep existing
@@ -216,6 +226,7 @@ new class extends Component
                         'collection_info' => $collectionInfo,
                         'celebration' => $relatedCelebration,
                         'scope_label' => $assignment->scope_label,
+                        'score_reasons' => $scoreReasons,
                     ];
                 }
             }
@@ -378,7 +389,7 @@ new class extends Component
                             @endphp
                             <div class="flex items-start gap-2" wire:key="slotMusicMap-{{ $slotName }}-{{ $music->id }}">
                                 <div class="flex-1 min-w-0">
-                                    <livewire:music-card :music="$music" :score="$score" :scope_label="$musicItem['scope_label']" />
+                                    <livewire:music-card :music="$music" :score="$score" :scope_label="$musicItem['scope_label']" :score_reasons="$musicItem['score_reasons'] ?? []" />
                                 </div>
                                 @if($musicPlanId)
                                 <flux:button

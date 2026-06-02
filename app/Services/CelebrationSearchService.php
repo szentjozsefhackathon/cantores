@@ -48,16 +48,7 @@ class CelebrationSearchService
         // Subsequent calls within the same render reuse the memoized collection.
         $allCelebrations = $this->allCelebrations ??= Celebration::query()->get();
 
-        // Cast numeric criteria to integers for proper type comparison
-        if (isset($criteria['season'])) {
-            $criteria['season'] = (int) $criteria['season'];
-        }
-        if (isset($criteria['week'])) {
-            $criteria['week'] = (int) $criteria['week'];
-        }
-        if (isset($criteria['day'])) {
-            $criteria['day'] = (int) $criteria['day'];
-        }
+        $criteria = $this->castCriteria($criteria);
 
         $scored = $allCelebrations->map(function (Celebration $celebration) use ($criteria) {
             $score = $this->computeScore($celebration, $criteria);
@@ -72,25 +63,57 @@ class CelebrationSearchService
     }
 
     /**
+     * Cast numeric criteria to integers for proper type comparison.
+     *
+     * @param  array<string, mixed>  $criteria
+     * @return array<string, mixed>
+     */
+    private function castCriteria(array $criteria): array
+    {
+        foreach (['season', 'week', 'day'] as $key) {
+            if (isset($criteria[$key])) {
+                $criteria[$key] = (int) $criteria[$key];
+            }
+        }
+
+        return $criteria;
+    }
+
+    /**
      * Compute the relevance score for a single celebration against the given criteria.
      *
      * @param  array<string, mixed>  $criteria
      */
     protected function computeScore(Celebration $celebration, array $criteria): int
     {
-        $score = 0;
+        return array_sum(array_column($this->scoreBreakdown($celebration, $criteria), 'points'));
+    }
+
+    /**
+     * Explain the relevance score for a single celebration as a list of matched rules.
+     *
+     * Each entry contains a human-readable label and the points it contributed,
+     * mirroring the additive rules documented on findRelated().
+     *
+     * @param  array<string, mixed>  $criteria
+     * @return array<int, array{label: string, points: int}>
+     */
+    public function scoreBreakdown(Celebration $celebration, array $criteria): array
+    {
+        $criteria = $this->castCriteria($criteria);
+        $reasons = [];
 
         // Rule 1: readings_code exactly the same (5 points)
         if (isset($criteria['readings_code']) && $criteria['readings_code'] !== null) {
             if ($celebration->readings_code === $criteria['readings_code']) {
-                $score += 5;
+                $reasons[] = ['label' => __('Same readings'), 'points' => 5];
             }
         }
 
-        // Rule 2: name exactly the same (5 points)
+        // Rule 2: name exactly the same (10 points)
         if (isset($criteria['name']) && $criteria['name'] !== null) {
             if ($celebration->name === $criteria['name']) {
-                $score += 10;
+                $reasons[] = ['label' => __('Same celebration name'), 'points' => 10];
             }
         }
 
@@ -102,7 +125,7 @@ class CelebrationSearchService
                 && $celebration->day === $criteria['day']
                 && $celebration->year_letter === $criteria['year_letter'];
             if ($match) {
-                $score += 2;
+                $reasons[] = ['label' => __('Same liturgical day and year cycle'), 'points' => 2];
             }
         }
 
@@ -114,7 +137,7 @@ class CelebrationSearchService
                 && $celebration->day === $criteria['day']
                 && $celebration->year_parity === $criteria['year_parity'];
             if ($match) {
-                $score += 2;
+                $reasons[] = ['label' => __('Same liturgical day and year parity'), 'points' => 2];
             }
         }
 
@@ -123,11 +146,11 @@ class CelebrationSearchService
             if ($celebration->season === $criteria['season']
                 && $celebration->week === $criteria['week']
                 && $celebration->day === $criteria['day']) {
-                $score += 1;
+                $reasons[] = ['label' => __('Same liturgical day'), 'points' => 1];
             }
         }
 
-        return $score;
+        return $reasons;
     }
 
     /**
