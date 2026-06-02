@@ -251,7 +251,7 @@ new class extends Component
             return null;
         }
 
-        return $name.'|'.($celebrationData['dateISO'] ?? $this->date);
+        return $name . '|' . ($celebrationData['dateISO'] ?? $this->date);
     }
 
     /**
@@ -267,11 +267,11 @@ new class extends Component
         }
 
         $pairs = collect($this->celebrations)
-            ->map(fn (array $celebrationData): array => [
+            ->map(fn(array $celebrationData): array => [
                 'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
                 'date' => $celebrationData['dateISO'] ?? $this->date,
             ])
-            ->filter(fn (array $pair): bool => $pair['name'] !== null);
+            ->filter(fn(array $pair): bool => $pair['name'] !== null);
 
         if ($pairs->isEmpty()) {
             return $this->exactCelebrations = collect();
@@ -285,7 +285,7 @@ new class extends Component
         }
 
         return $this->exactCelebrations = $query->get()
-            ->keyBy(fn (Celebration $celebration): string => $celebration->name.'|'.$celebration->actual_date->format('Y-m-d'));
+            ->keyBy(fn(Celebration $celebration): string => $celebration->name . '|' . $celebration->actual_date->format('Y-m-d'));
     }
 
     /**
@@ -419,7 +419,7 @@ new class extends Component
                 'readings_code' => $celebrationData['readingsId'] ?? null,
                 'year_letter' => $celebrationData['yearLetter'] ?? null,
                 'year_parity' => $celebrationData['yearParity'] ?? null,
-            ], fn ($value): bool => $value !== null);
+            ], fn($value): bool => $value !== null);
 
             $ids = $service->findRelated($criteria)->pluck('id')->all();
             $relatedIdsPerIndex[$index] = $ids;
@@ -500,331 +500,330 @@ new class extends Component
 ?>
 
 <div>
-<flux:card class="liturgical-info p-0 overflow-hidden border-0 shadow-xl dark:shadow-neutral-900/30">
-    <!-- Header with gradient -->
-    <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-indigo-900 dark:to-fuchsia-950 p-6 text-gray-800 dark:text-white">
-        <div class="flex flex-col md:flex-row justify-between gap-4">
-            <div class="flex items-center gap-4">
-                <flux:icon name="book-open-text" class="h-10 w-10" variant="outline" />
-                <div>
-                    @if($welcome)
-                    <flux:heading size="xl" class="text-gray-800 dark:text-white">Liturgikus énekrendek</flux:heading>
-                    <flux:text class="text-gray-500 dark:text-blue-100">Nézd meg, mások mit énekelnek — vagy állítsd össze és oszd meg a saját énekrendedet!</flux:text>
-                    <div class="flex items-center">
-                        <flux:heading class="mr-2 text-gray-800 dark:text-white">Műfaj:</flux:heading>
-                        <livewire:genre-selector />
-                    </div>
-                    @else
-                    <flux:heading size="xl" class="text-gray-800 dark:text-white">Liturgikus naptár és énekrendek</flux:heading>
-                    @endif
-
-                </div>
-
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <div class="flex items-end gap-2">
-                    <flux:button
-                        wire:click="today"
-                        variant="outline"
-                        icon="calendar"
-                        icon:variant="mini">
-                        Ma
-                    </flux:button>
-                    <flux:field class="mb-0">
-                        <flux:input
-                            type="date"
-                            wire:model.live="date"
-                            variant="outline"
-                            class="bg-white/80 border-gray-300 text-gray-800 placeholder-gray-400 dark:bg-white/20 dark:border-white/30 dark:text-white dark:placeholder-white/70"
-                            max="{{ Carbon::now()->addYears(1)->format('Y-m-d') }}"
-                            min="{{ Carbon::now()->subYears(10)->format('Y-m-d') }}" />
-                    </flux:field>
-                </div>
-                <div class="flex flex-col gap-2">
-                    <div class="flex items-center gap-2">
-                        <div class="flex flex-wrap gap-2">
-                            <flux:button
-                                square
-                                wire:click="previousDay"
-                                variant="outline"
-                                size="sm"
-                                icon="arrow-left"
-                                icon:variant="mini"
-                                title="Előző nap"
-                                aria-label="Előző nap" />
-                            <div class="flex items-center justify-center self-center">
-                                <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70 text-center">Előző/következő nap</flux:text>
-                            </div>
-                            <flux:button
-                                square
-                                wire:click="nextDay"
-                                variant="outline"
-                                size="sm"
-                                icon="arrow-right"
-                                icon:variant="mini"
-                                title="Következő nap"
-                                aria-label="Következő nap" />
+    <flux:card class="liturgical-info p-0 overflow-hidden border-0 shadow-xl dark:shadow-neutral-900/30">
+        <!-- Header with gradient -->
+        <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-indigo-900 dark:to-fuchsia-950 p-6 text-gray-800 dark:text-white">
+            <div class="flex flex-col md:flex-row justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <flux:icon name="book-open-text" class="h-10 w-10" variant="outline" />
+                    <div>
+                        @if($welcome)
+                        <flux:heading size="xl" class="text-gray-800 dark:text-white">Liturgikus énekrendek</flux:heading>
+                        <flux:text class="text-gray-500 dark:text-blue-100">Nézd meg, mások mit énekelnek — vagy állítsd össze és oszd meg a saját énekrendedet!</flux:text>
+                        <div class="flex items-center">
+                            <flux:heading class="mr-2 text-gray-800 dark:text-white">Műfaj:</flux:heading>
+                            <livewire:genre-selector />
                         </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <flux:button
-                            square
-                            wire:click="previousSunday"
-                            variant="outline"
-                            size="sm"
-                            icon="backward"
-                            icon:variant="mini"
-                            title="Előző vasárnap"
-                            aria-label="Előző vasárnap" />
-                        <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70 self-center text-center">Előző/következő vasárnap</flux:text>
-
-                        <flux:button
-                            square
-                            wire:click="nextSunday"
-                            variant="outline"
-                            size="sm"
-                            icon="forward"
-                            icon:variant="mini"
-                            title="Következő vasárnap"
-                            aria-label="Következő vasárnap" />
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="p-6 space-y-6">
-        <!-- Selected date display -->
-        <div class="flex items-center justify-between flex-wrap gap-4">
-            <div class="flex items-center gap-3">
-                <flux:icon name="calendar-days" class="h-5 w-5 text-blue-600 dark:text-blue-400" variant="mini" />
-                <flux:text size="lg">
-                    {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('Y. F j., l') }}
-                </flux:text>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-2">
-                <flux:button
-                    size="sm"
-                    variant="filled"
-                    x-on:click="$dispatch('open-direktorium', { date: '{{ $date }}' }); $flux.modal('direktorium').show()"
-                    class="inline-flex items-center gap-1"
-                    icon="book-open-text" icon:variant="mini">
-                    
-                    Direktórium
-                </flux:button>
-                @foreach ($this->importantLinks() as $link)
-                <flux:link
-                    wire:key="important-link-{{ $link['key'] }}"
-                    href="{{ $link['href'] }}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-blue-500 dark:hover:text-blue-300">
-                    <flux:icon name="{{ $link['icon'] }}" class="h-3.5 w-3.5" variant="mini" />
-                    {{ $link['label'] }}
-                    <flux:icon name="external-link" class="h-3.5 w-3.5" variant="mini" />
-                </flux:link>
-                @endforeach
-            </div>
-        </div>
-
-        @if ($loading)
-        <div class="text-center py-12 space-y-4">
-            <flux:icon.loading class="h-12 w-12 mx-auto text-blue-600" />
-            <flux:heading size="md">Loading liturgical information...</flux:heading>
-            <flux:text class="text-neutral-600 dark:text-neutral-400">Fetching data from the liturgical calendar</flux:text>
-        </div>
-        @elseif ($error)
-        <flux:callout color="red" icon="exclamation-circle" class="border-red-200 dark:border-red-800">
-            <flux:callout.heading>Unable to Load Data</flux:callout.heading>
-            <flux:callout.text>{{ $error }}</flux:callout.text>
-            <x-slot name="actions">
-                <flux:button wire:click="refresh" variant="ghost" size="sm">Try Again</flux:button>
-            </x-slot>
-        </flux:callout>
-        @elseif (empty($celebrations))
-        <flux:callout color="zinc" class="border-zinc-200 dark:border-zinc-800">
-            <flux:callout.heading>No Celebrations Found</flux:callout.heading>
-            <flux:callout.text>There are no liturgical celebrations recorded for the selected date.</flux:callout.text>
-            <x-slot name="actions">
-                <flux:button wire:click="refresh" variant="ghost" size="sm">Check Another Date</flux:button>
-            </x-slot>
-        </flux:callout>
-        @else
-        @if ($selectable)
-        <div class="grid grid-cols-1 gap-6">
-            @else
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                @endif
-                @foreach ($celebrations as $celebration)
-                @php
-                $colorTextColor = \App\Models\Celebration::borderColorClassForColorText($celebration['colorText'] ?? null);
-                @endphp
-                <flux:card class="celebration-card p-0 overflow-hidden border-l-4 {{ $colorTextColor }} hover:shadow-lg transition-shadow duration-300">
-                    <div class="p-5 space-y-4">
-                        <!-- Title with badges -->
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="flex-1">
-                                <flux:heading size="md" class="inline leading-snug">{{ $celebration['name'] ?? 'No title' }}</flux:heading>
-                                @if (isset($celebration['yearLetter']))
-                                <flux:badge color="blue" size="sm" class="ml-1.5 align-middle">{{ $celebration['yearLetter'] }}</flux:badge>
-                                @endif
-                                @if (isset($celebration['yearParity']))
-                                <flux:badge color="zinc" size="sm" class="ml-1 align-middle">{{ $celebration['yearParity'] }}</flux:badge>
-                                @endif
-                            </div>
-                            @if (isset($celebration['celebrationType']))
-                            <div class="flex items-center gap-1 flex-shrink-0">
-                                <flux:icon name="tag" class="h-4 w-4 text-amber-600 dark:text-amber-400" variant="mini" />
-                                <flux:text class="text-sm font-medium">{{ $celebration['celebrationType'] }}</flux:text>
-                            </div>
-                            @endif
-                        </div>
-
-                        <!-- Season info -->
-                        @if (isset($celebration['seasonText']))
-                        <div class="flex items-center gap-2">
-                            <flux:icon name="clock" class="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" variant="mini" />
-                            <flux:text class="text-sm font-medium">{{ $celebration['seasonText'] }}</flux:text>
-                        </div>
+                        @else
+                        <flux:heading size="xl" class="text-gray-800 dark:text-white">Liturgikus naptár és énekrendek</flux:heading>
                         @endif
 
-                        @auth
-                        @php
-                        $existingPlans = $this->getExistingMusicPlans($celebration);
-                        @endphp
-                        <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
-                            <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
-                                Saját énekrendjeid:
-                            </flux:heading>
-                            @if($existingPlans->isNotEmpty())
-                            <div class="space-y-2">
-                                @foreach($existingPlans as $plan)
-                                <a
-                                    href="{{ route('music-plan-editor', ['musicPlan' => $plan->id]) }}"
-                                    class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" variant="mini" />
-                                        <div class="min-w-0">
-                                            <x-user-badge :user="$plan->user" />
-                                            <div class="flex items-center gap-2 mt-0.5">
-                                                <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
-                                                    {{ $plan->slots_count }} rész · {{ $plan->music_assignments_count }} zenemű
-                                                </flux:text>
-                                                @if(!$plan->is_private)
-                                                <flux:icon name="globe" class="h-3 w-3 text-neutral-400 inline" variant="mini" />
-                                                @else
-                                                <flux:icon name="globe-lock" class="h-3 w-3 text-neutral-400 inline" variant="mini" />
-                                                @endif
-                                            </div>
-                                            @if($plan->private_notes)
-                                            <flux:text class="text-xs text-neutral-400 dark:text-neutral-500 italic truncate max-w-48 mt-0.5">
-                                                {{ \Illuminate\Support\Str::limit($plan->private_notes, 50) }}
-                                            </flux:text>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600 shrink-0" variant="mini" />
-                                </a>
-                                @endforeach
-                            </div>
-                            @else
-                            <flux:text class="text-sm text-neutral-500 dark:text-neutral-400 italic">
-                                Még nincs énekrend ehhez az ünnephez{{ GenreContext::getId() ? ' ' . GenreContext::label() . ' műfajban' : '' }}.
-                            </flux:text>
-                            @endif
-                        </div>
-                        @endauth
+                    </div>
 
-                        @php
-                        $publishedPlans = $this->getPublishedMusicPlans($celebration);
-                        @endphp
-                        <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
-                            <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
-                                Más kántorok ezt énekelték:
-                            </flux:heading>
-                            @if($publishedPlans->isNotEmpty())
-                            <div class="space-y-2">
-                                @foreach($publishedPlans as $plan)
-                                <a
-                                    href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
-                                    class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
-                                    <div class="flex items-center gap-3 min-w-0">
-                                        <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" variant="mini" />
-                                        <div class="min-w-0">
-                                            <x-user-badge :user="$plan->user" />
-                                            <flux:text class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                                                {{ $plan->slots_count }} rész · {{ $plan->music_assignments_count }} zenemű
-                                            </flux:text>
-                                        </div>
-                                    </div>
-                                    <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600 shrink-0" variant="mini" />
-                                </a>
-                                @endforeach
-                            </div>
-                            @else
-                            <flux:text class="text-sm text-neutral-500 dark:text-neutral-400 italic">
-                                Még nincs megosztott énekrend{{ GenreContext::getId() ? ' ' . GenreContext::label() . ' műfajban' : '' }}.
-                            </flux:text>
-                            @endif
-                        </div>
+                </div>
 
-                        <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
-                            @if($selectable)
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-end gap-2">
+                        <flux:button
+                            wire:click="today"
+                            variant="outline"
+                            icon="calendar"
+                            icon:variant="mini">
+                            Ma
+                        </flux:button>
+                        <flux:field class="mb-0">
+                            <flux:input
+                                type="date"
+                                wire:model.live="date"
+                                variant="outline"
+                                class="bg-white/80 border-gray-300 text-gray-800 placeholder-gray-400 dark:bg-white/20 dark:border-white/30 dark:text-white dark:placeholder-white/70"
+                                max="{{ Carbon::now()->addYears(1)->format('Y-m-d') }}"
+                                min="{{ Carbon::now()->subYears(10)->format('Y-m-d') }}" />
+                        </flux:field>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center gap-2">
+                            <div class="flex flex-wrap gap-2">
+                                <flux:button
+                                    square
+                                    wire:click="previousDay"
+                                    variant="outline"
+                                    size="sm"
+                                    icon="arrow-left"
+                                    icon:variant="mini"
+                                    title="Előző nap"
+                                    aria-label="Előző nap" />
+                                <div class="flex items-center justify-center self-center">
+                                    <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70 text-center">Előző/következő nap</flux:text>
+                                </div>
+                                <flux:button
+                                    square
+                                    wire:click="nextDay"
+                                    variant="outline"
+                                    size="sm"
+                                    icon="arrow-right"
+                                    icon:variant="mini"
+                                    title="Következő nap"
+                                    aria-label="Következő nap" />
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
                             <flux:button
-                                wire:click="selectCelebration({{ $loop->index }})"
-                                variant="primary"
+                                square
+                                wire:click="previousSunday"
+                                variant="outline"
                                 size="sm"
-                                icon="check-circle"
-                                class="w-full">
-                                Ünnep kiválasztása
-                            </flux:button>
-                            @endif
-                            @if (!$selectable)
-                            @auth
+                                icon="backward"
+                                icon:variant="mini"
+                                title="Előző vasárnap"
+                                aria-label="Előző vasárnap" />
+                            <flux:text size="sm" class="w-38 shrink-0 text-gray-500 dark:text-white/70 self-center text-center">Előző/következő vasárnap</flux:text>
+
                             <flux:button
-                                wire:click="createMusicPlan({{ $loop->index }})"
-                                wire:confirm="Létrehozol új énekrendet? ({{ GenreContext::getId() ? GenreContext::label() : 'Műfaj nélkül' }})"
-                                variant="filled"
+                                square
+                                wire:click="nextSunday"
+                                variant="outline"
                                 size="sm"
-                                icon="list-music-add"
-                                class="w-full">
-                                Új énekrend
-                            </flux:button>
-                            @endauth
-                            @php
-                            $hasSuggestions = $this->hasSuggestions($loop->index);
-                            @endphp
-                            @if($hasSuggestions)
-                            <flux:button
-                                wire:click="openSuggestions({{ $loop->index }})"
-                                size="sm"
-                                icon="light-bulb"
-                                class="w-full">
-                                Énekjavaslatok az ünnepre
-                            </flux:button>
-                            @else
-                            <flux:text class="text-sm text-neutral-500 dark:text-neutral-400 italic text-center py-1">
-                                Még nincsenek énekjavaslatok{{ GenreContext::getId() ? ' ' . GenreContext::label() . ' műfajban' : '' }}.
-                            </flux:text>
-                            <flux:button
-                                wire:click="openSuggestions({{ $loop->index }})"
-                                size="sm"
-                                icon="information-circle"
-                                class="w-full">
-                                Ünnep részletei
-                            </flux:button>
-                            @endif
-                            @endif
+                                icon="forward"
+                                icon:variant="mini"
+                                title="Következő vasárnap"
+                                aria-label="Következő vasárnap" />
                         </div>
                     </div>
-                </flux:card>
-                @endforeach
+                </div>
             </div>
-            @endif
         </div>
-</flux:card>
 
-<livewire:direktorium-modal />
+        <div class="p-6 space-y-6">
+            <!-- Selected date display -->
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <flux:icon name="calendar-days" class="h-5 w-5 text-blue-600 dark:text-blue-400" variant="mini" />
+                    <flux:text size="lg">
+                        {{ \Illuminate\Support\Carbon::parse($date)->translatedFormat('Y. F j., l') }}
+                    </flux:text>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <flux:button
+                        size="sm"
+                        variant="filled"
+                        x-on:click="$dispatch('open-direktorium', { date: '{{ $date }}' }); $flux.modal('direktorium').show()"
+                        class="inline-flex items-center gap-1"
+                        icon="book-open-text" icon:variant="mini">
+
+                        Direktórium
+                    </flux:button>
+                    @foreach ($this->importantLinks() as $link)
+                    <flux:link
+                        wire:key="important-link-{{ $link['key'] }}"
+                        href="{{ $link['href'] }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-blue-500 dark:hover:text-blue-300">
+                        <flux:icon name="{{ $link['icon'] }}" class="h-3.5 w-3.5" variant="mini" />
+                        {{ $link['label'] }}
+                        <flux:icon name="external-link" class="h-3.5 w-3.5" variant="mini" />
+                    </flux:link>
+                    @endforeach
+                </div>
+            </div>
+
+            @if ($loading)
+            <div class="text-center py-12 space-y-4">
+                <flux:icon.loading class="h-12 w-12 mx-auto text-blue-600" />
+                <flux:heading size="md">Loading liturgical information...</flux:heading>
+                <flux:text class="text-neutral-600 dark:text-neutral-400">Fetching data from the liturgical calendar</flux:text>
+            </div>
+            @elseif ($error)
+            <flux:callout color="red" icon="exclamation-circle" class="border-red-200 dark:border-red-800">
+                <flux:callout.heading>Unable to Load Data</flux:callout.heading>
+                <flux:callout.text>{{ $error }}</flux:callout.text>
+                <x-slot name="actions">
+                    <flux:button wire:click="refresh" variant="ghost" size="sm">Try Again</flux:button>
+                </x-slot>
+            </flux:callout>
+            @elseif (empty($celebrations))
+            <flux:callout color="zinc" class="border-zinc-200 dark:border-zinc-800">
+                <flux:callout.heading>No Celebrations Found</flux:callout.heading>
+                <flux:callout.text>There are no liturgical celebrations recorded for the selected date.</flux:callout.text>
+                <x-slot name="actions">
+                    <flux:button wire:click="refresh" variant="ghost" size="sm">Check Another Date</flux:button>
+                </x-slot>
+            </flux:callout>
+            @else
+            @if ($selectable)
+            <div class="grid grid-cols-1 gap-6">
+                @else
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    @endif
+                    @foreach ($celebrations as $celebration)
+                    @php
+                    $colorTextColor = \App\Models\Celebration::borderColorClassForColorText($celebration['colorText'] ?? null);
+                    @endphp
+                    <flux:card class="celebration-card p-0 overflow-hidden border-l-4 {{ $colorTextColor }} hover:shadow-lg transition-shadow duration-300">
+                        <div class="p-5 space-y-4">
+                            <!-- Title with badges -->
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex-1">
+                                    <flux:heading size="md" class="inline leading-snug">{{ $celebration['name'] ?? 'No title' }}</flux:heading>
+                                    @if (isset($celebration['yearLetter']))
+                                    <flux:badge color="blue" size="sm" class="ml-1.5 align-middle">{{ $celebration['yearLetter'] }}</flux:badge>
+                                    @endif
+                                    @if (isset($celebration['yearParity']))
+                                    <flux:badge color="zinc" size="sm" class="ml-1 align-middle">{{ $celebration['yearParity'] }}</flux:badge>
+                                    @endif
+                                </div>
+                                @if (isset($celebration['celebrationType']))
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <flux:icon name="tag" class="h-4 w-4 text-amber-600 dark:text-amber-400" variant="mini" />
+                                    <flux:text class="text-sm font-medium">{{ $celebration['celebrationType'] }}</flux:text>
+                                </div>
+                                @endif
+                            </div>
+
+                            <!-- Season info -->
+                            @if (isset($celebration['seasonText']))
+                            <div class="flex items-center gap-2">
+                                <flux:icon name="clock" class="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" variant="mini" />
+                                <flux:text class="text-sm font-medium">{{ $celebration['seasonText'] }}</flux:text>
+                            </div>
+                            @endif
+
+                            @auth
+                            @php
+                            $existingPlans = $this->getExistingMusicPlans($celebration);
+                            @endphp
+                            <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
+                                <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
+                                    Saját énekrendjeid:
+                                </flux:heading>
+                                @if($existingPlans->isNotEmpty())
+                                <div class="space-y-2">
+                                    @foreach($existingPlans as $plan)
+                                    <a
+                                        href="{{ route('music-plan-editor', ['musicPlan' => $plan->id]) }}"
+                                        class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" variant="mini" />
+                                            <div class="min-w-0">
+                                                <x-user-badge :user="$plan->user" />
+                                                <div class="flex items-center gap-2 mt-0.5">
+                                                    <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
+                                                        {{ $plan->slots_count }} rész · {{ $plan->music_assignments_count }} zenemű
+                                                    </flux:text>
+                                                    @if(!$plan->is_private)
+                                                    <flux:icon name="globe" class="h-3 w-3 text-neutral-400 inline" variant="mini" />
+                                                    @else
+                                                    <flux:icon name="globe-lock" class="h-3 w-3 text-neutral-400 inline" variant="mini" />
+                                                    @endif
+                                                </div>
+                                                @if($plan->private_notes)
+                                                <flux:text class="text-xs text-neutral-400 dark:text-neutral-500 italic truncate max-w-48 mt-0.5">
+                                                    {{ \Illuminate\Support\Str::limit($plan->private_notes, 50) }}
+                                                </flux:text>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600 shrink-0" variant="mini" />
+                                    </a>
+                                    @endforeach
+                                </div>
+                                @else
+                                <flux:text class="text-sm text-neutral-500 dark:text-neutral-400 italic">
+                                    Még nincs énekrend ehhez az ünnephez{{ GenreContext::getId() ? ' ' . GenreContext::label() . ' műfajban' : '' }}.
+                                </flux:text>
+                                @endif
+                            </div>
+                            @endauth
+
+                            @php
+                            $publishedPlans = $this->getPublishedMusicPlans($celebration);
+                            @endphp
+                            <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
+                                @if($selectable)
+                                <flux:button
+                                    wire:click="selectCelebration({{ $loop->index }})"
+                                    variant="primary"
+                                    size="sm"
+                                    icon="check-circle"
+                                    class="w-full">
+                                    Ünnep kiválasztása
+                                </flux:button>
+                                @endif
+                                @if (!$selectable)
+                                @php
+                                $hasSuggestions = $this->hasSuggestions($loop->index);
+                                @endphp
+                                @if($hasSuggestions)
+                                <flux:button
+                                    wire:click="openSuggestions({{ $loop->index }})"
+                                    size="sm"
+                                    icon="light-bulb"
+                                    class="w-full">
+                                    Énekjavaslatok az ünnepre
+                                </flux:button>
+                                @else
+                                <flux:text class="text-sm text-neutral-500 dark:text-neutral-400 italic text-center py-1">
+                                    Még nincsenek énekjavaslatok{{ GenreContext::getId() ? ' ' . GenreContext::label() . ' műfajban' : '' }}.
+                                </flux:text>
+                                <flux:button
+                                    wire:click="openSuggestions({{ $loop->index }})"
+                                    size="sm"
+                                    icon="information-circle"
+                                    class="w-full">
+                                    Ünnep részletei
+                                </flux:button>
+                                @endif
+                                @auth
+                                <flux:button
+                                    wire:click="createMusicPlan({{ $loop->index }})"
+                                    wire:confirm="Létrehozol új énekrendet? ({{ GenreContext::getId() ? GenreContext::label() : 'Műfaj nélkül' }})"
+                                    variant="filled"
+                                    size="sm"
+                                    icon="list-music-add"
+                                    class="w-full">
+                                    Új énekrend
+                                </flux:button>
+                                @endauth
+                                @endif
+                            </div>
+                            <div class="pt-4 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
+                                <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
+                                    Más kántorok ezt énekelték:
+                                </flux:heading>
+                                @if($publishedPlans->isNotEmpty())
+                                <div class="space-y-2">
+                                    @foreach($publishedPlans as $plan)
+                                    <a
+                                        href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
+                                        class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" variant="mini" />
+                                            <div class="min-w-0">
+                                                <x-user-badge :user="$plan->user" />
+                                                <flux:text class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                                    {{ $plan->slots_count }} rész · {{ $plan->music_assignments_count }} zenemű
+                                                </flux:text>
+                                            </div>
+                                        </div>
+                                        <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600 shrink-0" variant="mini" />
+                                    </a>
+                                    @endforeach
+                                </div>
+                                @else
+                                <flux:text class="text-sm text-neutral-500 dark:text-neutral-400 italic">
+                                    Még nincs megosztott énekrend{{ GenreContext::getId() ? ' ' . GenreContext::label() . ' műfajban' : '' }}.
+                                </flux:text>
+                                @endif
+                            </div>                            
+                        </div>
+                    </flux:card>
+                    @endforeach
+                </div>
+                @endif
+            </div>
+    </flux:card>
+
+    <livewire:direktorium-modal />
 </div>
