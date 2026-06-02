@@ -189,9 +189,26 @@ document.addEventListener('alpine:init', () => {
             chordpro: '{title: }\n[C]Glo-ri-[G]a [C]Deo\n',
         },
 
+        _wireContentDirty: false,
+        _wireContentTimer: null,
+
         handleEditorContentInput(value) {
             if (value === this.localContent) { return; }
-            this.setEditorContent(value, { modified: true });
+            this.isContentUserModified = true;
+            this.localContent = String(value ?? '');
+            this._wireContentDirty = true;
+            clearTimeout(this._wireContentTimer);
+            this._wireContentTimer = setTimeout(() => this.flushWireContent(), 500);
+            this.scheduleRender();
+            if (this.$wire.format === 'aretino') {
+                this.updateAretinoHighlight();
+            }
+        },
+
+        flushWireContent() {
+            if (!this._wireContentDirty) { return; }
+            this._wireContentDirty = false;
+            this.$wire.content = this.localContent;
         },
 
         setEditorContent(value, options = {}) {
@@ -252,7 +269,9 @@ document.addEventListener('alpine:init', () => {
                 this.syncAretinoEditor();
             }
             this.$watch('$wire.content', (val) => {
-                this.localContent = String(val ?? '');
+                const content = String(val ?? '');
+                if (content === this.localContent) { return; }
+                this.localContent = content;
                 this.syncAretinoEditor();
                 this.scheduleRender();
             });
@@ -341,6 +360,8 @@ document.addEventListener('alpine:init', () => {
             this._resizeObservers.forEach(ro => ro.disconnect());
             this._resizeObservers = [];
             clearTimeout(this._resizeTimer);
+            clearTimeout(this._wireContentTimer);
+            this.flushWireContent();
             this._aretinoResizeObserver?.disconnect();
             this._aretinoResizeObserver = null;
             clearTimeout(this._aretinoResizeTimer);
@@ -543,6 +564,7 @@ document.addEventListener('alpine:init', () => {
         async saveScore() {
             if (this.savingScore) { return; }
             this.savingScore = true;
+            this.flushWireContent();
             try {
                 const c = this.collectSettings();
                 const incipit = await this.generateIncipit().catch(() => null);
@@ -1142,7 +1164,7 @@ document.addEventListener('alpine:init', () => {
             // until renderAretinoPreview rebuilds it, so the tooltip doesn't flash
             // onto the wrong row while typing (renderAretinoPreview clears this).
             if (format === 'aretino') { this._aretinoPreviewDirty = true; }
-            const delay = (format === 'aretino' || format === 'chordpro') ? 100 : 600;
+            const delay = (format === 'aretino' || format === 'chordpro') ? 16 : 600;
             this.renderTimer = setTimeout(() => this.renderPreview(), delay);
         },
 

@@ -44,6 +44,7 @@ export function aretinoMixin() {
         _aretinoResizeObserver: null,
         _aretinoResizeTimer: null,
         _aretinoPreviewDirty: false,
+        _aretinoFontsLoaded: {},
 
         convertGabcToAretino() {
             const aretino = gabcToAretino(this.gabcSource);
@@ -87,13 +88,17 @@ export function aretinoMixin() {
 
             if (document.fonts) {
                 const primaryFamily = this.aretinoTextFont.split(',')[0].trim().replace(/['"]/g, '');
-                const sz = `${this.aretinoLyricSize}px "${primaryFamily}"`;
-                await Promise.allSettled([
-                    document.fonts.load(sz),
-                    document.fonts.load(`italic ${sz}`),
-                    document.fonts.load(`bold ${sz}`),
-                    document.fonts.load(`italic bold ${sz}`),
-                ]);
+                const fontKey = `${this.aretinoLyricSize}_${primaryFamily}`;
+                if (!this._aretinoFontsLoaded[fontKey]) {
+                    const sz = `${this.aretinoLyricSize}px "${primaryFamily}"`;
+                    await Promise.allSettled([
+                        document.fonts.load(sz),
+                        document.fonts.load(`italic ${sz}`),
+                        document.fonts.load(`bold ${sz}`),
+                        document.fonts.load(`italic bold ${sz}`),
+                    ]);
+                    this._aretinoFontsLoaded[fontKey] = true;
+                }
             }
 
             const ratio = this.aretinoPageRatio;
