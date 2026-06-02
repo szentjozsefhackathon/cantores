@@ -16,7 +16,7 @@ new class extends Component
 };
 ?>
 
-<flux:card class="music-plan-card p-0 overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-neutral-200 dark:border-neutral-800">
+<flux:card class="music-plan-card p-0 overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-neutral-200 dark:border-neutral-800 border-l-4 {{ $musicPlan->celebration?->liturgicalBorderColorClass() ?? 'border-l-neutral-200! dark:border-l-neutral-800!' }}">
     @if (!$this->readonly)
     <a href="{{ route('music-plan-editor', ['musicPlan' => $musicPlan->id]) }}" class="block">
     @else

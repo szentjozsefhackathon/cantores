@@ -191,6 +191,10 @@
 @source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
 @source '../../vendor/livewire/flux/stubs/**/*.blade.php';
 
+/* Liturgical color accents are generated in App\Models\Celebration (not scanned). */
+@source inline("border-{purple-500,purple-700,purple-800,green-500,green-400,zinc-100,zinc-400,zinc-900,pink-500,pink-400,red-500,red-400,neutral-300,neutral-600}!");
+@source inline("dark:border-{purple-400,purple-700,green-400,zinc-100,zinc-400,pink-400,red-400,neutral-600}!");
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {

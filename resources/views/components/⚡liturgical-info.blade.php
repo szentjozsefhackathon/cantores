@@ -183,6 +183,8 @@ new class extends Component
                 'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? 'Unknown',
                 'season' => (int) ($celebrationData['season'] ?? 0),
                 'season_text' => $celebrationData['seasonText'] ?? null,
+                'color_id' => $celebrationData['colorId'] ?? null,
+                'color_text' => $celebrationData['colorText'] ?? null,
                 'week' => (int) ($celebrationData['week'] ?? 0),
                 'day' => (int) ($celebrationData['dayofWeek'] ?? 0),
                 'readings_code' => $celebrationData['readingsId'] ?? null,
@@ -225,6 +227,8 @@ new class extends Component
                 'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? 'Unknown',
                 'season' => (int) ($celebrationData['season'] ?? 0),
                 'season_text' => $celebrationData['seasonText'] ?? null,
+                'color_id' => $celebrationData['colorId'] ?? null,
+                'color_text' => $celebrationData['colorText'] ?? null,
                 'week' => (int) ($celebrationData['week'] ?? 0),
                 'day' => (int) ($celebrationData['dayofWeek'] ?? 0),
                 'readings_code' => $celebrationData['readingsId'] ?? null,
@@ -655,28 +659,7 @@ new class extends Component
                 @endif
                 @foreach ($celebrations as $celebration)
                 @php
-                // Determine border color based on colorText
-                $colorText = strtolower($celebration['colorText'] ?? '');
-                if ($colorText === 'lila') {
-                $colorTextColor = 'border-purple-500! dark:border-purple-400!';
-                } elseif ($colorText === 'zöld') {
-                $colorTextColor = 'border-green-500! dark:border-green-400!';
-                } elseif ($colorText === 'fehér') {
-                $colorTextColor = 'border-zinc-100! dark:border-zinc-100!';
-                } elseif ($colorText === 'rózsaszín|lila') {
-                $colorTextColor = 'border-pink-500! dark:border-pink-400!';
-                } elseif ($colorText === 'rózsaszín') {
-                $colorTextColor = 'border-pink-500! dark:border-pink-400!';
-                } elseif ($colorText === 'piros') {
-                $colorTextColor = 'border-red-500! dark:border-red-400!';
-                } elseif ($colorText === 'lila' or $colorText === 'lila|fehér') {
-                $colorTextColor = 'border-purple-800! dark:border-purple-700!';
-                } elseif ($colorText === 'lila|fekete') {
-                $colorTextColor = 'border-zinc-900! dark:border-zinc-400!';
-                }
-                else {
-                $colorTextColor = 'border-neutral-300! dark:border-neutral-600!';
-                }
+                $colorTextColor = \App\Models\Celebration::borderColorClassForColorText($celebration['colorText'] ?? null);
                 @endphp
                 <flux:card class="celebration-card p-0 overflow-hidden border-l-4 {{ $colorTextColor }} hover:shadow-lg transition-shadow duration-300">
                     <div class="p-5 space-y-4">

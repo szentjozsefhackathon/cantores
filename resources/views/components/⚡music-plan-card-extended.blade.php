@@ -87,7 +87,7 @@ new class extends Component
 @endplaceholder
 
 
-<div {{ $attributes->merge(['class' => 'max-w-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden']) }}>
+<div {{ $attributes->merge(['class' => 'max-w-md rounded-lg border border-gray-200 dark:border-gray-700 border-l-4 ' . ($musicPlan->celebration?->liturgicalBorderColorClass() ?? 'border-l-gray-200! dark:border-l-gray-700!') . ' bg-white dark:bg-gray-900 shadow-sm overflow-hidden']) }}>
     <!-- Header with icon and title -->
     <div class="p-3 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-start justify-between gap-2">

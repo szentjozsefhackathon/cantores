@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property int|null $season
  * @property string|null $season_text
+ * @property string|null $color_id
+ * @property string|null $color_text
  * @property int|null $week
  * @property int|null $day
  * @property string|null $readings_code
@@ -69,6 +71,8 @@ class Celebration extends Model
         'name',
         'season',
         'season_text',
+        'color_id',
+        'color_text',
         'week',
         'day',
         'readings_code',
@@ -153,6 +157,50 @@ class Celebration extends Model
         ];
 
         return $days[$this->day] ?? '-';
+    }
+
+    /**
+     * Get the Tailwind border classes representing this celebration's
+     * liturgical color, suitable for a `border-l-4` accent.
+     */
+    public function liturgicalBorderColorClass(): string
+    {
+        return self::borderColorClassForColorText($this->color_text ?? self::colorTextForSeason($this->season));
+    }
+
+    /**
+     * Map a liturgical color name (as provided by the upstream API) to the
+     * Tailwind border classes used for the colored card accent.
+     */
+    public static function borderColorClassForColorText(?string $colorText): string
+    {
+        return match (mb_strtolower((string) $colorText)) {
+            'lila' => 'border-purple-500! dark:border-purple-400!',
+            'lila|fehér' => 'border-purple-800! dark:border-purple-700!',
+            'lila|fekete' => 'border-zinc-900! dark:border-zinc-400!',
+            'zöld' => 'border-green-500! dark:border-green-400!',
+            'fehér' => 'border-zinc-100! dark:border-zinc-100!',
+            'rózsaszín', 'rózsaszín|lila' => 'border-pink-500! dark:border-pink-400!',
+            'piros' => 'border-red-500! dark:border-red-400!',
+            default => 'border-neutral-300! dark:border-neutral-600!',
+        };
+    }
+
+    /**
+     * Best-effort liturgical color for celebrations that have no stored color,
+     * derived from the liturgical season. Used as a fallback for legacy and
+     * custom celebrations.
+     */
+    protected static function colorTextForSeason(?int $season): ?string
+    {
+        return match ($season) {
+            0 => 'lila',
+            4, 8, 9 => 'fehér',
+            5 => 'zöld',
+            6 => 'lila',
+            7 => 'piros',
+            default => null,
+        };
     }
 
     /**

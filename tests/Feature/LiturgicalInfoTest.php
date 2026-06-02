@@ -39,6 +39,8 @@ function celebrationPayload(Celebration $celebration): array
         'name' => $celebration->name,
         'dateISO' => $celebration->actual_date->format('Y-m-d'),
         'season' => $celebration->season,
+        'colorId' => $celebration->color_id,
+        'colorText' => $celebration->color_text,
         'week' => $celebration->week,
         'dayofWeek' => $celebration->day,
         'readingsId' => $celebration->readings_code,
@@ -217,4 +219,29 @@ test('suggestion existence is computed with a single full celebration scan regar
     Livewire::test('liturgical-info');
 
     expect($fullScans)->toBe(1);
+});
+
+test('creating a music plan persists the celebration liturgical color', function () {
+    Genre::factory()->create();
+    $this->actingAs(User::factory()->create());
+
+    mockCelebrations([[
+        'name' => 'Pünkösdvasárnap',
+        'dateISO' => '2026-05-24',
+        'celebrationKey' => 0,
+        'season' => 8,
+        'seasonText' => 'húsvéti idő',
+        'colorId' => '1',
+        'colorText' => 'piros',
+        'week' => 0,
+        'dayofWeek' => 0,
+    ]]);
+
+    Livewire::test('liturgical-info')
+        ->set('date', '2026-05-24')
+        ->call('createMusicPlan', 0);
+
+    expect(Celebration::where('name', 'Pünkösdvasárnap')->first())
+        ->color_id->toBe('1')
+        ->color_text->toBe('piros');
 });
