@@ -26,6 +26,48 @@
             </flux:field>
         </div>
 
+        <!-- Secret link section (owner only) -->
+        @if($isOwner)
+        <div class="mb-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+            <flux:heading size="sm" class="mb-2">Titkos megosztási link</flux:heading>
+            <flux:text class="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
+                A titkos link segítségével megoszthatod az énekrend teljes tartalmát (privát zenékkel és kottákkal együtt) bárki számára, aki rendelkezik a linkkel.
+            </flux:text>
+
+            @if($secretLinkUrl)
+            <div class="flex flex-col gap-2">
+                <flux:input value="{{ $secretLinkUrl }}" readonly />
+                <div class="flex gap-2">
+                    <flux:button
+                        wire:click="$dispatch('copy-to-clipboard', '{{ $secretLinkUrl }}')"
+                        variant="outline"
+                        size="sm"
+                        icon="clipboard-copy">
+                        Link másolása
+                    </flux:button>
+                    <flux:button
+                        wire:click="deleteSecretLink"
+                        variant="outline"
+                        color="red"
+                        size="sm"
+                        icon="trash">
+                        Link törlése
+                    </flux:button>
+                </div>
+            </div>
+            @else
+            <flux:button
+                wire:click="generateSecretLink"
+                variant="outline"
+                color="blue"
+                size="sm"
+                icon="link">
+                Titkos link generálása
+            </flux:button>
+            @endif
+        </div>
+        @endif
+
         <!-- Action buttons -->
         <div class="flex gap-3 justify-end">
             <flux:button

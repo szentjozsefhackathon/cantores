@@ -3,18 +3,28 @@
 namespace App\Livewire;
 
 use App\Models\MusicPlan;
+use App\Models\Score;
 use App\MusicUrlLabel;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 class MusicPlanShareModal extends Component
 {
+    use AuthorizesRequests;
+
     public int $musicPlanId;
 
     public bool $showModal = false;
 
     public string $shareText = '';
+
+    public bool $isOwner = false;
+
+    public ?string $secretLinkUrl = null;
 
     public function mount(MusicPlan $musicPlan): void
     {
@@ -24,6 +34,11 @@ class MusicPlanShareModal extends Component
         }
 
         $this->musicPlanId = $musicPlan->id;
+        $this->isOwner = Auth::check() && Auth::id() === $musicPlan->user_id;
+
+        if ($this->isOwner && $musicPlan->share_token) {
+            $this->secretLinkUrl = route('music-plan.share', ['token' => $musicPlan->share_token]);
+        }
     }
 
     public function openModal(): void
@@ -40,6 +55,54 @@ class MusicPlanShareModal extends Component
     public function copyToClipboard(): void
     {
         $this->dispatch('copy-to-clipboard', $this->shareText);
+    }
+
+    #[Renderless]
+    public function generateSecretLink(): void
+    {
+        $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
+        $this->authorize('update', $musicPlan);
+
+        do {
+            $token = Str::random(32);
+        } while (MusicPlan::query()->where('share_token', $token)->exists());
+
+        $musicPlan->share_token = $token;
+        $musicPlan->save();
+
+        $ownerId = $musicPlan->user_id;
+        $musicIds = $musicPlan->musicAssignments()
+            ->pluck('music_id')
+            ->unique()
+            ->filter()
+            ->all();
+
+        Score::query()
+            ->where('user_id', $ownerId)
+            ->whereIn('music_id', $musicIds)
+            ->whereNull('share_token')
+            ->each(function (Score $score) {
+                do {
+                    $scoreToken = Str::random(32);
+                } while (Score::query()->where('share_token', $scoreToken)->exists());
+
+                $score->share_token = $scoreToken;
+                $score->save();
+            });
+
+        $this->secretLinkUrl = route('music-plan.share', ['token' => $token]);
+    }
+
+    #[Renderless]
+    public function deleteSecretLink(): void
+    {
+        $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
+        $this->authorize('update', $musicPlan);
+
+        $musicPlan->share_token = null;
+        $musicPlan->save();
+
+        $this->secretLinkUrl = null;
     }
 
     private function generateShareText(): string
