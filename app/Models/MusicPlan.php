@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property int|null $genre_id
  * @property string|null $private_notes
+ * @property string|null $share_token
  * @property int|null $celebration_id
  * @property-read \App\Models\Celebration|null $celebration
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlot> $customSlots
@@ -69,6 +70,7 @@ class MusicPlan extends Model
         'genre_id',
         'is_private',
         'private_notes',
+        'share_token',
     ];
 
     /**
