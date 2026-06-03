@@ -26,36 +26,42 @@ A felhasználó köteles tartalmat (énekrendeket, megjegyzéseket) csak a jogsz
 mások szerzői jogait és személyiségi jogait megsértve nem feltölteni. A platform moderálási jogot fenntart,
 és a szabályokat sértő tartalmakat előzetes figyelmeztetés nélkül törölheti.
 
-## 4. Adatvédelem
+## 4. Titkos linkek és megosztás
+
+A platform lehetővé teszi privát énekrendek és kották megosztását titkos linken keresztül. A titkos link birtokában bárki – regisztráció nélkül is – megtekintheti a megosztott tartalmat.
+
+A titkos link létrehozója teljes jogi felelősséget vállal a megosztott tartalomért, különös tekintettel a szerzői jogi szabályok betartására. A platform fenntartója nem ellenőrzi a titkos linken megosztott tartalmak jogszerűségét, és semmilyen felelősséget nem vállal az esetleges szerzői jogi jogsértésekért. Amennyiben jogsértést tapasztal, kérjük, jelezze a [kapcsolati lehetőségeinken](/about) keresztül.
+
+## 5. Adatvédelem
 
 Az Ön e‑mail címét és a platformon megadott adatokat (pl. becenév, város, énekrendek) kizárólag a szolgáltatás működtetése céljából dolgozzuk fel.
 **Harmadik félnek semmilyen adatot nem adunk át.**
 Az adatokat a magyar és az érvényes uniós adatvédelmi jogszabályoknak megfelelően kezeljük.
 Részletes információkért tekintse meg az [Adatvédelmi nyilatkozatot](/privacy).
 
-## 5. A szolgáltatás módosítása és megszüntetése
+## 6. A szolgáltatás módosítása és megszüntetése
 
 A platform fenntartója jogosult a szolgáltatás tartalmát, működését bármikor módosítani,
 ideiglenesen vagy véglegesen megszüntetni, előzetes értesítés nélkül. A felhasználók ezzel a lehetőséggel
 ismerkedve és azt elfogadva használják a szolgáltatást.
 
-## 6. Felelősség korlátozása
+## 7. Felelősség korlátozása
 
 A platform fenntartója semmilyen körülmények között nem felelős közvetlen vagy közvetett kárért,
 amely a szolgáltatás használatából vagy használatának képtelenségéből ered. A felhasználó saját felelősségére
 használja a rendszert.
 
-## 7. Fiókok felfüggesztése és törlése
+## 8. Fiókok felfüggesztése és törlése
 
 A platform adminisztrátorai jogosultak bármely felhasználói fiókot – indoklás és előzetes értesítés nélkül –
 felfüggeszteni vagy véglegesen törölni. Ez a jog különösen, de nem kizárólagosan vonatkozik a visszaélésszerű,
 szabályokat sértő vagy a közösség számára káros magatartásra. 
 
-## 8. Egyéb rendelkezések
+## 9. Egyéb rendelkezések
 
 A jelen feltételek a magyar jog szerint értelmezendők. A felhasználói jogvitákra a magyar bíróságok illetékessége terjed ki.
 A feltételek időről időre frissülhetnek; a változások közzététele a weboldalon történik, és a közzététel pillanatától hatályosak.
 
 ---
 
-*Utolsó frissítés: 2026. 01. 01.*
+*Utolsó frissítés: 2026. 06. 03.*
