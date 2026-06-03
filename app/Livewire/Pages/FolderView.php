@@ -3,7 +3,9 @@
 namespace App\Livewire\Pages;
 
 use App\Models\Folder;
+use App\Models\Score;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
 
@@ -29,7 +31,20 @@ class FolderView extends Component
 
         $this->folder = $folder;
         $this->name = $folder->name;
-        $this->scores = $folder->scores()->orderBy('title')->get();
+        $this->scores = $folder->scores()->with('music')->orderBy('title')->get();
+
+        $this->scores->each(function (Score $score): void {
+            if ($score->share_token !== null) {
+                return;
+            }
+
+            do {
+                $shareToken = Str::random(32);
+            } while (Score::query()->where('share_token', $shareToken)->exists());
+
+            $score->share_token = $shareToken;
+            $score->save();
+        });
     }
 
     public function rendering(IlluminateView $view): void

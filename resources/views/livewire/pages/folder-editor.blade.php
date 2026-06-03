@@ -26,40 +26,135 @@
             </flux:field>
 
             @if($folder)
-            {{-- Score Assignment --}}
-            <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700"
-                 x-data="{ search: '' }">
-                <flux:heading size="sm" class="mb-3">{{ __('Scores') }}</flux:heading>
+            {{-- Score List --}}
+            <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                <div class="mb-4 flex items-center justify-between">
+                    <flux:heading size="sm">{{ __('Scores') }}</flux:heading>
+                    <flux:button icon="plus" size="sm" wire:click="$set('showModal', true)">
+                        {{ __('Add Scores') }}
+                    </flux:button>
+                </div>
 
-                @if($this->userScores->isNotEmpty())
-                    <flux:input
-                        x-model="search"
-                        type="search"
-                        :placeholder="__('Filter scores…')"
-                        size="sm"
-                        class="mb-3" />
-
-                    <div class="max-h-64 space-y-1 overflow-y-auto">
-                        @foreach($this->userScores as $score)
-                        <div x-show="search === '' || '{{ strtolower($score->title) }}'.includes(search.toLowerCase())">
-                            <flux:checkbox
-                                wire:key="score-check-{{ $score->id }}"
+                @if($addedScores->isEmpty())
+                    <flux:callout variant="secondary" icon="book-open-text" class="border-dashed">
+                        <flux:callout.heading>{{ __('No scores yet') }}</flux:callout.heading>
+                        <flux:callout.text>{{ __('Click "Add Scores" to add scores to this folder.') }}</flux:callout.text>
+                    </flux:callout>
+                @else
+                    <div class="space-y-2">
+                        @foreach($addedScores as $score)
+                        <div class="flex items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50"
+                             wire:key="added-{{ $score->id }}">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <a href="{{ route('scores.edit', $score) }}" wire:navigate
+                                       class="font-medium hover:underline">{{ $score->title }}</a>
+                                    <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                                </div>
+                                @if($score->music)
+                                <div class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{{ $score->music->title }}</div>
+                                @endif
+                                @if($score->hasIncipit())
+                                <div class="mt-2">
+                                    <x-incipit-image
+                                        :src="route('scores.incipit', $score)"
+                                        :alt="$score->title"
+                                        img-class="block h-14 w-auto" />
+                                </div>
+                                @endif
+                            </div>
+                            <flux:button
+                                icon="x-mark"
+                                variant="ghost"
+                                size="sm"
                                 wire:click="toggleScore({{ $score->id }})"
-                                :checked="in_array($score->id, $scoreIds)"
-                                :label="$score->title" />
+                                :title="__('Remove from folder')" />
                         </div>
                         @endforeach
                     </div>
-                @else
-                    <flux:callout variant="secondary" icon="book-open-text" class="border-dashed">
-                        <flux:callout.heading>{{ __('No scores yet') }}</flux:callout.heading>
-                        <flux:callout.text>
-                            <a href="{{ route('scores.create') }}" wire:navigate class="underline">{{ __('Create a score') }}</a>
-                            {{ __('first to assign it to this folder.') }}
-                        </flux:callout.text>
-                    </flux:callout>
                 @endif
             </div>
+
+            {{-- Score Picker Modal --}}
+            <flux:modal wire:model="showModal" class="max-w-2xl">
+                <flux:heading size="lg" class="mb-4">{{ __('Add Scores') }}</flux:heading>
+
+                <flux:input
+                    wire:model.live.debounce.300ms="modalSearch"
+                    type="search"
+                    :placeholder="__('Search scores…')"
+                    icon="magnifying-glass"
+                    class="mb-3" />
+
+                <div class="max-h-96 space-y-2 overflow-y-auto">
+                    @forelse($modalScores as $score)
+                    <div class="flex items-start gap-3 rounded-lg border px-3 py-2 {{ in_array($score->id, $scoreIds) ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20' : 'border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/50' }}"
+                         wire:key="modal-{{ $score->id }}">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="font-medium">{{ $score->title }}</span>
+                                <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                            </div>
+                            @if($score->music)
+                            <div class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{{ $score->music->title }}</div>
+                            @endif
+                            @if($score->hasIncipit())
+                            <div class="mt-2">
+                                <x-incipit-image
+                                    :src="route('scores.incipit', $score)"
+                                    :alt="$score->title"
+                                    img-class="block h-14 w-auto" />
+                            </div>
+                            @endif
+                        </div>
+                        @if(in_array($score->id, $scoreIds))
+                        <flux:button
+                            wire:click="toggleScore({{ $score->id }})"
+                            size="sm"
+                            variant="outline"
+                            color="red"
+                            icon="minus">
+                            {{ __('Remove') }}
+                        </flux:button>
+                        @else
+                        <flux:button
+                            wire:click="toggleScore({{ $score->id }})"
+                            size="sm"
+                            variant="primary"
+                            icon="plus">
+                            {{ __('Add') }}
+                        </flux:button>
+                        @endif
+                    </div>
+                    @empty
+                    <flux:callout variant="secondary" icon="book-open-text" class="border-dashed">
+                        <flux:callout.heading>{{ __('No scores found') }}</flux:callout.heading>
+                    </flux:callout>
+                    @endforelse
+                </div>
+
+                @if($modalScores->hasPages())
+                <div class="mt-4 flex items-center justify-between border-t border-zinc-200 pt-3 dark:border-zinc-700">
+                    <flux:button
+                        wire:click="previousModalPage"
+                        :disabled="$modalPage <= 1"
+                        icon="chevron-left"
+                        size="sm"
+                        variant="ghost" />
+                    <span class="text-sm text-zinc-500">{{ $modalPage }} / {{ $modalScores->lastPage() }}</span>
+                    <flux:button
+                        wire:click="nextModalPage({{ $modalScores->lastPage() }})"
+                        :disabled="$modalPage >= $modalScores->lastPage()"
+                        icon="chevron-right"
+                        size="sm"
+                        variant="ghost" />
+                </div>
+                @endif
+
+                <div class="mt-4 flex justify-end">
+                    <flux:button wire:click="$set('showModal', false)">{{ __('Done') }}</flux:button>
+                </div>
+            </flux:modal>
 
             {{-- Secret Link --}}
             <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700"

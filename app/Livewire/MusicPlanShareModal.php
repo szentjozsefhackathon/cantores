@@ -9,7 +9,6 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
-use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 class MusicPlanShareModal extends Component
@@ -57,7 +56,6 @@ class MusicPlanShareModal extends Component
         $this->dispatch('copy-to-clipboard', $this->shareText);
     }
 
-    #[Renderless]
     public function generateSecretLink(): void
     {
         $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
@@ -93,7 +91,6 @@ class MusicPlanShareModal extends Component
         $this->secretLinkUrl = route('music-plan.share', ['token' => $token]);
     }
 
-    #[Renderless]
     public function deleteSecretLink(): void
     {
         $musicPlan = MusicPlan::findOrFail($this->musicPlanId);

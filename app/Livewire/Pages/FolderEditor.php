@@ -8,7 +8,6 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\View\View as IlluminateView;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
@@ -24,6 +23,12 @@ class FolderEditor extends Component
 
     /** @var array<int> */
     public array $scoreIds = [];
+
+    public bool $showModal = false;
+
+    public string $modalSearch = '';
+
+    public int $modalPage = 1;
 
     public function mount(?Folder $folder = null): void
     {
@@ -69,6 +74,25 @@ class FolderEditor extends Component
         $this->redirectRoute('folders.edit', ['folder' => $folder->id], navigate: true);
     }
 
+    public function updatedModalSearch(): void
+    {
+        $this->modalPage = 1;
+    }
+
+    public function previousModalPage(): void
+    {
+        if ($this->modalPage > 1) {
+            $this->modalPage--;
+        }
+    }
+
+    public function nextModalPage(int $lastPage): void
+    {
+        if ($this->modalPage < $lastPage) {
+            $this->modalPage++;
+        }
+    }
+
     #[Renderless]
     public function generateSecretLink(): void
     {
@@ -109,6 +133,8 @@ class FolderEditor extends Component
         } else {
             $this->scoreIds[] = $scoreId;
         }
+
+        $this->folder->scores()->sync($this->scoreIds);
     }
 
     public function delete(): void
@@ -121,19 +147,37 @@ class FolderEditor extends Component
         $this->redirectRoute('folders', navigate: true);
     }
 
-    #[Computed]
-    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Score> */
-    public function userScores(): \Illuminate\Database\Eloquent\Collection
-    {
-        if (! Auth::check()) {
-            return Score::query()->whereNull('id')->get();
-        }
-
-        return Score::query()->mine(Auth::user())->orderBy('title')->get();
-    }
-
     public function render(): IlluminateView
     {
-        return view('livewire.pages.folder-editor');
+        $addedScores = collect();
+        $modalScores = collect();
+
+        if ($this->folder instanceof Folder) {
+            if (! empty($this->scoreIds)) {
+                $addedScores = Score::query()
+                    ->mine(Auth::user())
+                    ->with(['music'])
+                    ->whereIn('id', $this->scoreIds)
+                    ->orderBy('title')
+                    ->get();
+            }
+
+            $modalScores = Score::query()
+                ->mine(Auth::user())
+                ->with(['music'])
+                ->when($this->modalSearch !== '', function ($q) {
+                    $q->where(function ($q) {
+                        $q->where('title', 'ilike', "%{$this->modalSearch}%")
+                            ->orWhereHas('music', fn ($q) => $q->where('title', 'ilike', "%{$this->modalSearch}%"));
+                    });
+                })
+                ->orderBy('title')
+                ->paginate(8, ['*'], 'modal_page', $this->modalPage);
+        }
+
+        return view('livewire.pages.folder-editor', [
+            'addedScores' => $addedScores,
+            'modalScores' => $modalScores,
+        ]);
     }
 }

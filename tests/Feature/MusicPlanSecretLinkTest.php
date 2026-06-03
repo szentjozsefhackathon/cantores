@@ -76,6 +76,30 @@ it('shows score links for plan owner scores', function () {
         ->assertSee(route('score.share', ['token' => $scoreToken]));
 });
 
+it('auto-generates score tokens for scores created after the plan link', function () {
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id, 'share_token' => Str::random(32)]);
+    $music = Music::factory()->create(['user_id' => $owner->id]);
+    $score = Score::factory()->create([
+        'user_id' => $owner->id,
+        'music_id' => $music->id,
+        'share_token' => null,
+    ]);
+    $slotPlan = MusicPlanSlotPlan::factory()->create(['music_plan_id' => $plan->id]);
+    MusicPlanSlotAssignment::factory()->create([
+        'music_plan_slot_plan_id' => $slotPlan->id,
+        'music_id' => $music->id,
+    ]);
+
+    Livewire::test(MusicPlanShareView::class, ['token' => $plan->share_token])
+        ->assertOk();
+
+    $freshScore = $score->fresh();
+    expect($freshScore->share_token)->not->toBeNull()->toHaveLength(32);
+    Livewire::test(MusicPlanShareView::class, ['token' => $plan->share_token])
+        ->assertSee(route('score.share', ['token' => $freshScore->share_token]));
+});
+
 it('does not show scores from other users', function () {
     $owner = User::factory()->create();
     $other = User::factory()->create();

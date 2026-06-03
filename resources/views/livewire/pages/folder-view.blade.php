@@ -11,10 +11,10 @@
                     <flux:callout.heading>{{ __('No scores in this folder') }}</flux:callout.heading>
                 </flux:callout>
             @else
-                <div class="space-y-2">
+                <div class="space-y-3">
                     @foreach($this->scores as $score)
-                    <div class="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800/50">
-                        <div class="min-w-0 flex-1">
+                    <div class="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <div class="flex flex-wrap items-center gap-1.5">
                             @if($score->share_token)
                                 <a href="{{ route('score.share', ['token' => $score->share_token]) }}" class="font-medium text-blue-600 hover:underline dark:text-blue-400">
                                     {{ $score->title }}
@@ -22,8 +22,19 @@
                             @else
                                 <span class="font-medium text-zinc-800 dark:text-zinc-200">{{ $score->title }}</span>
                             @endif
+                            <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
                         </div>
-                        <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                        @if($score->music)
+                        <div class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{{ $score->music->title }}</div>
+                        @endif
+                        @if($score->hasIncipit() && $score->share_token)
+                        <div class="mt-2">
+                            <x-incipit-image
+                                :src="route('score.share.incipit', ['token' => $score->share_token])"
+                                :alt="$score->title"
+                                img-class="block h-14 w-auto" />
+                        </div>
+                        @endif
                     </div>
                     @endforeach
                 </div>

@@ -134,6 +134,9 @@ Route::livewire('/score/preview', \App\Livewire\Pages\ScoreEditor::class)
 Route::livewire('/s/{token}', \App\Livewire\Pages\ScoreView::class)
     ->name('score.share');
 
+Route::get('/s/{token}/incipit', \App\Http\Controllers\ScoreShareIncipitController::class)
+    ->name('score.share.incipit');
+
 // Secret plan link — public, no authentication required
 Route::livewire('/p/{token}', \App\Livewire\Pages\MusicPlanShareView::class)
     ->name('music-plan.share');

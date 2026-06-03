@@ -4,6 +4,7 @@ namespace App\Livewire\Pages;
 
 use App\Models\MusicPlan;
 use App\Models\Score;
+use Illuminate\Support\Str;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
 
@@ -58,11 +59,25 @@ class MusicPlanShareView extends Component
             ->filter()
             ->all();
 
-        $scoresByMusicId = Score::query()
+        $scores = Score::query()
             ->where('user_id', $ownerId)
             ->whereIn('music_id', $musicIds)
-            ->get()
-            ->groupBy('music_id');
+            ->get();
+
+        $scores->each(function (Score $score): void {
+            if ($score->share_token !== null) {
+                return;
+            }
+
+            do {
+                $token = Str::random(32);
+            } while (Score::query()->where('share_token', $token)->exists());
+
+            $score->share_token = $token;
+            $score->save();
+        });
+
+        $scoresByMusicId = $scores->groupBy('music_id');
 
         $assignmentsByPivot = $this->musicPlan->musicAssignments()
             ->with(['music.collections', 'music.authors', 'scopes'])
@@ -102,6 +117,9 @@ class MusicPlanShareView extends Component
                                 'format_value' => $s->format->value,
                                 'share_url' => $s->share_token
                                     ? route('score.share', ['token' => $s->share_token])
+                                    : null,
+                                'incipit_url' => ($s->share_token && $s->hasIncipit())
+                                    ? route('score.share.incipit', ['token' => $s->share_token])
                                     : null,
                             ])->all(),
                         ];

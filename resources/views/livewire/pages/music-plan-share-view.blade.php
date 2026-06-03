@@ -132,21 +132,31 @@
 
                                                     <!-- Scores -->
                                                     @if(!empty($assignment['scores']))
-                                                    <div class="mt-2 flex flex-wrap gap-2">
+                                                    <div class="mt-2 space-y-2">
                                                         @foreach($assignment['scores'] as $score)
+                                                        <div class="space-y-1">
                                                             @if($score['share_url'])
                                                             <a href="{{ $score['share_url'] }}" target="_blank"
-                                                               class="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 dark:border-neutral-600 px-2 py-1 text-xs hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                                               class="inline-flex items-center gap-1.5 text-sm font-medium hover:underline">
+                                                                {{ $score['title'] }}
                                                                 <flux:badge size="sm" color="zinc">{{ $score['format'] }}</flux:badge>
-                                                                <span>{{ $score['title'] }}</span>
                                                                 <flux:icon name="arrow-top-right-on-square" variant="micro" class="text-neutral-400" />
                                                             </a>
                                                             @else
-                                                            <span class="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 px-2 py-1 text-xs text-neutral-500">
+                                                            <span class="inline-flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+                                                                {{ $score['title'] }}
                                                                 <flux:badge size="sm" color="zinc">{{ $score['format'] }}</flux:badge>
-                                                                <span>{{ $score['title'] }}</span>
                                                             </span>
                                                             @endif
+
+                                                            @if($score['incipit_url'])
+                                                            <x-incipit-image
+                                                                :src="$score['incipit_url']"
+                                                                :alt="$score['title']"
+                                                                img-class="block h-auto max-h-14 w-auto"
+                                                            />
+                                                            @endif
+                                                        </div>
                                                         @endforeach
                                                     </div>
                                                     @endif
