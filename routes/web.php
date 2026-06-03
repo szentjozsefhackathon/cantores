@@ -157,6 +157,22 @@ Route::get('/scores/{score}/incipit', \App\Http\Controllers\ScoreIncipitControll
 Route::get('/scores/{score}/public-incipit', \App\Http\Controllers\ScorePublicIncipitController::class)
     ->name('scores.public-incipit');
 
+// Secret folder share link — public, read-only
+Route::livewire('/f/{token}', \App\Livewire\Pages\FolderView::class)
+    ->name('folder.share');
+
+Route::livewire('/folders', \App\Livewire\Pages\Folders::class)
+    ->middleware(['auth', 'verified'])
+    ->name('folders');
+
+Route::livewire('/folders/create', \App\Livewire\Pages\FolderEditor::class)
+    ->middleware(['auth', 'verified'])
+    ->name('folders.create');
+
+Route::livewire('/folders/{folder}/edit', \App\Livewire\Pages\FolderEditor::class)
+    ->middleware(['auth', 'verified'])
+    ->name('folders.edit');
+
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');

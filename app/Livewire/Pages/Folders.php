@@ -2,15 +2,14 @@
 
 namespace App\Livewire\Pages;
 
-use App\Enums\ScoreFormat;
-use App\Models\Score;
+use App\Models\Folder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-class Scores extends Component
+class Folders extends Component
 {
     use AuthorizesRequests, WithPagination;
 
@@ -18,13 +17,13 @@ class Scores extends Component
 
     public function mount(): void
     {
-        $this->authorize('viewAny', Score::class);
+        $this->authorize('viewAny', Folder::class);
     }
 
     public function rendering(IlluminateView $view): void
     {
         $view->layout('layouts::app', [
-            'title' => __('My Scores'),
+            'title' => __('My Folders'),
         ]);
     }
 
@@ -33,34 +32,30 @@ class Scores extends Component
         $this->resetPage();
     }
 
-    public function delete(Score $score): void
+    public function delete(Folder $folder): void
     {
-        $this->authorize('delete', $score);
+        $this->authorize('delete', $folder);
 
-        $score->delete();
+        $folder->delete();
 
-        $this->dispatch('score-deleted');
+        $this->dispatch('folder-deleted');
     }
 
-    public function render()
+    public function render(): IlluminateView
     {
         $search = trim($this->search);
 
-        $scores = Score::query()
+        $folders = Folder::query()
             ->mine(Auth::user())
-            ->with(['music', 'folders'])
+            ->withCount('scores')
             ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('title', 'ilike', "%{$search}%")
-                        ->orWhereHas('music', fn ($query) => $query->where('title', 'ilike', "%{$search}%"));
-                });
+                $query->where('name', 'ilike', "%{$search}%");
             })
             ->latest('updated_at')
             ->paginate(10);
 
-        return view('livewire.pages.scores', [
-            'scores' => $scores,
-            'formats' => ScoreFormat::cases(),
+        return view('livewire.pages.folders', [
+            'folders' => $folders,
         ]);
     }
 }

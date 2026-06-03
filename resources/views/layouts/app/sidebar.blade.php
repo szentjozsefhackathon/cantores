@@ -83,6 +83,9 @@
                 <flux:sidebar.item icon="file-music" :href="route('scores')" :current="request()->routeIs('scores', 'scores.*')" wire:navigate>
                     {{ __('My Scores') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="folder" :href="route('folders')" :current="request()->routeIs('folders', 'folders.*')" wire:navigate>
+                    {{ __('My Folders') }}
+                </flux:sidebar.item>
                 <flux:sidebar.item icon="book-open" :href="route('collections')" :current="request()->routeIs('collections')" wire:navigate>
                     {{ __('Collections') }}
                 </flux:sidebar.item>
