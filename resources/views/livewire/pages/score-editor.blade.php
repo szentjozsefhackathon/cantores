@@ -127,6 +127,36 @@
                 </div>
             </div>
 
+            @if (! $isGuest && $musicId && $this->relatedScores->isNotEmpty())
+                <div class="mt-4">
+                    <div class="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <flux:icon name="layers" variant="micro" class="shrink-0 text-zinc-400" />
+                        <span class="text-sm font-medium text-zinc-600 dark:text-zinc-400">{{ __('Variations') }}</span>
+
+                        @if ($score)
+                            <span class="inline-flex items-center gap-1.5 rounded-md border border-zinc-400 bg-white px-2.5 py-1 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-400 dark:border-zinc-500 dark:bg-zinc-700 dark:text-zinc-100 dark:ring-zinc-500">
+                                {{ $score->title }}
+                                <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                            </span>
+                        @endif
+
+                        @foreach ($this->relatedScores as $relatedScore)
+                            <a href="{{ route('scores.edit', $relatedScore) }}" wire:navigate
+                               class="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-sm text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-400 dark:hover:bg-zinc-700">
+                                {{ $relatedScore->title }}
+                                <flux:badge color="zinc" size="sm">{{ $relatedScore->format->label() }}</flux:badge>
+                            </a>
+                        @endforeach
+
+                        <a href="{{ route('scores.create', ['music' => $musicId]) }}" wire:navigate
+                           class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm text-zinc-500 transition hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+                            <flux:icon name="plus" variant="micro" class="shrink-0" />
+                            {{ __('Add variation') }}
+                        </a>
+                    </div>
+                </div>
+            @endif
+
             <style>
                 .score-editor-source-pane.overflow-hidden textarea {
                     flex: 1 1 0% !important;

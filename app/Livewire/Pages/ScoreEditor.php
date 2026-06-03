@@ -337,6 +337,25 @@ class ScoreEditor extends Component
         return Music::query()->find($this->musicId);
     }
 
+    #[Computed]
+    /** @return \Illuminate\Database\Eloquent\Collection<int, Score> */
+    public function relatedScores(): \Illuminate\Database\Eloquent\Collection
+    {
+        if ($this->isSharedLink || $this->musicId === null || ! Auth::check()) {
+            return Score::query()->whereNull('id')->get();
+        }
+
+        $query = Score::query()
+            ->where('music_id', $this->musicId)
+            ->where('user_id', Auth::id());
+
+        if ($this->score instanceof Score) {
+            $query->where('id', '!=', $this->score->id);
+        }
+
+        return $query->orderBy('updated_at', 'desc')->get();
+    }
+
     #[On('music-selected.score')]
     public function onMusicSelected(int $musicId): void
     {
