@@ -6,6 +6,7 @@ use App\Enums\ScoreFormat;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -27,6 +28,8 @@ use Illuminate\Support\Facades\Storage;
  * @property-read int|null $urls_count
  * @property-read \App\Models\Music|null $music
  * @property-read \App\Models\User $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Folder> $folders
+ * @property-read int|null $folders_count
  *
  * @method static \Database\Factories\ScoreFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Score mine(?\App\Models\User $user = null)
@@ -84,6 +87,11 @@ class Score extends Model
     public function urls(): HasMany
     {
         return $this->hasMany(ScoreUrl::class);
+    }
+
+    public function folders(): BelongsToMany
+    {
+        return $this->belongsToMany(Folder::class, 'folder_score');
     }
 
     public function getIncipitPathAttribute(): string

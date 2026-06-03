@@ -39,6 +39,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $music_verifications_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Score> $scores
  * @property-read int|null $scores_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Folder> $folders
+ * @property-read int|null $folders_count
  * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spatie\Permission\Models\Permission> $permissions
@@ -198,6 +200,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function scores(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Score::class);
+    }
+
+    /**
+     * Get the user's folders.
+     */
+    public function folders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Folder::class);
     }
 
     /**

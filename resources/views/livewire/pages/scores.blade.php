@@ -49,6 +49,12 @@
                                         @if($score->share_token)
                                             <flux:icon name="link" size="sm" class="text-blue-500 dark:text-blue-400" :title="__('Secret link active')" />
                                         @endif
+                                        @foreach($score->folders as $folder)
+                                            <flux:badge color="violet" size="sm" :title="$folder->name">
+                                                <flux:icon name="folder" variant="micro" class="mr-0.5" />
+                                                {{ \Illuminate\Support\Str::limit($folder->name, 20) }}
+                                            </flux:badge>
+                                        @endforeach
                                     </div>
                                     @if($score->hasIncipit())
                                         <x-incipit-image :src="route('scores.incipit', $score)" :alt="__('Incipit')"

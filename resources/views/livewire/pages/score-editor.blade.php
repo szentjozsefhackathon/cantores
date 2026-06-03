@@ -910,6 +910,55 @@
                 </flux:modal>
 
                 @if(!$isGuest && $score)
+                {{-- Folders modal --}}
+                <flux:modal name="folders-modal" class="w-80"
+                    x-data="{ newFolderName: '', showNewFolder: false }">
+                    <div class="space-y-4">
+                        <flux:heading size="lg">{{ __('Folders') }}</flux:heading>
+
+                        @forelse($this->userFolders as $folder)
+                            <div>
+                                <flux:checkbox
+                                    wire:key="folder-toggle-{{ $folder->id }}"
+                                    wire:click="toggleFolder({{ $folder->id }})"
+                                    :checked="in_array($folder->id, $folderIds)"
+                                    :label="$folder->name" />
+                            </div>
+                        @empty
+                            <flux:text class="text-sm text-zinc-500">{{ __('No folders yet.') }}</flux:text>
+                        @endforelse
+
+                        <div>
+                            <flux:button size="sm" variant="ghost" icon="plus"
+                                x-on:click="showNewFolder = !showNewFolder">
+                                {{ __('New folder') }}
+                            </flux:button>
+                            <div x-show="showNewFolder" x-cloak class="mt-2 flex gap-2">
+                                <flux:input
+                                    x-model="newFolderName"
+                                    :placeholder="__('Folder name')"
+                                    size="sm"
+                                    class="flex-1"
+                                    x-on:keydown.enter="$wire.createFolderAndAdd(newFolderName); newFolderName = ''; showNewFolder = false" />
+                                <flux:button
+                                    size="sm"
+                                    variant="primary"
+                                    x-on:click="$wire.createFolderAndAdd(newFolderName); newFolderName = ''; showNewFolder = false">
+                                    {{ __('Add') }}
+                                </flux:button>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <flux:button variant="ghost" x-on:click="$flux.modal('folders-modal').close()">
+                                {{ __('Close') }}
+                            </flux:button>
+                        </div>
+                    </div>
+                </flux:modal>
+                @endif
+
+                @if(!$isGuest && $score)
                 {{-- URL Management --}}
                 <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700" x-show="!splitScreen">
                     <flux:heading size="sm" class="mb-3">{{ __('Links') }}</flux:heading>
@@ -987,6 +1036,17 @@
                 </div>
                 @endif
 
+
+                @if(!$isGuest && $score)
+                <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700" x-show="!splitScreen">
+                    <flux:button icon="folder" variant="outline" x-on:click="$flux.modal('folders-modal').show()">
+                        {{ __('Folders') }}
+                        @if(count($folderIds))
+                            <flux:badge size="sm" class="ml-1">{{ count($folderIds) }}</flux:badge>
+                        @endif
+                    </flux:button>
+                </div>
+                @endif
 
                 @if($score)
                 <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700" x-show="!splitScreen">

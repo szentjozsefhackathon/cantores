@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages;
 
 use App\Enums\ScoreFormat;
+use App\Models\Folder;
 use App\Models\Music;
 use App\Models\Score;
 use App\Models\ScoreUrl;
@@ -47,6 +48,9 @@ class ScoreEditor extends Component
 
     public ?string $secretLinkUrl = null;
 
+    /** @var array<int> */
+    public array $folderIds = [];
+
     public string $newUrl = '';
 
     public ?string $newUrlLabel = null;
@@ -79,6 +83,7 @@ class ScoreEditor extends Component
             $this->secretLinkUrl = $score->share_token !== null
                 ? route('score.share', ['token' => $score->share_token])
                 : null;
+            $this->folderIds = $score->folders()->pluck('folder_id')->toArray();
 
             return;
         }
@@ -234,6 +239,43 @@ class ScoreEditor extends Component
         $this->secretLinkUrl = null;
     }
 
+    public function toggleFolder(int $folderId): void
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('update', $this->score);
+
+        Folder::query()->where('id', $folderId)->where('user_id', Auth::id())->firstOrFail();
+
+        if (in_array($folderId, $this->folderIds, true)) {
+            $this->score->folders()->detach($folderId);
+            $this->folderIds = array_values(array_filter($this->folderIds, fn ($id) => $id !== $folderId));
+        } else {
+            $this->score->folders()->attach($folderId);
+            $this->folderIds[] = $folderId;
+        }
+    }
+
+    public function createFolderAndAdd(string $newFolderName): void
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('update', $this->score);
+
+        $name = trim($newFolderName);
+        if ($name === '') {
+            return;
+        }
+
+        $folder = Folder::query()->create([
+            'user_id' => Auth::id(),
+            'name' => $name,
+        ]);
+
+        $this->score->folders()->attach($folder);
+        $this->folderIds[] = $folder->id;
+
+        unset($this->userFolders);
+    }
+
     public function addUrl(): void
     {
         abort_unless($this->score instanceof Score, 404);
@@ -289,6 +331,17 @@ class ScoreEditor extends Component
         }
 
         return $this->score->urls()->orderBy('id')->get();
+    }
+
+    #[Computed]
+    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Folder> */
+    public function userFolders(): \Illuminate\Database\Eloquent\Collection
+    {
+        if (! Auth::check()) {
+            return Folder::query()->whereNull('id')->get();
+        }
+
+        return Folder::query()->mine(Auth::user())->orderBy('name')->get();
     }
 
     #[Computed]
