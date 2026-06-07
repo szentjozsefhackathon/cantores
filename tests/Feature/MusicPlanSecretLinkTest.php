@@ -8,6 +8,7 @@ use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Models\Score;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 
@@ -98,6 +99,51 @@ it('auto-generates score tokens for scores created after the plan link', functio
     expect($freshScore->share_token)->not->toBeNull()->toHaveLength(32);
     Livewire::test(MusicPlanShareView::class, ['token' => $plan->share_token])
         ->assertSee(route('score.share', ['token' => $freshScore->share_token]));
+});
+
+it('shows the score incipit via the share route, suppressing the public preview carousel', function () {
+    Storage::fake();
+
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id, 'share_token' => Str::random(32)]);
+    $music = Music::factory()->create(['user_id' => $owner->id]);
+    $scoreToken = Str::random(32);
+    $score = Score::factory()->create([
+        'user_id' => $owner->id,
+        'music_id' => $music->id,
+        'share_token' => $scoreToken,
+        'public_preview' => true,
+    ]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+    $slotPlan = MusicPlanSlotPlan::factory()->create(['music_plan_id' => $plan->id]);
+    MusicPlanSlotAssignment::factory()->create([
+        'music_plan_slot_plan_id' => $slotPlan->id,
+        'music_id' => $music->id,
+    ]);
+
+    Livewire::test(MusicPlanShareView::class, ['token' => $plan->share_token])
+        ->assertSee(route('score.share.incipit', ['token' => $scoreToken]))
+        ->assertDontSee(route('scores.public-incipit', $score));
+});
+
+it('shows private score url links via the plan secret link', function () {
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id, 'share_token' => Str::random(32)]);
+    $music = Music::factory()->create(['user_id' => $owner->id]);
+    $score = Score::factory()->create([
+        'user_id' => $owner->id,
+        'music_id' => $music->id,
+        'share_token' => Str::random(32),
+    ]);
+    $score->urls()->create(['url' => 'https://example.com/private-sheet']);
+    $slotPlan = MusicPlanSlotPlan::factory()->create(['music_plan_id' => $plan->id]);
+    MusicPlanSlotAssignment::factory()->create([
+        'music_plan_slot_plan_id' => $slotPlan->id,
+        'music_id' => $music->id,
+    ]);
+
+    Livewire::test(MusicPlanShareView::class, ['token' => $plan->share_token])
+        ->assertSee('https://example.com/private-sheet');
 });
 
 it('does not show scores from other users', function () {

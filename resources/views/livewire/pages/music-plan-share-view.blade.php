@@ -81,90 +81,30 @@
                                     @endif
 
                                     @if(!empty($slot['assignments']))
-                                    <div class="mt-3 space-y-4">
+                                    <div class="mt-3 space-y-3">
                                         @foreach($slot['assignments'] as $assignment)
                                             @if(!empty($assignment['music']))
-                                                <div class="space-y-1">
-                                                    @if(!empty($assignment['scope_label']))
+                                                @if(!empty($assignment['scope_label']))
                                                     <div class="mb-1">
                                                         <flux:badge color="zinc" size="sm">{{ $assignment['scope_label'] }}</flux:badge>
                                                     </div>
-                                                    @endif
-
-                                                    <!-- Music info — no link to music-view -->
-                                                    <div class="flex flex-wrap items-center gap-2">
-                                                        <flux:text class="font-semibold">{{ $assignment['music']->title }}</flux:text>
-                                                        @if($assignment['music']->subtitle)
-                                                        <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ $assignment['music']->subtitle }}</flux:text>
-                                                        @endif
-                                                        @if($assignment['music']->is_private)
-                                                        <flux:badge color="red" size="sm">Privát zene</flux:badge>
-                                                        @endif
-                                                    </div>
-
-                                                    <!-- Collections -->
-                                                    @if($assignment['music']->collections->isNotEmpty())
-                                                    <div class="flex flex-wrap gap-1">
-                                                        @foreach($assignment['music']->collections as $collection)
-                                                        <flux:badge color="zinc" size="sm">
-                                                            {{ $collection->abbreviation ?? $collection->title }}
-                                                            @if($collection->pivot->order_number)
-                                                                {{ $collection->pivot->order_number }}
-                                                            @endif
-                                                        </flux:badge>
-                                                        @endforeach
-                                                    </div>
-                                                    @endif
-
-                                                    <!-- Authors -->
-                                                    @if($assignment['music']->authors->isNotEmpty())
-                                                    <flux:text class="text-xs text-neutral-500 dark:text-neutral-400">
-                                                        {{ $assignment['music']->authors->pluck('name')->join(', ') }}
-                                                    </flux:text>
-                                                    @endif
-
-                                                    <!-- Notes -->
-                                                    @if(!empty($assignment['notes']))
-                                                    <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">
-                                                        {{ $assignment['notes'] }}
-                                                    </flux:text>
-                                                    @endif
-
-                                                    <!-- Scores -->
-                                                    @if(!empty($assignment['scores']))
-                                                    <div class="mt-2 space-y-2">
-                                                        @foreach($assignment['scores'] as $score)
-                                                        <div class="space-y-1">
-                                                            @if($score['share_url'])
-                                                            <a href="{{ $score['share_url'] }}" target="_blank"
-                                                               class="inline-flex items-center gap-1.5 text-sm font-medium hover:underline">
-                                                                {{ $score['title'] }}
-                                                                <flux:badge size="sm" color="zinc">{{ $score['format'] }}</flux:badge>
-                                                                <flux:icon name="arrow-top-right-on-square" variant="micro" class="text-neutral-400" />
-                                                            </a>
-                                                            @else
-                                                            <span class="inline-flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400">
-                                                                {{ $score['title'] }}
-                                                                <flux:badge size="sm" color="zinc">{{ $score['format'] }}</flux:badge>
-                                                            </span>
-                                                            @endif
-
-                                                            @if($score['incipit_url'])
-                                                            <x-incipit-image
-                                                                :src="$score['incipit_url']"
-                                                                :alt="$score['title']"
-                                                                img-class="block h-auto max-h-14 w-auto"
-                                                            />
-                                                            @endif
-                                                        </div>
-                                                        @endforeach
-                                                    </div>
-                                                    @endif
-                                                </div>
+                                                @endif
+                                                <livewire:music-card
+                                                    :key="'music-card-'.$assignment['id']"
+                                                    :music="$assignment['music']"
+                                                    :private-share="true"
+                                                    :share-scores="$assignment['scores']"
+                                                />
                                             @else
                                             <flux:callout variant="secondary" icon="information-circle">
                                                 A zenei bejegyzés már nem érhető el.
                                             </flux:callout>
+                                            @endif
+
+                                            @if(!empty($assignment['notes']))
+                                            <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">
+                                                {{ $assignment['notes'] }}
+                                            </flux:text>
                                             @endif
                                         @endforeach
                                     </div>
