@@ -13,15 +13,23 @@ new class extends Component
     /** @var array<int, array{label: string, points: int}> */
     public array $score_reasons = [];
 
+    public bool $privateShare = false;
+
+    /** @var array<int, array<string, mixed>> */
+    public array $shareScores = [];
+
     /**
      * @param  array<int, array{label: string, points: int}>  $score_reasons
+     * @param  array<int, array<string, mixed>>  $shareScores
      */
-    public function mount(Music $music, ?int $score = null, ?string $scope_label = null, array $score_reasons = []): void
+    public function mount(Music $music, ?int $score = null, ?string $scope_label = null, array $score_reasons = [], bool $privateShare = false, array $shareScores = []): void
     {
         $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
         $this->score = $score;
         $this->scope_label = $scope_label;
         $this->score_reasons = $score_reasons;
+        $this->privateShare = $privateShare;
+        $this->shareScores = $shareScores;
     }
 
     #[On('music-updated')]
@@ -164,8 +172,10 @@ new class extends Component
     </div>
 
     @php
-        $incipitScores = $music->visibleIncipitScores(auth()->user())
-            ->map(fn($s) => ['score' => $s, 'url' => $s->public_preview ? route('scores.public-incipit', $s) : route('scores.incipit', $s)]);
+        $incipitScores = $privateShare
+            ? collect()
+            : $music->visibleIncipitScores(auth()->user())
+                ->map(fn($s) => ['score' => $s, 'url' => $s->public_preview ? route('scores.public-incipit', $s) : route('scores.incipit', $s)]);
     @endphp
     @if($incipitScores->isNotEmpty())
     <div class="border-b border-gray-200 dark:border-gray-700 px-3 py-2"
@@ -198,6 +208,53 @@ new class extends Component
             </button>
             @endif
         </div>
+    </div>
+    @endif
+
+    @if($privateShare && !empty($shareScores))
+    <div class="border-b border-gray-200 dark:border-gray-700 px-4 py-3 space-y-3">
+        @foreach($shareScores as $shareScore)
+        <div class="space-y-1">
+            @if(!empty($shareScore['share_url']))
+            <a href="{{ $shareScore['share_url'] }}"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="relative z-10 inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline">
+                {{ $shareScore['title'] }}
+                <flux:badge size="sm" color="zinc">{{ $shareScore['format'] }}</flux:badge>
+                <flux:icon name="arrow-top-right-on-square" variant="micro" class="text-gray-400" />
+            </a>
+            @else
+            <span class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
+                {{ $shareScore['title'] }}
+                <flux:badge size="sm" color="zinc">{{ $shareScore['format'] }}</flux:badge>
+            </span>
+            @endif
+
+            @if(!empty($shareScore['incipit_url']))
+            <x-incipit-image :src="$shareScore['incipit_url']"
+                 :alt="$shareScore['title']"
+                 img-class="block h-auto max-h-14 w-auto"
+                 img-style="max-width: 400px;" />
+            @endif
+
+            @if(!empty($shareScore['urls']))
+            <div class="flex items-start gap-2">
+                <flux:icon name="arrow-top-right-on-square" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
+                <div class="flex flex-wrap gap-2">
+                    @foreach($shareScore['urls'] as $scoreUrl)
+                        <a href="{{ $scoreUrl['url'] }}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="relative z-10 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                           title="{{ $scoreUrl['label'] }}"
+                        >{{ $scoreUrl['label'] }}</a>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+        </div>
+        @endforeach
     </div>
     @endif
 

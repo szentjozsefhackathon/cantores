@@ -4,6 +4,7 @@ namespace App\Livewire\Pages;
 
 use App\Models\MusicPlan;
 use App\Models\Score;
+use App\Models\ScoreUrl;
 use Illuminate\Support\Str;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
@@ -62,6 +63,7 @@ class MusicPlanShareView extends Component
         $scores = Score::query()
             ->where('user_id', $ownerId)
             ->whereIn('music_id', $musicIds)
+            ->with('urls')
             ->get();
 
         $scores->each(function (Score $score): void {
@@ -121,6 +123,10 @@ class MusicPlanShareView extends Component
                                 'incipit_url' => ($s->share_token && $s->hasIncipit())
                                     ? route('score.share.incipit', ['token' => $s->share_token])
                                     : null,
+                                'urls' => $s->urls->map(fn (ScoreUrl $url) => [
+                                    'url' => $url->url,
+                                    'label' => $url->label?->label() ?? $url->url,
+                                ])->all(),
                             ])->all(),
                         ];
                     })->all(),
