@@ -45,7 +45,7 @@
                                         <a href="{{ route('scores.edit', ['score' => $score->id]) }}" wire:navigate class="hover:underline">
                                             {{ $score->title }}
                                         </a>
-                                        <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                                        <x-score-format-badge :format="$score->format" />
                                         @if($score->share_token)
                                             <flux:icon name="link" size="sm" class="text-blue-500 dark:text-blue-400" :title="__('Secret link active')" />
                                         @endif

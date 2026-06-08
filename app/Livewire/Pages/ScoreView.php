@@ -13,7 +13,7 @@ class ScoreView extends Component
 
     public string $title = '';
 
-    public string $format = 'abc';
+    public ?string $format = null;
 
     public string $content = '';
 
@@ -33,8 +33,8 @@ class ScoreView extends Component
 
         $this->score = $score->load('urls');
         $this->title = $score->title;
-        $this->format = $score->format->value;
-        $this->content = $score->content;
+        $this->format = $score->format?->value;
+        $this->content = $score->content ?? '';
         $this->settings = $score->settings ?? [];
     }
 

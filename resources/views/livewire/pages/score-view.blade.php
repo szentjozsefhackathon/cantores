@@ -32,6 +32,7 @@
             </div>
             @endif
 
+            @if($this->content !== '')
             <div
                 x-data="scoreEditor({
                     scoreSettings: @js($this->settings ?: (object) []),
@@ -410,6 +411,7 @@
                     </div>
                 </div>
             </div>
+            @endif
         </flux:card>
     </div>
 </div>

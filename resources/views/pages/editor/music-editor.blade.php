@@ -1198,7 +1198,7 @@ new class extends Component
                                     {{ $myScore->title }}
                                 </a>
                                 <div class="mt-0.5 flex flex-wrap items-center gap-2">
-                                    <flux:badge color="zinc" size="sm">{{ $myScore->format->label() }}</flux:badge>
+                                    <x-score-format-badge :format="$myScore->format" />
                                     <span class="text-xs text-gray-500 dark:text-gray-400">{{ $myScore->updated_at->translatedFormat('Y-m-d') }}</span>
                                 </div>
                             </td>
@@ -1259,7 +1259,7 @@ new class extends Component
                                     {{ $previewScore->title }}
                                 </a>
                                 <div class="mt-0.5">
-                                    <flux:badge color="zinc" size="sm">{{ $previewScore->format->label() }}</flux:badge>
+                                    <x-score-format-badge :format="$previewScore->format" />
                                 </div>
                             </td>
                             <td class="px-3 py-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">

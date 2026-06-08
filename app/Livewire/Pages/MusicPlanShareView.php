@@ -115,8 +115,8 @@ class MusicPlanShareView extends Component
                             'scores' => $scores->map(fn (Score $s) => [
                                 'id' => $s->id,
                                 'title' => $s->title,
-                                'format' => $s->format->label(),
-                                'format_value' => $s->format->value,
+                                'format' => $s->format?->label() ?? __('Links'),
+                                'format_value' => $s->format?->value,
                                 'share_url' => $s->share_token
                                     ? route('score.share', ['token' => $s->share_token])
                                     : null,

@@ -246,7 +246,7 @@
                                                 {{ $score->title }}
                                             </a>
                                             <div class="mt-0.5 flex flex-wrap items-center gap-2">
-                                                <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                                                <x-score-format-badge :format="$score->format" />
                                                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ $score->updated_at->translatedFormat('Y-m-d') }}</span>
                                             </div>
                                         </td>

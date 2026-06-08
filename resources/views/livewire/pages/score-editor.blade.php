@@ -49,9 +49,15 @@
 
                 <div class="flex flex-wrap gap-2">
                     @if(!$isGuest)
-                    <flux:button variant="filled" variant="primary" icon="check" x-on:click="saveScore()" x-bind:disabled="savingScore">
-                        {{ __('Save Score') }}
-                    </flux:button>
+                        @if($linksOnly)
+                        <flux:button variant="filled" variant="primary" icon="check" wire:click="save">
+                            {{ __('Save Score') }}
+                        </flux:button>
+                        @else
+                        <flux:button variant="filled" variant="primary" icon="check" x-on:click="saveScore()" x-bind:disabled="savingScore">
+                            {{ __('Save Score') }}
+                        </flux:button>
+                        @endif
                     @endif
                 </div>
             </div>
@@ -106,7 +112,34 @@
                         @endif
                     </div>
 
-                    <flux:field required>
+                    <flux:field>
+                        @if(!$isGuest)
+                        <flux:label class="inline">{{ __('Content type') }}</flux:label>
+                        <div class="mb-3 flex gap-2">
+                            <button
+                                type="button"
+                                wire:click="$set('linksOnly', false)"
+                                @class([
+                                    'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition',
+                                    'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-white dark:bg-zinc-700 dark:text-zinc-100' => !$linksOnly,
+                                    'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' => $linksOnly,
+                                ])>
+                                {{ __('Notation') }}
+                            </button>
+                            <button
+                                type="button"
+                                wire:click="$set('linksOnly', true)"
+                                @class([
+                                    'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition',
+                                    'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-white dark:bg-zinc-700 dark:text-zinc-100' => $linksOnly,
+                                    'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' => !$linksOnly,
+                                ])>
+                                {{ __('Links only') }}
+                            </button>
+                        </div>
+                        @endif
+
+                        @unless($linksOnly)
                         <flux:label class="inline">{{ __('Format') }}</flux:label>
                         <div class="flex flex-nowrap gap-2">
                             @foreach($formats as $formatOption)
@@ -123,6 +156,7 @@
                             @endforeach
                         </div>
                         <flux:error name="format" />
+                        @endunless
                     </flux:field>
                 </div>
             </div>
@@ -136,7 +170,7 @@
                         @if ($score)
                             <span class="inline-flex items-center gap-1.5 rounded-md border border-zinc-400 bg-white px-2.5 py-1 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-400 dark:border-zinc-500 dark:bg-zinc-700 dark:text-zinc-100 dark:ring-zinc-500">
                                 {{ $score->title }}
-                                <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                                <x-score-format-badge :format="$score->format" />
                             </span>
                         @endif
 
@@ -144,7 +178,7 @@
                             <a href="{{ route('scores.edit', $relatedScore) }}" wire:navigate
                                class="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-sm text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-400 dark:hover:bg-zinc-700">
                                 {{ $relatedScore->title }}
-                                <flux:badge color="zinc" size="sm">{{ $relatedScore->format->label() }}</flux:badge>
+                                <x-score-format-badge :format="$relatedScore->format" />
                             </a>
                         @endforeach
 
@@ -179,6 +213,7 @@
 
             <div
                 :class="splitScreen ? 'fixed inset-0 z-[60] flex flex-col overflow-hidden bg-white dark:bg-zinc-900' : ''">
+                @unless($linksOnly)
                 {{-- Compact header shown only in split-screen mode --}}
                 <div x-show="splitScreen" x-cloak class="flex h-10 shrink-0 items-center gap-3 border-b border-zinc-200 px-3 dark:border-zinc-700">
                     <span x-text="$wire.title || '…'" class="min-w-0 truncate text-sm font-medium text-zinc-700 dark:text-zinc-200"></span>
@@ -877,6 +912,7 @@
                         </div>
                     </div>{{-- end preview col --}}
                 </div>{{-- end two-col grid --}}
+                @endunless
 
                 <flux:modal name="share-link-modal" class="max-w-md">
                     <div class="space-y-4">
@@ -988,7 +1024,7 @@
                 </flux:modal>
                 @endif
 
-                @if(!$isGuest && $score)
+                @if(!$isGuest)
                 {{-- URL Management --}}
                 <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700" x-show="!splitScreen">
                     <flux:heading size="sm" class="mb-3">{{ __('Links') }}</flux:heading>
@@ -996,7 +1032,7 @@
                     @if($this->scoreUrls->isNotEmpty())
                     <div class="mb-4 space-y-2">
                         @foreach($this->scoreUrls as $scoreUrl)
-                        <div class="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <div wire:key="score-url-{{ $scoreUrl->exists ? 'saved-'.$scoreUrl->id : 'pending-'.$scoreUrl->pending_index }}" class="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
                             @if($scoreUrl->label instanceof \App\MusicUrlLabel)
                             <flux:icon name="{{ $scoreUrl->label->icon() }}" variant="micro" class="shrink-0 {{ $scoreUrl->label->color() }}" />
                             @else
@@ -1017,7 +1053,7 @@
                                 icon="trash"
                                 variant="ghost"
                                 size="sm"
-                                wire:click="deleteUrl({{ $scoreUrl->id }})"
+                                wire:click="{{ $scoreUrl->exists ? 'deleteUrl('.$scoreUrl->id.')' : 'removePendingUrl('.$scoreUrl->pending_index.')' }}"
                                 wire:confirm="{{ __('Remove this link?') }}" />
                         </div>
                         @endforeach

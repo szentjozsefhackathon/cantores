@@ -22,7 +22,7 @@
                             @else
                                 <span class="font-medium text-zinc-800 dark:text-zinc-200">{{ $score->title }}</span>
                             @endif
-                            <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                            <x-score-format-badge :format="$score->format" />
                         </div>
                         @if($score->music)
                         <div class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{{ $score->music->title }}</div>

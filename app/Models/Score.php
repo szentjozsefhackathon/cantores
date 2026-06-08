@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\Storage;
  * @property int $user_id
  * @property int|null $music_id
  * @property string $title
- * @property \App\Enums\ScoreFormat $format
- * @property string $content
+ * @property \App\Enums\ScoreFormat|null $format
+ * @property string|null $content
  * @property array<string, array<string, array<string, mixed>>>|null $settings
  * @property string|null $share_token
  * @property bool $public_preview

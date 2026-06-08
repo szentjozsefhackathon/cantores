@@ -56,4 +56,9 @@ class ScoreFactory extends Factory
     {
         return $this->state(['music_id' => null]);
     }
+
+    public function linksOnly(): static
+    {
+        return $this->state(['format' => null, 'content' => null]);
+    }
 }

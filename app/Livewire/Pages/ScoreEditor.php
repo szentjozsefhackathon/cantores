@@ -44,6 +44,11 @@ class ScoreEditor extends Component
 
     public bool $publicPreview = false;
 
+    public bool $linksOnly = false;
+
+    /** @var array<int, array{url: string, label: ?string, comment: ?string}> */
+    public array $pendingUrls = [];
+
     public bool $isSharedLink = false;
 
     public ?string $secretLinkUrl = null;
@@ -76,8 +81,9 @@ class ScoreEditor extends Component
             $this->score = $score->load('music');
             $this->musicId = $score->music_id;
             $this->title = $score->title;
-            $this->format = $score->format->value;
-            $this->content = $score->content;
+            $this->linksOnly = $score->format === null;
+            $this->format = $score->format?->value ?? 'abc';
+            $this->content = $score->content ?? '';
             $this->settings = $score->settings ?? [];
             $this->publicPreview = (bool) $score->public_preview;
             $this->secretLinkUrl = $score->share_token !== null
@@ -128,36 +134,70 @@ class ScoreEditor extends Component
     {
         $this->authorize($this->score ? 'update' : 'create', $this->score ?? Score::class);
 
-        $validated = $this->validate([
+        $rules = [
             'title' => ['required', 'string', 'max:255'],
-            'format' => ['required', Rule::enum(ScoreFormat::class)],
-            'content' => ['required', 'string'],
             'musicId' => ['nullable', 'integer'],
             'publicPreview' => ['boolean'],
-        ]);
+        ];
+
+        if (! $this->linksOnly) {
+            $rules['format'] = ['required', Rule::enum(ScoreFormat::class)];
+            $rules['content'] = ['required', 'string'];
+        }
+
+        $validated = $this->validate($rules);
+
+        if ($this->linksOnly && ! $this->hasAnyLink()) {
+            $this->addError('newUrl', __('Add at least one link.'));
+
+            return;
+        }
 
         $musicId = $this->resolveMusicId($validated['musicId']);
 
-        $settings = $this->settings;
-        if (is_string($ratio) && $ratio !== '' && is_array($ratioSettings)) {
-            $settings[$validated['format']][$ratio] = $ratioSettings;
+        $score = $this->score ?? new Score(['user_id' => Auth::id()]);
+
+        if ($this->linksOnly) {
+            $score->fill([
+                'music_id' => $musicId,
+                'title' => $validated['title'],
+                'format' => null,
+                'content' => null,
+                'settings' => null,
+                'public_preview' => false,
+            ]);
+        } else {
+            $settings = $this->settings;
+            if (is_string($ratio) && $ratio !== '' && is_array($ratioSettings)) {
+                $settings[$validated['format']][$ratio] = $ratioSettings;
+            }
+
+            $score->fill([
+                'music_id' => $musicId,
+                'title' => $validated['title'],
+                'format' => $validated['format'],
+                'content' => $validated['content'],
+                'settings' => $settings ?: null,
+                'public_preview' => $musicId !== null && ($validated['publicPreview'] ?? false),
+            ]);
         }
 
-        $score = $this->score ?? new Score(['user_id' => Auth::id()]);
-        $score->fill([
-            'music_id' => $musicId,
-            'title' => $validated['title'],
-            'format' => $validated['format'],
-            'content' => $validated['content'],
-            'settings' => $settings ?: null,
-            'public_preview' => $musicId !== null && ($validated['publicPreview'] ?? false),
-        ]);
         $score->user_id = $score->user_id ?: Auth::id();
         $score->save();
 
-        $this->storeIncipit($score, $incipitDataUrl);
+        foreach ($this->pendingUrls as $pendingUrl) {
+            $score->urls()->create([
+                'url' => $pendingUrl['url'],
+                'label' => $pendingUrl['label'] ?: null,
+                'comment' => $pendingUrl['comment'] ?: null,
+            ]);
+        }
+        $this->pendingUrls = [];
 
-        $this->settings = $settings;
+        if (! $this->linksOnly) {
+            $this->storeIncipit($score, $incipitDataUrl);
+            $this->settings = $score->settings ?? [];
+        }
 
         $this->dispatch($this->score ? 'score-updated' : 'score-created');
         $this->redirectRoute('scores.edit', ['score' => $score->id], navigate: true);
@@ -278,8 +318,7 @@ class ScoreEditor extends Component
 
     public function addUrl(): void
     {
-        abort_unless($this->score instanceof Score, 404);
-        $this->authorize('update', $this->score);
+        $this->authorize($this->score instanceof Score ? 'update' : 'create', $this->score ?? Score::class);
 
         $this->validate([
             'newUrl' => ['required', 'string', 'url', 'max:2048'],
@@ -287,11 +326,19 @@ class ScoreEditor extends Component
             'newUrlComment' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $this->score->urls()->create([
-            'url' => $this->newUrl,
-            'label' => $this->newUrlLabel ?: null,
-            'comment' => $this->newUrlComment ?: null,
-        ]);
+        if ($this->score instanceof Score) {
+            $this->score->urls()->create([
+                'url' => $this->newUrl,
+                'label' => $this->newUrlLabel ?: null,
+                'comment' => $this->newUrlComment ?: null,
+            ]);
+        } else {
+            $this->pendingUrls[] = [
+                'url' => $this->newUrl,
+                'label' => $this->newUrlLabel ?: null,
+                'comment' => $this->newUrlComment ?: null,
+            ];
+        }
 
         $this->newUrl = '';
         $this->newUrlLabel = null;
@@ -312,6 +359,23 @@ class ScoreEditor extends Component
         unset($this->scoreUrls);
     }
 
+    public function removePendingUrl(int $index): void
+    {
+        unset($this->pendingUrls[$index]);
+        $this->pendingUrls = array_values($this->pendingUrls);
+
+        unset($this->scoreUrls);
+    }
+
+    private function hasAnyLink(): bool
+    {
+        if ($this->pendingUrls !== []) {
+            return true;
+        }
+
+        return $this->score instanceof Score && $this->score->urls()->exists();
+    }
+
     public function delete(): void
     {
         abort_unless($this->score instanceof Score, 404);
@@ -323,14 +387,25 @@ class ScoreEditor extends Component
     }
 
     #[Computed]
-    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreUrl> */
-    public function scoreUrls(): \Illuminate\Database\Eloquent\Collection
+    /** @return \Illuminate\Support\Collection<int, \App\Models\ScoreUrl> */
+    public function scoreUrls(): \Illuminate\Support\Collection
     {
-        if (! $this->score instanceof Score) {
-            return ScoreUrl::query()->whereNull('id')->get();
-        }
+        $persisted = $this->score instanceof Score
+            ? $this->score->urls()->orderBy('id')->get()
+            : collect();
 
-        return $this->score->urls()->orderBy('id')->get();
+        $pending = collect($this->pendingUrls)->map(function (array $pendingUrl, int $index): ScoreUrl {
+            $url = new ScoreUrl([
+                'url' => $pendingUrl['url'],
+                'label' => $pendingUrl['label'] ?: null,
+                'comment' => $pendingUrl['comment'] ?: null,
+            ]);
+            $url->pending_index = $index;
+
+            return $url;
+        });
+
+        return collect($persisted)->concat($pending)->values();
     }
 
     #[Computed]

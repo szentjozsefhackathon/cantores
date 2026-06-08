@@ -718,6 +718,9 @@
     "Score updated.": "Kotta frissítve.",
     "Saved as your default for this ratio.": "Alapértelmezettként elmentve ehhez az arányhoz.",
     "Links": "Hivatkozások",
+    "Content type": "Tartalom típusa",
+    "Links only": "Csak hivatkozások",
+    "Add at least one link.": "Adj hozzá legalább egy hivatkozást.",
     "No type": "Nincs típus",
     "Comment (optional)": "Megjegyzés (nem kötelező)",
 

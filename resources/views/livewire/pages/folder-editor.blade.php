@@ -49,7 +49,7 @@
                                 <div class="flex flex-wrap items-center gap-1.5">
                                     <a href="{{ route('scores.edit', $score) }}" wire:navigate
                                        class="font-medium hover:underline">{{ $score->title }}</a>
-                                    <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                                    <x-score-format-badge :format="$score->format" />
                                 </div>
                                 @if($score->music)
                                 <div class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{{ $score->music->title }}</div>
@@ -93,7 +93,7 @@
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-1.5">
                                 <span class="font-medium">{{ $score->title }}</span>
-                                <flux:badge color="zinc" size="sm">{{ $score->format->label() }}</flux:badge>
+                                <x-score-format-badge :format="$score->format" />
                             </div>
                             @if($score->music)
                             <div class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{{ $score->music->title }}</div>
