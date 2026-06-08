@@ -126,6 +126,10 @@ class MusicPlanShareView extends Component
                                 'urls' => $s->urls->map(fn (ScoreUrl $url) => [
                                     'url' => $url->url,
                                     'label' => $url->label?->label() ?? $url->url,
+                                    'icon' => $url->label?->icon() ?? 'link',
+                                    'color' => $url->label?->color() ?? 'text-gray-500',
+                                    'host' => preg_replace('/^www\./', '', parse_url($url->url, PHP_URL_HOST) ?? $url->url),
+                                    'comment' => $url->comment,
                                 ])->all(),
                             ])->all(),
                         ];

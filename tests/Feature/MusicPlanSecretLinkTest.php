@@ -135,7 +135,7 @@ it('shows private score url links via the plan secret link', function () {
         'music_id' => $music->id,
         'share_token' => Str::random(32),
     ]);
-    $score->urls()->create(['url' => 'https://example.com/private-sheet']);
+    $score->urls()->create(['url' => 'https://example.com/private-sheet', 'comment' => 'soprano part']);
     $slotPlan = MusicPlanSlotPlan::factory()->create(['music_plan_id' => $plan->id]);
     MusicPlanSlotAssignment::factory()->create([
         'music_plan_slot_plan_id' => $slotPlan->id,
@@ -143,7 +143,9 @@ it('shows private score url links via the plan secret link', function () {
     ]);
 
     Livewire::test(MusicPlanShareView::class, ['token' => $plan->share_token])
-        ->assertSee('https://example.com/private-sheet');
+        ->assertSee('https://example.com/private-sheet')
+        ->assertSee('example.com')
+        ->assertSee('soprano part');
 });
 
 it('does not show scores from other users', function () {

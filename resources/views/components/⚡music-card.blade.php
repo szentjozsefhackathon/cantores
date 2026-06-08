@@ -239,18 +239,21 @@ new class extends Component
             @endif
 
             @if(!empty($shareScore['urls']))
-            <div class="flex items-start gap-2">
-                <flux:icon name="arrow-top-right-on-square" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
-                <div class="flex flex-wrap gap-2">
-                    @foreach($shareScore['urls'] as $scoreUrl)
-                        <a href="{{ $scoreUrl['url'] }}"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           class="relative z-10 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                           title="{{ $scoreUrl['label'] }}"
-                        >{{ $scoreUrl['label'] }}</a>
-                    @endforeach
-                </div>
+            <div class="flex flex-wrap gap-2">
+                @foreach($shareScore['urls'] as $scoreUrl)
+                    <a href="{{ $scoreUrl['url'] }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="relative z-10 inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                       title="{{ $scoreUrl['label'] }}"
+                    >
+                        <flux:icon name="{{ $scoreUrl['icon'] ?? 'link' }}" class="size-3.5 shrink-0 {{ $scoreUrl['color'] ?? 'text-gray-500' }}" />
+                        {{ $scoreUrl['host'] ?? $scoreUrl['label'] }}
+                        @if(!empty($scoreUrl['comment']))
+                            <span class="text-gray-500 dark:text-gray-400">({{ $scoreUrl['comment'] }})</span>
+                        @endif
+                    </a>
+                @endforeach
             </div>
             @endif
         </div>
