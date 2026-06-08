@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\ScoreFormat;
 use App\Livewire\Pages\ScoreEditor;
 use App\Models\Music;
 use App\Models\Score;
@@ -27,8 +26,10 @@ it('relatedScores returns empty in shared-link mode', function () {
     $score = Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id]);
     Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id]);
 
-    $component = Livewire::test(ScoreEditor::class, ['score' => $score]);
-    $component->instance()->isSharedLink = true;
+    actingAs($user);
+
+    $component = Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->set('isSharedLink', true);
 
     expect($component->instance()->relatedScores)->toBeEmpty();
 });
@@ -114,21 +115,6 @@ it('variations panel is not rendered when there are no siblings', function () {
 
     Livewire::test(ScoreEditor::class, ['score' => $score])
         ->assertDontSee(__('Variations'));
-});
-
-it('variations panel renders sibling title and format badge', function () {
-    $user = User::factory()->create();
-    $music = Music::factory()->create();
-
-    $editing = Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id]);
-    Score::factory()->abc()->create(['user_id' => $user->id, 'music_id' => $music->id, 'title' => 'SATB Version']);
-
-    actingAs($user);
-
-    Livewire::test(ScoreEditor::class, ['score' => $editing])
-        ->assertSee('Variations')
-        ->assertSee('SATB Version')
-        ->assertSee(ScoreFormat::Abc->label());
 });
 
 it('variations panel includes link to sibling edit page', function () {

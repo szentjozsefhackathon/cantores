@@ -56,7 +56,7 @@
                     </flux:menu>
                 </flux:dropdown>
             </div>
-            <div>
+            <div class="flex justify-center">
                 <livewire:genre-selector />
             </div>
         </div>

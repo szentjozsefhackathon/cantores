@@ -33,7 +33,7 @@ new class extends Component
 }
 ?>
 
-<div class="flex items-center justify-center">
+<div class="inline-flex items-center">
     <flux:radio.group wire:model.live="selectedGenreId" variant="segmented">
             @if (is_null($this->selectedGenreId))
                 <flux:radio label="{{ __('All') }}" value="" checked />

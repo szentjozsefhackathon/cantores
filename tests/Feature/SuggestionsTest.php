@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Celebration;
+use App\Models\Genre;
 use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
@@ -9,6 +10,19 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
+
+test('guest sees the genre selector on the suggestions page', function () {
+    Genre::firstOrCreate(['name' => 'organist']);
+    Genre::firstOrCreate(['name' => 'guitarist']);
+
+    $response = $this->get('/suggestions?'.http_build_query([
+        'name' => 'Non-existent',
+    ]));
+
+    $response->assertSuccessful();
+    $response->assertSeeLivewire('genre-selector');
+    $response->assertSee(__('All'));
+});
 
 test('suggestions page loads with criteria', function () {
     $user = User::factory()->create();

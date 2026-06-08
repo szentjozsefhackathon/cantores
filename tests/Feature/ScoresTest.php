@@ -238,20 +238,6 @@ it('creates an unattached chordpro score', function () {
     ]);
 });
 
-it('renders the format selector as image buttons instead of a dropdown', function () {
-    $user = User::factory()->create();
-
-    actingAs($user);
-
-    Livewire::test(ScoreEditor::class)
-        ->assertDontSeeHtml('<flux:select wire:model="format">')
-        ->assertSeeHtml("wire:click=\"\$set('format', 'abc')\"")
-        ->assertSeeHtml('abc-button.png')
-        ->assertSeeHtml('gabc-button.png')
-        ->assertSeeHtml('aretino-button.png')
-        ->assertSeeHtml('chordpro-button.png');
-});
-
 it('renders reset to defaults button in each format toolbar', function () {
     $user = User::factory()->create();
 

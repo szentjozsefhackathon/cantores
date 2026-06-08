@@ -30,7 +30,7 @@ class FolderEditor extends Component
 
     public int $modalPage = 1;
 
-    public function mount(?Folder $folder = null): void
+    public function mount(mixed $folder = null): void
     {
         if ($folder instanceof Folder) {
             $this->authorize('update', $folder);
