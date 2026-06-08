@@ -74,7 +74,10 @@ new class extends Component
     {
         $user = Auth::user();
         $assignmentsByPivot = $this->musicPlan->musicAssignments()
-            ->with(['music.collections', 'scopes'])
+            ->with([
+                'music' => fn ($q) => $q->with('collections')->visibleTo($user),
+                'scopes',
+            ])
             ->orderBy('music_plan_slot_plan_id')
             ->orderBy('music_sequence')
             ->get()
