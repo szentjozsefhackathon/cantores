@@ -39,7 +39,7 @@ RUN apt-get update && apt-get upgrade -y && \
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
 # Add PHP extensions
-ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.7.24/install-php-extensions /usr/local/bin/
+COPY --from=mlocati/php-extension-installer:2.7.24 /usr/bin/install-php-extensions /usr/local/bin/
 RUN install-php-extensions gd gmp memcached pdo_pgsql pdo_mysql xdebug zip pcntl bcmath intl
 
 # Apache configuration
