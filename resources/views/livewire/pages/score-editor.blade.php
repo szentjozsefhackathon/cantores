@@ -113,50 +113,35 @@
                     </div>
 
                     <flux:field>
-                        @if(!$isGuest)
-                        <flux:label class="inline">{{ __('Content type') }}</flux:label>
-                        <div class="mb-3 flex gap-2">
-                            <button
-                                type="button"
-                                wire:click="$set('linksOnly', false)"
-                                @class([
-                                    'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition',
-                                    'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-white dark:bg-zinc-700 dark:text-zinc-100' => !$linksOnly,
-                                    'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' => $linksOnly,
-                                ])>
-                                {{ __('Notation') }}
-                            </button>
-                            <button
-                                type="button"
-                                wire:click="$set('linksOnly', true)"
-                                @class([
-                                    'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition',
-                                    'border-zinc-900 bg-zinc-100 text-zinc-900 dark:border-white dark:bg-zinc-700 dark:text-zinc-100' => $linksOnly,
-                                    'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' => !$linksOnly,
-                                ])>
+                        <div class="flex items-center gap-2">
+                            <flux:label class="inline">{{ __('Format') }}</flux:label>
+                            @if(!$isGuest)
+                            <flux:button
+                                class="mb-1"
+                                size="xs"
+                                icon="link"
+                                :variant="$linksOnly ? 'primary' : null"
+                                wire:click="$toggle('linksOnly')">
                                 {{ __('Links only') }}
-                            </button>
+                            </flux:button>
+                            @endif
                         </div>
-                        @endif
-
-                        @unless($linksOnly)
-                        <flux:label class="inline">{{ __('Format') }}</flux:label>
                         <div class="flex flex-nowrap gap-2">
                             @foreach($formats as $formatOption)
                             <button
                                 type="button"
-                                wire:click="$set('format', '{{ $formatOption->value }}')"
-                                x-bind:class="$wire.format === '{{ $formatOption->value }}'
-                                    ? 'border-zinc-900 bg-zinc-100 dark:border-white dark:bg-zinc-700'
-                                    : 'border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700'"
-                                class="flex flex-1 min-w-0 basis-0 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-zinc-800 transition dark:text-zinc-100">
+                                wire:click="selectFormat('{{ $formatOption->value }}')"
+                                @class([
+                                    'flex flex-1 min-w-0 basis-0 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-zinc-800 transition dark:text-zinc-100',
+                                    'border-zinc-900 bg-zinc-100 dark:border-white dark:bg-zinc-700' => ! $linksOnly && $format === $formatOption->value,
+                                    'border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700' => $linksOnly || $format !== $formatOption->value,
+                                ])>
                                 <span class="text-sm font-medium">{{ $formatOption->label() }}</span>
                                 <img src="{{ asset($formatOption->value.'-button.png') }}" alt="{{ $formatOption->label() }}" class="h-10 w-auto object-contain" />
                             </button>
                             @endforeach
                         </div>
                         <flux:error name="format" />
-                        @endunless
                     </flux:field>
                 </div>
             </div>

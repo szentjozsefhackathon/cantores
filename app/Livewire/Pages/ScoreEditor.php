@@ -500,6 +500,16 @@ class ScoreEditor extends Component
         $this->musicId = null;
     }
 
+    public function selectFormat(string $format): void
+    {
+        if (! ScoreFormat::tryFrom($format) instanceof ScoreFormat) {
+            return;
+        }
+
+        $this->format = $format;
+        $this->linksOnly = false;
+    }
+
     public function render()
     {
         $user = Auth::user();

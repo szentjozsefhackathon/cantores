@@ -94,6 +94,28 @@ it('stages multiple links during creation and can remove a pending one', functio
     expect($score->urls()->get()->pluck('url')->all())->toBe(['https://example.com/b']);
 });
 
+it('switches back to notation and sets the format when a format is selected', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->set('linksOnly', true)
+        ->call('selectFormat', 'gabc')
+        ->assertSet('linksOnly', false)
+        ->assertSet('format', 'gabc');
+});
+
+it('ignores an invalid format when selecting', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->call('selectFormat', 'not-a-format')
+        ->assertSet('format', 'abc');
+});
+
 it('initializes linksOnly when editing a links-only score', function () {
     $user = User::factory()->create();
     $score = Score::factory()->unattached()->linksOnly()->create(['user_id' => $user->id]);
