@@ -127,7 +127,7 @@ new class extends Component
 
         $dbAssignments = \App\Models\MusicPlanSlotAssignment::where('music_plan_slot_plan_id', $this->slotPlan->id)
             ->orderBy('music_sequence')
-            ->with(['music.collections', 'music.tags', 'music.genres', 'music.authors', 'music.publicPreviewScores', 'flag', 'scopes'])
+            ->with(['music.collections', 'music.tags', 'music.genres', 'music.authors', 'music.urls', 'music.publicPreviewScores', 'flag', 'scopes'])
             ->get();
 
         $this->assignments = $dbAssignments->map(function ($assignment) use ($user) {
@@ -182,6 +182,13 @@ new class extends Component
                 'music_incipits' => $music->visibleIncipitScores($user)
                     ->map(fn ($s) => ['url' => $s->public_preview ? route('scores.public-incipit', $s) : route('scores.incipit', $s), 'title' => $s->title])
                     ->toArray(),
+                'music_urls' => $music->urls->map(fn ($u) => [
+                    'url' => $u->url,
+                    'icon' => \App\MusicUrlLabel::tryFrom($u->label)?->icon() ?? 'link',
+                    'color' => \App\MusicUrlLabel::tryFrom($u->label)?->color() ?? 'text-gray-500',
+                    'label' => \App\MusicUrlLabel::tryFrom($u->label)?->label(),
+                    'host' => preg_replace('/^www\./', '', parse_url($u->url, PHP_URL_HOST) ?? $u->url),
+                ])->toArray(),
             ];
         })->toArray();
     }

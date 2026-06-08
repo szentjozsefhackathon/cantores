@@ -282,18 +282,24 @@ new class extends Component
         @endif
 
         @if($music->urls->isNotEmpty())
-        <div class="flex items-start gap-2">
-            <flux:icon name="arrow-top-right-on-square" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
-            <div class="flex flex-wrap gap-2">
-                @foreach($music->urls as $url)
-                    <a href="{{ $url->url }}"
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       class="relative z-10 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                       title="{{ $url->label ? (\App\MusicUrlLabel::tryFrom($url->label)?->label() ?? $url->label) : $url->url }}"
-                    >{{ $url->label ? (\App\MusicUrlLabel::tryFrom($url->label)?->label() ?? $url->label) : $url->url }}</a>
-                @endforeach
-            </div>
+        <div class="flex flex-wrap gap-2">
+            @foreach($music->urls as $url)
+                @php
+                    $urlLabelEnum = \App\MusicUrlLabel::tryFrom($url->label);
+                    $urlIcon = $urlLabelEnum?->icon() ?? 'link';
+                    $urlColor = $urlLabelEnum?->color() ?? 'text-gray-500';
+                    $urlHost = preg_replace('/^www\./', '', parse_url($url->url, PHP_URL_HOST) ?? $url->url);
+                @endphp
+                <a href="{{ $url->url }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="relative z-10 inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                   title="{{ $urlLabelEnum?->label() ?? $url->url }}"
+                >
+                    <flux:icon name="{{ $urlIcon }}" class="size-3.5 shrink-0 {{ $urlColor }}" />
+                    {{ $urlHost }}
+                </a>
+            @endforeach
         </div>
         @endif
 

@@ -123,18 +123,18 @@
         @endif
 
         @if(isset($assignment['music_urls']) && !empty($assignment['music_urls']))
-        <div class="flex items-start gap-2">
-            <flux:icon name="arrow-top-right-on-square" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
-            <div class="flex flex-wrap gap-2">
-                @foreach($assignment['music_urls'] as $url)
-                    <a href="{{ $url['url'] ?? $url }}"
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                       title="{{ $url['label'] ?? ($url['url'] ?? $url) }}"
-                    >{{ $url['label'] ?? ($url['url'] ?? $url) }}</a>
-                @endforeach
-            </div>
+        <div class="flex flex-wrap gap-2">
+            @foreach($assignment['music_urls'] as $url)
+                <a href="{{ $url['url'] ?? $url }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                   title="{{ $url['label'] ?? ($url['url'] ?? $url) }}"
+                >
+                    <flux:icon name="{{ $url['icon'] ?? 'link' }}" class="size-3.5 shrink-0 {{ $url['color'] ?? 'text-gray-500' }}" />
+                    {{ $url['host'] ?? ($url['url'] ?? $url) }}
+                </a>
+            @endforeach
         </div>
         @endif
 
