@@ -167,15 +167,31 @@ new class extends Component
                     @endif
                         @php
                         $firstCelebration = $musicPlan->celebration;
+                        $hasLiturgicalDetails = $firstCelebration && (
+                            $firstCelebration->year_letter ||
+                            $firstCelebration->year_parity ||
+                            $firstCelebration->season_text ||
+                            $firstCelebration->week
+                        );
                         @endphp
+                    @if($hasLiturgicalDetails)
                     <div>
                         <div class="flex flex-row gap-2">
-                            <flux:badge color="zinc">{{ $firstCelebration?->year_letter . ' év' ?? '–' }} {{ $firstCelebration?->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }}</flux:badge>                            
-                            <flux:badge color="blue" size="sm">{{ $firstCelebration?->season_text ?? '–' }}</flux:badge>
-                            <flux:badge color="green" size="sm">{{ $firstCelebration?->week ?? '–' }}.hét</flux:badge>
+                            @if($firstCelebration->year_letter || $firstCelebration->year_parity)
+                            <flux:badge color="zinc">{{ $firstCelebration->year_letter }} {{ $firstCelebration->year_parity ? '(' . $firstCelebration->year_parity . ')' : '' }} év</flux:badge>
+                            @endif
+                            @if($firstCelebration->season_text)
+                            <flux:badge color="blue" size="sm">{{ $firstCelebration->season_text }}</flux:badge>
+                            @endif
+                            @if($firstCelebration->week)
+                            <flux:badge color="green" size="sm">{{ $firstCelebration->week }}.hét</flux:badge>
+                            @endif
+                            @if($musicPlan->day_name)
                             <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
+                            @endif
                         </div>
                     </div>
+                    @endif
                 </div>
 
                 @if($isOwner && $musicPlan->private_notes)

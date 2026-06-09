@@ -50,11 +50,18 @@ new class extends Component
             <!-- Liturgical details -->
             @php
                 $firstCelebration = $musicPlan->celebration;
+                $hasLiturgicalDetails = $firstCelebration && (
+                    $firstCelebration->year_letter ||
+                    $firstCelebration->year_parity ||
+                    $firstCelebration->season_text ||
+                    $firstCelebration->week
+                );
             @endphp
+            @if($hasLiturgicalDetails)
             <div class="flex flex-row gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
                 @if($firstCelebration && ($firstCelebration->year_letter || $firstCelebration->year_parity))
                     <flux:text class="text-base font-semibold" size="sm">
-                        {{ $firstCelebration->year_letter ?? '–' }} 
+                        {{ $firstCelebration->year_letter ?? '–' }}
                         @if($firstCelebration->year_parity)
                         ({{ $firstCelebration->year_parity }})
                         @endif év
@@ -74,6 +81,7 @@ new class extends Component
                         @endif
                 @endif
             </div>
+            @endif
 
             <!-- Slot count and creation date -->
             <div class="flex items-center justify-between pt-3 border-t border-neutral-100 dark:border-neutral-800">
