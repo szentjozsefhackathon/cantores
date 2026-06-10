@@ -566,9 +566,13 @@ document.addEventListener('alpine:init', () => {
             this.savingScore = true;
             this.flushWireContent();
             try {
-                const c = this.collectSettings();
+                const format = this.$wire.format;
+                // Capture the currently displayed ratio into tempSettings before collecting
+                this.captureCurrentSettings(format, this.ratioForFormat(format));
+                // Send all ratio settings that have been touched this session
+                const allRatioSettings = Object.assign({}, this.tempSettings[format] || {});
                 const incipit = await this.generateIncipit().catch(() => null);
-                this.$wire.call('save', c.settings, c.ratio, incipit);
+                this.$wire.call('save', allRatioSettings, incipit);
             } finally {
                 setTimeout(() => { this.savingScore = false; }, 5000);
             }

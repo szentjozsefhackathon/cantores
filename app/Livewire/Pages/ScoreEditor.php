@@ -128,11 +128,13 @@ class ScoreEditor extends Component
     }
 
     /**
-     * @param  array<string, mixed>|null  $ratioSettings
+     * @param  array<string, array<string, mixed>>|null  $allRatioSettings  Map of ratio key to settings
      */
-    public function save(?array $ratioSettings = null, ?string $ratio = null, ?string $incipitDataUrl = null): void
+    public function save(?array $allRatioSettings = null, ?string $incipitDataUrl = null): void
     {
-        $this->authorize($this->score ? 'update' : 'create', $this->score ?? Score::class);
+        $isNew = $this->score === null;
+
+        $this->authorize($isNew ? 'create' : 'update', $this->score ?? Score::class);
 
         $rules = [
             'title' => ['required', 'string', 'max:255'],
@@ -168,8 +170,12 @@ class ScoreEditor extends Component
             ]);
         } else {
             $settings = $this->settings;
-            if (is_string($ratio) && $ratio !== '' && is_array($ratioSettings)) {
-                $settings[$validated['format']][$ratio] = $ratioSettings;
+            if (is_array($allRatioSettings)) {
+                foreach ($allRatioSettings as $ratio => $ratioSettings) {
+                    if (is_string($ratio) && $ratio !== '' && is_array($ratioSettings)) {
+                        $settings[$validated['format']][$ratio] = $ratioSettings;
+                    }
+                }
             }
 
             $score->fill([
@@ -199,8 +205,10 @@ class ScoreEditor extends Component
             $this->settings = $score->settings ?? [];
         }
 
-        $this->dispatch('toast', message: $this->score ? __('Score updated.') : __('Score created.'), type: 'success');
-        $this->redirectRoute('scores.edit', ['score' => $score->id], navigate: true);
+        $this->dispatch('toast', message: $isNew ? __('Score created.') : __('Score updated.'), type: 'success');
+        if ($isNew) {
+            $this->redirectRoute('scores.edit', ['score' => $score->id], navigate: true);
+        }
     }
 
     /**

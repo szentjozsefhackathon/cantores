@@ -26,7 +26,7 @@ it('stores an incipit image when saving a score with a valid png data url', func
         ->set('title', 'Incipit Score')
         ->set('format', ScoreFormat::Abc->value)
         ->set('content', "X:1\nK:C\nC D E F|")
-        ->call('save', null, null, $dataUrl)
+        ->call('save', null, $dataUrl)
         ->assertHasNoErrors();
 
     $score = Score::query()->firstWhere('title', 'Incipit Score');
@@ -59,7 +59,7 @@ it('ignores a malformed incipit data url', function () {
         ->set('title', 'Bad Incipit Score')
         ->set('format', ScoreFormat::Abc->value)
         ->set('content', "X:1\nK:C\nC D E F|")
-        ->call('save', null, null, 'data:image/jpeg;base64,notvalid')
+        ->call('save', null, 'data:image/jpeg;base64,notvalid')
         ->assertHasNoErrors();
 
     $score = Score::query()->firstWhere('title', 'Bad Incipit Score');

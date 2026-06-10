@@ -139,7 +139,7 @@ it('persists per-ratio preview settings when saving a score', function () {
         ->set('title', 'Settings Score')
         ->set('format', ScoreFormat::Gabc->value)
         ->set('content', "name: x;\n%%\n(c4) Ky(e)")
-        ->call('save', ['zoom' => 150, 'lyricSize' => 24, 'staffSize' => 120], '16/9')
+        ->call('save', ['16/9' => ['zoom' => 150, 'lyricSize' => 24, 'staffSize' => 120]])
         ->assertHasNoErrors();
 
     $score = Score::query()->firstWhere('title', 'Settings Score');
@@ -161,13 +161,40 @@ it('merges new ratio settings into existing score settings', function () {
     actingAs($user);
 
     Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->call('save', ['lyricSize' => 30], '16/9')
+        ->call('save', ['16/9' => ['lyricSize' => 30]])
         ->assertHasNoErrors();
 
     expect($score->fresh()->settings)->toBe([
         'gabc' => [
             'auto' => ['lyricSize' => 16],
             '16/9' => ['lyricSize' => 30],
+        ],
+    ]);
+});
+
+it('saves all ratio settings in a single save call', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->set('title', 'Multi-Ratio Score')
+        ->set('format', ScoreFormat::Gabc->value)
+        ->set('content', "name: x;\n%%\n(c4) Ky(e)")
+        ->call('save', [
+            '16/9' => ['zoom' => 150, 'lyricSize' => 24],
+            '4/3' => ['zoom' => 120, 'lyricSize' => 20],
+            'paper' => ['zoom' => 100, 'lyricSize' => 18],
+        ])
+        ->assertHasNoErrors();
+
+    $score = Score::query()->firstWhere('title', 'Multi-Ratio Score');
+
+    expect($score->settings)->toBe([
+        'gabc' => [
+            '16/9' => ['zoom' => 150, 'lyricSize' => 24],
+            '4/3' => ['zoom' => 120, 'lyricSize' => 20],
+            'paper' => ['zoom' => 100, 'lyricSize' => 18],
         ],
     ]);
 });
@@ -197,11 +224,13 @@ it('persists abc per-ratio settings including lyric options', function () {
         ->set('format', ScoreFormat::Abc->value)
         ->set('content', "X:1\nT:Test\nK:C\nC D E F|")
         ->call('save', [
-            'abcScale' => 1.5,
-            'abcTranspose' => 0,
-            'abcLyricSize' => 14,
-            'abcLyricFont' => 'Palatino',
-        ], '16/9')
+            '16/9' => [
+                'abcScale' => 1.5,
+                'abcTranspose' => 0,
+                'abcLyricSize' => 14,
+                'abcLyricFont' => 'Palatino',
+            ],
+        ])
         ->assertHasNoErrors();
 
     $score = Score::query()->firstWhere('title', 'ABC Settings Score');
