@@ -144,7 +144,7 @@ it('prevents deleting author with music assigned', function () {
 
     Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
         ->call('delete', $author)
-        ->assertDispatched('error');
+        ->assertDispatched('toast', type: 'error');
 
     $this->assertDatabaseHas('authors', ['id' => $author->id]);
 });
@@ -157,7 +157,7 @@ it('allows deleting author without assignments', function () {
 
     Livewire::test(\App\Livewire\Pages\Editor\AuthorsTable::class)
         ->call('delete', $author)
-        ->assertDispatched('author-deleted');
+        ->assertDispatched('toast', message: __('Author deleted.'), type: 'success');
 
     $this->assertDatabaseMissing('authors', ['id' => $author->id]);
 });

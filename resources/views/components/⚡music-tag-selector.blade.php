@@ -49,7 +49,7 @@ new class extends Component
 
         $this->selectedTagId = null;
 
-        $this->dispatch('tag-added');
+        $this->dispatch('toast', message: __('Tag added.'), type: 'success');
     }
 
     /**
@@ -60,7 +60,7 @@ new class extends Component
         $this->music->tags()->detach($tagId);
         $this->music->load('tags');
 
-        $this->dispatch('tag-removed');
+        $this->dispatch('toast', message: __('Tag removed.'), type: 'success');
     }
 }
 
@@ -114,13 +114,5 @@ new class extends Component
             </flux:button>
         </div>
 
-        <div class="flex justify-end mt-2">
-            <x-action-message on="tag-added">
-                {{ __('Tag added.') }}
-            </x-action-message>
-            <x-action-message on="tag-removed">
-                {{ __('Tag removed.') }}
-            </x-action-message>
-        </div>
     </div>
 </div>

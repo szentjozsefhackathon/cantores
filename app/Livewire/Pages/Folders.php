@@ -38,7 +38,7 @@ class Folders extends Component
 
         $folder->delete();
 
-        $this->dispatch('folder-deleted');
+        $this->dispatch('toast', message: __('Folder deleted.'), type: 'success');
     }
 
     public function render(): IlluminateView

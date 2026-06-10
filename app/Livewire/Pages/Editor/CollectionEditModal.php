@@ -93,6 +93,7 @@ class CollectionEditModal extends Component
         $this->show = false;
         $this->reset(['collectionId', 'title', 'abbreviation', 'author', 'isPrivate', 'selectedGenres', 'canUploadCover', 'currentCoverUrl', 'photo', 'photoLicense', 'cropAlign']);
         $this->dispatch('collection-updated');
+        $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
     }
 
     /**
@@ -112,6 +113,7 @@ class CollectionEditModal extends Component
         $this->photo = null;
         $this->currentCoverUrl = $collection->fresh()->coverUrl();
         $this->dispatch('collection-updated');
+        $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
     }
 
     /**
@@ -128,6 +130,7 @@ class CollectionEditModal extends Component
 
         $collection->update(['photo_license' => $this->photoLicense ?: null]);
         $this->dispatch('collection-updated');
+        $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
     }
 
     /**
@@ -142,6 +145,7 @@ class CollectionEditModal extends Component
 
         $this->currentCoverUrl = null;
         $this->dispatch('collection-updated');
+        $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
     }
 
     /**

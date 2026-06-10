@@ -1,7 +1,4 @@
 <div>
-    <x-action-message on="error-report-success" />
-    <x-action-message on="error-report-failed" />
-
     <!-- Modal -->
     @if($showModal)
     <flux:modal wire:model="showModal" max-width="md">

@@ -79,6 +79,7 @@ class AuthorEditModal extends Component
         $this->show = false;
         $this->reset(['authorId', 'name', 'isPrivate', 'canChangePrivacy', 'canUploadAvatar', 'currentAvatarUrl', 'photo', 'photoLicense', 'cropAlign']);
         $this->dispatch('author-updated');
+        $this->dispatch('toast', message: __('Author updated.'), type: 'success');
     }
 
     /**
@@ -98,6 +99,7 @@ class AuthorEditModal extends Component
         $this->photo = null;
         $this->currentAvatarUrl = $author->fresh()->avatarUrl();
         $this->dispatch('author-updated');
+        $this->dispatch('toast', message: __('Author updated.'), type: 'success');
     }
 
     /**
@@ -114,6 +116,7 @@ class AuthorEditModal extends Component
 
         $author->update(['photo_license' => $this->photoLicense ?: null]);
         $this->dispatch('author-updated');
+        $this->dispatch('toast', message: __('Author updated.'), type: 'success');
     }
 
     /**
@@ -128,6 +131,7 @@ class AuthorEditModal extends Component
 
         $this->currentAvatarUrl = null;
         $this->dispatch('author-updated');
+        $this->dispatch('toast', message: __('Author updated.'), type: 'success');
     }
 
     /**

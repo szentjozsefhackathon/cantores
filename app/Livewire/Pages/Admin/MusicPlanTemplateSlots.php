@@ -101,7 +101,7 @@ class MusicPlanTemplateSlots extends Component
 
         $this->showAddSlotModal = false;
         $this->resetAddSlotForm();
-        $this->dispatch('slot-added');
+        $this->dispatch('toast', message: __('Slot added.'), type: 'success');
     }
 
     /**
@@ -126,7 +126,7 @@ class MusicPlanTemplateSlots extends Component
 
         $this->showEditSlotModal = false;
         $this->resetEditSlotForm();
-        $this->dispatch('slot-updated');
+        $this->dispatch('toast', message: __('Slot updated.'), type: 'success');
     }
 
     /**
@@ -138,7 +138,7 @@ class MusicPlanTemplateSlots extends Component
 
         $this->template->detachSlot($slot);
 
-        $this->dispatch('slot-removed');
+        $this->dispatch('toast', message: __('Slot removed.'), type: 'success');
     }
 
     /**

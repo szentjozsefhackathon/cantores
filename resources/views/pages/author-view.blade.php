@@ -106,7 +106,4 @@
 
     <livewire:pages.editor.author-edit-modal />
 
-    <x-action-message on="author-updated">
-        {{ __('Author updated.') }}
-    </x-action-message>
 </div>

@@ -118,9 +118,5 @@
 
 <livewire:pages.editor.collection-edit-modal />
 
-    <x-action-message on="collection-updated">
-        {{ __('Collection updated.') }}
-    </x-action-message>
-
 <livewire:error-report />
 </div>

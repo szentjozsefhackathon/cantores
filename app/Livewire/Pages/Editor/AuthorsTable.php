@@ -44,13 +44,13 @@ class AuthorsTable extends Component
         $this->authorize('delete', $author);
 
         if ($author->music()->count() > 0) {
-            $this->dispatch('error', message: __('Cannot delete author that has music assigned to it.'));
+            $this->dispatch('toast', message: __('Cannot delete author that has music assigned to it.'), type: 'error');
 
             return;
         }
 
         $author->delete();
-        $this->dispatch('author-deleted');
+        $this->dispatch('toast', message: __('Author deleted.'), type: 'success');
     }
 
     /**
@@ -62,6 +62,7 @@ class AuthorsTable extends Component
 
         $author->update(['is_verified' => ! $author->is_verified]);
         $this->dispatch('author-updated');
+        $this->dispatch('toast', message: __('Author updated.'), type: 'success');
     }
 
     #[On('author-created')]

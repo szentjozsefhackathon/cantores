@@ -4,10 +4,6 @@
         <flux:subheading>{{ __('Select two music pieces to merge them') }}</flux:subheading>
     </div>
 
-    <!-- Action messages -->
-    <div class="mb-4">
-        <x-action-message on="music-merged" />
-    </div>
 
     @if (!$showComparison)
     <!-- Selection Phase: Two-column layout -->

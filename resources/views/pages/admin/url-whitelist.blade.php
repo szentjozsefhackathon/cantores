@@ -135,7 +135,7 @@ new class  extends Component
 
         $this->resetForm();
         $this->showCreateModal = false;
-        $this->dispatch("notify", message: $message);
+        $this->dispatch('toast', message: $message, type: 'success');
     }
 
     public function confirmDelete(int $id): void
@@ -152,7 +152,7 @@ new class  extends Component
         $rule->delete();
         $this->showDeleteModal = false;
         $this->selectedRules = array_diff($this->selectedRules, [$this->deletingId]);
-        $this->dispatch("notify", message: 'Rule deleted successfully.');
+        $this->dispatch('toast', message: 'Rule deleted successfully.', type: 'success');
     }
 
     public function bulkActivate(): void
@@ -160,7 +160,7 @@ new class  extends Component
         $this->authorize('system.maintain');
         WhitelistRule::whereIn('id', $this->selectedRules)->update(['is_active' => true]);
         $this->selectedRules = [];
-        $this->dispatch("notify", message: 'Selected rules activated.');
+        $this->dispatch('toast', message: 'Selected rules activated.', type: 'success');
     }
 
     public function bulkDeactivate(): void
@@ -168,7 +168,7 @@ new class  extends Component
         $this->authorize('system.maintain');
         WhitelistRule::whereIn('id', $this->selectedRules)->update(['is_active' => false]);
         $this->selectedRules = [];
-        $this->dispatch("notify", message: 'Selected rules deactivated.');
+        $this->dispatch('toast', message: 'Selected rules deactivated.', type: 'success');
     }
 
     public function bulkDelete(): void
@@ -176,7 +176,7 @@ new class  extends Component
         $this->authorize('system.maintain');
         WhitelistRule::whereIn('id', $this->selectedRules)->delete();
         $this->selectedRules = [];
-        $this->dispatch("notify", message: 'Selected rules deleted.');
+        $this->dispatch('toast', message: 'Selected rules deleted.', type: 'success');
     }
 
     public function testRule(): void
@@ -228,7 +228,6 @@ new class  extends Component
 ?>
 
 <x-pages::admin.layout :heading="__('URL Whitelist Management')">
-    <x-action-message on="notify" />
     <div class="mt-5 space-y-8">
                 <div class="mt-6 border-t pt-6">
                     <h3 class="mb-4 text-lg font-semibold">Test Rule</h3>
@@ -246,7 +245,6 @@ new class  extends Component
                 </div>
 
         <div>
-            <x-action-message on="success" />
             <div class="mb-6">
                 <div class="flex items-center justify-between">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">URL Whitelist Rules</h1>

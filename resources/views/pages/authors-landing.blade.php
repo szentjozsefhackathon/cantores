@@ -69,6 +69,7 @@ new class extends Component
 
         $this->modal('create-author')->close();
         $this->dispatch('author-created');
+        $this->dispatch('toast', message: __('Author created.'), type: 'success');
     }
 
     private function getNameValidationRule(): array

@@ -38,7 +38,7 @@ new class extends Component
         }
 
         if (! $this->user) {
-            $this->dispatch('error', message: __('Unable to load user.'));
+            $this->dispatch('toast', message: __('Unable to load user.'), type: 'error');
 
             return;
         }
@@ -60,14 +60,14 @@ new class extends Component
         ]);
 
         if (! $this->user) {
-            $this->dispatch('error', message: __('No user selected.'));
+            $this->dispatch('toast', message: __('No user selected.'), type: 'error');
 
             return;
         }
 
         // Check if current user is admin
         if (! Auth::user()->hasRole('admin')) {
-            $this->dispatch('error', message: __('You do not have permission to edit roles.'));
+            $this->dispatch('toast', message: __('You do not have permission to edit roles.'), type: 'error');
 
             return;
         }
@@ -75,7 +75,7 @@ new class extends Component
         // Sync roles
         $this->user->syncRoles($this->selectedRoles);
 
-        $this->dispatch('success', message: __('User roles updated successfully.'));
+        $this->dispatch('toast', message: __('User roles updated successfully.'), type: 'success');
         $this->closeModal();
         $this->dispatch('refresh-users');
     }

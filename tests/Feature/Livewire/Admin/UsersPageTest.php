@@ -39,7 +39,7 @@ test('admin can block a user', function () {
     Livewire::actingAs($this->admin)
         ->test('pages::admin.users')
         ->call('blockUser', $this->targetUser->id)
-        ->assertDispatched('success');
+        ->assertDispatched('toast', type: 'success');
 
     expect($this->targetUser->fresh()->blocked)->toBeTrue();
     expect($this->targetUser->fresh()->blocked_at)->not->toBeNull();
@@ -51,7 +51,7 @@ test('admin can unblock a blocked user', function () {
     Livewire::actingAs($this->admin)
         ->test('pages::admin.users')
         ->call('unblockUser', $this->targetUser->id)
-        ->assertDispatched('success');
+        ->assertDispatched('toast', type: 'success');
 
     expect($this->targetUser->fresh()->blocked)->toBeFalse();
     expect($this->targetUser->fresh()->blocked_at)->toBeNull();
@@ -61,7 +61,7 @@ test('admin cannot block themselves', function () {
     Livewire::actingAs($this->admin)
         ->test('pages::admin.users')
         ->call('blockUser', $this->admin->id)
-        ->assertDispatched('error');
+        ->assertDispatched('toast', type: 'error');
 
     expect($this->admin->fresh()->blocked)->toBeFalse();
 });

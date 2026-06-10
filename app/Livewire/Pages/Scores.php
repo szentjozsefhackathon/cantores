@@ -39,7 +39,7 @@ class Scores extends Component
 
         $score->delete();
 
-        $this->dispatch('score-deleted');
+        $this->dispatch('toast', message: __('Score deleted.'), type: 'success');
     }
 
     public function render()

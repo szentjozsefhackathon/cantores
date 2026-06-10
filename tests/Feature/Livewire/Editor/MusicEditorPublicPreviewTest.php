@@ -38,7 +38,7 @@ test('editor can revoke public preview on a score', function () {
 
     Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->call('revokePublicPreview', $score->id)
-        ->assertDispatched('public-preview-revoked');
+        ->assertDispatched('toast', message: __('Public preview revoked.'), type: 'success');
 
     expect($score->fresh()->public_preview)->toBeFalse();
 });

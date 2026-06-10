@@ -33,7 +33,7 @@ new class extends Component
         }
 
         if (! $this->resource) {
-            $this->dispatch('error', message: __('Unable to load resource for error reporting.'));
+            $this->dispatch('toast', message: __('Unable to load resource for error reporting.'), type: 'error');
 
             return;
         }
@@ -57,13 +57,13 @@ new class extends Component
         /** @var User $user */
         $user = Auth::user();
         if (! $user) {
-            $this->dispatch('error-report-failed', message: __('You must be logged in to report an error.'));
+            $this->dispatch('toast', message: __('You must be logged in to report an error.'), type: 'error');
 
             return;
         }
 
         if (! $this->resource) {
-            $this->dispatch('error-report-failed', message: __('No resource selected.'));
+            $this->dispatch('toast', message: __('No resource selected.'), type: 'error');
 
             return;
         }
@@ -72,7 +72,7 @@ new class extends Component
         $notificationService = app(NotificationService::class);
         $notificationService->createErrorReport($user, $this->resource, $this->message);
 
-        $this->dispatch('error-report-success', message: __('Error report submitted successfully.'));
+        $this->dispatch('toast', message: __('Error report submitted successfully.'), type: 'success');
         $this->closeModal();
     }
 

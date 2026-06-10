@@ -208,7 +208,17 @@
 
     <livewire:contact-us />
 
+    <x-action-message />
+
     @fluxScripts
+
+    <script>
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('toast', ({ message, type }) => {
+                window.dispatchEvent(new CustomEvent('show-toast', { detail: { message, type: type ?? 'success' } }));
+            });
+        });
+    </script>
 </body>
 
 </html>

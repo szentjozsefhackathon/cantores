@@ -95,7 +95,7 @@ class MusicPlanTemplates extends Component
 
         $this->showCreateModal = false;
         $this->resetForm();
-        $this->dispatch('template-created');
+        $this->dispatch('toast', message: __('Template created.'), type: 'success');
     }
 
     /**
@@ -111,7 +111,7 @@ class MusicPlanTemplates extends Component
 
         $this->showEditModal = false;
         $this->resetForm();
-        $this->dispatch('template-updated');
+        $this->dispatch('toast', message: __('Template updated.'), type: 'success');
     }
 
     /**
@@ -123,7 +123,7 @@ class MusicPlanTemplates extends Component
 
         $template->delete();
 
-        $this->dispatch('template-deleted');
+        $this->dispatch('toast', message: __('Template deleted.'), type: 'success');
     }
 
     /**
@@ -135,7 +135,7 @@ class MusicPlanTemplates extends Component
 
         $template->update(['is_active' => ! $template->is_active]);
 
-        $this->dispatch('template-status-updated');
+        $this->dispatch('toast', message: __('Template status updated.'), type: 'success');
     }
 
     /**

@@ -5,20 +5,6 @@
         <flux:subheading>{{ __('Manage music authors') }}</flux:subheading>
     </div>
 
-    <!-- Action messages -->
-    <div class="mb-4 flex justify-end">
-        <x-action-message on="author-created">
-            {{ __('Author created.') }}
-        </x-action-message>
-        <x-action-message on="author-updated">
-            {{ __('Author updated.') }}
-        </x-action-message>
-        <x-action-message on="author-deleted">
-            {{ __('Author deleted.') }}
-        </x-action-message>
-        <x-action-message on="error" />
-        <x-action-message on="success" />
-    </div>
 
     <div class="space-y-6">
         <!-- Create button -->

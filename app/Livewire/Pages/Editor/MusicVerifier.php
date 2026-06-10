@@ -271,21 +271,21 @@ class MusicVerifier extends Component
         // Validate status
         $allowedStatuses = ['verified', 'rejected'];
         if (! in_array($status, $allowedStatuses)) {
-            $this->dispatch('error', message: __('Invalid verification status.'));
+            $this->dispatch('toast', message: __('Invalid verification status.'), type: 'error');
 
             return;
         }
 
         // Validate notes length
         if ($notes && strlen($notes) > 1000) {
-            $this->dispatch('error', message: __('Notes must be less than 1000 characters.'));
+            $this->dispatch('toast', message: __('Notes must be less than 1000 characters.'), type: 'error');
 
             return;
         }
 
         // Ensure music is selected
         if (! $this->musicId || ! $this->music) {
-            $this->dispatch('error', message: __('No music selected.'));
+            $this->dispatch('toast', message: __('No music selected.'), type: 'error');
 
             return;
         }
@@ -311,7 +311,7 @@ class MusicVerifier extends Component
         $this->fieldStatuses[$key] = $status;
         $this->fieldNotes[$key] = $notes ?? '';
 
-        $this->dispatch('verification-updated', message: __('Verification saved.'));
+        $this->dispatch('toast', message: __('Verification saved.'), type: 'success');
     }
 
     /**
@@ -323,7 +323,7 @@ class MusicVerifier extends Component
 
         // Ensure music is selected
         if (! $this->musicId || ! $this->music) {
-            $this->dispatch('error', message: __('No music selected.'));
+            $this->dispatch('toast', message: __('No music selected.'), type: 'error');
 
             return;
         }
@@ -340,7 +340,7 @@ class MusicVerifier extends Component
         $this->fieldStatuses[$key] = 'pending';
         $this->fieldNotes[$key] = '';
 
-        $this->dispatch('verification-updated', message: __('Verification removed.'));
+        $this->dispatch('toast', message: __('Verification removed.'), type: 'success');
     }
 
     /**
@@ -361,7 +361,7 @@ class MusicVerifier extends Component
             }
         }
 
-        $this->dispatch('verification-updated', message: __('Verified :count fields.', ['count' => $count]));
+        $this->dispatch('toast', message: __('Verified :count fields.', ['count' => $count]), type: 'success');
     }
 
     /**

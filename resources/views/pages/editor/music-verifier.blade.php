@@ -4,11 +4,6 @@
         <flux:subheading>{{ __('Select a music piece to verify its fields and relations') }}</flux:subheading>
     </div>
 
-    <!-- Action messages -->
-    <div class="mb-4">
-        <x-action-message on="verification-updated" />
-        <x-action-message on="error" />
-    </div>
 
     @if (!$showVerification)
     <!-- Selection Phase -->

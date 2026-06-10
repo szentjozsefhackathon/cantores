@@ -137,7 +137,7 @@ describe('relation ownership in music editor', function () {
             ->set('newUrl', 'https://example.com/music/song.pdf')
             ->call('addUrl')
             ->assertHasNoErrors()
-            ->assertDispatched('url-added');
+            ->assertDispatched('toast', message: __('URL added.'), type: 'success');
 
         $this->assertDatabaseHas('music_urls', [
             'music_id' => $this->music->id,
@@ -167,7 +167,7 @@ describe('relation ownership in music editor', function () {
             ->set('editingUrl', 'https://example.com/music/new.pdf')
             ->call('updateUrl')
             ->assertHasNoErrors()
-            ->assertDispatched('url-updated');
+            ->assertDispatched('toast', message: __('URL updated.'), type: 'success');
 
         $this->assertDatabaseHas('music_urls', [
             'id' => $url->id,
@@ -183,7 +183,7 @@ describe('relation ownership in music editor', function () {
 
         Livewire::test('pages::editor.music-editor', ['music' => $this->music->fresh()])
             ->call('deleteUrl', $url->id)
-            ->assertDispatched('url-deleted');
+            ->assertDispatched('toast', message: __('URL deleted.'), type: 'success');
 
         $this->assertDatabaseMissing('music_urls', ['id' => $url->id]);
     });
@@ -221,7 +221,7 @@ describe('relation ownership in music editor', function () {
             ->set('selectedAuthorId', $author->id)
             ->call('addAuthor')
             ->assertHasNoErrors()
-            ->assertDispatched('author-added');
+            ->assertDispatched('toast', message: __('Author added.'), type: 'success');
 
         $this->assertDatabaseHas('author_music', [
             'music_id' => $this->music->id,
@@ -236,7 +236,7 @@ describe('relation ownership in music editor', function () {
 
         Livewire::test('pages::editor.music-editor', ['music' => $this->music->fresh()])
             ->call('removeAuthor', $author->id)
-            ->assertDispatched('author-removed');
+            ->assertDispatched('toast', message: __('Author removed.'), type: 'success');
 
         $this->assertDatabaseMissing('author_music', [
             'music_id' => $this->music->id,
@@ -263,7 +263,7 @@ describe('relation ownership in music editor', function () {
             ->set('selectedCollectionId', $collection->id)
             ->call('addCollection')
             ->assertHasNoErrors()
-            ->assertDispatched('collection-added');
+            ->assertDispatched('toast', message: __('Collection added.'), type: 'success');
 
         $this->assertDatabaseHas('music_collection', [
             'music_id' => $this->music->id,
@@ -278,7 +278,7 @@ describe('relation ownership in music editor', function () {
 
         Livewire::test('pages::editor.music-editor', ['music' => $this->music->fresh()])
             ->call('removeCollection', $collection->id)
-            ->assertDispatched('collection-removed');
+            ->assertDispatched('toast', message: __('Collection removed.'), type: 'success');
 
         $this->assertDatabaseMissing('music_collection', [
             'music_id' => $this->music->id,

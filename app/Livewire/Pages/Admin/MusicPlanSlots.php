@@ -118,7 +118,7 @@ class MusicPlanSlots extends Component
 
         $this->showCreateModal = false;
         $this->resetForm();
-        $this->dispatch('slot-created');
+        $this->dispatch('toast', message: __('Slot created.'), type: 'success');
     }
 
     /**
@@ -134,7 +134,7 @@ class MusicPlanSlots extends Component
 
         $this->showEditModal = false;
         $this->resetForm();
-        $this->dispatch('slot-updated');
+        $this->dispatch('toast', message: __('Slot updated.'), type: 'success');
     }
 
     /**
@@ -146,7 +146,7 @@ class MusicPlanSlots extends Component
 
         $slot->delete();
 
-        $this->dispatch('slot-deleted');
+        $this->dispatch('toast', message: __('Slot deleted.'), type: 'success');
     }
 
     /**

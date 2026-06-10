@@ -199,7 +199,7 @@ class ScoreEditor extends Component
             $this->settings = $score->settings ?? [];
         }
 
-        $this->dispatch($this->score ? 'score-updated' : 'score-created');
+        $this->dispatch('toast', message: $this->score ? __('Score updated.') : __('Score created.'), type: 'success');
         $this->redirectRoute('scores.edit', ['score' => $score->id], navigate: true);
     }
 
@@ -224,7 +224,7 @@ class ScoreEditor extends Component
         $user->score_settings = $defaults;
         $user->save();
 
-        $this->dispatch('score-defaults-saved');
+        $this->dispatch('toast', message: __('Saved as your default for this ratio.'), type: 'success');
     }
 
     /**

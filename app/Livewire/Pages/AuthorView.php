@@ -47,7 +47,7 @@ class AuthorView extends Component
         $this->authorize('delete', $this->author);
 
         if ($this->author->music()->count() > 0) {
-            $this->dispatch('error', message: __('Cannot delete author that has music assigned to it.'));
+            $this->dispatch('toast', message: __('Cannot delete author that has music assigned to it.'), type: 'error');
 
             return;
         }

@@ -29,18 +29,6 @@
             </div>
         </div>
 
-        <!-- Action messages -->
-        <div class="flex justify-end">
-            <x-action-message on="slot-added">
-                {{ __('Slot added.') }}
-            </x-action-message>
-            <x-action-message on="slot-updated">
-                {{ __('Slot updated.') }}
-            </x-action-message>
-            <x-action-message on="slot-removed">
-                {{ __('Slot removed.') }}
-            </x-action-message>
-        </div>
 
         <!-- Slots Management -->
         <div class="rounded-lg border border-gray-200 dark:border-gray-700">

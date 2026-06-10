@@ -62,17 +62,6 @@
                 </div>
             </div>
 
-            <div class="mb-4 flex justify-end">
-                <x-action-message on="score-created">
-                    {{ __('Score created.') }}
-                </x-action-message>
-                <x-action-message on="score-updated">
-                    {{ __('Score updated.') }}
-                </x-action-message>
-                <x-action-message on="score-defaults-saved">
-                    {{ __('Saved as your default for this ratio.') }}
-                </x-action-message>
-            </div>
 
             <div class="space-y-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

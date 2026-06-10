@@ -67,7 +67,7 @@ class MusicTagManager extends Component
         if (MusicTag::where('name', $validated['newTagName'])
             ->where('type', $validated['newTagType'])
             ->exists()) {
-            $this->dispatch('error', __('This tag already exists.'));
+            $this->dispatch('toast', message: __('This tag already exists.'), type: 'error');
 
             return;
         }
@@ -80,7 +80,7 @@ class MusicTagManager extends Component
         $this->newTagName = '';
         $this->newTagType = '';
 
-        $this->dispatch('tag-created');
+        $this->dispatch('toast', message: __('Tag created successfully.'), type: 'success');
     }
 
     /**
@@ -126,7 +126,7 @@ class MusicTagManager extends Component
             ->where('type', $validated['editingTagType'])
             ->where('id', '!=', $this->editingTagId)
             ->exists()) {
-            $this->dispatch('error', __('This tag already exists.'));
+            $this->dispatch('toast', message: __('This tag already exists.'), type: 'error');
 
             return;
         }
@@ -138,7 +138,7 @@ class MusicTagManager extends Component
 
         $this->cancelEditTag();
 
-        $this->dispatch('tag-updated');
+        $this->dispatch('toast', message: __('Tag updated successfully.'), type: 'success');
     }
 
     /**
@@ -188,7 +188,7 @@ class MusicTagManager extends Component
         $this->showDeleteConfirm = false;
         $this->deleteTagId = null;
 
-        $this->dispatch('tag-deleted');
+        $this->dispatch('toast', message: __('Tag deleted successfully.'), type: 'success');
     }
 
     /**

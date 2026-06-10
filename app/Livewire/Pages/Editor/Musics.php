@@ -98,7 +98,7 @@ class Musics extends Component
 
         $music->delete();
 
-        $this->dispatch('music-deleted');
+        $this->dispatch('toast', message: __('Music deleted.'), type: 'success');
     }
 
     public function showAuditLog(Music $music): void

@@ -81,7 +81,7 @@ it('allows deleting music with collections assigned and removes pivot records', 
 
     Livewire::test(\App\Livewire\Pages\Editor\Musics::class)
         ->call('delete', $music)
-        ->assertDispatched('music-deleted');
+        ->assertDispatched('toast', message: __('Music deleted.'), type: 'success');
 
     // Music should be deleted
     $this->assertDatabaseMissing('musics', ['id' => $music->id]);
@@ -102,7 +102,7 @@ it('allows deleting music without assignments', function () {
 
     Livewire::test(\App\Livewire\Pages\Editor\Musics::class)
         ->call('delete', $music)
-        ->assertDispatched('music-deleted');
+        ->assertDispatched('toast', message: __('Music deleted.'), type: 'success');
 
     $this->assertDatabaseMissing('musics', ['id' => $music->id]);
 });

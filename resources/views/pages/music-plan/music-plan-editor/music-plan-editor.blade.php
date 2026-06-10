@@ -7,12 +7,6 @@
             </div>
 
             <div class="space-y-4">
-                <!-- Notification message -->
-                <div class="flex justify-end">
-                    <x-action-message on="slots-updated">
-                        {{ __('Művelet sikeres.') }}
-                    </x-action-message>
-                </div>
 
                 <!-- Combined info grid -->
                 <div class="grid grid-cols-1 md:grid-cols-6 gap-3">

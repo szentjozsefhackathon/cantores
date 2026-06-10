@@ -12,11 +12,6 @@
                 </flux:button>
             </div>
 
-            <div class="mb-4 flex justify-end">
-                <x-action-message on="score-deleted">
-                    {{ __('Score deleted.') }}
-                </x-action-message>
-            </div>
 
             <div class="mb-6">
                 <flux:field>

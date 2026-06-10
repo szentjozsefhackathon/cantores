@@ -49,7 +49,7 @@ class CollectionView extends Component
         $this->authorize('delete', $this->collection);
 
         if ($this->collection->music()->count() > 0) {
-            $this->dispatch('error', message: __('Cannot delete collection that has music assigned to it.'));
+            $this->dispatch('toast', message: __('Cannot delete collection that has music assigned to it.'), type: 'error');
 
             return;
         }

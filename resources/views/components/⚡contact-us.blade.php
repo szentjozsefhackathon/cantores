@@ -37,7 +37,7 @@ new class extends Component
         /** @var User $user */
         $user = Auth::user();
         if (! $user) {
-            $this->dispatch('contact-failed', message: __('You must be logged in to send a contact message.'));
+            $this->dispatch('toast', message: __('You must be logged in to send a contact message.'), type: 'error');
 
             return;
         }
@@ -46,7 +46,7 @@ new class extends Component
         $notificationService = app(NotificationService::class);
         $notificationService->createContactMessage($user, $this->subject, $this->message);
 
-        $this->dispatch('contact-success', message: __('Your message has been sent successfully.'));
+        $this->dispatch('toast', message: __('Your message has been sent successfully.'), type: 'success');
         $this->closeModal();
     }
 
@@ -57,9 +57,6 @@ new class extends Component
 };
 ?>
 <div>
-    <x-action-message on="contact-success" />
-    <x-action-message on="contact-failed" />
-
     <!-- Modal -->
     @if($showModal)
     <flux:modal wire:model="showModal" max-width="md">

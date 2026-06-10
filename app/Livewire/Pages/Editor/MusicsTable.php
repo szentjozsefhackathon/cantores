@@ -119,7 +119,7 @@ class MusicsTable extends Component
         $this->authorize('delete', $music);
 
         $music->delete();
-        $this->dispatch('music-deleted');
+        $this->dispatch('toast', message: __('Music deleted.'), type: 'success');
     }
 
     public function getTagsProperty()

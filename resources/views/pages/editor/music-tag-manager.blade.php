@@ -75,11 +75,6 @@ new class extends \Livewire\Component
                         </div>
                     </div>
 
-                    <div class="flex justify-end">
-                        <x-action-message on="tag-created">
-                            {{ __('Tag created successfully.') }}
-                        </x-action-message>
-                    </div>
                 </div>
             </div>
 
@@ -182,14 +177,6 @@ new class extends \Livewire\Component
                     </table>
                 </div>
 
-                <div class="flex justify-end mt-4">
-                    <x-action-message on="tag-updated">
-                        {{ __('Tag updated successfully.') }}
-                    </x-action-message>
-                    <x-action-message on="tag-deleted">
-                        {{ __('Tag deleted successfully.') }}
-                    </x-action-message>
-                </div>
                 @else
                 <div class="text-center py-8 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
                     <flux:icon name="tag" class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500" />

@@ -89,17 +89,9 @@
         document.addEventListener('livewire:navigated', () => {
             Livewire.on('copy-to-clipboard', (text) => {
                 navigator.clipboard.writeText(text).then(() => {
-                    // Show success message
-                    const notification = document.createElement('div');
-                    notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg';
-                    notification.textContent = 'Szöveg másolva a vágólapra!';
-                    document.body.appendChild(notification);
-                    
-                    setTimeout(() => {
-                        notification.remove();
-                    }, 3000);
+                    window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Szöveg másolva a vágólapra!', type: 'success' } }));
                 }).catch(() => {
-                    alert('Hiba a másolás során');
+                    window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Hiba a másolás során', type: 'error' } }));
                 });
             });
         });

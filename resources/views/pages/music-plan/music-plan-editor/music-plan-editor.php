@@ -144,13 +144,13 @@ new class extends Component
     #[On('slot-added')]
     public function onSlotAdded(string $slotName): void
     {
-        $this->dispatch('slots-updated', message: $slotName.' hozzáadva.');
+        $this->dispatch('toast', message: $slotName.' hozzáadva.', type: 'success');
     }
 
     #[On('slot-created')]
     public function onSlotCreated(string $slotName): void
     {
-        $this->dispatch('slots-updated', message: 'Új elem létrehozva: '.$slotName);
+        $this->dispatch('toast', message: 'Új elem létrehozva: '.$slotName, type: 'success');
     }
 
     #[On('open-music-search')]
@@ -184,7 +184,7 @@ new class extends Component
 
         $this->js("Flux.modal('music-search-shared').close()");
         $this->dispatch('slot-assignments-refreshed', pivotId: $slotPlan->id);
-        $this->dispatch('slots-updated', message: 'Zene hozzáadva az elemhez.');
+        $this->dispatch('toast', message: 'Zene hozzáadva az elemhez.', type: 'success');
         $this->activeSlotPlanId = null;
     }
 
@@ -193,7 +193,7 @@ new class extends Component
     {
         // If a new slot was created, the parent re-renders and mounts a new slot-plan child.
         // If an existing slot was updated, the child refreshes itself via slot-assignments-refreshed.
-        $this->dispatch('slots-updated', message: 'Zene hozzáadva: '.$slotName);
+        $this->dispatch('toast', message: 'Zene hozzáadva: '.$slotName, type: 'success');
     }
 
     #[On('add-slot-from-template')]
@@ -203,7 +203,7 @@ new class extends Component
 
         $this->insertSlotAtPriorityPosition($slotId);
 
-        $this->dispatch('slots-updated', message: 'Elem hozzáadva.');
+        $this->dispatch('toast', message: 'Elem hozzáadva.', type: 'success');
     }
 
     #[On('add-slots-from-template')]
@@ -221,7 +221,7 @@ new class extends Component
             $addedCount++;
         }
 
-        $this->dispatch('slots-updated', message: $addedCount.' elem hozzáadva a sablonból.');
+        $this->dispatch('toast', message: $addedCount.' elem hozzáadva a sablonból.', type: 'success');
     }
 
     #[On('add-default-slots-from-template')]
@@ -241,7 +241,7 @@ new class extends Component
             }
         }
 
-        $this->dispatch('slots-updated', message: $addedCount.' elem hozzáadva a sablonból.');
+        $this->dispatch('toast', message: $addedCount.' elem hozzáadva a sablonból.', type: 'success');
     }
 
     private function insertSlotAtPriorityPosition(int $slotId): void
@@ -281,7 +281,7 @@ new class extends Component
         ]);
 
         $this->isEditingCelebration = false;
-        $this->dispatch('slots-updated', message: 'Ünnep adatai frissítve.');
+        $this->dispatch('toast', message: 'Ünnep adatai frissítve.', type: 'success');
     }
 
     public function switchToCustomCelebration(): void
@@ -305,7 +305,7 @@ new class extends Component
         $this->celebrationDate = $celebration->actual_date->format('Y-m-d');
         $this->isEditingCelebration = true;
 
-        $this->dispatch('slots-updated', message: 'Átváltva egyedi ünnepre.');
+        $this->dispatch('toast', message: 'Átváltva egyedi ünnepre.', type: 'success');
     }
 
     public function switchToLiturgicalCelebration(): void
@@ -357,7 +357,7 @@ new class extends Component
         $this->celebrationDate = null;
         $this->isEditingCelebration = false;
 
-        $this->dispatch('slots-updated', message: 'Liturgikus ünnep csatolva.');
+        $this->dispatch('toast', message: 'Liturgikus ünnep csatolva.', type: 'success');
 
     }
 
@@ -387,6 +387,6 @@ new class extends Component
             'private_notes' => $this->privateNotes,
         ]);
 
-        $this->dispatch('slots-updated', message: 'Privát megjegyzések mentve.');
+        $this->dispatch('toast', message: 'Privát megjegyzések mentve.', type: 'success');
     }
 };

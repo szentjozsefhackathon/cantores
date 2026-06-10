@@ -180,7 +180,7 @@ return new class extends Component
     {
         if ($this->leftMusicId && $this->rightMusicId) {
             if ($this->leftMusicId === $this->rightMusicId) {
-                $this->dispatch('error', message: __('Cannot select the same music piece for both sides.'));
+                $this->dispatch('toast', message: __('Cannot select the same music piece for both sides.'), type: 'error');
                 $this->rightMusicId = null;
                 $this->rightMusic = null;
 
@@ -500,7 +500,7 @@ return new class extends Component
         });
 
         // Dispatch event for audit logging
-        $this->dispatch('music-merged', message: __('Music pieces merged successfully.'));
+        $this->dispatch('toast', message: __('Music pieces merged successfully.'), type: 'success');
 
         // Redirect to left music editor
         $this->redirectRoute('music-editor', ['music' => $this->leftMusic->id]);

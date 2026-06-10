@@ -73,6 +73,7 @@ class Authors extends Component
         $this->showCreateModal = false;
         $this->resetForm();
         $this->dispatch('author-created');
+        $this->dispatch('toast', message: __('Author created.'), type: 'success');
     }
 
     /**

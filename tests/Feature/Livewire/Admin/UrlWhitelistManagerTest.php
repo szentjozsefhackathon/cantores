@@ -78,7 +78,7 @@ test('creates new whitelist rule', function () {
         ->set('form.description', 'Test rule')
         ->call('save')
         ->assertHasNoErrors()
-        ->assertDispatched('notify')
+        ->assertDispatched('toast', type: 'success')
         ->assertSet('showCreateModal', false);
 
     $this->assertDatabaseHas('whitelist_rules', [
@@ -131,7 +131,7 @@ test('edits existing whitelist rule', function () {
         ->set('form.description', 'Updated description')
         ->call('save')
         ->assertHasNoErrors()
-        ->assertDispatched('notify');
+        ->assertDispatched('toast', type: 'success');
 
     $this->assertDatabaseHas('whitelist_rules', [
         'id' => $rule->id,
@@ -166,7 +166,7 @@ test('deletes whitelist rule', function () {
         ->assertSet('showDeleteModal', true)
         ->call('delete')
         ->assertSet('showDeleteModal', false)
-        ->assertDispatched('notify');
+        ->assertDispatched('toast', type: 'success');
 
     $this->assertModelMissing('whitelist_rules', ['id' => $rule->id]);
 });
@@ -179,7 +179,7 @@ test('bulk activates selected rules', function () {
     Livewire::test('pages::admin.url-whitelist')
         ->set('selectedRules', [$rule1->id, $rule2->id])
         ->call('bulkActivate')
-        ->assertDispatched('notify')
+        ->assertDispatched('toast', type: 'success')
         ->assertSet('selectedRules', []);
 
     $this->assertDatabaseHas('whitelist_rules', ['id' => $rule1->id, 'is_active' => true]);
@@ -194,7 +194,7 @@ test('bulk deactivates selected rules', function () {
     Livewire::test('pages::admin.url-whitelist')
         ->set('selectedRules', [$rule1->id, $rule2->id])
         ->call('bulkDeactivate')
-        ->assertDispatched('notify')
+        ->assertDispatched('toast', type: 'success')
         ->assertSet('selectedRules', []);
 
     $this->assertDatabaseHas('whitelist_rules', ['id' => $rule1->id, 'is_active' => false]);
@@ -209,7 +209,7 @@ test('bulk deletes selected rules', function () {
     Livewire::test('pages::admin.url-whitelist')
         ->set('selectedRules', [$rule1->id, $rule2->id])
         ->call('bulkDelete')
-        ->assertDispatched('notify')
+        ->assertDispatched('toast', type: 'success')
         ->assertSet('selectedRules', []);
 
     $this->assertModelMissing('whitelist_rules', ['id' => $rule1->id]);

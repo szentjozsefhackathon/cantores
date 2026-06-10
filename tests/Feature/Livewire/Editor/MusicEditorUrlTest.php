@@ -37,7 +37,7 @@ test('adds URL with whitelist validation', function () {
         ->set('newUrl', 'https://example.com/music/song.pdf')
         ->call('addUrl')
         ->assertHasNoErrors()
-        ->assertDispatched('url-added');
+        ->assertDispatched('toast', message: __('URL added.'), type: 'success');
 
     $this->assertDatabaseHas('music_urls', [
         'music_id' => $this->music->id,
@@ -99,7 +99,7 @@ test('edits existing URL', function () {
         ->set('editingUrl', 'https://example.com/music/new.pdf')
         ->call('updateUrl')
         ->assertHasNoErrors()
-        ->assertDispatched('url-updated');
+        ->assertDispatched('toast', message: __('URL updated.'), type: 'success');
 
     $this->assertDatabaseHas('music_urls', [
         'id' => $url->id,
@@ -137,7 +137,7 @@ test('deletes URL', function () {
 
     Livewire::test('pages::editor.music-editor', ['music' => $this->music])
         ->call('deleteUrl', $url->id)
-        ->assertDispatched('url-deleted');
+        ->assertDispatched('toast', message: __('URL deleted.'), type: 'success');
 
     $this->assertDatabaseMissing('music_urls', ['id' => $url->id]);
 });

@@ -38,7 +38,7 @@ new class extends Component
         $user = User::findOrFail($userId);
 
         if ($user->id === Auth::id()) {
-            $this->dispatch('error', message: __('You cannot block yourself.'));
+            $this->dispatch('toast', message: __('You cannot block yourself.'), type: 'error');
 
             return;
         }
@@ -48,7 +48,7 @@ new class extends Component
             'blocked_at' => now(),
         ]);
 
-        $this->dispatch('success', message: __('User has been blocked.'));
+        $this->dispatch('toast', message: __('User has been blocked.'), type: 'success');
         $this->loadUsers();
     }
 
@@ -61,7 +61,7 @@ new class extends Component
             'blocked_at' => null,
         ]);
 
-        $this->dispatch('success', message: __('User has been unblocked.'));
+        $this->dispatch('toast', message: __('User has been unblocked.'), type: 'success');
         $this->loadUsers();
     }
 
@@ -70,7 +70,7 @@ new class extends Component
         $user = User::findOrFail($userId);
 
         if ($user->id === Auth::id()) {
-            $this->dispatch('error', message: __('You cannot delete yourself.'));
+            $this->dispatch('toast', message: __('You cannot delete yourself.'), type: 'error');
 
             return;
         }
@@ -118,7 +118,7 @@ new class extends Component
             ])->save();
         });
 
-        $this->dispatch('success', message: __('User has been anonymized and their private data deleted.'));
+        $this->dispatch('toast', message: __('User has been anonymized and their private data deleted.'), type: 'success');
         $this->loadUsers();
     }
 

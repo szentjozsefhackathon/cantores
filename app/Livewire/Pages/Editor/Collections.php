@@ -202,6 +202,7 @@ class Collections extends Component
         $this->modal('create-collection')->close();
         $this->resetForm();
         $this->dispatch('collection-created');
+        $this->dispatch('toast', message: __('Collection created.'), type: 'success');
     }
 
     /**
@@ -232,6 +233,7 @@ class Collections extends Component
         $this->resetForm();
         $this->editingCollection = null;
         $this->dispatch('collection-updated');
+        $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
     }
 
     /**
@@ -243,13 +245,14 @@ class Collections extends Component
 
         // Check if collection has any music assigned
         if ($collection->music()->count() > 0) {
-            $this->dispatch('error', message: __('Cannot delete collection that has music assigned to it.'));
+            $this->dispatch('toast', message: __('Cannot delete collection that has music assigned to it.'), type: 'error');
 
             return;
         }
 
         $collection->delete();
         $this->dispatch('collection-deleted');
+        $this->dispatch('toast', message: __('Collection deleted.'), type: 'success');
     }
 
     /**
@@ -261,6 +264,7 @@ class Collections extends Component
 
         $collection->update(['is_verified' => ! $collection->is_verified]);
         $this->dispatch('collection-updated');
+        $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
     }
 
     /**

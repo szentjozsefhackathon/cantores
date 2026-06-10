@@ -132,14 +132,14 @@ new class extends Component
 
         // Check if same music
         if ($this->music->id === $validated['selectedRelatedMusicId']) {
-            $this->dispatch('error', __('Cannot relate a music piece to itself.'));
+            $this->dispatch('toast', message: __('Cannot relate a music piece to itself.'), type: 'error');
             return;
         }
 
         // Check if relation already exists (in either direction)
         $existing = \App\Models\MusicRelation::between($this->music->id, $validated['selectedRelatedMusicId'])->exists();
         if ($existing) {
-            $this->dispatch('error', __('This music piece is already related.'));
+            $this->dispatch('toast', message: __('This music piece is already related.'), type: 'error');
             return;
         }
 
@@ -160,7 +160,7 @@ new class extends Component
         // Close the modal
         $this->showRelatedMusicSearchModal = false;
 
-        $this->dispatch('related-music-added');
+        $this->dispatch('toast', message: __('Related music added.'), type: 'success');
     }
 
     /**
@@ -183,7 +183,7 @@ new class extends Component
         // Refresh the relationships
         $this->music->load(['directMusicRelations.relatedMusic', 'inverseMusicRelations.music']);
 
-        $this->dispatch('related-music-removed');
+        $this->dispatch('toast', message: __('Related music removed.'), type: 'success');
     }
 
 
@@ -285,7 +285,7 @@ new class extends Component
         // Sync selected genres (empty array will detach all)
         $this->music->genres()->sync($validated['selectedGenres'] ?? []);
 
-        $this->dispatch('music-updated');
+        $this->dispatch('toast', message: __('Music updated.'), type: 'success');
     }
 
     /**
@@ -328,7 +328,7 @@ new class extends Component
 
         // Check if already attached
         if ($this->music->collections()->where('collection_id', $validated['selectedCollectionId'])->exists()) {
-            $this->dispatch('error', __('This collection is already attached to this music piece.'));
+            $this->dispatch('toast', message: __('This collection is already attached to this music piece.'), type: 'error');
 
             return;
         }
@@ -347,7 +347,7 @@ new class extends Component
         $this->pageNumber = null;
         $this->orderNumber = null;
 
-        $this->dispatch('collection-added');
+        $this->dispatch('toast', message: __('Collection added.'), type: 'success');
     }
 
     /**
@@ -363,7 +363,7 @@ new class extends Component
         $this->music->collections()->detach($collectionId);
         $this->music->load('collections');
 
-        $this->dispatch('collection-removed');
+        $this->dispatch('toast', message: __('Collection removed.'), type: 'success');
     }
 
     /**
@@ -379,7 +379,7 @@ new class extends Component
 
         // Check if already attached
         if ($this->music->authors()->where('author_id', $validated['selectedAuthorId'])->exists()) {
-            $this->dispatch('error', __('This author is already attached to this music piece.'));
+            $this->dispatch('toast', message: __('This author is already attached to this music piece.'), type: 'error');
 
             return;
         }
@@ -394,7 +394,7 @@ new class extends Component
         // Reset the form field
         $this->selectedAuthorId = null;
 
-        $this->dispatch('author-added');
+        $this->dispatch('toast', message: __('Author added.'), type: 'success');
     }
 
     /**
@@ -410,7 +410,7 @@ new class extends Component
         $this->music->authors()->detach($authorId);
         $this->music->load('authors');
 
-        $this->dispatch('author-removed');
+        $this->dispatch('toast', message: __('Author removed.'), type: 'success');
     }
 
     /**
@@ -439,7 +439,7 @@ new class extends Component
         $this->newUrlLabel = null;
         $this->newUrl = null;
 
-        $this->dispatch('url-added');
+        $this->dispatch('toast', message: __('URL added.'), type: 'success');
     }
 
     /**
@@ -490,7 +490,7 @@ new class extends Component
         // Reset the editing state
         $this->cancelEditUrl();
 
-        $this->dispatch('url-updated');
+        $this->dispatch('toast', message: __('URL updated.'), type: 'success');
     }
 
     /**
@@ -504,7 +504,7 @@ new class extends Component
         $this->music->urls()->where('id', $urlId)->delete();
         $this->music->load('urls');
 
-        $this->dispatch('url-deleted');
+        $this->dispatch('toast', message: __('URL deleted.'), type: 'success');
     }
 
     /**
@@ -564,7 +564,7 @@ new class extends Component
         $this->editingPageNumber = null;
         $this->editingOrderNumber = null;
 
-        $this->dispatch('collection-updated');
+        $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
     }
 
     /**
@@ -594,7 +594,7 @@ new class extends Component
 
         $this->music->load('publicPreviewScores.user');
 
-        $this->dispatch('public-preview-revoked');
+        $this->dispatch('toast', message: __('Public preview revoked.'), type: 'success');
     }
 
     /**
@@ -606,7 +606,7 @@ new class extends Component
 
         // Check if music has any collections or plan slots assigned
         if ($this->music->collections()->count() > 0 || $this->music->musicPlanSlotAssignments()->count() > 0) {
-            $this->dispatch('error', __('Cannot delete music piece that has collections or plan slots assigned to it.'));
+            $this->dispatch('toast', message: __('Cannot delete music piece that has collections or plan slots assigned to it.'), type: 'error');
 
             return;
         }
@@ -782,9 +782,6 @@ new class extends Component
 
                 <!-- Save Button -->
                 <div class="flex justify-end items-center gap-4 pt-2">
-                    <x-action-message on="music-updated">
-                        {{ __('Saved.') }}
-                    </x-action-message>
                     <flux:button
                         variant="primary"
                         wire:click="update"
@@ -852,15 +849,6 @@ new class extends Component
             </div>
             @endif
 
-            <!-- Collection removal message -->
-            <div class="flex justify-end mb-2">
-                <x-action-message on="collection-removed">
-                    {{ __('Collection removed.') }}
-                </x-action-message>
-                <x-action-message on="collection-updated">
-                    {{ __('Collection updated.') }}
-                </x-action-message>
-            </div>
 
             <!-- Add Collection Form -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -894,9 +882,6 @@ new class extends Component
                                 size="sm">
                                 {{ __('Add Collection') }}
                             </flux:button>
-                            <x-action-message on="collection-added">
-                                {{ __('Collection added.') }}
-                            </x-action-message>
                         </div>
 
                     </div>
@@ -929,15 +914,6 @@ new class extends Component
             </div>
             @endif
 
-            <!-- Author removal message -->
-            <div class="flex justify-end mb-2">
-                <x-action-message on="author-removed">
-                    {{ __('Author removed.') }}
-                </x-action-message>
-                <x-action-message on="author-added">
-                    {{ __('Author added.') }}
-                </x-action-message>
-            </div>
 
             <!-- Add Author Form -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -1101,18 +1077,6 @@ new class extends Component
             </div>
             @endif
 
-            <!-- URL action messages -->
-            <div class="flex justify-end mb-2">
-                <x-action-message on="url-added">
-                    {{ __('URL added.') }}
-                </x-action-message>
-                <x-action-message on="url-updated">
-                    {{ __('URL updated.') }}
-                </x-action-message>
-                <x-action-message on="url-deleted">
-                    {{ __('URL deleted.') }}
-                </x-action-message>
-            </div>
 
             <!-- Add URL Form -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -1288,11 +1252,6 @@ new class extends Component
                     </tbody>
                 </table>
             </div>
-            <div class="flex justify-end">
-                <x-action-message on="public-preview-revoked">
-                    {{ __('Public preview revoked.') }}
-                </x-action-message>
-            </div>
             @else
             <div class="text-center py-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
                 <flux:icon name="eye" class="mx-auto h-6 w-6 text-gray-400 dark:text-gray-500" />
@@ -1350,15 +1309,6 @@ new class extends Component
             </div>
             @endif
 
-            <!-- Related music action messages -->
-            <div class="flex justify-end mb-2">
-                <x-action-message on="related-music-added">
-                    {{ __('Related music added.') }}
-                </x-action-message>
-                <x-action-message on="related-music-removed">
-                    {{ __('Related music removed.') }}
-                </x-action-message>
-            </div>
 
             <!-- Add Related Music Button -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-4 pb-4">

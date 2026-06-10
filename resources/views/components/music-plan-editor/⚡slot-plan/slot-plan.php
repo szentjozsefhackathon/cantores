@@ -236,7 +236,7 @@ new class extends Component
         });
 
         $this->loadAssignments();
-        $this->dispatch('slots-updated', message: 'Zene sorrendje frissítve.');
+        $this->dispatch('toast', message: 'Zene sorrendje frissítve.', type: 'success');
     }
 
     // -------------------------------------------------------------------------
@@ -262,7 +262,7 @@ new class extends Component
             });
 
             $this->loadAssignments();
-            $this->dispatch('slots-updated', message: 'Zene eltávolítva.');
+            $this->dispatch('toast', message: 'Zene eltávolítva.', type: 'success');
         }
     }
 
@@ -312,7 +312,7 @@ new class extends Component
         }
 
         $this->loadAssignments();
-        $this->dispatch('slots-updated', message: 'Hatókör frissítve.');
+        $this->dispatch('toast', message: 'Hatókör frissítve.', type: 'success');
     }
 
     public function addScope(int $assignmentId): void
@@ -389,7 +389,7 @@ new class extends Component
         $this->closeMoveAssignmentModal();
         $this->loadAssignments();
         $this->dispatch('slot-assignments-refreshed', pivotId: $targetSlotPlanId);
-        $this->dispatch('slots-updated', message: 'Zene áthelyezve másik elembe.');
+        $this->dispatch('toast', message: 'Zene áthelyezve másik elembe.', type: 'success');
     }
 
     #[On('slot-assignments-refreshed')]
@@ -444,7 +444,7 @@ new class extends Component
         });
 
         $this->dispatch('slot-list-changed');
-        $this->dispatch('slots-updated', message: 'Elem sorrendje frissítve.');
+        $this->dispatch('toast', message: 'Elem sorrendje frissítve.', type: 'success');
     }
 
     public function deleteSlot(): void
@@ -471,7 +471,7 @@ new class extends Component
         });
 
         $this->dispatch('slot-list-changed');
-        $this->dispatch('slots-updated', message: 'Elem eltávolítva.');
+        $this->dispatch('toast', message: 'Elem eltávolítva.', type: 'success');
     }
 
     // -------------------------------------------------------------------------
@@ -524,6 +524,6 @@ new class extends Component
 
         $this->slotPlan->load('musicPlanSlot');
         $this->cancelEditingSlot();
-        $this->dispatch('slots-updated', message: 'Elem frissítve: '.$slot->name);
+        $this->dispatch('toast', message: 'Elem frissítve: '.$slot->name, type: 'success');
     }
 };
