@@ -104,6 +104,21 @@ class Score extends Model
         return Storage::exists($this->incipit_path);
     }
 
+    public function incipitUrl(): string
+    {
+        return route('scores.incipit', $this).'?v='.($this->updated_at?->timestamp ?? 0);
+    }
+
+    public function publicIncipitUrl(): string
+    {
+        return route('scores.public-incipit', $this).'?v='.($this->updated_at?->timestamp ?? 0);
+    }
+
+    public function shareIncipitUrl(): string
+    {
+        return route('score.share.incipit', ['token' => $this->share_token]).'?v='.($this->updated_at?->timestamp ?? 0);
+    }
+
     public function scopePublicPreview(\Illuminate\Database\Eloquent\Builder $query): void
     {
         $query->where('public_preview', true);

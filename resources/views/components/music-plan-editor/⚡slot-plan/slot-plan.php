@@ -180,7 +180,7 @@ new class extends Component
                 'can_view_music' => $user === null ? (! $music->is_private) : $user->can('view', $music),
                 'can_edit_music' => $user !== null && $user->can('update', $music),
                 'music_incipits' => $music->visibleIncipitScores($user)
-                    ->map(fn ($s) => ['url' => $s->public_preview ? route('scores.public-incipit', $s) : route('scores.incipit', $s), 'title' => $s->title])
+                    ->map(fn ($s) => ['url' => $s->public_preview ? $s->publicIncipitUrl() : $s->incipitUrl(), 'title' => $s->title])
                     ->toArray(),
                 'music_urls' => $music->urls->map(fn ($u) => [
                     'url' => $u->url,

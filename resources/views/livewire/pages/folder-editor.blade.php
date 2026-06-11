@@ -57,7 +57,7 @@
                                 @if($score->hasIncipit())
                                 <div class="mt-2">
                                     <x-incipit-image
-                                        :src="route('scores.incipit', $score)"
+                                        :src="$score->incipitUrl()"
                                         :alt="$score->title"
                                         img-class="block h-14 w-auto" />
                                 </div>
@@ -101,7 +101,7 @@
                             @if($score->hasIncipit())
                             <div class="mt-2">
                                 <x-incipit-image
-                                    :src="route('scores.incipit', $score)"
+                                    :src="$score->incipitUrl()"
                                     :alt="$score->title"
                                     img-class="block h-14 w-auto" />
                             </div>

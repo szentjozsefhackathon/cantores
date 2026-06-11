@@ -52,7 +52,7 @@
                                         @endforeach
                                     </div>
                                     @if($score->hasIncipit())
-                                        <x-incipit-image :src="route('scores.incipit', $score)" :alt="__('Incipit')"
+                                        <x-incipit-image :src="$score->incipitUrl()" :alt="__('Incipit')"
                                             class="mt-1 max-w-[400px]"
                                             img-class="block h-auto max-h-20 w-auto max-w-full" />
                                     @endif

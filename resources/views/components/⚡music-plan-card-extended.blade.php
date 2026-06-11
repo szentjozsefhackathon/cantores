@@ -68,7 +68,7 @@ new class extends Component
                             'music' => $music,
                             'scope_label' => $assignment->scope_label,
                             'music_incipits' => $music ? $music->visibleIncipitScores(Auth::user())
-                                ->map(fn ($s) => ['url' => $s->public_preview ? route('scores.public-incipit', $s) : route('scores.incipit', $s), 'title' => $s->title])
+                                ->map(fn ($s) => ['url' => $s->public_preview ? $s->publicIncipitUrl() : $s->incipitUrl(), 'title' => $s->title])
                                 ->all() : [],
                         ];
                     })->all(),

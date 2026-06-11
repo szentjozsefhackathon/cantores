@@ -175,7 +175,7 @@ new class extends Component
         $incipitScores = $privateShare
             ? collect()
             : $music->visibleIncipitScores(auth()->user())
-                ->map(fn($s) => ['score' => $s, 'url' => $s->public_preview ? route('scores.public-incipit', $s) : route('scores.incipit', $s)]);
+                ->map(fn($s) => ['score' => $s, 'url' => $s->public_preview ? $s->publicIncipitUrl() : $s->incipitUrl()]);
     @endphp
     @if($incipitScores->isNotEmpty())
     <div class="border-b border-gray-200 dark:border-gray-700 px-3 py-2"

@@ -22,7 +22,8 @@ class ScoreIncipitController extends Controller
         $response = Storage::response($score->incipit_path, headers: ['Content-Type' => 'image/png']);
         $response->setLastModified($lastModified);
         $response->setPrivate();
-        $response->headers->addCacheControlDirective('no-cache');
+        $response->setMaxAge(31536000);
+        $response->headers->addCacheControlDirective('immutable');
         $response->isNotModified(request());
 
         return $response;

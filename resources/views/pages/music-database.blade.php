@@ -167,7 +167,7 @@ new class extends Component
                                 @endif
                                 @if ($incipitScore)
                                     <div class="mt-1.5 sm:hidden">
-                                        <x-incipit-image :src="route('scores.public-incipit', $incipitScore)"
+                                        <x-incipit-image :src="$incipitScore->publicIncipitUrl()"
                                              :alt="$incipitScore->title"
                                              img-class="h-14 w-auto max-w-full object-contain" />
                                     </div>
@@ -175,7 +175,7 @@ new class extends Component
                             </div>
                             @if ($incipitScore)
                                 <div class="hidden shrink-0 sm:block">
-                                    <x-incipit-image :src="route('scores.public-incipit', $incipitScore)"
+                                    <x-incipit-image :src="$incipitScore->publicIncipitUrl()"
                                          :alt="$incipitScore->title"
                                          img-class="h-14 w-auto max-w-[220px] object-contain" />
                                 </div>

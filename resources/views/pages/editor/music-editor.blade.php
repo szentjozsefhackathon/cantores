@@ -1168,7 +1168,7 @@ new class extends Component
                             </td>
                             <td class="px-3 py-2 hidden md:table-cell">
                                 @if($myScore->hasIncipit())
-                                <x-incipit-image :src="route('scores.incipit', $myScore)"
+                                <x-incipit-image :src="$myScore->incipitUrl()"
                                      :alt="__('Incipit')"
                                      img-class="h-auto max-h-12 w-auto max-w-[200px]" />
                                 @else
@@ -1231,7 +1231,7 @@ new class extends Component
                             </td>
                             <td class="px-3 py-2 hidden md:table-cell">
                                 @if($previewScore->hasIncipit())
-                                <x-incipit-image :src="route('scores.incipit', $previewScore)"
+                                <x-incipit-image :src="$previewScore->incipitUrl()"
                                      :alt="__('Incipit')"
                                      img-class="h-auto max-h-12 w-auto max-w-[200px]" />
                                 @else

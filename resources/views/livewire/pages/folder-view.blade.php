@@ -30,7 +30,7 @@
                         @if($score->hasIncipit() && $score->share_token)
                         <div class="mt-2">
                             <x-incipit-image
-                                :src="route('score.share.incipit', ['token' => $score->share_token])"
+                                :src="$score->shareIncipitUrl()"
                                 :alt="$score->title"
                                 img-class="block h-14 w-auto" />
                         </div>

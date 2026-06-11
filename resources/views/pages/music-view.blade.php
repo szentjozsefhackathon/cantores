@@ -252,7 +252,7 @@
                                         </td>
                                         <td class="px-3 py-2 hidden md:table-cell">
                                             @if($score->hasIncipit())
-                                            <x-incipit-image :src="route('scores.incipit', $score)"
+                                            <x-incipit-image :src="$score->incipitUrl()"
                                                  :alt="__('Incipit')"
                                                  img-class="h-auto max-h-12 w-auto max-w-[200px]" />
                                             @else

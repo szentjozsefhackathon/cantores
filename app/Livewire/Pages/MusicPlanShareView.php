@@ -121,7 +121,7 @@ class MusicPlanShareView extends Component
                                     ? route('score.share', ['token' => $s->share_token])
                                     : null,
                                 'incipit_url' => ($s->share_token && $s->hasIncipit())
-                                    ? route('score.share.incipit', ['token' => $s->share_token])
+                                    ? $s->shareIncipitUrl()
                                     : null,
                                 'urls' => $s->urls->map(fn (ScoreUrl $url) => [
                                     'url' => $url->url,
