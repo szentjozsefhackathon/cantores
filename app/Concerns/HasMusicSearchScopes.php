@@ -80,7 +80,7 @@ trait HasMusicSearchScopes
                                 ->orWhere('collections.abbreviation', 'ilike', "%{$word}%");
 
                             if (ctype_digit($word)) {
-                                $qq->orWhereRaw('music_collection.order_number ~* ?', ["^{$word}([^0-9]|$)"]);
+                                $qq->orWhereRaw('music_collection.order_number ~* ?', ["(^|/)0*{$word}([^0-9]|$)"]);
                             } else {
                                 $qq->orWhere('music_collection.order_number', 'ilike', "%{$word}%");
                             }
