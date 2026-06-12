@@ -302,14 +302,22 @@ it('renders the Aretino custom editor while keeping the shared textarea for othe
         ->assertSeeHtml('wire:model="content"');
 });
 
-it('renders the Aretino file download action', function () {
+it('renders the file save and open actions for every format', function () {
     $user = User::factory()->create();
 
     actingAs($user);
 
     Livewire::test(ScoreEditor::class)
+        ->assertSee(__('Save as .abc file'))
+        ->assertSee(__('Open .abc file'))
         ->assertSee(__('Save as .aretino file'))
-        ->assertSeeHtml('saveAretinoFile()');
+        ->assertSee(__('Open .aretino file'))
+        ->assertSee(__('Save as .gabc file'))
+        ->assertSee(__('Open .gabc file'))
+        ->assertSee(__('Save as .cho file'))
+        ->assertSee(__('Open .cho file'))
+        ->assertSeeHtml('saveScoreFile()')
+        ->assertSeeHtml('openScoreFile()');
 });
 
 it('sets the Aretino CodeMirror editor font size', function () {

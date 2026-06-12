@@ -216,6 +216,12 @@
                             <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('abc-cheatsheet').show()">
                                 {{ __('Cheatsheet') }}
                             </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveScoreFile()">
+                                {{ __('Save as .abc file') }}
+                            </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="folder-open" x-on:click="openScoreFile()">
+                                {{ __('Open .abc file') }}
+                            </flux:button>
                             <flux:button size="sm" variant="ghost" icon="arrow-down-on-square" x-on:click="$flux.modal('diatar-import').show()">
                                 {{ __('Import from Diatar') }}
                             </flux:button>
@@ -270,6 +276,12 @@
                             <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('chordpro-cheatsheet').show()">
                                 {{ __('Cheatsheet') }}
                             </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveScoreFile()">
+                                {{ __('Save as .cho file') }}
+                            </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="folder-open" x-on:click="openScoreFile()">
+                                {{ __('Open .cho file') }}
+                            </flux:button>
                         </div>
 
                         <flux:modal name="chordpro-cheatsheet" class="max-w-2xl">
@@ -302,6 +314,12 @@
                             </flux:link>
                             <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('gabc-cheatsheet').show()">
                                 {{ __('Cheatsheet') }}
+                            </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveScoreFile()">
+                                {{ __('Save as .gabc file') }}
+                            </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="folder-open" x-on:click="openScoreFile()">
+                                {{ __('Open .gabc file') }}
                             </flux:button>
                         </div>
 
@@ -336,8 +354,11 @@
                             <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('aretino-cheatsheet').show()">
                                 {{ __('Cheatsheet') }}
                             </flux:button>
-                            <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveAretinoFile()">
+                            <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveScoreFile()">
                                 {{ __('Save as .aretino file') }}
+                            </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="folder-open" x-on:click="openScoreFile()">
+                                {{ __('Open .aretino file') }}
                             </flux:button>
                             <flux:button size="sm" variant="ghost" icon="arrow-down-on-square" x-on:click="$flux.modal('gabc-import').show()">
                                 {{ __('Import from Gregorio') }}

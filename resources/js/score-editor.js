@@ -4,7 +4,7 @@ import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { removeEditorOnlySvgMarkup } from './score-editor-export.js';
-import { downloadTextFile, scoreSourceFilename } from './score-editor-file.js';
+import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
 import { renderFirstRow } from '@aretino-chant/core';
 
@@ -712,12 +712,19 @@ document.addEventListener('alpine:init', () => {
             return String(this.localContent ?? '');
         },
 
-        saveAretinoFile() {
+        saveScoreFile() {
             const content = this.currentEditorContent();
             this.localContent = content;
             this.$wire.content = content;
 
-            downloadTextFile(content, scoreSourceFilename(this.$wire.title, 'aretino'));
+            downloadTextFile(content, scoreSourceFilename(this.$wire.title, scoreSourceExtension(this.$wire.format)));
+        },
+
+        async openScoreFile() {
+            const file = await openTextFile(`.${scoreSourceExtension(this.$wire.format)}`);
+            if (!file) { return; }
+
+            this.setEditorContent(file.content, { modified: true });
         },
 
         getShareData() {
