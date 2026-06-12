@@ -207,55 +207,55 @@ new class extends Component
                 <!-- Editor Columns -->
                 <div class="pt-6 border-t border-neutral-200 dark:border-neutral-800">
                     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div class="space-y-4 lg:col-span-1">
+                        <div class="space-y-4 lg:col-span-1 min-w-0">
                             <div class="flex items-center justify-between">
                                 <flux:heading size="lg">Énekrend elemei</flux:heading>
                                 <flux:badge color="zinc" size="sm">{{ count($planSlots) }} elem</flux:badge>
                             </div>
 
                             @forelse($planSlots as $slot)
-                            <flux:card class="p-2 flex items-start gap-4">
-                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold">
-                                    {{ $slot['sequence'] }}
-                                </div>
-                                <div class="flex-1 space-y-1">
-                                    <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
-                                    @if($slot['description'])
-                                    <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
-                                    @endif
-
-                                    @if(!empty($slot['assignments']))
-                                    <div class="mt-3 space-y-3">
-                                        @foreach($slot['assignments'] as $assignment)
-                                            @if(!empty($assignment['music']))
-                                                @if(!empty($assignment['scope_label']))
-                                                    <div class="mb-1">
-                                                        <flux:badge color="zinc" size="sm">{{ $assignment['scope_label'] }}</flux:badge>
-                                                    </div>
-                                                @endif
-                                                <livewire:music-card
-                                                    :key="'music-card-'.$assignment['id']"
-                                                    :music="$assignment['music']"
-                                                />
-                                            @else
-                                            <flux:callout variant="secondary" icon="information-circle">
-                                                A zenei bejegyzés már nem érhető el.
-                                            </flux:callout>
-                                            @endif
-
-                                            @if(!empty($assignment['notes']))
-                                            <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">
-                                                {{ $assignment['notes'] }}
-                                            </flux:text>
-                                            @endif
-                                        @endforeach
+                            <flux:card class="p-2 space-y-2 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 text-xs font-semibold shrink-0">
+                                        {{ $slot['sequence'] }}
                                     </div>
-                                    @else
-                                    <flux:callout variant="secondary" icon="musical-note" class="mt-3">
-                                        Ehhez az elemhez nincs zene hozzárendelve.
-                                    </flux:callout>
-                                    @endif
+                                    <flux:heading size="sm">{{ $slot['name'] }}</flux:heading>
                                 </div>
+                                @if($slot['description'])
+                                <flux:text class="text-sm text-neutral-600 dark:text-neutral-400">{{ Str::limit($slot['description'], 120) }}</flux:text>
+                                @endif
+
+                                @if(!empty($slot['assignments']))
+                                <div class="space-y-3">
+                                    @foreach($slot['assignments'] as $assignment)
+                                        @if(!empty($assignment['music']))
+                                            @if(!empty($assignment['scope_label']))
+                                                <div class="mb-1">
+                                                    <flux:badge color="zinc" size="sm">{{ $assignment['scope_label'] }}</flux:badge>
+                                                </div>
+                                            @endif
+                                            <livewire:music-card
+                                                :key="'music-card-'.$assignment['id']"
+                                                :music="$assignment['music']"
+                                            />
+                                        @else
+                                        <flux:callout variant="secondary" icon="information-circle">
+                                            A zenei bejegyzés már nem érhető el.
+                                        </flux:callout>
+                                        @endif
+
+                                        @if(!empty($assignment['notes']))
+                                        <flux:text class="text-xs text-neutral-600 dark:text-neutral-400">
+                                            {{ $assignment['notes'] }}
+                                        </flux:text>
+                                        @endif
+                                    @endforeach
+                                </div>
+                                @else
+                                <flux:callout variant="secondary" icon="musical-note">
+                                    Ehhez az elemhez nincs zene hozzárendelve.
+                                </flux:callout>
+                                @endif
                             </flux:card>
                             @empty
                             <flux:callout variant="secondary" icon="musical-note">

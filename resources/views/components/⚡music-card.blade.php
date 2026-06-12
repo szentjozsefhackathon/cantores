@@ -189,13 +189,13 @@ new class extends Component
                 <flux:icon name="chevron-left" class="h-4 w-4" />
             </button>
             @endif
-            <div class="overflow-hidden" style="max-width: 400px; max-height: 80px;">
+            <div class="flex-1 min-w-0 overflow-hidden max-h-20">
                 @foreach($incipitScores as $i => $incipitItem)
                 <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
-                    <x-incipit-image :src="$incipitItem['url']"
+                    <x-incipit-image class="max-w-full"
+                         :src="$incipitItem['url']"
                          :alt="$incipitItem['score']->title"
-                         img-class="block h-auto max-h-14 w-auto"
-                         img-style="max-width: 400px;" />
+                         img-class="block h-auto max-h-14 w-auto max-w-full" />
                 </div>
                 @endforeach
             </div>
@@ -232,10 +232,10 @@ new class extends Component
             @endif
 
             @if(!empty($shareScore['incipit_url']))
-            <x-incipit-image :src="$shareScore['incipit_url']"
+            <x-incipit-image class="max-w-full"
+                 :src="$shareScore['incipit_url']"
                  :alt="$shareScore['title']"
-                 img-class="block h-auto max-h-14 w-auto"
-                 img-style="max-width: 400px;" />
+                 img-class="block h-auto max-h-14 w-auto max-w-full" />
             @endif
 
             @if(!empty($shareScore['urls']))

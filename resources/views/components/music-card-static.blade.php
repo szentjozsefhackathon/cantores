@@ -80,13 +80,13 @@
                 <flux:icon name="chevron-left" class="h-4 w-4" />
             </button>
             @endif
-            <div class="overflow-hidden" style="max-width: 400px; max-height: 80px;">
+            <div class="flex-1 min-w-0 overflow-hidden max-h-20">
                 @foreach($incipits as $i => $incipit)
                 <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
-                    <x-incipit-image :src="$incipit['url']"
+                    <x-incipit-image class="max-w-full"
+                         :src="$incipit['url']"
                          :alt="$incipit['title']"
-                         img-class="block h-auto max-h-14 w-auto"
-                         img-style="max-width: 400px;" />
+                         img-class="block h-auto max-h-14 w-auto max-w-full" />
                 </div>
                 @endforeach
             </div>

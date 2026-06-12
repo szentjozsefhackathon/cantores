@@ -2,7 +2,7 @@
 <flux:card class="p-2 {{ count($assignments) > 0 ? 'border-4' : '' }}">
     <div class="grid grid-cols-1 gap-4 grid-cols-[1fr_auto]">
         <!-- Left column: sequence, name/description, and assignments -->
-        <div class="space-y-4">
+        <div class="space-y-4 min-w-0">
             <!-- First row: sequence and name/description -->
             <div class="flex items-start gap-4">
                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold flex-shrink-0">
@@ -40,7 +40,7 @@
             <div class="space-y-2">
             @foreach($assignments as $assignment)
             <div wire:key="assignment-{{ $assignment['id'] }}" class="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-lg px-3 py-2">
-                <div class="flex gap-3">
+                <div class="flex gap-3 flex-1 min-w-0">
                     <!-- Button bar -->
                     <div class="flex flex-col gap-1">
                         @if(count($assignments) > 1)
@@ -83,7 +83,7 @@
                             title="Áthelyezés másik elembe" />
                         @endif
                     </div>
-                    <div class="flex flex-col gap-2">
+                    <div class="flex flex-col gap-2 flex-1 min-w-0">
                         <x-music-card-static :assignment="$assignment" />
                         <div class="text-sm">
                         <x-mary-choices
