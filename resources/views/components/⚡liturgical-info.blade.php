@@ -529,7 +529,6 @@ new class extends Component
 
         $user = Auth::user();
         $genreId = GenreContext::getId();
-        $limit = 12;
 
         $query = MusicPlan::whereIn('celebration_id', $related['all'])
             ->with([
@@ -593,7 +592,7 @@ new class extends Component
             // Order songs by their slot position (priority then name), mirroring the suggestions list.
             usort($items, fn(array $a, array $b): int => [$a['slot_priority'], $a['slot']] <=> [$b['slot_priority'], $b['slot']]);
 
-            $previews[$index] = array_slice($items, 0, $limit);
+            $previews[$index] = $items;
         }
 
         return $this->suggestionPreviews = $previews;

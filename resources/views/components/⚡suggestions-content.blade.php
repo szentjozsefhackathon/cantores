@@ -330,7 +330,7 @@ new class extends Component
     @else
     <!-- Tabs navigation with mary-ui -->
     <x-mary-tabs wire:model="activeTab" class="mb-8">
-        <x-mary-tab name="music" icon="o-musical-note" label="Énekjavaslatok ({{ count($slotMusicMap) }})">
+        <x-mary-tab name="music" icon="o-musical-note" label="Énekjavaslatok ({{ collect($slotMusicMap)->sum(fn (array $slotData): int => count($slotData['musics'])) }})">
             @island(defer: true, always: true)
             @placeholder
             <flux:skeleton.group animate="shimmer" class="flex items-center gap-4">

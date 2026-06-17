@@ -74,6 +74,58 @@ test('suggestions page loads with criteria', function () {
     $response->assertSee('Test Celebration');
 });
 
+test('music suggestions tab counts musics across slots, not slots', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $celebration = Celebration::factory()->create([
+        'name' => 'Count Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 0,
+        'readings_code' => 'ABC123',
+        'year_letter' => 'A',
+        'year_parity' => 'I',
+    ]);
+
+    $musicPlan = MusicPlan::factory()->create(['user_id' => $user->id, 'is_private' => false]);
+    $musicPlan->celebration()->associate($celebration);
+    $musicPlan->save();
+
+    // Two slots, each carrying two distinct musics: 2 slots but 4 suggestions.
+    foreach (['Opening', 'Closing'] as $sequence => $slotName) {
+        $slot = MusicPlanSlot::factory()->create(['priority' => $sequence + 1, 'name' => $slotName]);
+        $musicPlan->slots()->attach($slot, ['sequence' => $sequence + 1]);
+        $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $musicPlan->id)
+            ->where('music_plan_slot_id', $slot->id)
+            ->first();
+
+        foreach (range(1, 2) as $musicSequence) {
+            MusicPlanSlotAssignment::factory()->create([
+                'music_plan_slot_plan_id' => $pivot->id,
+                'music_id' => Music::factory()->create()->id,
+                'music_sequence' => $musicSequence,
+            ]);
+        }
+    }
+
+    $response = $this->get('/suggestions?'.http_build_query([
+        'name' => 'Count Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 0,
+        'readings_code' => 'ABC123',
+        'year_letter' => 'A',
+        'year_parity' => 'I',
+    ]));
+
+    $response->assertSuccessful();
+    // The tab label is emitted inside mary's Alpine x-init JSON, where "É" is unicode-escaped,
+    // so match on the unambiguous tail. 4 distinct musics across 2 slots => count must be 4, not 2.
+    $response->assertSee('nekjavaslatok (4)');
+    $response->assertDontSee('nekjavaslatok (2)');
+});
+
 test('suggestions page shows no results when no matches', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
