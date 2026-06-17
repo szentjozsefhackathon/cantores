@@ -401,6 +401,56 @@ test('suggestion carousel orders songs by slot priority and shows collection bad
         ->assertSee('SzVU 7');
 });
 
+test('other cantors section shows an animated incipit carousel for each published plan', function () {
+    Storage::fake();
+    Genre::factory()->create();
+    $viewer = User::factory()->create();
+    $author = User::factory()->create();
+    $this->actingAs($viewer);
+
+    $celebration = Celebration::factory()->liturgical()->create([
+        'name' => 'Pünkösd',
+        'actual_date' => '2026-06-01',
+    ]);
+
+    $plan = MusicPlan::factory()->create([
+        'user_id' => $author->id,
+        'genre_id' => null,
+        'is_private' => false,
+        'celebration_id' => $celebration->id,
+    ]);
+
+    $slot = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Kezdőének']);
+    $music = \App\Models\Music::factory()->create(['title' => 'Jöjj Szentlélek Úristen']);
+
+    $plan->slots()->attach($slot->id, ['sequence' => 1]);
+    $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+        ->where('music_plan_slot_id', $slot->id)
+        ->first();
+    \App\Models\MusicPlanSlotAssignment::create([
+        'music_plan_slot_plan_id' => $pivot->id,
+        'music_id' => $music->id,
+        'music_sequence' => 1,
+    ]);
+
+    $score = \App\Models\Score::factory()->create([
+        'user_id' => $author->id,
+        'music_id' => $music->id,
+        'public_preview' => true,
+    ]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+
+    mockCelebrations([celebrationPayload($celebration)]);
+
+    Livewire::test('liturgical-info')
+        ->set('date', '2026-06-01')
+        ->assertSee('Más kántorok ezt énekelték')
+        ->assertSeeHtml('wire:key="plan-preview-carousel-'.$plan->id.'"')
+        ->assertSee('Kezdőének')
+        ->assertSee('Jöjj Szentlélek Úristen')
+        ->assertSeeHtml(route('scores.public-incipit', $score));
+});
+
 test('creating a music plan persists the celebration liturgical color', function () {
     Genre::factory()->create();
     $this->actingAs(User::factory()->create());

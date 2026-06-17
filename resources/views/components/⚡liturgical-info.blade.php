@@ -321,8 +321,20 @@ new class extends Component
             return $this->plansByCelebrationId = collect();
         }
 
+        $user = Auth::user();
+
         return $this->plansByCelebrationId = MusicPlan::whereIn('celebration_id', $celebrationIds)
-            ->with(['user', 'genre', 'celebration'])
+            ->with([
+                'user',
+                'genre',
+                'celebration',
+                'musicAssignments.music' => fn($q) => $q->visibleTo($user),
+                'musicAssignments.music.genres',
+                'musicAssignments.music.collections',
+                'musicAssignments.music.publicPreviewScores',
+                'musicAssignments.music.scores',
+                'musicAssignments.musicPlanSlotPlan.musicPlanSlot' => fn($q) => $q->visibleToUser($user),
+            ])
             ->withCount(['slots', 'musicAssignments'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -393,6 +405,45 @@ new class extends Component
                 return $genreId === null || $plan->genre_id === null || (int) $plan->genre_id === $genreId;
             })
             ->values();
+    }
+
+    /**
+     * Build the ordered, de-duplicated song-preview list for a single music plan's carousel. Each
+     * item carries its incipit URL when one is visible so the teaser can show a notated snippet
+     * where available and fall back to the title otherwise, mirroring the suggestion carousel.
+     *
+     * @return array<int, array{music: \App\Models\Music, title: string, slot: string, slot_priority: int, incipit_url: ?string}>
+     */
+    public function planPreviews(MusicPlan $plan): array
+    {
+        $user = Auth::user();
+        $seen = [];
+        $items = [];
+
+        foreach ($plan->musicAssignments as $assignment) {
+            $music = $assignment->music;
+            if (! $music || isset($seen[$music->id])) {
+                continue;
+            }
+
+            $incipit = $music->visibleIncipitScores($user)->first();
+            $slot = $assignment->musicPlanSlotPlan?->musicPlanSlot;
+
+            $seen[$music->id] = true;
+            $items[] = [
+                'music' => $music,
+                'title' => $music->title,
+                'slot' => $slot?->name ?? __('Ének'),
+                'slot_priority' => $slot?->priority ?? PHP_INT_MAX,
+                'incipit_url' => $incipit === null
+                    ? null
+                    : ($incipit->public_preview ? $incipit->publicIncipitUrl() : $incipit->incipitUrl()),
+            ];
+        }
+
+        usort($items, fn(array $a, array $b): int => [$a['slot_priority'], $a['slot']] <=> [$b['slot_priority'], $b['slot']]);
+
+        return $items;
     }
 
     /**
@@ -1028,20 +1079,86 @@ new class extends Component
                                 @if($publishedPlans->isNotEmpty())
                                 <div class="space-y-2">
                                     @foreach($publishedPlans as $plan)
-                                    <a
-                                        href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
-                                        class="flex items-center justify-between p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
-                                        <div class="flex items-center gap-3 min-w-0">
-                                            <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" variant="mini" />
-                                            <div class="min-w-0">
-                                                <x-user-badge :user="$plan->user" />
-                                                <flux:text class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                                                    {{ $plan->slots_count }} rész · {{ $plan->music_assignments_count }} zenemű
-                                                </flux:text>
+                                    @php $planPreviews = $this->planPreviews($plan); @endphp
+                                    <div class="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-700">
+                                        <a
+                                            href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
+                                            class="flex items-center justify-between p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors group">
+                                            <div class="flex items-center gap-3 min-w-0">
+                                                <flux:icon name="{{ $plan->genre?->icon() ?? 'musical-note' }}" class="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" variant="mini" />
+                                                <div class="min-w-0">
+                                                    <x-user-badge :user="$plan->user" />
+                                                    <flux:text class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                                        {{ $plan->slots_count }} rész · {{ $plan->music_assignments_count }} zenemű
+                                                    </flux:text>
+                                                </div>
                                             </div>
+                                            <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600 shrink-0" variant="mini" />
+                                        </a>
+                                        @if(!empty($planPreviews))
+                                        <div x-data="{
+                                                current: 0,
+                                                total: {{ count($planPreviews) }},
+                                                go(step) { this.current = (this.current + step + this.total) % this.total; },
+                                             }"
+                                             wire:key="plan-preview-carousel-{{ $plan->id }}"
+                                             class="flex items-stretch gap-1.5 border-t border-neutral-100 p-2 dark:border-neutral-800">
+                                            @if(count($planPreviews) > 1)
+                                            <button type="button"
+                                                x-on:click.stop="go(-1)"
+                                                class="flex shrink-0 items-center justify-center rounded-md px-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-blue-600 dark:text-neutral-500 dark:hover:bg-neutral-800"
+                                                aria-label="Előző ének">
+                                                <flux:icon name="chevron-left" class="h-5 w-5" />
+                                            </button>
+                                            @endif
+                                            <a
+                                                href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
+                                                class="group/plan relative h-36 flex-1 cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500"
+                                                title="Az énekrend megtekintése">
+                                                <div class="flex h-full transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (current * 100) + '%)'">
+                                                @foreach($planPreviews as $i => $preview)
+                                                <div wire:key="plan-preview-{{ $plan->id }}-{{ $preview['music']->id }}" class="relative flex h-full w-full shrink-0 flex-col p-3">
+                                                    <div class="mb-1.5 flex items-start justify-between gap-2">
+                                                        <div class="flex min-w-0 flex-wrap items-center gap-1">
+                                                            <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
+                                                            @foreach($preview['music']->collections as $collection)
+                                                                <x-collection-badge :collection="$collection" />
+                                                            @endforeach
+                                                        </div>
+                                                        @if(count($planPreviews) > 1)
+                                                        <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ count($planPreviews) }}</flux:text>
+                                                        @endif
+                                                    </div>
+                                                    <flux:heading size="sm" class="truncate text-neutral-800 transition-colors group-hover/plan:text-blue-600 dark:text-neutral-100 dark:group-hover/plan:text-blue-400">
+                                                        {{ $preview['title'] }}
+                                                    </flux:heading>
+                                                    @if($preview['incipit_url'])
+                                                    <div class="mt-2 flex flex-1 items-center overflow-hidden">
+                                                        <img src="{{ $preview['incipit_url'] }}" alt="{{ $preview['title'] }}" loading="lazy" class="block h-auto max-h-14 w-auto max-w-full" />
+                                                    </div>
+                                                    @endif
+                                                    @if($preview['music']->genres->isNotEmpty())
+                                                    <div class="pointer-events-none absolute bottom-0 right-0 flex items-center justify-center gap-1 rounded-tl-md bg-gray-200/30 px-2 py-1 backdrop-blur-sm dark:bg-gray-700/30">
+                                                        @foreach($preview['music']->genres as $genre)
+                                                            <flux:icon name="{{ $genre->icon() }}" class="h-4 w-4 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
+                                                        @endforeach
+                                                    </div>
+                                                    @endif
+                                                </div>
+                                                @endforeach
+                                                </div>
+                                            </a>
+                                            @if(count($planPreviews) > 1)
+                                            <button type="button"
+                                                x-on:click.stop="go(1)"
+                                                class="flex shrink-0 items-center justify-center rounded-md px-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-blue-600 dark:text-neutral-500 dark:hover:bg-neutral-800"
+                                                aria-label="Következő ének">
+                                                <flux:icon name="chevron-right" class="h-5 w-5" />
+                                            </button>
+                                            @endif
                                         </div>
-                                        <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600 shrink-0" variant="mini" />
-                                    </a>
+                                        @endif
+                                    </div>
                                     @endforeach
                                 </div>
                                 @else
