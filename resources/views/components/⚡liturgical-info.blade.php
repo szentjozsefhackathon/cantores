@@ -45,6 +45,21 @@ new class extends Component
      */
     private ?array $suggestionFlags = null;
 
+    /**
+     * Memoized related-celebration IDs, both per loop index and as a de-duplicated union.
+     *
+     * @var array{perIndex: array<int, array<int, int>>, all: array<int, int>}|null
+     */
+    private ?array $relatedIds = null;
+
+    /**
+     * Memoized song-preview lists keyed by celebration loop index. Each item carries the
+     * slot name, song title and incipit URL for a suggested song that has a visible incipit.
+     *
+     * @var array<int, array<int, array{music_id: int, title: string, slot: string, incipit_url: string}>>|null
+     */
+    private ?array $suggestionPreviews = null;
+
     public function mount(bool $selectable = false, bool $welcome = false): void
     {
         $this->welcome = $welcome;
@@ -381,6 +396,159 @@ new class extends Component
     }
 
     /**
+     * Build the CelebrationSearchService criteria for a celebration payload.
+     *
+     * @return array<string, mixed>
+     */
+    private function criteriaFor(array $celebrationData): array
+    {
+        return array_filter([
+            'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
+            'season' => isset($celebrationData['season']) ? (int) $celebrationData['season'] : null,
+            'week' => isset($celebrationData['week']) ? (int) $celebrationData['week'] : null,
+            'day' => isset($celebrationData['dayofWeek']) ? (int) $celebrationData['dayofWeek'] : null,
+            'readings_code' => $celebrationData['readingsId'] ?? null,
+            'year_letter' => $celebrationData['yearLetter'] ?? null,
+            'year_parity' => $celebrationData['yearParity'] ?? null,
+        ], fn($value): bool => $value !== null);
+    }
+
+    /**
+     * Resolve related-celebration IDs for every displayed celebration through a single shared
+     * service instance, so the full-table scan it performs runs only once per render. Returns the
+     * IDs both per loop index (scored order preserved) and as a de-duplicated union.
+     *
+     * @return array{perIndex: array<int, array<int, int>>, all: array<int, int>}
+     */
+    private function relatedIds(): array
+    {
+        if ($this->relatedIds !== null) {
+            return $this->relatedIds;
+        }
+
+        $service = app(CelebrationSearchService::class);
+
+        $perIndex = [];
+        $all = [];
+
+        foreach ($this->celebrations as $index => $celebrationData) {
+            $ids = $service->findRelated($this->criteriaFor($celebrationData))->pluck('id')->all();
+            $perIndex[$index] = $ids;
+            $all = array_merge($all, $ids);
+        }
+
+        return $this->relatedIds = [
+            'perIndex' => $perIndex,
+            'all' => array_values(array_unique($all)),
+        ];
+    }
+
+    /**
+     * Get the suggested-song previews for a celebration (by loop index).
+     *
+     * @return array<int, array{music: \App\Models\Music, title: string, slot: string, slot_priority: int, incipit_url: ?string}>
+     */
+    public function suggestionPreviewsFor(int $celebrationIndex): array
+    {
+        return $this->suggestionPreviews()[$celebrationIndex] ?? [];
+    }
+
+    /**
+     * Build, for every displayed celebration, an ordered and de-duplicated list of suggested songs
+     * for the engagement carousel. Each item carries its incipit URL when one is visible, so the
+     * teaser can show a notated snippet where available and fall back to the title otherwise.
+     *
+     * Music plans for the unioned related celebrations are loaded in a single query (with their
+     * assignments, slots and incipit scores eager-loaded), then walked per index in celebration
+     * score order. Memoized so the work runs once per render rather than per card.
+     *
+     * @return array<int, array<int, array{music: \App\Models\Music, title: string, slot: string, slot_priority: int, incipit_url: ?string}>>
+     */
+    private function suggestionPreviews(): array
+    {
+        if ($this->suggestionPreviews !== null) {
+            return $this->suggestionPreviews;
+        }
+
+        $related = $this->relatedIds();
+
+        if ($related['all'] === []) {
+            return $this->suggestionPreviews = [];
+        }
+
+        $user = Auth::user();
+        $genreId = GenreContext::getId();
+        $limit = 12;
+
+        $query = MusicPlan::whereIn('celebration_id', $related['all'])
+            ->with([
+                'musicAssignments.music' => fn($q) => $q->visibleTo($user),
+                'musicAssignments.music.genres',
+                'musicAssignments.music.collections',
+                'musicAssignments.music.publicPreviewScores',
+                'musicAssignments.music.scores',
+                'musicAssignments.musicPlanSlotPlan.musicPlanSlot' => fn($q) => $q->visibleToUser($user),
+            ]);
+
+        if ($genreId !== null) {
+            $query->where(function ($q) use ($genreId) {
+                $q->whereNull('genre_id')->orWhere('genre_id', $genreId);
+            });
+        }
+
+        $plansByCelebration = $query->visibleTo($user)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy('celebration_id');
+
+        $previews = [];
+
+        foreach ($related['perIndex'] as $index => $celebrationIds) {
+            $seen = [];
+            $items = [];
+
+            foreach ($celebrationIds as $celebrationId) {
+                foreach ($plansByCelebration->get($celebrationId, collect()) as $plan) {
+                    foreach ($plan->musicAssignments as $assignment) {
+                        $music = $assignment->music;
+                        if (! $music || isset($seen[$music->id])) {
+                            continue;
+                        }
+
+                        if ($genreId !== null) {
+                            $musicGenreIds = $music->genres->pluck('id')->all();
+                            if ($musicGenreIds !== [] && ! in_array($genreId, $musicGenreIds, true)) {
+                                continue;
+                            }
+                        }
+
+                        $incipit = $music->visibleIncipitScores($user)->first();
+                        $slot = $assignment->musicPlanSlotPlan?->musicPlanSlot;
+
+                        $seen[$music->id] = true;
+                        $items[] = [
+                            'music' => $music,
+                            'title' => $music->title,
+                            'slot' => $slot?->name ?? __('Ének'),
+                            'slot_priority' => $slot?->priority ?? PHP_INT_MAX,
+                            'incipit_url' => $incipit === null
+                                ? null
+                                : ($incipit->public_preview ? $incipit->publicIncipitUrl() : $incipit->incipitUrl()),
+                        ];
+                    }
+                }
+            }
+
+            // Order songs by their slot position (priority then name), mirroring the suggestions list.
+            usort($items, fn(array $a, array $b): int => [$a['slot_priority'], $a['slot']] <=> [$b['slot_priority'], $b['slot']]);
+
+            $previews[$index] = array_slice($items, 0, $limit);
+        }
+
+        return $this->suggestionPreviews = $previews;
+    }
+
+    /**
      * Check whether a celebration (by loop index) has any music plan suggestions.
      * Returns true when at least one related celebration has a published plan attached
      * or one of the authenticated user's own plans attached.
@@ -405,28 +573,9 @@ new class extends Component
             return $this->suggestionFlags;
         }
 
-        $service = app(CelebrationSearchService::class);
-
-        $relatedIdsPerIndex = [];
-        $allRelatedIds = [];
-
-        foreach ($this->celebrations as $index => $celebrationData) {
-            $criteria = array_filter([
-                'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
-                'season' => isset($celebrationData['season']) ? (int) $celebrationData['season'] : null,
-                'week' => isset($celebrationData['week']) ? (int) $celebrationData['week'] : null,
-                'day' => isset($celebrationData['dayofWeek']) ? (int) $celebrationData['dayofWeek'] : null,
-                'readings_code' => $celebrationData['readingsId'] ?? null,
-                'year_letter' => $celebrationData['yearLetter'] ?? null,
-                'year_parity' => $celebrationData['yearParity'] ?? null,
-            ], fn($value): bool => $value !== null);
-
-            $ids = $service->findRelated($criteria)->pluck('id')->all();
-            $relatedIdsPerIndex[$index] = $ids;
-            $allRelatedIds = array_merge($allRelatedIds, $ids);
-        }
-
-        $allRelatedIds = array_values(array_unique($allRelatedIds));
+        $related = $this->relatedIds();
+        $relatedIdsPerIndex = $related['perIndex'];
+        $allRelatedIds = $related['all'];
 
         $celebrationIdsWithPlans = [];
         if ($allRelatedIds !== []) {
@@ -662,7 +811,7 @@ new class extends Component
                     $colorTextColor = \App\Models\Celebration::borderColorClassForColorText($celebration['colorText'] ?? null);
                     @endphp
                     <flux:card class="celebration-card p-0 overflow-hidden border-l-4 {{ $colorTextColor }} hover:shadow-lg transition-shadow duration-300">
-                        <div class="p-5 space-y-4">
+                        <div class="p-3 space-y-4">
                             <!-- Title with badges -->
                             <div class="flex items-start justify-between gap-2">
                                 <div class="flex-1">
@@ -753,11 +902,95 @@ new class extends Component
                                 @endif
                                 @if (!$selectable)
                                 @php
-                                $hasSuggestions = $this->hasSuggestions($loop->index);
+                                $celebrationIndex = $loop->index;
+                                $previews = $this->suggestionPreviewsFor($celebrationIndex);
+                                $hasSuggestions = $this->hasSuggestions($celebrationIndex);
                                 @endphp
-                                @if($hasSuggestions)
+                                @if(!empty($previews))
+                                <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
+                                    Énekjavaslatok az ünnepre
+                                </flux:heading>
+                                <div x-data="{
+                                        current: 0,
+                                        total: {{ count($previews) }},
+                                        timer: null,
+                                        go(step) { this.current = (this.current + step + this.total) % this.total; this.start(); },
+                                        start() { this.stop(); if (this.total > 1) { this.timer = setInterval(() => { this.current = (this.current + 1) % this.total; }, 4000); } },
+                                        stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
+                                     }"
+                                     x-init="start()"
+                                     x-on:mouseenter="stop()"
+                                     x-on:mouseleave="start()"
+                                     wire:key="suggestion-carousel-{{ $celebrationIndex }}-{{ $date }}-{{ \App\Facades\GenreContext::getId() ?? 'all' }}"
+                                     class="flex items-stretch gap-1.5">
+                                    @if(count($previews) > 1)
+                                    <button type="button"
+                                        x-on:click.stop="go(-1)"
+                                        class="flex shrink-0 items-center justify-center rounded-md px-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-blue-600 dark:text-neutral-500 dark:hover:bg-neutral-800"
+                                        aria-label="Előző javaslat">
+                                        <flux:icon name="chevron-left" class="h-5 w-5" />
+                                    </button>
+                                    @endif
+                                    <div
+                                        wire:click="openSuggestions({{ $celebrationIndex }})"
+                                        role="button"
+                                        tabindex="0"
+                                        x-on:keydown.enter="$wire.openSuggestions({{ $celebrationIndex }})"
+                                        class="group/sugg relative h-36 flex-1 cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500"
+                                        title="Az összes énekjavaslat megtekintése">
+                                        <div class="flex h-full transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (current * 100) + '%)'">
+                                        @foreach($previews as $i => $preview)
+                                        <div wire:key="suggestion-preview-{{ $celebrationIndex }}-{{ $preview['music']->id }}" class="relative flex h-full w-full shrink-0 flex-col p-3">
+                                            <div class="mb-1.5 flex items-start justify-between gap-2">
+                                                <div class="flex min-w-0 flex-wrap items-center gap-1">
+                                                    <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
+                                                    @foreach($preview['music']->collections as $collection)
+                                                        <x-collection-badge :collection="$collection" />
+                                                    @endforeach
+                                                </div>
+                                                @if(count($previews) > 1)
+                                                <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ count($previews) }}</flux:text>
+                                                @endif
+                                            </div>
+                                            <flux:heading size="sm" class="truncate text-neutral-800 transition-colors group-hover/sugg:text-blue-600 dark:text-neutral-100 dark:group-hover/sugg:text-blue-400">
+                                                {{ $preview['title'] }}
+                                            </flux:heading>
+                                            @if($preview['incipit_url'])
+                                            <div class="mt-2 flex flex-1 items-center overflow-hidden">
+                                                <img src="{{ $preview['incipit_url'] }}" alt="{{ $preview['title'] }}" loading="lazy" class="block h-auto max-h-14 w-auto max-w-full" />
+                                            </div>
+                                            @endif
+                                            @if($preview['music']->genres->isNotEmpty())
+                                            <div class="pointer-events-none absolute bottom-0 right-0 flex items-center justify-center gap-1 rounded-tl-md bg-gray-200/30 px-2 py-1 backdrop-blur-sm dark:bg-gray-700/30">
+                                                @foreach($preview['music']->genres as $genre)
+                                                    <flux:icon name="{{ $genre->icon() }}" class="h-4 w-4 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
+                                                @endforeach
+                                            </div>
+                                            @endif
+                                        </div>
+                                        @endforeach
+                                        </div>
+                                    </div>
+                                    @if(count($previews) > 1)
+                                    <button type="button"
+                                        x-on:click.stop="go(1)"
+                                        class="flex shrink-0 items-center justify-center rounded-md px-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-blue-600 dark:text-neutral-500 dark:hover:bg-neutral-800"
+                                        aria-label="Következő javaslat">
+                                        <flux:icon name="chevron-right" class="h-5 w-5" />
+                                    </button>
+                                    @endif
+                                </div>
                                 <flux:button
-                                    wire:click="openSuggestions({{ $loop->index }})"
+                                    wire:click="openSuggestions({{ $celebrationIndex }})"
+                                    size="sm"
+                                    icon="light-bulb"
+                                    variant="primary"
+                                    class="w-full">
+                                    Az összes énekjavaslat
+                                </flux:button>
+                                @elseif($hasSuggestions)
+                                <flux:button
+                                    wire:click="openSuggestions({{ $celebrationIndex }})"
                                     size="sm"
                                     icon="light-bulb"
                                     class="w-full">
@@ -768,7 +1001,7 @@ new class extends Component
                                     Még nincsenek énekjavaslatok{{ GenreContext::getId() ? ' ' . GenreContext::label() . ' műfajban' : '' }}.
                                 </flux:text>
                                 <flux:button
-                                    wire:click="openSuggestions({{ $loop->index }})"
+                                    wire:click="openSuggestions({{ $celebrationIndex }})"
                                     size="sm"
                                     icon="information-circle"
                                     class="w-full">
