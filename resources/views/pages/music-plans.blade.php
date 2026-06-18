@@ -138,6 +138,9 @@ new class extends Component
                         </flux:text>
                     </div>
                 </div>
+                <div>
+                    <livewire:genre-selector />
+                </div>
             </div>
 
             <!-- Tabs -->

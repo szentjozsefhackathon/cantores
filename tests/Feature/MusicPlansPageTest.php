@@ -91,3 +91,10 @@ test('music-plans page does not require authentication', function () {
     // No redirect to login
     $response->assertStatus(200);
 });
+
+test('music-plans page includes the genre selector component', function () {
+    $response = $this->get('/music-plans');
+
+    $response->assertOk();
+    $response->assertSeeLivewire('genre-selector');
+});
