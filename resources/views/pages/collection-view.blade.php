@@ -14,12 +14,12 @@
                 <div>
                     <flux:heading size="xl">{{ $collection->title }}</flux:heading>
                     <flux:subheading>
-                        @if($collection->abbreviation && $collection->publisher)
-                            {{ $collection->abbreviation }} &middot; {{ $collection->publisher }}
+                        @if($collection->abbreviation && $collection->author)
+                            {{ $collection->abbreviation }} &middot; {{ $collection->author }}
                         @elseif($collection->abbreviation)
                             {{ $collection->abbreviation }}
-                        @elseif($collection->publisher)
-                            {{ $collection->publisher }}
+                        @elseif($collection->author)
+                            {{ $collection->author }}
                         @endif
                     </flux:subheading>
                     @auth
