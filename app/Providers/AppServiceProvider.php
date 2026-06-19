@@ -6,6 +6,7 @@ use App\Listeners\UpdateLastLoginAt;
 use App\Models\Author;
 use App\Models\City;
 use App\Models\Collection;
+use App\Models\ExternalLink;
 use App\Models\FirstName;
 use App\Models\Genre;
 use App\Models\Music;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Observers\AuthorObserver;
 use App\Observers\CityObserver;
 use App\Observers\CollectionObserver;
+use App\Observers\ExternalLinkObserver;
 use App\Observers\FirstNameObserver;
 use App\Observers\GenreObserver;
 use App\Observers\MusicObserver;
@@ -52,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
         Collection::observe(CollectionObserver::class);
         Music::observe(MusicObserver::class);
         Author::observe(AuthorObserver::class);
+        ExternalLink::observe(ExternalLinkObserver::class);
         User::observe(UserObserver::class);
 
         Event::listen(Login::class, UpdateLastLoginAt::class);

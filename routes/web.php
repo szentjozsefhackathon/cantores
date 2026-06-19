@@ -209,6 +209,11 @@ Route::livewire('/editor/music-tags', \App\Livewire\Pages\Editor\MusicTagManager
     ->middleware(['auth', 'verified'])
     ->name('music-tag-manager');
 
+// External links manager tool
+Route::livewire('/editor/external-links', \App\Livewire\Pages\Editor\ExternalLinks::class)
+    ->middleware(['auth', 'verified'])
+    ->name('external-links');
+
 // Suggestions page for music plan recommendations
 Route::livewire('/suggestions', 'pages::suggestions')
     ->name('suggestions');

@@ -320,5 +320,7 @@ new class extends Component
         </div>
         @endguest
 
+        <x-external-links />
+
     </div>
 </div>

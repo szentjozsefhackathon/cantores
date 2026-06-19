@@ -107,6 +107,9 @@
             <flux:sidebar.item icon="tag" :href="route('music-tag-manager')" :current="request()->routeIs('music-tag-manager')" wire:navigate>
                 Zenei címkék
             </flux:sidebar.item>
+            <flux:sidebar.item icon="link" :href="route('external-links')" :current="request()->routeIs('external-links')" wire:navigate>
+                Külső hivatkozások
+            </flux:sidebar.item>
             </flux:sidebar.group>
             @endif
         </flux:sidebar.nav>

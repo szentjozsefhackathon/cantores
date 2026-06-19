@@ -22,6 +22,8 @@
                         </div>
                         <livewire:music-quick-search />
                     </div>
+
+                    <x-external-links class="mt-6" />
                 </div>
             </main>
         </div>
