@@ -10,8 +10,11 @@
         htmlCopied: @js(__('HTML copied to clipboard!')),
         plainTextCopied: @js(__('Plain text copied to clipboard!')),
         copyAsImageText: @js(__('Copy as Image')),
+        shareText: @js(__('Share')),
+        exportText: @js(__('Export')),
         exportPngText: @js(__('Export PNG')),
         exportSvgText: @js(__('Export SVG')),
+        exportPdfText: @js(__('Export PDF')),
         fullscreenText: @js(__('Fullscreen')),
     })">
     <div class="mx-auto max-w-5xl xl:max-w-none">
@@ -765,29 +768,11 @@
                         {{-- ABC Preview --}}
                         <div x-show="$wire.format === 'abc'" x-cloak class="mt-4">
                             <div x-ref="abcPreview" class="min-h-16 space-y-4" wire:ignore></div>
-
-                            <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
-                                <flux:button icon="document-arrow-down" variant="ghost" x-on:click="exportDocumentPdf('abc', $wire.title)" x-bind:disabled="exportingPdf">
-                                    {{ __('Export PDF') }}
-                                </flux:button>
-                                <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
-                                    Megosztás
-                                </flux:button>
-                            </div>
                         </div>
 
                         {{-- GABC Preview --}}
                         <div x-show="$wire.format === 'gabc'" x-cloak class="mt-4">
                             <div x-ref="preview" class="min-h-16 space-y-4" wire:ignore></div>
-
-                            <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
-                                <flux:button icon="document-arrow-down" variant="ghost" x-on:click="exportDocumentPdf('gabc', $wire.title)" x-bind:disabled="exportingPdf">
-                                    {{ __('Export PDF') }}
-                                </flux:button>
-                                <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
-                                    Megosztás
-                                </flux:button>
-                            </div>
                         </div>
 
                         {{-- Aretino Settings Toolbar --}}
@@ -882,35 +867,33 @@
                         {{-- Aretino Preview --}}
                         <div x-show="$wire.format === 'aretino'" x-cloak class="mt-4">
                             <div x-ref="aretinoPreview" class="min-h-16 space-y-4" wire:ignore x-on:click="handleAretinoPreviewClick($event)"></div>
-
-                            <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
-                                <flux:button icon="document-arrow-down" variant="ghost" x-on:click="exportDocumentPdf('aretino', $wire.title)" x-bind:disabled="exportingPdf">
-                                    {{ __('Export PDF') }}
-                                </flux:button>
-                                <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
-                                    Megosztás
-                                </flux:button>
-                            </div>
                         </div>
 
                         {{-- ChordPro Preview --}}
                         <div x-show="$wire.format === 'chordpro'" x-cloak class="mt-4">
                             <div x-ref="chordproPreview" class="min-h-16 space-y-4" wire:ignore></div>
 
-                            <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
+                            <div class="mt-2 flex flex-nowrap items-center justify-end gap-2" x-show="hasPages">
                                 <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
                                 <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                     Megosztás
                                 </flux:button>
-                                <flux:button icon="clipboard-document-list" variant="ghost" x-on:click="copyChordproPlainText()">
-                                    {{ __('Copy as Text') }}
-                                </flux:button>
-                                <flux:button icon="clipboard" variant="ghost" x-on:click="copyChordproHtml()">
-                                    {{ __('Copy HTML') }}
-                                </flux:button>
-                                <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportChordproHtml()">
-                                    {{ __('Export HTML') }}
-                                </flux:button>
+                                <flux:dropdown align="end">
+                                    <flux:button icon="arrow-down-tray" icon:trailing="chevron-down" variant="ghost">
+                                        {{ __('Export') }}
+                                    </flux:button>
+                                    <flux:menu>
+                                        <flux:menu.item icon="clipboard-document-list" x-on:click="copyChordproPlainText()">
+                                            {{ __('Copy as Text') }}
+                                        </flux:menu.item>
+                                        <flux:menu.item icon="clipboard" x-on:click="copyChordproHtml()">
+                                            {{ __('Copy HTML') }}
+                                        </flux:menu.item>
+                                        <flux:menu.item icon="arrow-down-tray" x-on:click="exportChordproHtml()">
+                                            {{ __('Export HTML') }}
+                                        </flux:menu.item>
+                                    </flux:menu>
+                                </flux:dropdown>
                             </div>
 
                         </div>

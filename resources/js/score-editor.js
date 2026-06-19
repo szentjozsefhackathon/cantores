@@ -187,8 +187,11 @@ document.addEventListener('alpine:init', () => {
         htmlCopied: config.htmlCopied ?? '',
         plainTextCopied: config.plainTextCopied ?? '',
         copyAsImageText: config.copyAsImageText ?? '',
+        shareText: config.shareText ?? '',
+        exportText: config.exportText ?? '',
         exportPngText: config.exportPngText ?? '',
         exportSvgText: config.exportSvgText ?? '',
+        exportPdfText: config.exportPdfText ?? '',
         fullscreenText: config.fullscreenText ?? '',
         renderTimer: null,
         scoreSettings: config.scoreSettings ?? {},
@@ -930,29 +933,75 @@ document.addEventListener('alpine:init', () => {
             const dlIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>';
             const btnClass = 'inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800';
 
-            const copyBtn = document.createElement('button');
-            copyBtn.type = 'button';
-            copyBtn.className = btnClass;
-            copyBtn.innerHTML = clipIcon + this.copyAsImageText;
-            copyBtn.addEventListener('click', () => this.copyPageImage(pageEl, format, showFeedback));
+            const svgIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>';
+            const caretIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>';
+            const pdfIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>';
+
+            const dropdown = document.createElement('div');
+            dropdown.className = 'relative inline-block';
 
             const exportBtn = document.createElement('button');
             exportBtn.type = 'button';
             exportBtn.className = btnClass;
-            exportBtn.innerHTML = dlIcon + this.exportPngText;
-            exportBtn.addEventListener('click', () => this.exportPagePng(pageEl, pageIdx, totalPages, format, this.$wire.title));
+            exportBtn.innerHTML = dlIcon + this.exportText + caretIcon;
 
-            const svgIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>';
-            const exportSvgBtn = document.createElement('button');
-            exportSvgBtn.type = 'button';
-            exportSvgBtn.className = btnClass;
-            exportSvgBtn.innerHTML = svgIcon + this.exportSvgText;
-            exportSvgBtn.addEventListener('click', () => this.exportPageSvg(pageEl, pageIdx, totalPages, format, this.$wire.title));
+            const menu = document.createElement('div');
+            menu.className = 'absolute right-0 z-20 mt-1 hidden min-w-[12rem] rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800';
+
+            const closeMenu = () => {
+                menu.classList.add('hidden');
+                document.removeEventListener('click', onDocClick);
+            };
+            const onDocClick = (e) => {
+                if (!dropdown.contains(e.target)) {
+                    closeMenu();
+                }
+            };
+
+            const menuItemClass = 'flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-700';
+            const addMenuItem = (icon, label, onClick) => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = menuItemClass;
+                item.innerHTML = icon + '<span>' + label + '</span>';
+                item.addEventListener('click', () => {
+                    closeMenu();
+                    onClick();
+                });
+                menu.appendChild(item);
+            };
+
+            addMenuItem(clipIcon, this.copyAsImageText, () => this.copyPageImage(pageEl, format, showFeedback));
+            addMenuItem(dlIcon, this.exportPngText, () => this.exportPagePng(pageEl, pageIdx, totalPages, format, this.$wire.title));
+            addMenuItem(svgIcon, this.exportSvgText, () => this.exportPageSvg(pageEl, pageIdx, totalPages, format, this.$wire.title));
+            addMenuItem(pdfIcon, this.exportPdfText, () => this.exportDocumentPdf(format, this.$wire.title));
+
+            exportBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (menu.classList.contains('hidden')) {
+                    menu.classList.remove('hidden');
+                    document.addEventListener('click', onDocClick);
+                } else {
+                    closeMenu();
+                }
+            });
+
+            dropdown.appendChild(exportBtn);
+            dropdown.appendChild(menu);
 
             bar.appendChild(feedbackSpan);
-            bar.appendChild(copyBtn);
-            bar.appendChild(exportBtn);
-            bar.appendChild(exportSvgBtn);
+
+            if (pageIdx === totalPages) {
+                const linkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/></svg>';
+                const shareBtn = document.createElement('button');
+                shareBtn.type = 'button';
+                shareBtn.className = btnClass;
+                shareBtn.innerHTML = linkIcon + this.shareText;
+                shareBtn.addEventListener('click', () => this.openShareModal());
+                bar.appendChild(shareBtn);
+            }
+
+            bar.appendChild(dropdown);
 
             if (opts.fullscreen && document.documentElement.requestFullscreen) {
                 const fsIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>';
