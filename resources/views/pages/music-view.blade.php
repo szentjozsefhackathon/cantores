@@ -149,6 +149,31 @@
                 </div>
                 @endif
 
+                <!-- Scripture References -->
+                @if($music->scriptureReferences->isNotEmpty())
+                <div>
+                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">{{ __('Scripture References') }}</flux:heading>
+                    <div class="space-y-3">
+                        @foreach($music->scriptureReferences as $scriptureReference)
+                            <a href="https://szentiras.eu/{{ rawurlencode($scriptureReference->reference) }}" target="_blank" rel="noopener noreferrer" class="block">
+                                <div class="flex items-start justify-between gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <flux:text class="font-medium">{{ $scriptureReference->reference }}</flux:text>
+                                            <flux:badge color="zinc" size="sm">{{ $scriptureReference->reference_type->label() }}</flux:badge>
+                                        </div>
+                                        @if($scriptureReference->text)
+                                            <flux:text class="text-sm text-gray-500 dark:text-gray-400 mt-1 whitespace-pre-line">{{ $scriptureReference->text }}</flux:text>
+                                        @endif
+                                    </div>
+                                    <flux:icon name="external-link" class="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 <!-- Music Plans -->
                 @if($musicPlans->isNotEmpty())
                 <div>

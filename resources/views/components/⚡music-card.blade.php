@@ -24,7 +24,7 @@ new class extends Component
      */
     public function mount(Music $music, ?int $score = null, ?string $scope_label = null, array $score_reasons = [], bool $privateShare = false, array $shareScores = []): void
     {
-        $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
+        $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'scriptureReferences', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
         $this->score = $score;
         $this->scope_label = $scope_label;
         $this->score_reasons = $score_reasons;
@@ -41,7 +41,7 @@ new class extends Component
     #[On('public-preview-revoked')]
     public function refreshMusic(): void
     {
-        $this->music->refresh()->load(['collections', 'tags', 'authors', 'urls', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
+        $this->music->refresh()->load(['collections', 'tags', 'authors', 'urls', 'scriptureReferences', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
     }
 }
 ?>
@@ -261,7 +261,7 @@ new class extends Component
     </div>
     @endif
 
-    @if($music->authors->isNotEmpty() || $music->urls->isNotEmpty() || $music->allMusicRelations()->isNotEmpty())
+    @if($music->authors->isNotEmpty() || $music->urls->isNotEmpty() || $music->scriptureReferences->isNotEmpty() || $music->allMusicRelations()->isNotEmpty())
     <div class="px-4 py-3 space-y-2">
         @if($music->authors->isNotEmpty())
         <div class="flex flex-wrap gap-2">
@@ -303,6 +303,24 @@ new class extends Component
                     {{ $urlHost }}
                 </a>
             @endforeach
+        </div>
+        @endif
+
+        @if($music->scriptureReferences->isNotEmpty())
+        <div class="flex items-start gap-2">
+            <flux:icon name="book-open-text" class="size-4 shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
+            <div class="flex flex-wrap gap-1">
+                @foreach($music->scriptureReferences as $scriptureReference)
+                    <a href="https://szentiras.eu/{{ rawurlencode($scriptureReference->reference) }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="relative z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                       title="{{ $scriptureReference->reference_type->label() }}"
+                    >
+                        {{ $scriptureReference->reference }}
+                    </a>
+                @endforeach
+            </div>
         </div>
         @endif
 

@@ -107,3 +107,34 @@ test('score breakdown only contains matched rules', function () {
     expect(array_sum(array_column($breakdown, 'points')))->toBe(8);
     expect(array_column($breakdown, 'label'))->not->toContain(__('Same celebration name'));
 });
+
+test('music card shows scripture references linking to szentiras.eu in a new window', function () {
+    $this->actingAs(User::factory()->create());
+
+    $music = Music::factory()->create();
+    \App\Models\MusicScriptureReference::factory()->create([
+        'music_id' => $music->id,
+        'reference' => 'Jn 3,16',
+    ]);
+
+    Livewire::test('music-card', ['music' => $music])
+        ->assertSee('Jn 3,16')
+        ->assertSeeHtml('href="https://szentiras.eu/'.rawurlencode('Jn 3,16').'"')
+        ->assertSeeHtml('target="_blank"')
+        ->assertSeeHtml('rel="noopener noreferrer"');
+});
+
+test('music card omits the verse text and only shows the reference', function () {
+    $this->actingAs(User::factory()->create());
+
+    $music = Music::factory()->create();
+    \App\Models\MusicScriptureReference::factory()->create([
+        'music_id' => $music->id,
+        'reference' => 'Jn 3,16',
+        'text' => 'Mert úgy szerette Isten a világot...',
+    ]);
+
+    Livewire::test('music-card', ['music' => $music])
+        ->assertSee('Jn 3,16')
+        ->assertDontSee('Mert úgy szerette Isten a világot...');
+});
