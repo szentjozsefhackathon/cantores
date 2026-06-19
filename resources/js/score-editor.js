@@ -6,7 +6,7 @@ import { aretinoMixin } from './score-editor-aretino.js';
 import { removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
-import { renderFirstRow } from '@aretino-chant/core';
+import { renderAretino, renderFirstRow } from '@aretino-chant/core';
 
 let aretinoEditorDefinitionPromise = null;
 let aretinoHelpers = null;
@@ -88,6 +88,40 @@ async function fetchFontBase64(url) {
 
 function parsePrimaryFontFamily(fontValue) {
     return (fontValue ?? '').split(',')[0].trim().replace(/['"]/g, '');
+}
+
+const ARETINO_VERSE_INCIPIT_LINES = 7;
+
+/**
+ * Crops a verse-only Aretino SVG (one with no staff rows, just <text> lines)
+ * to its first few text lines by tightening the viewBox. Without this a long
+ * verse renders as a tall SVG that gets scaled down until the text is unreadable.
+ */
+function cropAretinoVerseToFirstLines(svgEl, maxLines = ARETINO_VERSE_INCIPIT_LINES) {
+    const vbAttr = svgEl.getAttribute('viewBox');
+    if (!vbAttr) { return; }
+
+    const texts = Array.from(svgEl.querySelectorAll('text'))
+        .map((t) => ({ y: parseFloat(t.getAttribute('y')), size: parseFloat(t.getAttribute('font-size')) }))
+        .filter((t) => Number.isFinite(t.y))
+        .sort((a, b) => a.y - b.y);
+    if (texts.length === 0) { return; }
+
+    const first = texts[0];
+    const last = texts[Math.min(maxLines, texts.length) - 1];
+    const firstSize = Number.isFinite(first.size) ? first.size : 13.333;
+    const lastSize = Number.isFinite(last.size) ? last.size : firstSize;
+    const [vbX, vbY, vbW, vbH] = vbAttr.split(/\s+/).map(Number);
+
+    // `y` is the baseline; extend up by the cap height of the first line and
+    // down by the descent of the last included line.
+    const top = Math.max(vbY, first.y - firstSize);
+    const bottom = Math.min(vbY + vbH, last.y + lastSize * 0.35);
+    const newH = bottom - top;
+    if (!(newH > 0)) { return; }
+
+    svgEl.setAttribute('viewBox', `${vbX} ${top} ${vbW} ${newH}`);
+    svgEl.setAttribute('height', String(newH));
 }
 
 function applyAretinoCodeMirrorFontSize(editor) {
@@ -587,8 +621,19 @@ document.addEventListener('alpine:init', () => {
                 const source = this.splitPages(this.localContent, 'aretino', this.aretinoPageRatio)[0] ?? this.localContent;
                 if (!source?.trim()) { return null; }
                 const firstRowSvg = renderFirstRow(source, { width: targetWidth, textFont: 'EB Garamond' });
-                if (!firstRowSvg) { return null; }
-                clone = new DOMParser().parseFromString(firstRowSvg, 'image/svg+xml').documentElement;
+                if (firstRowSvg) {
+                    clone = new DOMParser().parseFromString(firstRowSvg, 'image/svg+xml').documentElement;
+                } else {
+                    // Verse-only scores (only W: lines) produce no staff rows, so
+                    // renderFirstRow returns null. Fall back to the full render so the
+                    // incipit shows the verse text instead of coming out empty, then
+                    // crop it to the first few text lines so a long verse stays
+                    // readable rather than being shrunk to fit its full height.
+                    const verseSvg = renderAretino(source, { width: targetWidth, textFont: 'EB Garamond', noHeader: true });
+                    if (!verseSvg) { return null; }
+                    clone = new DOMParser().parseFromString(verseSvg, 'image/svg+xml').documentElement;
+                    cropAretinoVerseToFirstLines(clone);
+                }
             } else {
                 const refMap = {
                     abc: this.$refs.abcPreview,
