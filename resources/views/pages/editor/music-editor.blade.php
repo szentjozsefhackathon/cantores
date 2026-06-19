@@ -6,6 +6,8 @@ use App\Models\Music;
 use App\Models\Genre;
 use App\Models\WhitelistRule;
 use App\MusicRelationshipType;
+use App\ScriptureReferenceType;
+use App\Services\ScriptureReferenceService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +49,10 @@ new class extends Component
     public ?int $editingUrlId = null;
     public ?string $editingUrlLabel = null;
     public ?string $editingUrl = null;
+
+    // Scripture reference management
+    public ?string $newScriptureReferenceType = null;
+    public ?string $newScriptureReference = null;
 
     // Related music management
     public ?int $selectedRelatedMusicId = null;
@@ -193,7 +199,7 @@ new class extends Component
     public function mount(Music $music): void
     {
         $this->authorize('view', $music);
-        $this->music = $music->load(['collections', 'genres', 'authors', 'urls', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music', 'tags', 'publicPreviewScores.user']);
+        $this->music = $music->load(['collections', 'genres', 'authors', 'urls', 'scriptureReferences', 'directMusicRelations.relatedMusic', 'inverseMusicRelations.music', 'tags', 'publicPreviewScores.user']);
         $this->title = $music->title;
         $this->subtitle = $music->subtitle;
         $this->customId = $music->custom_id;
@@ -505,6 +511,95 @@ new class extends Component
         $this->music->load('urls');
 
         $this->dispatch('toast', message: __('URL deleted.'), type: 'success');
+    }
+
+    /**
+     * Add a scripture reference to the music piece.
+     *
+     * The reference text is fetched from the szentiras.eu API, which doubles as
+     * validation: an invalid reference returns no text and is rejected.
+     */
+    public function addScriptureReference(ScriptureReferenceService $service): void
+    {
+        $this->authorize('attachRelation', [$this->music, 'scripture_reference']);
+
+        $validated = $this->validate([
+            'newScriptureReferenceType' => ['required', 'string', Rule::in(array_column(ScriptureReferenceType::cases(), 'value'))],
+            'newScriptureReference' => ['required', 'string', 'max:255'],
+        ]);
+
+        $result = $service->lookup($validated['newScriptureReference']);
+
+        if ($result === null) {
+            $this->dispatch('toast', message: __('Invalid scripture reference, no text was found.'), type: 'error');
+
+            return;
+        }
+
+        if ($this->music->scriptureReferences()->where('reference', $result['reference'])->exists()) {
+            $this->dispatch('toast', message: __('This scripture reference has already been added.'), type: 'error');
+
+            return;
+        }
+
+        $this->music->scriptureReferences()->create([
+            'user_id' => Auth::id(),
+            'reference_type' => $validated['newScriptureReferenceType'],
+            'reference' => $result['reference'],
+            'text' => $result['text'],
+        ]);
+
+        $this->music->load('scriptureReferences');
+
+        $this->newScriptureReferenceType = null;
+        $this->newScriptureReference = null;
+
+        $this->dispatch('toast', message: __('Scripture reference added.'), type: 'success');
+    }
+
+    /**
+     * Re-fetch the stored text for a scripture reference from the API.
+     */
+    public function refreshScriptureReference(int $referenceId, ScriptureReferenceService $service): void
+    {
+        $reference = $this->music->scriptureReferences()->find($referenceId);
+
+        if (! $reference) {
+            return;
+        }
+
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'scripture_reference', $referenceId, $reference->user_id]);
+
+        $result = $service->lookup($reference->reference);
+
+        if ($result === null) {
+            $this->dispatch('toast', message: __('Invalid scripture reference, no text was found.'), type: 'error');
+
+            return;
+        }
+
+        $reference->update([
+            'reference' => $result['reference'],
+            'text' => $result['text'],
+        ]);
+
+        $this->music->load('scriptureReferences');
+
+        $this->dispatch('toast', message: __('Scripture reference refreshed.'), type: 'success');
+    }
+
+    /**
+     * Remove a scripture reference from the music piece.
+     */
+    public function removeScriptureReference(int $referenceId): void
+    {
+        $reference = $this->music->scriptureReferences()->find($referenceId);
+        $this->authorize('editOrDeleteVerifiedRelation', [$this->music, 'scripture_reference', $referenceId, $reference?->user_id]);
+
+        $this->music->scriptureReferences()->where('id', $referenceId)->delete();
+        $this->music->load('scriptureReferences');
+
+        $this->dispatch('toast', message: __('Scripture reference deleted.'), type: 'success');
     }
 
     /**
@@ -1123,6 +1218,93 @@ new class extends Component
                                 {{ __('Add URL') }}
                             </flux:button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </flux:card>
+
+        <!-- Scripture References -->
+        <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
+            <flux:heading size="md" class="md:size-lg">{{ __('Scripture References') }}</flux:heading>
+            <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Link this music to Bible passages. The text is fetched from szentiras.eu.') }}</flux:text>
+
+            @if($music->scriptureReferences->count())
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-72 overflow-y-auto mb-4">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                        <tr>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Reference') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">{{ __('Reference Type') }}</th>
+                            <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        @foreach($music->scriptureReferences as $scriptureReference)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors align-top">
+                            <td class="px-3 py-2 text-xs md:text-sm text-gray-900 dark:text-gray-100">
+                                <div class="max-w-md text-wrap">
+                                    <div class="font-medium">{{ $scriptureReference->reference }}</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1 whitespace-pre-line line-clamp-3">{{ $scriptureReference->text }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:hidden">{{ $scriptureReference->reference_type->label() }}</div>
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                                {{ $scriptureReference->reference_type->label() }}
+                            </td>
+                            <td class="px-3 py-2 text-xs md:text-sm">
+                                <div class="flex items-center gap-1">
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="arrow-path"
+                                        wire:click="refreshScriptureReference({{ $scriptureReference->id }})"
+                                        wire:loading.attr="disabled"
+                                        :title="__('Refresh text')" />
+                                    <flux:button
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="trash"
+                                        wire:click="removeScriptureReference({{ $scriptureReference->id }})"
+                                        wire:confirm="{{ __('Are you sure you want to delete this scripture reference?') }}"
+                                        :title="__('Delete')" />
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
+
+            <!-- Add Scripture Reference Form -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <flux:text class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-3">{{ __('Add a Bible passage, e.g. 1Kir2,4. The reference is validated against szentiras.eu.') }}</flux:text>
+
+                <div class="flex flex-col md:flex-row gap-3">
+                    <flux:field required class="flex-[1]">
+                        <flux:label>{{ __('Reference Type') }}</flux:label>
+                        <flux:select wire:model="newScriptureReferenceType">
+                            <option value="">{{ __('Select a reference type') }}</option>
+                            @foreach(\App\ScriptureReferenceType::cases() as $type)
+                            <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:error name="newScriptureReferenceType" />
+                    </flux:field>
+                    <flux:field required class="flex-[1]">
+                        <flux:label>{{ __('Reference') }}</flux:label>
+                        <flux:input wire:model="newScriptureReference" :placeholder="__('1Kir2,4')" />
+                        <flux:error name="newScriptureReference" />
+                    </flux:field>
+                    <div class="flex items-end gap-2 flex-none">
+                        <flux:button
+                            variant="primary"
+                            wire:click="addScriptureReference"
+                            wire:loading.attr="disabled"
+                            icon="plus"
+                            size="sm">
+                            {{ __('Add Reference') }}
+                        </flux:button>
                     </div>
                 </div>
             </div>

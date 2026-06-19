@@ -193,6 +193,14 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Get the scripture references for this music.
+     */
+    public function scriptureReferences(): HasMany
+    {
+        return $this->hasMany(MusicScriptureReference::class);
+    }
+
+    /**
      * Get private user scores attached to this music.
      */
     public function scores(): HasMany

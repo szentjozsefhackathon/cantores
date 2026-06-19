@@ -53,4 +53,9 @@ return [
         'timeout' => env('RSVG_CONVERT_TIMEOUT', 30),
     ],
 
+    'szentiras' => [
+        'base_url' => env('SZENTIRAS_EU_API_URL', 'https://szentiras.eu/api'),
+        'key' => env('SZENTIRAS_EU_API_KEY'),
+    ],
+
 ];

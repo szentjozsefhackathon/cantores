@@ -26,5 +26,21 @@
     "Same liturgical day and year cycle": "Same liturgical day and year cycle",
     "Same liturgical day and year parity": "Same liturgical day and year parity",
     "Same liturgical day": "Same liturgical day",
-    "This suggestion comes from a music plan for a related celebration.": "This suggestion comes from a music plan for a related celebration."
+    "This suggestion comes from a music plan for a related celebration.": "This suggestion comes from a music plan for a related celebration.",
+    "Scripture References": "Scripture References",
+    "Link this music to Bible passages. The text is fetched from szentiras.eu.": "Link this music to Bible passages. The text is fetched from szentiras.eu.",
+    "Add a Bible passage, e.g. 1Kir2,4. The reference is validated against szentiras.eu.": "Add a Bible passage, e.g. 1Kir2,4. The reference is validated against szentiras.eu.",
+    "Reference": "Reference",
+    "Reference Type": "Reference Type",
+    "Select a reference type": "Select a reference type",
+    "Add Reference": "Add Reference",
+    "Refresh text": "Refresh text",
+    "Exact": "Exact",
+    "LooselyRelated": "Loosely related",
+    "Scripture reference added.": "Scripture reference added.",
+    "Scripture reference refreshed.": "Scripture reference refreshed.",
+    "Scripture reference deleted.": "Scripture reference deleted.",
+    "Invalid scripture reference, no text was found.": "Invalid scripture reference, no text was found.",
+    "This scripture reference has already been added.": "This scripture reference has already been added.",
+    "Are you sure you want to delete this scripture reference?": "Are you sure you want to delete this scripture reference?"
 }
