@@ -401,6 +401,46 @@ test('suggestion carousel orders songs by slot priority and shows collection bad
         ->assertSee('SzVU 7');
 });
 
+test('suggestion carousel shows the same song twice when it is assigned to two different slots', function () {
+    Genre::factory()->create();
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $celebration = Celebration::factory()->liturgical()->create([
+        'name' => 'Pünkösd',
+        'actual_date' => '2026-06-01',
+    ]);
+
+    $plan = MusicPlan::factory()->create([
+        'user_id' => $user->id,
+        'genre_id' => null,
+        'is_private' => false,
+        'celebration_id' => $celebration->id,
+    ]);
+
+    $bevonulas = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Bevonulás', 'priority' => 1]);
+    $felajanlas = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Felajánlás', 'priority' => 2]);
+    $music = \App\Models\Music::factory()->create(['title' => 'Mindkét helyen énekelt ének']);
+
+    foreach ([$bevonulas, $felajanlas] as $slot) {
+        $plan->slots()->attach($slot->id, ['sequence' => 1]);
+        $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+            ->where('music_plan_slot_id', $slot->id)
+            ->first();
+        \App\Models\MusicPlanSlotAssignment::create([
+            'music_plan_slot_plan_id' => $pivot->id,
+            'music_id' => $music->id,
+            'music_sequence' => 1,
+        ]);
+    }
+
+    mockCelebrations([celebrationPayload($celebration)]);
+
+    Livewire::test('liturgical-info')
+        ->set('date', '2026-06-01')
+        ->assertSeeInOrder(['Bevonulás', 'Felajánlás']);
+});
+
 test('other cantors section shows an animated incipit carousel for each published plan', function () {
     Storage::fake();
     Genre::factory()->create();

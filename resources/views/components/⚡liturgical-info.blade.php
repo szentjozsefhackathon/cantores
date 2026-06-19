@@ -422,14 +422,20 @@ new class extends Component
 
         foreach ($plan->musicAssignments as $assignment) {
             $music = $assignment->music;
-            if (! $music || isset($seen[$music->id])) {
+            if (! $music) {
+                continue;
+            }
+
+            $slot = $assignment->musicPlanSlotPlan?->musicPlanSlot;
+            $seenKey = $music->id.'|'.($slot?->id ?? '');
+
+            if (isset($seen[$seenKey])) {
                 continue;
             }
 
             $incipit = $music->visibleIncipitScores($user)->first();
-            $slot = $assignment->musicPlanSlotPlan?->musicPlanSlot;
 
-            $seen[$music->id] = true;
+            $seen[$seenKey] = true;
             $items[] = [
                 'music' => $music,
                 'title' => $music->title,
@@ -561,7 +567,7 @@ new class extends Component
                 foreach ($plansByCelebration->get($celebrationId, collect()) as $plan) {
                     foreach ($plan->musicAssignments as $assignment) {
                         $music = $assignment->music;
-                        if (! $music || isset($seen[$music->id])) {
+                        if (! $music) {
                             continue;
                         }
 
@@ -572,10 +578,16 @@ new class extends Component
                             }
                         }
 
-                        $incipit = $music->visibleIncipitScores($user)->first();
                         $slot = $assignment->musicPlanSlotPlan?->musicPlanSlot;
+                        $seenKey = $music->id.'|'.($slot?->id ?? '');
 
-                        $seen[$music->id] = true;
+                        if (isset($seen[$seenKey])) {
+                            continue;
+                        }
+
+                        $incipit = $music->visibleIncipitScores($user)->first();
+
+                        $seen[$seenKey] = true;
                         $items[] = [
                             'music' => $music,
                             'title' => $music->title,
