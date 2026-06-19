@@ -8,8 +8,30 @@ use App\Models\MusicPlanSlot;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
+
+/**
+ * Attach a music to a slot of a celebration's music plan, creating the plan and slot wiring.
+ */
+function attachMusicToSlot(Celebration $celebration, MusicPlanSlot $slot, Music $music, User $user, int $musicSequence = 1): void
+{
+    $musicPlan = MusicPlan::factory()->create(['user_id' => $user->id, 'is_private' => false]);
+    $musicPlan->celebration()->associate($celebration);
+    $musicPlan->save();
+
+    $musicPlan->slots()->attach($slot, ['sequence' => 1]);
+    $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $musicPlan->id)
+        ->where('music_plan_slot_id', $slot->id)
+        ->first();
+
+    MusicPlanSlotAssignment::factory()->create([
+        'music_plan_slot_plan_id' => $pivot->id,
+        'music_id' => $music->id,
+        'music_sequence' => $musicSequence,
+    ]);
+}
 
 test('guest sees the genre selector on the suggestions page', function () {
     Genre::firstOrCreate(['name' => 'organist']);
@@ -124,6 +146,113 @@ test('music suggestions tab counts musics across slots, not slots', function () 
     // so match on the unambiguous tail. 4 distinct musics across 2 slots => count must be 4, not 2.
     $response->assertSee('nekjavaslatok (4)');
     $response->assertDontSee('nekjavaslatok (2)');
+});
+
+test('musics with equal relevance score are ordered by popularity', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $celebration = Celebration::factory()->create([
+        'name' => 'Popularity Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 0,
+        'readings_code' => 'ABC123',
+        'year_letter' => 'A',
+        'year_parity' => 'I',
+    ]);
+
+    $slot = MusicPlanSlot::factory()->create(['priority' => 1, 'name' => 'Opening']);
+
+    // Same relevance (same celebration for every plan), but different popularity:
+    // the popular music appears in three plans, the rare music in one.
+    $popularMusic = Music::factory()->create();
+    $rareMusic = Music::factory()->create();
+
+    // Give the rare music a lower music_sequence so it would win the old tie-break,
+    // proving popularity now takes precedence over music_sequence.
+    attachMusicToSlot($celebration, $slot, $rareMusic, $user, musicSequence: 1);
+    attachMusicToSlot($celebration, $slot, $popularMusic, $user, musicSequence: 5);
+    attachMusicToSlot($celebration, $slot, $popularMusic, $user, musicSequence: 5);
+    attachMusicToSlot($celebration, $slot, $popularMusic, $user, musicSequence: 5);
+
+    $criteria = [
+        'name' => 'Popularity Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 0,
+        'readings_code' => 'ABC123',
+        'year_letter' => 'A',
+        'year_parity' => 'I',
+    ];
+
+    $slotMusicMap = Livewire::test('suggestions-content', ['criteria' => $criteria])
+        ->get('slotMusicMap');
+
+    $musics = $slotMusicMap['Opening']['musics'];
+
+    expect($musics)->toHaveCount(2);
+    expect($musics[0]['music']->id)->toBe($popularMusic->id);
+    expect($musics[0]['popularity'])->toBe(3);
+    expect($musics[1]['music']->id)->toBe($rareMusic->id);
+    expect($musics[1]['popularity'])->toBe(1);
+});
+
+test('relevance score outranks popularity', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // High-relevance celebration: matches name + readings + day (exact match).
+    $exactCelebration = Celebration::factory()->create([
+        'name' => 'Relevance Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 0,
+        'readings_code' => 'ABC123',
+        'year_letter' => 'A',
+        'year_parity' => 'I',
+    ]);
+
+    // Lower-relevance celebration: only shares the liturgical day.
+    $looseCelebration = Celebration::factory()->create([
+        'name' => 'Other Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 0,
+        'readings_code' => 'ZZZ999',
+        'year_letter' => 'B',
+        'year_parity' => 'II',
+    ]);
+
+    $slot = MusicPlanSlot::factory()->create(['priority' => 1, 'name' => 'Opening']);
+
+    // The relevant music sits in a single (highly relevant) plan.
+    $relevantMusic = Music::factory()->create();
+    attachMusicToSlot($exactCelebration, $slot, $relevantMusic, $user);
+
+    // The popular music sits in many low-relevance plans.
+    $popularButLooseMusic = Music::factory()->create();
+    attachMusicToSlot($looseCelebration, $slot, $popularButLooseMusic, $user);
+    attachMusicToSlot($looseCelebration, $slot, $popularButLooseMusic, $user);
+    attachMusicToSlot($looseCelebration, $slot, $popularButLooseMusic, $user);
+
+    $criteria = [
+        'name' => 'Relevance Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 0,
+        'readings_code' => 'ABC123',
+        'year_letter' => 'A',
+        'year_parity' => 'I',
+    ];
+
+    $slotMusicMap = Livewire::test('suggestions-content', ['criteria' => $criteria])
+        ->get('slotMusicMap');
+
+    $musics = $slotMusicMap['Opening']['musics'];
+
+    expect($musics[0]['music']->id)->toBe($relevantMusic->id);
+    expect($musics[0]['celebration_score'])->toBeGreaterThan($musics[1]['celebration_score']);
 });
 
 test('suggestions page shows no results when no matches', function () {

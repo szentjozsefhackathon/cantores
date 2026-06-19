@@ -20,7 +20,7 @@ new class extends Component
     /** @var Collection<int, MusicPlan> */
     public Collection $musicPlans;
 
-    /** @var array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int, collection_info: ?string, score_reasons: array<int, array{label: string, points: int}>}>> */
+    /** @var array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int, popularity: int, collection_info: ?string, score_reasons: array<int, array{label: string, points: int}>}>> */
     public array $slotMusicMap = [];
 
     public string $activeTab = 'music';
@@ -124,7 +124,10 @@ new class extends Component
     /**
      * Aggregate music selections by slot, sorted according to requirements.
      *
-     * @return array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int, collection_info: ?string}>>
+     * Within a slot, musics are ordered by celebration relevance score, then by
+     * popularity (how many distinct music plans contain the music), then by music_sequence.
+     *
+     * @return array<string, array<int, array{music: \App\Models\Music, celebration_score: int, music_sequence: int, popularity: int, collection_info: ?string}>>
      */
     protected function aggregateMusicBySlot(): array
     {
@@ -197,25 +200,25 @@ new class extends Component
                 $existingIndex = $slotMap[$sortKey]['music_ids'][$musicId] ?? null;
 
                 if ($existingIndex !== null) {
-                    // Duplicate music in same slot: keep the entry with higher celebration score
-                    // If scores equal, keep the one with lower music_sequence
+                    // Duplicate music in same slot: track which plans use it for popularity,
+                    // then keep the descriptive fields of the entry with the higher celebration
+                    // score (ties broken by lower music_sequence).
                     $existing = &$slotMap[$sortKey]['musics'][$existingIndex];
+                    $existing['plan_ids'][$musicPlan->id] = true;
+
                     if (
                         $maxScore > $existing['celebration_score'] ||
                         ($maxScore === $existing['celebration_score'] && ($assignment->music_sequence ?? 0) < $existing['music_sequence'])
                     ) {
-                        // Replace with this better entry
-                        $existing = [
-                            'music' => $music,
-                            'celebration_score' => $maxScore,
-                            'music_sequence' => $assignment->music_sequence ?? 0,
-                            'collection_info' => $collectionInfo,
-                            'celebration' => $relatedCelebration,
-                            'scope_label' => $assignment->scope_label,
-                            'score_reasons' => $scoreReasons,
-                        ];
+                        $existing['celebration_score'] = $maxScore;
+                        $existing['music_sequence'] = $assignment->music_sequence ?? 0;
+                        $existing['collection_info'] = $collectionInfo;
+                        $existing['celebration'] = $relatedCelebration;
+                        $existing['scope_label'] = $assignment->scope_label;
+                        $existing['score_reasons'] = $scoreReasons;
                     }
-                    // else keep existing
+                    // else keep existing descriptive fields
+                    unset($existing);
                 } else {
                     // New music for this slot
                     $slotMap[$sortKey]['music_ids'][$musicId] = count($slotMap[$sortKey]['musics']);
@@ -227,6 +230,7 @@ new class extends Component
                         'celebration' => $relatedCelebration,
                         'scope_label' => $assignment->scope_label,
                         'score_reasons' => $scoreReasons,
+                        'plan_ids' => [$musicPlan->id => true],
                     ];
                 }
             }
@@ -235,13 +239,27 @@ new class extends Component
         // Sort slots by priority then slot name (already encoded in sortKey)
         ksort($slotMap);
 
-        // For each slot, sort musics first by celebration score descending, then by music_sequence ascending
+        // For each slot, sort musics by celebration score descending, then by popularity
+        // (the number of distinct music plans containing the music) descending, then by
+        // music_sequence ascending.
         foreach ($slotMap as &$slotData) {
             // Remove the temporary music_ids array
             unset($slotData['music_ids']);
+
+            // Resolve popularity from the collected plan ids, then drop the helper set.
+            foreach ($slotData['musics'] as &$musicEntry) {
+                $musicEntry['popularity'] = count($musicEntry['plan_ids']);
+                unset($musicEntry['plan_ids']);
+            }
+            unset($musicEntry);
+
             usort($slotData['musics'], function ($a, $b) {
                 if ($a['celebration_score'] !== $b['celebration_score']) {
                     return $b['celebration_score'] <=> $a['celebration_score']; // descending
+                }
+
+                if ($a['popularity'] !== $b['popularity']) {
+                    return $b['popularity'] <=> $a['popularity']; // descending
                 }
 
                 return $a['music_sequence'] <=> $b['music_sequence']; // ascending
