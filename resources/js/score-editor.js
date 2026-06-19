@@ -166,6 +166,7 @@ document.addEventListener('alpine:init', () => {
         shareUrlLoading: false,
         shareModalCopied: false,
         savingScore: false,
+        exportingPdf: false,
         splitScreen: false,
         splitEditorHeight: 380,
         _splitDragging: false,
@@ -1259,25 +1260,34 @@ document.addEventListener('alpine:init', () => {
             }).catch(e => console.error('[score-editor] export error:', e));
         },
 
-        async exportPageSvg(pageEl, pageIdx, totalPages, format, title) {
+        slugifyTitle(title) {
+            return (title ? title.trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '') : '') || 'score';
+        },
+
+        // Build a standalone, font-embedded SVG string for a single rendered
+        // page element. Returns null when the page has no music SVG.
+        async buildPageSvgString(pageEl, format) {
             const svgs = Array.from(pageEl.querySelectorAll('svg'));
-            if (!svgs.length) { return; }
-            const base = title ? title.trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '') || 'score' : 'score';
+            if (!svgs.length) { return null; }
+            if (format === 'abc' && svgs.length > 1) {
+                return await this.buildMergedSvg(svgs);
+            }
+            const clone = svgs[0].cloneNode(true);
+            removeEditorOnlySvgMarkup(clone);
+            let lyricFont;
+            if (format === 'aretino') { lyricFont = this.aretinoTextFont; }
+            else if (format === 'abc') { lyricFont = this.abcLyricFont; }
+            else { lyricFont = this.lyricFont; }
+            await injectWebFontsIntoSvg(clone, [lyricFont]);
+            return new XMLSerializer().serializeToString(clone);
+        },
+
+        async exportPageSvg(pageEl, pageIdx, totalPages, format, title) {
+            const base = this.slugifyTitle(title);
             const filename = totalPages > 1 ? base + '-page-' + pageIdx + '.cantores.hu.svg' : base + '.cantores.hu.svg';
             try {
-                let svgData;
-                if (format === 'abc' && svgs.length > 1) {
-                    svgData = await this.buildMergedSvg(svgs);
-                } else {
-                    const clone = svgs[0].cloneNode(true);
-                    removeEditorOnlySvgMarkup(clone);
-                    let lyricFont;
-                    if (format === 'aretino') { lyricFont = this.aretinoTextFont; }
-                    else if (format === 'abc') { lyricFont = this.abcLyricFont; }
-                    else { lyricFont = this.lyricFont; }
-                    await injectWebFontsIntoSvg(clone, [lyricFont]);
-                    svgData = new XMLSerializer().serializeToString(clone);
-                }
+                const svgData = await this.buildPageSvgString(pageEl, format);
+                if (!svgData) { return; }
                 const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -1287,6 +1297,49 @@ document.addEventListener('alpine:init', () => {
                 URL.revokeObjectURL(url);
             } catch (e) {
                 console.error('[score-editor] svg export error:', e);
+            }
+        },
+
+        // Collect every rendered page in the active preview, build a font-embedded
+        // SVG per page, and POST them to the server for vector PDF conversion.
+        async exportDocumentPdf(format, title) {
+            if (this.exportingPdf) { return; }
+            const refName = format === 'abc' ? 'abcPreview' : format === 'aretino' ? 'aretinoPreview' : 'preview';
+            const container = this.$refs[refName];
+            if (!container) { return; }
+            const pageEls = Array.from(container.querySelectorAll(':scope > .overflow-x-auto'))
+                .map(wrap => wrap.firstElementChild)
+                .filter(Boolean);
+            this.exportingPdf = true;
+            try {
+                const pages = [];
+                for (const pageEl of pageEls) {
+                    const svg = await this.buildPageSvgString(pageEl, format);
+                    if (svg) { pages.push(svg); }
+                }
+                if (!pages.length) { return; }
+                const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+                const resp = await fetch('/score/export-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/pdf',
+                        'X-CSRF-TOKEN': token,
+                    },
+                    body: JSON.stringify({ format, title: title ?? '', pages }),
+                });
+                if (!resp.ok) { throw new Error('PDF export failed: ' + resp.status); }
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.download = this.slugifyTitle(title) + '.cantores.hu.pdf';
+                a.href = url;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('[score-editor] pdf export error:', e);
+            } finally {
+                this.exportingPdf = false;
             }
         },
 

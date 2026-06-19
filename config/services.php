@@ -48,4 +48,9 @@ return [
         'key' => env('OPENAI_API_KEY'),
     ],
 
+    'rsvg' => [
+        'bin' => env('RSVG_CONVERT_BIN', 'rsvg-convert'),
+        'timeout' => env('RSVG_CONVERT_TIMEOUT', 30),
+    ],
+
 ];

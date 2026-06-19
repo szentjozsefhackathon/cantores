@@ -1,0 +1,10 @@
+abc2svg music font (abc2svg.ttf)
+
+Copyright (c) 2018-2025 Jean-Francois Moine.
+
+This font is licensed under the SIL Open Font License, Version 1.1
+(http://scripts.sil.org/OFL).
+
+The font file is the unmodified music font distributed with abc2svg
+(public/js/abc2svg-1.js), extracted to a standalone .ttf so it can be
+installed system-wide for server-side SVG -> PDF export with rsvg-convert.

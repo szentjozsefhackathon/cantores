@@ -11,6 +11,19 @@ RUN apt-get update && \
     apt-get install -y \
     curl sudo git gh nano python3
 
+# rsvg-convert + fonts for server-side SVG -> PDF export. Fonts are committed in
+# the repo so builds are reproducible offline. rsvg-convert (librsvg) ignores
+# @font-face fonts embedded in the SVG and resolves all text through fontconfig,
+# so both the lyric text fonts (EB Garamond, Lora, Inter, Barlow Condensed) and
+# the abc2svg music notation font must be installed system-wide. The music font
+# is referenced as family "music" in abc2svg output; a fontconfig alias maps
+# that onto the installed abc2svg.ttf (internal family "abc2svg").
+RUN apt-get install -y --no-install-recommends librsvg2-bin fontconfig
+COPY resources/fonts/lyric /usr/share/fonts/truetype/cantores
+COPY resources/fonts/music/abc2svg.ttf /usr/share/fonts/truetype/cantores/
+COPY resources/fonts/music/99-abc2svg-music.conf /etc/fonts/conf.d/
+RUN fc-cache -f
+
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
 # Add extensions not included in the base image

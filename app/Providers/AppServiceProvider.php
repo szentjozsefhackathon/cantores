@@ -34,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(\App\Services\GenreContext::class);
+        $this->app->singleton(\App\Services\SvgToPdfConverter::class, fn () => \App\Services\SvgToPdfConverter::fromConfig());
     }
 
     /**

@@ -767,6 +767,9 @@
                             <div x-ref="abcPreview" class="min-h-16 space-y-4" wire:ignore></div>
 
                             <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
+                                <flux:button icon="document-arrow-down" variant="ghost" x-on:click="exportDocumentPdf('abc', $wire.title)" x-bind:disabled="exportingPdf">
+                                    {{ __('Export PDF') }}
+                                </flux:button>
                                 <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                     Megosztás
                                 </flux:button>
@@ -778,6 +781,9 @@
                             <div x-ref="preview" class="min-h-16 space-y-4" wire:ignore></div>
 
                             <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
+                                <flux:button icon="document-arrow-down" variant="ghost" x-on:click="exportDocumentPdf('gabc', $wire.title)" x-bind:disabled="exportingPdf">
+                                    {{ __('Export PDF') }}
+                                </flux:button>
                                 <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                     Megosztás
                                 </flux:button>
@@ -878,6 +884,9 @@
                             <div x-ref="aretinoPreview" class="min-h-16 space-y-4" wire:ignore x-on:click="handleAretinoPreviewClick($event)"></div>
 
                             <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
+                                <flux:button icon="document-arrow-down" variant="ghost" x-on:click="exportDocumentPdf('aretino', $wire.title)" x-bind:disabled="exportingPdf">
+                                    {{ __('Export PDF') }}
+                                </flux:button>
                                 <flux:button icon="link" variant="ghost" x-on:click="openShareModal()">
                                     Megosztás
                                 </flux:button>

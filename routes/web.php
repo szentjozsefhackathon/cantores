@@ -130,6 +130,11 @@ Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
 Route::livewire('/score/preview', \App\Livewire\Pages\ScoreEditor::class)
     ->name('score.preview');
 
+// SVG → PDF export — public (guests may export) but protected by CSRF and rate limiting
+Route::post('/score/export-pdf', \App\Http\Controllers\ScorePdfExportController::class)
+    ->middleware('throttle:20,1')
+    ->name('score.export-pdf');
+
 // Secret link — public, resolves to edit for owner or read-only for others
 Route::livewire('/s/{token}', \App\Livewire\Pages\ScoreView::class)
     ->name('score.share');
