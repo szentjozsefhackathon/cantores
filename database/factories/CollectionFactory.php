@@ -29,6 +29,7 @@ class CollectionFactory extends Factory
             'author' => $this->faker->optional()->name(),
             'user_id' => \App\Models\User::factory(),
             'is_private' => $this->faker->boolean(20), // 20% private
+            'priority' => 100,
         ];
     }
 }

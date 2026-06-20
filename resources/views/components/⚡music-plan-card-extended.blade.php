@@ -236,8 +236,12 @@ new class extends Component
 
                                     <!-- Collections and Authors badges -->
                                     @if($assignment['music']->collections->isNotEmpty() || $assignment['music']->authors->isNotEmpty())
+                                    @php
+                                        $rankedCollections = $assignment['music']->displayCollections(auth()->user());
+                                        $hiddenCollections = $rankedCollections->slice(3);
+                                    @endphp
                                     <div class="flex flex-wrap gap-1 mt-1">
-                                        @foreach($assignment['music']->collections as $collection)
+                                        @foreach($rankedCollections->take(3) as $collection)
                                         <flux:badge color="blue" size="sm">
                                             {{ $collection->abbreviation ?? Str::limit($collection->title, 8) }}
                                             @if($collection->pivot->order_number)
@@ -245,6 +249,11 @@ new class extends Component
                                             @endif
                                         </flux:badge>
                                         @endforeach
+                                        @if($hiddenCollections->isNotEmpty())
+                                        <flux:tooltip content="{{ $hiddenCollections->map(fn ($collection) => $collection->formatWithPivot($collection->pivot))->join(', ') }}">
+                                            <flux:badge color="blue" size="sm">+{{ $hiddenCollections->count() }}</flux:badge>
+                                        </flux:tooltip>
+                                        @endif
                                         @foreach($assignment['music']->authors as $author)
                                         <flux:badge color="purple" size="sm">{{ $author->name }}</flux:badge>
                                         @endforeach

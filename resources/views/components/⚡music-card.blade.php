@@ -145,9 +145,7 @@ new class extends Component
                             {{ $music->custom_id }}
                         </span>
                         @endif
-                        @foreach($music->collections as $collection)
-                            <x-collection-badge :collection="$collection" />
-                        @endforeach
+                        <x-collection-badges :music="$music" />
                         @foreach($music->tags as $tag)
                             <x-music-tag-badge :tag="$tag" />
                         @endforeach
@@ -343,9 +341,7 @@ new class extends Component
                         </a>
                         @if($partner->collections->isNotEmpty())
                             <div class="flex flex-wrap gap-0.5 pl-2">
-                                @foreach($partner->collections as $collection)
-                                    <x-collection-badge :collection="$collection" />
-                                @endforeach
+                                <x-collection-badges :music="$partner" />
                             </div>
                         @endif
                     </div>

@@ -133,6 +133,53 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Get the collections that should be displayed for this music, filtered and ranked.
+     *
+     * Collections that are not visible to the given user, or that belong to a genre
+     * other than the currently active one, are excluded entirely (as if they did not
+     * contain the music). The remaining collections are ordered by editor-assigned
+     * priority (lower first), then verified status, then size.
+     *
+     * @return \Illuminate\Support\Collection<int, \App\Models\Collection>
+     */
+    public function displayCollections(?User $user = null): \Illuminate\Support\Collection
+    {
+        $this->loadMissing('collections');
+
+        $collections = $this->collections;
+        $collections->loadMissing('genres');
+
+        if ($collections->isNotEmpty() && ! isset($collections->first()->music_count)) {
+            $collections->loadCount('music');
+        }
+
+        $genreId = \App\Facades\GenreContext::getId();
+
+        return $collections
+            ->filter(fn (Collection $collection) => $collection->isVisibleTo($user))
+            ->filter(fn (Collection $collection) => $this->collectionMatchesGenre($collection, $genreId))
+            ->sortBy([
+                ['priority', 'asc'],
+                ['is_verified', 'desc'],
+                ['music_count', 'desc'],
+            ])
+            ->values();
+    }
+
+    /**
+     * Determine whether a collection belongs to the given genre context.
+     * Collections without any genre association belong to every genre.
+     */
+    private function collectionMatchesGenre(Collection $collection, ?int $genreId): bool
+    {
+        if ($genreId === null) {
+            return true;
+        }
+
+        return $collection->genres->isEmpty() || $collection->genres->contains('id', $genreId);
+    }
+
+    /**
      * Get the authors associated with this music.
      */
     public function authors(): BelongsToMany
