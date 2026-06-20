@@ -125,9 +125,9 @@ class DtxConvert extends Command
     }
 
     /**
-     * Parse CSV file with columns: title, reference, page number, tag, subtitle
+     * Parse CSV file with columns: title, reference, related, page number, tag, subtitle
      *
-     * @return array<int, array{ienek: string, enek: string, page_number: ?int, tag: ?string, subtitle?: string}>
+     * @return array<int, array{ienek: string, enek: string, related: ?string, page_number: ?int, tag: ?string, subtitle?: string}>
      */
     private function parseCsv(string $csvPath): array
     {
@@ -165,6 +165,7 @@ class DtxConvert extends Command
             // Determine title and reference based on available columns
             $title = '';
             $reference = '';
+            $related = null;
             $pageNumber = null;
             $tag = null;
             $subtitle = null;
@@ -179,6 +180,10 @@ class DtxConvert extends Command
                 $reference = trim($data['reference']);
             } elseif (isset($data['ienek'])) {
                 $reference = trim($data['ienek']);
+            }
+
+            if (isset($data['related']) && ! empty(trim($data['related']))) {
+                $related = trim($data['related']);
             }
 
             if (isset($data['page number']) && ! empty(trim($data['page number']))) {
@@ -202,6 +207,7 @@ class DtxConvert extends Command
             $song = [
                 'ienek' => $reference,
                 'enek' => $title,
+                'related' => $related,
                 'page_number' => $pageNumber,
                 'tag' => $tag,
             ];

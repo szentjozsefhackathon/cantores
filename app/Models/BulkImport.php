@@ -50,6 +50,7 @@ class BulkImport extends Model
         'collection',
         'piece',
         'reference',
+        'related',
         'page_number',
         'tag',
         'batch_number',

@@ -409,3 +409,32 @@ DTX;
         unlink($csvPath);
     }
 });
+
+test('dtx convert command with --csv flag imports the related column', function () {
+    $collection = 'csv_'.uniqid();
+    $csvPath = storage_path("app/{$collection}.csv");
+
+    $csv = <<<'CSV'
+title,reference,related,"page number",tag,subtitle
+"A keresztfához megyek",91,"SZVU 63",168,"Bűnbánat, nagyböjt",
+"A fényes nap immár",358,,416,"Különböző alkalmakra",
+CSV;
+    file_put_contents($csvPath, $csv);
+
+    $this->artisan('cantores:dtx-convert', ['collection' => $collection, '--csv' => true])
+        ->assertSuccessful();
+
+    $records = BulkImport::where('collection', $collection)->orderBy('reference')->get();
+    expect($records)->toHaveCount(2);
+
+    $withLink = $records->firstWhere('reference', '91');
+    expect($withLink->piece)->toBe('A keresztfához megyek');
+    expect($withLink->related)->toBe('SZVU 63');
+    expect($withLink->page_number)->toBe(168);
+    expect($withLink->tag)->toBe('Bűnbánat, nagyböjt');
+
+    $withoutLink = $records->firstWhere('reference', '358');
+    expect($withoutLink->related)->toBeNull();
+
+    unlink($csvPath);
+});

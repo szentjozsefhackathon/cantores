@@ -282,6 +282,15 @@ class BulkImports extends Component
             return false;
         }
 
+        // The related lookup resolved to the same piece, meaning it is already
+        // attached to both collections (an already-merged duplicate). Linking it
+        // to itself would create a self-referential relation, so skip it.
+        if ($relatedMusic->id === $music->id) {
+            \Log::info("Skipping self-referential relation for music ID {$music->id} (already attached to collection '{$abbreviation}') for related field '{$related}'");
+
+            return false;
+        }
+
         // Check if relation already exists (either direction)
         $existingRelation = MusicRelation::between($music->id, $relatedMusic->id)->first();
         if ($existingRelation) {
