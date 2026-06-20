@@ -5,6 +5,7 @@ use App\Models\Genre;
 use App\Models\Music;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Blade;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 
@@ -97,6 +98,19 @@ it('returns the full ranked list so callers can apply their own limit', function
     }
 
     expect($music->displayCollections())->toHaveCount(6);
+});
+
+it('renders badge triggers above the card overlay so their tooltips stay hoverable', function () {
+    $music = Music::factory()->create();
+
+    foreach (range(1, 6) as $i) {
+        attachCollection($music, Collection::factory()->create(['priority' => $i, 'is_private' => false]), (string) $i);
+    }
+
+    $html = Blade::render('<x-collection-badges :music="$music" />', ['music' => $music->fresh()]);
+
+    expect(substr_count($html, 'relative z-10'))->toBe(4); // 3 shown badges + the "+N" badge
+    expect($html)->toContain('+3');
 });
 
 it('lets an editor set a collection display priority', function () {

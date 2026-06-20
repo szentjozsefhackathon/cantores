@@ -12,6 +12,6 @@
 
 @if($hiddenCollections->isNotEmpty())
     <flux:tooltip content="{{ $hiddenCollections->map(fn ($collection) => $collection->formatWithPivot($collection->pivot))->join(', ') }}">
-        <flux:badge size="sm" color="zinc">+{{ $hiddenCollections->count() }}</flux:badge>
+        <flux:badge size="sm" color="zinc" class="relative z-10">+{{ $hiddenCollections->count() }}</flux:badge>
     </flux:tooltip>
 @endif
