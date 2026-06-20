@@ -18,6 +18,8 @@ class CollectionView extends Component
 
     public string $search = '';
 
+    public $audits = [];
+
     #[On('collection-updated')]
     public function refreshCollection(): void
     {
@@ -42,6 +44,27 @@ class CollectionView extends Component
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function verify(): void
+    {
+        $this->authorize('verify', $this->collection);
+
+        $this->collection->update(['is_verified' => ! $this->collection->is_verified]);
+        $this->collection = $this->collection->fresh();
+        $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
+    }
+
+    public function showAuditLog(): void
+    {
+        $this->authorize('view', $this->collection);
+
+        $this->audits = $this->collection->audits()
+            ->with(['user.city', 'user.firstName'])
+            ->latest()
+            ->get();
+
+        $this->modal('audit-collection')->show();
     }
 
     public function delete(): void

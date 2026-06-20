@@ -121,8 +121,8 @@ it('lets an editor set a collection display priority', function () {
 
     $collection = Collection::factory()->create(['priority' => 100, 'is_verified' => true]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('edit', $collection)
+    Livewire::test(\App\Livewire\Pages\Editor\CollectionEditModal::class)
+        ->call('open', $collection->id)
         ->set('priority', 5)
         ->call('update')
         ->assertHasNoErrors();
@@ -136,8 +136,8 @@ it('does not let a non-editor owner change display priority', function () {
 
     $collection = Collection::factory()->create(['priority' => 100, 'user_id' => $owner->id]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('edit', $collection)
+    Livewire::test(\App\Livewire\Pages\Editor\CollectionEditModal::class)
+        ->call('open', $collection->id)
         ->set('priority', 5)
         ->call('update')
         ->assertHasNoErrors();

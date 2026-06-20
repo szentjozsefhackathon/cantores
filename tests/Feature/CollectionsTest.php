@@ -13,7 +13,7 @@ it('requires unique title for collections', function () {
 
     Collection::factory()->create(['title' => 'Existing Title']);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
+    Livewire::test('pages::collections-landing')
         ->set('title', 'Existing Title')
         ->set('abbreviation', 'ABC')
         ->call('store')
@@ -26,7 +26,7 @@ it('requires unique abbreviation for collections', function () {
 
     Collection::factory()->create(['abbreviation' => 'ABC']);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
+    Livewire::test('pages::collections-landing')
         ->set('title', 'New Title')
         ->set('abbreviation', 'ABC')
         ->call('store')
@@ -39,7 +39,7 @@ it('allows duplicate abbreviation when null', function () {
 
     Collection::factory()->create(['abbreviation' => null]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
+    Livewire::test('pages::collections-landing')
         ->set('title', 'New Title')
         ->set('abbreviation', null)
         ->call('store')
@@ -55,8 +55,8 @@ it('allows updating collection with same title', function () {
         'user_id' => $user->id,
     ]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('edit', $collection)
+    Livewire::test(\App\Livewire\Pages\Editor\CollectionEditModal::class)
+        ->call('open', $collection->id)
         ->set('title', 'Original Title')
         ->call('update')
         ->assertHasNoErrors();
@@ -75,8 +75,8 @@ it('prevents updating collection with duplicate title of another', function () {
         'user_id' => $user->id,
     ]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('edit', $collection)
+    Livewire::test(\App\Livewire\Pages\Editor\CollectionEditModal::class)
+        ->call('open', $collection->id)
         ->set('title', 'Existing Title')
         ->call('update')
         ->assertHasErrors(['title' => 'unique']);
@@ -95,8 +95,8 @@ it('prevents updating collection with duplicate abbreviation of another', functi
         'user_id' => $user->id,
     ]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('edit', $collection)
+    Livewire::test(\App\Livewire\Pages\Editor\CollectionEditModal::class)
+        ->call('open', $collection->id)
         ->set('abbreviation', 'ABC')
         ->call('update')
         ->assertHasErrors(['abbreviation' => 'unique']);
@@ -108,9 +108,8 @@ it('shows audit log modal for collection', function () {
 
     $collection = Collection::factory()->create(['user_id' => $user->id]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('showAuditLog', $collection)
-        ->assertSet('auditingCollection.id', $collection->id)
+    Livewire::test(\App\Livewire\Pages\CollectionView::class, ['collection' => $collection])
+        ->call('showAuditLog')
         ->assertCount('audits', 0);
 });
 
@@ -136,9 +135,8 @@ it('loads audits for collection', function () {
         'updated_at' => now(),
     ]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('showAuditLog', $collection)
-        ->assertSet('auditingCollection.id', $collection->id)
+    Livewire::test(\App\Livewire\Pages\CollectionView::class, ['collection' => $collection])
+        ->call('showAuditLog')
         ->assertCount('audits', 1);
 });
 
@@ -148,7 +146,7 @@ it('attaches selected genres when creating a collection', function () {
     $genre1 = \App\Models\Genre::firstOrCreate(['name' => 'organist']);
     $genre2 = \App\Models\Genre::firstOrCreate(['name' => 'guitarist']);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
+    Livewire::test('pages::collections-landing')
         ->set('title', 'New Collection')
         ->set('selectedGenres', [$genre1->id, $genre2->id])
         ->call('store')
@@ -171,8 +169,8 @@ it('syncs genres when updating a collection', function () {
     // Attach initial genres
     $collection->genres()->attach([$genre1->id, $genre2->id]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('edit', $collection)
+    Livewire::test(\App\Livewire\Pages\Editor\CollectionEditModal::class)
+        ->call('open', $collection->id)
         ->assertSet('selectedGenres', [$genre1->id, $genre2->id])
         ->set('selectedGenres', [$genre2->id, $genre3->id])
         ->call('update')
@@ -255,8 +253,8 @@ it('verifying a collection toggles is_verified via Livewire', function () {
 
     $collection = Collection::factory()->create(['is_verified' => false]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('verify', $collection)
+    Livewire::test(\App\Livewire\Pages\CollectionView::class, ['collection' => $collection])
+        ->call('verify')
         ->assertHasNoErrors();
 
     expect($collection->fresh()->is_verified)->toBeTrue();
@@ -270,8 +268,8 @@ it('un-verifying a collection toggles is_verified back via Livewire', function (
 
     $collection = Collection::factory()->create(['is_verified' => true]);
 
-    Livewire::test(\App\Livewire\Pages\Editor\Collections::class)
-        ->call('verify', $collection)
+    Livewire::test(\App\Livewire\Pages\CollectionView::class, ['collection' => $collection])
+        ->call('verify')
         ->assertHasNoErrors();
 
     expect($collection->fresh()->is_verified)->toBeFalse();

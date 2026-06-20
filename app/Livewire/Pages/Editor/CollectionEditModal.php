@@ -30,9 +30,13 @@ class CollectionEditModal extends Component
 
     public bool $isPrivate = false;
 
+    public int $priority = 100;
+
     public array $selectedGenres = [];
 
     public bool $canUploadCover = false;
+
+    public bool $canVerify = false;
 
     public ?string $currentCoverUrl = null;
 
@@ -57,8 +61,10 @@ class CollectionEditModal extends Component
         $this->abbreviation = $collection->abbreviation;
         $this->author = $collection->author;
         $this->isPrivate = $collection->is_private;
+        $this->priority = $collection->priority;
         $this->selectedGenres = $collection->genres->pluck('id')->toArray();
         $this->canUploadCover = Gate::check('uploadCover', $collection);
+        $this->canVerify = Gate::check('verify', $collection);
         $this->currentCoverUrl = $collection->coverUrl();
         $this->photoLicense = $collection->photo_license ?? '';
         $this->photo = null;
@@ -79,19 +85,26 @@ class CollectionEditModal extends Component
             'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')->ignore($collection->id)],
             'author' => ['nullable', 'string', 'max:255'],
             'isPrivate' => ['boolean'],
+            'priority' => ['integer', 'min:0', 'max:65535'],
             'selectedGenres' => ['nullable', 'array'],
             'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
         ]);
 
-        $collection->update([
+        $attributes = [
             ...$validated,
             'is_private' => $validated['isPrivate'] ?? false,
-        ]);
+        ];
+
+        if (! Gate::allows('verify', $collection)) {
+            unset($attributes['priority']);
+        }
+
+        $collection->update($attributes);
 
         $collection->genres()->sync($validated['selectedGenres'] ?? []);
 
         $this->show = false;
-        $this->reset(['collectionId', 'title', 'abbreviation', 'author', 'isPrivate', 'selectedGenres', 'canUploadCover', 'currentCoverUrl', 'photo', 'photoLicense', 'cropAlign']);
+        $this->reset(['collectionId', 'title', 'abbreviation', 'author', 'isPrivate', 'priority', 'selectedGenres', 'canUploadCover', 'canVerify', 'currentCoverUrl', 'photo', 'photoLicense', 'cropAlign']);
         $this->dispatch('collection-updated');
         $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
     }

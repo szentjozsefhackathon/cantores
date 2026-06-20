@@ -40,6 +40,20 @@
             <flux:description>{{ __('Private collections are only visible to you and cannot be seen by other users.') }}</flux:description>
         </flux:field>
 
+        @if($canVerify)
+        <flux:field>
+            <flux:label>{{ __('Display priority') }}</flux:label>
+            <flux:description>{{ __('Controls which collections are shown first when a piece belongs to many. Lower numbers rank higher; the default is 100.') }}</flux:description>
+            <flux:input
+                type="number"
+                wire:model="priority"
+                min="0"
+                max="65535"
+            />
+            <flux:error name="priority" />
+        </flux:field>
+        @endif
+
         <div class="space-y-2">
             <flux:checkbox.group variant="cards" label="{{ __('Select which genres this collection belongs to.') }}">
                 @foreach($this->genres() as $genre)
