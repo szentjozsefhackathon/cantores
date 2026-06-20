@@ -147,6 +147,7 @@ new class extends Component
             $this->assignmentScopes[$assignment->id] = $mergedScopes;
 
             $music = $assignment->music;
+            $displayCollections = $music->displayCollections($user);
 
             return [
                 'id' => $assignment->id,
@@ -159,12 +160,16 @@ new class extends Component
                 'notes' => $assignment->notes,
                 'scopes' => $mergedScopes,
                 'scope_label' => $assignment->scope_label,
-                'music_collections' => $music->collections->map(fn ($c) => [
+                'music_collections' => $displayCollections->take(3)->map(fn ($c) => [
                     'abbreviation' => $c->abbreviation,
                     'title' => $c->title,
                     'order_number' => $c->pivot->order_number,
                     'page_number' => $c->pivot->page_number,
-                ])->toArray(),
+                ])->values()->toArray(),
+                'music_collections_overflow' => $displayCollections->slice(3)
+                    ->map(fn ($c) => $c->formatWithPivot($c->pivot))
+                    ->values()
+                    ->toArray(),
                 'music_tags' => $music->tags->map(fn ($t) => [
                     'name' => $t->name,
                     'icon' => $t->icon(),

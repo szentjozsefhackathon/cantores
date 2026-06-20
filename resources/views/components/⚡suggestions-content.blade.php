@@ -176,7 +176,7 @@ new class extends Component
                     }
                 }
 
-                $primaryCollection = $music->collections->first();
+                $primaryCollection = $music->displayCollections(auth()->user())->first();
                 if ($primaryCollection) {
                     $collectionInfo = $primaryCollection->formatWithPivot($primaryCollection->pivot);
                 }

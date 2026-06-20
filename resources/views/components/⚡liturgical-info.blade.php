@@ -1006,9 +1006,7 @@ new class extends Component
                                             <div class="mb-1.5 flex items-start justify-between gap-2">
                                                 <div class="flex min-w-0 flex-wrap items-center gap-1">
                                                     <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
-                                                    @foreach($preview['music']->collections as $collection)
-                                                        <x-collection-badge :collection="$collection" />
-                                                    @endforeach
+                                                    <x-collection-badges :music="$preview['music']" />
                                                 </div>
                                                 @if(count($previews) > 1)
                                                 <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ count($previews) }}</flux:text>
@@ -1132,9 +1130,7 @@ new class extends Component
                                                     <div class="mb-1.5 flex items-start justify-between gap-2">
                                                         <div class="flex min-w-0 flex-wrap items-center gap-1">
                                                             <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
-                                                            @foreach($preview['music']->collections as $collection)
-                                                                <x-collection-badge :collection="$collection" />
-                                                            @endforeach
+                                                            <x-collection-badges :music="$preview['music']" />
                                                         </div>
                                                         @if(count($planPreviews) > 1)
                                                         <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ count($planPreviews) }}</flux:text>

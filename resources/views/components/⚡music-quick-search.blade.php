@@ -160,7 +160,7 @@ new class extends Component
                 <div class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ $music->subtitle }}</div>
                 @endif
             </div>
-            @if($first = $music->collections->first())
+            @if($first = $music->displayCollections(auth()->user())->first())
             <span class="shrink-0 text-xs text-gray-400 dark:text-gray-500 font-mono">
                 {{ $first->abbreviation ?? $first->title }}
             </span>

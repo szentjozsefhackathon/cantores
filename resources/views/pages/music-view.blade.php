@@ -82,7 +82,7 @@
 
                 <!-- Collections -->
                 @php
-                    $visibleCollections = $music->collections->filter(fn($collection) => auth()->user() ? auth()->user()->can('view', $collection) : !$collection->is_private);
+                    $visibleCollections = $music->displayCollections(auth()->user());
                 @endphp
                 @if($visibleCollections->isNotEmpty())
                 <div>

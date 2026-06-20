@@ -22,6 +22,7 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property int|null $user_id
  * @property bool $is_private
  * @property bool $is_verified
+ * @property int $priority
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
  * @property-read int|null $audits_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Genre> $genres
@@ -70,6 +71,7 @@ class Collection extends Model implements Auditable
         'user_id',
         'is_private',
         'is_verified',
+        'priority',
         'cover',
         'photo_license',
     ];
@@ -84,6 +86,7 @@ class Collection extends Model implements Auditable
         return [
             'is_private' => 'boolean',
             'is_verified' => 'boolean',
+            'priority' => 'integer',
         ];
     }
 

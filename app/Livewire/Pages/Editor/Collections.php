@@ -8,6 +8,7 @@ use App\Models\Genre;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\On;
@@ -43,6 +44,8 @@ class Collections extends Component
     public string $filter = 'visible'; // 'visible', 'all', 'public', 'private', 'mine'
 
     public bool $isPrivate = false;
+
+    public int $priority = 100;
 
     public function rendering(IlluminateView $view): void
     {
@@ -155,6 +158,7 @@ class Collections extends Component
         $this->abbreviation = $collection->abbreviation;
         $this->author = $collection->author;
         $this->isPrivate = $collection->is_private;
+        $this->priority = $collection->priority;
         $this->selectedGenres = $collection->genres->pluck('id')->toArray();
         $this->modal('edit-collection')->show();
     }
@@ -217,14 +221,21 @@ class Collections extends Component
             'abbreviation' => ['nullable', 'string', 'max:20', Rule::unique('collections', 'abbreviation')->ignore($this->editingCollection->id)],
             'author' => ['nullable', 'string', 'max:255'],
             'isPrivate' => ['boolean'],
+            'priority' => ['integer', 'min:0', 'max:65535'],
             'selectedGenres' => ['nullable', 'array'],
             'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
         ]);
 
-        $this->editingCollection->update([
+        $attributes = [
             ...$validated,
             'is_private' => $validated['isPrivate'] ?? false,
-        ]);
+        ];
+
+        if (! Gate::allows('verify', $this->editingCollection)) {
+            unset($attributes['priority']);
+        }
+
+        $this->editingCollection->update($attributes);
 
         // Sync selected genres (empty array will detach all)
         $this->editingCollection->genres()->sync($validated['selectedGenres'] ?? []);
@@ -276,6 +287,7 @@ class Collections extends Component
         $this->abbreviation = null;
         $this->author = null;
         $this->isPrivate = false;
+        $this->priority = 100;
         $this->selectedGenres = [];
     }
 }
