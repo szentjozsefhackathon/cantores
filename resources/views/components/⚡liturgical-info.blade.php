@@ -998,28 +998,28 @@ new class extends Component
                                         role="button"
                                         tabindex="0"
                                         x-on:keydown.enter="$wire.openSuggestions({{ $celebrationIndex }})"
-                                        class="group/sugg relative h-36 flex-1 cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500"
+                                        class="group/sugg relative h-38 flex-1 cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500"
                                         title="Az összes énekjavaslat megtekintése">
                                         <div class="flex h-full transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (current * 100) + '%)'">
                                         @foreach($previews as $i => $preview)
-                                        <div wire:key="suggestion-preview-{{ $celebrationIndex }}-{{ $preview['music']->id }}" class="relative flex h-full w-full shrink-0 flex-col p-3">
+                                        <div wire:key="suggestion-preview-{{ $celebrationIndex }}-{{ $preview['music']->id }}" class="relative flex h-full w-full shrink-0 flex-col p-2">
                                             <div class="mb-1.5 flex items-start justify-between gap-2">
-                                                <div class="flex min-w-0 flex-wrap items-center gap-1">
-                                                    <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
-                                                    <x-collection-badges :music="$preview['music']" />
-                                                </div>
+                                                <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
                                                 @if(count($previews) > 1)
                                                 <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ count($previews) }}</flux:text>
                                                 @endif
                                             </div>
-                                            <flux:heading size="sm" class="truncate text-neutral-800 transition-colors group-hover/sugg:text-blue-600 dark:text-neutral-100 dark:group-hover/sugg:text-blue-400">
+                                            <flux:heading size="sm" class="truncate text-xs! text-neutral-800 transition-colors group-hover/sugg:text-blue-600 dark:text-neutral-100 dark:group-hover/sugg:text-blue-400">
                                                 {{ $preview['title'] }}
                                             </flux:heading>
                                             @if($preview['incipit_url'])
-                                            <div class="mt-2 flex flex-1 items-center overflow-hidden">
+                                            <div class="flex flex-1 items-center overflow-hidden">
                                                 <img src="{{ $preview['incipit_url'] }}" alt="{{ $preview['title'] }}" loading="lazy" class="block h-auto max-h-14 w-auto max-w-full" />
                                             </div>
                                             @endif
+                                            <div class="mt-auto flex min-w-0 flex-wrap items-center gap-1 pt-0">
+                                                <x-collection-badges :music="$preview['music']" />
+                                            </div>
                                             @if($preview['music']->genres->isNotEmpty())
                                             <div class="pointer-events-none absolute bottom-0 right-0 flex items-center justify-center gap-1 rounded-tl-md bg-gray-200/30 px-2 py-1 backdrop-blur-sm dark:bg-gray-700/30">
                                                 @foreach($preview['music']->genres as $genre)
@@ -1122,28 +1122,28 @@ new class extends Component
                                             @endif
                                             <a
                                                 href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
-                                                class="group/plan relative h-36 flex-1 cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500"
+                                                class="group/plan relative h-38 flex-1 cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500"
                                                 title="Az énekrend megtekintése">
                                                 <div class="flex h-full transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (current * 100) + '%)'">
                                                 @foreach($planPreviews as $i => $preview)
-                                                <div wire:key="plan-preview-{{ $plan->id }}-{{ $preview['music']->id }}" class="relative flex h-full w-full shrink-0 flex-col p-3">
+                                                <div wire:key="plan-preview-{{ $plan->id }}-{{ $preview['music']->id }}" class="relative flex h-full w-full shrink-0 flex-col p-2">
                                                     <div class="mb-1.5 flex items-start justify-between gap-2">
-                                                        <div class="flex min-w-0 flex-wrap items-center gap-1">
-                                                            <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
-                                                            <x-collection-badges :music="$preview['music']" />
-                                                        </div>
+                                                        <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
                                                         @if(count($planPreviews) > 1)
                                                         <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ count($planPreviews) }}</flux:text>
                                                         @endif
                                                     </div>
-                                                    <flux:heading size="sm" class="truncate text-neutral-800 transition-colors group-hover/plan:text-blue-600 dark:text-neutral-100 dark:group-hover/plan:text-blue-400">
+                                                    <flux:heading size="sm" class="truncate text-xs! text-neutral-800 transition-colors group-hover/plan:text-blue-600 dark:text-neutral-100 dark:group-hover/plan:text-blue-400">
                                                         {{ $preview['title'] }}
                                                     </flux:heading>
                                                     @if($preview['incipit_url'])
-                                                    <div class="mt-2 flex flex-1 items-center overflow-hidden">
+                                                    <div class="flex flex-1 items-center overflow-hidden">
                                                         <img src="{{ $preview['incipit_url'] }}" alt="{{ $preview['title'] }}" loading="lazy" class="block h-auto max-h-14 w-auto max-w-full" />
                                                     </div>
                                                     @endif
+                                                    <div class="mt-auto flex min-w-0 flex-wrap items-center gap-1 pt-0">
+                                                        <x-collection-badges :music="$preview['music']" />
+                                                    </div>
                                                     @if($preview['music']->genres->isNotEmpty())
                                                     <div class="pointer-events-none absolute bottom-0 right-0 flex items-center justify-center gap-1 rounded-tl-md bg-gray-200/30 px-2 py-1 backdrop-blur-sm dark:bg-gray-700/30">
                                                         @foreach($preview['music']->genres as $genre)
