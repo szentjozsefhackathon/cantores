@@ -438,7 +438,7 @@ test('suggestion carousel shows the same song twice when it is assigned to two d
 
     Livewire::test('liturgical-info')
         ->set('date', '2026-06-01')
-        ->assertSeeInOrder(['Bevonulás', 'Felajánlás']);
+        ->assertSeeHtmlInOrder(['Bevonulás', 'Felajánlás']);
 });
 
 test('other cantors section shows an animated incipit carousel for each published plan', function () {
