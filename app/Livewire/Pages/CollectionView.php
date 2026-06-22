@@ -101,7 +101,7 @@ class CollectionView extends Component
     protected function getMusicsQuery()
     {
         $query = $this->collection->music()
-            ->with(['collections', 'authors', 'genres'])
+            ->with(['collections', 'tags', 'authors', 'genres', 'urls', 'scriptureReferences', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores'])
             ->visibleTo(Auth::user());
 
         if ($this->search) {

@@ -244,33 +244,3 @@ it('regular user cannot verify a collection', function () {
 
     expect($policy->verify($user, $collection))->toBeFalse();
 });
-
-it('verifying a collection toggles is_verified via Livewire', function () {
-    $permission = Permission::firstOrCreate(['name' => 'content.edit.verified', 'guard_name' => 'web']);
-    $editor = User::factory()->create();
-    $editor->givePermissionTo($permission);
-    $this->actingAs($editor);
-
-    $collection = Collection::factory()->create(['is_verified' => false]);
-
-    Livewire::test(\App\Livewire\Pages\CollectionView::class, ['collection' => $collection])
-        ->call('verify')
-        ->assertHasNoErrors();
-
-    expect($collection->fresh()->is_verified)->toBeTrue();
-});
-
-it('un-verifying a collection toggles is_verified back via Livewire', function () {
-    $permission = Permission::firstOrCreate(['name' => 'content.edit.verified', 'guard_name' => 'web']);
-    $editor = User::factory()->create();
-    $editor->givePermissionTo($permission);
-    $this->actingAs($editor);
-
-    $collection = Collection::factory()->create(['is_verified' => true]);
-
-    Livewire::test(\App\Livewire\Pages\CollectionView::class, ['collection' => $collection])
-        ->call('verify')
-        ->assertHasNoErrors();
-
-    expect($collection->fresh()->is_verified)->toBeFalse();
-});

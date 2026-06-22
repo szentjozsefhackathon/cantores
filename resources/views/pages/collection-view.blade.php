@@ -60,7 +60,7 @@
                     @if($musics->isNotEmpty())
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                             @foreach($musics as $music)
-                                <livewire:music-card :music="$music" :key="'music-card-'.$music->id" />
+                                <x-music.card :music="$music" wire:key="music-card-{{ $music->id }}" />
                             @endforeach
                         </div>
 

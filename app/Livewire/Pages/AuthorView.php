@@ -18,8 +18,6 @@ class AuthorView extends Component
 
     public string $search = '';
 
-    public int $renderKey = 0;
-
     public function mount($author): void
     {
         // Load existing author
@@ -39,7 +37,6 @@ class AuthorView extends Component
     public function refreshAuthor(): void
     {
         $this->author = $this->author->fresh();
-        $this->renderKey++;
     }
 
     public function delete(): void
@@ -80,7 +77,7 @@ class AuthorView extends Component
     protected function getMusicsQuery()
     {
         $query = $this->author->music()
-            ->with(['collections', 'genres'])
+            ->with(['collections', 'tags', 'authors', 'genres', 'urls', 'scriptureReferences', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores'])
             ->visibleTo(Auth::user());
 
         if ($this->search) {
