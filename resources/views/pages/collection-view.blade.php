@@ -47,7 +47,7 @@
                     </div>
 
                     <!-- Search input -->
-                    <div class="mb-6">
+                    <div class="mb-2">
                         <flux:field>
                             <flux:input
                                 type="search"
@@ -56,6 +56,15 @@
                             />
                         </flux:field>
                     </div>
+
+                    <!-- Detailed search hint -->
+                    <flux:text class="mb-6 text-sm text-neutral-500 dark:text-neutral-400">
+                        {{ __('Looking for more?') }}
+                        <flux:link :href="route('musics', ['collection' => $collection->abbreviation ?: $collection->title])" wire:navigate>
+                            {{ __('Detailed search') }}
+                        </flux:link>
+                        {{ __('lets you filter by author, tags, and more in this collection.') }}
+                    </flux:text>
                     
                     @if($musics->isNotEmpty())
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">

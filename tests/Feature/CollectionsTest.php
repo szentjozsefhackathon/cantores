@@ -102,6 +102,33 @@ it('prevents updating collection with duplicate abbreviation of another', functi
         ->assertHasErrors(['abbreviation' => 'unique']);
 });
 
+it('links to detailed search preselected to the collection', function () {
+    $collection = Collection::factory()->create([
+        'title' => 'Graduale Romanum',
+        'abbreviation' => 'GR',
+        'is_private' => false,
+    ]);
+
+    $expectedUrl = route('musics', ['collection' => 'GR']);
+
+    Livewire::test(\App\Livewire\Pages\CollectionView::class, ['collection' => $collection])
+        ->assertSee(__('Detailed search'))
+        ->assertSee($expectedUrl, escape: false);
+});
+
+it('falls back to collection title in detailed search link when no abbreviation', function () {
+    $collection = Collection::factory()->create([
+        'title' => 'Cantus Selecti',
+        'abbreviation' => null,
+        'is_private' => false,
+    ]);
+
+    $expectedUrl = route('musics', ['collection' => 'Cantus Selecti']);
+
+    Livewire::test(\App\Livewire\Pages\CollectionView::class, ['collection' => $collection])
+        ->assertSee($expectedUrl, escape: false);
+});
+
 it('shows audit log modal for collection', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
