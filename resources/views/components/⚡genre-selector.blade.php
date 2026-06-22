@@ -35,13 +35,13 @@ new class extends Component
 
 <div class="inline-flex items-center">
     <flux:radio.group wire:model.live="selectedGenreId" variant="segmented">
-            @if (is_null($this->selectedGenreId))
-                <flux:radio label="{{ __('All') }}" value="" checked />
-            @else
-                <flux:radio label="{{ __('All') }}" value="" />
-            @endif
+            <flux:tooltip :content="__('All')" class="flex flex-1">
+                <flux:radio label="{{ __('All') }}" value="" class="transition-colors hover:bg-zinc-800/5 dark:hover:bg-white/10" :checked="is_null($this->selectedGenreId)" />
+            </flux:tooltip>
             @foreach($this->genres() as $genre)
-                <flux:radio value="{{ $genre->id }}" icon="{{ $genre->icon() }}" />
+                <flux:tooltip :content="$genre->label()" class="flex flex-1">
+                    <flux:radio value="{{ $genre->id }}" icon="{{ $genre->icon() }}" class="transition-colors hover:bg-zinc-800/5 dark:hover:bg-white/10" />
+                </flux:tooltip>
             @endforeach
         </flux:radio.group>
 </div>

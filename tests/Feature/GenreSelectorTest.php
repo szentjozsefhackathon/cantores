@@ -55,6 +55,15 @@ test('selecting a genre dispatches event', function () {
         ->assertDispatched('genre-changed', genreId: $organist->id);
 });
 
+test('component renders tooltips with genre labels', function () {
+    $user = User::factory()->create(['current_genre_id' => null]);
+
+    Livewire::actingAs($user)
+        ->test('genre-selector')
+        ->assertSee(__('Organist'))
+        ->assertSee(__('Guitarist'));
+});
+
 test('component works when no genre selected', function () {
     $user = User::factory()->create(['current_genre_id' => null]);
 
