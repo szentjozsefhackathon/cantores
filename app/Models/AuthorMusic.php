@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\AuthorType;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * @property int $id
  * @property int $author_id
  * @property int $music_id
+ * @property AuthorType|null $author_type
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property int|null $user_id
@@ -50,8 +52,21 @@ class AuthorMusic extends Pivot
     protected $fillable = [
         'author_id',
         'music_id',
+        'author_type',
         'user_id',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'author_type' => AuthorType::class,
+        ];
+    }
 
     /**
      * Get the user who added this author relation.

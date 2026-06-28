@@ -186,7 +186,7 @@ class Music extends Model implements Auditable
     {
         return $this->belongsToMany(Author::class, 'author_music')
             ->using(AuthorMusic::class)
-            ->withPivot(['user_id'])
+            ->withPivot(['user_id', 'author_type'])
             ->withTimestamps();
     }
 

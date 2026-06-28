@@ -131,6 +131,8 @@ class Author extends Model implements Auditable
     public function music(): BelongsToMany
     {
         return $this->belongsToMany(Music::class, 'author_music')
+            ->using(AuthorMusic::class)
+            ->withPivot(['user_id', 'author_type'])
             ->withTimestamps();
     }
 
