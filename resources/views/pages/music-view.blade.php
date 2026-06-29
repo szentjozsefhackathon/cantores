@@ -72,6 +72,7 @@
                             <a href="{{ route('author-view', $author) }}" class="inline-block">
                                 <flux:badge color="purple" size="sm" class="hover:bg-purple-600 transition-colors flex items-center gap-1">
                                     {{ $author->name }}
+                                    <x-author-type-icon :type="$author->pivot->author_type" />
                                     <livewire:verification-icon :fieldName="'authors'" :music="$music" :pivotReference="$author->id" />
                                 </flux:badge>
                             </a>

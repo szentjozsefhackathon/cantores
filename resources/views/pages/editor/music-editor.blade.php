@@ -39,6 +39,7 @@ new class extends Component
 
     // Author assignment
     public ?int $selectedAuthorId = null;
+    public ?string $selectedAuthorType = null;
 
     // Genre assignment
     public array $selectedGenres = [];
@@ -381,6 +382,7 @@ new class extends Component
 
         $validated = $this->validate([
             'selectedAuthorId' => ['required', 'integer', 'exists:authors,id'],
+            'selectedAuthorType' => ['nullable', Rule::enum(\App\AuthorType::class)],
         ]);
 
         // Check if already attached
@@ -392,6 +394,7 @@ new class extends Component
 
         $this->music->authors()->attach($validated['selectedAuthorId'], [
             'user_id' => Auth::id(),
+            'author_type' => $validated['selectedAuthorType'] ?: null,
         ]);
 
         // Refresh the authors relationship
@@ -399,6 +402,7 @@ new class extends Component
 
         // Reset the form field
         $this->selectedAuthorId = null;
+        $this->selectedAuthorType = null;
 
         $this->dispatch('toast', message: __('Author added.'), type: 'success');
     }
@@ -996,6 +1000,7 @@ new class extends Component
                 @foreach($music->authors as $author)
                 <div class="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-sm">
                     <span class="text-gray-900 dark:text-gray-100 font-medium">{{ $author->name }}</span>
+                    <x-author-type-icon :type="$author->pivot->author_type" />
                     <livewire:verification-icon :fieldName="'author'" :music="$music" :pivotReference="$author->id" />
                     <flux:button
                         variant="ghost"
@@ -1023,6 +1028,14 @@ new class extends Component
                             no-result-text="Nincs találat"
                             single
                             searchable />
+                    </div>
+                    <div class="w-full sm:w-44">
+                        <flux:select wire:model="selectedAuthorType" :placeholder="__('Type (optional)')" size="sm">
+                            <flux:select.option value="">{{ __('Type (optional)') }}</flux:select.option>
+                            @foreach(\App\AuthorType::cases() as $authorType)
+                            <flux:select.option :value="$authorType->value">{{ $authorType->label() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
                     </div>
                     <flux:button
                         variant="primary"

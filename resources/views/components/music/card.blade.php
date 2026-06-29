@@ -227,6 +227,7 @@
                         </div>
                     @endif
                     <span class="text-xs font-medium">{{ $author->name }}</span>
+                    <x-author-type-icon :type="$author->pivot->author_type" />
                 </a>
             @endforeach
         </div>
