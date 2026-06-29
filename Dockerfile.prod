@@ -3,6 +3,11 @@ ARG NODE_VERSION=22-alpine
 # Stage 1: Install Composer dependencies (skip scripts to avoid artisan errors)
 FROM composer:2 AS composer
 WORKDIR /app
+# Authenticate with GitHub so Composer fetches signed zipballs instead of the
+# unauthenticated codeload legacy.zip redirect, which intermittently returns
+# HTTP 400 and also hits the anonymous rate limit.
+ARG GITHUB_TOKEN
+RUN if [ -n "$GITHUB_TOKEN" ]; then composer config -g github-oauth.github.com "$GITHUB_TOKEN"; fi
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-cache --no-scripts --no-autoloader
 
@@ -61,8 +66,14 @@ COPY docker/sites-available/000-default.conf.prod /etc/apache2/sites-available/0
 # Copy application code
 COPY . .
 
-# Run full composer install (with scripts) in the final image
-RUN composer install --no-dev --no-interaction --no-cache
+# Run full composer install (with scripts) in the final image.
+# COMPOSER_AUTH is scoped to this single RUN so the GitHub token is never
+# written to disk or baked into the published image layer. The token avoids
+# the unauthenticated codeload legacy.zip redirect, which intermittently
+# returns HTTP 400.
+ARG GITHUB_TOKEN
+RUN if [ -n "$GITHUB_TOKEN" ]; then export COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"$GITHUB_TOKEN\"}}"; fi; \
+    composer install --no-dev --no-interaction --no-cache
 
 # Overlay built assets from node stage
 COPY --from=node /app/public/build ./public/build

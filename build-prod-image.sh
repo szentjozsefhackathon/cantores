@@ -45,8 +45,10 @@ if [ -f "$FILE_PATH" ]; then
 else
     echo "🔄 Building Docker image for commit $GIT_SHORT_HASH..."
     
-    # Build with git hash as build argument
-    APP_DOMAIN=cantores.hu GIT_COMMIT_HASH=$GIT_FULL_HASH docker compose -f docker-compose.prod.yml build app
+    # Build with git hash as build argument. GITHUB_TOKEN (set in .env.deploy)
+    # lets Composer fetch signed GitHub zipballs instead of the unauthenticated
+    # codeload legacy.zip redirect, which intermittently returns HTTP 400.
+    APP_DOMAIN=cantores.hu GIT_COMMIT_HASH=$GIT_FULL_HASH GITHUB_TOKEN="${GITHUB_TOKEN:-}" docker compose -f docker-compose.prod.yml build app
     docker save creshu-app-prod:latest | gzip > "$FILE_PATH"
     
     echo "✅ Docker image saved to $FILE_PATH"

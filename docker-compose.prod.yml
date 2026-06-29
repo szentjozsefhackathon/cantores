@@ -55,6 +55,7 @@ services:
       dockerfile: Dockerfile.prod
       args:
         - GIT_COMMIT_HASH=${GIT_COMMIT_HASH:-}
+        - GITHUB_TOKEN=${GITHUB_TOKEN:-}
     # Use this when building: GIT_COMMIT_HASH=$(git rev-parse HEAD) docker compose ...
     env_file:
       - path: ./.env.prod # write your customizations here - these are used as environment variables, not from the file inside the container
