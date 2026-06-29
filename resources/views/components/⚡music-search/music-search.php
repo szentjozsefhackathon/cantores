@@ -28,6 +28,8 @@ return new class extends Component
 
     public string $authorFreeText = '';
 
+    public string $scriptureFilter = '';
+
     public array $tagFilters = [];
 
     public bool $selectable = false;
@@ -83,6 +85,14 @@ return new class extends Component
      * Reset pagination when author free text filter changes.
      */
     public function updatingAuthorFreeText(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when scripture filter changes.
+     */
+    public function updatingScriptureFilter(): void
     {
         $this->resetPage();
     }

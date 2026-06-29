@@ -94,6 +94,11 @@ trait HasMusicSearchScopes
                 $q->whereHas('authors', fn ($aq) => $aq->where('name', 'ilike', '%'.$this->authorFreeText.'%'));
             });
 
+        $query = $query
+            ->when(property_exists($this, 'scriptureFilter') && $this->scriptureFilter !== '', function ($q) {
+                $q->whereHas('scriptureReferences', fn ($sq) => $sq->where('reference', 'ilike', '%'.trim($this->scriptureFilter).'%'));
+            });
+
         // Tags: AND logic - music must have ALL selected tags
         $query = $query
             ->when(! empty($this->tagFilters), function ($q) {

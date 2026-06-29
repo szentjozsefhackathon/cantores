@@ -864,6 +864,8 @@
     "Hide clefs from second measure onward": "Kulcsok elrejtése a második ütemtől",
     "https://...": "https://...",
     "Scripture References": "Szentírási hivatkozások",
+    "Scripture reference": "Igehely",
+    "Scripture reference (e.g. Jn 3,16)": "Igehely (pl. Jn 3,16)",
     "Link this music to Bible passages. The text is fetched from szentiras.eu.": "Kapcsold az éneket bibliai szakaszokhoz. A szöveget a szentiras.eu szolgáltatja.",
     "Add a Bible passage, e.g. 1Kir2,4. The reference is validated against szentiras.eu.": "Adj meg egy bibliai szakaszt, pl. 1Kir2,4. A hivatkozást a szentiras.eu ellenőrzi.",
     "Reference": "Hivatkozás",

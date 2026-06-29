@@ -4,6 +4,7 @@ namespace App\Livewire\Pages\Editor;
 
 use App\Concerns\HasMusicSearchScopes;
 use App\Models\Music;
+use App\Models\MusicTag;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Attributes\On;
@@ -26,6 +27,9 @@ class MusicsTable extends Component
     public string $authorFilter = '';
 
     public string $authorFreeText = '';
+
+    #[Url(as: 'scripture')]
+    public string $scriptureFilter = '';
 
     public array $tagFilters = [];
 
@@ -56,6 +60,11 @@ class MusicsTable extends Component
     }
 
     public function updatingAuthorFreeText(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingScriptureFilter(): void
     {
         $this->resetPage();
     }
@@ -124,7 +133,7 @@ class MusicsTable extends Component
 
     public function getTagsProperty()
     {
-        return \App\Models\MusicTag::orderBy('name')->get();
+        return MusicTag::orderBy('name')->get();
     }
 
     /**

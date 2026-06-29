@@ -9,10 +9,6 @@
             @click="active = active === 'search' ? null : 'search'"
             x-bind:class="active === 'search' ? 'bg-zinc-100 dark:bg-zinc-700' : ''"
             title="{{ __('Title') }}" />
-        <flux:button type="button" variant="ghost" size="sm" icon="tag"
-            @click="active = active === 'tags' ? null : 'tags'"
-            x-bind:class="active === 'tags' ? 'bg-zinc-100 dark:bg-zinc-700' : ''"
-            title="{{ __('Tags') }}" />
         <flux:button type="button" variant="ghost" size="sm" icon="hashtag"
             @click="active = active === 'collection-text' ? null : 'collection-text'"
             x-bind:class="active === 'collection-text' ? 'bg-zinc-100 dark:bg-zinc-700' : ''"
@@ -29,10 +25,18 @@
             @click="active = active === 'author-select' ? null : 'author-select'"
             x-bind:class="active === 'author-select' ? 'bg-zinc-100 dark:bg-zinc-700' : ''"
             title="{{ __('Author') }}" />
+        <flux:button type="button" variant="ghost" size="sm" icon="book-open-text"
+            @click="active = active === 'scripture' ? null : 'scripture'"
+            x-bind:class="active === 'scripture' ? 'bg-zinc-100 dark:bg-zinc-700' : ''"
+            title="{{ __('Scripture reference') }}" />
+        <flux:button type="button" variant="ghost" size="sm" icon="tag"
+            @click="active = active === 'tags' ? null : 'tags'"
+            x-bind:class="active === 'tags' ? 'bg-zinc-100 dark:bg-zinc-700' : ''"
+            title="{{ __('Tags') }}" />
     </div>
 
-    {{-- Filter inputs: on mobile shown one at a time via Alpine; on sm+ always shown in 2-col grid --}}
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    {{-- Filter inputs: on mobile shown one at a time via Alpine; on sm+ always shown in a 2/3-col grid --}}
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 
         {{-- Title search --}}
         <div x-show="active === 'search'" class="sm:!block"
@@ -43,36 +47,6 @@
                     wire:model.live.debounce.500ms="search"
                     :placeholder="__('Title, subtitle, etc.')"
                     autocomplete="off" />
-            </flux:field>
-        </div>
-
-        {{-- Tags --}}
-        <div x-show="active === 'tags'" class="sm:!block text-sm">
-            <flux:field>
-                <x-mary-choices
-                    placeholder="{{ __('Tags (all selected required)') }}"
-                    wire:model.live="tagFilters"
-                    :options="$this->tagOptions">
-                    @scope('item', $option)
-                        <x-mary-list-item :item="$option">
-                            <x-slot:avatar>
-                                <flux:icon :name="$option['icon'] ?? null" class="h-4 w-4" />
-                            </x-slot:avatar>
-                        </x-mary-list-item>
-                    @endscope
-                    @scope('selection', $selectedTags)
-                        @foreach ($selectedTags as $tagId)
-                            @php $tag = $this->tagsById->get($tagId); @endphp
-                            @if ($tag)
-                                <div class="inline">
-                                    <flux:icon :name="$tag->icon()" class="h-4 w-4 inline" />
-                                    <span class="text-gray-900 dark:text-gray-100 inline">{{ $tag->name }}</span>
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ $tag->typeLabel() }}</span>
-                                </div>
-                            @endif
-                        @endforeach
-                    @endscope
-                </x-mary-choices>
             </flux:field>
         </div>
 
@@ -119,6 +93,47 @@
                         <option value="{{ $author->name }}">{{ $author->name }}</option>
                     @endforeach
                 </flux:select>
+            </flux:field>
+        </div>
+
+        {{-- Scripture reference --}}
+        <div x-show="active === 'scripture'" class="sm:!block">
+            <flux:field>
+                <flux:input
+                    type="search"
+                    wire:model.live.debounce.500ms="scriptureFilter"
+                    :placeholder="__('Scripture reference (e.g. Jn 3,16)')"
+                    autocomplete="off" />
+            </flux:field>
+        </div>
+
+        {{-- Tags --}}
+        <div x-show="active === 'tags'" class="sm:!block text-sm">
+            <flux:field>
+                <x-mary-choices
+                    placeholder="{{ __('Tags (all selected required)') }}"
+                    wire:model.live="tagFilters"
+                    :options="$this->tagOptions">
+                    @scope('item', $option)
+                        <x-mary-list-item :item="$option">
+                            <x-slot:avatar>
+                                <flux:icon :name="$option['icon'] ?? null" class="h-4 w-4" />
+                            </x-slot:avatar>
+                        </x-mary-list-item>
+                    @endscope
+                    @scope('selection', $selectedTags)
+                        @foreach ($selectedTags as $tagId)
+                            @php $tag = $this->tagsById->get($tagId); @endphp
+                            @if ($tag)
+                                <div class="inline">
+                                    <flux:icon :name="$tag->icon()" class="h-4 w-4 inline" />
+                                    <span class="text-gray-900 dark:text-gray-100 inline">{{ $tag->name }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ $tag->typeLabel() }}</span>
+                                </div>
+                            @endif
+                        @endforeach
+                    @endscope
+                </x-mary-choices>
             </flux:field>
         </div>
 
