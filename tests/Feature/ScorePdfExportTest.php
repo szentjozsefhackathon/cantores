@@ -6,6 +6,34 @@ use function Pest\Laravel\postJson;
 
 const SAMPLE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40"><text x="5" y="20">Glória</text></svg>';
 
+/**
+ * Read the first page's MediaBox from a PDF and return its size in millimetres.
+ *
+ * Cairo writes the page dictionary into a compressed object stream, so every
+ * stream is inflated before the box is looked up.
+ *
+ * @return array{0: float, 1: float}
+ */
+function pdfPageSizeInMm(string $pdf): array
+{
+    $haystack = $pdf;
+    if (preg_match_all('/stream\r?\n/', $pdf, $matches, PREG_OFFSET_CAPTURE)) {
+        foreach ($matches[0] as [$match, $offset]) {
+            $start = $offset + strlen($match);
+            $end = strpos($pdf, 'endstream', $start);
+            $inflated = @gzuncompress(substr($pdf, $start, $end - $start));
+            if ($inflated !== false) {
+                $haystack .= $inflated;
+            }
+        }
+    }
+
+    expect($haystack)->toMatch('/\/MediaBox\s*\[\s*[\d.-]+\s+[\d.-]+\s+([\d.]+)\s+([\d.]+)/');
+    preg_match('/\/MediaBox\s*\[\s*[\d.-]+\s+[\d.-]+\s+([\d.]+)\s+([\d.]+)/', $haystack, $box);
+
+    return [(float) $box[1] / 72 * 25.4, (float) $box[2] / 72 * 25.4];
+}
+
 it('rejects a request with no pages', function () {
     postJson(route('score.export-pdf'), ['format' => 'abc'])
         ->assertStatus(422)
@@ -131,3 +159,58 @@ it('resolves the abc2svg music font so notation renders in exported PDFs', funct
 
     expect($resolved)->toBe('abc2svg');
 })->group('fonts');
+
+it('sizes the page from the viewBox so the preview zoom does not enlarge the print', function () {
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -12 643 300" width="772" height="374"><rect width="643" height="300"/></svg>';
+
+    $result = SvgToPdfConverter::fromConfig()->normalizePhysicalSize($svg);
+
+    $doc = new DOMDocument;
+    $doc->loadXML($result);
+
+    expect($doc->documentElement->getAttribute('width'))->toBe('170.1271mm');
+    expect($doc->documentElement->getAttribute('height'))->toBe('79.375mm');
+    expect($doc->documentElement->getAttribute('viewBox'))->toBe('0 -12 643 300');
+});
+
+it('sizes a page that states its width in percent from the viewBox too', function () {
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 240" width="100%"><rect width="480" height="240"/></svg>';
+
+    $doc = new DOMDocument;
+    $doc->loadXML(SvgToPdfConverter::fromConfig()->normalizePhysicalSize($svg));
+
+    expect($doc->documentElement->getAttribute('width'))->toBe('127mm');
+    expect($doc->documentElement->getAttribute('height'))->toBe('63.5mm');
+});
+
+it('keeps a size that is already given in a physical unit', function () {
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 643 300" width="170mm" height="79mm"><rect width="643" height="300"/></svg>';
+
+    expect(SvgToPdfConverter::fromConfig()->normalizePhysicalSize($svg))->toBe($svg);
+});
+
+it('leaves a page without a usable viewBox untouched', function () {
+    $noViewBox = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><rect width="200" height="60"/></svg>';
+    $emptyViewBox = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 0 0" width="200" height="60"><rect width="200" height="60"/></svg>';
+    $converter = SvgToPdfConverter::fromConfig();
+
+    expect($converter->normalizePhysicalSize($noViewBox))->toBe($noViewBox);
+    expect($converter->normalizePhysicalSize($emptyViewBox))->toBe($emptyViewBox);
+    expect($converter->normalizePhysicalSize('<svg><rect></svg>'))->toBe('<svg><rect></svg>');
+});
+
+it('renders a 170 mm wide score as a 170 mm wide pdf page', function () {
+    $binary = (string) config('services.rsvg.bin', 'rsvg-convert');
+    if (! shell_exec('command -v '.escapeshellarg($binary))) {
+        $this->markTestSkipped('rsvg-convert is not installed in this environment.');
+    }
+
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 643 300" width="772" height="360"><rect width="643" height="300" fill="none" stroke="#000"/></svg>';
+
+    $pdf = SvgToPdfConverter::fromConfig()->convert([$svg]);
+
+    [$widthMm, $heightMm] = pdfPageSizeInMm($pdf);
+
+    expect($widthMm)->toBeGreaterThan(169.5)->toBeLessThan(170.5);
+    expect($heightMm)->toBeGreaterThan(79.0)->toBeLessThan(79.8);
+});
