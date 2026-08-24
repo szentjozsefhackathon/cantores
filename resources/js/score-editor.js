@@ -3,7 +3,7 @@ import { abcMixin, ABC_RATIO_DEFAULTS, normalizeAbcPageWidth } from './score-edi
 import { gabcMixin } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
-import { removeEditorOnlySvgMarkup } from './score-editor-export.js';
+import { applyPhysicalSvgSize, removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
 import { renderAretino, renderFirstRow } from '@aretino-chant/core';
@@ -1369,7 +1369,12 @@ document.addEventListener('alpine:init', () => {
             const clone = svgs[0].cloneNode(true);
             removeEditorOnlySvgMarkup(clone);
             let lyricFont;
-            if (format === 'aretino') { lyricFont = this.aretinoTextFont; }
+            if (format === 'aretino') {
+                lyricFont = this.aretinoTextFont;
+                // Aretino engraves at a physical scale, so an exported page
+                // carries its size in millimetres, not in zoomed screen pixels.
+                applyPhysicalSvgSize(clone);
+            }
             else if (format === 'abc') { lyricFont = this.abcLyricFont; }
             else { lyricFont = this.lyricFont; }
             await injectWebFontsIntoSvg(clone, [lyricFont]);
