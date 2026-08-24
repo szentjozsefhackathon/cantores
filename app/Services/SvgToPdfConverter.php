@@ -8,6 +8,12 @@ use Symfony\Component\Process\Process;
 
 class SvgToPdfConverter
 {
+    /**
+     * Millimetres per CSS pixel: the editor lays scores out in user units
+     * where 1 unit = 1 px at 96 dpi.
+     */
+    private const MM_PER_PX = 25.4 / 96;
+
     public function __construct(
         private readonly string $binary,
         private readonly int $timeout,
@@ -43,7 +49,8 @@ class SvgToPdfConverter
             $inputFiles = [];
             foreach (array_values($svgs) as $index => $svg) {
                 $path = $workDir.DIRECTORY_SEPARATOR.'page-'.$index.'.svg';
-                file_put_contents($path, $this->expandPositionedText($svg));
+                $prepared = $this->normalizePhysicalSize($this->expandPositionedText($svg));
+                file_put_contents($path, $prepared);
                 $inputFiles[] = $path;
             }
 
@@ -73,6 +80,80 @@ class SvgToPdfConverter
         } finally {
             $this->removeWorkDir($workDir);
         }
+    }
+
+    /**
+     * Restate the document's intrinsic size as the physical size of its viewBox.
+     *
+     * Scores are laid out in user units where 1 unit = 1 px at 96 dpi, so a
+     * 170 mm staff width becomes a 643 unit viewBox. The editor then multiplies
+     * the root width/height by the preview zoom (120% by default), and
+     * rsvg-convert maps those unitless pixels straight to PDF points — a page
+     * that prints 204 mm wide instead of 170 mm. Replacing width/height with
+     * the viewBox size expressed in millimetres drops the screen zoom and
+     * states the size in a unit that survives the trip to PDF unchanged, so
+     * the printed score measures what the editor promised.
+     *
+     * Documents that already declare a physical unit, or that carry no usable
+     * viewBox, are returned untouched.
+     */
+    public function normalizePhysicalSize(string $svg): string
+    {
+        $previous = libxml_use_internal_errors(true);
+        $doc = new \DOMDocument;
+
+        try {
+            if (! $doc->loadXML($svg, LIBXML_NONET)) {
+                return $svg;
+            }
+
+            $root = $doc->documentElement;
+            if (! $root instanceof \DOMElement || $root->localName !== 'svg') {
+                return $svg;
+            }
+
+            if ($this->hasPhysicalUnit($root->getAttribute('width'))
+                || $this->hasPhysicalUnit($root->getAttribute('height'))) {
+                return $svg;
+            }
+
+            $box = $this->parseCoordinateList($root->getAttribute('viewBox'));
+            if (count($box) !== 4) {
+                return $svg;
+            }
+
+            $width = (float) $box[2];
+            $height = (float) $box[3];
+            if ($width <= 0 || $height <= 0) {
+                return $svg;
+            }
+
+            $root->setAttribute('width', $this->millimetres($width));
+            $root->setAttribute('height', $this->millimetres($height));
+
+            return (string) $doc->saveXML();
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+    }
+
+    /**
+     * Whether a length is expressed in an absolute unit other than pixels.
+     */
+    private function hasPhysicalUnit(string $length): bool
+    {
+        return (bool) preg_match('/(mm|cm|in|pt|pc|q)\s*$/i', trim($length));
+    }
+
+    /**
+     * Format a pixel length as a millimetre length, trimmed of trailing zeros.
+     */
+    private function millimetres(float $pixels): string
+    {
+        $value = rtrim(rtrim(number_format($pixels * self::MM_PER_PX, 4, '.', ''), '0'), '.');
+
+        return ($value === '' ? '0' : $value).'mm';
     }
 
     /**
