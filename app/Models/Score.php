@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasShares;
 use App\Enums\ScoreFormat;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,6 +44,8 @@ class Score extends Model
 {
     /** @use HasFactory<\Database\Factories\ScoreFactory> */
     use HasFactory;
+
+    use HasShares;
 
     /**
      * The attributes that are mass assignable.
@@ -114,9 +117,18 @@ class Score extends Model
         return route('scores.public-incipit', $this).'?v='.($this->updated_at?->timestamp ?? 0);
     }
 
-    public function shareIncipitUrl(): string
+    /**
+     * The read-only page for this score as reached through the given grant.
+     */
+    public function shareUrl(string $token): string
     {
-        return route('score.share.incipit', ['token' => $this->share_token]).'?v='.($this->updated_at?->timestamp ?? 0);
+        return route('share.score', ['token' => $token, 'score' => $this]);
+    }
+
+    public function shareIncipitUrl(string $token): string
+    {
+        return route('share.score.incipit', ['token' => $token, 'score' => $this])
+            .'?v='.($this->updated_at?->timestamp ?? 0);
     }
 
     public function scopePublicPreview(\Illuminate\Database\Eloquent\Builder $query): void

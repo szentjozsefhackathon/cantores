@@ -951,6 +951,35 @@
                             <flux:text class="mt-1 text-xs text-zinc-500" x-show="!$wire.secretLinkUrl">
                                 {{ __('Generate a secret link to share this score as a read-only preview.') }}
                             </flux:text>
+
+                            @if($this->indirectShares->isNotEmpty())
+                            <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-900/20">
+                                <div class="flex items-center gap-1.5">
+                                    <flux:icon name="information-circle" variant="micro" class="shrink-0 text-amber-600 dark:text-amber-400" />
+                                    <span class="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                        {{ __('Also reachable through') }}
+                                    </span>
+                                </div>
+                                <flux:text class="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                                    {{ __('These secret links open this score too, even without a link of its own.') }}
+                                </flux:text>
+                                <div class="mt-2 space-y-1">
+                                    @foreach($this->indirectShares as $indirect)
+                                    <div class="flex items-center justify-between gap-2" wire:key="indirect-share-{{ $indirect['revoke_id'] }}">
+                                        <span class="min-w-0 truncate text-sm text-amber-900 dark:text-amber-100">{{ $indirect['label'] }}</span>
+                                        <flux:button
+                                            size="xs"
+                                            variant="ghost"
+                                            icon="trash"
+                                            wire:click="revokeIndirectShare({{ $indirect['revoke_id'] }})"
+                                            wire:confirm="{{ __('This will invalidate that link entirely. Are you sure?') }}">
+                                            {{ __('Revoke') }}
+                                        </flux:button>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
                         </div>
                         @endif
 

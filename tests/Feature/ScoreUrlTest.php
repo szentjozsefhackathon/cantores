@@ -4,6 +4,7 @@ use App\Livewire\Pages\ScoreEditor;
 use App\Livewire\Pages\ScoreView;
 use App\Models\Score;
 use App\Models\ScoreUrl;
+use App\Models\Share;
 use App\Models\User;
 use App\MusicUrlLabel;
 use Illuminate\Support\Facades\DB;
@@ -107,9 +108,8 @@ it('prevents deleting a url belonging to another score', function () {
 });
 
 it('displays urls on the read-only view page', function () {
-    $score = Score::factory()->unattached()->create([
-        'share_token' => 'testtoken123456789012345678901',
-    ]);
+    $score = Score::factory()->unattached()->create();
+    $share = Share::factory()->of($score)->create();
     ScoreUrl::create([
         'score_id' => $score->id,
         'url' => 'https://drive.google.com/my-file',
@@ -117,7 +117,7 @@ it('displays urls on the read-only view page', function () {
         'comment' => 'Full score PDF',
     ]);
 
-    Livewire::test(ScoreView::class, ['token' => $score->share_token])
+    Livewire::test(ScoreView::class, ['token' => $share->token])
         ->assertSee('Full score PDF')
         ->assertSee('https://drive.google.com/my-file');
 });

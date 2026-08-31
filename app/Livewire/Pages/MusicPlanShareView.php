@@ -5,7 +5,8 @@ namespace App\Livewire\Pages;
 use App\Models\MusicPlan;
 use App\Models\Score;
 use App\Models\ScoreUrl;
-use Illuminate\Support\Str;
+use App\Models\Share;
+use App\Services\ShareAccessService;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
 
@@ -16,11 +17,19 @@ class MusicPlanShareView extends Component
     /** @var array<int, array<string, mixed>> */
     public array $planSlots = [];
 
+    public string $shareToken = '';
+
     public function mount(string $token): void
     {
-        $musicPlan = MusicPlan::query()->where('share_token', $token)->first();
-        abort_if($musicPlan === null, 404);
+        $share = app(ShareAccessService::class)->resolveOfType($token, MusicPlan::class);
+        abort_if(! $share instanceof Share, 404);
 
+        $share->touchLastViewed();
+
+        /** @var MusicPlan $musicPlan */
+        $musicPlan = $share->shareable;
+
+        $this->shareToken = $token;
         $this->musicPlan = $musicPlan->load(['celebration', 'user', 'genre']);
         $this->loadPlanSlots();
     }
@@ -52,34 +61,10 @@ class MusicPlanShareView extends Component
 
     private function loadPlanSlots(): void
     {
-        $ownerId = $this->musicPlan->user_id;
-
-        $musicIds = $this->musicPlan->musicAssignments()
-            ->pluck('music_id')
-            ->unique()
-            ->filter()
-            ->all();
-
-        $scores = Score::query()
-            ->where('user_id', $ownerId)
-            ->whereIn('music_id', $musicIds)
+        $scoresByMusicId = $this->musicPlan->reachableScores()
             ->with('urls')
-            ->get();
-
-        $scores->each(function (Score $score): void {
-            if ($score->share_token !== null) {
-                return;
-            }
-
-            do {
-                $token = Str::random(32);
-            } while (Score::query()->where('share_token', $token)->exists());
-
-            $score->share_token = $token;
-            $score->save();
-        });
-
-        $scoresByMusicId = $scores->groupBy('music_id');
+            ->get()
+            ->groupBy('music_id');
 
         $assignmentsByPivot = $this->musicPlan->musicAssignments()
             ->with(['music.collections', 'music.authors', 'scopes'])
@@ -117,11 +102,9 @@ class MusicPlanShareView extends Component
                                 'title' => $s->title,
                                 'format' => $s->format?->label() ?? __('Links'),
                                 'format_value' => $s->format?->value,
-                                'share_url' => $s->share_token
-                                    ? route('score.share', ['token' => $s->share_token])
-                                    : null,
-                                'incipit_url' => ($s->share_token && $s->hasIncipit())
-                                    ? $s->shareIncipitUrl()
+                                'share_url' => $s->shareUrl($this->shareToken),
+                                'incipit_url' => $s->hasIncipit()
+                                    ? $s->shareIncipitUrl($this->shareToken)
                                     : null,
                                 'urls' => $s->urls->map(fn (ScoreUrl $url) => [
                                     'url' => $url->url,

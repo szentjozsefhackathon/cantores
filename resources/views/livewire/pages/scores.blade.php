@@ -41,7 +41,7 @@
                                             {{ $score->title }}
                                         </a>
                                         <x-score-format-badge :format="$score->format" />
-                                        @if($score->share_token)
+                                        @if($score->live_shares_count > 0)
                                             <flux:icon name="link" size="sm" class="text-blue-500 dark:text-blue-400" :title="__('Secret link active')" />
                                         @endif
                                         @foreach($score->folders as $folder)

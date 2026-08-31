@@ -49,6 +49,7 @@ class Scores extends Component
         $scores = Score::query()
             ->mine(Auth::user())
             ->with(['music', 'folders'])
+            ->withCount('liveShares')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('title', 'ilike', "%{$search}%")

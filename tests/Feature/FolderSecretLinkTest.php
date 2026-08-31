@@ -3,6 +3,7 @@
 use App\Livewire\Pages\FolderEditor;
 use App\Livewire\Pages\FolderView;
 use App\Models\Folder;
+use App\Models\Share;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -15,29 +16,32 @@ it('returns 404 for an unknown folder token', function () {
 
 it('redirects the owner to the edit screen', function () {
     $user = User::factory()->create();
-    $folder = Folder::factory()->create(['user_id' => $user->id, 'share_token' => 'ownertoken1234567890123456789012']);
+    $folder = Folder::factory()->create(['user_id' => $user->id]);
+    $share = Share::factory()->of($folder)->create();
 
     actingAs($user);
 
-    Livewire::test(FolderView::class, ['token' => $folder->share_token])
+    Livewire::test(FolderView::class, ['token' => $share->token])
         ->assertRedirect(route('folders.edit', ['folder' => $folder->id]));
 });
 
 it('shows read-only view to a guest', function () {
     $owner = User::factory()->create();
-    $folder = Folder::factory()->create(['user_id' => $owner->id, 'share_token' => 'guesttoken12345678901234567890ab']);
+    $folder = Folder::factory()->create(['user_id' => $owner->id]);
+    $share = Share::factory()->of($folder)->create();
 
-    get(route('folder.share', ['token' => $folder->share_token]))->assertOk();
+    get(route('folder.share', ['token' => $share->token]))->assertOk();
 });
 
 it('shows read-only view to another authenticated user', function () {
     $owner = User::factory()->create();
     $other = User::factory()->create();
-    $folder = Folder::factory()->create(['user_id' => $owner->id, 'share_token' => 'othertoken1234567890123456789012', 'name' => 'Advent']);
+    $folder = Folder::factory()->create(['user_id' => $owner->id, 'name' => 'Advent']);
+    $share = Share::factory()->of($folder)->create();
 
     actingAs($other);
 
-    Livewire::test(FolderView::class, ['token' => $folder->share_token])
+    Livewire::test(FolderView::class, ['token' => $share->token])
         ->assertSet('name', 'Advent');
 });
 
@@ -46,13 +50,13 @@ it('owner can generate a secret link', function () {
     $folder = Folder::factory()->create(['user_id' => $user->id]);
     actingAs($user);
 
-    expect($folder->share_token)->toBeNull();
+    expect($folder->shareToken())->toBeNull();
 
     Livewire::test(FolderEditor::class, ['folder' => $folder])
         ->call('generateSecretLink')
         ->assertHasNoErrors();
 
-    expect($folder->fresh()->share_token)->not->toBeNull()->toHaveLength(32);
+    expect($folder->fresh()->shareToken())->not->toBeNull()->toHaveLength(32);
 });
 
 it('secret link resolves to a valid URL after generation', function () {
@@ -63,7 +67,7 @@ it('secret link resolves to a valid URL after generation', function () {
     Livewire::test(FolderEditor::class, ['folder' => $folder])
         ->call('generateSecretLink');
 
-    $token = $folder->fresh()->share_token;
+    $token = $folder->fresh()->shareToken();
     expect($token)->not->toBeNull();
 
     \Illuminate\Support\Facades\Auth::logout();
@@ -72,20 +76,21 @@ it('secret link resolves to a valid URL after generation', function () {
 
 it('owner can delete the secret link', function () {
     $user = User::factory()->create();
-    $folder = Folder::factory()->create(['user_id' => $user->id, 'share_token' => 'deletetoken12345678901234567890']);
+    $folder = Folder::factory()->create(['user_id' => $user->id]);
+    Share::factory()->of($folder)->create();
     actingAs($user);
 
     Livewire::test(FolderEditor::class, ['folder' => $folder])
         ->call('deleteSecretLink')
         ->assertHasNoErrors();
 
-    expect($folder->fresh()->share_token)->toBeNull();
+    expect($folder->fresh()->shareToken())->toBeNull();
 });
 
 it('deleted secret link returns 404', function () {
     $user = User::factory()->create();
-    $folder = Folder::factory()->create(['user_id' => $user->id, 'share_token' => 'deletedtoken1234567890123456789']);
-    $token = $folder->share_token;
+    $folder = Folder::factory()->create(['user_id' => $user->id]);
+    $token = Share::factory()->of($folder)->create()->token;
     actingAs($user);
 
     Livewire::test(FolderEditor::class, ['folder' => $folder])
@@ -106,9 +111,10 @@ it('another user cannot open FolderEditor for someone elses folder', function ()
 
 it('read-only view has noindex meta tag', function () {
     $owner = User::factory()->create();
-    $folder = Folder::factory()->create(['user_id' => $owner->id, 'share_token' => 'noindextoken12345678901234567890']);
+    $folder = Folder::factory()->create(['user_id' => $owner->id]);
+    $share = Share::factory()->of($folder)->create();
 
-    get(route('folder.share', ['token' => $folder->share_token]))
+    get(route('folder.share', ['token' => $share->token]))
         ->assertOk()
         ->assertSee('noindex, nofollow', false);
 });

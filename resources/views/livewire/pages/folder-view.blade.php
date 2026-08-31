@@ -15,22 +15,18 @@
                     @foreach($this->scores as $score)
                     <div class="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800/50">
                         <div class="flex flex-wrap items-center gap-1.5">
-                            @if($score->share_token)
-                                <a href="{{ route('score.share', ['token' => $score->share_token]) }}" class="font-medium text-blue-600 hover:underline dark:text-blue-400">
-                                    {{ $score->title }}
-                                </a>
-                            @else
-                                <span class="font-medium text-zinc-800 dark:text-zinc-200">{{ $score->title }}</span>
-                            @endif
+                            <a href="{{ $score->shareUrl($this->shareToken) }}" class="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                {{ $score->title }}
+                            </a>
                             <x-score-format-badge :format="$score->format" />
                         </div>
                         @if($score->music)
                         <div class="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{{ $score->music->title }}</div>
                         @endif
-                        @if($score->hasIncipit() && $score->share_token)
+                        @if($score->hasIncipit())
                         <div class="mt-2">
                             <x-incipit-image
-                                :src="$score->shareIncipitUrl()"
+                                :src="$score->shareIncipitUrl($this->shareToken)"
                                 :alt="$score->title"
                                 img-class="block h-14 w-auto" />
                         </div>

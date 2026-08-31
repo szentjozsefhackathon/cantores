@@ -41,7 +41,7 @@
                                         <a href="{{ route('folders.edit', ['folder' => $folder->id]) }}" wire:navigate class="hover:underline">
                                             {{ $folder->name }}
                                         </a>
-                                        @if($folder->share_token)
+                                        @if($folder->live_shares_count > 0)
                                             <flux:icon name="link" size="sm" class="text-blue-500 dark:text-blue-400" :title="__('Secret link active')" />
                                         @endif
                                     </div>

@@ -86,6 +86,9 @@
                 <flux:sidebar.item icon="folder" :href="route('folders')" :current="request()->routeIs('folders', 'folders.*')" wire:navigate>
                     {{ __('My Folders') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="link" :href="route('shared-links')" :current="request()->routeIs('shared-links')" wire:navigate>
+                    {{ __('My Secret Links') }}
+                </flux:sidebar.item>
                 <flux:sidebar.item icon="book-open" :href="route('collections')" :current="request()->routeIs('collections')" wire:navigate>
                     {{ __('Collections') }}
                 </flux:sidebar.item>

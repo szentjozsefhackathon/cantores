@@ -47,7 +47,7 @@ class Folders extends Component
 
         $folders = Folder::query()
             ->mine(Auth::user())
-            ->withCount('scores')
+            ->withCount(['scores', 'liveShares'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where('name', 'ilike', "%{$search}%");
             })

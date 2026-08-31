@@ -6,7 +6,6 @@ use App\Models\Folder;
 use App\Models\Score;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Renderless;
 use Livewire\Component;
@@ -36,8 +35,9 @@ class FolderEditor extends Component
             $this->authorize('update', $folder);
             $this->folder = $folder;
             $this->name = $folder->name;
-            $this->secretLinkUrl = $folder->share_token !== null
-                ? route('folder.share', ['token' => $folder->share_token])
+            $shareToken = $folder->shareToken();
+            $this->secretLinkUrl = $shareToken !== null
+                ? route('folder.share', ['token' => $shareToken])
                 : null;
             $this->scoreIds = $folder->scores()->pluck('scores.id')->toArray();
         } else {
@@ -99,14 +99,9 @@ class FolderEditor extends Component
         abort_unless($this->folder instanceof Folder, 404);
         $this->authorize('update', $this->folder);
 
-        do {
-            $token = Str::random(32);
-        } while (Folder::query()->where('share_token', $token)->exists());
+        $share = $this->folder->mintShare();
 
-        $this->folder->share_token = $token;
-        $this->folder->save();
-
-        $this->secretLinkUrl = route('folder.share', ['token' => $token]);
+        $this->secretLinkUrl = route('folder.share', ['token' => $share->token]);
     }
 
     #[Renderless]
@@ -115,8 +110,7 @@ class FolderEditor extends Component
         abort_unless($this->folder instanceof Folder, 404);
         $this->authorize('update', $this->folder);
 
-        $this->folder->share_token = null;
-        $this->folder->save();
+        $this->folder->revokeShares();
 
         $this->secretLinkUrl = null;
     }

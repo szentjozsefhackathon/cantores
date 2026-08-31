@@ -7,13 +7,14 @@ use App\Models\Folder;
 use App\Models\Music;
 use App\Models\Score;
 use App\Models\ScoreUrl;
+use App\Models\Share;
 use App\MusicUrlLabel;
+use App\Services\ShareAccessService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
 use League\CommonMark\Environment\Environment;
@@ -86,8 +87,9 @@ class ScoreEditor extends Component
             $this->content = $score->content ?? '';
             $this->settings = $score->settings ?? [];
             $this->publicPreview = (bool) $score->public_preview;
-            $this->secretLinkUrl = $score->share_token !== null
-                ? route('score.share', ['token' => $score->share_token])
+            $shareToken = $score->shareToken();
+            $this->secretLinkUrl = $shareToken !== null
+                ? route('score.share', ['token' => $shareToken])
                 : null;
             $this->folderIds = $score->folders()->pluck('folder_id')->toArray();
 
@@ -265,14 +267,9 @@ class ScoreEditor extends Component
         abort_unless($this->score instanceof Score, 404);
         $this->authorize('update', $this->score);
 
-        do {
-            $token = Str::random(32);
-        } while (Score::query()->where('share_token', $token)->exists());
+        $share = $this->score->mintShare();
 
-        $this->score->share_token = $token;
-        $this->score->save();
-
-        $this->secretLinkUrl = route('score.share', ['token' => $token]);
+        $this->secretLinkUrl = route('score.share', ['token' => $share->token]);
     }
 
     #[Renderless]
@@ -281,8 +278,7 @@ class ScoreEditor extends Component
         abort_unless($this->score instanceof Score, 404);
         $this->authorize('update', $this->score);
 
-        $this->score->share_token = null;
-        $this->score->save();
+        $this->score->revokeShares();
 
         $this->secretLinkUrl = null;
     }
@@ -392,6 +388,45 @@ class ScoreEditor extends Component
         $this->score->delete();
 
         $this->redirectRoute('scores', navigate: true);
+    }
+
+    /**
+     * Grants that reach this score through a shared folder or music plan.
+     *
+     * Sharing a folder or an énekrend also opens the scores underneath it, so the
+     * owner needs to see those here rather than assume the score is private just
+     * because it has no secret link of its own.
+     *
+     * @return \Illuminate\Support\Collection<int, array{label: string, revoke_id: int}>
+     */
+    #[Computed]
+    public function indirectShares(): \Illuminate\Support\Collection
+    {
+        if (! $this->score instanceof Score) {
+            return collect();
+        }
+
+        return app(ShareAccessService::class)
+            ->grantsReaching($this->score)
+            ->reject(fn (Share $share) => $share->shareable instanceof Score)
+            ->map(fn (Share $share) => [
+                'label' => $share->shareable instanceof Folder
+                    ? __('Folder: :name', ['name' => $share->shareable->name])
+                    : __('Music plan: :name', ['name' => $share->shareable->celebration_name ?? __('Music Plan')]),
+                'revoke_id' => $share->id,
+            ])
+            ->values();
+    }
+
+    #[Renderless]
+    public function revokeIndirectShare(int $shareId): void
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('update', $this->score);
+
+        Share::query()->mine(Auth::user())->findOrFail($shareId)->revoke();
+
+        unset($this->indirectShares);
     }
 
     #[Computed]

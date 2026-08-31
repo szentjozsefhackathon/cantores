@@ -3,12 +3,10 @@
 namespace App\Livewire;
 
 use App\Models\MusicPlan;
-use App\Models\Score;
 use App\MusicUrlLabel;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use Livewire\Component;
 
 class MusicPlanShareModal extends Component
@@ -35,8 +33,10 @@ class MusicPlanShareModal extends Component
         $this->musicPlanId = $musicPlan->id;
         $this->isOwner = Auth::check() && Auth::id() === $musicPlan->user_id;
 
-        if ($this->isOwner && $musicPlan->share_token) {
-            $this->secretLinkUrl = route('music-plan.share', ['token' => $musicPlan->share_token]);
+        $token = $this->isOwner ? $musicPlan->shareToken() : null;
+
+        if ($token !== null) {
+            $this->secretLinkUrl = route('music-plan.share', ['token' => $token]);
         }
     }
 
@@ -61,43 +61,22 @@ class MusicPlanShareModal extends Component
         $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
         $this->authorize('update', $musicPlan);
 
-        do {
-            $token = Str::random(32);
-        } while (MusicPlan::query()->where('share_token', $token)->exists());
+        $share = $musicPlan->mintShare();
 
-        $musicPlan->share_token = $token;
-        $musicPlan->save();
-
-        $ownerId = $musicPlan->user_id;
-        $musicIds = $musicPlan->musicAssignments()
-            ->pluck('music_id')
-            ->unique()
-            ->filter()
-            ->all();
-
-        Score::query()
-            ->where('user_id', $ownerId)
-            ->whereIn('music_id', $musicIds)
-            ->whereNull('share_token')
-            ->each(function (Score $score) {
-                do {
-                    $scoreToken = Str::random(32);
-                } while (Score::query()->where('share_token', $scoreToken)->exists());
-
-                $score->share_token = $scoreToken;
-                $score->save();
-            });
-
-        $this->secretLinkUrl = route('music-plan.share', ['token' => $token]);
+        $this->secretLinkUrl = route('music-plan.share', ['token' => $share->token]);
     }
 
+    /**
+     * Revoking the plan's grant also revokes every score URL reached through it:
+     * that access is derived from this grant per request, never minted onto the
+     * scores themselves.
+     */
     public function deleteSecretLink(): void
     {
         $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
         $this->authorize('update', $musicPlan);
 
-        $musicPlan->share_token = null;
-        $musicPlan->save();
+        $musicPlan->revokeShares();
 
         $this->secretLinkUrl = null;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasShares;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +32,8 @@ class Folder extends Model
 {
     /** @use HasFactory<\Database\Factories\FolderFactory> */
     use HasFactory;
+
+    use HasShares;
 
     /**
      * The attributes that are mass assignable.

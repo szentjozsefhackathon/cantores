@@ -138,6 +138,15 @@ Route::livewire('/s/{token}', \App\Livewire\Pages\ScoreView::class)
 Route::get('/s/{token}/incipit', \App\Http\Controllers\ScoreShareIncipitController::class)
     ->name('score.share.incipit');
 
+// A score reached *through* a grant — the score itself, or a folder or plan that
+// reaches it. Access is derived from the grant on every request, so revoking the
+// grant revokes these URLs too.
+Route::livewire('/share/{token}/score/{score}', \App\Livewire\Pages\ScoreView::class)
+    ->name('share.score');
+
+Route::get('/share/{token}/score/{score}/incipit', \App\Http\Controllers\ScoreShareIncipitController::class)
+    ->name('share.score.incipit');
+
 // Secret plan link — public, no authentication required
 Route::livewire('/p/{token}', \App\Livewire\Pages\MusicPlanShareView::class)
     ->name('music-plan.share');
@@ -168,6 +177,11 @@ Route::livewire('/f/{token}', \App\Livewire\Pages\FolderView::class)
 Route::livewire('/folders', \App\Livewire\Pages\Folders::class)
     ->middleware(['auth', 'verified'])
     ->name('folders');
+
+// Every secret link the user has handed out, and a way to revoke one
+Route::livewire('/shared-links', \App\Livewire\Pages\SharedLinks::class)
+    ->middleware(['auth', 'verified'])
+    ->name('shared-links');
 
 Route::livewire('/folders/create', \App\Livewire\Pages\FolderEditor::class)
     ->middleware(['auth', 'verified'])

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Concerns\HasShares;
 use App\Concerns\HasVisibilityScoping;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -58,6 +60,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 class MusicPlan extends Model
 {
     use HasFactory;
+    use HasShares;
     use HasVisibilityScoping;
 
     /**
@@ -167,6 +170,23 @@ class MusicPlan extends Model
             'id',                      // local key on music_plans
             'id'                       // local key on music_plan_slot_plan
         );
+    }
+
+    /**
+     * The owner's scores this plan reaches.
+     *
+     * A plan attaches musics, not scores, so reach is "every score the plan owner has
+     * for a music assigned to this plan". A secret link on the plan grants exactly this
+     * set, evaluated per request — so a score added later is reachable, and a music
+     * removed from the plan stops being.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<Score>
+     */
+    public function reachableScores(): Builder
+    {
+        return Score::query()
+            ->where('user_id', $this->user_id)
+            ->whereIn('music_id', $this->musicAssignments()->pluck('music_id')->unique()->filter());
     }
 
     /**
