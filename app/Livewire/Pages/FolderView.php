@@ -41,7 +41,7 @@ class FolderView extends Component
         $this->folder = $folder;
         $this->name = $folder->name;
         $this->shareToken = $token;
-        $this->scores = $folder->scores()->with('music')->orderBy('title')->get();
+        $this->scores = $folder->scores()->with(['music', 'files'])->orderBy('title')->get();
     }
 
     public function rendering(IlluminateView $view): void

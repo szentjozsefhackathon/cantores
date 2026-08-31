@@ -52,6 +52,11 @@
 
                 <div class="flex flex-wrap gap-2">
                     @if(!$isGuest)
+                        <flux:tooltip :content="$score ? __('Share this score') : __('Save the score first')">
+                            <flux:button variant="filled" icon="link" x-on:click="openShareModal()" :disabled="! $score">
+                                {{ __('Share') }}
+                            </flux:button>
+                        </flux:tooltip>
                         @if($linksOnly)
                         <flux:button variant="filled" variant="primary" icon="check" wire:click="save">
                             {{ __('Save Score') }}
@@ -904,6 +909,7 @@
                 <flux:modal name="share-link-modal" class="max-w-md">
                     <div class="space-y-4">
                         <flux:heading size="lg">Kotta megosztása</flux:heading>
+                        @unless($linksOnly)
                         <flux:text>
                             {{ __('This link encodes the full score and all settings directly in the URL — no account or registration needed. Anyone with the link can open and preview the score instantly.') }}
                         </flux:text>
@@ -919,6 +925,7 @@
                                 <span class="text-sm font-medium">{{ __('Link copied! You can now paste it anywhere.') }}</span>
                             </div>
                         </div>
+                        @endunless
 
                         @if($score && !$isGuest)
                         <div class="border-t border-zinc-200 pt-4 dark:border-zinc-700" x-data="{ secretLinkCopied: false }">
@@ -1038,6 +1045,215 @@
                         </div>
                     </div>
                 </flux:modal>
+                @endif
+
+                @if(!$isGuest)
+                {{-- Uploaded sheet music files --}}
+                <div
+                    class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700"
+                    x-show="!splitScreen"
+                    x-on:score-file-saved.window="$flux.modal('score-file-edit').close()"
+                >
+                    <flux:heading size="sm" class="mb-3">{{ __('Sheet music files') }}</flux:heading>
+
+                    @if($this->scoreFiles->isNotEmpty())
+                    <flux:table class="mb-4">
+                        <flux:table.columns>
+                            <flux:table.column>{{ __('File') }}</flux:table.column>
+                            <flux:table.column>{{ __('Status') }}</flux:table.column>
+                            <flux:table.column>{{ __('Rights') }}</flux:table.column>
+                            <flux:table.column />
+                        </flux:table.columns>
+
+                        <flux:table.rows>
+                            @foreach($this->scoreFiles as $file)
+                            <flux:table.row wire:key="score-file-{{ $file->id }}">
+                                <flux:table.cell>
+                                    <div class="flex items-start gap-3">
+                                        @if($file->has_thumbnail)
+                                        <img src="{{ route('scores.file.thumbnail', ['score' => $score, 'scoreFile' => $file]) }}" alt="" class="h-10 w-auto shrink-0 rounded border border-zinc-200 bg-white object-contain dark:border-zinc-600" />
+                                        @else
+                                        <flux:icon name="document-text" variant="micro" class="mt-1 shrink-0 text-zinc-400" />
+                                        @endif
+
+                                        <div class="min-w-0">
+                                            <div class="truncate font-medium text-zinc-800 dark:text-zinc-100">{{ $file->displayName() }}</div>
+                                            <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                                                @if($file->label)
+                                                <span class="truncate">{{ $file->original_name }}</span>
+                                                <span>&middot;</span>
+                                                @endif
+                                                <span>{{ number_format($file->size_bytes / 1024, 0, ',', ' ') }} KB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </flux:table.cell>
+
+                                <flux:table.cell>
+                                    <div class="text-sm text-zinc-600 dark:text-zinc-300">
+                                        @if($file->isRendering())
+                                        <span class="inline-flex items-center gap-1.5">
+                                            <flux:icon.loading class="size-3.5 shrink-0 text-zinc-400" />
+                                            {{ $file->render_status->label() }}
+                                        </span>
+                                        @else
+                                        {{ $file->render_status->label() }}
+                                        @endif
+                                    </div>
+                                    @if($file->page_count)
+                                    <div class="text-xs text-zinc-500 dark:text-zinc-400">
+                                        {{ trans_choice(':count page|:count pages', $file->page_count, ['count' => $file->page_count]) }}
+                                    </div>
+                                    @endif
+                                    @if($file->render_error)
+                                    <div class="mt-0.5 text-xs text-red-600 dark:text-red-400">{{ $file->render_error }}</div>
+                                    @endif
+                                </flux:table.cell>
+
+                                <flux:table.cell>
+                                    <span class="text-sm text-zinc-600 dark:text-zinc-300">{{ $file->rights->label() }}</span>
+                                </flux:table.cell>
+
+                                <flux:table.cell>
+                                    <div class="flex items-center justify-end gap-1">
+                                        <x-score-file-pages
+                                            icon-only
+                                            name="score-file-pages-{{ $file->id }}"
+                                            :pages="$this->filePageUrls[$file->id] ?? []"
+                                            :heading="$file->displayName()" />
+
+                                        <flux:button
+                                            icon="arrow-down-tray"
+                                            variant="ghost"
+                                            size="sm"
+                                            :aria-label="__('Download')"
+                                            :href="route('scores.file.download', ['score' => $score, 'scoreFile' => $file])" />
+
+                                        <flux:modal.trigger name="score-file-edit">
+                                            <flux:button
+                                                icon="pencil-square"
+                                                variant="ghost"
+                                                size="sm"
+                                                :aria-label="__('Edit file')"
+                                                wire:click="editFile({{ $file->id }})" />
+                                        </flux:modal.trigger>
+
+                                        <flux:button
+                                            icon="trash"
+                                            variant="ghost"
+                                            size="sm"
+                                            :aria-label="__('Remove file')"
+                                            wire:click="deleteFile({{ $file->id }})"
+                                            wire:confirm="{{ __('Remove this file?') }}" />
+                                    </div>
+                                </flux:table.cell>
+                            </flux:table.row>
+                            @endforeach
+                        </flux:table.rows>
+                    </flux:table>
+                    @endif
+
+                    @if($this->filesRendering)
+                    {{-- The render runs on the queue; poll until it lands rather than making the user reload. --}}
+                    <div wire:poll.2s class="mb-4 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <flux:icon.loading class="size-4 shrink-0 text-zinc-400" />
+                        <flux:text class="text-sm">{{ __('Rendering the sheet music — this page updates on its own when it is ready.') }}</flux:text>
+                    </div>
+                    @endif
+
+                    <div class="flex flex-wrap items-end gap-2">
+                        <flux:field class="min-w-48 flex-1">
+                            <flux:input
+                                type="file"
+                                wire:model="pendingFile"
+                                accept=".mscz,.musicxml,.mxl,.mid,.midi,.pdf"
+                                size="sm" />
+                            <flux:description>
+                                {{ __('MuseScore (.mscz), MusicXML, MIDI or PDF. Max 25 MB. Never published — only you and the people you hand a secret link to can open it.') }}
+                            </flux:description>
+                            <flux:error name="pendingFile" />
+                        </flux:field>
+                        <flux:field class="w-40">
+                            <flux:input
+                                wire:model="fileLabel"
+                                :placeholder="__('Label, e.g. A4')"
+                                size="sm" />
+                            <flux:error name="fileLabel" />
+                        </flux:field>
+                        <flux:field class="w-56">
+                            <flux:select wire:model="fileRights" size="sm">
+                                @foreach($rightsOptions as $rightsOption)
+                                <flux:select.option value="{{ $rightsOption->value }}">{{ $rightsOption->label() }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                            <flux:error name="fileRights" />
+                        </flux:field>
+                    </div>
+
+                    <div wire:loading wire:target="pendingFile" class="mt-2">
+                        <flux:text class="text-xs text-zinc-500">{{ __('Uploading…') }}</flux:text>
+                    </div>
+
+                    @if($pendingFile)
+                    <div class="mt-2 flex items-center gap-2">
+                        @if($score)
+                        <flux:button variant="primary" size="sm" icon="plus" wire:click="addFile">
+                            {{ __('Add :name', ['name' => $pendingFile->getClientOriginalName()]) }}
+                        </flux:button>
+                        @else
+                        <flux:text class="text-sm text-zinc-600 dark:text-zinc-300">
+                            {{ __('Ready to save: :name', ['name' => $pendingFile->getClientOriginalName()]) }}
+                        </flux:text>
+                        @endif
+                        <flux:button icon="x-mark" variant="ghost" size="sm" wire:click="removePendingFile" />
+                    </div>
+                    @endif
+
+                    {{-- One dialog serves every row: the button that opens it loads that row first. --}}
+                    <flux:modal name="score-file-edit" class="w-full max-w-lg" wire:close="cancelFileEdit">
+                        <div class="space-y-4">
+                            <flux:heading size="lg">{{ __('Edit file') }}</flux:heading>
+
+                            <flux:field>
+                                <flux:label>{{ __('Label') }}</flux:label>
+                                <flux:input wire:model="editingLabel" :placeholder="__('Label, e.g. A4')" />
+                                <flux:description>{{ __('What this file is, when a score carries several — the paper size it is cut for, say.') }}</flux:description>
+                                <flux:error name="editingLabel" />
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>{{ __('Rights') }}</flux:label>
+                                <flux:select wire:model="editingRights">
+                                    @foreach($rightsOptions as $rightsOption)
+                                    <flux:select.option value="{{ $rightsOption->value }}">{{ $rightsOption->label() }}</flux:select.option>
+                                    @endforeach
+                                </flux:select>
+                                <flux:error name="editingRights" />
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>{{ __('Replace the file') }}</flux:label>
+                                <flux:input
+                                    type="file"
+                                    wire:model="replacementFile"
+                                    accept=".mscz,.musicxml,.mxl,.mid,.midi,.pdf" />
+                                <flux:description>{{ __('Leave this empty to keep the file that is there now.') }}</flux:description>
+                                <flux:error name="replacementFile" />
+                            </flux:field>
+
+                            <div wire:loading wire:target="replacementFile">
+                                <flux:text class="text-xs text-zinc-500">{{ __('Uploading…') }}</flux:text>
+                            </div>
+
+                            <div class="flex justify-end gap-2">
+                                <flux:modal.close>
+                                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                                </flux:modal.close>
+                                <flux:button variant="primary" wire:click="updateFile">{{ __('Save file') }}</flux:button>
+                            </div>
+                        </div>
+                    </flux:modal>
+                </div>
                 @endif
 
                 @if(!$isGuest)

@@ -1,0 +1,32 @@
+#!/bin/sh
+# Headless MuseScore 4 wrapper.
+#
+# MuseScore 4 ignores QT_QPA_PLATFORM=offscreen: it initialises the xcb plugin
+# regardless and aborts with "no Qt platform plugin could be initialized" when
+# no display is present. Passing `-platform offscreen` does start Qt, but its
+# CommandLineParser then consumes "offscreen" as an input file and `-o` silently
+# produces nothing. A throwaway X server is the only reliable headless path.
+#
+# Qt also aborts when HOME is not writable, which matters because the queue
+# worker runs as www-data.
+set -e
+
+: "${MUSESCORE_HOME:=/tmp/musescore}"
+HOME="$MUSESCORE_HOME"
+XDG_RUNTIME_DIR="$MUSESCORE_HOME/runtime"
+export HOME XDG_RUNTIME_DIR
+
+mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+
+# Uploaded scores are attacker-controlled input parsed by MuseScore's Qt stack,
+# which has no business reaching the network. An empty network namespace takes
+# that away outright, but creating one unprivileged needs user namespaces the
+# container may not be allowed to use — Docker's default seccomp profile denies
+# them. Probe rather than assume, and fall back to the plain run: the service's
+# internal-only network is the standing defence either way.
+if unshare -rn true 2>/dev/null; then
+    exec unshare -rn xvfb-run -a mscore "$@"
+fi
+
+exec xvfb-run -a mscore "$@"

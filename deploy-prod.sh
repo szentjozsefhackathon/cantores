@@ -20,15 +20,22 @@ SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/deploy}
 
 # Parse command line arguments
 EXEC=0
+KEEP_ARTIFACTS=0
 while [[ $# -gt 0 ]]; do
     case $1 in
         -e|--exec)
             EXEC=1
             shift
             ;;
+        -k|--keep-artifacts)
+            KEEP_ARTIFACTS=1
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [-e|--exec]"
+            echo "Usage: $0 [-e|--exec] [-k|--keep-artifacts]"
+            echo "  -e, --exec            Open a shell in the app container when done"
+            echo "  -k, --keep-artifacts  Keep image archives and dangling images after deploying"
             exit 1
             ;;
     esac
@@ -231,6 +238,47 @@ for service in $SERVICES; do
     echo "   - $service: $STATUS"
 done
 
+# 9. Clean up deployment artifacts
+if [ $KEEP_ARTIFACTS -eq 1 ]; then
+    echo "9. Skipping artifact cleanup (--keep-artifacts)"
+else
+    echo "9. Cleaning up deployment artifacts..."
+
+    APP_STATUS=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml ps app --format '{{.Status}}'" 2>/dev/null)
+
+    case "$APP_STATUS" in
+        Up*)
+            REMOTE_AVAIL_BEFORE=$($SSH_CMD "$SSH_TARGET" "df -B1 --output=avail / | tail -1 | tr -d ' '")
+
+            # The archives are pure transport: the image is already in the server's
+            # Docker store, so nothing is lost by dropping them.
+            echo "   Removing uploaded image archives on server..."
+            $SSH_CMD "$SSH_TARGET" "rm -f $DEPLOY_REMOTE_PATH/creshu-app-prod-*.tar.gz" || true
+
+            # Each 'docker load' untags the previous build; prune collects those.
+            # Dangling-only, so images backing running containers are never touched.
+            echo "   Pruning untagged Docker images on server..."
+            $SSH_CMD "$SSH_TARGET" "docker image prune -f" 2>/dev/null | tail -1 | sed 's/^/   /' || true
+
+            REMOTE_AVAIL_AFTER=$($SSH_CMD "$SSH_TARGET" "df -B1 --output=avail / | tail -1 | tr -d ' '")
+            REMOTE_FREED=$(( ${REMOTE_AVAIL_AFTER:-0} - ${REMOTE_AVAIL_BEFORE:-0} ))
+            if [ $REMOTE_FREED -lt 0 ]; then
+                REMOTE_FREED=0
+            fi
+            echo "   ✅ Server: $(numfmt --to=iec $REMOTE_FREED) reclaimed, $(numfmt --to=iec ${REMOTE_AVAIL_AFTER:-0}) now free"
+
+            LOCAL_FREED=$(du -cb $DIR/creshu-app-prod-*.tar.gz 2>/dev/null | tail -1 | cut -f1)
+            rm -f $DIR/creshu-app-prod-*.tar.gz
+            echo "   ✅ Local: $(numfmt --to=iec ${LOCAL_FREED:-0}) reclaimed from $DIR/"
+            echo "   ℹ️  Rebuild with ./build-prod-image.sh to redeploy this commit."
+            ;;
+        *)
+            echo "   ⚠️  app container is not up (status: ${APP_STATUS:-unknown})"
+            echo "   Keeping all artifacts so the deployment can be retried or rolled back."
+            ;;
+    esac
+fi
+
 if [ $EXEC -eq 1 ]; then
     echo
     echo "=== Executing into container app ==="
@@ -251,8 +299,5 @@ echo "   ssh -p $DEPLOY_PORT $SSH_TARGET 'cd $DEPLOY_REMOTE_PATH && docker compo
 echo
 echo "3. View Traefik dashboard (if enabled):"
 echo "   http://$DEPLOY_SERVER:8080"
-echo
-echo "4. Clean up old images (optional):"
-echo "   ssh -p $DEPLOY_PORT $SSH_TARGET 'docker image prune -f'"
 echo
 echo "The application should be available at: https://$DEPLOY_SERVER"

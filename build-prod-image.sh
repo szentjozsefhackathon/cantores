@@ -49,9 +49,18 @@ else
     # lets Composer fetch signed GitHub zipballs instead of the unauthenticated
     # codeload legacy.zip redirect, which intermittently returns HTTP 400.
     APP_DOMAIN=cantores.hu GIT_COMMIT_HASH=$GIT_FULL_HASH GITHUB_TOKEN="${GITHUB_TOKEN:-}" docker compose -f docker-compose.prod.yml build app
-    docker save creshu-app-prod:latest | gzip > "$FILE_PATH"
-    
-    echo "✅ Docker image saved to $FILE_PATH"
+
+    # The renderer image derives from the app image just built, so it has to
+    # follow it rather than build in parallel.
+    echo "🔄 Building MuseScore renderer image..."
+    docker build -f Dockerfile.musescore -t creshu-musescore-prod:latest .
+
+    # Both images in one archive: they share every base layer, so the renderer
+    # costs only MuseScore and poppler on the wire, and one 'docker load' on the
+    # server picks up both.
+    docker save creshu-app-prod:latest creshu-musescore-prod:latest | gzip > "$FILE_PATH"
+
+    echo "✅ Docker images saved to $FILE_PATH"
 fi
 
 echo

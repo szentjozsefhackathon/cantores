@@ -55,7 +55,10 @@ services:
       dockerfile: Dockerfile.prod
       args:
         - GIT_COMMIT_HASH=${GIT_COMMIT_HASH:-}
-        - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      # Passed as a BuildKit secret, not a build arg: arg values are recorded in
+      # the image's layer history and readable via `docker history`.
+      secrets:
+        - github_token
     # Use this when building: GIT_COMMIT_HASH=$(git rev-parse HEAD) docker compose ...
     env_file:
       - path: ./.env.prod # write your customizations here - these are used as environment variables, not from the file inside the container
@@ -130,6 +133,34 @@ services:
     entrypoint: []
     command: ["/bin/sh", "-c", "php artisan queue:work --sleep=15 --tries=3 --timeout=3600"]
     restart: unless-stopped
+  musescore:
+    # Uploaded score files are attacker-controlled input parsed by MuseScore's Qt
+    # stack, so this worker is kept away from anything it does not need: its own
+    # queue, the internal network only, non-root, and hard memory and process
+    # caps. /tmp is tmpfs so the plaintext the renderer needs never lands on the
+    # storage volume the encryption at rest is protecting.
+    image: creshu-musescore-prod
+    user: "33:33" # www-data
+    mem_limit: 1g
+    pids_limit: 256
+    env_file:
+      - path: ./.env.prod
+        required: false
+    volumes:
+      - storage:/var/www/html/storage
+      - cache:/var/www/html/bootstrap/cache
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    depends_on:
+      database:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - internal
+    entrypoint: []
+    command: ["/bin/sh", "-c", "php artisan queue:work --queue=musescore --sleep=15 --tries=2 --timeout=600"]
+    restart: unless-stopped
   scheduler:
     image: creshu-app-prod
     user: "33:33" # www-data
@@ -164,6 +195,10 @@ services:
       - traefik.http.routers.maintenance.priority=1
       - traefik.http.services.maintenance.loadbalancer.server.port=80
     restart: unless-stopped
+
+secrets:
+  github_token:
+    environment: GITHUB_TOKEN
 
 volumes:
   db-data:

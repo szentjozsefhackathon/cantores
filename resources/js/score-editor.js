@@ -792,8 +792,12 @@ document.addEventListener('alpine:init', () => {
         async openShareModal() {
             this.shareUrl = '';
             this.shareModalCopied = false;
-            this.shareUrlLoading = true;
             this.$flux.modal('share-link-modal').show();
+            if (this.$wire.linksOnly) {
+                this.shareUrlLoading = false;
+                return;
+            }
+            this.shareUrlLoading = true;
             try {
                 const data = this.getShareData();
                 this.shareUrl = await this.$wire.createShareUrl(data);

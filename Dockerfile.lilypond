@@ -1,0 +1,13 @@
+# Renderer image: engraves LilyPond (.ly) sources from a dedicated queue.
+#
+# Derives from the application image so the worker has the full Laravel
+# codebase. Saving app + renderers in a single `docker save` lets the shared
+# base layers dedupe, so each extra image costs only its own tooling on the wire.
+ARG BASE_IMAGE=creshu-app-prod
+FROM ${BASE_IMAGE}
+
+# lilypond brings its own Guile runtime and the Emmentaler notation fonts, so it
+# needs no fontconfig wiring beyond what the base image already sets up.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      lilypond \
+ && rm -rf /var/lib/apt/lists/*

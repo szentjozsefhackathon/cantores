@@ -1,0 +1,55 @@
+# Renderer image: converts MuseScore scores (.mscz, .musicxml) from a dedicated
+# queue, then rasterises the resulting PDF into page images with poppler.
+# Derives from the application image, as Dockerfile.lilypond does — from the dev
+# one when BASE_IMAGE says so, so the same tooling is available locally.
+ARG BASE_IMAGE=creshu-app-prod
+FROM ${BASE_IMAGE}
+
+ARG MUSESCORE_VERSION=4.7.4
+ARG MUSESCORE_BUILD=260706075
+
+# The dev base image drops to an unprivileged user; apt and /opt need root here.
+# Restored at the end so the image keeps the user its base image chose.
+ARG BASE_USER=root
+USER root
+
+# MuseScore 4 bundles its own Qt6 but not the platform libraries Qt links
+# against. Debian 13 (trixie) ships the time_t-64 variants of several of these,
+# hence the libasound2t64 / libglib2.0-0t64 / libcups2t64 naming.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libegl1 libgl1 libglx-mesa0 libopengl0 \
+      libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+      libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 \
+      libxkbcommon-x11-0 libxkbcommon0 libx11-xcb1 \
+      libxrandr2 libxi6 libxtst6 libxcursor1 libxcomposite1 libxdamage1 \
+      libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libpango-1.0-0 libcairo2 \
+      libasound2t64 libpulse0 libpipewire-0.3-0t64 libsndfile1 \
+      libnss3 libdbus-1-3 libglib2.0-0t64 libgomp1 libgpg-error0 \
+      libdrm2 libgbm1 libfreetype6 fontconfig fonts-dejavu-core \
+      xvfb xauth \
+      poppler-utils \
+ && rm -rf /var/lib/apt/lists/*
+
+# Fetch, extract and delete in one layer: a COPY or a separate RUN would leave
+# the 192 MB AppImage in the image forever. --appimage-extract sidesteps FUSE,
+# which is unavailable inside an unprivileged container.
+RUN curl -fsSL -o /tmp/ms.AppImage \
+      "https://github.com/musescore/MuseScore/releases/download/v${MUSESCORE_VERSION}/MuseScore-Studio-${MUSESCORE_VERSION}.${MUSESCORE_BUILD}-x86_64.AppImage" \
+ && chmod +x /tmp/ms.AppImage \
+ && cd /opt && /tmp/ms.AppImage --appimage-extract >/dev/null \
+ && mv squashfs-root musescore \
+ && rm -f /tmp/ms.AppImage \
+ && ln -s /opt/musescore/AppRun /usr/local/bin/mscore
+
+COPY docker/musescore/mscore-render /usr/local/bin/mscore-render
+RUN chmod +x /usr/local/bin/mscore-render
+
+# Qt aborts when HOME is not writable, and the queue worker runs as a user that
+# cannot write to /var/www. mscore-render creates this directory itself, which
+# keeps Qt's scratch state on the renderer service's tmpfs alongside the
+# decrypted score it is working on. LANG avoids MuseScore's non-UTF-8 locale
+# warning on every run.
+ENV LANG=C.UTF-8 \
+    MUSESCORE_HOME=/tmp/musescore
+
+USER ${BASE_USER}

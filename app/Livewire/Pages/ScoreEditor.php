@@ -2,14 +2,18 @@
 
 namespace App\Livewire\Pages;
 
+use App\Enums\ScoreFileRights;
 use App\Enums\ScoreFormat;
 use App\Models\Folder;
 use App\Models\Music;
 use App\Models\Score;
+use App\Models\ScoreFile;
 use App\Models\ScoreUrl;
 use App\Models\Share;
 use App\MusicUrlLabel;
+use App\Services\ScoreFileUploader;
 use App\Services\ShareAccessService;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -24,11 +28,23 @@ use League\CommonMark\MarkdownConverter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class ScoreEditor extends Component
 {
     use AuthorizesRequests;
+    use WithFileUploads;
+
+    /**
+     * What an uploaded sheet music file may be. A PDF is accepted beside the
+     * editable formats: it is what a choir actually prints from, and poppler
+     * cuts it into pages the same way an engraved score is cut.
+     *
+     * @var list<string>
+     */
+    private const UPLOAD_RULES = ['nullable', 'file', 'extensions:mscz,musicxml,mxl,mid,midi,pdf', 'max:25600'];
 
     public ?Score $score = null;
 
@@ -49,6 +65,32 @@ class ScoreEditor extends Component
 
     /** @var array<int, array{url: string, label: ?string, comment: ?string}> */
     public array $pendingUrls = [];
+
+    /**
+     * The sheet music file staged for upload. On a score that already exists it
+     * is added by addFile(); on a new one save() persists it, in the same way
+     * $pendingUrls is.
+     */
+    #[Validate(self::UPLOAD_RULES)]
+    public $pendingFile = null;
+
+    public string $fileRights = ScoreFileRights::OwnWork->value;
+
+    /**
+     * What to call the staged file in the file list — "A4", "A5 booklet" — so a
+     * score carrying several tells them apart.
+     */
+    public string $fileLabel = '';
+
+    /** The file whose row the edit dialog is open on, if any. */
+    public ?int $editingFileId = null;
+
+    public string $editingLabel = '';
+
+    public string $editingRights = ScoreFileRights::OwnWork->value;
+
+    /** New bytes for the file being edited, replacing what it holds now. */
+    public $replacementFile = null;
 
     public bool $isSharedLink = false;
 
@@ -149,6 +191,12 @@ class ScoreEditor extends Component
             $rules['content'] = ['required', 'string'];
         }
 
+        if ($this->pendingFile !== null) {
+            $rules['pendingFile'] = self::UPLOAD_RULES;
+            $rules['fileRights'] = ['required', Rule::enum(ScoreFileRights::class)];
+            $rules['fileLabel'] = ['nullable', 'string', 'max:120'];
+        }
+
         $validated = $this->validate($rules);
 
         if ($this->linksOnly && ! $this->hasAnyLink()) {
@@ -201,6 +249,8 @@ class ScoreEditor extends Component
             ]);
         }
         $this->pendingUrls = [];
+
+        $this->storePendingFile($score);
 
         if (! $this->linksOnly) {
             $this->storeIncipit($score, $incipitDataUrl);
@@ -371,13 +421,221 @@ class ScoreEditor extends Component
         unset($this->scoreUrls);
     }
 
+    /**
+     * Whether a links-only score has anything to point at. An uploaded file is
+     * the sheet music itself, so it satisfies the requirement the way a link does.
+     */
     private function hasAnyLink(): bool
     {
-        if ($this->pendingUrls !== []) {
+        if ($this->pendingUrls !== [] || $this->pendingFile !== null) {
             return true;
         }
 
-        return $this->score instanceof Score && $this->score->urls()->exists();
+        if (! $this->score instanceof Score) {
+            return false;
+        }
+
+        return $this->score->urls()->exists() || $this->score->files()->exists();
+    }
+
+    /**
+     * Prefill from the file the moment it is staged: a .mscz knows its own title,
+     * so the cantor does not retype it, and the embedded thumbnail gives the score
+     * a preview before the render job has run.
+     */
+    public function updatedPendingFile(): void
+    {
+        $this->validateOnly('pendingFile');
+
+        if ($this->pendingFile === null) {
+            return;
+        }
+
+        $metadata = app(ScoreFileUploader::class)->inspect($this->pendingFile);
+
+        if ($this->title === '' && is_string($metadata['title'])) {
+            $this->title = $metadata['title'];
+        }
+
+        // The file is the sheet music, so the score has no editor format — but
+        // not at the cost of the source someone has already typed.
+        if ($this->content === '') {
+            $this->linksOnly = true;
+        }
+    }
+
+    public function removePendingFile(): void
+    {
+        $this->pendingFile = null;
+        $this->fileLabel = '';
+        $this->resetErrorBag('pendingFile');
+    }
+
+    /**
+     * Add the staged file to a score that already exists, without waiting for a
+     * save — the list it lands in is the point of staging it.
+     */
+    public function addFile(): void
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('update', $this->score);
+
+        $this->validate([
+            'pendingFile' => ['required', ...self::UPLOAD_RULES],
+            'fileRights' => ['required', Rule::enum(ScoreFileRights::class)],
+            'fileLabel' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        app(ScoreFileUploader::class)->store(
+            $this->score,
+            $this->pendingFile,
+            ScoreFileRights::from($this->fileRights),
+            $this->fileLabel,
+        );
+
+        $this->pendingFile = null;
+        $this->fileLabel = '';
+        $this->forgetFiles();
+
+        $this->dispatch('toast', message: __('File added.'), type: 'success');
+    }
+
+    /**
+     * Load a file's details into the edit dialog the row's button opens.
+     */
+    public function editFile(int $scoreFileId): void
+    {
+        $scoreFile = $this->ownedFile($scoreFileId);
+
+        $this->editingFileId = $scoreFile->id;
+        $this->editingLabel = $scoreFile->label ?? '';
+        $this->editingRights = $scoreFile->rights->value;
+        $this->replacementFile = null;
+        $this->resetErrorBag(['editingLabel', 'editingRights', 'replacementFile']);
+    }
+
+    /**
+     * Save the edited details, and the new bytes when the dialog was used to
+     * re-upload — the row keeps its identity either way, so a link handed out
+     * for this file still reaches it.
+     */
+    public function updateFile(): void
+    {
+        $scoreFile = $this->ownedFile((int) $this->editingFileId);
+
+        $rules = [
+            'editingLabel' => ['nullable', 'string', 'max:120'],
+            'editingRights' => ['required', Rule::enum(ScoreFileRights::class)],
+        ];
+
+        if ($this->replacementFile !== null) {
+            $rules['replacementFile'] = self::UPLOAD_RULES;
+        }
+
+        $this->validate($rules);
+
+        $scoreFile->update([
+            'label' => trim($this->editingLabel) !== '' ? trim($this->editingLabel) : null,
+            'rights' => ScoreFileRights::from($this->editingRights),
+        ]);
+
+        if ($this->replacementFile !== null) {
+            app(ScoreFileUploader::class)->replace($scoreFile, $this->replacementFile);
+        }
+
+        $this->cancelFileEdit();
+        $this->forgetFiles();
+
+        $this->dispatch('score-file-saved');
+        $this->dispatch('toast', message: __('File updated.'), type: 'success');
+    }
+
+    public function cancelFileEdit(): void
+    {
+        $this->editingFileId = null;
+        $this->editingLabel = '';
+        $this->replacementFile = null;
+        $this->resetErrorBag(['editingLabel', 'editingRights', 'replacementFile']);
+    }
+
+    public function deleteFile(int $scoreFileId): void
+    {
+        $scoreFile = $this->ownedFile($scoreFileId);
+
+        app(ScoreFileUploader::class)->delete($scoreFile);
+
+        if ($this->editingFileId === $scoreFileId) {
+            $this->cancelFileEdit();
+        }
+
+        $this->forgetFiles();
+    }
+
+    /**
+     * The score's file with this id, or a 404 — a file id from another score is
+     * not this editor's to touch.
+     */
+    private function ownedFile(int $scoreFileId): ScoreFile
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('update', $this->score);
+
+        $scoreFile = $this->score->files()->find($scoreFileId);
+        abort_if($scoreFile === null, 404);
+
+        return $scoreFile;
+    }
+
+    /**
+     * Every file uploaded to this score, oldest first.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreFile>
+     */
+    #[Computed]
+    public function scoreFiles(): EloquentCollection
+    {
+        return $this->score instanceof Score ? $this->score->orderedFiles() : new EloquentCollection;
+    }
+
+    /**
+     * Whether the queue still owes this score a preview, so the page keeps
+     * polling until it lands.
+     */
+    #[Computed]
+    public function filesRendering(): bool
+    {
+        return $this->scoreFiles->contains(fn (ScoreFile $scoreFile): bool => $scoreFile->isRendering());
+    }
+
+    /**
+     * URLs of every rendered page, in page order, keyed by score file id.
+     *
+     * @return array<int, list<string>>
+     */
+    #[Computed]
+    public function filePageUrls(): array
+    {
+        $urls = [];
+
+        foreach ($this->scoreFiles as $scoreFile) {
+            $urls[$scoreFile->id] = array_map(
+                fn (int $page): string => route('scores.file.page', [
+                    'score' => $this->score,
+                    'scoreFile' => $scoreFile,
+                    'page' => $page,
+                ]),
+                $scoreFile->pageNumbers(),
+            );
+        }
+
+        return $urls;
+    }
+
+    private function forgetFiles(): void
+    {
+        $this->score?->unsetRelation('files');
+
+        unset($this->scoreFiles, $this->filesRendering, $this->filePageUrls);
     }
 
     public function delete(): void
@@ -560,10 +818,29 @@ class ScoreEditor extends Component
         return view('livewire.pages.score-editor', [
             'formats' => ScoreFormat::cases(),
             'urlLabels' => MusicUrlLabel::cases(),
+            'rightsOptions' => ScoreFileRights::cases(),
             'userDefaults' => $user instanceof \App\Models\User ? ($user->score_settings ?? []) : [],
             'isSharedLink' => $this->isSharedLink,
             'isGuest' => ! Auth::check(),
         ]);
+    }
+
+    private function storePendingFile(Score $score): void
+    {
+        if ($this->pendingFile === null) {
+            return;
+        }
+
+        app(ScoreFileUploader::class)->store(
+            $score,
+            $this->pendingFile,
+            ScoreFileRights::from($this->fileRights),
+            $this->fileLabel,
+        );
+
+        $this->pendingFile = null;
+        $this->fileLabel = '';
+        $this->forgetFiles();
     }
 
     private function storeIncipit(Score $score, ?string $incipitDataUrl): void

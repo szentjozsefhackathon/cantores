@@ -3,13 +3,25 @@ ARG NODE_VERSION=22-alpine
 # Stage 1: Install Composer dependencies (skip scripts to avoid artisan errors)
 FROM composer:2 AS composer
 WORKDIR /app
+COPY composer.json composer.lock ./
 # Authenticate with GitHub so Composer fetches signed zipballs instead of the
 # unauthenticated codeload legacy.zip redirect, which intermittently returns
 # HTTP 400 and also hits the anonymous rate limit.
-ARG GITHUB_TOKEN
-RUN if [ -n "$GITHUB_TOKEN" ]; then composer config -g github-oauth.github.com "$GITHUB_TOKEN"; fi
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --no-cache --no-scripts --no-autoloader
+#
+# The token arrives on a BuildKit secret mount rather than through ARG: an ARG
+# value is recorded verbatim in the image's layer history, where `docker history`
+# exposes it to anyone holding the image. The secret is mounted only for the
+# lifetime of this RUN, is never committed to a layer, and leaves no trace in
+# history. It is read into COMPOSER_AUTH rather than `composer config` so it is
+# never written to an auth.json on disk either.
+RUN --mount=type=secret,id=github_token \
+    if [ -s /run/secrets/github_token ]; then \
+        export COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"$(cat /run/secrets/github_token)\"}}"; \
+        echo "GitHub auth: enabled"; \
+    else \
+        echo "GitHub auth: anonymous"; \
+    fi; \
+    composer install --no-dev --no-interaction --no-cache --no-scripts --no-autoloader
 
 # Generate optimized autoloader without running post-autoload-dump scripts
 RUN composer dump-autoload --no-dev --optimize --no-scripts
@@ -66,13 +78,13 @@ COPY docker/sites-available/000-default.conf.prod /etc/apache2/sites-available/0
 # Copy application code
 COPY . .
 
-# Run full composer install (with scripts) in the final image.
-# COMPOSER_AUTH is scoped to this single RUN so the GitHub token is never
-# written to disk or baked into the published image layer. The token avoids
-# the unauthenticated codeload legacy.zip redirect, which intermittently
-# returns HTTP 400.
-ARG GITHUB_TOKEN
-RUN if [ -n "$GITHUB_TOKEN" ]; then export COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"$GITHUB_TOKEN\"}}"; fi; \
+# Run full composer install (with scripts) in the final image. The token comes
+# from a BuildKit secret mount, so it is neither written to disk nor recorded in
+# the layer history that ships with the image (see the composer stage above).
+RUN --mount=type=secret,id=github_token \
+    if [ -s /run/secrets/github_token ]; then \
+        export COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"$(cat /run/secrets/github_token)\"}}"; \
+    fi; \
     composer install --no-dev --no-interaction --no-cache
 
 # Overlay built assets from node stage

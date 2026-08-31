@@ -107,7 +107,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 512M
   migrator:
     image: creshu-app-dev
     env_file:
@@ -201,6 +201,34 @@ services:
       resources:
         limits:
           memory: 64M
+  musescore:
+    # Build with:
+    #   docker build -f Dockerfile.musescore --build-arg BASE_IMAGE=creshu-app-dev \
+    #     --build-arg BASE_USER=laravel -t creshu-musescore-dev .
+    image: creshu-musescore-dev
+    env_file:
+      - path: ./.env.docker
+        required: false
+    environment:
+      - XDEBUG_CONFIG="mode=off"
+    volumes:
+      - .:/var/www/html
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    depends_on:
+      database:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - creshu-network
+    command: php artisan queue:work --queue=musescore --sleep=15 --tries=2 --timeout=600
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
 volumes:
   db-data:
   db-testing-data:

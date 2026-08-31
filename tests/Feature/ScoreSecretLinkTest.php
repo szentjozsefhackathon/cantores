@@ -161,3 +161,47 @@ it('read-only view has noindex meta tag', function () {
         ->assertOk()
         ->assertSee('noindex, nofollow', false);
 });
+
+it('shows the share button in the editor header for a links-only score', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->create([
+        'user_id' => $user->id,
+        'format' => null,
+        'content' => null,
+    ]);
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSet('linksOnly', true)
+        ->assertSeeHtml('openShareModal()')
+        ->assertSee(__('Share this score'));
+});
+
+it('disables the header share button until the score is saved', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->assertSee(__('Save the score first'))
+        ->assertSeeHtml('openShareModal()');
+});
+
+it('omits the url-encoded share section from the modal for links-only scores', function () {
+    $user = User::factory()->create();
+    $inline = Score::factory()->create(['user_id' => $user->id, 'format' => 'abc']);
+    $linksOnly = Score::factory()->create([
+        'user_id' => $user->id,
+        'format' => null,
+        'content' => null,
+    ]);
+    actingAs($user);
+
+    $encodedBlurb = __('This link encodes the full score and all settings directly in the URL — no account or registration needed. Anyone with the link can open and preview the score instantly.');
+
+    Livewire::test(ScoreEditor::class, ['score' => $inline])
+        ->assertSee($encodedBlurb);
+
+    Livewire::test(ScoreEditor::class, ['score' => $linksOnly])
+        ->assertDontSee($encodedBlurb)
+        ->assertSee(__('Secret Link'));
+});

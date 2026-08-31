@@ -53,6 +53,16 @@ return [
         'timeout' => env('RSVG_CONVERT_TIMEOUT', 30),
     ],
 
+    'musescore' => [
+        'bin' => env('MUSESCORE_BIN', 'mscore-render'),
+        'timeout' => env('MUSESCORE_TIMEOUT', 180),
+    ],
+
+    'pdftoppm' => [
+        'bin' => env('PDFTOPPM_BIN', 'pdftoppm'),
+        'timeout' => env('PDFTOPPM_TIMEOUT', 180),
+    ],
+
     'szentiras' => [
         'base_url' => env('SZENTIRAS_EU_API_URL', 'https://szentiras.eu/api'),
         'key' => env('SZENTIRAS_EU_API_KEY'),

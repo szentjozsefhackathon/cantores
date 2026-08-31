@@ -32,6 +32,42 @@
             </div>
             @endif
 
+            @if($this->scoreFiles->isNotEmpty())
+            <div class="mb-6 space-y-2">
+                @foreach($this->scoreFiles as $file)
+                <div wire:key="share-score-file-{{ $file->id }}" class="flex flex-wrap items-center gap-2">
+                    @if($file->isReady())
+                    <x-score-file-pages
+                        name="score-file-pages-share-{{ $file->id }}"
+                        :pages="$this->filePageUrls[$file->id] ?? []"
+                        :heading="$file->displayName()"
+                        :label="__('View :name', ['name' => $file->displayName()])" />
+
+                    @if($allowDownload)
+                    <flux:button
+                        icon="arrow-down-tray"
+                        variant="outline"
+                        size="sm"
+                        :href="route('share.score.file.download', ['token' => $shareToken, 'score' => $this->score, 'scoreFile' => $file])">
+                        {{ __('Download :name', ['name' => $file->displayName()]) }}
+                    </flux:button>
+                    @endif
+                    @elseif(! $file->isRendering())
+                    <flux:text class="text-sm text-zinc-500">{{ $file->displayName() }} — {{ $file->render_status->label() }}</flux:text>
+                    @endif
+                </div>
+                @endforeach
+
+                @if($this->filesRendering)
+                {{-- The render runs on the queue; poll until it lands rather than making the reader reload. --}}
+                <div wire:poll.2s class="flex items-center gap-2">
+                    <flux:icon.loading class="size-4 shrink-0 text-zinc-400" />
+                    <flux:text class="text-sm text-zinc-500">{{ __('Rendering the sheet music — this page updates on its own when it is ready.') }}</flux:text>
+                </div>
+                @endif
+            </div>
+            @endif
+
             @if($this->content !== '')
             <div
                 x-data="scoreEditor({

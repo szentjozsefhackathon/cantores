@@ -284,6 +284,8 @@ The script sends three signals:
 - The restic repository is **encrypted** with `RESTIC_PASSWORD`. Back this password up independently (password manager, printed copy in a safe).
 - The S3 IAM user should have only the minimum required permissions on the backup bucket (e.g., `s3:PutObject`, `s3:GetObject`, `s3:ListBucket`, `s3:DeleteObject` scoped to the bucket).
 - Because the S3 bucket is shared, each restic repository uses a distinct key prefix (`/creshu-prod`). Never run `restic prune` or `restic forget` without the `--tag creshu-prod` filter, or it may affect other repositories in the same bucket.
+- **Back up `APP_KEY` next to `RESTIC_PASSWORD`.** Uploaded sheet music files (`score-files/` on the storage volume) are encrypted at rest with `APP_KEY`, which lives in `.env.prod` on the host and is therefore *not* in any snapshot. That is deliberate — a leaked snapshot or a stolen volume copy yields ciphertext only — but it also means **losing `APP_KEY` loses every uploaded score irrecoverably**, and no restore can bring them back. Store it in the password manager, and keep it there across host rebuilds.
+- Rotating `APP_KEY` requires `APP_PREVIOUS_KEYS` so existing files stay readable, plus a re-encrypt pass over `score-files/` — it is not a config change alone.
 
 ---
 

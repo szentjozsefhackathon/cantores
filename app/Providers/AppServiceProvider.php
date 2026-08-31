@@ -37,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(\App\Services\GenreContext::class);
         $this->app->singleton(\App\Services\SvgToPdfConverter::class, fn () => \App\Services\SvgToPdfConverter::fromConfig());
+        $this->app->singleton(\App\Services\MuseScoreRenderer::class, fn () => \App\Services\MuseScoreRenderer::fromConfig());
+        $this->app->singleton(\App\Services\PdfPageRasterizer::class, fn () => \App\Services\PdfPageRasterizer::fromConfig());
     }
 
     /**

@@ -147,6 +147,16 @@ Route::livewire('/share/{token}/score/{score}', \App\Livewire\Pages\ScoreView::c
 Route::get('/share/{token}/score/{score}/incipit', \App\Http\Controllers\ScoreShareIncipitController::class)
     ->name('share.score.incipit');
 
+// Rendered pages and the original file of an uploaded score, reached through a
+// grant. A directly shared score has itself as the grant, so these serve every
+// kind of link uniformly.
+Route::get('/share/{token}/score/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\ScoreShareFilePageController::class)
+    ->whereNumber('page')
+    ->name('share.score.file.page');
+
+Route::get('/share/{token}/score/{score}/file/{scoreFile}/download', \App\Http\Controllers\ScoreShareFileDownloadController::class)
+    ->name('share.score.file.download');
+
 // Secret plan link — public, no authentication required
 Route::livewire('/p/{token}', \App\Livewire\Pages\MusicPlanShareView::class)
     ->name('music-plan.share');
@@ -169,6 +179,19 @@ Route::get('/scores/{score}/incipit', \App\Http\Controllers\ScoreIncipitControll
 
 Route::get('/scores/{score}/public-incipit', \App\Http\Controllers\ScorePublicIncipitController::class)
     ->name('scores.public-incipit');
+
+Route::get('/scores/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\ScoreFilePageController::class)
+    ->middleware(['auth', 'verified'])
+    ->whereNumber('page')
+    ->name('scores.file.page');
+
+Route::get('/scores/{score}/file/{scoreFile}/thumbnail', \App\Http\Controllers\ScoreFileThumbnailController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('scores.file.thumbnail');
+
+Route::get('/scores/{score}/file/{scoreFile}/download', \App\Http\Controllers\ScoreFileDownloadController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('scores.file.download');
 
 // Secret folder share link — public, read-only
 Route::livewire('/f/{token}', \App\Livewire\Pages\FolderView::class)

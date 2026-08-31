@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Concerns\HasShares;
 use App\Enums\ScoreFormat;
+use App\Services\ScoreFileStorage;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +29,8 @@ use Illuminate\Support\Facades\Storage;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreUrl> $urls
  * @property-read int|null $urls_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreFile> $files
+ * @property-read int|null $files_count
  * @property-read \App\Models\Music|null $music
  * @property-read \App\Models\User $user
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Folder> $folders
@@ -77,6 +81,22 @@ class Score extends Model
         ];
     }
 
+    /**
+     * The database drops score_files rows by cascade, which never reaches the
+     * encrypted artifacts on disk — so they are removed here, before the row
+     * that names them is gone.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (Score $score): void {
+            $storage = app(ScoreFileStorage::class);
+
+            foreach ($score->files()->get() as $file) {
+                $storage->deleteAll($file);
+            }
+        });
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -92,6 +112,34 @@ class Score extends Model
         return $this->hasMany(ScoreUrl::class);
     }
 
+    public function files(): HasMany
+    {
+        return $this->hasMany(ScoreFile::class);
+    }
+
+    /**
+     * The uploaded file this score is built around, if any.
+     *
+     * A score can hold several — the editable source beside the PDFs cut for
+     * different paper — and the one uploaded first stands for the rest.
+     */
+    public function primaryFile(): ?ScoreFile
+    {
+        return $this->orderedFiles()->first();
+    }
+
+    /**
+     * Every uploaded file, oldest first, so a listing keeps a stable order.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreFile>
+     */
+    public function orderedFiles(): Collection
+    {
+        return $this->relationLoaded('files')
+            ? $this->files->sortBy('id')->values()
+            : $this->files()->orderBy('id')->get();
+    }
+
     public function folders(): BelongsToMany
     {
         return $this->belongsToMany(Folder::class, 'folder_score');
@@ -102,9 +150,27 @@ class Score extends Model
         return "incipits/{$this->id}.png";
     }
 
+    /**
+     * The score file whose crop stands in for this score's incipit.
+     *
+     * A file-backed score's incipit lives encrypted beside the file rather than
+     * in the shared plaintext incipits/ directory, so serving it goes through
+     * ScoreFileResponder instead of the storage disk.
+     */
+    public function incipitFile(): ?ScoreFile
+    {
+        return $this->orderedFiles()->first(fn (ScoreFile $file): bool => $file->has_thumbnail);
+    }
+
     public function hasIncipit(): bool
     {
-        return Storage::exists($this->incipit_path);
+        // Disk first: listings call this in a loop, and only a score with no
+        // browser-generated incipit is worth a lookup for a file-backed one.
+        if (Storage::exists($this->incipit_path)) {
+            return true;
+        }
+
+        return $this->incipitFile() instanceof ScoreFile;
     }
 
     public function incipitUrl(): string
