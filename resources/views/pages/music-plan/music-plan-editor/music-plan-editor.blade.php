@@ -156,8 +156,8 @@
 
                 <!-- Editor Columns -->
                 <div class="pt-6 border-t border-neutral-200 dark:border-neutral-800">
-                    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div class="space-y-4 lg:col-span-1">
+                    <div class="grid grid-cols-1 gap-6 lg:h-[calc(100vh-8rem)] lg:grid-cols-2">
+                        <div class="space-y-4 lg:col-span-1 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
                             <div class="flex items-center justify-between">
                                 <flux:heading size="lg">Énekrend elemei</flux:heading>
                                 <flux:badge color="zinc" size="sm">{{ $this->planSlots->count() }} elem</flux:badge>
@@ -181,7 +181,7 @@
                             @endforelse
                         </div>
 
-                        <div class="space-y-4">
+                        <div class="space-y-4 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
                             <!-- Tabs for template and suggestions -->
                             <x-mary-tabs class="mb-8" wire:model="activeTemplateTab" wire:key="template-tabs">
                                 <x-mary-tab name="template" label="Énekrend sablon">

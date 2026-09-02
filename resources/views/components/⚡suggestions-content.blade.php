@@ -366,6 +366,9 @@ new class extends Component
                 <div class="text-sm text-amber-900 dark:text-amber-100 flex items-center gap-2">
                     <span class="text-yellow-500">★-★★★★</span><span class="text-xs opacity-90">A csillagok száma mutatja, hogy az ünnephez mennyire illeszkedő énekrendből származik a javaslat.</span>
                 </div>
+                <div class="mt-1 text-sm text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                    <flux:icon name="list-bullet" class="h-3.5 w-3.5 shrink-0" /><span class="text-xs opacity-90">A csillagok előtti szám azt mutatja, hány énekrendben szerepel az ének ehhez az ünnephez.</span>
+                </div>
             </div>
 
             <div class="space-y-10" role="tabpanel" id="music-panel" aria-labelledby="music-tab">
@@ -407,7 +410,7 @@ new class extends Component
                             @endphp
                             <div class="flex items-start gap-2" wire:key="slotMusicMap-{{ $slotName }}-{{ $music->id }}">
                                 <div class="flex-1 min-w-0">
-                                    <livewire:music-card :music="$music" :score="$score" :scope_label="$musicItem['scope_label']" :score_reasons="$musicItem['score_reasons'] ?? []" />
+                                    <livewire:music-card :music="$music" :score="$score" :scope_label="$musicItem['scope_label']" :score_reasons="$musicItem['score_reasons'] ?? []" :popularity="$musicItem['popularity'] ?? null" />
                                 </div>
                                 @if($musicPlanId)
                                 <flux:button

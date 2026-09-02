@@ -814,6 +814,7 @@
     "Paste a Gregorio (GABC) score below. Converting replaces the editor content with the generated Aretino notation. Not everything may be converted correctly, so please check the result.": "Illessz be egy Gregorio (GABC) kottát alább. A konvertálás lecseréli a szerkesztő tartalmát a generált Aretino jelöléssel. Nem mindent lehet helyesen konvertálni, ezért ellenőrizd a végeredményt.",
     "Import from Guido": "Importálás Guidóból",
     "Why this relevance score?": "Miért ennyi a relevancia?",
+    "Appears in :count music plan for this celebration|Appears in :count music plans for this celebration": "Ehhez az ünnephez :count énekrendben szerepel|Ehhez az ünnephez :count énekrendben szerepel",
     "Relevance": "Relevancia",
     ":score points": ":score pont",
     "Same readings": "Azonos olvasmányok",

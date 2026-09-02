@@ -10,6 +10,8 @@ new class extends Component
     public ?int $score = null;
     public ?string $scope_label = null;
 
+    public ?int $popularity = null;
+
     /** @var array<int, array{label: string, points: int}> */
     public array $score_reasons = [];
 
@@ -22,7 +24,7 @@ new class extends Component
      * @param  array<int, array{label: string, points: int}>  $score_reasons
      * @param  array<int, array<string, mixed>>  $shareScores
      */
-    public function mount(Music $music, ?int $score = null, ?string $scope_label = null, array $score_reasons = [], bool $privateShare = false, array $shareScores = []): void
+    public function mount(Music $music, ?int $score = null, ?string $scope_label = null, array $score_reasons = [], bool $privateShare = false, array $shareScores = [], ?int $popularity = null): void
     {
         $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'scriptureReferences', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
         $this->score = $score;
@@ -30,6 +32,7 @@ new class extends Component
         $this->score_reasons = $score_reasons;
         $this->privateShare = $privateShare;
         $this->shareScores = $shareScores;
+        $this->popularity = $popularity;
     }
 
     #[On('music-updated')]
@@ -64,5 +67,6 @@ new class extends Component
         :score-reasons="$score_reasons"
         :private-share="$privateShare"
         :share-scores="$shareScores"
+        :popularity="$popularity"
     />
 </div>

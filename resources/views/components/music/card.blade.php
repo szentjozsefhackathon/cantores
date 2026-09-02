@@ -5,6 +5,7 @@
     'scoreReasons' => [],
     'privateShare' => false,
     'shareScores' => [],
+    'popularity' => null,
 ])
 
 <div {{ $attributes->merge(['class' => 'rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden max-w-[355px] relative group transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl']) }}
@@ -13,12 +14,23 @@
     @can('view', $music)
     <a href="{{ route('music-view', $music) }}" class="absolute inset-0 z-0" aria-label="{{ $music->title }}" wire:navigate></a>
     @endcan
-    <!-- Relevance score stars -->
-    @if($score !== null)
+    <!-- Plan count and relevance score stars -->
+    @if($score !== null || $popularity !== null)
+        <div class="absolute top-1 right-1 z-20 flex items-center gap-0.5">
+        @if($popularity !== null)
+            <span
+                class="inline-flex items-center gap-0.5 rounded px-0.5 py-0.5 text-[9px] font-medium leading-none text-gray-500 dark:text-gray-400"
+                title="{{ trans_choice('Appears in :count music plan for this celebration|Appears in :count music plans for this celebration', $popularity, ['count' => $popularity]) }}"
+            >
+                <flux:icon name="list-bullet" class="h-2.5 w-2.5" />
+                {{ $popularity }}
+            </span>
+        @endif
+        @if($score !== null)
         @php
             $stars = $score >= 17 ? 4 : ($score >= 11 ? 3 : ($score >= 6 ? 2 : 1));
         @endphp
-        <div class="absolute top-1 right-1 z-20" x-data="{ showRelevance: false }">
+        <div x-data="{ showRelevance: false }">
             <button
                 type="button"
                 x-ref="relevanceTrigger"
@@ -65,6 +77,8 @@
                     @endif
                 </div>
             </template>
+        </div>
+        @endif
         </div>
     @endif
     <!-- Bottom right corner rounded rectangle with genre icons -->

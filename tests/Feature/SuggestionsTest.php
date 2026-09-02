@@ -341,3 +341,27 @@ test('same music appears only once per slot in suggestions', function () {
     // We'll add a simple assertion that the page loads successfully.
     $response->assertSee('Énekrend javaslatok');
 })->skip(); // This test is a bit complex to set up and verify, so we'll skip for now
+
+test('music card shows how many music plans contain the song', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $music = Music::factory()->create();
+
+    $html = Livewire::test('music-card', ['music' => $music, 'score' => 10, 'popularity' => 3])
+        ->assertSee(trans_choice('Appears in :count music plan for this celebration|Appears in :count music plans for this celebration', 3, ['count' => 3]))
+        ->html();
+
+    // The count itself is rendered next to the relevance stars, not only in the tooltip.
+    expect($html)->toMatch('/<\/svg>\s*3\s*<\/span>/');
+});
+
+test('music card omits the plan count when popularity is unknown', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $music = Music::factory()->create();
+
+    Livewire::test('music-card', ['music' => $music])
+        ->assertDontSee('music plan for this celebration');
+});
