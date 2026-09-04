@@ -4,10 +4,10 @@ use App\Enums\ScoreFileRenderStatus;
 use App\Enums\ScoreFileRights;
 use App\Jobs\RenderScoreFileJob;
 use App\Livewire\Pages\ScoreEditor;
+use App\Models\Loan;
 use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\ScoreUrl;
-use App\Models\Share;
 use App\Models\User;
 use App\MusicUrlLabel;
 use App\Services\MuseScoreMetadata;
@@ -352,10 +352,10 @@ it('serves a page through a live grant and 404s once it is revoked', function ()
     $scoreFile = ScoreFile::factory()->ready(1)->create(['score_id' => $score->id]);
     app(ScoreFileStorage::class)->put($scoreFile->pagePath(1), makePng(20, 20));
 
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
 
-    $url = route('share.score.file.page', [
-        'token' => $share->token,
+    $url = route('loan.score.file.page', [
+        'token' => $loan->token,
         'score' => $score,
         'scoreFile' => $scoreFile,
         'page' => 1,
@@ -363,7 +363,7 @@ it('serves a page through a live grant and 404s once it is revoked', function ()
 
     get($url)->assertOk();
 
-    $share->revoke();
+    $loan->revoke();
 
     get($url)->assertNotFound();
 });
@@ -376,14 +376,14 @@ it('gates the original file download on the grant', function () {
     $scoreFile = ScoreFile::factory()->ready(1)->create(['score_id' => $score->id]);
     app(ScoreFileStorage::class)->put($scoreFile->path, makeMscz());
 
-    $allowed = Share::factory()->of($score)->create(['allow_download' => true]);
-    $refused = Share::factory()->of($score)->create(['allow_download' => false]);
+    $allowed = Loan::factory()->of($score)->create(['allow_download' => true]);
+    $refused = Loan::factory()->of($score)->create(['allow_download' => false]);
 
-    get(route('share.score.file.download', ['token' => $allowed->token, 'score' => $score, 'scoreFile' => $scoreFile]))
+    get(route('loan.score.file.download', ['token' => $allowed->token, 'score' => $score, 'scoreFile' => $scoreFile]))
         ->assertOk()
         ->assertDownload($scoreFile->original_name);
 
-    get(route('share.score.file.download', ['token' => $refused->token, 'score' => $score, 'scoreFile' => $scoreFile]))
+    get(route('loan.score.file.download', ['token' => $refused->token, 'score' => $score, 'scoreFile' => $scoreFile]))
         ->assertForbidden();
 });
 
@@ -475,9 +475,9 @@ it('polls a shared score while the render is still queued', function () {
         'score_id' => $score->id,
         'render_status' => ScoreFileRenderStatus::Pending,
     ]);
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
 
-    get(route('score.share', ['token' => $share->token]))
+    get(route('score.loan', ['token' => $loan->token]))
         ->assertOk()
         ->assertSeeHtml('wire:poll.2s')
         ->assertSee(__('Rendering the sheet music — this page updates on its own when it is ready.'))
@@ -489,13 +489,13 @@ it('offers the rendered pages behind a modal button on a shared score', function
 
     $score = Score::factory()->linksOnly()->create(['user_id' => User::factory()->create()->id]);
     $scoreFile = ScoreFile::factory()->ready(2)->create(['score_id' => $score->id]);
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
 
-    $response = get(route('score.share', ['token' => $share->token]))->assertOk();
+    $response = get(route('score.loan', ['token' => $loan->token]))->assertOk();
 
     $pageUrls = array_map(
-        fn (int $page): string => route('share.score.file.page', [
-            'token' => $share->token,
+        fn (int $page): string => route('loan.score.file.page', [
+            'token' => $loan->token,
             'score' => $score,
             'scoreFile' => $scoreFile,
             'page' => $page,
@@ -629,7 +629,7 @@ it('renames a file and changes its rights from the edit dialog', function () {
         ->and($scoreFile->render_status)->toBe(ScoreFileRenderStatus::Ready);
 });
 
-it('re-uploads over a file, keeping its row and dropping the old render', function () {
+it('re-uploads over a file as a new row, dropping the old one and its render', function () {
     Storage::fake('private');
     fakeRenderer(pageCount: 1);
 
@@ -645,6 +645,8 @@ it('re-uploads over a file, keeping its row and dropping the old render', functi
     $storage->put($scoreFile->path, 'the old source');
     $storage->put($scoreFile->pagePath(4), makePng(20, 20));
 
+    $oldPagePath = $scoreFile->pagePath(4);
+
     actingAs($owner);
 
     $replacement = makeMscz('Veni Creator Spiritus');
@@ -655,15 +657,55 @@ it('re-uploads over a file, keeping its row and dropping the old render', functi
         ->call('updateFile')
         ->assertHasNoErrors();
 
+    // The row is not mutated: a published version may point at it, so the bytes
+    // behind an approved snapshot are never swapped underneath it.
+    $current = $score->fresh()->orderedFiles();
+
+    expect($current)->toHaveCount(1)
+        ->and($current->first()->id)->not->toBe($scoreFile->id)
+        ->and($current->first()->original_name)->toBe('veni-v2.mscz')
+        ->and($current->first()->label)->toBe('A4')
+        ->and($current->first()->checksum)->toBe(hash('sha256', $replacement))
+        ->and($storage->get($current->first()->path))->toBe($replacement)
+        ->and($current->first()->page_count)->toBe(1)
+        // Nothing referred to the old row, so it went entirely.
+        ->and(ScoreFile::query()->whereKey($scoreFile->id)->exists())->toBeFalse()
+        ->and(Storage::disk('private')->exists($oldPagePath))->toBeFalse();
+});
+
+it('keeps the bytes a published version was approved with when the file is replaced', function () {
+    Storage::fake('private');
+    fakeRenderer(pageCount: 1);
+
+    $owner = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $owner->id]);
+    $scoreFile = ScoreFile::factory()->ready(1)->create([
+        'score_id' => $score->id,
+        'original_name' => 'veni.mscz',
+        'is_published' => true,
+    ]);
+
+    app(ScoreFileStorage::class)->put($scoreFile->path, 'the approved source');
+
+    $version = app(\App\Services\ScoreVersionService::class)->snapshot($score->fresh());
+
+    expect($version->files->pluck('id')->all())->toBe([$scoreFile->id]);
+
+    actingAs($owner);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->call('editFile', $scoreFile->id)
+        ->set('replacementFile', UploadedFile::fake()->createWithContent('veni-v2.mscz', makeMscz('Veni')))
+        ->call('updateFile')
+        ->assertHasNoErrors();
+
     $scoreFile->refresh();
 
-    expect($score->fresh()->files()->count())->toBe(1)
-        ->and($scoreFile->original_name)->toBe('veni-v2.mscz')
-        ->and($scoreFile->label)->toBe('A4')
-        ->and($scoreFile->checksum)->toBe(hash('sha256', $replacement))
-        ->and($storage->get($scoreFile->path))->toBe($replacement)
-        ->and($scoreFile->page_count)->toBe(1)
-        ->and(Storage::disk('private')->exists($scoreFile->pagePath(4)))->toBeFalse();
+    expect($scoreFile->isSuperseded())->toBeTrue()
+        ->and($scoreFile->superseded_by_id)->not->toBeNull()
+        ->and(app(ScoreFileStorage::class)->get($scoreFile->path))->toBe('the approved source')
+        // and it is out of the score's own listing
+        ->and($score->fresh()->orderedFiles()->pluck('id')->all())->toBe([$scoreFile->superseded_by_id]);
 });
 
 it('deletes one file and leaves the others alone', function () {
@@ -751,9 +793,9 @@ it('offers every ready file on a shared score', function () {
         'original_name' => 'veni.mscz',
     ]);
     $print = ScoreFile::factory()->pdf('A4')->ready(2)->create(['score_id' => $score->id]);
-    $share = Share::factory()->of($score)->create(['allow_download' => true]);
+    $loan = Loan::factory()->of($score)->create(['allow_download' => true]);
 
-    get(route('score.share', ['token' => $share->token]))
+    get(route('score.loan', ['token' => $loan->token]))
         ->assertOk()
         ->assertSee(__('View :name', ['name' => 'veni.mscz']))
         ->assertSee(__('View :name', ['name' => 'A4']))

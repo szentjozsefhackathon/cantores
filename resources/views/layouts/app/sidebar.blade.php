@@ -65,32 +65,39 @@
             <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                 {{ __('Dashboard') }}
             </flux:sidebar.item>
-            <flux:sidebar.item icon="circle-stack" :href="route('music-database')" :current="request()->routeIs('music-database')" wire:navigate>
-                Énektár
-            </flux:sidebar.item>
-            <flux:sidebar.group heading="Énekrend">
-                <flux:sidebar.item icon="list-music" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>
-                    Énekrendjeim
-                </flux:sidebar.item>
-                <flux:sidebar.item icon="globe" :href="route('music-plans')" :current="request()->routeIs('music-plans')" wire:navigate>
-                    Közzétett énekrendek
-                </flux:sidebar.item>
-            </flux:sidebar.group>
-            <flux:sidebar.group heading="Könyvtár">
-                <flux:sidebar.item icon="music" :href="route('musics')" :current="request()->routeIs('musics')" wire:navigate>
-                    {{ __('Music Pieces') }}
-                </flux:sidebar.item>
+            {{--
+                Split by whose material it is: everything in the first group is mine
+                and editable, everything in the second belongs to the site and is
+                browsable. The old "Könyvtár" drawer mixed the two, which is what
+                let an outbound-only "Titkos linkjeim" sit there for a year with no
+                inbound counterpart.
+            --}}
+            <flux:sidebar.group heading="Az én kottatáram">
                 <flux:sidebar.item icon="file-music" :href="route('scores')" :current="request()->routeIs('scores', 'scores.*')" wire:navigate>
                     {{ __('My Scores') }}
-                </flux:sidebar.item>
-                <flux:sidebar.item icon="arrow-down-tray" :href="route('public-scores')" :current="request()->routeIs('public-scores', 'public-scores.*')" wire:navigate>
-                    Ingyenes kották
                 </flux:sidebar.item>
                 <flux:sidebar.item icon="folder" :href="route('folders')" :current="request()->routeIs('folders', 'folders.*')" wire:navigate>
                     {{ __('My Folders') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="link" :href="route('shared-links')" :current="request()->routeIs('shared-links')" wire:navigate>
-                    {{ __('My Secret Links') }}
+                <flux:sidebar.item icon="list-music" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>
+                    Énekrendjeim
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="arrow-path-rounded-square" :href="route('loans')" :current="request()->routeIs('loans', 'loans.*')" wire:navigate>
+                    {{ __('Loans') }}
+                </flux:sidebar.item>
+            </flux:sidebar.group>
+            <flux:sidebar.group heading="Böngészés">
+                <flux:sidebar.item icon="circle-stack" :href="route('music-database')" :current="request()->routeIs('music-database')" wire:navigate>
+                    Énektár
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="music" :href="route('musics')" :current="request()->routeIs('musics')" wire:navigate>
+                    {{ __('Music Pieces') }}
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="arrow-down-tray" :href="route('public-scores')" :current="request()->routeIs('public-scores', 'public-scores.*')" wire:navigate>
+                    Ingyenes kották
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="globe" :href="route('music-plans')" :current="request()->routeIs('music-plans')" wire:navigate>
+                    Közzétett énekrendek
                 </flux:sidebar.item>
                 <flux:sidebar.item icon="book-open" :href="route('collections')" :current="request()->routeIs('collections')" wire:navigate>
                     {{ __('Collections') }}

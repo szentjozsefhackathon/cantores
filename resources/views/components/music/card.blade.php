@@ -4,7 +4,7 @@
     'scopeLabel' => null,
     'scoreReasons' => [],
     'privateShare' => false,
-    'shareScores' => [],
+    'loanScores' => [],
     'popularity' => null,
 ])
 
@@ -173,36 +173,45 @@
     </div>
     @endif
 
-    @if($privateShare && !empty($shareScores))
+    @if($privateShare && !empty($loanScores))
     <div class="border-b border-gray-200 dark:border-gray-700 px-4 py-3 space-y-3">
-        @foreach($shareScores as $shareScore)
+        @foreach($loanScores as $loanScore)
         <div class="space-y-1">
-            @if(!empty($shareScore['share_url']))
-            <a href="{{ $shareScore['share_url'] }}"
+            @if(!empty($loanScore['loan_url']))
+            <a href="{{ $loanScore['loan_url'] }}"
                target="_blank"
                rel="noopener noreferrer"
                class="relative z-10 inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline">
-                {{ $shareScore['title'] }}
-                <flux:badge size="sm" color="zinc">{{ $shareScore['format'] }}</flux:badge>
+                {{ $loanScore['title'] }}
+                <flux:badge size="sm" color="zinc">{{ $loanScore['format'] }}</flux:badge>
                 <flux:icon name="arrow-top-right-on-square" variant="micro" class="text-gray-400" />
             </a>
             @else
             <span class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100">
-                {{ $shareScore['title'] }}
-                <flux:badge size="sm" color="zinc">{{ $shareScore['format'] }}</flux:badge>
+                {{ $loanScore['title'] }}
+                <flux:badge size="sm" color="zinc">{{ $loanScore['format'] }}</flux:badge>
             </span>
             @endif
 
-            @if(!empty($shareScore['incipit_url']))
+            @if(!empty($loanScore['is_passed_on']) && !empty($loanScore['owner_name']))
+            {{-- Attribution is what lending buys over re-uploading, so it is not removable. --}}
+            <div>
+                <flux:badge size="sm" color="amber" icon="arrow-path-rounded-square">
+                    {{ __('On loan · :name\'s score', ['name' => $loanScore['owner_name']]) }}
+                </flux:badge>
+            </div>
+            @endif
+
+            @if(!empty($loanScore['incipit_url']))
             <x-incipit-image class="max-w-full"
-                 :src="$shareScore['incipit_url']"
-                 :alt="$shareScore['title']"
+                 :src="$loanScore['incipit_url']"
+                 :alt="$loanScore['title']"
                  img-class="block h-auto max-h-14 w-auto max-w-full" />
             @endif
 
-            @if(!empty($shareScore['urls']))
+            @if(!empty($loanScore['urls']))
             <div class="flex flex-wrap gap-2">
-                @foreach($shareScore['urls'] as $scoreUrl)
+                @foreach($loanScore['urls'] as $scoreUrl)
                     <a href="{{ $scoreUrl['url'] }}"
                        target="_blank"
                        rel="noopener noreferrer"

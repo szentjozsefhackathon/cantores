@@ -55,10 +55,18 @@ class ScorePublicationReview extends Component
     public function queue(): Collection
     {
         return ScorePublication::query()
-            ->with(['score.music.authors', 'score.files', 'submitter'])
+            ->with(['score.music.authors', 'score.files', 'submitter', 'approvedVersion', 'submittedVersion'])
+            // The "submitted" filter is the work queue, not the literal status: a
+            // correction queued behind a score that is already published stays
+            // Approved so the public keeps reading it, and would otherwise sit in
+            // nobody's list.
             ->when(
-                $this->status !== 'all',
-                fn ($query) => $query->where('status', $this->status)
+                $this->status === ScorePublicationStatus::Submitted->value,
+                fn ($query) => $query->pending(),
+                fn ($query) => $query->when(
+                    $this->status !== 'all',
+                    fn ($query) => $query->where('status', $this->status)
+                )
             )
             ->orderBy('submitted_at')
             ->limit(100)

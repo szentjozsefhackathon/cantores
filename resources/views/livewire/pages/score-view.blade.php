@@ -1,6 +1,8 @@
 <div class="py-8">
     <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <flux:card class="p-4 lg:p-6">
+            <x-borrowed-bar :owner-name="$ownerName" :can-keep="$canKeep" :kept="$kept" />
+
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                     <flux:heading size="2xl">{{ $this->score->title }}</flux:heading>
@@ -48,7 +50,7 @@
                         icon="arrow-down-tray"
                         variant="outline"
                         size="sm"
-                        :href="route('share.score.file.download', ['token' => $shareToken, 'score' => $this->score, 'scoreFile' => $file])">
+                        :href="route('loan.score.file.download', ['token' => $loanToken, 'score' => $this->score, 'scoreFile' => $file])">
                         {{ __('Download :name', ['name' => $file->displayName()]) }}
                     </flux:button>
                     @endif

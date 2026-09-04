@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages;
 
 use App\Models\MusicPlan;
+use App\Services\MusicPlanScoreListService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -73,6 +74,13 @@ new class extends Component
     private function loadPlanSlots(): void
     {
         $user = Auth::user();
+
+        // The service list: for each music, every score this reader may actually
+        // see — their own, the ones they kept out of somebody's loan, and the
+        // public library. Nothing is chosen and nothing is stored, so a published
+        // plan needs no special case: each viewer sees what they hold.
+        $scoresByMusicId = app(MusicPlanScoreListService::class)->forViewer($this->musicPlan, $user);
+
         $assignmentsByPivot = $this->musicPlan->musicAssignments()
             ->with([
                 'music' => fn ($q) => $q->with('collections')->visibleTo($user),
@@ -93,7 +101,7 @@ new class extends Component
 
         $this->planSlots = $slotsQuery
             ->get()
-            ->map(function ($slot) use ($assignmentsByPivot) {
+            ->map(function ($slot) use ($assignmentsByPivot, $scoresByMusicId) {
                 $pivotId = $slot->pivot->id;
                 $assignments = $assignmentsByPivot->get($pivotId, collect());
 
@@ -103,7 +111,7 @@ new class extends Component
                     'name' => $slot->name,
                     'description' => $slot->description,
                     'sequence' => $slot->pivot->sequence,
-                    'assignments' => $assignments->map(function ($assignment) {
+                    'assignments' => $assignments->map(function ($assignment) use ($scoresByMusicId) {
                         return [
                             'id' => $assignment->id,
                             'music_id' => $assignment->music_id,
@@ -111,6 +119,7 @@ new class extends Component
                             'notes' => $assignment->notes,
                             'music' => $assignment->music,
                             'scope_label' => $assignment->scope_label,
+                            'scores' => $scoresByMusicId->get($assignment->music_id, collect())->all(),
                         ];
                     })->all(),
                 ];
@@ -238,6 +247,10 @@ new class extends Component
                                                 :key="'music-card-'.$assignment['id']"
                                                 :music="$assignment['music']"
                                             />
+
+                                            @if(!empty($assignment['scores']))
+                                            <x-plan-score-list :scores="$assignment['scores']" />
+                                            @endif
                                         @else
                                         <flux:callout variant="secondary" icon="information-circle">
                                             A zenei bejegyzés már nem érhető el.
@@ -276,7 +289,7 @@ new class extends Component
                         Énekrend szerkesztése
                     </flux:button>
                     @endif
-                    <livewire:music-plan-share-modal :music-plan="$musicPlan" />
+                    <livewire:music-plan-loan-modal :music-plan="$musicPlan" />
                     <form method="POST" action="{{ route('music-plans.copy', $musicPlan) }}" class="inline">
                         @csrf
                         <flux:button type="submit" variant="outline" color="blue" icon="clipboard-copy">

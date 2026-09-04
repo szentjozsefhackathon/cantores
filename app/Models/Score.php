@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Concerns\HasShares;
+use App\Concerns\HasLoans;
 use App\Enums\ScoreFormat;
 use App\Services\ScoreFileStorage;
 use Illuminate\Database\Eloquent\Collection;
@@ -52,7 +52,7 @@ class Score extends Model
     /** @use HasFactory<\Database\Factories\ScoreFactory> */
     use HasFactory;
 
-    use HasShares;
+    use HasLoans;
 
     /**
      * The attributes that are mass assignable.
@@ -86,9 +86,17 @@ class Score extends Model
     }
 
     /**
-     * The database drops score_files rows by cascade, which never reaches the
-     * encrypted artifacts on disk — so they are removed here, before the row
-     * that names them is gone.
+     * Two things a score's own row has to do for itself.
+     *
+     * Deleting: the database drops score_files rows by cascade, which never
+     * reaches the encrypted artifacts on disk — so they are removed here, before
+     * the row that names them is gone.
+     *
+     * Saving: the public page renders GABC, ABC and ChordPro in the reader's
+     * browser straight from `content` and `format`, so editing the typed source
+     * of a published score is exactly as capable of introducing someone else's
+     * work as replacing a file, and re-enters the review queue the same way.
+     * `settings` is deliberately not in the list — see ScorePublicationWatcher.
      */
     protected static function booted(): void
     {
@@ -98,6 +106,14 @@ class Score extends Model
             foreach ($score->files()->get() as $file) {
                 $storage->deleteAll($file);
             }
+        });
+
+        static::saved(function (Score $score): void {
+            if (! $score->wasChanged(['content', 'format'])) {
+                return;
+            }
+
+            app(\App\Services\ScorePublicationWatcher::class)->scoreChanged($score);
         });
     }
 
@@ -133,7 +149,7 @@ class Score extends Model
      * Whether guests may reach this score's pages and files.
      *
      * Publication is a third access axis, independent of both ownership
-     * (ScorePolicy) and secret links (ShareAccessService): revoking a share
+     * (ScorePolicy) and secret links (LoanAccessService): revoking a share
      * never unpublishes, and unpublishing never revokes a share.
      */
     public function isPublished(): bool
@@ -168,15 +184,20 @@ class Score extends Model
     }
 
     /**
-     * Every uploaded file, oldest first, so a listing keeps a stable order.
+     * Every uploaded file still part of this score, oldest first, so a listing
+     * keeps a stable order.
+     *
+     * Superseded rows are left out: those are bytes kept alive because a published
+     * version refers to them, not files the score still offers. `files()` itself
+     * stays unfiltered, because deleting a score has to reach every artifact.
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreFile>
      */
     public function orderedFiles(): Collection
     {
         return $this->relationLoaded('files')
-            ? $this->files->sortBy('id')->values()
-            : $this->files()->orderBy('id')->get();
+            ? $this->files->filter(fn (ScoreFile $file): bool => ! $file->isSuperseded())->sortBy('id')->values()
+            : $this->files()->whereNull('superseded_at')->orderBy('id')->get();
     }
 
     /**
@@ -258,14 +279,14 @@ class Score extends Model
     /**
      * The read-only page for this score as reached through the given grant.
      */
-    public function shareUrl(string $token): string
+    public function loanUrl(string $token): string
     {
-        return route('share.score', ['token' => $token, 'score' => $this]);
+        return route('loan.score', ['token' => $token, 'score' => $this]);
     }
 
-    public function shareIncipitUrl(string $token): string
+    public function loanIncipitUrl(string $token): string
     {
-        return route('share.score.incipit', ['token' => $token, 'score' => $this])
+        return route('loan.score.incipit', ['token' => $token, 'score' => $this])
             .'?v='.($this->updated_at?->timestamp ?? 0);
     }
 

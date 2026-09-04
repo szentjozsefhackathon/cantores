@@ -18,7 +18,7 @@ class FolderEditor extends Component
 
     public string $name = '';
 
-    public ?string $secretLinkUrl = null;
+    public ?string $loanLinkUrl = null;
 
     /** @var array<int> */
     public array $scoreIds = [];
@@ -35,9 +35,9 @@ class FolderEditor extends Component
             $this->authorize('update', $folder);
             $this->folder = $folder;
             $this->name = $folder->name;
-            $shareToken = $folder->shareToken();
-            $this->secretLinkUrl = $shareToken !== null
-                ? route('folder.share', ['token' => $shareToken])
+            $loanToken = $folder->loanToken();
+            $this->loanLinkUrl = $loanToken !== null
+                ? route('folder.loan', ['token' => $loanToken])
                 : null;
             $this->scoreIds = $folder->scores()->pluck('scores.id')->toArray();
         } else {
@@ -94,25 +94,25 @@ class FolderEditor extends Component
     }
 
     #[Renderless]
-    public function generateSecretLink(): void
+    public function lendByLink(): void
     {
         abort_unless($this->folder instanceof Folder, 404);
         $this->authorize('update', $this->folder);
 
-        $share = $this->folder->mintShare();
+        $loan = $this->folder->mintLoan();
 
-        $this->secretLinkUrl = route('folder.share', ['token' => $share->token]);
+        $this->loanLinkUrl = route('folder.loan', ['token' => $loan->token]);
     }
 
     #[Renderless]
-    public function deleteSecretLink(): void
+    public function recallLoan(): void
     {
         abort_unless($this->folder instanceof Folder, 404);
         $this->authorize('update', $this->folder);
 
-        $this->folder->revokeShares();
+        $this->folder->revokeLoans();
 
-        $this->secretLinkUrl = null;
+        $this->loanLinkUrl = null;
     }
 
     public function toggleScore(int $scoreId): void

@@ -23,6 +23,15 @@ A szolgáltatás a Szent József Hackathon keretében önkéntes fejlesztők ál
 - Énekrendek (zenei tervek) tartalma, amelyeket Ön készít és a platformon tárol.
 - Megjegyzések, kedvencek, beállítások.
 
+**Kölcsönzések:**
+
+Ha bejelentkezve megnyit egy kölcsönlinket, rögzítjük, hogy Ön megnyitotta:
+a kölcsönadó látja a beceneved és a megnyitás időpontját. Bejelentkezés nélküli
+megnyitás névtelen marad – ilyenkor csak a megnyitások száma nő. A kölcsönadó
+oldalán ezért mindig külön szerepel, hány megnyitás volt ismert és hány névtelen.
+Ha egy kölcsönkapott kottát elment a kölcsönzései közé, ezt a döntést is
+rögzítjük, és bármikor eltávolíthatja a listájáról.
+
 **Technikai adatok (automatikusan rögzítjük):**
 
 - IP‑cím, böngésző típusa, operációs rendszer, látogatás időpontja.

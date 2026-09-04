@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Score;
 use App\Models\ScoreFile;
-use App\Models\Share;
+use App\Models\Loan;
 use App\Services\ScoreFileResponder;
-use App\Services\ShareAccessService;
+use App\Services\LoanAccessService;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -16,19 +16,19 @@ use Symfony\Component\HttpFoundation\Response;
  * different things, so the grant carries `allow_download` and this is the only
  * place it decides anything.
  */
-class ScoreShareFileDownloadController extends Controller
+class ScoreLoanFileDownloadController extends Controller
 {
     public function __invoke(
-        ShareAccessService $shareAccess,
+        LoanAccessService $loanAccess,
         ScoreFileResponder $responder,
         string $token,
         Score $score,
         ScoreFile $scoreFile,
     ): Response {
-        $share = $shareAccess->resolve($token);
-        abort_if(! $share instanceof Share, 404);
-        abort_unless($shareAccess->grantsScore($share, $score), 404);
-        abort_unless($share->allow_download, 403);
+        $loan = $loanAccess->resolve($token);
+        abort_if(! $loan instanceof Loan, 404);
+        abort_unless($loanAccess->grantsScore($loan, $score), 404);
+        abort_unless($loan->allow_download, 403);
 
         abort_unless($scoreFile->score_id === $score->id, 404);
 

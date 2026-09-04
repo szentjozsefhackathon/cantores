@@ -7,6 +7,7 @@ enum NotificationType: string
     case ERROR_REPORT = 'error_report';
     case CONTACT_MESSAGE = 'contact_message';
     case RIGHTS_REPORT = 'rights_report';
+    case LOAN_REQUEST = 'loan_request';
     // Future expansion: SYSTEM = 'system', MENTION = 'mention', etc.
 
     public function label(): string
@@ -15,6 +16,7 @@ enum NotificationType: string
             self::ERROR_REPORT => __('Error report'),
             self::CONTACT_MESSAGE => __('Contact message'),
             self::RIGHTS_REPORT => __('Rights complaint'),
+            self::LOAN_REQUEST => __('Loan request'),
         };
     }
 }

@@ -64,6 +64,9 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <flux:badge size="sm">{{ $publication->status->label() }}</flux:badge>
+                            @if($publication->hasUnpublishedChanges())
+                            <flux:badge size="sm" color="amber">{{ __('Newer version awaiting review') }}</flux:badge>
+                            @endif
                             <flux:button
                                 size="sm"
                                 variant="outline"

@@ -9,7 +9,7 @@
 
     @if($showModal)
     <flux:modal wire:model="showModal" class="max-w-2xl">
-        <flux:heading size="lg" class="mb-4">Énekrend megosztása</flux:heading>
+        <flux:heading size="lg" class="mb-4">Énekrend kölcsönadása</flux:heading>
 
         <flux:text class="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
             Az alábbi szöveget másolhatod és beillesztheted egy messenger csoportba:
@@ -29,24 +29,24 @@
         <!-- Secret link section (owner only) -->
         @if($isOwner)
         <div class="mb-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
-            <flux:heading size="sm" class="mb-2">Titkos megosztási link</flux:heading>
+            <flux:heading size="sm" class="mb-2">Kölcsönlink</flux:heading>
             <flux:text class="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
-                A titkos link segítségével megoszthatod az énekrend teljes tartalmát (privát zenékkel és kottákkal együtt) bárki számára, aki rendelkezik a linkkel.
+                A kölcsönlinkkel bárkinek kölcsönadhatod az énekrend teljes tartalmát – a privát énekekkel és kottákkal együtt. Aki megkapja, tovább is adhatja; a linket bármikor visszavonhatod.
             </flux:text>
 
-            @if($secretLinkUrl)
+            @if($loanLinkUrl)
             <div class="flex flex-col gap-2">
-                <flux:input value="{{ $secretLinkUrl }}" readonly />
+                <flux:input value="{{ $loanLinkUrl }}" readonly />
                 <div class="flex gap-2">
                     <flux:button
-                        wire:click="$dispatch('copy-to-clipboard', '{{ $secretLinkUrl }}')"
+                        wire:click="$dispatch('copy-to-clipboard', '{{ $loanLinkUrl }}')"
                         variant="outline"
                         size="sm"
                         icon="clipboard-copy">
                         Link másolása
                     </flux:button>
                     <flux:button
-                        wire:click="deleteSecretLink"
+                        wire:click="recallLoan"
                         variant="outline"
                         color="red"
                         size="sm"
@@ -57,12 +57,12 @@
             </div>
             @else
             <flux:button
-                wire:click="generateSecretLink"
+                wire:click="lendByLink"
                 variant="outline"
                 color="blue"
                 size="sm"
                 icon="link">
-                Titkos link generálása
+                Kölcsönadás linkkel
             </flux:button>
             @endif
         </div>

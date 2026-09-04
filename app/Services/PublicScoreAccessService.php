@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\ScorePublication;
+use App\Models\ScoreVersion;
 use App\Policies\ScorePublicationPolicy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
  * The only gate on the public library, and the third access axis on a score.
  *
  * The other two are ownership (ScorePolicy) and secret links
- * (ShareAccessService). This one is deliberately separate from both, and its
+ * (LoanAccessService). This one is deliberately separate from both, and its
  * routes are deliberately separate from the authenticated `/scores/*` ones:
  * those sit behind `auth,verified`, and that middleware is a second line of
  * defence over every private file on the site. Adding a public branch inside
@@ -79,11 +80,21 @@ class PublicScoreAccessService
     /**
      * Whether what the viewer is looking at is a reviewer's preview rather than
      * the live library page, so the page can say so and stay out of the index.
+     *
+     * Two cases, and the second one only exists because of versioning: a score
+     * that is not published yet, and a published score with a correction waiting
+     * in the queue. A reviewer asked to judge that correction has to be shown the
+     * correction, not the version the public is reading.
      */
     public function isPreview(Score $score): bool
     {
-        return ! $this->published($score) instanceof ScorePublication
-            && $this->previewable($score) instanceof ScorePublication;
+        if (! $this->previewable($score) instanceof ScorePublication) {
+            return false;
+        }
+
+        $published = $this->published($score);
+
+        return ! $published instanceof ScorePublication || $published->hasUnpublishedChanges();
     }
 
     /**
@@ -118,11 +129,42 @@ class PublicScoreAccessService
 
         abort_unless($scoreFile->score_id === $score->getKey(), 404);
 
+        // What the public may fetch is what the approved version was approved
+        // with, not what the score currently flags. The two differ exactly when a
+        // file has been replaced: the old bytes are still the published page's,
+        // and the new ones are not published until a reviewer says so.
+        $version = $this->versionFor($score);
+
+        if ($version instanceof ScoreVersion) {
+            abort_unless($version->files()->whereKey($scoreFile->getKey())->exists(), 404);
+
+            return $scoreFile;
+        }
+
         // Not isPubliclyAvailable(): that asks whether the score is live, which
         // is exactly what a preview has not settled yet.
         abort_unless($scoreFile->mayBeOffered(), 404);
 
         return $scoreFile;
+    }
+
+    /**
+     * The frozen copy behind this score's public page, if it has one.
+     *
+     * A publication approved before versioning existed has none, and the live
+     * score stands in — the same thing the page always showed.
+     */
+    public function versionFor(Score $score): ?ScoreVersion
+    {
+        $publication = $score->publication;
+
+        if (! $publication instanceof ScorePublication) {
+            return null;
+        }
+
+        return $this->isPreview($score)
+            ? $publication->submittedVersion
+            : $publication->approvedVersion;
     }
 
     /**

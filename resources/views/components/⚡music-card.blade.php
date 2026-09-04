@@ -18,20 +18,20 @@ new class extends Component
     public bool $privateShare = false;
 
     /** @var array<int, array<string, mixed>> */
-    public array $shareScores = [];
+    public array $loanScores = [];
 
     /**
      * @param  array<int, array{label: string, points: int}>  $score_reasons
-     * @param  array<int, array<string, mixed>>  $shareScores
+     * @param  array<int, array<string, mixed>>  $loanScores
      */
-    public function mount(Music $music, ?int $score = null, ?string $scope_label = null, array $score_reasons = [], bool $privateShare = false, array $shareScores = [], ?int $popularity = null): void
+    public function mount(Music $music, ?int $score = null, ?string $scope_label = null, array $score_reasons = [], bool $privateShare = false, array $loanScores = [], ?int $popularity = null): void
     {
         $this->music = $music->load(['collections', 'tags', 'authors', 'urls', 'scriptureReferences', 'directMusicRelations.relatedMusic.collections', 'inverseMusicRelations.music.collections', 'publicPreviewScores']);
         $this->score = $score;
         $this->scope_label = $scope_label;
         $this->score_reasons = $score_reasons;
         $this->privateShare = $privateShare;
-        $this->shareScores = $shareScores;
+        $this->loanScores = $loanScores;
         $this->popularity = $popularity;
     }
 
@@ -66,7 +66,7 @@ new class extends Component
         :scope-label="$scope_label"
         :score-reasons="$score_reasons"
         :private-share="$privateShare"
-        :share-scores="$shareScores"
+        :loan-scores="$loanScores"
         :popularity="$popularity"
     />
 </div>

@@ -18,6 +18,8 @@ use RuntimeException;
  */
 class ScorePublicationService
 {
+    public function __construct(private readonly ScoreVersionService $versions) {}
+
     /**
      * Nominate a score, or re-nominate one that was rejected or withdrawn.
      *
@@ -47,11 +49,17 @@ class ScorePublicationService
 
             if ($publication instanceof ScorePublication) {
                 $publication->update($payload);
-
-                return $publication;
+            } else {
+                $publication = $score->publication()->create($payload);
             }
 
-            return $score->publication()->create($payload);
+            // The reviewer judges a frozen copy, not whatever the score happens to
+            // be when they get to it.
+            $publication->update([
+                'submitted_version_id' => $this->versions->snapshotFor($publication)->getKey(),
+            ]);
+
+            return $publication;
         });
     }
 
@@ -68,6 +76,8 @@ class ScorePublicationService
         }
 
         DB::transaction(function () use ($publication, $score, $reviewer, $notes, $selfApproved): void {
+            $version = $publication->submittedVersion ?? $this->versions->snapshot($score);
+
             $publication->update([
                 'status' => ScorePublicationStatus::Approved,
                 'reviewer_id' => $reviewer->getKey(),
@@ -76,7 +86,12 @@ class ScorePublicationService
                 'self_approved' => $selfApproved,
                 'published_at' => $publication->published_at ?? now(),
                 'unpublished_at' => null,
-                'approved_fingerprint' => $publication->computeFingerprint(),
+                // The version the reviewer read is what goes on the shelf, and the
+                // fingerprint is that version's — not the live score's, which may
+                // already have moved on.
+                'approved_version_id' => $version->getKey(),
+                'submitted_version_id' => $version->getKey(),
+                'approved_fingerprint' => $version->fingerprint(),
             ]);
 
             // A published score's incipit is trivially public, so the listing
@@ -85,10 +100,36 @@ class ScorePublicationService
         });
 
         $this->flushPublicCaches();
+
+        // If the score moved on while it was in the queue, the reviewer approved a
+        // version the score no longer matches: publish that one and queue the rest.
+        if (! $publication->fresh()?->matchesApprovedFingerprint()) {
+            $this->queueChangeForReview($publication->refresh());
+        }
     }
 
+    /**
+     * Turn a nomination down.
+     *
+     * A change queued behind a score that is already published is a different act
+     * from rejecting the score itself: the queued version is dropped and what the
+     * public was already reading stays where it is.
+     */
     public function reject(ScorePublication $publication, User $reviewer, string $notes): void
     {
+        if ($publication->status->isPublic() && $publication->hasUnpublishedChanges()) {
+            $publication->update([
+                'reviewer_id' => $reviewer->getKey(),
+                'reviewed_at' => now(),
+                'review_notes' => $notes,
+                'submitted_version_id' => $publication->approved_version_id,
+            ]);
+
+            $this->flushPublicCaches();
+
+            return;
+        }
+
         $publication->update([
             'status' => ScorePublicationStatus::Rejected,
             'reviewer_id' => $reviewer->getKey(),
@@ -140,23 +181,46 @@ class ScorePublicationService
     }
 
     /**
-     * Drop an approval whose bytes no longer match what was reviewed.
+     * Put a change to an approved score back in the review queue.
      *
-     * Called when a published file's contents change under it. The score leaves
-     * the library immediately and goes back into the queue rather than being
-     * rejected, since nothing has been judged yet.
+     * Called whenever something that can carry someone else's work changes under an
+     * approval: the typed source, a published file, or a score link. The score
+     * stays published and the public keeps reading the approved version while the
+     * change waits, so correcting a wrong accidental no longer takes the score off
+     * the shelf — the site's answer to "there is an error in bar 12" is to fix the
+     * error, not to remove the score.
+     *
+     * The exception is a publication approved before versioning existed, which has
+     * no snapshot for the public to fall back on. That one is unpublished, as it
+     * always was.
      */
-    public function invalidateApproval(ScorePublication $publication): void
+    public function queueChangeForReview(ScorePublication $publication): void
     {
         if (! $publication->status->isPublic()) {
             return;
         }
 
+        if ($publication->approved_version_id === null) {
+            $publication->update([
+                'status' => ScorePublicationStatus::Submitted,
+                'unpublished_at' => now(),
+                'approved_fingerprint' => null,
+                'review_notes' => __('Returned for review: the score changed after approval.'),
+            ]);
+
+            $this->flushPublicCaches();
+
+            return;
+        }
+
+        // Refreshed rather than added to while it waits: the reviewer must read the
+        // current offer, and a handful of rows per score is the whole budget.
+        $version = $this->versions->snapshotFor($publication);
+
         $publication->update([
-            'status' => ScorePublicationStatus::Submitted,
-            'unpublished_at' => now(),
-            'approved_fingerprint' => null,
-            'review_notes' => __('Returned for review: a published file changed after approval.'),
+            'submitted_version_id' => $version->getKey(),
+            'submitted_at' => now(),
+            'review_notes' => __('Returned for review: the score changed after approval.'),
         ]);
 
         $this->flushPublicCaches();

@@ -2,11 +2,13 @@
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
         <flux:card class="p-5">
+            <x-borrowed-bar :owner-name="$ownerName" :can-keep="$canKeep" :kept="$kept" />
+
             <div class="flex flex-wrap items-center gap-4 mb-4">
                 <x-genre-icon :genre-id="$musicPlan->genre_id" />
                 <flux:heading size="xl">Énekrend</flux:heading>
                 <x-user-badge :user="$musicPlan->user" />
-                <flux:badge color="amber" icon="lock-closed">Titkos megosztás</flux:badge>
+                <flux:badge color="amber" icon="lock-closed">{{ __('Lent by link') }}</flux:badge>
 
                 @if($musicPlan->actual_date)
                 <div class="flex items-center gap-1">
@@ -94,7 +96,7 @@
                                                 :key="'music-card-'.$assignment['id']"
                                                 :music="$assignment['music']"
                                                 :private-share="true"
-                                                :share-scores="$assignment['scores']"
+                                                :loan-scores="$assignment['scores']"
                                             />
                                         @else
                                         <flux:callout variant="secondary" icon="information-circle">

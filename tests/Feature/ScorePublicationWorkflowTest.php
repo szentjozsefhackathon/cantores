@@ -158,7 +158,7 @@ it('writes an audit row for every decision', function () {
         ->toContain('status');
 });
 
-it('unpublishes a score when a published file is replaced after approval', function () {
+it('queues a change for review when a published file changes after approval', function () {
     $score = Score::factory()->create();
     $file = ScoreFile::factory()->published()->ready()->create([
         'score_id' => $score->id,
@@ -169,7 +169,32 @@ it('unpublishes a score when a published file is replaced after approval', funct
     $this->service->approve($publication, reviewer());
     expect($publication->fresh()->status)->toBe(ScorePublicationStatus::Approved);
 
-    // What ScoreFileUploader::replace() does: same row, different bytes.
+    $file->update(['checksum' => hash('sha256', 'something else entirely')]);
+
+    // The approved version stays on the shelf while the change waits: taking the
+    // score down would be answering "there is an error in bar 12" by removing the
+    // score. It is in the review queue all the same.
+    $publication = $publication->fresh();
+
+    expect($publication->status)->toBe(ScorePublicationStatus::Approved)
+        ->and($score->fresh()->isPublished())->toBeTrue()
+        ->and($publication->hasUnpublishedChanges())->toBeTrue()
+        ->and(ScorePublication::query()->pending()->whereKey($publication->id)->exists())->toBeTrue();
+});
+
+it('unpublishes a score approved before versioning existed when it changes', function () {
+    $score = Score::factory()->create();
+    $file = ScoreFile::factory()->published()->ready()->create([
+        'score_id' => $score->id,
+        'rights' => ScoreFileRights::PublicDomain,
+    ]);
+    $publication = ScorePublication::factory()->of($score)->submitted()->create();
+
+    $this->service->approve($publication, reviewer());
+
+    // No snapshot for the public to fall back on, so the old behaviour stands.
+    $publication->fresh()->forceFill(['approved_version_id' => null])->saveQuietly();
+
     $file->update(['checksum' => hash('sha256', 'something else entirely')]);
 
     expect($publication->fresh()->status)->toBe(ScorePublicationStatus::Submitted)

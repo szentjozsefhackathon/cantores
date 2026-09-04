@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\NotificationType;
 use App\Mail\InSystemNotificationMail;
+use App\Models\Loan;
 use App\Models\Notification;
 use App\Models\NotificationReply;
 use App\Models\Score;
@@ -214,6 +215,37 @@ class NotificationService
         }
 
         return $recipients;
+    }
+
+    /**
+     * Ask the owner of an ended loan to lend it again.
+     *
+     * Deliberately just a message: there is no approval flow and no per-person
+     * grant behind it. The owner answers by lending again, or not at all.
+     */
+    public function createLoanRequest(Loan $loan, User $requester, string $message): Notification
+    {
+        $owner = $loan->user;
+
+        $notification = DB::transaction(function () use ($loan, $requester, $owner, $message) {
+            $notification = Notification::create([
+                'type' => NotificationType::LOAN_REQUEST,
+                'message' => $message,
+                'reporter_id' => $requester->id,
+                'notifiable_id' => $loan->getKey(),
+                'notifiable_type' => $loan->getMorphClass(),
+            ]);
+
+            if ($owner instanceof User) {
+                $notification->recipients()->attach([$owner->id => ['created_at' => now()]]);
+            }
+
+            return $notification;
+        });
+
+        $this->queueEmailNotifications($notification, $owner instanceof User ? [$owner->id] : [], $requester);
+
+        return $notification;
     }
 
     /**

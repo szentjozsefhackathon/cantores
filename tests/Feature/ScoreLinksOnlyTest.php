@@ -3,9 +3,9 @@
 use App\Livewire\Pages\ScoreEditor;
 use App\Livewire\Pages\Scores;
 use App\Livewire\Pages\ScoreView;
+use App\Models\Loan;
 use App\Models\Score;
 use App\Models\ScoreUrl;
-use App\Models\Share;
 use App\Models\User;
 use App\MusicUrlLabel;
 use Livewire\Livewire;
@@ -155,14 +155,14 @@ it('shows a Links badge for a links-only score in the list', function () {
 
 it('renders a links-only score on the read-only share page', function () {
     $score = Score::factory()->unattached()->linksOnly()->create();
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
     ScoreUrl::create([
         'score_id' => $score->id,
         'url' => 'https://drive.google.com/links-only',
         'label' => MusicUrlLabel::SheetMusic->value,
     ]);
 
-    Livewire::test(ScoreView::class, ['token' => $share->token])
+    Livewire::test(ScoreView::class, ['token' => $loan->token])
         ->assertHasNoErrors()
         ->assertSee('https://drive.google.com/links-only');
 });

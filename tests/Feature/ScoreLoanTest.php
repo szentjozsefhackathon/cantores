@@ -3,7 +3,7 @@
 use App\Livewire\Pages\ScoreEditor;
 use App\Livewire\Pages\ScoreView;
 use App\Models\Score;
-use App\Models\Share;
+use App\Models\Loan;
 use App\Models\User;
 use Illuminate\Support\Js;
 use Livewire\Livewire;
@@ -12,37 +12,37 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
 it('returns 404 for an unknown token', function () {
-    get(route('score.share', ['token' => 'nonexistenttoken12345678901234']))->assertNotFound();
+    get(route('score.loan', ['token' => 'nonexistenttoken12345678901234']))->assertNotFound();
 });
 
 it('redirects the owner to the edit screen', function () {
     $user = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $user->id]);
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
 
     actingAs($user);
 
-    Livewire::test(ScoreView::class, ['token' => $share->token])
+    Livewire::test(ScoreView::class, ['token' => $loan->token])
         ->assertRedirect(route('scores.edit', ['score' => $score->id]));
 });
 
 it('shows read-only view to a guest', function () {
     $owner = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $owner->id]);
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
 
-    get(route('score.share', ['token' => $share->token]))->assertOk();
+    get(route('score.loan', ['token' => $loan->token]))->assertOk();
 });
 
 it('shows read-only view to another authenticated user', function () {
     $owner = User::factory()->create();
     $other = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $owner->id]);
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
 
     actingAs($other);
 
-    Livewire::test(ScoreView::class, ['token' => $share->token])
+    Livewire::test(ScoreView::class, ['token' => $loan->token])
         ->assertSet('title', $score->title)
         ->assertSet('content', $score->content)
         ->assertSet('format', $score->format->value);
@@ -55,9 +55,9 @@ it('loads score content into the view component', function () {
         'title' => 'My Hymn',
         'format' => 'abc',
     ]);
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
 
-    Livewire::test(ScoreView::class, ['token' => $share->token])
+    Livewire::test(ScoreView::class, ['token' => $loan->token])
         ->assertSet('title', 'My Hymn')
         ->assertSet('format', 'abc');
 });
@@ -67,13 +67,13 @@ it('owner can generate a secret link', function () {
     $score = Score::factory()->create(['user_id' => $user->id]);
     actingAs($user);
 
-    expect($score->shareToken())->toBeNull();
+    expect($score->loanToken())->toBeNull();
 
     Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->call('generateSecretLink')
+        ->call('lendByLink')
         ->assertHasNoErrors();
 
-    expect($score->fresh()->shareToken())->not->toBeNull()->toHaveLength(32);
+    expect($score->fresh()->loanToken())->not->toBeNull()->toHaveLength(32);
 });
 
 it('secret link resolves to a valid URL after generation', function () {
@@ -82,14 +82,14 @@ it('secret link resolves to a valid URL after generation', function () {
     actingAs($user);
 
     Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->call('generateSecretLink');
+        ->call('lendByLink');
 
-    $token = $score->fresh()->shareToken();
+    $token = $score->fresh()->loanToken();
     expect($token)->not->toBeNull();
 
     // Verify as guest (owner would be redirected to edit)
     \Illuminate\Support\Facades\Auth::logout();
-    get(route('score.share', ['token' => $token]))->assertOk();
+    get(route('score.loan', ['token' => $token]))->assertOk();
 });
 
 it('generating a secret link twice reuses the live grant', function () {
@@ -97,49 +97,49 @@ it('generating a secret link twice reuses the live grant', function () {
     $score = Score::factory()->create(['user_id' => $user->id]);
     actingAs($user);
 
-    Livewire::test(ScoreEditor::class, ['score' => $score])->call('generateSecretLink');
-    $first = $score->fresh()->shareToken();
+    Livewire::test(ScoreEditor::class, ['score' => $score])->call('lendByLink');
+    $first = $score->fresh()->loanToken();
 
-    Livewire::test(ScoreEditor::class, ['score' => $score])->call('generateSecretLink');
+    Livewire::test(ScoreEditor::class, ['score' => $score])->call('lendByLink');
 
-    expect($score->fresh()->shareToken())->toBe($first)
-        ->and($score->shares()->count())->toBe(1);
+    expect($score->fresh()->loanToken())->toBe($first)
+        ->and($score->loans()->count())->toBe(1);
 });
 
 it('owner can delete the secret link', function () {
     $user = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $user->id]);
-    Share::factory()->of($score)->create();
+    Loan::factory()->of($score)->create();
     actingAs($user);
 
     Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->call('deleteSecretLink')
+        ->call('recallLoan')
         ->assertHasNoErrors();
 
-    expect($score->fresh()->shareToken())->toBeNull();
+    expect($score->fresh()->loanToken())->toBeNull();
 });
 
 it('deleted secret link returns 404', function () {
     $user = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $user->id]);
-    $token = Share::factory()->of($score)->create()->token;
+    $token = Loan::factory()->of($score)->create()->token;
     actingAs($user);
 
     Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->call('deleteSecretLink');
+        ->call('recallLoan');
 
-    get(route('score.share', ['token' => $token]))->assertNotFound();
+    get(route('score.loan', ['token' => $token]))->assertNotFound();
 });
 
 it('returns 404 for a revoked or expired grant', function () {
     $owner = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $owner->id]);
 
-    $revoked = Share::factory()->of($score)->revoked()->create();
-    $expired = Share::factory()->of($score)->expired()->create();
+    $revoked = Loan::factory()->of($score)->revoked()->create();
+    $expired = Loan::factory()->of($score)->expired()->create();
 
-    get(route('score.share', ['token' => $revoked->token]))->assertNotFound();
-    get(route('score.share', ['token' => $expired->token]))->assertNotFound();
+    get(route('score.loan', ['token' => $revoked->token]))->assertNotFound();
+    get(route('score.loan', ['token' => $expired->token]))->assertNotFound();
 });
 
 it('another user cannot open ScoreEditor for someone elses score', function () {
@@ -156,14 +156,14 @@ it('another user cannot open ScoreEditor for someone elses score', function () {
 it('read-only view has noindex meta tag', function () {
     $owner = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $owner->id]);
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
 
-    get(route('score.share', ['token' => $share->token]))
+    get(route('score.loan', ['token' => $loan->token]))
         ->assertOk()
         ->assertSee('noindex, nofollow', false);
 });
 
-it('shows the share button in the editor header for a links-only score', function () {
+it('shows the lend button in the editor header for a links-only score', function () {
     $user = User::factory()->create();
     $score = Score::factory()->create([
         'user_id' => $user->id,
@@ -175,10 +175,10 @@ it('shows the share button in the editor header for a links-only score', functio
     Livewire::test(ScoreEditor::class, ['score' => $score])
         ->assertSet('linksOnly', true)
         ->assertSeeHtml('openShareModal()')
-        ->assertSee(__('Share this score'));
+        ->assertSee(__('Lend this score'));
 });
 
-it('disables the header share button until the score is saved', function () {
+it('disables the header lend button until the score is saved', function () {
     $user = User::factory()->create();
     actingAs($user);
 
@@ -204,15 +204,15 @@ it('omits the url-encoded share section from the modal for links-only scores', f
 
     Livewire::test(ScoreEditor::class, ['score' => $linksOnly])
         ->assertDontSee($encodedBlurb)
-        ->assertSee(__('Secret Link'));
+        ->assertSee(__('Lending Link'));
 });
 
 it('labels the export menu on the read-only share view', function () {
     $owner = User::factory()->create();
     $score = Score::factory()->abc()->create(['user_id' => $owner->id]);
-    $share = Share::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
 
-    get(route('score.share', ['token' => $share->token]))
+    get(route('score.loan', ['token' => $loan->token]))
         ->assertOk()
         ->assertSee('exportText: '.Js::from(__('Export')), false)
         ->assertSee('exportPdfText: '.Js::from(__('Export PDF')), false)

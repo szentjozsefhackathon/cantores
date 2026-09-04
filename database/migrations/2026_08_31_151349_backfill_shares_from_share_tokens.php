@@ -5,6 +5,7 @@ use App\Models\MusicPlan;
 use App\Models\Score;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -18,6 +19,11 @@ use Illuminate\Support\Str;
  *
  * The `share_token` columns are left in place, unused, and dropped in a later
  * migration once this has been verified in production.
+ *
+ * The destination table was renamed `shares` → `loans` shortly after this ran, so
+ * it is resolved at call time: on a fresh database this runs before the rename and
+ * writes to `shares`, and anywhere the rename has already happened it writes to
+ * `loans` instead.
  */
 return new class extends Migration
 {
@@ -34,12 +40,15 @@ return new class extends Migration
     {
         $now = now();
         $seen = [];
+        $target = $this->targetTable();
+        $typeColumn = $target === 'loans' ? 'lendable_type' : 'shareable_type';
+        $idColumn = $target === 'loans' ? 'lendable_id' : 'shareable_id';
 
         foreach (self::SOURCES as $model => $table) {
             DB::table($table)
                 ->whereNotNull('share_token')
                 ->orderBy('id')
-                ->chunkById(500, function ($rows) use ($model, $now, &$seen): void {
+                ->chunkById(500, function ($rows) use ($model, $now, $target, $typeColumn, $idColumn, &$seen): void {
                     $inserts = [];
 
                     foreach ($rows as $row) {
@@ -53,8 +62,8 @@ return new class extends Migration
 
                         $inserts[] = [
                             'user_id' => $row->user_id,
-                            'shareable_type' => $model,
-                            'shareable_id' => $row->id,
+                            $typeColumn => $model,
+                            $idColumn => $row->id,
                             'token' => $token,
                             'allow_download' => true,
                             'created_at' => $now,
@@ -63,7 +72,7 @@ return new class extends Migration
                     }
 
                     if ($inserts !== []) {
-                        DB::table('shares')->insert($inserts);
+                        DB::table($target)->insert($inserts);
                     }
                 });
         }
@@ -71,6 +80,11 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::table('shares')->truncate();
+        DB::table($this->targetTable())->truncate();
+    }
+
+    private function targetTable(): string
+    {
+        return Schema::hasTable('loans') ? 'loans' : 'shares';
     }
 };

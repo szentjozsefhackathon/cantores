@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\MusicPlanShareModal;
+use App\Livewire\MusicPlanLoanModal;
 use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlotAssignment;
@@ -43,7 +43,7 @@ test('share modal includes music URLs in share text', function () {
         'music_id' => $music->id,
     ]);
 
-    $component = Livewire::test(MusicPlanShareModal::class, ['musicPlan' => $musicPlan]);
+    $component = Livewire::test(MusicPlanLoanModal::class, ['musicPlan' => $musicPlan]);
     $component->call('openModal');
 
     $shareText = $component->instance()->shareText;
@@ -71,7 +71,7 @@ test('share modal works with music that has no URLs', function () {
         'music_id' => $music->id,
     ]);
 
-    $component = Livewire::test(MusicPlanShareModal::class, ['musicPlan' => $musicPlan]);
+    $component = Livewire::test(MusicPlanLoanModal::class, ['musicPlan' => $musicPlan]);
     $component->call('openModal');
 
     $shareText = $component->instance()->shareText;

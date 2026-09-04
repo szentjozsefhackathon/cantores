@@ -5,6 +5,7 @@ namespace App\Livewire\Pages;
 use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\ScorePublication;
+use App\Models\ScoreVersion;
 use App\Services\PublicScoreAccessService;
 use App\Services\ScoreAttributionBuilder;
 use Illuminate\Database\Eloquent\Collection;
@@ -18,8 +19,14 @@ use Livewire\Component;
  * A published score, as a guest sees it.
  *
  * Deliberately a sibling of ScoreView rather than a branch inside it: this page
- * is indexable, its files come from the publication rather than a grant, and it
- * carries an attribution block that the share page has no business showing.
+ * is indexable, its files come from the publication rather than a loan, and it
+ * carries an attribution block that a borrowed page has no business showing.
+ *
+ * What it draws is the *approved version*, not the live score. An owner fixing a
+ * typo therefore does not take their own score off the shelf while the correction
+ * waits in the queue, and what the public reads is what a reviewer actually read.
+ * A reviewer previewing a nomination gets the submitted version instead, which is
+ * the point of the preview.
  */
 class PublicScoreView extends Component
 {
@@ -59,10 +66,59 @@ class PublicScoreView extends Component
         }
 
         $this->score = $score->load(['urls', 'music.authors', 'music.collections', 'publication']);
+
+        $version = $this->version();
+
         $this->title = $score->title;
-        $this->format = $score->format?->value;
-        $this->content = $score->content ?? '';
-        $this->settings = $score->settings ?? [];
+        $this->format = $version?->format?->value ?? $score->format?->value;
+        $this->content = $version?->content ?? $score->content ?? '';
+        $this->settings = $version?->settings ?? $score->settings ?? [];
+    }
+
+    /**
+     * The frozen copy this page draws from: the approved one for the public, the
+     * submitted one for a reviewer looking at a nomination.
+     *
+     * Null for a publication approved before versioning existed, in which case the
+     * live score stands in — the same thing the page always showed.
+     */
+    public function version(): ?ScoreVersion
+    {
+        $publication = $this->score?->publication;
+
+        if (! $publication instanceof ScorePublication) {
+            return null;
+        }
+
+        return $this->isPreview
+            ? $publication->submittedVersion
+            : $publication->approvedVersion;
+    }
+
+    /**
+     * The score links as the version carries them, so a link added since approval
+     * does not appear on the public page before anyone has looked at it.
+     *
+     * @return \Illuminate\Support\Collection<int, array{url: string, label: \App\MusicUrlLabel|null, comment: string|null}>
+     */
+    #[Computed]
+    public function urls(): \Illuminate\Support\Collection
+    {
+        $version = $this->version();
+
+        if ($version === null) {
+            return collect($this->score?->urls ?? [])->map(fn ($url): array => [
+                'url' => $url->url,
+                'label' => $url->label,
+                'comment' => $url->comment,
+            ]);
+        }
+
+        return collect($version->urls ?? [])->map(fn (array $url): array => [
+            'url' => $url['url'],
+            'label' => \App\MusicUrlLabel::tryFrom((string) ($url['label'] ?? '')),
+            'comment' => $url['comment'] ?? null,
+        ]);
     }
 
     #[Computed]
@@ -79,6 +135,12 @@ class PublicScoreView extends Component
     #[Computed]
     public function scoreFiles(): Collection
     {
+        $version = $this->version();
+
+        if ($version instanceof ScoreVersion) {
+            return $version->publishedFiles();
+        }
+
         return $this->score?->publishedFiles() ?? new Collection;
     }
 

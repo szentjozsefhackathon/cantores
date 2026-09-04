@@ -4,7 +4,7 @@ use App\Livewire\Pages\ScoreEditor;
 use App\Models\Folder;
 use App\Models\Score;
 use App\Models\ScorePublication;
-use App\Models\Share;
+use App\Models\Loan;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -25,7 +25,7 @@ it('calls an unshared score private', function () {
 it('reports a secret link on the score', function () {
     $user = User::factory()->create();
     $score = Score::factory()->unattached()->create(['user_id' => $user->id]);
-    Share::factory()->of($score)->create();
+    Loan::factory()->of($score)->create();
 
     actingAs($user);
 
@@ -39,7 +39,7 @@ it('reports a share reaching the score through a folder', function () {
     $score = Score::factory()->unattached()->create(['user_id' => $user->id]);
     $folder = Folder::factory()->create(['user_id' => $user->id]);
     $folder->scores()->attach($score);
-    Share::factory()->of($folder)->create();
+    Loan::factory()->of($folder)->create();
 
     actingAs($user);
 
@@ -85,8 +85,8 @@ it('shows the secret-link badge as soon as one is generated', function () {
 
     Livewire::test(ScoreEditor::class, ['score' => $score])
         ->assertSee(__('Private — only you can see it'))
-        ->call('generateSecretLink')
+        ->call('lendByLink')
         ->assertSee(__('Shared with a secret link'))
-        ->call('deleteSecretLink')
+        ->call('recallLoan')
         ->assertSee(__('Private — only you can see it'));
 });

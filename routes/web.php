@@ -136,35 +136,36 @@ Route::post('/score/export-pdf', \App\Http\Controllers\ScorePdfExportController:
     ->middleware('throttle:20,1')
     ->name('score.export-pdf');
 
-// Secret link — public, resolves to edit for owner or read-only for others
+// Lending link — public, resolves to edit for owner or read-only for others
 Route::livewire('/s/{token}', \App\Livewire\Pages\ScoreView::class)
-    ->name('score.share');
+    ->name('score.loan');
 
-Route::get('/s/{token}/incipit', \App\Http\Controllers\ScoreShareIncipitController::class)
-    ->name('score.share.incipit');
+Route::get('/s/{token}/incipit', \App\Http\Controllers\ScoreLoanIncipitController::class)
+    ->name('score.loan.incipit');
 
-// A score reached *through* a grant — the score itself, or a folder or plan that
-// reaches it. Access is derived from the grant on every request, so revoking the
-// grant revokes these URLs too.
+// A score reached *through* a loan — the score itself, or a folder or plan that
+// reaches it. Access is derived from the loan on every request, so revoking the
+// loan revokes these URLs too. The /share/ prefix is left alone: these URLs are
+// bearer links already in circulation.
 Route::livewire('/share/{token}/score/{score}', \App\Livewire\Pages\ScoreView::class)
-    ->name('share.score');
+    ->name('loan.score');
 
-Route::get('/share/{token}/score/{score}/incipit', \App\Http\Controllers\ScoreShareIncipitController::class)
-    ->name('share.score.incipit');
+Route::get('/share/{token}/score/{score}/incipit', \App\Http\Controllers\ScoreLoanIncipitController::class)
+    ->name('loan.score.incipit');
 
 // Rendered pages and the original file of an uploaded score, reached through a
-// grant. A directly shared score has itself as the grant, so these serve every
-// kind of link uniformly.
-Route::get('/share/{token}/score/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\ScoreShareFilePageController::class)
+// loan. A directly lent score is its own loan, so these serve every kind of
+// link uniformly.
+Route::get('/share/{token}/score/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\ScoreLoanFilePageController::class)
     ->whereNumber('page')
-    ->name('share.score.file.page');
+    ->name('loan.score.file.page');
 
-Route::get('/share/{token}/score/{score}/file/{scoreFile}/download', \App\Http\Controllers\ScoreShareFileDownloadController::class)
-    ->name('share.score.file.download');
+Route::get('/share/{token}/score/{score}/file/{scoreFile}/download', \App\Http\Controllers\ScoreLoanFileDownloadController::class)
+    ->name('loan.score.file.download');
 
-// Secret plan link — public, no authentication required
-Route::livewire('/p/{token}', \App\Livewire\Pages\MusicPlanShareView::class)
-    ->name('music-plan.share');
+// Plan lending link — public, no authentication required
+Route::livewire('/p/{token}', \App\Livewire\Pages\MusicPlanLoanView::class)
+    ->name('music-plan.loan');
 
 Route::livewire('/scores', \App\Livewire\Pages\Scores::class)
     ->middleware(['auth', 'verified'])
@@ -216,18 +217,26 @@ Route::get('/ingyenes-kottak/{score}/file/{scoreFile}/download', \App\Http\Contr
     ->middleware('throttle:60,1')
     ->name('public-scores.file.download');
 
-// Secret folder share link — public, read-only
+// Folder lending link — public, read-only
 Route::livewire('/f/{token}', \App\Livewire\Pages\FolderView::class)
-    ->name('folder.share');
+    ->name('folder.loan');
 
 Route::livewire('/folders', \App\Livewire\Pages\Folders::class)
     ->middleware(['auth', 'verified'])
     ->name('folders');
 
-// Every secret link the user has handed out, and a way to revoke one
-Route::livewire('/shared-links', \App\Livewire\Pages\SharedLinks::class)
+// The lending centre: what I borrowed, what I lent, and what I published
+Route::livewire('/kolcsonzesek', \App\Livewire\Pages\Loans::class)
     ->middleware(['auth', 'verified'])
-    ->name('shared-links');
+    ->name('loans');
+
+// Which scores a lent folder or plan actually opens
+Route::livewire('/kolcsonzesek/{loan}', \App\Livewire\Pages\LoanManager::class)
+    ->middleware(['auth', 'verified'])
+    ->name('loans.manage');
+
+// The screen was called /shared-links before lending got its own vocabulary
+Route::redirect('/shared-links', '/kolcsonzesek');
 
 Route::livewire('/folders/create', \App\Livewire\Pages\FolderEditor::class)
     ->middleware(['auth', 'verified'])

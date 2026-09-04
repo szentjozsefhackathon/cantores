@@ -4,32 +4,32 @@ namespace App\Http\Controllers;
 
 use App\Models\Score;
 use App\Models\ScoreFile;
-use App\Models\Share;
+use App\Models\Loan;
 use App\Services\ScoreFileResponder;
-use App\Services\ShareAccessService;
+use App\Services\LoanAccessService;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
-class ScoreShareIncipitController extends Controller
+class ScoreLoanIncipitController extends Controller
 {
     /**
      * Serves the incipit for a score reached through a grant — either the direct
      * score link (/s/{token}/incipit) or a folder or plan grant that reaches it.
      */
     public function __invoke(
-        ShareAccessService $shareAccess,
+        LoanAccessService $loanAccess,
         ScoreFileResponder $responder,
         string $token,
         ?Score $score = null,
     ): Response {
-        $share = $shareAccess->resolve($token);
-        abort_if(! $share instanceof Share, 404);
+        $loan = $loanAccess->resolve($token);
+        abort_if(! $loan instanceof Loan, 404);
 
         if ($score instanceof Score) {
-            abort_unless($shareAccess->grantsScore($share, $score), 404);
+            abort_unless($loanAccess->grantsScore($loan, $score), 404);
         } else {
-            abort_unless($share->shareable instanceof Score, 404);
-            $score = $share->shareable;
+            abort_unless($loan->lendable instanceof Score, 404);
+            $score = $loan->lendable;
         }
 
         $file = $score->incipitFile();

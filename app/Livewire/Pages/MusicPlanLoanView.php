@@ -2,36 +2,79 @@
 
 namespace App\Livewire\Pages;
 
+use App\Models\Loan;
 use App\Models\MusicPlan;
 use App\Models\Score;
 use App\Models\ScoreUrl;
-use App\Models\Share;
-use App\Services\ShareAccessService;
+use App\Services\LoanAccessService;
+use App\Services\LoanKeepingService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
 
-class MusicPlanShareView extends Component
+class MusicPlanLoanView extends Component
 {
     public ?MusicPlan $musicPlan = null;
 
     /** @var array<int, array<string, mixed>> */
     public array $planSlots = [];
 
-    public string $shareToken = '';
+    public string $loanToken = '';
+
+    /** Whose plan this is, so a borrowed page says whose work it is. */
+    public string $ownerName = '';
+
+    public bool $kept = false;
+
+    public bool $canKeep = false;
 
     public function mount(string $token): void
     {
-        $share = app(ShareAccessService::class)->resolveOfType($token, MusicPlan::class);
-        abort_if(! $share instanceof Share, 404);
+        $loan = app(LoanAccessService::class)->resolveOfType($token, MusicPlan::class);
+        abort_if(! $loan instanceof Loan, 404);
 
-        $share->touchLastViewed();
+        $loan->touchLastViewed();
+
+        $receipt = app(LoanKeepingService::class)->recordOpen($loan, Auth::user());
 
         /** @var MusicPlan $musicPlan */
-        $musicPlan = $share->shareable;
+        $musicPlan = $loan->lendable;
 
-        $this->shareToken = $token;
+        $this->loanToken = $token;
         $this->musicPlan = $musicPlan->load(['celebration', 'user', 'genre']);
-        $this->loadPlanSlots();
+        $this->ownerName = $musicPlan->user?->displayName ?? '';
+        $this->canKeep = Auth::check() && Auth::id() !== $musicPlan->user_id;
+        $this->kept = $receipt?->isKept() === true;
+        $this->loadPlanSlots($loan);
+    }
+
+    /**
+     * Save the plan — its arrangement, musics and order — into the reader's own
+     * lending centre.
+     *
+     * This one the lender can take back: revoking a plan loan takes back the plan.
+     * Scores inside it that belong to someone else are kept separately, against the
+     * loan they originate from, from the score's own page.
+     */
+    public function keep(): void
+    {
+        if (! Auth::check()) {
+            return;
+        }
+
+        $loan = app(LoanAccessService::class)->resolveOfType($this->loanToken, MusicPlan::class);
+
+        if (! $loan instanceof Loan) {
+            return;
+        }
+
+        if (app(LoanKeepingService::class)->keep($loan, Auth::user()) === null) {
+            return;
+        }
+
+        $this->kept = true;
+
+        $this->dispatch('toast', message: __('Saved to your loans.'), type: 'success');
     }
 
     public function rendering(IlluminateView $view): void
@@ -56,15 +99,23 @@ class MusicPlanShareView extends Component
 
     public function render(): IlluminateView
     {
-        return view('livewire.pages.music-plan-share-view');
+        return view('livewire.pages.music-plan-loan-view');
     }
 
-    private function loadPlanSlots(): void
+    /**
+     * The scores each music in the plan opens for this reader.
+     *
+     * Resolved through the loan rather than off the plan, so the lender's exclusions
+     * apply and any score they borrowed and are passing on travels with the link.
+     */
+    private function loadPlanSlots(Loan $loan): void
     {
-        $scoresByMusicId = $this->musicPlan->reachableScores()
-            ->with('urls')
-            ->get()
+        $scoresByMusicId = app(LoanAccessService::class)
+            ->scoresFor($loan)
+            ->load(['urls', 'user'])
             ->groupBy('music_id');
+
+        $lenderId = $loan->user_id;
 
         $assignmentsByPivot = $this->musicPlan->musicAssignments()
             ->with(['music.collections', 'music.authors', 'scopes'])
@@ -77,7 +128,7 @@ class MusicPlanShareView extends Component
             ->withPivot('id', 'sequence')
             ->orderBy('music_plan_slot_plan.sequence')
             ->get()
-            ->map(function ($slot) use ($assignmentsByPivot, $scoresByMusicId) {
+            ->map(function ($slot) use ($assignmentsByPivot, $scoresByMusicId, $lenderId) {
                 $pivotId = $slot->pivot->id;
                 $assignments = $assignmentsByPivot->get($pivotId, collect());
 
@@ -87,7 +138,7 @@ class MusicPlanShareView extends Component
                     'name' => $slot->name,
                     'description' => $slot->description,
                     'sequence' => $slot->pivot->sequence,
-                    'assignments' => $assignments->map(function ($assignment) use ($scoresByMusicId) {
+                    'assignments' => $assignments->map(function ($assignment) use ($scoresByMusicId, $lenderId) {
                         $scores = $scoresByMusicId->get($assignment->music_id, collect());
 
                         return [
@@ -100,11 +151,15 @@ class MusicPlanShareView extends Component
                             'scores' => $scores->map(fn (Score $s) => [
                                 'id' => $s->id,
                                 'title' => $s->title,
+                                // Attribution is what lending buys over re-uploading,
+                                // so a score the lender borrowed says whose it is.
+                                'owner_name' => $s->user?->displayName,
+                                'is_passed_on' => $s->user_id !== $lenderId,
                                 'format' => $s->format?->label() ?? __('Links'),
                                 'format_value' => $s->format?->value,
-                                'share_url' => $s->shareUrl($this->shareToken),
+                                'loan_url' => $s->loanUrl($this->loanToken),
                                 'incipit_url' => $s->hasIncipit()
-                                    ? $s->shareIncipitUrl($this->shareToken)
+                                    ? $s->loanIncipitUrl($this->loanToken)
                                     : null,
                                 'urls' => $s->urls->map(fn (ScoreUrl $url) => [
                                     'url' => $url->url,

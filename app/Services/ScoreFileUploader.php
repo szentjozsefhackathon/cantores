@@ -52,35 +52,38 @@ class ScoreFileUploader
     }
 
     /**
-     * Put new bytes behind an existing row, keeping its label, its rights and
-     * the links that already point at it.
+     * Put new bytes in the place of an existing file, keeping its label and rights.
+     *
+     * A new row rather than new bytes behind the old one. A published version
+     * points at the file rows it was approved against, and mutating a row in place
+     * would gut the approved snapshot — the public would be reading a page whose
+     * bytes had been swapped underneath it. The old row is superseded instead: it
+     * leaves the score's listing and keeps its artifacts, and only a row no version
+     * refers to is ever destroyed.
      */
     public function replace(ScoreFile $scoreFile, UploadedFile $upload): ScoreFile
     {
         $bytes = $this->read($upload);
 
-        // Every artifact under the directory belongs to the bytes being
-        // replaced: the old pages would otherwise outlive the file they came
-        // from and be served alongside the new ones.
-        $this->storage->deleteAll($scoreFile);
-
-        $scoreFile->update([
+        $replacement = $scoreFile->score->files()->create([
+            'path' => '',
             'original_name' => $upload->getClientOriginalName(),
+            'label' => $scoreFile->label,
             'mime' => $upload->getClientMimeType(),
             'size_bytes' => strlen($bytes),
             'checksum' => hash('sha256', $bytes),
+            'rights' => $scoreFile->rights,
+            'is_published' => $scoreFile->is_published,
             'render_status' => ScoreFileRenderStatus::Pending,
-            'render_error' => null,
-            'has_thumbnail' => false,
-            'page_count' => null,
-            'rendered_at' => null,
         ]);
 
-        $this->writeSource($scoreFile, $upload, $bytes);
+        $this->writeSource($replacement, $upload, $bytes);
 
-        RenderScoreFileJob::dispatch($scoreFile);
+        $this->retire($scoreFile, $replacement);
 
-        return $scoreFile;
+        RenderScoreFileJob::dispatch($replacement);
+
+        return $replacement;
     }
 
     /**
@@ -160,10 +163,42 @@ class ScoreFileUploader
         return $clean === '' ? 'bin' : $clean;
     }
 
+    /**
+     * Take a file out of its score.
+     *
+     * A file a published version refers to is only retired: destroying its bytes
+     * would take the page the public is reading with it. Everything else is deleted
+     * outright, artifacts and all.
+     */
     public function delete(ScoreFile $scoreFile): void
     {
+        if ($scoreFile->isReferencedByVersion()) {
+            $this->retire($scoreFile);
+
+            return;
+        }
+
         $this->storage->deleteAll($scoreFile);
         $scoreFile->delete();
+    }
+
+    /**
+     * Drop a file out of its score's listing while its bytes stay where they are.
+     */
+    private function retire(ScoreFile $scoreFile, ?ScoreFile $replacement = null): void
+    {
+        $scoreFile->update([
+            'superseded_at' => now(),
+            'superseded_by_id' => $replacement?->getKey(),
+            // A retired file is nobody's published copy: the version that refers to
+            // it names it directly, and the live score has moved on.
+            'is_published' => false,
+        ]);
+
+        if (! $scoreFile->isReferencedByVersion()) {
+            $this->storage->deleteAll($scoreFile);
+            $scoreFile->delete();
+        }
     }
 
     /**

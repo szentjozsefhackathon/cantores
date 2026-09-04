@@ -31,6 +31,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $has_thumbnail
  * @property int|null $page_count
  * @property \Carbon\CarbonImmutable|null $rendered_at
+ * @property \Carbon\CarbonImmutable|null $superseded_at
+ * @property int|null $superseded_by_id
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\Score $score
@@ -82,6 +84,8 @@ class ScoreFile extends Model
         'has_thumbnail',
         'page_count',
         'rendered_at',
+        'superseded_at',
+        'superseded_by_id',
     ];
 
     /**
@@ -97,39 +101,65 @@ class ScoreFile extends Model
             'rights' => ScoreFileRights::class,
             'render_status' => ScoreFileRenderStatus::class,
             'rendered_at' => 'datetime',
+            'superseded_at' => 'datetime',
         ];
     }
 
     /**
-     * ScoreFileUploader::replace() keeps this row and swaps the bytes behind it,
-     * so an approved publication has to be re-checked whenever a file's
-     * contents or publication flag change. Without this, review is bypassable
-     * in one click.
+     * A file leaving or joining the published set has to re-check the approval.
+     *
+     * Replacement no longer mutates this row — ScoreFileUploader supersedes it and
+     * inserts a new one, so a version's bytes survive — but the publication flag,
+     * the rights and the supersede stamp all change what the public would get.
+     *
+     * `deleted` is here because a hook on `saved` alone left the fingerprint stale
+     * when a published file was removed: removal need not re-review anything by
+     * itself, but the digest has to be recomputed against what is left.
      */
     protected static function booted(): void
     {
         static::saved(function (ScoreFile $scoreFile): void {
-            if (! $scoreFile->wasChanged(['checksum', 'is_published', 'rights'])) {
+            if (! $scoreFile->wasChanged(['checksum', 'is_published', 'rights', 'superseded_at'])) {
                 return;
             }
 
-            $publication = $scoreFile->score?->publication;
+            app(\App\Services\ScorePublicationWatcher::class)->scoreChanged($scoreFile->score);
+        });
 
-            if ($publication === null || ! $publication->status->isPublic()) {
-                return;
-            }
-
-            if ($publication->matchesApprovedFingerprint()) {
-                return;
-            }
-
-            app(\App\Services\ScorePublicationService::class)->invalidateApproval($publication);
+        static::deleted(function (ScoreFile $scoreFile): void {
+            app(\App\Services\ScorePublicationWatcher::class)->scoreChanged($scoreFile->score);
         });
     }
 
     public function score(): BelongsTo
     {
         return $this->belongsTo(Score::class);
+    }
+
+    /**
+     * The published versions that were approved with this file in them.
+     */
+    public function versions(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(ScoreVersion::class, 'score_version_file')->withTimestamps();
+    }
+
+    /**
+     * Whether a published version still points at these bytes, in which case they
+     * must outlive the file's place in the score.
+     */
+    public function isReferencedByVersion(): bool
+    {
+        return $this->versions()->exists();
+    }
+
+    /**
+     * Whether this file is still part of its score, as opposed to bytes kept alive
+     * only because an approved version refers to them.
+     */
+    public function isSuperseded(): bool
+    {
+        return $this->superseded_at !== null;
     }
 
     /**

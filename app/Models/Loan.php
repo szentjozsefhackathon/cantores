@@ -6,45 +6,51 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 /**
- * A secret link. One row is one deliberate share of a Score, Folder or MusicPlan.
+ * A lending link. One row is one deliberate loan of a Score, Folder or MusicPlan.
  *
- * Access to a score reached *through* a folder or plan grant is derived at request
- * time by ShareAccessService rather than minted onto the score, so revoking this
+ * A loan is not a gift: the score stays its owner's, the link may be passed along
+ * a chain of people, and the owner can end it for everyone downstream at once.
+ *
+ * Access to a score reached *through* a folder or plan loan is derived at request
+ * time by LoanAccessService rather than minted onto the score, so revoking this
  * single row revokes every URL underneath it.
  *
  * @property int $id
  * @property int $user_id
- * @property int $shareable_id
- * @property string $shareable_type
+ * @property int $lendable_id
+ * @property string $lendable_type
  * @property string $token
  * @property string|null $label
  * @property bool $allow_download
  * @property \Carbon\CarbonImmutable|null $expires_at
  * @property \Carbon\CarbonImmutable|null $revoked_at
+ * @property int $open_count
  * @property \Carbon\CarbonImmutable|null $last_viewed_at
+ * @property \Carbon\CarbonImmutable|null $contents_reviewed_at
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
- * @property-read Model|\Eloquent $shareable
+ * @property-read Model|\Eloquent $lendable
  * @property-read \App\Models\User $user
  *
- * @method static \Database\Factories\ShareFactory factory($count = null, $state = [])
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Share live()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Share mine(?\App\Models\User $user = null)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Share newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Share newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Share query()
+ * @method static \Database\Factories\LoanFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan live()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan mine(?\App\Models\User $user = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan query()
  *
  * @mixin \Eloquent
  */
-class Share extends Model
+class Loan extends Model
 {
-    /** @use HasFactory<\Database\Factories\ShareFactory> */
+    /** @use HasFactory<\Database\Factories\LoanFactory> */
     use HasFactory;
 
     public const TOKEN_LENGTH = 32;
@@ -56,14 +62,15 @@ class Share extends Model
      */
     protected $fillable = [
         'user_id',
-        'shareable_id',
-        'shareable_type',
+        'lendable_id',
+        'lendable_type',
         'token',
         'label',
         'allow_download',
         'expires_at',
         'revoked_at',
         'last_viewed_at',
+        'contents_reviewed_at',
     ];
 
     /**
@@ -78,6 +85,7 @@ class Share extends Model
             'expires_at' => 'datetime',
             'revoked_at' => 'datetime',
             'last_viewed_at' => 'datetime',
+            'contents_reviewed_at' => 'datetime',
         ];
     }
 
@@ -86,9 +94,34 @@ class Share extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function shareable(): MorphTo
+    public function lendable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * Every record of someone opening or keeping this loan.
+     */
+    public function receipts(): HasMany
+    {
+        return $this->hasMany(ReceivedLoan::class);
+    }
+
+    /**
+     * The scores this loan deliberately leaves out. Empty means everything.
+     */
+    public function exclusions(): HasMany
+    {
+        return $this->hasMany(LoanScoreExclusion::class);
+    }
+
+    /**
+     * Whether this loan opens a container — a folder or plan whose contents can be
+     * excluded one by one — as opposed to a single score.
+     */
+    public function isContainer(): bool
+    {
+        return ! $this->lendable instanceof Score;
     }
 
     /**
@@ -117,18 +150,22 @@ class Share extends Model
 
     /**
      * Record that the link was followed, without touching `updated_at`.
+     *
+     * Counted for everyone, named for nobody: who opened it is recorded in
+     * `received_loans` and only when they are signed in.
      */
     public function touchLastViewed(): void
     {
-        $this->newQuery()
-            ->whereKey($this->getKey())
-            ->update(['last_viewed_at' => Carbon::now()]);
+        $this->getConnection()
+            ->table($this->getTable())
+            ->where($this->getKeyName(), $this->getKey())
+            ->incrementEach(['open_count' => 1], ['last_viewed_at' => Carbon::now()]);
     }
 
     /**
-     * Scope to grants that are neither revoked nor expired.
+     * Scope to loans that are neither revoked nor expired.
      *
-     * @param  Builder<Share>  $query
+     * @param  Builder<Loan>  $query
      */
     public function scopeLive(Builder $query): void
     {
@@ -139,7 +176,7 @@ class Share extends Model
     }
 
     /**
-     * @param  Builder<Share>  $query
+     * @param  Builder<Loan>  $query
      */
     public function scopeMine(Builder $query, ?User $user = null): void
     {

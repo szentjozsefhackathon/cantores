@@ -5,12 +5,12 @@
         clipboardNotSupported: @js(__('Clipboard not supported in this browser')),
         imageCopied: @js(__('Image copied to clipboard')),
         failedToCopy: @js(__('Failed to copy image')),
-        shareLinkCopied: @js(__('Share link copied!')),
+        shareLinkCopied: @js(__('Lending link copied!')),
         linkCopyFailed: @js(__('Failed to copy link')),
         htmlCopied: @js(__('HTML copied to clipboard!')),
         plainTextCopied: @js(__('Plain text copied to clipboard!')),
         copyAsImageText: @js(__('Copy as Image')),
-        shareText: @js(__('Share')),
+        shareText: @js(__('Lend')),
         exportText: @js(__('Export')),
         exportPngText: @js(__('Export PNG')),
         exportSvgText: @js(__('Export SVG')),
@@ -60,11 +60,11 @@
                     @php($headerPublication = $this->publication)
                     @php($headerPublicationStatus = $headerPublication?->status)
                     <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                        @if($secretLinkUrl)
+                        @if($loanLinkUrl)
                         <flux:badge size="sm" color="amber" icon="link">{{ __('Shared with a secret link') }}</flux:badge>
                         @endif
 
-                        @if($this->indirectShares->isNotEmpty())
+                        @if($this->indirectLoans->isNotEmpty())
                         <flux:badge size="sm" color="amber" icon="folder">{{ __('Shared through a folder or music plan') }}</flux:badge>
                         @endif
 
@@ -74,8 +74,8 @@
                         <flux:badge size="sm" color="blue" icon="clock">{{ __('Waiting for review by an editor') }}</flux:badge>
                         @endif
 
-                        @if(! $secretLinkUrl
-                            && $this->indirectShares->isEmpty()
+                        @if(! $loanLinkUrl
+                            && $this->indirectLoans->isEmpty()
                             && $headerPublicationStatus !== \App\Enums\ScorePublicationStatus::Approved
                             && $headerPublicationStatus !== \App\Enums\ScorePublicationStatus::Submitted)
                         <flux:badge size="sm" color="zinc" icon="lock-closed">{{ __('Private — only you can see it') }}</flux:badge>
@@ -92,9 +92,9 @@
                             x-text="autosaveLabel()"
                             class="text-sm text-zinc-500 dark:text-zinc-400"
                             :class="autosaveState === 'failed' ? 'text-red-600 dark:text-red-400' : ''"></span>
-                        <flux:tooltip :content="$score ? __('Share this score') : __('Save the score first')">
+                        <flux:tooltip :content="$score ? __('Lend this score') : __('Save the score first')">
                             <flux:button variant="filled" icon="link" x-on:click="openShareModal()" :disabled="! $score">
-                                {{ __('Share') }}
+                                {{ __('Lend') }}
                             </flux:button>
                         </flux:tooltip>
                         @if($linksOnly)
@@ -988,7 +988,7 @@
 
                 <flux:modal name="share-link-modal" class="max-w-md">
                     <div class="space-y-4">
-                        <flux:heading size="lg">Kotta megosztása</flux:heading>
+                        <flux:heading size="lg">Kotta kölcsönadása</flux:heading>
                         @unless($linksOnly)
                         <flux:text>
                             {{ __('This link encodes the full score and all settings directly in the URL — no account or registration needed. Anyone with the link can open and preview the score instantly.') }}
@@ -1008,38 +1008,38 @@
                         @endunless
 
                         @if($score && !$isGuest)
-                        <div class="border-t border-zinc-200 pt-4 dark:border-zinc-700" x-data="{ secretLinkCopied: false }">
+                        <div class="border-t border-zinc-200 pt-4 dark:border-zinc-700" x-data="{ loanLinkCopied: false }">
                             <div class="flex items-center justify-between gap-2">
-                                <flux:subheading class="font-medium">{{ __('Secret Link') }}</flux:subheading>
-                                <div class="flex min-w-0 flex-1 items-center gap-2" x-show="$wire.secretLinkUrl" x-cloak>
-                                    <flux:input readonly x-bind:value="$wire.secretLinkUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
+                                <flux:subheading class="font-medium">{{ __('Lending Link') }}</flux:subheading>
+                                <div class="flex min-w-0 flex-1 items-center gap-2" x-show="$wire.loanLinkUrl" x-cloak>
+                                    <flux:input readonly x-bind:value="$wire.loanLinkUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
                                     <flux:button
                                         icon="clipboard"
                                         variant="ghost"
                                         :title="__('Copy link')"
-                                        x-on:click="navigator.clipboard.writeText($wire.secretLinkUrl).then(() => { secretLinkCopied = true; setTimeout(() => secretLinkCopied = false, 2000) })"
-                                        x-bind:class="secretLinkCopied ? 'text-green-600' : ''" />
+                                        x-on:click="navigator.clipboard.writeText($wire.loanLinkUrl).then(() => { loanLinkCopied = true; setTimeout(() => loanLinkCopied = false, 2000) })"
+                                        x-bind:class="loanLinkCopied ? 'text-green-600' : ''" />
                                     <flux:button
                                         icon="trash"
                                         variant="ghost"
-                                        :title="__('Delete link')"
-                                        wire:click="deleteSecretLink"
-                                        wire:confirm="{{ __('This will invalidate the current link. Are you sure?') }}" />
+                                        :title="__('Recall the loan')"
+                                        wire:click="recallLoan"
+                                        wire:confirm="{{ __('Recall this loan? Anyone still holding the link will lose access.') }}" />
                                 </div>
-                                <div x-show="!$wire.secretLinkUrl">
-                                    <flux:button icon="link" variant="ghost" wire:click="generateSecretLink">
-                                        {{ __('Generate Secret Link') }}
+                                <div x-show="!$wire.loanLinkUrl">
+                                    <flux:button icon="link" variant="ghost" wire:click="lendByLink">
+                                        {{ __('Lend by link') }}
                                     </flux:button>
                                 </div>
                             </div>
-                            <flux:text class="mt-1 text-xs text-zinc-500" x-show="$wire.secretLinkUrl" x-cloak>
-                                {{ __('Anyone with this link can view the score (read-only). Delete the link to revoke access.') }}
+                            <flux:text class="mt-1 text-xs text-zinc-500" x-show="$wire.loanLinkUrl" x-cloak>
+                                {{ __('Whoever holds this link may read the score and keep it. Recall the link to close it for everyone.') }}
                             </flux:text>
-                            <flux:text class="mt-1 text-xs text-zinc-500" x-show="!$wire.secretLinkUrl">
-                                {{ __('Generate a secret link to share this score as a read-only preview.') }}
+                            <flux:text class="mt-1 text-xs text-zinc-500" x-show="!$wire.loanLinkUrl">
+                                {{ __('Lend this score by link: whoever holds it may read it and keep it.') }}
                             </flux:text>
 
-                            @if($this->indirectShares->isNotEmpty())
+                            @if($this->indirectLoans->isNotEmpty())
                             <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-900/20">
                                 <div class="flex items-center gap-1.5">
                                     <flux:icon name="information-circle" variant="micro" class="shrink-0 text-amber-600 dark:text-amber-400" />
@@ -1051,16 +1051,16 @@
                                     {{ __('These secret links open this score too, even without a link of its own.') }}
                                 </flux:text>
                                 <div class="mt-2 space-y-1">
-                                    @foreach($this->indirectShares as $indirect)
+                                    @foreach($this->indirectLoans as $indirect)
                                     <div class="flex items-center justify-between gap-2" wire:key="indirect-share-{{ $indirect['revoke_id'] }}">
                                         <span class="min-w-0 truncate text-sm text-amber-900 dark:text-amber-100">{{ $indirect['label'] }}</span>
                                         <flux:button
                                             size="xs"
                                             variant="ghost"
                                             icon="trash"
-                                            wire:click="revokeIndirectShare({{ $indirect['revoke_id'] }})"
-                                            wire:confirm="{{ __('This will invalidate that link entirely. Are you sure?') }}">
-                                            {{ __('Revoke') }}
+                                            wire:click="revokeIndirectLoan({{ $indirect['revoke_id'] }})"
+                                            wire:confirm="{{ __('Recall that loan entirely? Anyone still holding the link will lose access.') }}">
+                                            {{ __('Recall') }}
                                         </flux:button>
                                     </div>
                                     @endforeach
@@ -1484,6 +1484,8 @@
                         {{ __('Only public domain and Creative Commons material can go here. An editor checks every nomination before it is published.') }}
                     </flux:text>
 
+                    {{-- The public reads an approved snapshot, so a render setting
+                         changed here shows nowhere until the next submission. --}}
                     @if($publication && $publication->status === \App\Enums\ScorePublicationStatus::Approved)
                     <div class="mt-3 flex flex-wrap items-center gap-2">
                         <flux:badge color="green" size="sm">{{ __('Published') }}</flux:badge>
@@ -1494,11 +1496,20 @@
                             {{ __('Withdraw') }}
                         </flux:button>
                     </div>
+                    @if($publication->hasUnpublishedChanges())
+                    <div class="mt-2">
+                        <flux:badge color="amber" size="sm">{{ __('Newer version awaiting review') }}</flux:badge>
+                    </div>
+                    @endif
+                    <flux:text class="mt-2 text-xs text-zinc-500">
+                        {{ __('The public reads the version an editor approved. Changing the notes or the links sends the change back for review, and the approved version stays up meanwhile; changing the display settings does not show publicly until the next submission.') }}
+                    </flux:text>
                     @elseif($publication && $publication->status === \App\Enums\ScorePublicationStatus::Submitted)
                     <div class="mt-3 flex flex-wrap items-center gap-2">
                         <flux:badge size="sm">{{ __('Awaiting review') }}</flux:badge>
                         <flux:button size="sm" variant="outline" wire:click="withdrawPublication">{{ __('Withdraw') }}</flux:button>
                     </div>
+
                     @elseif($publication && $publication->status === \App\Enums\ScorePublicationStatus::TakenDown)
                     <div class="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/40">
                         <flux:badge color="red" size="sm">{{ __('Taken down') }}</flux:badge>

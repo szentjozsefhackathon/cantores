@@ -46,11 +46,15 @@ use OwenIt\Auditing\Contracts\Auditable;
  * @property \Carbon\CarbonImmutable|null $unpublished_at
  * @property string|null $takedown_reason
  * @property string|null $approved_fingerprint
+ * @property int|null $approved_version_id
+ * @property int|null $submitted_version_id
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\Score $score
  * @property-read \App\Models\User|null $reviewer
  * @property-read \App\Models\User|null $submitter
+ * @property-read \App\Models\ScoreVersion|null $approvedVersion
+ * @property-read \App\Models\ScoreVersion|null $submittedVersion
  *
  * @method static \Database\Factories\ScorePublicationFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScorePublication approved()
@@ -97,6 +101,8 @@ class ScorePublication extends Model implements Auditable
         'unpublished_at',
         'takedown_reason',
         'approved_fingerprint',
+        'approved_version_id',
+        'submitted_version_id',
     ];
 
     /**
@@ -123,6 +129,7 @@ class ScorePublication extends Model implements Auditable
         'published_at',
         'unpublished_at',
         'takedown_reason',
+        'approved_version_id',
     ];
 
     /**
@@ -161,6 +168,33 @@ class ScorePublication extends Model implements Auditable
         return $this->belongsTo(User::class, 'submitted_by');
     }
 
+    /**
+     * The version the public is reading.
+     */
+    public function approvedVersion(): BelongsTo
+    {
+        return $this->belongsTo(ScoreVersion::class, 'approved_version_id');
+    }
+
+    /**
+     * The version waiting in the review queue, which is not necessarily the one the
+     * public is reading — that is the point of versioning the published surface.
+     */
+    public function submittedVersion(): BelongsTo
+    {
+        return $this->belongsTo(ScoreVersion::class, 'submitted_version_id');
+    }
+
+    /**
+     * Whether a correction is queued behind what the public is currently reading.
+     */
+    public function hasUnpublishedChanges(): bool
+    {
+        return $this->approved_version_id !== null
+            && $this->submitted_version_id !== null
+            && $this->approved_version_id !== $this->submitted_version_id;
+    }
+
     public function isPublic(): bool
     {
         return $this->status->isPublic();
@@ -176,29 +210,73 @@ class ScorePublication extends Model implements Auditable
     }
 
     /**
-     * A digest of the bytes this publication was approved against.
+     * A digest of everything in this score that a copyright review had to judge.
      *
-     * ScoreFileUploader::replace() deliberately keeps a file's row and swaps the
-     * bytes behind it, which would otherwise let an owner get a public domain
-     * engraving approved and then serve something else from the same URL. The
-     * checksums are sorted so the digest depends on the set of published bytes
-     * and not on the order they come back in.
+     * Review exists for copyright, so the digest covers anything that can carry
+     * someone else's work: the typed source, its format, the score links the public
+     * page prints, and the checksums of the published files. Render settings are
+     * deliberately outside it — a transpose or a staff size changes how the same
+     * notes look and cannot introduce anyone else's material.
+     *
+     * ScoreFileUploader supersedes rather than mutates a replaced file, but the
+     * checksums are still what identifies the published bytes, and they are sorted
+     * so the digest depends on the set and not on the order it comes back in.
      */
     public function computeFingerprint(): string
     {
         // Queried rather than read off the score's loaded relation: this runs
-        // from a saved() hook, where an in-memory `files` collection may still
-        // hold the bytes that were just replaced.
+        // from a saved() hook, where an in-memory relation may still hold the
+        // values that were just replaced.
+        $score = Score::query()->find($this->score_id);
+
+        if ($score === null) {
+            return self::fingerprintOf(null, null, [], []);
+        }
+
         $checksums = ScoreFile::query()
             ->where('score_id', $this->score_id)
             ->where('is_published', true)
+            ->whereNull('superseded_at')
             ->orderBy('id')
             ->pluck('checksum')
-            ->sort()
-            ->values()
             ->all();
 
-        return hash('sha256', implode('|', $checksums));
+        return self::fingerprintOf(
+            $score->content,
+            $score->format?->value,
+            ScoreUrl::query()
+                ->where('score_id', $this->score_id)
+                ->orderBy('id')
+                ->get()
+                ->map(fn (ScoreUrl $url): array => ['url' => $url->url, 'label' => $url->label?->value])
+                ->all(),
+            $checksums,
+        );
+    }
+
+    /**
+     * The one place the digest's shape is decided, so a version and a live score
+     * are always hashed the same way.
+     *
+     * @param  array<int, array<string, mixed>>  $urls
+     * @param  array<int, string|null>  $checksums
+     */
+    public static function fingerprintOf(?string $content, ?string $format, array $urls, array $checksums): string
+    {
+        $urlDigest = collect($urls)
+            ->map(fn (array $url): string => ($url['url'] ?? '').'|'.($url['label'] ?? ''))
+            ->sort()
+            ->values()
+            ->implode(',');
+
+        $checksumDigest = collect($checksums)->filter()->sort()->values()->implode('|');
+
+        return hash('sha256', implode("\n", [
+            (string) $content,
+            (string) $format,
+            $urlDigest,
+            $checksumDigest,
+        ]));
     }
 
     /**
@@ -210,13 +288,26 @@ class ScorePublication extends Model implements Auditable
     }
 
     /**
-     * Scope to nominations waiting for a reviewer.
+     * Scope to everything waiting for a reviewer.
+     *
+     * Two shapes: a nomination not yet published, and a change queued behind a
+     * score that already is. The second one only exists because the public keeps
+     * reading the approved version while a correction waits — without it, that
+     * correction would sit in nobody's queue.
      *
      * @param  Builder<ScorePublication>  $query
      */
     public function scopePending(Builder $query): void
     {
-        $query->where('status', ScorePublicationStatus::Submitted);
+        $query->where(function (Builder $query): void {
+            $query->where('status', ScorePublicationStatus::Submitted)
+                ->orWhere(function (Builder $query): void {
+                    $query->where('status', ScorePublicationStatus::Approved)
+                        ->whereNotNull('submitted_version_id')
+                        ->whereNotNull('approved_version_id')
+                        ->whereColumn('submitted_version_id', '!=', 'approved_version_id');
+                });
+        });
     }
 
     /**

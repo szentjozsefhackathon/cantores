@@ -6,17 +6,17 @@ use App\Enums\ScoreFileRights;
 use App\Enums\ScoreFormat;
 use App\Enums\ScoreLicense;
 use App\Models\Folder;
+use App\Models\Loan;
 use App\Models\Music;
 use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\ScorePublication;
 use App\Models\ScoreUrl;
-use App\Models\Share;
 use App\MusicUrlLabel;
+use App\Services\LoanAccessService;
 use App\Services\ScoreDuplicator;
 use App\Services\ScoreFileUploader;
 use App\Services\ScorePublicationService;
-use App\Services\ShareAccessService;
 use App\Support\ScorePublicationRules;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -123,7 +123,7 @@ class ScoreEditor extends Component
 
     public bool $isSharedLink = false;
 
-    public ?string $secretLinkUrl = null;
+    public ?string $loanLinkUrl = null;
 
     /** @var array<int> */
     public array $folderIds = [];
@@ -159,9 +159,9 @@ class ScoreEditor extends Component
             $this->content = $score->content ?? '';
             $this->settings = $score->settings ?? [];
             $this->publicPreview = (bool) $score->public_preview;
-            $shareToken = $score->shareToken();
-            $this->secretLinkUrl = $shareToken !== null
-                ? route('score.share', ['token' => $shareToken])
+            $loanToken = $score->loanToken();
+            $this->loanLinkUrl = $loanToken !== null
+                ? route('score.loan', ['token' => $loanToken])
                 : null;
             $this->folderIds = $score->folders()->pluck('folder_id')->toArray();
             $this->fillPublicationForm($score);
@@ -652,24 +652,24 @@ class ScoreEditor extends Component
         ];
     }
 
-    public function generateSecretLink(): void
+    public function lendByLink(): void
     {
         abort_unless($this->score instanceof Score, 404);
         $this->authorize('update', $this->score);
 
-        $share = $this->score->mintShare();
+        $loan = $this->score->mintLoan();
 
-        $this->secretLinkUrl = route('score.share', ['token' => $share->token]);
+        $this->loanLinkUrl = route('score.loan', ['token' => $loan->token]);
     }
 
-    public function deleteSecretLink(): void
+    public function recallLoan(): void
     {
         abort_unless($this->score instanceof Score, 404);
         $this->authorize('update', $this->score);
 
-        $this->score->revokeShares();
+        $this->score->revokeLoans();
 
-        $this->secretLinkUrl = null;
+        $this->loanLinkUrl = null;
     }
 
     public function toggleFolder(int $folderId): void
@@ -1006,42 +1006,42 @@ class ScoreEditor extends Component
     }
 
     /**
-     * Grants that reach this score through a shared folder or music plan.
+     * Loans that reach this score through a lent folder or music plan.
      *
-     * Sharing a folder or an énekrend also opens the scores underneath it, so the
+     * Lending a folder or an énekrend also opens the scores underneath it, so the
      * owner needs to see those here rather than assume the score is private just
-     * because it has no secret link of its own.
+     * because it has no lending link of its own.
      *
      * @return \Illuminate\Support\Collection<int, array{label: string, revoke_id: int}>
      */
     #[Computed]
-    public function indirectShares(): \Illuminate\Support\Collection
+    public function indirectLoans(): \Illuminate\Support\Collection
     {
         if (! $this->score instanceof Score) {
             return collect();
         }
 
-        return app(ShareAccessService::class)
-            ->grantsReaching($this->score)
-            ->reject(fn (Share $share) => $share->shareable instanceof Score)
-            ->map(fn (Share $share) => [
-                'label' => $share->shareable instanceof Folder
-                    ? __('Folder: :name', ['name' => $share->shareable->name])
-                    : __('Music plan: :name', ['name' => $share->shareable->celebration_name ?? __('Music Plan')]),
-                'revoke_id' => $share->id,
+        return app(LoanAccessService::class)
+            ->loansReaching($this->score)
+            ->reject(fn (Loan $loan) => $loan->lendable instanceof Score)
+            ->map(fn (Loan $loan) => [
+                'label' => $loan->lendable instanceof Folder
+                    ? __('Folder: :name', ['name' => $loan->lendable->name])
+                    : __('Music plan: :name', ['name' => $loan->lendable->celebration_name ?? __('Music Plan')]),
+                'revoke_id' => $loan->id,
             ])
             ->values();
     }
 
     #[Renderless]
-    public function revokeIndirectShare(int $shareId): void
+    public function revokeIndirectLoan(int $loanId): void
     {
         abort_unless($this->score instanceof Score, 404);
         $this->authorize('update', $this->score);
 
-        Share::query()->mine(Auth::user())->findOrFail($shareId)->revoke();
+        Loan::query()->mine(Auth::user())->findOrFail($loanId)->revoke();
 
-        unset($this->indirectShares);
+        unset($this->indirectLoans);
     }
 
     #[Computed]

@@ -158,35 +158,35 @@
 
             {{-- Secret Link --}}
             <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700"
-                 x-data="{ secretLinkCopied: false }">
+                 x-data="{ loanLinkCopied: false }">
                 <div class="flex items-center justify-between gap-2">
-                    <flux:subheading class="font-medium">{{ __('Secret Link') }}</flux:subheading>
-                    <div class="flex min-w-0 flex-1 items-center gap-2" x-show="$wire.secretLinkUrl" x-cloak>
-                        <flux:input readonly x-bind:value="$wire.secretLinkUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
+                    <flux:subheading class="font-medium">{{ __('Lending Link') }}</flux:subheading>
+                    <div class="flex min-w-0 flex-1 items-center gap-2" x-show="$wire.loanLinkUrl" x-cloak>
+                        <flux:input readonly x-bind:value="$wire.loanLinkUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
                         <flux:button
                             icon="clipboard"
                             variant="ghost"
                             :title="__('Copy link')"
-                            x-on:click="navigator.clipboard.writeText($wire.secretLinkUrl).then(() => { secretLinkCopied = true; setTimeout(() => secretLinkCopied = false, 2000) })"
-                            x-bind:class="secretLinkCopied ? 'text-green-600' : ''" />
+                            x-on:click="navigator.clipboard.writeText($wire.loanLinkUrl).then(() => { loanLinkCopied = true; setTimeout(() => loanLinkCopied = false, 2000) })"
+                            x-bind:class="loanLinkCopied ? 'text-green-600' : ''" />
                         <flux:button
                             icon="trash"
                             variant="ghost"
-                            :title="__('Delete link')"
-                            wire:click="deleteSecretLink"
-                            wire:confirm="{{ __('This will invalidate the current link. Are you sure?') }}" />
+                            :title="__('Recall the loan')"
+                            wire:click="recallLoan"
+                            wire:confirm="{{ __('Recall this loan? Anyone still holding the link will lose access.') }}" />
                     </div>
-                    <div x-show="!$wire.secretLinkUrl">
-                        <flux:button icon="link" variant="ghost" wire:click="generateSecretLink">
-                            {{ __('Generate Secret Link') }}
+                    <div x-show="!$wire.loanLinkUrl">
+                        <flux:button icon="link" variant="ghost" wire:click="lendByLink">
+                            {{ __('Lend by link') }}
                         </flux:button>
                     </div>
                 </div>
-                <flux:text class="mt-1 text-xs text-zinc-500" x-show="$wire.secretLinkUrl" x-cloak>
+                <flux:text class="mt-1 text-xs text-zinc-500" x-show="$wire.loanLinkUrl" x-cloak>
                     {{ __('Anyone with this link can view the folder contents (read-only). Delete the link to revoke access.') }}
                 </flux:text>
-                <flux:text class="mt-1 text-xs text-zinc-500" x-show="!$wire.secretLinkUrl">
-                    {{ __('Generate a secret link to share this folder as a read-only preview.') }}
+                <flux:text class="mt-1 text-xs text-zinc-500" x-show="!$wire.loanLinkUrl">
+                    {{ __('Lend this folder by link: it opens every score inside it.') }}
                 </flux:text>
             </div>
 

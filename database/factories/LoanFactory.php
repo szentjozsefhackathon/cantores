@@ -5,15 +5,15 @@ namespace Database\Factories;
 use App\Models\Folder;
 use App\Models\MusicPlan;
 use App\Models\Score;
-use App\Models\Share;
+use App\Models\Loan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Share>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Loan>
  */
-class ShareFactory extends Factory
+class LoanFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -24,22 +24,22 @@ class ShareFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'shareable_type' => Score::class,
-            'shareable_id' => Score::factory(),
-            'token' => Share::generateToken(),
+            'lendable_type' => Score::class,
+            'lendable_id' => Score::factory(),
+            'token' => Loan::generateToken(),
             'allow_download' => true,
         ];
     }
 
     /**
-     * Share the given model, attributing the grant to its owner.
+     * Loan the given model, attributing the grant to its owner.
      */
-    public function of(Model $shareable): static
+    public function of(Model $lendable): static
     {
         return $this->state([
-            'shareable_type' => $shareable::class,
-            'shareable_id' => $shareable->getKey(),
-            'user_id' => $shareable->getAttribute('user_id'),
+            'lendable_type' => $lendable::class,
+            'lendable_id' => $lendable->getKey(),
+            'user_id' => $lendable->getAttribute('user_id'),
         ]);
     }
 

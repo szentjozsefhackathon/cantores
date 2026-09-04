@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 
-class MusicPlanShareModal extends Component
+class MusicPlanLoanModal extends Component
 {
     use AuthorizesRequests;
 
@@ -21,7 +21,7 @@ class MusicPlanShareModal extends Component
 
     public bool $isOwner = false;
 
-    public ?string $secretLinkUrl = null;
+    public ?string $loanLinkUrl = null;
 
     public function mount(MusicPlan $musicPlan): void
     {
@@ -33,10 +33,10 @@ class MusicPlanShareModal extends Component
         $this->musicPlanId = $musicPlan->id;
         $this->isOwner = Auth::check() && Auth::id() === $musicPlan->user_id;
 
-        $token = $this->isOwner ? $musicPlan->shareToken() : null;
+        $token = $this->isOwner ? $musicPlan->loanToken() : null;
 
         if ($token !== null) {
-            $this->secretLinkUrl = route('music-plan.share', ['token' => $token]);
+            $this->loanLinkUrl = route('music-plan.loan', ['token' => $token]);
         }
     }
 
@@ -56,14 +56,14 @@ class MusicPlanShareModal extends Component
         $this->dispatch('copy-to-clipboard', $this->shareText);
     }
 
-    public function generateSecretLink(): void
+    public function lendByLink(): void
     {
         $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
         $this->authorize('update', $musicPlan);
 
-        $share = $musicPlan->mintShare();
+        $loan = $musicPlan->mintLoan();
 
-        $this->secretLinkUrl = route('music-plan.share', ['token' => $share->token]);
+        $this->loanLinkUrl = route('music-plan.loan', ['token' => $loan->token]);
     }
 
     /**
@@ -71,14 +71,14 @@ class MusicPlanShareModal extends Component
      * that access is derived from this grant per request, never minted onto the
      * scores themselves.
      */
-    public function deleteSecretLink(): void
+    public function recallLoan(): void
     {
         $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
         $this->authorize('update', $musicPlan);
 
-        $musicPlan->revokeShares();
+        $musicPlan->revokeLoans();
 
-        $this->secretLinkUrl = null;
+        $this->loanLinkUrl = null;
     }
 
     private function generateShareText(): string
@@ -242,6 +242,6 @@ class MusicPlanShareModal extends Component
     public function render()
     {
 
-        return view('music-plan-share-modal');
+        return view('music-plan-loan-modal');
     }
 }

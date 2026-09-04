@@ -45,6 +45,26 @@ class ScoreUrl extends Model
         ];
     }
 
+    /**
+     * A score link is printed on the public page, so it can carry someone else's
+     * work as surely as an uploaded file can. Adding, editing or removing one on a
+     * published score re-enters the review queue.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (ScoreUrl $scoreUrl): void {
+            if (! $scoreUrl->wasChanged(['url', 'label']) && ! $scoreUrl->wasRecentlyCreated) {
+                return;
+            }
+
+            app(\App\Services\ScorePublicationWatcher::class)->scoreChanged($scoreUrl->score);
+        });
+
+        static::deleted(function (ScoreUrl $scoreUrl): void {
+            app(\App\Services\ScorePublicationWatcher::class)->scoreChanged($scoreUrl->score);
+        });
+    }
+
     public function score(): BelongsTo
     {
         return $this->belongsTo(Score::class);

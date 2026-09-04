@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Concerns\HasShares;
+use App\Concerns\HasLoans;
 use App\Concerns\HasVisibilityScoping;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -60,7 +60,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 class MusicPlan extends Model
 {
     use HasFactory;
-    use HasShares;
+    use HasLoans;
     use HasVisibilityScoping;
 
     /**
@@ -173,20 +173,33 @@ class MusicPlan extends Model
     }
 
     /**
-     * The owner's scores this plan reaches.
+     * The musics assigned to this plan, in no particular order.
+     *
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    public function assignedMusicIds(): \Illuminate\Support\Collection
+    {
+        return $this->musicAssignments()->pluck('music_id')->unique()->filter()->values();
+    }
+
+    /**
+     * The owner's own scores this plan reaches.
      *
      * A plan attaches musics, not scores, so reach is "every score the plan owner has
-     * for a music assigned to this plan". A secret link on the plan grants exactly this
-     * set, evaluated per request — so a score added later is reachable, and a music
-     * removed from the plan stops being.
+     * for a music assigned to this plan", evaluated per request — a score added later
+     * is reachable, and a music removed from the plan stops being.
+     *
+     * This is only the owner's half. A plan can also carry scores its owner borrowed
+     * from someone else and is passing on; LoanAccessService::scoresFor() adds those,
+     * because whether they travel depends on how the plan is being read.
      *
      * @return \Illuminate\Database\Eloquent\Builder<Score>
      */
-    public function reachableScores(): Builder
+    public function ownScores(): Builder
     {
         return Score::query()
             ->where('user_id', $this->user_id)
-            ->whereIn('music_id', $this->musicAssignments()->pluck('music_id')->unique()->filter());
+            ->whereIn('music_id', $this->assignedMusicIds());
     }
 
     /**
