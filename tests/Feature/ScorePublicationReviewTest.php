@@ -108,6 +108,36 @@ it('lets an admin self-approve but records that they did', function () {
         ->and($publication->fresh()->self_approved)->toBeTrue();
 });
 
+it('stops an editor rejecting their own nomination', function () {
+    $editor = reviewerUser();
+    $score = Score::factory()->create(['user_id' => $editor->id]);
+    $publication = ScorePublication::factory()->of($score)->submitted()->create();
+
+    Livewire::actingAs($editor)
+        ->test(ScorePublicationReview::class)
+        ->call('select', $publication->id)
+        ->set('decisionNotes', 'Not a fit.')
+        ->call('reject')
+        ->assertForbidden();
+
+    expect($publication->fresh()->status)->toBe(ScorePublicationStatus::Submitted);
+});
+
+it('lets an admin self-reject their own nomination', function () {
+    $admin = reviewerUser('admin');
+    $score = Score::factory()->create(['user_id' => $admin->id]);
+    $publication = ScorePublication::factory()->of($score)->submitted()->create();
+
+    Livewire::actingAs($admin)
+        ->test(ScorePublicationReview::class)
+        ->call('select', $publication->id)
+        ->set('decisionNotes', 'Not a fit after all.')
+        ->call('reject')
+        ->assertHasNoErrors();
+
+    expect($publication->fresh()->status)->toBe(ScorePublicationStatus::Rejected);
+});
+
 it('requires a reason before taking a published score down', function () {
     $score = Score::factory()->create();
     $publication = ScorePublication::factory()->of($score)->approved()->create();

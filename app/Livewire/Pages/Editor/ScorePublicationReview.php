@@ -181,7 +181,12 @@ class ScorePublicationReview extends Component
     public function reject(): void
     {
         $publication = $this->requireSelected();
-        $this->authorize('reject', $publication);
+
+        // Mirrors approve(): a reviewer may not turn down their own nomination,
+        // but an admin may, same as the self-approval escape hatch.
+        if (! Auth::user()->can('reject', $publication)) {
+            $this->authorize('selfReject', $publication);
+        }
 
         $this->validate([
             'decisionNotes' => ['required', 'string', 'min:5', 'max:2000'],

@@ -53,6 +53,16 @@ class ScorePublicationPolicy
         return $user->can(self::REVIEW_PERMISSION) && ! $this->hasStakeIn($user, $publication);
     }
 
+    /**
+     * The same escape hatch as {@see selfApprove()}, for the other side of the
+     * decision: a single active admin must be able to turn their own nomination
+     * down too, not just wave it through.
+     */
+    public function selfReject(User $user, ScorePublication $publication): bool
+    {
+        return $user->isAdmin() && $user->can(self::REVIEW_PERMISSION);
+    }
+
     public function takeDown(User $user, ScorePublication $publication): bool
     {
         return $user->can(self::REVIEW_PERMISSION);
