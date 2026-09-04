@@ -106,21 +106,47 @@ it('makes a permission claim record the permission', function () {
         ->assertHasErrors(['publicationForm.permission_evidence' => 'required']);
 });
 
-it('hides the nomination form when the score has no music', function () {
+it('asks for a music instead of hiding the offer when the score has none', function () {
     $score = Score::factory()->unattached()->create();
 
     Livewire::actingAs($score->user)
         ->test(ScoreEditor::class, ['score' => $score])
-        ->assertSet('canNominate', false);
+        ->assertSet('canNominate', false)
+        ->assertSee(__('Attach this score to a music, and you can offer it to the public library.'))
+        ->assertSee(__('Attach a music'))
+        ->assertDontSee(__('Offer this score'));
 });
 
-it('hides the nomination form when the music is private', function () {
-    $music = Music::factory()->create(['is_private' => true]);
+it('offers the score as soon as a music is attached', function () {
+    $score = Score::factory()->unattached()->create();
+    $music = Music::factory()->create();
+
+    Livewire::actingAs($score->user)
+        ->test(ScoreEditor::class, ['score' => $score])
+        ->call('onMusicSelected', $music->id)
+        ->assertSee(__('Offer this score'))
+        ->assertDontSee(__('Attach this score to a music, and you can offer it to the public library.'));
+});
+
+it('says why a private music keeps the score out of the library', function () {
+    $music = Music::factory()->private()->create();
     $score = Score::factory()->create(['music_id' => $music->id]);
 
     Livewire::actingAs($score->user)
         ->test(ScoreEditor::class, ['score' => $score])
-        ->assertSet('canNominate', false);
+        ->assertSet('canNominate', false)
+        ->assertSee(__('The music this score belongs to is private, so the score cannot be offered to the public library.'))
+        ->assertDontSee(__('Attach a music'))
+        ->assertDontSee(__('Offer this score'));
+});
+
+it('asks for something to publish when the score is still empty', function () {
+    $score = Score::factory()->create(['content' => null, 'format' => null]);
+
+    Livewire::actingAs($score->user)
+        ->test(ScoreEditor::class, ['score' => $score])
+        ->assertSee(__('Write the score or add a file, and you can offer it to the public library.'))
+        ->assertDontSee(__('Offer this score'));
 });
 
 it('lets an owner withdraw a published score', function () {

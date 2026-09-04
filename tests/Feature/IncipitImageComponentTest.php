@@ -10,7 +10,7 @@ it('renders the incipit image with a magnifier overlay and a full-image lightbox
 
     expect($html)
         ->toContain('https://example.test/incipits/42.png')
-        ->toContain('aria-label="View full image"')
+        ->toContain('aria-label="Kép megtekintése teljes méretben"')
         ->toContain('incipitZoom = true')
         ->toContain('x-teleport="body"')
         ->toContain('block max-h-14');
