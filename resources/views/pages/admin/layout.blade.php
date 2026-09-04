@@ -7,6 +7,9 @@
             <flux:navlist.item :href="route('admin.users')" wire:navigate :current="request()->routeIs('admin.users')">
                 {{ __('Users') }}
             </flux:navlist.item>
+            <flux:navlist.item :href="route('admin.content-statistics')" wire:navigate :current="request()->routeIs('admin.content-statistics')">
+                {{ __('Content Statistics') }}
+            </flux:navlist.item>
 
             <flux:navlist.group :heading="__('Security')">
                 <flux:navlist.item :href="route('admin.role-permissions')" wire:navigate :current="request()->routeIs('admin.role-permissions')">

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->group(function () {
     Route::livewire('nickname-data', 'pages::admin.nickname-data')->name('admin.nickname-data');
     Route::livewire('users', 'pages::admin.users')->name('admin.users');
+    Route::livewire('content-statistics', 'pages::admin.content-statistics')->name('admin.content-statistics');
 
     // Music Plan Templates
     Route::livewire('music-plan-slots', \App\Livewire\Pages\Admin\MusicPlanSlots::class)->name('admin.music-plan-slots');

@@ -1328,5 +1328,9 @@
     "to": "–",
     "of": "/",
     "results": "találat",
-    "Go to page :page": "Ugrás a(z) :page. oldalra"
+    "Go to page :page": "Ugrás a(z) :page. oldalra",
+    "Content Statistics": "Tartalom statisztika",
+    "How much content each nickname has added. Private scores and plans are counted, never shown.": "Mennyi tartalmat adott hozzá az oldalhoz az adott becenév. A privát kották és énekrendek csak számként jelennek meg, tartalmuk soha.",
+    "Music": "Zeneművek",
+    "Total": "Összesen"
 }

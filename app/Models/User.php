@@ -81,6 +81,20 @@ use Spatie\Permission\Traits\HasRoles;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutPermission($permissions)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User withoutRole($roles, ?string $guard = null)
  *
+ * @property \Carbon\CarbonImmutable|null $last_login_at
+ * @property array<array-key, mixed>|null $score_settings
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Author> $authors
+ * @property-read int|null $authors_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Collection> $collections
+ * @property-read int|null $collections_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlan> $musicPlans
+ * @property-read int|null $music_plans_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $musics
+ * @property-read int|null $musics_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereLastLoginAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereScoreSettings($value)
+ *
  * @mixin \Eloquent
  */
 class User extends Authenticatable implements MustVerifyEmail
@@ -200,6 +214,38 @@ class User extends Authenticatable implements MustVerifyEmail
     public function scores(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Score::class);
+    }
+
+    /**
+     * Get the music pieces this user added, public and private.
+     */
+    public function musics(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Music::class);
+    }
+
+    /**
+     * Get the authors this user added, public and private.
+     */
+    public function authors(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Author::class);
+    }
+
+    /**
+     * Get the collections this user created, public and private.
+     */
+    public function collections(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Collection::class);
+    }
+
+    /**
+     * Get the music plans this user created, public and private.
+     */
+    public function musicPlans(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(MusicPlan::class);
     }
 
     /**
