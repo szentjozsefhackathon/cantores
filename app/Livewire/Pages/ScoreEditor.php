@@ -548,7 +548,7 @@ class ScoreEditor extends Component
         }
 
         return [
-            'message' => __('Write the score or add a file, and you can offer it to the public library.'),
+            'message' => __('Write the score, or add a file and mark it for the offer, and you can offer it to the public library.'),
             'needsMusic' => false,
         ];
     }

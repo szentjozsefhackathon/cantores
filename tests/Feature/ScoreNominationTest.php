@@ -145,8 +145,35 @@ it('asks for something to publish when the score is still empty', function () {
 
     Livewire::actingAs($score->user)
         ->test(ScoreEditor::class, ['score' => $score])
-        ->assertSee(__('Write the score or add a file, and you can offer it to the public library.'))
+        ->assertSee(__('Write the score, or add a file and mark it for the offer, and you can offer it to the public library.'))
         ->assertDontSee(__('Offer this score'));
+});
+
+it('does not offer to nominate a links-only score whose file is not marked for the offer', function () {
+    $score = Score::factory()->linksOnly()->create();
+    ScoreFile::factory()->ready()->create([
+        'score_id' => $score->id,
+        'rights' => ScoreFileRights::PublicDomain,
+    ]);
+
+    Livewire::actingAs($score->user)
+        ->test(ScoreEditor::class, ['score' => $score])
+        ->assertSet('canNominate', false)
+        ->assertDontSee(__('Offer this score'));
+});
+
+it('offers a links-only score once its file is marked for the offer', function () {
+    $score = Score::factory()->linksOnly()->create();
+    $file = ScoreFile::factory()->ready()->create([
+        'score_id' => $score->id,
+        'rights' => ScoreFileRights::PublicDomain,
+    ]);
+
+    Livewire::actingAs($score->user)
+        ->test(ScoreEditor::class, ['score' => $score])
+        ->call('togglePublishedFile', $file->id)
+        ->assertSet('canNominate', true)
+        ->assertSee(__('Offer this score'));
 });
 
 it('lets an owner withdraw a published score', function () {
@@ -187,6 +214,21 @@ it('flags a public domain file for publication', function () {
         ->call('togglePublishedFile', $file->id);
 
     expect($file->fresh()->is_published)->toBeTrue();
+});
+
+it('shows a button that offers a file for publication and reflects it once flagged', function () {
+    $score = Score::factory()->create();
+    $file = ScoreFile::factory()->ready()->create([
+        'score_id' => $score->id,
+        'rights' => ScoreFileRights::PublicDomain,
+    ]);
+
+    Livewire::actingAs($score->user)
+        ->test(ScoreEditor::class, ['score' => $score])
+        ->assertSeeHtml('wire:click="togglePublishedFile('.$file->id.')"')
+        ->assertDontSee(__('Included in the offer'))
+        ->call('togglePublishedFile', $file->id)
+        ->assertSee(__('Included in the offer'));
 });
 
 it('does not let a stranger nominate someone else’s score', function () {

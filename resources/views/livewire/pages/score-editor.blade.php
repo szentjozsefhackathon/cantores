@@ -1172,6 +1172,9 @@
 
                                     <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
                                         <flux:badge size="sm" color="zinc">{{ $file->rights->label() }}</flux:badge>
+                                        @if($file->is_published)
+                                        <flux:badge size="sm" color="green">{{ __('Included in the offer') }}</flux:badge>
+                                        @endif
                                         @if($file->isRendering())
                                         <flux:badge size="sm" color="blue" class="gap-1">
                                             <flux:icon.loading class="size-3 shrink-0" />
@@ -1201,6 +1204,13 @@
                                     size="sm"
                                     :aria-label="__('Download')"
                                     :href="route('scores.file.download', ['score' => $score, 'scoreFile' => $file])" />
+
+                                <flux:button
+                                    icon="{{ $file->is_published ? 'check-badge' : 'cloud-arrow-up' }}"
+                                    variant="{{ $file->is_published ? 'filled' : 'ghost' }}"
+                                    size="sm"
+                                    :aria-label="$file->is_published ? __('Remove from the public offer') : __('Include in the public offer')"
+                                    wire:click="togglePublishedFile({{ $file->id }})" />
 
                                 <flux:modal.trigger name="score-file-edit">
                                     <flux:button
@@ -1262,7 +1272,7 @@
                                     wire:model="pendingFile"
                                     accept=".mscz,.musicxml,.mxl,.mid,.midi,.pdf" />
                                 <flux:description>
-                                    {{ __('MuseScore (.mscz), MusicXML, MIDI or PDF. Max 25 MB. Never published — only you and the people you hand a secret link to can open it.') }}
+                                    {{ __('MuseScore (.mscz), MusicXML, MIDI or PDF. Max 25 MB. Private until you mark it for the public offer below — until then, only you and the people you hand a secret link to can open it.') }}
                                 </flux:description>
                                 <flux:error name="pendingFile" />
                             </flux:field>
