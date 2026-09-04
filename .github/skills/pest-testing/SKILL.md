@@ -158,6 +158,61 @@ arch('controllers')
     ->toHaveSuffix('Controller');
 ```
 
+## Test Behaviour, Not the Implementation
+
+A test earns its place only if it can fail for a reason that matters. If the sole way to
+break it is to edit the very lines it mirrors, it is tautological: it asserts that the code
+says what it says. It never catches a bug, and it breaks on every harmless rename or
+restyle, so the suite grows expensive and nobody trusts a red run.
+
+Signals a test is tautological:
+
+- Asserting on CSS classes, Tailwind utilities, DOM structure, element order, or attribute
+  strings copied out of a Blade file.
+- `substr_count($html, ...)` or `toContain('<div class="...">')` over rendered markup.
+- Restating a constant, config value, enum case, or translation the code already declares:
+  `expect(Loan::STATUS_ACTIVE)->toBe('active')`.
+- Mocking the method under test, then asserting it was called.
+- Asserting a factory produced the attributes the test just passed to that factory.
+- Recomputing an accessor's formula in the test and comparing the two.
+
+Assert instead on what a user or a caller would notice:
+
+| Test this | Not this |
+|-----------|----------|
+| Text the user reads: `assertSee('Adventi ének')` | The classes on the element wrapping it |
+| Persisted state: `assertDatabaseHas`, model counts | That an Eloquent call was made |
+| `assertRedirect`, `assertForbidden`, policy outcomes | The route string in the controller |
+| Dispatched events, sent notifications, queued jobs | That the code calls `dispatch()` |
+| JSON payload shape and values | The Resource class's property list |
+| Livewire: `assertSet`, `assertSee`, `assertDispatched` | Livewire: rendered HTML fragments |
+
+<!-- Tautological: mirrors the template, cannot catch a bug -->
+```php
+expect($html)->toContain('bg-accent-foreground/20 text-accent-foreground');
+```
+
+<!-- Meaningful: fails when the tab actually shows the wrong scores -->
+```php
+Livewire::test(Loans::class)
+    ->call('selectTab', 'lent')
+    ->assertSee('Saját kottám')
+    ->assertDontSee('Kölcsönkapott kotta');
+```
+
+### Changes With No Behaviour to Assert
+
+A colour swap, a spacing tweak, an icon change: there is nothing a Pest assertion can
+observe that isn't a copy of the diff. Do not manufacture one. Either
+
+- cover it where it can genuinely fail — a browser test asserting what the user can see or
+  do, or a visual regression screenshot, when the project runs them; or
+- add no test, and say plainly in your reply that the change is presentational, how you
+  verified it, and that a unit test would only restate the markup.
+
+"No test for this one, and here is why" is a better report than a green assertion that
+restates the diff.
+
 ## Common Pitfalls
 
 - Not importing `use function Pest\Laravel\mock;` before using mock
@@ -165,3 +220,5 @@ arch('controllers')
 - Forgetting datasets for repetitive validation tests
 - Deleting tests without approval
 - Forgetting `assertNoJavaScriptErrors()` in browser tests
+- Asserting on CSS classes or markup the test copied out of the template
+- Writing a test for a purely presentational change instead of reporting that none applies
