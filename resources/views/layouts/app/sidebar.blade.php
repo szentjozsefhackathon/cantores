@@ -83,6 +83,9 @@
                 <flux:sidebar.item icon="file-music" :href="route('scores')" :current="request()->routeIs('scores', 'scores.*')" wire:navigate>
                     {{ __('My Scores') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="arrow-down-tray" :href="route('public-scores')" :current="request()->routeIs('public-scores', 'public-scores.*')" wire:navigate>
+                    Ingyenes kották
+                </flux:sidebar.item>
                 <flux:sidebar.item icon="folder" :href="route('folders')" :current="request()->routeIs('folders', 'folders.*')" wire:navigate>
                     {{ __('My Folders') }}
                 </flux:sidebar.item>
@@ -106,6 +109,9 @@
             </flux:sidebar.item>
             <flux:sidebar.item icon="check-circle" :href="route('music-verifier')" :current="request()->routeIs('music-verifier')" wire:navigate>
                 Énekek ellenőrzése
+            </flux:sidebar.item>
+            <flux:sidebar.item icon="shield-check" :href="route('score-publication-review')" :current="request()->routeIs('score-publication-review')" wire:navigate>
+                Kotta-közzététel
             </flux:sidebar.item>
             <flux:sidebar.item icon="tag" :href="route('music-tag-manager')" :current="request()->routeIs('music-tag-manager')" wire:navigate>
                 Zenei címkék

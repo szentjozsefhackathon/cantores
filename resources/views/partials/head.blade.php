@@ -15,6 +15,10 @@
 @endif
 <link rel="canonical" href="{{ $canonicalUrl }}" />
 
+@if(! empty($jsonLd))
+<script type="application/ld+json">{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+@endif
+
 {{-- Open Graph --}}
 <meta property="og:site_name" content="{{ config('app.name') }}" />
 <meta property="og:locale" content="hu_HU" />

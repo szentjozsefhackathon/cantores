@@ -1,4 +1,4 @@
-@props(['title' => null, 'description' => null, 'canonical' => null, 'noindex' => false])
+@props(['title' => null, 'description' => null, 'canonical' => null, 'noindex' => false, 'ogImage' => null, 'jsonLd' => null])
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark" x-data="{
   init() {
@@ -41,6 +41,10 @@
                     <a href="{{ route('music-plans') }}" class="text-accent hover:underline font-medium text-sm">
                         <flux:icon name="list-music" class="inline" variant="mini"></flux:icon>
                         Énekrendek
+                    </a>
+                    <a href="{{ route('public-scores') }}" class="text-accent hover:underline font-medium text-sm">
+                        <flux:icon name="arrow-down-tray" class="inline" variant="mini"></flux:icon>
+                        Ingyenes kották
                     </a>
                     @auth
                         <a href="{{ url('/dashboard') }}">
@@ -97,6 +101,10 @@
                     <a href="{{ route('music-plans') }}" class="text-accent hover:underline font-medium text-sm">
                         <flux:icon name="list-music" class="inline" variant="mini"></flux:icon>
                         Énekrendek
+                    </a>
+                    <a href="{{ route('public-scores') }}" class="text-accent hover:underline font-medium text-sm">
+                        <flux:icon name="arrow-down-tray" class="inline" variant="mini"></flux:icon>
+                        Ingyenes kották
                     </a>
                     <flux:dropdown align="end">
                         <flux:button variant="ghost" square icon="bars-3" aria-label="Menu" />

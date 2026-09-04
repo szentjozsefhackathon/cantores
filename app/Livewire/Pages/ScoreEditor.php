@@ -4,15 +4,19 @@ namespace App\Livewire\Pages;
 
 use App\Enums\ScoreFileRights;
 use App\Enums\ScoreFormat;
+use App\Enums\ScoreLicense;
 use App\Models\Folder;
 use App\Models\Music;
 use App\Models\Score;
 use App\Models\ScoreFile;
+use App\Models\ScorePublication;
 use App\Models\ScoreUrl;
 use App\Models\Share;
 use App\MusicUrlLabel;
 use App\Services\ScoreFileUploader;
+use App\Services\ScorePublicationService;
 use App\Services\ShareAccessService;
+use App\Support\ScorePublicationRules;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
@@ -52,6 +56,12 @@ class ScoreEditor extends Component
 
     public string $title = '';
 
+    /**
+     * What this score is called among the other versions of the same music —
+     * "Fuvola", "Kórus", "Csak szöveg".
+     */
+    public string $variationName = '';
+
     public string $format = 'abc';
 
     public string $content = '';
@@ -75,6 +85,24 @@ class ScoreEditor extends Component
     public $pendingFile = null;
 
     public string $fileRights = ScoreFileRights::OwnWork->value;
+
+    /**
+     * The nomination form. Empty until the owner opens it, and never a source
+     * of truth: the publication row is.
+     *
+     * @var array<string, mixed>
+     */
+    public array $publicationForm = [
+        'license' => '',
+        'outbound_license' => '',
+        'source_url' => '',
+        'source_title' => '',
+        'composer_death_year' => '',
+        'edition_is_free' => false,
+        'rights_note' => '',
+        'permission_evidence' => '',
+        'attribution_line' => '',
+    ];
 
     /**
      * What to call the staged file in the file list — "A4", "A5 booklet" — so a
@@ -124,6 +152,7 @@ class ScoreEditor extends Component
             $this->score = $score->load('music');
             $this->musicId = $score->music_id;
             $this->title = $score->title;
+            $this->variationName = $score->variation_name ?? '';
             $this->linksOnly = $score->format === null;
             $this->format = $score->format?->value ?? 'abc';
             $this->content = $score->content ?? '';
@@ -134,6 +163,7 @@ class ScoreEditor extends Component
                 ? route('score.share', ['token' => $shareToken])
                 : null;
             $this->folderIds = $score->folders()->pluck('folder_id')->toArray();
+            $this->fillPublicationForm($score);
 
             return;
         }
@@ -154,6 +184,52 @@ class ScoreEditor extends Component
             $this->musicId = $music->id;
             $this->title = $music->title;
         }
+
+        if (request()->routeIs('scores.create')) {
+            $this->openDraft();
+        }
+    }
+
+    /**
+     * Give the editor a row to work on before a single note is typed, the way a
+     * cloud document editor does: uploads, share links and autosave all need a
+     * score that exists, and forgetting to press Save can then lose nothing.
+     */
+    private function openDraft(): void
+    {
+        $title = $this->title !== '' ? $this->title : __('Untitled score');
+
+        $draft = $this->untouchedDraft($title) ?? Score::create([
+            'user_id' => Auth::id(),
+            'music_id' => $this->musicId,
+            'title' => $title,
+            'format' => $this->format,
+            'content' => null,
+        ]);
+
+        $this->redirectRoute('scores.edit', ['score' => $draft->id], navigate: true);
+    }
+
+    /**
+     * A draft the user opened before and left exactly as it was found. Opening
+     * the editor again hands back that same row rather than littering the
+     * library with a new "Untitled score" per visit.
+     */
+    private function untouchedDraft(string $title): ?Score
+    {
+        return Score::query()
+            ->where('user_id', Auth::id())
+            ->where('title', $title)
+            ->when(
+                $this->musicId === null,
+                fn ($query) => $query->whereNull('music_id'),
+                fn ($query) => $query->where('music_id', $this->musicId),
+            )
+            ->where(fn ($query) => $query->whereNull('content')->orWhere('content', ''))
+            ->whereDoesntHave('files')
+            ->whereDoesntHave('urls')
+            ->latest('id')
+            ->first();
     }
 
     public function rendering(IlluminateView $view): void
@@ -182,6 +258,7 @@ class ScoreEditor extends Component
 
         $rules = [
             'title' => ['required', 'string', 'max:255'],
+            'variationName' => ['nullable', 'string', 'max:120'],
             'musicId' => ['nullable', 'integer'],
             'publicPreview' => ['boolean'],
         ];
@@ -213,24 +290,19 @@ class ScoreEditor extends Component
             $score->fill([
                 'music_id' => $musicId,
                 'title' => $validated['title'],
+                'variation_name' => $this->variationNameForStorage(),
                 'format' => null,
                 'content' => null,
                 'settings' => null,
                 'public_preview' => false,
             ]);
         } else {
-            $settings = $this->settings;
-            if (is_array($allRatioSettings)) {
-                foreach ($allRatioSettings as $ratio => $ratioSettings) {
-                    if (is_string($ratio) && $ratio !== '' && is_array($ratioSettings)) {
-                        $settings[$validated['format']][$ratio] = $ratioSettings;
-                    }
-                }
-            }
+            $settings = $this->settingsMergedWith($allRatioSettings, $validated['format']);
 
             $score->fill([
                 'music_id' => $musicId,
                 'title' => $validated['title'],
+                'variation_name' => $this->variationNameForStorage(),
                 'format' => $validated['format'],
                 'content' => $validated['content'],
                 'settings' => $settings ?: null,
@@ -261,6 +333,86 @@ class ScoreEditor extends Component
         if ($isNew) {
             $this->redirectRoute('scores.edit', ['score' => $score->id], navigate: true);
         }
+    }
+
+    /**
+     * Write what is on screen back to the row without saying a word: no toast,
+     * no redirect and no validation errors, so an unfinished score is kept
+     * without the editor nagging about what is still missing.
+     *
+     * It never clears anything the explicit save would clear — a blank title or
+     * a links-only switch leaves the stored value alone — so an autosave can
+     * only ever cost the user less work, never more.
+     *
+     * @param  array<string, array<string, mixed>>|null  $allRatioSettings  Map of ratio key to settings
+     */
+    #[Renderless]
+    public function autosave(?array $allRatioSettings = null, ?string $incipitDataUrl = null): void
+    {
+        if (! $this->score instanceof Score || $this->linksOnly) {
+            return;
+        }
+
+        $this->authorize('update', $this->score);
+
+        if (ScoreFormat::tryFrom($this->format) === null) {
+            return;
+        }
+
+        $score = $this->score;
+        $musicId = $this->resolveMusicId($this->musicId);
+        $settings = $this->settingsMergedWith($allRatioSettings, $this->format);
+
+        if (trim($this->title) !== '') {
+            $score->title = $this->title;
+        }
+
+        $score->fill([
+            'music_id' => $musicId,
+            'variation_name' => $this->variationNameForStorage(),
+            'format' => $this->format,
+            'content' => $this->content,
+            'settings' => $settings ?: null,
+            'public_preview' => $musicId !== null && $this->publicPreview,
+        ]);
+
+        $score->save();
+
+        $this->storeIncipit($score, $incipitDataUrl);
+        $this->settings = $score->settings ?? [];
+
+        $this->dispatch('score-autosaved');
+    }
+
+    /**
+     * The public-preview box is the one editor control that changes the score
+     * without touching the preview, so the browser-side timer never hears about
+     * it; the tick is written back here instead.
+     */
+    public function updatedPublicPreview(): void
+    {
+        $this->autosave();
+    }
+
+    /**
+     * The score's settings with this session's per-ratio edits laid over them.
+     *
+     * @param  array<string, array<string, mixed>>|null  $allRatioSettings  Map of ratio key to settings
+     * @return array<string, array<string, array<string, mixed>>>
+     */
+    private function settingsMergedWith(?array $allRatioSettings, string $format): array
+    {
+        $settings = $this->settings;
+
+        if (is_array($allRatioSettings)) {
+            foreach ($allRatioSettings as $ratio => $ratioSettings) {
+                if (is_string($ratio) && $ratio !== '' && is_array($ratioSettings)) {
+                    $settings[$format][$ratio] = $ratioSettings;
+                }
+            }
+        }
+
+        return $settings;
     }
 
     /**
@@ -311,7 +463,161 @@ class ScoreEditor extends Component
         return route('score.preview', ['d' => $encoded]);
     }
 
-    #[Renderless]
+    /**
+     * The score's standing offer to the public library, if any.
+     */
+    #[Computed]
+    public function publication(): ?ScorePublication
+    {
+        return $this->score?->publication;
+    }
+
+    /**
+     * Whether the nomination form should be reachable at all.
+     */
+    #[Computed]
+    public function canNominate(): bool
+    {
+        return $this->score instanceof Score
+            && Gate::allows('nominate', $this->score);
+    }
+
+    /**
+     * Flag or unflag one file for publication.
+     *
+     * Only the owner's own files, and only ones whose declared rights permit
+     * it — the review queue shows the result, so it must not be forgeable here.
+     */
+    public function togglePublishedFile(int $scoreFileId): void
+    {
+        $scoreFile = $this->ownedFile($scoreFileId);
+
+        if (! $scoreFile->is_published && ! $scoreFile->rights->mayBePublished()) {
+            $this->dispatch(
+                'toast',
+                message: __('That file cannot be published with the rights you declared for it.'),
+                type: 'error',
+            );
+
+            return;
+        }
+
+        $scoreFile->update(['is_published' => ! $scoreFile->is_published]);
+
+        $this->forgetFiles();
+        unset($this->publication);
+    }
+
+    public function submitForPublication(): void
+    {
+        abort_unless($this->score instanceof Score, 404);
+        $this->authorize('nominate', $this->score);
+
+        $license = ScoreLicense::tryFrom((string) ($this->publicationForm['license'] ?? ''));
+
+        $rules = [];
+        foreach (ScorePublicationRules::for($license) as $field => $fieldRules) {
+            $rules["publicationForm.{$field}"] = $fieldRules;
+        }
+
+        $messages = [];
+        foreach (ScorePublicationRules::messages() as $key => $message) {
+            $messages["publicationForm.{$key}"] = $message;
+        }
+
+        $this->validate($rules, $messages);
+
+        try {
+            app(ScorePublicationService::class)->submit(
+                $this->score,
+                Auth::user(),
+                $this->publicationAttributes(),
+            );
+        } catch (\RuntimeException $e) {
+            $this->dispatch('toast', message: $e->getMessage(), type: 'error');
+
+            return;
+        }
+
+        unset($this->publication);
+
+        $this->dispatch('score-publication-submitted');
+        $this->dispatch(
+            'toast',
+            message: __('Sent for review. An editor will check the licence before it goes public.'),
+            type: 'success',
+        );
+    }
+
+    public function withdrawPublication(): void
+    {
+        $publication = $this->publication;
+
+        abort_if($publication === null, 404);
+        $this->authorize('withdraw', $publication);
+
+        app(ScorePublicationService::class)->withdraw($publication);
+
+        unset($this->publication);
+
+        $this->dispatch('toast', message: __('Withdrawn from the public library.'), type: 'success');
+    }
+
+    /**
+     * Load a standing nomination back into the form, so an owner fixing a
+     * rejection edits what they submitted rather than starting again.
+     */
+    private function fillPublicationForm(Score $score): void
+    {
+        $publication = $score->publication;
+
+        if (! $publication instanceof ScorePublication) {
+            return;
+        }
+
+        $this->publicationForm = [
+            'license' => $publication->license->value,
+            'outbound_license' => $publication->outbound_license?->value ?? '',
+            'source_url' => $publication->source_url ?? '',
+            'source_title' => $publication->source_title ?? '',
+            'composer_death_year' => (string) ($publication->composer_death_year ?? ''),
+            'edition_is_free' => $publication->edition_is_free,
+            'rights_note' => $publication->rights_note ?? '',
+            'permission_evidence' => $publication->permission_evidence ?? '',
+            'attribution_line' => $publication->attribution_line ?? '',
+        ];
+    }
+
+    /**
+     * The nomination form, normalised for storage.
+     *
+     * @return array<string, mixed>
+     */
+    private function publicationAttributes(): array
+    {
+        $blankToNull = fn (string $key): ?string => trim((string) ($this->publicationForm[$key] ?? '')) !== ''
+            ? trim((string) $this->publicationForm[$key])
+            : null;
+
+        $license = ScoreLicense::tryFrom((string) ($this->publicationForm['license'] ?? ''));
+
+        return [
+            'license' => $this->publicationForm['license'],
+            'outbound_license' => $blankToNull('outbound_license'),
+            'source_url' => $blankToNull('source_url'),
+            'source_title' => $blankToNull('source_title'),
+            'composer_death_year' => $blankToNull('composer_death_year'),
+            // Only meaningful where the licence asks the question, so a tick
+            // left behind by a licence the owner tried and abandoned does not
+            // reach the reviewer as an assertion they never made.
+            'edition_is_free' => $license?->requiresEditionAffirmation()
+                && (bool) ($this->publicationForm['edition_is_free'] ?? false),
+            'rights_note' => $blankToNull('rights_note'),
+            'permission_evidence' => $blankToNull('permission_evidence'),
+            'attribution_line' => $blankToNull('attribution_line'),
+        ];
+    }
+
     public function generateSecretLink(): void
     {
         abort_unless($this->score instanceof Score, 404);
@@ -322,7 +628,6 @@ class ScoreEditor extends Component
         $this->secretLinkUrl = route('score.share', ['token' => $share->token]);
     }
 
-    #[Renderless]
     public function deleteSecretLink(): void
     {
         abort_unless($this->score instanceof Score, 404);
@@ -394,11 +699,28 @@ class ScoreEditor extends Component
             ];
         }
 
+        $this->resetUrlForm();
+
+        unset($this->scoreUrls);
+
+        $this->dispatch('score-url-added');
+    }
+
+    /**
+     * Empty the add-link dialog when it is dismissed, so reopening it does not
+     * offer the half-typed link from last time.
+     */
+    public function cancelUrlAdd(): void
+    {
+        $this->resetUrlForm();
+        $this->resetErrorBag(['newUrl', 'newUrlLabel', 'newUrlComment']);
+    }
+
+    private function resetUrlForm(): void
+    {
         $this->newUrl = '';
         $this->newUrlLabel = null;
         $this->newUrlComment = '';
-
-        unset($this->scoreUrls);
     }
 
     public function deleteUrl(int $urlId): void
@@ -497,6 +819,7 @@ class ScoreEditor extends Component
         $this->fileLabel = '';
         $this->forgetFiles();
 
+        $this->dispatch('score-file-added');
         $this->dispatch('toast', message: __('File added.'), type: 'success');
     }
 
@@ -794,11 +1117,13 @@ class ScoreEditor extends Component
         $this->musicId = $music->id;
         $this->title = $music->title;
         $this->js("Flux.modal('score-music-search').close()");
+        $this->autosave();
     }
 
     public function clearMusic(): void
     {
         $this->musicId = null;
+        $this->autosave();
     }
 
     public function selectFormat(string $format): void
@@ -809,6 +1134,27 @@ class ScoreEditor extends Component
 
         $this->format = $format;
         $this->linksOnly = false;
+        $this->autosave();
+    }
+
+    /**
+     * Pick the fifth format: the score is the links and the files hung on it,
+     * with nothing typed in an editor.
+     */
+    public function selectLinksOnly(): void
+    {
+        $this->linksOnly = true;
+    }
+
+    /**
+     * The variation name as the column wants it: a blank box means unnamed, and
+     * an over-long one is cut rather than allowed to break a silent autosave.
+     */
+    private function variationNameForStorage(): ?string
+    {
+        $name = trim($this->variationName);
+
+        return $name !== '' ? mb_substr($name, 0, 120) : null;
     }
 
     public function render()
@@ -819,6 +1165,9 @@ class ScoreEditor extends Component
             'formats' => ScoreFormat::cases(),
             'urlLabels' => MusicUrlLabel::cases(),
             'rightsOptions' => ScoreFileRights::cases(),
+            'licenseOptions' => ScoreLicense::cases(),
+            'outboundLicenseOptions' => ScoreLicense::redistributableCases(),
+            'editionFreeBefore' => ScorePublicationRules::editionFreeBefore(),
             'userDefaults' => $user instanceof \App\Models\User ? ($user->score_settings ?? []) : [],
             'isSharedLink' => $this->isSharedLink,
             'isGuest' => ! Auth::check(),

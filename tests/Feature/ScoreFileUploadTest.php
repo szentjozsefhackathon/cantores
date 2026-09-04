@@ -6,8 +6,10 @@ use App\Jobs\RenderScoreFileJob;
 use App\Livewire\Pages\ScoreEditor;
 use App\Models\Score;
 use App\Models\ScoreFile;
+use App\Models\ScoreUrl;
 use App\Models\Share;
 use App\Models\User;
+use App\MusicUrlLabel;
 use App\Services\MuseScoreMetadata;
 use App\Services\MuseScoreRenderer;
 use App\Services\PdfPageRasterizer;
@@ -559,6 +561,47 @@ it('keeps every uploaded file and lists them all in the editor', function () {
         ->and($files[1]->rights)->toBe(ScoreFileRights::PublicDomain);
 });
 
+it('lists uploaded files as cards rather than table rows', function () {
+    Storage::fake('private');
+
+    $owner = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $owner->id]);
+    actingAs($owner);
+
+    ScoreFile::factory()->ready(3)->create([
+        'score_id' => $score->id,
+        'original_name' => 'veni.mscz',
+        'rights' => ScoreFileRights::PublicDomain,
+    ]);
+
+    $html = Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSee('veni.mscz')
+        ->assertSee(ScoreFileRights::PublicDomain->label())
+        ->assertSee(trans_choice(':count page|:count pages', 3, ['count' => 3]))
+        ->html();
+
+    expect($html)->not->toContain('data-flux-table');
+});
+
+it('lists links as cards rather than plain rows', function () {
+    $owner = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $owner->id]);
+    ScoreUrl::create([
+        'score_id' => $score->id,
+        'url' => 'https://example.com/kotta.pdf',
+        'label' => MusicUrlLabel::SheetMusic->value,
+        'comment' => 'A négyszólamú változat',
+    ]);
+
+    actingAs($owner);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSee('https://example.com/kotta.pdf')
+        ->assertSee('A négyszólamú változat')
+        ->assertSee(MusicUrlLabel::SheetMusic->label())
+        ->assertSee(__('Open link'));
+});
+
 it('renames a file and changes its rights from the edit dialog', function () {
     Storage::fake('private');
 
@@ -741,4 +784,36 @@ it('actually renders a .musicxml with MuseScore', function () {
     $pdf = MuseScoreRenderer::fromConfig()->render($musicxml, 'musicxml');
 
     expect($pdf)->toStartWith('%PDF');
+});
+
+it('keeps the add-file form in a dialog and closes it once the file is stored', function () {
+    Storage::fake('private');
+    fakeRenderer();
+    $score = Score::factory()->unattached()->create();
+
+    actingAs($score->user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSeeHtml('data-modal="score-file-add"')
+        ->assertSeeHtml("fluxModal('score-file-add'")
+        ->set('fileRights', ScoreFileRights::OwnWork->value)
+        ->set('pendingFile', UploadedFile::fake()->createWithContent('veni.mscz', makeMscz()))
+        ->call('addFile')
+        ->assertHasNoErrors()
+        ->assertDispatched('score-file-added');
+
+    expect($score->files()->count())->toBe(1);
+});
+
+it('keeps the add-file dialog open when the upload is rejected', function () {
+    Storage::fake('private');
+    $score = Score::factory()->unattached()->create();
+
+    actingAs($score->user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->set('pendingFile', UploadedFile::fake()->createWithContent('notes.txt', 'hello'))
+        ->call('addFile')
+        ->assertHasErrors('pendingFile')
+        ->assertNotDispatched('score-file-added');
 });

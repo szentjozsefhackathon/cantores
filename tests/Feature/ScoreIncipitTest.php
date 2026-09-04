@@ -109,12 +109,27 @@ it('serves the incipit publicly via public-incipit route for a public_preview sc
         ->assertHeader('Content-Type', 'image/png');
 });
 
-it('returns 403 on public-incipit route for a non-public_preview score', function () {
+it('returns 404, not 403, on public-incipit route for a non-public_preview score', function () {
+    // 403 would confirm that a score exists at this id, which is an oracle over
+    // every private score on the site.
     $owner = User::factory()->create();
     $score = Score::factory()->unattached()->create(['user_id' => $owner->id, 'public_preview' => false]);
     Storage::put($score->incipit_path, 'fake-png-data');
 
-    get(route('scores.public-incipit', $score))->assertForbidden();
+    get(route('scores.public-incipit', $score))->assertNotFound();
+});
+
+it('does not let a public incipit be cached past a revocation', function () {
+    $score = Score::factory()->create(['public_preview' => true]);
+    Storage::put($score->incipit_path, 'fake-png-data');
+
+    $response = get(route('scores.public-incipit', $score))->assertOk();
+
+    $cacheControl = $response->headers->get('Cache-Control');
+
+    expect($cacheControl)->toContain('public')
+        ->and($cacheControl)->not->toContain('immutable')
+        ->and($cacheControl)->toContain('must-revalidate');
 });
 
 it('saves public_preview flag when saving a score with a music attached', function () {

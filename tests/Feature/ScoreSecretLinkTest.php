@@ -5,6 +5,7 @@ use App\Livewire\Pages\ScoreView;
 use App\Models\Score;
 use App\Models\Share;
 use App\Models\User;
+use Illuminate\Support\Js;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -204,4 +205,16 @@ it('omits the url-encoded share section from the modal for links-only scores', f
     Livewire::test(ScoreEditor::class, ['score' => $linksOnly])
         ->assertDontSee($encodedBlurb)
         ->assertSee(__('Secret Link'));
+});
+
+it('labels the export menu on the read-only share view', function () {
+    $owner = User::factory()->create();
+    $score = Score::factory()->abc()->create(['user_id' => $owner->id]);
+    $share = Share::factory()->of($score)->create();
+
+    get(route('score.share', ['token' => $share->token]))
+        ->assertOk()
+        ->assertSee('exportText: '.Js::from(__('Export')), false)
+        ->assertSee('exportPdfText: '.Js::from(__('Export PDF')), false)
+        ->assertSee('x-ref="abcPreview" class="min-h-16 space-y-4" wire:ignore', false);
 });

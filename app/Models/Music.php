@@ -264,6 +264,17 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Scores of this music that guests may download from the public library.
+     *
+     * Distinct from publicPreviewScores(): that one grants an incipit crop,
+     * this one a whole score under a named licence.
+     */
+    public function publishedScores(): HasMany
+    {
+        return $this->hasMany(Score::class)->published();
+    }
+
+    /**
      * Get all incipit scores visible to the given user: public previews plus the user's own non-public scores.
      *
      * @return \Illuminate\Support\Collection<int, Score>

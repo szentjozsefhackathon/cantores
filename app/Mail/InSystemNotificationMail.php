@@ -19,7 +19,7 @@ class InSystemNotificationMail extends Mailable implements ShouldQueue
     public function __construct(
         public Notification $notification,
         public User $recipient,
-        public User $messageSender,
+        public ?User $messageSender,
         public ?NotificationReply $reply = null,
     ) {}
 

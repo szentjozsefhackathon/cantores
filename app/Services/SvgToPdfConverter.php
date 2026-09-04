@@ -35,9 +35,13 @@ class SvgToPdfConverter
      * directory, so a hostile SVG cannot read arbitrary server files. No flags
      * enabling network or unrestricted resource loading are passed.
      *
+     * When $credit is given it is stamped along the foot of every page, so a
+     * score published under a licence that requires attribution carries its
+     * credit in the file itself rather than only on the page it came from.
+     *
      * @param  list<string>  $svgs
      */
-    public function convert(array $svgs): string
+    public function convert(array $svgs, ?string $credit = null): string
     {
         if ($svgs === []) {
             throw new RuntimeException('No SVG input provided.');
@@ -50,6 +54,7 @@ class SvgToPdfConverter
             foreach (array_values($svgs) as $index => $svg) {
                 $path = $workDir.DIRECTORY_SEPARATOR.'page-'.$index.'.svg';
                 $prepared = $this->normalizePhysicalSize($this->expandPositionedText($svg));
+                $prepared = $this->stampCredit($prepared, $credit);
                 file_put_contents($path, $prepared);
                 $inputFiles[] = $path;
             }
@@ -97,6 +102,36 @@ class SvgToPdfConverter
      * Documents that already declare a physical unit, or that carry no usable
      * viewBox, are returned untouched.
      */
+    /**
+     * Append a small credit line to the foot of an SVG page.
+     *
+     * Inserted immediately before the closing tag so it paints over everything
+     * already drawn, and positioned from the document's own height so it lands
+     * inside the page whatever size the editor produced.
+     */
+    public function stampCredit(string $svg, ?string $credit): string
+    {
+        if ($credit === null || trim($credit) === '') {
+            return $svg;
+        }
+
+        $close = strripos($svg, '</svg>');
+
+        if ($close === false) {
+            return $svg;
+        }
+
+        $text = htmlspecialchars($credit, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+
+        $element = '<text x="50%" y="99%" text-anchor="middle" '
+            .'font-family="sans-serif" font-size="7" fill="#666" '
+            .'style="font-family:sans-serif;font-size:7px;fill:#666">'
+            .$text
+            .'</text>';
+
+        return substr($svg, 0, $close).$element.substr($svg, $close);
+    }
+
     public function normalizePhysicalSize(string $svg): string
     {
         $previous = libxml_use_internal_errors(true);

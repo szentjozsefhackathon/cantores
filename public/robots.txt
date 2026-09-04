@@ -1,2 +1,10 @@
 User-agent: *
-Disallow:
+
+# Secret links are private by intent. The pages already send noindex; these
+# rules also cover the file endpoints underneath them, which cannot.
+Disallow: /s/
+Disallow: /f/
+Disallow: /p/
+Disallow: /share/
+
+Sitemap: https://cantores.hu/sitemap.xml

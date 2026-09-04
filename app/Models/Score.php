@@ -11,14 +11,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
  * @property int $user_id
  * @property int|null $music_id
  * @property string $title
+ * @property string|null $variation_name
  * @property \App\Enums\ScoreFormat|null $format
  * @property string|null $content
  * @property array<string, array<string, array<string, mixed>>>|null $settings
@@ -60,6 +63,7 @@ class Score extends Model
         'user_id',
         'music_id',
         'title',
+        'variation_name',
         'format',
         'content',
         'settings',
@@ -118,6 +122,41 @@ class Score extends Model
     }
 
     /**
+     * This score's offer to the public library, if its owner ever made one.
+     */
+    public function publication(): HasOne
+    {
+        return $this->hasOne(ScorePublication::class);
+    }
+
+    /**
+     * Whether guests may reach this score's pages and files.
+     *
+     * Publication is a third access axis, independent of both ownership
+     * (ScorePolicy) and secret links (ShareAccessService): revoking a share
+     * never unpublishes, and unpublishing never revokes a share.
+     */
+    public function isPublished(): bool
+    {
+        return $this->publication?->isPublic() === true;
+    }
+
+    /**
+     * The files that go out with the publication, oldest first.
+     *
+     * A file's own declared rights are re-checked here rather than trusted from
+     * the flag alone, so a rights downgrade takes effect without a backfill.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreFile>
+     */
+    public function publishedFiles(): Collection
+    {
+        return $this->orderedFiles()
+            ->filter(fn (ScoreFile $file): bool => $file->mayBeOffered())
+            ->values();
+    }
+
+    /**
      * The uploaded file this score is built around, if any.
      *
      * A score can hold several — the editable source beside the PDFs cut for
@@ -138,6 +177,16 @@ class Score extends Model
         return $this->relationLoaded('files')
             ? $this->files->sortBy('id')->values()
             : $this->files()->orderBy('id')->get();
+    }
+
+    /**
+     * What to call this score among the other versions of the same music —
+     * "Fuvola", "Kórus", "Csak szöveg". Falls back to the title, so a score
+     * named before variations had names still reads sensibly in the list.
+     */
+    public function variationLabel(): string
+    {
+        return trim((string) $this->variation_name) !== '' ? (string) $this->variation_name : $this->title;
     }
 
     public function folders(): BelongsToMany
@@ -184,6 +233,29 @@ class Score extends Model
     }
 
     /**
+     * The slug half of this score's public URL.
+     *
+     * One canonical spelling, because PublicScoreView redirects anything else
+     * to it and every link that gets it wrong pays a redirect.
+     */
+    public function publicSlug(): string
+    {
+        return Str::slug($this->title) ?: 'kotta';
+    }
+
+    /**
+     * This score's page in the public library.
+     *
+     * The URL exists whether or not the score is published — a reviewer opens
+     * it to judge a nomination — but only PublicScoreAccessService decides who
+     * gets an answer from it.
+     */
+    public function publicUrl(): string
+    {
+        return route('public-scores.show', ['score' => $this, 'slug' => $this->publicSlug()]);
+    }
+
+    /**
      * The read-only page for this score as reached through the given grant.
      */
     public function shareUrl(string $token): string
@@ -200,6 +272,17 @@ class Score extends Model
     public function scopePublicPreview(\Illuminate\Database\Eloquent\Builder $query): void
     {
         $query->where('public_preview', true);
+    }
+
+    /**
+     * Scope to scores a guest may reach in the public library.
+     */
+    public function scopePublished(\Illuminate\Database\Eloquent\Builder $query): void
+    {
+        $query->whereHas(
+            'publication',
+            fn (\Illuminate\Database\Eloquent\Builder $publication) => $publication->approved()
+        );
     }
 
     public function scopeMine(\Illuminate\Database\Eloquent\Builder $query, ?User $user = null): void

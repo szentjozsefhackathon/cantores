@@ -28,8 +28,13 @@ Route::livewire('/abc/guide', \App\Livewire\Pages\AbcGuide::class)
 Route::livewire('/music-database', 'pages::music-database')
     ->name('music-database');
 
+Route::get('/sitemap.xml', \App\Http\Controllers\SitemapController::class)->name('sitemap');
+
 Route::view('/terms', 'pages.terms')->name('terms');
 Route::view('/privacy', 'pages.privacy')->name('privacy');
+
+// What may be published in the free library, and how to report a problem.
+Route::view('/kotta-jogok', 'pages.kotta-jogok')->name('score-rights');
 
 Route::get('/random-nickname', function () {
     $cities = \App\Models\City::allCached();
@@ -193,6 +198,24 @@ Route::get('/scores/{score}/file/{scoreFile}/download', \App\Http\Controllers\Sc
     ->middleware(['auth', 'verified'])
     ->name('scores.file.download');
 
+// Public score library — indexable, no authentication. These routes are kept
+// separate from the /scores/* ones on purpose: those sit behind auth,verified,
+// and that middleware is a second line of defence over every private file.
+// PublicScoreAccessService is the single gate here.
+Route::livewire('/ingyenes-kottak', \App\Livewire\Pages\PublicScores::class)
+    ->name('public-scores');
+
+Route::livewire('/ingyenes-kottak/{score}/{slug?}', \App\Livewire\Pages\PublicScoreView::class)
+    ->name('public-scores.show');
+
+Route::get('/ingyenes-kottak/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\PublicScorePageController::class)
+    ->whereNumber('page')
+    ->name('public-scores.file.page');
+
+Route::get('/ingyenes-kottak/{score}/file/{scoreFile}/download', \App\Http\Controllers\PublicScoreDownloadController::class)
+    ->middleware('throttle:60,1')
+    ->name('public-scores.file.download');
+
 // Secret folder share link — public, read-only
 Route::livewire('/f/{token}', \App\Livewire\Pages\FolderView::class)
     ->name('folder.share');
@@ -236,6 +259,11 @@ Route::livewire('/editor/musics/duplicates', 'editor.duplicate-merger')
 Route::livewire('/editor/musics/verify', \App\Livewire\Pages\Editor\MusicVerifier::class)
     ->middleware(['auth', 'verified'])
     ->name('music-verifier');
+
+// Score publication review queue — the gate on the public library
+Route::livewire('/editor/score-publications', \App\Livewire\Pages\Editor\ScorePublicationReview::class)
+    ->middleware(['auth', 'verified'])
+    ->name('score-publication-review');
 
 // Music tag manager tool
 Route::livewire('/editor/music-tags', \App\Livewire\Pages\Editor\MusicTagManager::class)

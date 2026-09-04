@@ -214,3 +214,70 @@ it('renders a 170 mm wide score as a 170 mm wide pdf page', function () {
     expect($widthMm)->toBeGreaterThan(169.5)->toBeLessThan(170.5);
     expect($heightMm)->toBeGreaterThan(79.0)->toBeLessThan(79.8);
 });
+
+it('stamps a published score’s credit into the exported pdf', function () {
+    $score = \App\Models\Score::factory()->create(['title' => 'Adoro Te']);
+    \App\Models\ScorePublication::factory()->of($score)->approved()->create([
+        'license' => \App\Enums\ScoreLicense::CcBySa,
+    ]);
+
+    $captured = null;
+
+    $this->mock(\App\Services\SvgToPdfConverter::class, function ($mock) use (&$captured) {
+        $mock->shouldReceive('convert')
+            ->once()
+            ->andReturnUsing(function (array $svgs, ?string $credit) use (&$captured) {
+                $captured = $credit;
+
+                return '%PDF-1.4 fake';
+            });
+    });
+
+    $this->post(route('score.export-pdf'), [
+        'format' => 'abc',
+        'title' => 'Adoro Te',
+        'score_id' => $score->id,
+        'pages' => ['<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'],
+    ])->assertOk();
+
+    expect($captured)->toContain('CC BY-SA 4.0')
+        ->and($captured)->toContain('Adoro Te');
+});
+
+it('does not stamp a credit on an unpublished score', function () {
+    $score = \App\Models\Score::factory()->create();
+    $captured = 'unset';
+
+    $this->mock(\App\Services\SvgToPdfConverter::class, function ($mock) use (&$captured) {
+        $mock->shouldReceive('convert')
+            ->once()
+            ->andReturnUsing(function (array $svgs, ?string $credit) use (&$captured) {
+                $captured = $credit;
+
+                return '%PDF-1.4 fake';
+            });
+    });
+
+    $this->post(route('score.export-pdf'), [
+        'format' => 'abc',
+        'score_id' => $score->id,
+        'pages' => ['<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"></svg>'],
+    ])->assertOk();
+
+    expect($captured)->toBeNull();
+});
+
+it('puts the credit text into the svg it stamps', function () {
+    $converter = app(\App\Services\SvgToPdfConverter::class);
+
+    $stamped = $converter->stampCredit(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><g/></svg>',
+        'Adoro Te · CC BY-SA 4.0',
+    );
+
+    expect($stamped)->toContain('Adoro Te')
+        ->and($stamped)->toContain('CC BY-SA 4.0')
+        ->and($stamped)->toEndWith('</svg>');
+
+    expect($converter->stampCredit('<svg></svg>', null))->toBe('<svg></svg>');
+});

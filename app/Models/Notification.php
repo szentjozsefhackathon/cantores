@@ -126,6 +126,7 @@ class Notification extends Model
             Music::class => 'music',
             Collection::class => 'collection',
             Author::class => 'author',
+            Score::class => 'score',
             default => class_basename($this->notifiable_type),
         };
     }

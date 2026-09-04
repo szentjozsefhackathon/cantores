@@ -32,6 +32,10 @@ A platform lehetővé teszi privát énekrendek és kották megosztását titkos
 
 A titkos link létrehozója teljes jogi felelősséget vállal a megosztott tartalomért, különös tekintettel a szerzői jogi szabályok betartására. A platform fenntartója nem ellenőrzi a titkos linken megosztott tartalmak jogszerűségét, és semmilyen felelősséget nem vállal az esetleges szerzői jogi jogsértésekért. Amennyiben jogsértést tapasztal, kérjük, jelezze a [kapcsolati lehetőségeinken](/about) keresztül.
 
+A **nyilvános kottatárban** közzétett kották esetében a bejelentés egyszerűbb: magán a kotta oldalán,
+a *Hogyan használhatod* blokkban található **„Jogsértés bejelentése"** gombbal, regisztráció nélkül is.
+A részleteket a [Kották jogi feltételei és bejelentés](/kotta-jogok) oldal írja le.
+
 ## 5. Adatvédelem
 
 Az Ön e‑mail címét és a platformon megadott adatokat (pl. becenév, város, énekrendek) kizárólag a szolgáltatás működtetése céljából dolgozzuk fel.

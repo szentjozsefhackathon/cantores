@@ -54,6 +54,7 @@ A **Cantores.hu** egy ingyenes, önkéntes alapon működő webalkalmazás, amel
 | **Javaslatok** | Automatikus énekajánlások egy adott ünnepre mások énekrendjei alapján |
 | **Liturgikus naptár** | Ünnepek, liturgikus szezonok, olvasmányok nyilvántartása |
 | **Közösségi megosztás** | Énekrendek opcionális megosztása a közösséggel |
+| **Ingyenes kották** | Szabadon letölthető közkincs és Creative Commons kották |
 
 ### Kiknek ajánljuk?
 
@@ -63,7 +64,9 @@ A **Cantores.hu** egy ingyenes, önkéntes alapon működő webalkalmazás, amel
 - Zenészeknek, akik egyházi zenével foglalkoznak
 - Minden érdeklődőnek, aki a katolikus liturgia zenéje iránt érdeklődik
 
-> **Fontos:** A platform **nem tartalmaz letölthető kottákat vagy hangfájlokat**. Bizonyos zenékhez külső, szerzői jogilag legális forrásokra mutató linkeket biztosítunk (pl. YouTube, kottakiadók weboldala).
+> **Fontos:** A platform csak olyan kottákat tesz **szabadon letölthetővé**, amelyek bizonyíthatóan **közkincsek vagy Creative Commons licenc alatt állnak** – ezeket az **Ingyenes kották** menüpontban találod, és minden tételt szerkesztő ellenőrzött a közzététel előtt. A többi kotta magánjellegű marad: csak a feltöltője látja, illetve az, akivel titkos linken megosztja. Szerzői joggal védett kottákhoz továbbra is csak külső, jogilag legális forrásokra mutató linkeket adunk (pl. YouTube, kottakiadók weboldala).
+>
+> Ha úgy látod, hogy egy közzétett kotta sérti a jogaidat, írj nekünk a **Kapcsolat** oldalon keresztül: a bejelentést megvizsgáljuk, és a vitatott kottát az ellenőrzés idejére eltávolítjuk.
 
 ---
 
@@ -153,6 +156,7 @@ Bejelentkezés után az **irányítópult** fogad, amely áttekintést nyújt a 
 | **Dashboard** | Irányítópult főoldal |
 | **Énekrendeim** | Saját énekrendek listája |
 | **Közzétett énekrendek** | Mások által megosztott énekrendek |
+| **Ingyenes kották** | Szabadon letölthető kották böngészése |
 | **Music Pieces** | Zenei adatbázis |
 | **Collections** | Gyűjtemények (énekeskönyvek) |
 | **Authors** | Szerzők adatbázisa |

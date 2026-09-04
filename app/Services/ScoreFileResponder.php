@@ -15,9 +15,28 @@ use Symfony\Component\HttpFoundation\Response;
  * row, so the 304 is decided before anything is decrypted and a repeat view
  * costs no crypto at all. Page images run 100–300 KB; the whole-file download
  * is bounded by the 25 MB upload cap.
+ *
+ * Private and public responses cache very differently. A private artifact has
+ * a stable URL whose bytes only change on re-upload, so it is immutable for a
+ * year. A public one has to be revocable: a score can be taken down after a
+ * rightholder complains, and a year-long immutable response would keep serving
+ * it from intermediaries long after it left the site. Public responses
+ * therefore get a short max-age and must revalidate — which costs nothing,
+ * because the checksum ETag still answers the revalidation without decrypting.
  */
 class ScoreFileResponder
 {
+    /**
+     * How long a public artifact may be reused before it must be revalidated.
+     * Bounds how long a takedown can be outrun by a cache.
+     */
+    public const PUBLIC_MAX_AGE = 600;
+
+    /**
+     * A private artifact's URL only ever names one set of bytes.
+     */
+    public const PRIVATE_MAX_AGE = 31536000;
+
     public function __construct(
         private readonly ScoreFileStorage $storage,
     ) {}
@@ -54,15 +73,21 @@ class ScoreFileResponder
     /**
      * The original uploaded file, as an attachment under its own name.
      */
-    public function download(ScoreFile $scoreFile): Response
+    public function download(ScoreFile $scoreFile, bool $public = false): Response
     {
         $response = $this->respond(
             $scoreFile,
             $scoreFile->path,
             'source',
             $scoreFile->mime ?: 'application/octet-stream',
-            public: false,
+            $public,
         );
+
+        if ($public) {
+            // Rank the landing page that carries the attribution, not an
+            // orphaned file served without it.
+            $response->headers->set('X-Robots-Tag', 'noindex');
+        }
 
         $response->headers->set('Content-Disposition', HeaderUtils::makeDisposition(
             HeaderUtils::DISPOSITION_ATTACHMENT,
@@ -83,9 +108,15 @@ class ScoreFileResponder
         $response->setLastModified(
             ($scoreFile->rendered_at ?? $scoreFile->updated_at ?? now())->toDateTime()
         );
-        $public ? $response->setPublic() : $response->setPrivate();
-        $response->setMaxAge(31536000);
-        $response->headers->addCacheControlDirective('immutable');
+        if ($public) {
+            $response->setPublic();
+            $response->setMaxAge(self::PUBLIC_MAX_AGE);
+            $response->headers->addCacheControlDirective('must-revalidate');
+        } else {
+            $response->setPrivate();
+            $response->setMaxAge(self::PRIVATE_MAX_AGE);
+            $response->headers->addCacheControlDirective('immutable');
+        }
 
         // Ahead of the decrypt on purpose: a conditional request never touches
         // the ciphertext.

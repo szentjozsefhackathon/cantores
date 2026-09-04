@@ -237,6 +237,33 @@
                     @endif
                 </div>
 
+                @php
+                    $downloadableScores = $music->publishedScores()->with('publication')->get();
+                @endphp
+                @if($downloadableScores->isNotEmpty())
+                <!-- Freely downloadable scores -->
+                <div>
+                    <flux:heading size="sm" class="mb-3 text-neutral-600 dark:text-neutral-400">
+                        {{ __('Free to download') }}
+                    </flux:heading>
+
+                    <div class="space-y-2">
+                        @foreach($downloadableScores as $publicScore)
+                        <div class="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                            @if($publicScore->hasIncipit())
+                            <x-incipit-image :src="$publicScore->publicIncipitUrl()" :alt="$publicScore->title" imgClass="max-h-12 w-auto" />
+                            @endif
+                            <a href="{{ route('public-scores.show', ['score' => $publicScore, 'slug' => \Illuminate\Support\Str::slug($publicScore->title)]) }}"
+                               class="flex-1 font-medium hover:underline">
+                                {{ $publicScore->title }}
+                            </a>
+                            <x-score-license-badge :publication="$publicScore->publication" />
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
                 @auth
                 <!-- Private Scores -->
                 <div>

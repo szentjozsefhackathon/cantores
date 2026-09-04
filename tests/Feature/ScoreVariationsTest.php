@@ -106,7 +106,7 @@ it('variations panel is not rendered when no music is attached', function () {
         ->assertDontSee(__('Variations'));
 });
 
-it('variations panel is not rendered when there are no siblings', function () {
+it('variations panel offers Add variation even when there are no siblings', function () {
     $user = User::factory()->create();
     $music = Music::factory()->create();
     $score = Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id]);
@@ -114,7 +114,93 @@ it('variations panel is not rendered when there are no siblings', function () {
     actingAs($user);
 
     Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->assertDontSee(__('Variations'));
+        ->assertSee(__('Variations'))
+        ->assertSee(__('Add variation'))
+        ->assertSeeHtml(route('scores.create', ['music' => $music->id]));
+});
+
+it('names a variation and stores it on save', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+    $score = Score::factory()->abc()->create(['user_id' => $user->id, 'music_id' => $music->id]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->set('variationName', 'Fuvola')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($score->fresh()->variation_name)->toBe('Fuvola');
+});
+
+it('stores a blank variation name as null', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'music_id' => $music->id,
+        'variation_name' => 'Kórus',
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSet('variationName', 'Kórus')
+        ->set('variationName', '   ')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($score->fresh()->variation_name)->toBeNull();
+});
+
+it('rejects a variation name longer than the column holds', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+    $score = Score::factory()->abc()->create(['user_id' => $user->id, 'music_id' => $music->id]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->set('variationName', str_repeat('a', 121))
+        ->call('save')
+        ->assertHasErrors(['variationName']);
+});
+
+it('labels a sibling by its variation name rather than its title', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+
+    $editing = Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id]);
+    Score::factory()->create([
+        'user_id' => $user->id,
+        'music_id' => $music->id,
+        'title' => 'Ave Maria',
+        'variation_name' => 'Csak szöveg',
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $editing])
+        ->assertSee('Csak szöveg');
+});
+
+it('falls back to the title for a sibling with no variation name', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+
+    $editing = Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id]);
+    Score::factory()->create([
+        'user_id' => $user->id,
+        'music_id' => $music->id,
+        'title' => 'Unnamed Sibling',
+        'variation_name' => null,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $editing])
+        ->assertSee('Unnamed Sibling');
 });
 
 it('variations panel includes link to sibling edit page', function () {

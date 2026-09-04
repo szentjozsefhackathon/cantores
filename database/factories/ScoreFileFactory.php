@@ -48,6 +48,14 @@ class ScoreFileFactory extends Factory
         });
     }
 
+    /**
+     * A file that goes out with its score's publication.
+     */
+    public function published(): static
+    {
+        return $this->state(['is_published' => true]);
+    }
+
     public function ready(int $pageCount = 1): static
     {
         return $this->state([

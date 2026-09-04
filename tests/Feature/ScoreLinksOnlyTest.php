@@ -95,6 +95,17 @@ it('stages multiple links during creation and can remove a pending one', functio
     expect($score->urls()->get()->pluck('url')->all())->toBe(['https://example.com/b']);
 });
 
+it('picks the links-and-files format from the format row', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class)
+        ->assertSee(__('Links and files'))
+        ->call('selectLinksOnly')
+        ->assertSet('linksOnly', true);
+});
+
 it('switches back to notation and sets the format when a format is selected', function () {
     $user = User::factory()->create();
 

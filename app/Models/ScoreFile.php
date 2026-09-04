@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $size_bytes
  * @property string $checksum
  * @property \App\Enums\ScoreFileRights $rights
+ * @property bool $is_published
  * @property \App\Enums\ScoreFileRenderStatus $render_status
  * @property string|null $render_error
  * @property bool $has_thumbnail
@@ -75,6 +76,7 @@ class ScoreFile extends Model
         'size_bytes',
         'checksum',
         'rights',
+        'is_published',
         'render_status',
         'render_error',
         'has_thumbnail',
@@ -91,10 +93,38 @@ class ScoreFile extends Model
     {
         return [
             'has_thumbnail' => 'boolean',
+            'is_published' => 'boolean',
             'rights' => ScoreFileRights::class,
             'render_status' => ScoreFileRenderStatus::class,
             'rendered_at' => 'datetime',
         ];
+    }
+
+    /**
+     * ScoreFileUploader::replace() keeps this row and swaps the bytes behind it,
+     * so an approved publication has to be re-checked whenever a file's
+     * contents or publication flag change. Without this, review is bypassable
+     * in one click.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (ScoreFile $scoreFile): void {
+            if (! $scoreFile->wasChanged(['checksum', 'is_published', 'rights'])) {
+                return;
+            }
+
+            $publication = $scoreFile->score?->publication;
+
+            if ($publication === null || ! $publication->status->isPublic()) {
+                return;
+            }
+
+            if ($publication->matchesApprovedFingerprint()) {
+                return;
+            }
+
+            app(\App\Services\ScorePublicationService::class)->invalidateApproval($publication);
+        });
     }
 
     public function score(): BelongsTo
@@ -165,6 +195,31 @@ class ScoreFile extends Model
     public function isReady(): bool
     {
         return $this->render_status === ScoreFileRenderStatus::Ready;
+    }
+
+    /**
+     * Whether this file is part of what its score offers the public.
+     *
+     * Says nothing about the score's own standing: an offered file of an
+     * unapproved score is what a reviewer looks at, and what nobody else may.
+     * Both conditions are checked at read time rather than trusted from the
+     * flag, so a rights downgrade takes effect without a backfill.
+     */
+    public function mayBeOffered(): bool
+    {
+        return $this->is_published && $this->rights->mayBePublished();
+    }
+
+    /**
+     * Whether this file may be served to a guest right now.
+     *
+     * All three conditions are checked at serve time rather than trusted from
+     * the flag: the owner flagged it, its declared rights still permit it, and
+     * the score it belongs to still carries an approved publication.
+     */
+    public function isPubliclyAvailable(): bool
+    {
+        return $this->mayBeOffered() && $this->score->isPublished();
     }
 
     /**

@@ -121,3 +121,46 @@ it('displays urls on the read-only view page', function () {
         ->assertSee('Full score PDF')
         ->assertSee('https://drive.google.com/my-file');
 });
+
+it('keeps the add-link form in a dialog and closes it once the link is added', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->unattached()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSeeHtml('data-modal="score-url-add"')
+        ->assertSeeHtml("fluxModal('score-url-add'")
+        ->set('newUrl', 'https://example.com/score')
+        ->call('addUrl')
+        ->assertHasNoErrors()
+        ->assertDispatched('score-url-added');
+});
+
+it('keeps the dialog open when the link does not validate', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->unattached()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->set('newUrl', 'not-a-url')
+        ->call('addUrl')
+        ->assertHasErrors('newUrl')
+        ->assertNotDispatched('score-url-added');
+});
+
+it('empties the add-link form when the dialog is dismissed', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->unattached()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->set('newUrl', 'not-a-url')
+        ->call('addUrl')
+        ->call('cancelUrlAdd')
+        ->assertSet('newUrl', '')
+        ->assertSet('newUrlComment', '')
+        ->assertHasNoErrors();
+});

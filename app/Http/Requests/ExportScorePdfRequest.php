@@ -38,6 +38,9 @@ class ExportScorePdfRequest extends FormRequest
         return [
             'format' => ['required', 'string', 'in:abc,gabc,aretino'],
             'title' => ['nullable', 'string', 'max:255'],
+            // Which score this came from, so a published one can be stamped
+            // with its credit. Optional: the editor exports without a score.
+            'score_id' => ['nullable', 'integer'],
             'pages' => ['required', 'array', 'min:1', 'max:'.self::MAX_PAGES],
             'pages.*' => ['required', 'string', 'max:'.self::MAX_PAGE_BYTES, 'regex:/^\s*<(\?xml|svg)/i'],
         ];

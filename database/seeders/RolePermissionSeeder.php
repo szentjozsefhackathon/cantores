@@ -38,6 +38,10 @@ class RolePermissionSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'content.edit.verified']); // includes delete
         Permission::firstOrCreate(['name' => 'content.edit.published']); // includes delete
 
+        // Deciding what the site offers the public under a free licence. Not
+        // implied by masterdata.maintain: this one carries legal weight.
+        Permission::firstOrCreate(['name' => 'scores.publish.review']);
+
         Permission::firstOrCreate(['name' => 'masterdata.maintain']);
         Permission::firstOrCreate(['name' => 'system.maintain']);
 
@@ -79,6 +83,8 @@ class RolePermissionSeeder extends Seeder
             'content.edit.verified',
             // Master data maintenance
             'masterdata.maintain',
+            // Reviewing what the site publishes under a free licence
+            'scores.publish.review',
         ];
         $editorRole->givePermissionTo($editorPermissions);
 

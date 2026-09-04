@@ -20,9 +20,7 @@
         <tr>
             <td><strong>{{ __('Type') }}</strong></td>
             <td>
-                {{ $notification->type === \App\Enums\NotificationType::CONTACT_MESSAGE
-                    ? __('Contact message')
-                    : __('Error report') }}
+                {{ $notification->type->label() }}
             </td>
         </tr>
         @php

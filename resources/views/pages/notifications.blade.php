@@ -32,7 +32,7 @@
                             </div>
                             <p class="text-gray-800">{{ $notification->message }}</p>
                             <div class="mt-2 text-sm text-gray-600">
-                                Reported by <span class="font-medium">{{ $notification->reporter?->display_name ?? 'Unknown' }}</span>
+                                Reported by <span class="font-medium">{{ $notification->reporter?->display_name ?? __('a visitor') }}</span>
                                 on <span class="font-medium">{{ $notification->resource_title ?? 'Unknown resource' }}</span>
                                 · {{ $notification->created_at->diffForHumans() }}
                             </div>

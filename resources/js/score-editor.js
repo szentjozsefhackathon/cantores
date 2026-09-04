@@ -35,6 +35,15 @@ function ensureAretinoEditor() {
     return aretinoEditorDefinitionPromise;
 }
 
+/** How long the editor stays quiet before an edit is written back. */
+const AUTOSAVE_IDLE_MS = 2000;
+
+/** A floor under the idle timer, for an edit that somehow never settles. */
+const AUTOSAVE_INTERVAL_MS = 20000;
+
+/** How often an autosave may also redraw the incipit. */
+const AUTOSAVE_INCIPIT_MS = 60000;
+
 const ARETINO_CODEMIRROR_FONT_STYLE_ID = 'score-editor-aretino-codemirror-font-size';
 const ARETINO_CODEMIRROR_FONT_SIZE = '14px';
 const LATIN_EXT = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
@@ -203,6 +212,16 @@ document.addEventListener('alpine:init', () => {
         shareUrlLoading: false,
         shareModalCopied: false,
         savingScore: false,
+        autosaveEnabled: config.autosave ?? false,
+        autosaveLabels: config.autosaveLabels ?? {},
+        autosaveState: '',
+        autosaveArmed: false,
+        _autosaveDirty: false,
+        _autosaveRunning: false,
+        _autosaveTimer: null,
+        _autosaveInterval: null,
+        _autosaveIncipitAt: 0,
+        _autosaveFlush: null,
         exportingPdf: false,
         splitScreen: false,
         splitEditorHeight: 380,
@@ -309,6 +328,9 @@ document.addEventListener('alpine:init', () => {
             this.$watch('$wire.content', (val) => {
                 const content = String(val ?? '');
                 if (content === this.localContent) { return; }
+                // An autosave that overlaps typing echoes back the text it was
+                // handed; the keystrokes since then only live here, so they win.
+                if (this._wireContentDirty) { return; }
                 this.localContent = content;
                 this.syncAretinoEditor();
                 this.scheduleRender();
@@ -369,7 +391,27 @@ document.addEventListener('alpine:init', () => {
             this.$nextTick(() => {
                 this.scheduleRender();
                 this.initResponsiveResizeObservers();
+                this.startAutosave();
             });
+        },
+
+        // Armed only once the editor has settled, so applying stored settings on
+        // load is not mistaken for an edit. The interval is a floor under the
+        // idle timer; the page-hidden and navigation hooks catch the tab being
+        // closed or left mid-sentence.
+        startAutosave() {
+            if (!this.autosaveEnabled) { return; }
+            setTimeout(() => {
+                this.autosaveArmed = true;
+                this._autosaveDirty = false;
+            }, 1000);
+            this._autosaveInterval = setInterval(() => this.runAutosave(), AUTOSAVE_INTERVAL_MS);
+            this._autosaveFlush = () => {
+                if (document.visibilityState === 'hidden') { this.runAutosave(); }
+            };
+            document.addEventListener('visibilitychange', this._autosaveFlush);
+            this._autosaveNavigating = () => this.runAutosave();
+            document.addEventListener('livewire:navigating', this._autosaveNavigating);
         },
 
         // Re-render the active format when its preview container resizes, but
@@ -395,6 +437,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         destroy() {
+            clearTimeout(this._autosaveTimer);
+            clearInterval(this._autosaveInterval);
+            if (this._autosaveFlush) {
+                document.removeEventListener('visibilitychange', this._autosaveFlush);
+                document.removeEventListener('livewire:navigating', this._autosaveNavigating);
+            }
             this._resizeObservers.forEach(ro => ro.disconnect());
             this._resizeObservers = [];
             clearTimeout(this._resizeTimer);
@@ -599,9 +647,60 @@ document.addEventListener('alpine:init', () => {
             this.applyRatioSettings('aretino', this.aretinoPageRatio);
         },
 
+        autosaveLabel() {
+            return this.autosaveLabels[this.autosaveState] ?? '';
+        },
+
+        // Every visible edit runs through scheduleRender(), so that is where the
+        // autosave clock is wound: typing, a ratio change, a font change.
+        markDirty() {
+            if (!this.autosaveEnabled || !this.autosaveArmed) { return; }
+            this._autosaveDirty = true;
+            this.autosaveState = 'pending';
+            clearTimeout(this._autosaveTimer);
+            this._autosaveTimer = setTimeout(() => this.runAutosave(), AUTOSAVE_IDLE_MS);
+        },
+
+        // The incipit costs a full SVG-to-PNG round trip, so a burst of typing
+        // does not redraw it; the explicit Save always does.
+        async runAutosave({ force = false } = {}) {
+            if (!this.autosaveEnabled || !this._autosaveDirty) { return; }
+            if (this._autosaveRunning || this.savingScore) {
+                clearTimeout(this._autosaveTimer);
+                this._autosaveTimer = setTimeout(() => this.runAutosave(), 1000);
+                return;
+            }
+
+            clearTimeout(this._autosaveTimer);
+            this._autosaveRunning = true;
+            this._autosaveDirty = false;
+            this.autosaveState = 'saving';
+            this.flushWireContent();
+
+            try {
+                const format = this.$wire.format;
+                this.captureCurrentSettings(format, this.ratioForFormat(format));
+                const allRatioSettings = Object.assign({}, this.tempSettings[format] || {});
+                const wantsIncipit = force || (Date.now() - this._autosaveIncipitAt > AUTOSAVE_INCIPIT_MS);
+                const incipit = wantsIncipit ? await this.generateIncipit().catch(() => null) : null;
+                if (incipit) { this._autosaveIncipitAt = Date.now(); }
+                await this.$wire.call('autosave', allRatioSettings, incipit);
+                this.autosaveState = 'saved';
+            } catch (e) {
+                console.warn('[score-editor] autosave failed', e);
+                this._autosaveDirty = true;
+                this.autosaveState = 'failed';
+            } finally {
+                this._autosaveRunning = false;
+            }
+        },
+
         async saveScore() {
             if (this.savingScore) { return; }
             this.savingScore = true;
+            clearTimeout(this._autosaveTimer);
+            this._autosaveDirty = false;
+            this.autosaveState = '';
             this.flushWireContent();
             try {
                 const format = this.$wire.format;
@@ -952,6 +1051,18 @@ document.addEventListener('alpine:init', () => {
             const menu = document.createElement('div');
             menu.className = 'absolute right-0 z-20 mt-1 hidden min-w-[12rem] rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-800';
 
+            /** Flip the menu above the button when the viewport has no room for it below. */
+            const positionMenu = () => {
+                menu.classList.remove('mt-1', 'bottom-full', 'mb-1');
+                const rect = exportBtn.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom;
+                if (spaceBelow < menu.offsetHeight + 16 && rect.top > spaceBelow) {
+                    menu.classList.add('bottom-full', 'mb-1');
+                } else {
+                    menu.classList.add('mt-1');
+                }
+            };
+
             const closeMenu = () => {
                 menu.classList.add('hidden');
                 document.removeEventListener('click', onDocClick);
@@ -984,6 +1095,7 @@ document.addEventListener('alpine:init', () => {
                 e.stopPropagation();
                 if (menu.classList.contains('hidden')) {
                     menu.classList.remove('hidden');
+                    positionMenu();
                     document.addEventListener('click', onDocClick);
                 } else {
                     closeMenu();
@@ -995,7 +1107,7 @@ document.addEventListener('alpine:init', () => {
 
             bar.appendChild(feedbackSpan);
 
-            if (pageIdx === totalPages) {
+            if (pageIdx === totalPages && this.shareText) {
                 const linkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"/></svg>';
                 const shareBtn = document.createElement('button');
                 shareBtn.type = 'button';
@@ -1268,6 +1380,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         scheduleRender() {
+            this.markDirty();
             clearTimeout(this.renderTimer);
             const format = this.$wire?.format;
             // The current Aretino SVG is now outdated; freeze the caret highlight

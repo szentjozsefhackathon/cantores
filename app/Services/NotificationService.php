@@ -6,7 +6,9 @@ use App\Enums\NotificationType;
 use App\Mail\InSystemNotificationMail;
 use App\Models\Notification;
 use App\Models\NotificationReply;
+use App\Models\Score;
 use App\Models\User;
+use App\Policies\ScorePublicationPolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -162,6 +164,59 @@ class NotificationService
     }
 
     /**
+     * Create a rights complaint notification against a published score.
+     *
+     * The reporter is usually a guest — a rights holder has no reason to hold
+     * an account here — so the notification carries their contact details in
+     * its message rather than in a `reporter_id`.
+     */
+    public function createRightsReport(Score $score, ?User $reporter, string $message): Notification
+    {
+        $recipientIds = [];
+
+        $notification = DB::transaction(function () use ($score, $reporter, $message, &$recipientIds) {
+            $notification = Notification::create([
+                'type' => NotificationType::RIGHTS_REPORT,
+                'message' => $message,
+                'reporter_id' => $reporter?->id,
+                'notifiable_id' => $score->getKey(),
+                'notifiable_type' => $score->getMorphClass(),
+            ]);
+
+            $recipients = $this->getRecipientsForRightsReport();
+            $recipientIds = array_keys($recipients);
+            $notification->recipients()->attach($recipients);
+
+            return $notification;
+        });
+
+        $this->queueEmailNotifications($notification, $recipientIds, $reporter);
+
+        return $notification;
+    }
+
+    /**
+     * Determine recipients for a rights complaint: everyone who may act on it.
+     *
+     * @return array<int, array{created_at: \Illuminate\Support\Carbon}>
+     */
+    protected function getRecipientsForRightsReport(): array
+    {
+        $recipients = [];
+
+        $reviewers = User::query()
+            ->permission(ScorePublicationPolicy::REVIEW_PERMISSION)
+            ->get()
+            ->merge(User::all()->filter(fn (User $user) => $user->is_admin));
+
+        foreach ($reviewers as $reviewer) {
+            $recipients[$reviewer->id] = ['created_at' => now()];
+        }
+
+        return $recipients;
+    }
+
+    /**
      * Create a contact message notification.
      */
     public function createContactMessage(User $sender, string $subject, string $message): Notification
@@ -210,7 +265,7 @@ class NotificationService
      *
      * @param  array<int, int>  $recipientIds
      */
-    protected function queueEmailNotifications(Notification $notification, array $recipientIds, User $messageSender, ?NotificationReply $reply = null): void
+    protected function queueEmailNotifications(Notification $notification, array $recipientIds, ?User $messageSender, ?NotificationReply $reply = null): void
     {
         $recipientIds = array_values(array_unique($recipientIds));
 
@@ -220,7 +275,7 @@ class NotificationService
 
         User::query()
             ->whereKey($recipientIds)
-            ->whereKeyNot($messageSender)
+            ->when($messageSender, fn ($query) => $query->whereKeyNot($messageSender))
             ->where('email_notifications_enabled', true)
             ->get()
             ->each(function (User $recipient) use ($notification, $messageSender, $reply): void {
