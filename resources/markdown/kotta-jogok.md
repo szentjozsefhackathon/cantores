@@ -23,6 +23,10 @@ Elfogadott jogalapok:
 | **Saját mű** | A feltöltő saját szerzeménye vagy saját kottagrafikája – ilyenkor is meg kell adnia, milyen licenc alatt engedi tovább. |
 | **Írásos engedély** | A jogtulajdonos kifejezetten engedélyezte, és az engedély szövege rögzítve van. |
 
+A felajánlással a feltöltő szavatolja, hogy a megadott jogalap és licenc helytálló. **A megadott licenc
+kötelezettséget keletkeztet a nyilvánossággal szemben:** az az alapján már megszerzett felhasználási jogokat
+utólag nem lehet visszavonni, akkor sem, ha a kotta később lekerül az oldalról.
+
 ## Amire külön figyelünk
 
 **A mű szabadsága és a kottakép szabadsága két külön kérdés.** Attól, hogy egy dallam évszázados,
@@ -38,6 +42,10 @@ nem tehető közzé. A gyakorlatban ide gregorián tételek, régi dallamok és 
 **Vásárolt példányt sohasem teszünk közzé.** A feltöltő a saját kottatárában tarthat megvásárolt
 kiadványt, és titkos linken megoszthatja azzal, akinek joga van hozzáférni – de az ilyen fájl a
 nyilvános kottatárba nem kerülhet be, még akkor sem, ha a kotta többi fájlja szabad.
+
+**A kölcsönzés nem keletkeztet jogot.** Ez az oldal a *nyilvános* közzétételről szól; a titkos linken
+történő kölcsönadás külön kérdés. Azért, hogy mit ad kölcsön és kinek, kizárólag a link gazdája felel –
+a szerzői jogi szabályokat ott is be kell tartani. Lásd a [Használati feltételek](/terms) 5. pontját.
 
 ## Ha jogsértést látsz
 

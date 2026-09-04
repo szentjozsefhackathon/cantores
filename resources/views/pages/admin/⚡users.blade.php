@@ -1,18 +1,9 @@
 <?php
 
-use App\Models\Author;
-use App\Models\Celebration;
-use App\Models\Collection;
-use App\Models\Music;
-use App\Models\MusicPlan;
-use App\Models\MusicPlanSlot;
 use App\Models\User;
-use App\Services\NicknameService;
+use App\Services\AccountDeletionService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -65,7 +56,7 @@ new class extends Component
         $this->loadUsers();
     }
 
-    public function deleteUser(int $userId): void
+    public function deleteUser(int $userId, AccountDeletionService $accounts): void
     {
         $user = User::findOrFail($userId);
 
@@ -75,48 +66,7 @@ new class extends Component
             return;
         }
 
-        DB::transaction(function () use ($user) {
-            // Hard delete all music plans (DB cascade removes slot plans and assignments)
-            MusicPlan::where('user_id', $user->id)->each(fn ($plan) => $plan->delete());
-
-            // Hard delete any remaining custom slots that belonged to this user
-            MusicPlanSlot::where('user_id', $user->id)->where('is_custom', true)->each(fn ($slot) => $slot->forceDelete());
-
-            // Hard delete private authors (DB cascade removes author_music pivot entries)
-            Author::where('user_id', $user->id)->where('is_private', true)->each(fn ($author) => $author->delete());
-
-            // Hard delete private collections (DB cascade removes music_collection pivot entries)
-            Collection::where('user_id', $user->id)->where('is_private', true)->each(fn ($collection) => $collection->delete());
-
-            // Hard delete private musics (DB cascade removes related pivot entries)
-            Music::where('user_id', $user->id)->where('is_private', true)->each(fn ($music) => $music->delete());
-
-            // Delete custom celebrations owned by this user
-            Celebration::where('user_id', $user->id)->where('is_custom', true)->delete();
-
-            // Remove all roles from the user
-            $user->syncRoles([]);
-
-            // Find an unused city+firstname pair for anonymization
-            [$cityId, $firstNameId] = app(NicknameService::class)->randomPairExcluding($user->id);
-
-            // Anonymize the user record
-            $user->forceFill([
-                'name' => 'Deleted User',
-                'email' => 'deleted-'.$user->id.'@example.com',
-                'password' => Hash::make(Str::random(32)),
-                'city_id' => $cityId,
-                'first_name_id' => $firstNameId,
-                'current_genre_id' => null,
-                'blocked' => true,
-                'blocked_at' => now(),
-                'email_verified_at' => null,
-                'two_factor_secret' => null,
-                'two_factor_recovery_codes' => null,
-                'two_factor_confirmed_at' => null,
-                'remember_token' => null,
-            ])->save();
-        });
+        $accounts->delete($user);
 
         $this->dispatch('toast', message: __('User has been anonymized and their private data deleted.'), type: 'success');
         $this->loadUsers();
@@ -214,7 +164,7 @@ new class extends Component
                                     size="sm"
                                     variant="danger"
                                     wire:click="deleteUser({{ $user->id }})"
-                                    wire:confirm="{{ __('WARNING: This will permanently delete all music plans, private authors, private collections, and private music for this user, and anonymize their account. This cannot be undone. Are you sure?') }}"
+                                    wire:confirm="{{ __('WARNING: This will permanently delete this user\'s music plans, scores and uploaded files, folders and lending links, as well as their private authors, collections and music, and anonymize their account. This cannot be undone. Are you sure?') }}"
                                     :disabled="$user->id === auth()->id()"
                                 >
                                     {{ __('Delete') }}

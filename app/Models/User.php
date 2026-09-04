@@ -41,6 +41,10 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read int|null $scores_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Folder> $folders
  * @property-read int|null $folders_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Loan> $loans
+ * @property-read int|null $loans_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ReceivedLoan> $receivedLoans
+ * @property-read int|null $received_loans_count
  * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \Spatie\Permission\Models\Permission> $permissions
@@ -254,6 +258,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function folders(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Folder::class);
+    }
+
+    /**
+     * Get the lending links this user handed out.
+     */
+    public function loans(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Loan::class);
+    }
+
+    /**
+     * Get the record of the loans this user opened or kept from other people.
+     */
+    public function receivedLoans(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ReceivedLoan::class);
     }
 
     /**

@@ -37,6 +37,23 @@ A szerzők szintén a közös törzsadatbázis részei: zeneszerzőket, szöveg�
 - **Privát szerző:** csak te látod; az ehhez kapcsolt énekek szerzői adatai nem nyilvánosak.
 - **Publikus szerző:** mindenki számára kereshető. Az adatokat te (a létrehozó) és a szerkesztők módosíthatják.
 
+### 🎼 Kotta
+
+A kotta a saját kottatáradba feltöltött vagy ott szerkesztett anyag. A kottáknál **három, egymástól
+független** kérdés dönti el, ki férhet hozzá:
+
+- **Privát:** alapértelmezés szerint csak te látod. Minden feltöltött kotta így indul.
+- **Kölcsönadott:** titkos linken odaadod valakinek. A linket bárki megnyithatja, aki megkapta, akár
+  regisztráció nélkül is – és tovább is adhatja. Bármikor visszavonhatod, lejárati időt állíthatsz be,
+  és eldöntheted, letölthető-e az anyag. **Amit kölcsönadsz, azért te felelsz**, beleértve a szerzői
+  jogi szabályok betartását is.
+- **Közzétett:** felajánlod az [Ingyenes kották](/ingyenes-kottak) közé. Ide csak jogilag szabadon
+  terjeszthető kotta kerülhet, és minden felajánlást szerkesztő ellenőriz. Feltételek:
+  [Kották jogi feltételei](/kotta-jogok).
+
+A három axis nem függ össze: a kölcsönlink visszavonása nem szünteti meg a közzétételt, és a közzététel
+visszavonása nem szünteti meg a kölcsönlinkeket.
+
 ## Ki szerkesztheti a törzsadatokat?
 
 A **törzsadatok** (énekek, gyűjtemények, szerzők) a közösség közös adatbázisát alkotják.
@@ -88,6 +105,7 @@ Ha úgy látod, hogy egy verifikált énekben, gyűjteményben vagy szerzőben h
 | Ének | Csak te | Te (amíg nem verifikált) + szerkesztők | Igen |
 | Gyűjtemény | Csak te | Te (amíg nem verifikált) + szerkesztők | Igen |
 | Szerző | Csak te | Te (amíg nem verifikált) + szerkesztők | Igen |
+| Kotta | Csak te (amíg nem adod kölcsön vagy nem teszed közzé) | Csak te | Közzétételkor szerkesztő hagyja jóvá |
 
 ---
 

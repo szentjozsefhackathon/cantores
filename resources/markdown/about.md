@@ -9,6 +9,9 @@ A Cantores.hu egy kántoroknak és más érdeklődőknek szóló platform, amely
 3. **Orgona- és egyéb zenei darabok katalógusa:** Előadási darabok kereshető, bővíthető gyűjteménye.
 4. **Napló:** Saját énekrendek privát nyilvántartása.
 5. **Énekrend-javaslatok:** Egy adott ünnephez javasolt énekek/darabok gyűjteménye.
+6. **Saját kottatár és kottakölcsönzés:** Saját kottáid tárolása, és titkos linken való kölcsönadása
+   például a kórusodnak.
+7. **Ingyenes kották:** Szabadon letölthető kották, amelyek jogilag is szabadon terjeszthetők.
 
 ## Miért érdemes regisztrálni?
 
@@ -26,7 +29,22 @@ A regisztráció során megadott név és város alapján generálunk egy becene
 
 ## Tölthetek le innen énekeket, kottákat, vagy egyéb anyagokat?
 
-Nem, a honlap nem tartalmaz letölthető anyagokat. Bizonyos előre meghatározott oldalakra, szerzői jogi szempontból legális letöltési linket biztosítunk, de a honlap nem szolgáltat közvetlen letöltési lehetőséget énekekre, kottákra, vagy egyéb anyagokra, viszont segít, hogy egy helyről megtaláld ezeket a legális forrásokat.
+Igen, de csak azt, ami jogilag is szabadon terjeszthető. Az **[Ingyenes kották](/ingyenes-kottak)** rovatban
+közkincs, szabad licenc alatt közreadott vagy a szerzőjük által felajánlott kották találhatók; minden ilyen
+kottát szerkesztő ellenőriz a megjelenés előtt. A feltételeket a
+[Kották jogi feltételei](/kotta-jogok) oldal írja le.
+
+Ezen kívül más oldalakra mutató, szerzői jogi szempontból legális letöltési linkeket is gyűjtünk, hogy egy
+helyről megtaláld a legális forrásokat. Védett kottákat az oldal nem tesz közzé.
+
+## Feltölthetem a saját kottáimat, és odaadhatom a kórusomnak?
+
+A saját kottatáradba feltöltheted a saját kottagrafikáidat és azokat az anyagokat, amelyekhez jogszerű
+hozzáférésed van, majd **titkos linken kölcsönadhatod** őket – például a kórusodnak vagy a kántortársaidnak.
+A kölcsönadott linkért és a mögötte lévő tartalomért az felel, aki a linket létrehozta: a Cantores.hu
+nem nézi át és nem ellenőrzi, mit osztasz meg titkos linken (hasonlóan a Google Drive-hoz vagy a
+OneDrive-hoz). A szerzői jogi szabályok betartása tehát a te felelősséged – a részleteket a
+[Használati feltételek](/terms) tartalmazzák.
 
 ## Fejlesztés, hibajelentés
 

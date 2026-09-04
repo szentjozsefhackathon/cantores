@@ -14,6 +14,21 @@ use Illuminate\Support\Facades\Auth;
  */
 trait HasLoans
 {
+    /**
+     * A lendable's loans go with it.
+     *
+     * `loans` is a morph table, so no foreign key cascades them: without this,
+     * deleting a score or a folder would leave a live token behind pointing at
+     * nothing. Deleting the rows also cascades the receipts and exclusions
+     * hanging off them.
+     */
+    public static function bootHasLoans(): void
+    {
+        static::deleting(function (self $lendable): void {
+            $lendable->loans()->delete();
+        });
+    }
+
     public function loans(): MorphMany
     {
         return $this->morphMany(Loan::class, 'lendable');
