@@ -65,6 +65,11 @@ class ScorePolicy
      * Nomination needs something to publish and a public music to hang it on:
      * a score carries no genre, collection or author of its own, and a private
      * music's metadata must not reach an indexable page.
+     *
+     * Having a file is not enough on its own — it must also be flagged for the
+     * offer, or the nomination would sit in the queue with nothing an editor
+     * could actually approve. Mirrors the check ScorePublicationService::approve()
+     * makes, so a submission can never reach the queue only to fail there.
      */
     public function nominate(User $user, Score $score): bool
     {
@@ -76,7 +81,7 @@ class ScorePolicy
             return false;
         }
 
-        return $score->content !== null || $score->files()->exists();
+        return ($score->content !== null && $score->content !== '') || $score->publishedFiles()->isNotEmpty();
     }
 
     /**

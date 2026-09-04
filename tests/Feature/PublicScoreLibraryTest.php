@@ -6,6 +6,7 @@ use App\Livewire\Pages\PublicScores;
 use App\Models\Music;
 use App\Models\Score;
 use App\Models\ScorePublication;
+use App\Models\User;
 use Livewire\Livewire;
 
 use function Pest\Laravel\get;
@@ -111,6 +112,27 @@ it('is indexable and carries structured data', function () {
         ->and($html)->not->toContain('noindex')
         ->and($html)->toContain('application/ld+json')
         ->and($html)->toContain('MusicComposition');
+});
+
+it('groups several free scores of the same music into one card', function () {
+    $music = Music::factory()->create(['title' => 'Salve Regina']);
+    publishedScore(['title' => 'Salve Regina', 'music_id' => $music->id, 'variation_name' => 'Fuvola']);
+    publishedScore(['title' => 'Salve Regina', 'music_id' => $music->id, 'variation_name' => 'Kórus']);
+
+    $html = Livewire::test(PublicScores::class)->html();
+
+    // The music heading itself must appear once (not once per score); the
+    // title also legitimately shows up elsewhere, e.g. an incipit's alt text.
+    expect(substr_count($html, '>Salve Regina<'))->toBe(1)
+        ->and($html)->toContain('Fuvola')
+        ->and($html)->toContain('Kórus');
+});
+
+it('shows the nickname of each score\'s owner', function () {
+    $owner = User::factory()->create();
+    publishedScore(['title' => 'Attributed Piece', 'user_id' => $owner->id]);
+
+    Livewire::test(PublicScores::class)->assertSee($owner->display_name);
 });
 
 it('links a published score from the music page it belongs to', function () {

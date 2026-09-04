@@ -517,6 +517,43 @@ class ScoreEditor extends Component
     }
 
     /**
+     * Why this score cannot be offered to the public library yet, and whether a
+     * music is what it is waiting for.
+     *
+     * The nomination form shows itself only once a score qualifies, which left
+     * an owner with no way to learn that offering exists at all. Naming what is
+     * missing turns that silence into the nudge towards attaching a music.
+     *
+     * @return array{message: string, needsMusic: bool}|null
+     */
+    #[Computed]
+    public function nominationBlocker(): ?array
+    {
+        if (! $this->score instanceof Score || $this->canNominate || ! Gate::allows('update', $this->score)) {
+            return null;
+        }
+
+        if ($this->score->music_id === null) {
+            return [
+                'message' => __('Attach this score to a music, and you can offer it to the public library.'),
+                'needsMusic' => true,
+            ];
+        }
+
+        if ($this->score->music?->is_private !== false) {
+            return [
+                'message' => __('The music this score belongs to is private, so the score cannot be offered to the public library.'),
+                'needsMusic' => false,
+            ];
+        }
+
+        return [
+            'message' => __('Write the score, or add a file and mark it for the offer, and you can offer it to the public library.'),
+            'needsMusic' => false,
+        ];
+    }
+
+    /**
      * Flag or unflag one file for publication.
      *
      * Only the owner's own files, and only ones whose declared rights permit

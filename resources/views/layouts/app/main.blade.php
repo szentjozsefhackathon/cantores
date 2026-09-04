@@ -42,15 +42,27 @@
                         <flux:icon name="list-music" class="inline" variant="mini"></flux:icon>
                         Énekrendek
                     </a>
-                    <a href="{{ route('public-scores') }}" class="text-accent hover:underline font-medium text-sm">
-                        <flux:icon name="arrow-down-tray" class="inline" variant="mini"></flux:icon>
-                        Ingyenes kották
-                    </a>
+                    <flux:dropdown>
+                        <flux:button variant="ghost" size="sm" icon-trailing="chevron-down" class="text-accent! font-medium text-sm!">
+                            <flux:icon name="arrow-down-tray" class="inline" variant="mini"></flux:icon>
+                            Kottatár
+                        </flux:button>
+                        <flux:menu>
+                            <flux:menu.item href="{{ route('public-scores') }}" icon="arrow-down-tray">
+                                Ingyenes kották
+                            </flux:menu.item>
+                            @guest
+                                <flux:menu.item href="{{ route('score.preview') }}" icon="musical-note">
+                                    Kottaszerkesztő
+                                </flux:menu.item>
+                            @endguest
+                        </flux:menu>
+                    </flux:dropdown>
                     @auth
                         <a href="{{ url('/dashboard') }}">
                             <flux:button variant="primary" icon="home">{{ __('Dashboard') }}</flux:button>
                         </a>
-                        
+
                         <div class="flex items-center" x-data="{ cycle() { const s = ['light','dark','system']; $flux.appearance = s[(s.indexOf($flux.appearance) + 1) % 3]; } }">
                             <flux:button variant="ghost" square @click="cycle()" aria-label="Toggle appearance">
                                 <flux:icon x-show="$flux.appearance === 'light'" name="sun" variant="mini" />
@@ -59,11 +71,6 @@
                             </flux:button>
                         </div>
                     @else
-                        <a href="{{ route('score.preview') }}" class="text-accent hover:underline font-medium text-sm">
-                            <flux:icon name="musical-note" class="inline" variant="mini"></flux:icon>
-                            Kottaszerkesztő
-                        </a>
-
                         <a href="{{ url('/about') }}" class="text-accent hover:underline font-medium text-sm">
                             <flux:icon name="information-circle" class="inline" variant="mini"></flux:icon>
                             Rólunk

@@ -1172,6 +1172,9 @@
 
                                     <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
                                         <flux:badge size="sm" color="zinc">{{ $file->rights->label() }}</flux:badge>
+                                        @if($file->is_published)
+                                        <flux:badge size="sm" color="green">{{ __('Included in the offer') }}</flux:badge>
+                                        @endif
                                         @if($file->isRendering())
                                         <flux:badge size="sm" color="blue" class="gap-1">
                                             <flux:icon.loading class="size-3 shrink-0" />
@@ -1201,6 +1204,13 @@
                                     size="sm"
                                     :aria-label="__('Download')"
                                     :href="route('scores.file.download', ['score' => $score, 'scoreFile' => $file])" />
+
+                                <flux:button
+                                    icon="{{ $file->is_published ? 'check-badge' : 'cloud-arrow-up' }}"
+                                    variant="{{ $file->is_published ? 'filled' : 'ghost' }}"
+                                    size="sm"
+                                    :aria-label="$file->is_published ? __('Remove from the public offer') : __('Include in the public offer')"
+                                    wire:click="togglePublishedFile({{ $file->id }})" />
 
                                 <flux:modal.trigger name="score-file-edit">
                                     <flux:button
@@ -1262,7 +1272,7 @@
                                     wire:model="pendingFile"
                                     accept=".mscz,.musicxml,.mxl,.mid,.midi,.pdf" />
                                 <flux:description>
-                                    {{ __('MuseScore (.mscz), MusicXML, MIDI or PDF. Max 25 MB. Never published — only you and the people you hand a secret link to can open it.') }}
+                                    {{ __('MuseScore (.mscz), MusicXML, MIDI or PDF. Max 25 MB. Private until you mark it for the public offer below — until then, only you and the people you hand a secret link to can open it.') }}
                                 </flux:description>
                                 <flux:error name="pendingFile" />
                             </flux:field>
@@ -1471,7 +1481,8 @@
                 </div>
                 @endif
 
-                @if($this->canNominate)
+                @php($nominationBlocker = $this->nominationBlocker)
+                @if($this->canNominate || $nominationBlocker)
                 <div
                     class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700"
                     x-show="!splitScreen"
@@ -1483,6 +1494,22 @@
                     <flux:text class="mt-1 text-sm text-zinc-500">
                         {{ __('Only public domain and Creative Commons material can go here. An editor checks every nomination before it is published.') }}
                     </flux:text>
+
+                    {{-- A score that does not qualify yet says so rather than
+                         hiding the offer: an owner cannot ask for something
+                         they were never shown. --}}
+                    @if($nominationBlocker)
+                    <div class="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+                        <flux:text class="text-sm">{{ $nominationBlocker['message'] }}</flux:text>
+                        @if($nominationBlocker['needsMusic'])
+                        <div class="mt-2">
+                            <flux:button size="sm" variant="outline" icon="magnifying-glass" x-on:click="$flux.modal('score-music-search').show()">
+                                {{ __('Attach a music') }}
+                            </flux:button>
+                        </div>
+                        @endif
+                    </div>
+                    @else
 
                     {{-- The public reads an approved snapshot, so a render setting
                          changed here shows nowhere until the next submission. --}}
@@ -1630,6 +1657,7 @@
                             </div>
                         </div>
                     </flux:modal>
+                    @endif
                     @endif
                 </div>
                 @endif

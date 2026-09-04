@@ -44,7 +44,12 @@ services:
     networks:
       - internal
     entrypoint: []
-    command: ["/bin/sh", "-c", "php artisan migrate -n --force && php artisan icons:clear && php artisan icons:cache && php artisan view:clear && php artisan optimize"]
+    # db:seed re-runs RolePermissionSeeder, SystemAdminSeeder and GenreSeeder on
+    # every deploy. They're all written to be safe to repeat (firstOrCreate,
+    # additive givePermissionTo), so this is how a newly added permission or role
+    # grant actually reaches production instead of sitting unseeded until someone
+    # runs it by hand.
+    command: ["/bin/sh", "-c", "php artisan migrate -n --force && php artisan db:seed --force && php artisan icons:clear && php artisan icons:cache && php artisan view:clear && php artisan optimize"]
     restart: "no"
   app:
     image: creshu-app-prod

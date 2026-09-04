@@ -9,6 +9,7 @@ use App\Models\Genre;
 use App\Models\Score;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator as Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Url;
@@ -57,15 +58,24 @@ class PublicScores extends Component
     }
 
     /**
-     * @return LengthAwarePaginator<int, Score>
+     * Published scores eligible for the library, grouped by the music they
+     * belong to so a piece with several free scores appears as one card. A
+     * score with no linked music groups alone, keyed by its own id.
+     *
+     * Fetched whole and grouped in PHP rather than paginated at the database:
+     * the published library is small (see the class docblock above), and a
+     * database-level LIMIT would risk splitting one music's scores across two
+     * pages.
+     *
+     * @return LengthAwarePaginator<int, \Illuminate\Support\Collection<int, Score>>
      */
-    private function scores(): LengthAwarePaginator
+    private function scoreGroups(): LengthAwarePaginator
     {
         $search = trim($this->search);
 
-        return Score::query()
+        $scores = Score::query()
             ->published()
-            ->with(['music.authors', 'music.collections', 'publication', 'files'])
+            ->with(['music.authors', 'music.collections', 'publication', 'files', 'user'])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('scores.title', 'ilike', "%{$search}%")
@@ -88,7 +98,22 @@ class PublicScores extends Component
                 fn (Builder $genres) => $genres->where('genres.id', $this->genre)
             ))
             ->orderByDesc('scores.updated_at')
-            ->paginate(24);
+            ->get();
+
+        $groups = $scores
+            ->groupBy(fn (Score $score) => $score->music_id !== null ? "music-{$score->music_id}" : "score-{$score->id}")
+            ->values();
+
+        $page = Paginator::resolveCurrentPage();
+        $perPage = 24;
+
+        return new Paginator(
+            $groups->forPage($page, $perPage)->values(),
+            $groups->count(),
+            $perPage,
+            $page,
+            ['path' => Paginator::resolveCurrentPath()],
+        );
     }
 
     public function rendering(IlluminateView $view): void
@@ -105,7 +130,7 @@ class PublicScores extends Component
     public function render(): IlluminateView
     {
         return view('livewire.pages.public-scores', [
-            'scores' => $this->scores(),
+            'groups' => $this->scoreGroups(),
             'licenses' => ScoreLicense::cases(),
             'formats' => ScoreFormat::cases(),
             'collections' => Collection::query()->public()->orderBy('title')->get(['id', 'title', 'abbreviation']),
