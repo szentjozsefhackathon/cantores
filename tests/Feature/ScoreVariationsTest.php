@@ -116,7 +116,7 @@ it('variations panel offers Add variation even when there are no siblings', func
     Livewire::test(ScoreEditor::class, ['score' => $score])
         ->assertSee(__('Variations'))
         ->assertSee(__('Add variation'))
-        ->assertSeeHtml(route('scores.create', ['music' => $music->id]));
+        ->assertSeeHtml('addVariation()');
 });
 
 it('names a variation and stores it on save', function () {
@@ -227,7 +227,7 @@ it('variations panel includes Add variation link', function () {
 
     Livewire::test(ScoreEditor::class, ['score' => $editing])
         ->assertSee(__('Add variation'))
-        ->assertSeeHtml(route('scores.create', ['music' => $music->id]));
+        ->assertSeeHtml('addVariation()');
 });
 
 it('variations panel is not rendered for a guest on the preview page', function () {

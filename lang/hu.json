@@ -851,6 +851,8 @@
 
     "Variations": "Variációk",
     "Add variation": "Variáció hozzáadása",
+    ":name (copy)": ":name (másolat)",
+    "Variation created as a copy.": "A variáció az eredeti másolataként jött létre.",
     "Incipit": "Incipit",
     "Read-only preview": "Csak olvasható előnézet",
     "Secret link active": "Titkos link aktív",

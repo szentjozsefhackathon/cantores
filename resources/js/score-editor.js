@@ -715,6 +715,27 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        // A new variation is a copy of this score, so what is on screen has to
+        // reach the server before the copy is taken — the same payload the
+        // explicit save sends, minus the toast.
+        async addVariation() {
+            if (this.savingScore) { return; }
+            this.savingScore = true;
+            clearTimeout(this._autosaveTimer);
+            this._autosaveDirty = false;
+            this.autosaveState = '';
+            this.flushWireContent();
+            try {
+                const format = this.$wire.format;
+                this.captureCurrentSettings(format, this.ratioForFormat(format));
+                const allRatioSettings = Object.assign({}, this.tempSettings[format] || {});
+                const incipit = await this.generateIncipit().catch(() => null);
+                await this.$wire.call('addVariation', allRatioSettings, incipit);
+            } finally {
+                setTimeout(() => { this.savingScore = false; }, 5000);
+            }
+        },
+
         async generateIncipit() {
             const targetWidth = 800;
             let clone;

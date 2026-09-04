@@ -13,6 +13,7 @@ use App\Models\ScorePublication;
 use App\Models\ScoreUrl;
 use App\Models\Share;
 use App\MusicUrlLabel;
+use App\Services\ScoreDuplicator;
 use App\Services\ScoreFileUploader;
 use App\Services\ScorePublicationService;
 use App\Services\ShareAccessService;
@@ -392,6 +393,39 @@ class ScoreEditor extends Component
     public function updatedPublicPreview(): void
     {
         $this->autosave();
+    }
+
+    /**
+     * Start another variation of the same music as a copy of this one, so the
+     * new score arrives with the music, the source, the render settings, the
+     * links, the folders and the files already in place instead of an empty
+     * editor. What is on screen is written back first, so the copy is of the
+     * score as the owner sees it rather than of the last autosave.
+     *
+     * Nothing that exposes a score is copied: the new variation is not
+     * previewable to guests, is not nominated to the public library and
+     * inherits no share link.
+     *
+     * @param  array<string, array<string, mixed>>|null  $allRatioSettings  Map of ratio key to settings
+     */
+    public function addVariation(?array $allRatioSettings = null, ?string $incipitDataUrl = null): void
+    {
+        $this->authorize('create', Score::class);
+
+        if (! $this->score instanceof Score) {
+            $this->redirectRoute('scores.create', ['music' => $this->musicId], navigate: true);
+
+            return;
+        }
+
+        $this->authorize('update', $this->score);
+
+        $this->autosave($allRatioSettings, $incipitDataUrl);
+
+        $copy = app(ScoreDuplicator::class)->duplicate($this->score->fresh() ?? $this->score);
+
+        $this->dispatch('toast', message: __('Variation created as a copy.'), type: 'success');
+        $this->redirectRoute('scores.edit', ['score' => $copy->id], navigate: true);
     }
 
     /**

@@ -222,11 +222,27 @@
                             </a>
                         @endforeach
 
-                        <a href="{{ route('scores.create', ['music' => $musicId]) }}" wire:navigate
-                           class="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm text-zinc-500 transition hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
-                            <flux:icon name="plus" variant="micro" class="shrink-0" />
-                            {{ __('Add variation') }}
-                        </a>
+                        @php($variationButtonClasses = 'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm text-zinc-500 transition hover:text-zinc-700 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-200')
+
+                        {{-- With a score to copy, the new variation starts as a duplicate of it; without one there is nothing to copy yet. --}}
+                        @if ($score && $linksOnly)
+                            <button type="button" wire:click="addVariation" class="{{ $variationButtonClasses }}">
+                                <flux:icon name="plus" variant="micro" class="shrink-0" />
+                                {{ __('Add variation') }}
+                            </button>
+                        @elseif ($score)
+                            <button type="button" x-on:click="addVariation()" x-bind:disabled="savingScore"
+                                    class="{{ $variationButtonClasses }}">
+                                <flux:icon name="plus" variant="micro" class="shrink-0" />
+                                {{ __('Add variation') }}
+                            </button>
+                        @else
+                            <a href="{{ route('scores.create', ['music' => $musicId]) }}" wire:navigate
+                               class="{{ $variationButtonClasses }}">
+                                <flux:icon name="plus" variant="micro" class="shrink-0" />
+                                {{ __('Add variation') }}
+                            </a>
+                        @endif
                     </div>
                 </div>
             @endif
