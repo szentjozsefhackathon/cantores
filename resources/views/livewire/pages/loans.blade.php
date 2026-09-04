@@ -20,7 +20,7 @@
                         wire:click="selectTab('{{ $tabKey }}')"
                         wire:key="loan-tab-{{ $tabKey }}">
                         {{ $tabLabel }}
-                        <flux:badge size="sm" color="zinc" class="ms-1.5">{{ $this->tabCounts[$tabKey] }}</flux:badge>
+                        <span class="ms-1.5 inline-flex items-center rounded-md px-2 py-1 text-xs font-medium {{ $tab === $tabKey ? 'bg-accent-foreground/20 text-accent-foreground' : 'bg-zinc-400/15 text-zinc-700 dark:bg-zinc-400/40 dark:text-zinc-200' }}">{{ $this->tabCounts[$tabKey] }}</span>
                     </flux:button>
                 @endforeach
             </div>

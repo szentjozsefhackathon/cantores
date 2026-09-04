@@ -2,8 +2,8 @@
 
 use App\Livewire\Pages\Loans;
 use App\Models\Folder;
-use App\Models\Score;
 use App\Models\Loan;
+use App\Models\Score;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
@@ -162,7 +162,6 @@ it('does not list a scores own link as an indirect one', function () {
     expect(Livewire::test(\App\Livewire\Pages\ScoreEditor::class, ['score' => $score])->get('indirectLoans'))
         ->toHaveCount(0);
 });
-
 
 it('rolls up publication status across every score I offered', function () {
     $user = User::factory()->create();
