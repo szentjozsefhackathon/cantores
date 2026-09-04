@@ -56,7 +56,7 @@
             </div>
         </flux:card>
 
-        @if($scores->isEmpty())
+        @if($groups->isEmpty())
         <flux:card class="p-8 text-center">
             <flux:text class="text-zinc-500">{{ __('Nothing matches those filters yet.') }}</flux:text>
             <div class="mt-4">
@@ -64,40 +64,76 @@
             </div>
         </flux:card>
         @else
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            @foreach($scores as $score)
-            @php($slug = \Illuminate\Support\Str::slug($score->title) ?: 'kotta')
-            <flux:card wire:key="public-score-{{ $score->id }}" class="flex flex-col gap-3 p-4">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0">
-                        <a href="{{ route('public-scores.show', ['score' => $score, 'slug' => $slug]) }}" class="hover:underline">
-                            <flux:heading size="lg" class="truncate">{{ $score->title }}</flux:heading>
+        <div class="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @foreach($groups as $group)
+            @php
+                $primary = $group->first();
+                $music = $primary->music;
+                $incipitScore = $group->first(fn ($groupedScore) => $groupedScore->hasIncipit());
+                $shown = $group->take(3);
+                $remaining = $group->count() - $shown->count();
+            @endphp
+            <flux:card wire:key="public-score-group-{{ $music?->id ?? 'score-'.$primary->id }}" class="flex h-full flex-col gap-3 p-4">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <flux:icon name="musical-note" variant="micro" class="shrink-0 text-zinc-400" />
+                        @if($music)
+                        <a href="{{ route('music-view', $music) }}" wire:navigate class="min-w-0 hover:underline">
+                            <flux:heading size="lg" class="truncate">{{ $music->title }}</flux:heading>
                         </a>
-                        @if($score->music?->authors->isNotEmpty())
-                        <flux:text class="truncate text-sm text-zinc-500">{{ $score->music->authors->pluck('name')->implode(', ') }}</flux:text>
+                        @else
+                        <flux:heading size="lg" class="truncate">{{ $primary->title }}</flux:heading>
                         @endif
                     </div>
-                    <x-score-license-badge :publication="$score->publication" />
+                    @if($music?->authors->isNotEmpty())
+                    <flux:text class="truncate pl-5 text-sm text-zinc-500">{{ $music->authors->pluck('name')->implode(', ') }}</flux:text>
+                    @endif
                 </div>
 
-                @if($score->hasIncipit())
-                <a href="{{ route('public-scores.show', ['score' => $score, 'slug' => $slug]) }}">
-                    <x-incipit-image :src="$score->publicIncipitUrl()" :alt="$score->title" />
-                </a>
-                @endif
+                <div class="flex h-36 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-50 dark:bg-zinc-800/50">
+                    @if($incipitScore)
+                    <a href="{{ $incipitScore->publicUrl() }}" class="flex h-full w-full items-center justify-center">
+                        <x-incipit-image :src="$incipitScore->publicIncipitUrl()" :alt="$incipitScore->title" imgClass="max-h-36 max-w-full object-contain" />
+                    </a>
+                    @else
+                    <flux:icon name="musical-note" class="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
+                    @endif
+                </div>
 
-                <div class="mt-auto flex flex-wrap items-center gap-2">
-                    <x-score-format-badge :format="$score->format" />
-                    @foreach($score->music?->collections ?? [] as $collection)
-                    <flux:badge size="sm" color="zinc">{{ $collection->abbreviation ?: $collection->title }}</flux:badge>
+                <div class="mt-auto flex flex-col gap-2">
+                    @foreach($shown as $score)
+                    <div class="flex flex-wrap items-center gap-1.5 text-sm" wire:key="public-score-{{ $score->id }}">
+                        <flux:icon :name="$score->variation_name ? 'layers' : 'document-text'" variant="micro" class="shrink-0 text-zinc-400" />
+                        <a href="{{ $score->publicUrl() }}" class="min-w-0 truncate hover:underline">{{ $score->variationLabel() }}</a>
+                        <x-score-format-badge :format="$score->format" />
+                        <x-score-license-badge :publication="$score->publication" />
+                        <span class="inline-flex items-center gap-1 text-xs text-zinc-500">
+                            <flux:icon name="user" variant="micro" class="shrink-0" />
+                            {{ $score->user->display_name }}
+                        </span>
+                    </div>
                     @endforeach
+
+                    @if($remaining > 0 && $music)
+                    <a href="{{ route('music-view', $music) }}" wire:navigate class="text-xs text-zinc-500 hover:underline">
+                        {{ trans_choice('+:count more score|+:count more scores', $remaining, ['count' => $remaining]) }}
+                    </a>
+                    @endif
+
+                    @if($music?->collections->isNotEmpty())
+                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                        @foreach($music->collections as $collection)
+                        <flux:badge size="sm" color="zinc">{{ $collection->abbreviation ?: $collection->title }}</flux:badge>
+                        @endforeach
+                    </div>
+                    @endif
                 </div>
             </flux:card>
             @endforeach
         </div>
 
         <div class="mt-6">
-            {{ $scores->links() }}
+            {{ $groups->links() }}
         </div>
         @endif
     </div>
