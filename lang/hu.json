@@ -138,10 +138,8 @@
     "Submit Report": "Jelentés elküldése",
     "Maximum 160 characters.": "Maximum 160 karakter.",
     "Enter a brief description of the error": "Adj meg egy rövid leírást a hibáról",
-
     "Please enter your new password below": "Add meg az új jelszavadat alább",
     "Email": "Email",
-
     "Back to Music Plans": "Vissza az énekrendekhez",
     "Author Details": "Szerző részletei",
     "Public": "Nyilvános",
@@ -155,7 +153,6 @@
     "Created": "Létrehozva",
     "Updated": "Frissítve",
     "Search by title, subtitle, or custom ID...": "Keresés cím, alcím vagy egyéni azonosító alapján...",
-
     "Music Piece Details": "Zenemű részletei",
     "Report an Issue": "Hiba bejelentése",
     "Custom ID": "Egyéni azonosító",
@@ -168,7 +165,6 @@
     "Order": "Sorszám",
     "No external links available for this music piece.": "Ehhez a zeneműhöz nem állnak rendelkezésre külső hivatkozások.",
     "Edit Music Piece": "Zenemű szerkesztése",
-
     "Collection Details": "Gyűjtemény részletei",
     "Publisher": "Kiadó",
     "Description": "Leírás",
@@ -176,13 +172,11 @@
     "No music pieces are assigned to this collection yet.": "Még nincs zenemű hozzárendelve ehhez a gyűjteményhez.",
     "Edit Collection": "Gyűjtemény szerkesztése",
     "Search by title, subtitle, custom ID, or author...": "Keresés cím, alcím, egyéni azonosító vagy szerző alapján...",
-
     "All Collections": "Összes gyűjtemény",
     "All Authors": "Összes szerző",
     "No music pieces found": "Nem található zenemű",
     "Try a different search term.": "Próbálj más keresési kifejezést.",
     "Get started by creating a new music piece.": "Hozz létre egy új zeneművet a kezdéshez.",
-
     "Assigned Tags": "Hozzárendelt címkék",
     "No tags assigned yet.": "Még nincs hozzárendelt címke.",
     "Add Link": "Hivatkozás hozzáadása",
@@ -192,21 +186,17 @@
     "Add": "Hozzáadás",
     "Tag added.": "Címke hozzáadva.",
     "Tag removed.": "Címke eltávolítva.",
-
     "Error Description": "Hiba leírása",
-
     "Edit User Roles": "Felhasználói szerepkörök szerkesztése",
     "User": "Felhasználó",
     "Roles": "Szerepkörök",
     "Loading user...": "Felhasználó betöltése...",
-
     "Contact Us": "Kapcsolat",
     "Send us a message. We will get back to you as soon as possible.": "Küldj nekünk üzenetet. Amint lehetséges, visszajelzünk.",
     "Subject": "Tárgy",
     "Message": "Üzenet",
     "Maximum 500 characters.": "Maximum 500 karakter.",
     "Send Message": "Üzenet küldése",
-
     "Two-Factor Authentication Settings": "Kétfaktoros hitelesítési beállítások",
     "With two-factor authentication enabled, you will be prompted for a secure, random pin during login, which you can retrieve from the TOTP-supported application on your phone.": "A kétfaktoros hitelesítés engedélyezésével a bejelentkezés során egy biztonságos, véletlenszerű PIN-kódot kell megadnod, amelyet a telefonodra telepített TOTP-támogatott alkalmazásból szerezhetsz be.",
     "Disable 2FA": "2FA letiltása",
@@ -220,7 +210,6 @@
     "Continue": "Folytatás",
     "Enable Two-Factor Authentication": "Kétfaktoros hitelesítés engedélyezése",
     "To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app.": "A kétfaktoros hitelesítés engedélyezésének befejezéséhez olvasd be a QR-kódot, vagy add meg a beállítási kulcsot a hitelesítő alkalmazásodban.",
-
     "2FA Recovery Codes": "2FA helyreállítási kódok",
     "Recovery codes let you regain access if you lose your 2FA device. Store them in a secure password manager.": "A helyreállítási kódok segítségével visszanyerheted a hozzáférést, ha elveszíted a 2FA eszközödet. Tárold őket egy biztonságos jelszókezelőben.",
     "View Recovery Codes": "Helyreállítási kódok megtekintése",
@@ -228,17 +217,13 @@
     "Regenerate Codes": "Kódok újragenerálása",
     "Recovery codes": "Helyreállítási kódok",
     "Each recovery code can be used once to access your account and will be removed after use. If you need more, click Regenerate Codes above.": "Minden helyreállítási kód egyszer használható a fiókod eléréséhez, és felhasználás után törlődik. Ha többre van szükséged, kattints a fenti Kódok újragenerálása gombra.",
-
     "Profile Settings": "Profilbeállítások",
     "Your email address is unverified.": "Az email címed nincs megerősítve.",
     "Click here to re-send the verification email.": "Kattints ide az ellenőrző email újraküldéséhez.",
     "A new verification link has been sent to your email address.": "Egy új ellenőrző linket küldtünk az email címedre.",
-
     "Password Settings": "Jelszóbeállítások",
     "Appearance Settings": "Megjelenési beállítások",
-
     "Hiba.": "Hiba.",
-
     "Music piece deleted.": "Zenemű törölve.",
     "Create Music Piece": "Zenemű létrehozása",
     "Make this music piece private (only visible to you)": "Tedd ezt a zeneművet priváttá (csak te láthatod)",
@@ -266,7 +251,7 @@
     "Enter subtitle": "Add meg az alcímet",
     "All": "Mind",
     "My items": "Saját elemek",
-    "empty": "üres",    
+    "empty": "üres",
     "Author created.": "Szerző létrehozva.",
     "Author updated.": "Szerző frissítve.",
     "Author deleted.": "Szerző törölve.",
@@ -276,7 +261,6 @@
     "Author was created.": "A szerző létrehozva.",
     "Author was deleted.": "A szerző törölve.",
     "No changes have been recorded for this author yet.": "Ehhez a szerzőhöz még nem rögzítettünk változásokat.",
-
     "Collection created.": "Gyűjtemény létrehozva.",
     "Collection updated.": "Gyűjtemény frissítve.",
     "Collection deleted.": "Gyűjtemény törölve.",
@@ -287,7 +271,6 @@
     "Collection was created.": "A gyűjtemény létrehozva.",
     "Collection was deleted.": "A gyűjtemény törölve.",
     "No changes have been recorded for this collection yet.": "Ehhez a gyűjteményhez még nem rögzítettünk változásokat.",
-
     "Verify Music Data": "Zeneadatok ellenőrzése",
     "Select a music piece to verify its fields and relations": "Válassz egy zeneművet a mezők és kapcsolatok ellenőrzéséhez",
     "Select Music to Verify": "Válassz ellenőrizendő zeneművet",
@@ -324,7 +307,6 @@
     "No music selected.": "Nincs kiválasztott zenemű.",
     "Verification saved.": "Ellenőrzés mentve.",
     "Verification removed.": "Ellenőrzés visszavonva.",
-
     "Manage Music Tags": "Zenei címkék kezelése",
     "Create and manage music tags. Tags are organized by type for easy filtering and querying.": "Zenei címkék létrehozása és kezelése. A címkék típus szerint vannak rendezve a könnyű szűrés és lekérdezés érdekében.",
     "Create New Tag": "Új címke létrehozása",
@@ -347,7 +329,6 @@
     "Are you sure you want to delete this tag? This action cannot be undone.": "Biztosan törölni szeretnéd ezt a címkét? Ez a művelet nem vonható vissza.",
     "This tag already exists.": "Ez a címke már létezik.",
     "Back to Dashboard": "Vissza az irányítópultra",
-
     "Back to Music List": "Vissza a zenemű-listához",
     "Select one or more genres that apply to this music piece.": "Válassz egy vagy több műfajt, amely illik erre a zeneműre.",
     "Private music pieces are only visible to you. Public music pieces are visible to all users.": "A privát zeneművek csak neked láthatóak. A nyilvános zeneművek minden felhasználó számára láthatóak.",
@@ -425,7 +406,6 @@
     "This author is already attached to this music piece.": "Ez a szerző már csatolva van ehhez a zeneműhöz.",
     "Cannot delete music piece that has collections or plan slots assigned to it.": "Nem lehet törölni a zeneművet, ha gyűjtemények vagy tervhelyek vannak hozzárendelve.",
     "Are you sure you want to delete this music piece? This can only be done if no collections or plan slots are assigned to it.": "Biztosan törölni szeretnéd ezt a zeneművet? Ez csak akkor lehetséges, ha nincs hozzárendelve gyűjtemény vagy tervhely.",
-
     "Merge Music Pieces": "Zeneművek összevonása",
     "Select two music pieces to merge them": "Válassz két zeneművet az összevonáshoz",
     "Left Music (Source A)": "Bal zenemű (A forrás)",
@@ -455,7 +435,6 @@
     "You will become the owner of the merged music": "Az összevont zenemű tulajdonosa te leszel",
     "Are you sure you want to merge these music pieces? This action cannot be undone.": "Biztosan összevonod ezeket a zeneművekat? Ez a művelet nem vonható vissza.",
     "Save Merge": "Összevonás mentése",
-
     "Role Permission Manager": "Szerepkör-jogosultság kezelő",
     "Assign permissions to roles in the system": "Jogosultságok hozzárendelése a rendszer szerepköreiből",
     "Users": "Felhasználók",
@@ -466,7 +445,6 @@
     "Not verified": "Nincs megerősítve",
     "Edit Roles": "Szerepkörök szerkesztése",
     "No users found.": "Nem található felhasználó.",
-
     "Nickname and city master data": "Becenév és város törzsadatok",
     "Process": "Feldolgozás",
     "Delete Selected": "Kijelöltek törlése",
@@ -479,7 +457,6 @@
     "Selected first names deleted.": "Kijelölt keresztnevek törölve.",
     "Male": "Férfi",
     "Female": "Nő",
-
     "Bulk Imports": "Tömeges importok",
     "View records to be imported with BulkImports": "A BulkImports paranccsal importálandó rekordok megtekintése",
     "Search by piece...": "Keresés zenemű alapján...",
@@ -492,7 +469,6 @@
     "Tag": "Címke",
     "No bulk import records have been added yet.": "Még nem adtak hozzá tömeges import rekordokat.",
     "Create Music Pieces": "Zeneművek létrehozása",
-
     "Music Plan Slots": "Énekrend helyek",
     "Manage global and custom music plan slots": "Globális és egyéni énekrend helyek kezelése",
     "Slot created.": "Hely létrehozva.",
@@ -523,7 +499,6 @@
     "Lower numbers have higher priority (e.g., 1 appears before 2). Defines order in unified celebration view.": "Az alacsonyabb számok magasabb prioritást jeleznek (pl. 1 jelenik meg 2 előtt). Meghatározza a sorrendet az egységes ünnep nézetben.",
     "Update Slot": "Hely frissítése",
     "Edit Music Plan Slot": "Énekrend hely szerkesztése",
-
     "Music Plan Templates": "Énekrend sablonok",
     "Manage templates for organizing music plans": "Énekrendek rendszerezéséhez szükséges sablonok kezelése",
     "Template created.": "Sablon létrehozva.",
@@ -544,7 +519,6 @@
     "Update Template": "Sablon frissítése",
     "Edit Music Plan Template": "Énekrend sablon szerkesztése",
     "Are you sure you want to delete this template? This will not affect existing music plans.": "Biztosan törölni szeretnéd ezt a sablont? Ez nem érinti a meglévő énekrendeket.",
-
     "Manage slots for this template": "A sablon helyeinek kezelése",
     "Back to Templates": "Vissza a sablonokhoz",
     "Slot added.": "Hely hozzáadva.",
@@ -567,7 +541,6 @@
     "Included by default in music plans": "Alapértelmezetten szerepel a énekrendekben",
     "If unchecked, this slot will be marked as advanced/optional": "Ha nincs bejelölve, ez a hely haladó/opcionálisként lesz jelölve",
     "Edit Slot in Template": "Hely szerkesztése a sablonban",
-
     "Only show slots not yet added": "Csak a még nem hozzáadott helyek megjelenítése",
     "New custom slot": "Új egyéni hely",
     "Click to create": "Kattints a létrehozáshoz",
@@ -578,7 +551,6 @@
     "Slot Name": "Hely neve",
     "Description (optional)": "Leírás (opcionális)",
     "Processing...": "Feldolgozás...",
-
     "URL Whitelist Management": "URL engedélyezési lista kezelése",
     "Security": "Biztonság",
     "Role Permissions": "Szerepkör-jogosultságok",
@@ -586,7 +558,6 @@
     "Music Plans": "Énekrendek",
     "Data Import": "Adatimport",
     "Admin": "Adminisztráció",
-
     "Search": "Keresés",
     "Repository": "Tárház",
     "Documentation": "Dokumentáció",
@@ -605,7 +576,6 @@
     "You can turn off these emails in your profile settings.": "Ezeket az emaileket kikapcsolhatod a profilbeállításaidban.",
     "Email me when I receive an in-system notification": "Kérek emailt, amikor alkalmazáson belüli értesítést kapok",
     "You will still receive notifications inside the application when this is turned off.": "Kikapcsolás után is megkapod az értesítéseket az alkalmazáson belül.",
-
     "Year A": "A év",
     "Year B": "B év",
     "Year C": "C év",
@@ -637,7 +607,6 @@
     "This city and first name combination is already taken.": "Ez a város és keresztnév kombináció már foglalt.",
     "city": "város",
     "first name": "keresztnév",
-
     "A slot name is required.": "A hely neve kötelező.",
     "A slot with this name already exists.": "Már létezik ilyen nevű hely.",
     "Description cannot exceed 1000 characters.": "A leírás nem lehet hosszabb 1000 karakternél.",
@@ -663,14 +632,12 @@
     "Abbreviation, order number, etc.": "Rövidítés, sorszám",
     "Author name...": "Szerző neve...",
     "Select": "Kiválasztás",
-
     "Variation": "Variáció",
     "Arrangement": "Feldolgozás",
     "Accompaniment": "Kíséret",
     "Contrafact": "Kontrafaktum",
     "Connected": "Összetartozó",
     "Duplicate": "Duplikátum",
-
     "Loading": "Betöltés",
     "Error report submitted successfully.": "Hibajelentés elküldve.",
     "Delete collection": "Gyűjtemény törlése",
@@ -720,7 +687,6 @@
     "Type the score here": "Írd be a kottát ide",
     "Lyric size (pt)": "Szövegméret (pt)",
     "Staff size": "Kottaméret",
-
     "Score Preview": "Kotta előnézete",
     "Sign in to save this score to your library.": "Jelentkezz be a kotta könyvtáradba való mentéséhez.",
     "Are you sure you want to delete this score?": "Biztosan törölni szeretnéd ezt a kottát?",
@@ -732,7 +698,6 @@
     "Add at least one link.": "Adj hozzá legalább egy hivatkozást.",
     "No type": "Nincs típus",
     "Comment (optional)": "Megjegyzés (nem kötelező)",
-
     "Content does not fit on page": "A tartalom nem fér el az oldalon",
     "Clipboard not supported in this browser": "A vágólap nem támogatott ebben a böngészőben",
     "First page copied to clipboard": "Az első oldal a vágólapra másolva",
@@ -742,7 +707,6 @@
     "Failed to copy link": "Nem sikerült a linket másolni",
     "HTML copied to clipboard!": "HTML a vágólapra másolva!",
     "Plain text copied to clipboard!": "Egyszerű szöveg a vágólapra másolva!",
-
     "Show me an example": "Mutass egy példát",
     "Zoom (%)": "Nagyítás (%)",
     "Staff size (%)": "Kottasor mérete (%)",
@@ -754,18 +718,15 @@
     "Condensing tolerance": "Sűrítési tolerancia",
     "Space between lines": "Sorok közötti tér",
     "Min. space below staff": "Min. tér a kottasor alatt",
-
     "Font size (pt)": "Betűméret (pt)",
     "Columns": "Oszlopok",
     "Transpose (semitones)": "Transzponálás (félhang)",
     "German notation (H = B, B = B♭)": "Német jelölés (H = H, B = B♭)",
     "Save as my default": "Mentés alapértelmezettként",
-
     "Copy as Text": "Másolás szövegként",
     "Copy HTML": "HTML másolása",
     "Export HTML": "Exportálás HTML-be",
     "Generating link…": "Link generálása…",
-
     "Secret Link": "Titkos link",
     "Copy link": "Link másolása",
     "Delete link": "Link törlése",
@@ -821,7 +782,6 @@
     "Same liturgical day and year parity": "Azonos liturgikus nap (páros/páratlan év)",
     "Same liturgical day": "Azonos liturgikus nap",
     "This suggestion comes from a music plan for a related celebration.": "Ez a javaslat egy kapcsolódó ünnep énekrendjéből származik.",
-
     "Folders": "Mappák",
     "My Folders": "Mappáim",
     "Folder name": "Mappa neve",
@@ -837,7 +797,6 @@
     "Are you sure you want to delete this folder?": "Biztosan törölni szeretnéd ezt a mappát?",
     "Anyone with this link can view the folder contents (read-only). Delete the link to revoke access.": "Bárki megtekintheti a mappa tartalmát ezzel a linkkel (csak olvasható). Töröld a linket a hozzáférés visszavonásához.",
     "Generate a secret link to share this folder as a read-only preview.": "Generálj titkos linket a mappa csak olvasható előnézetként való megosztásához.",
-
     "Scores": "Kották",
     "No scores found": "Nincs kotta",
     "No scores yet": "Még nincs kotta",
@@ -848,7 +807,6 @@
     "Add Scores": "Kották hozzáadása",
     "Click \"Add Scores\" to add scores to this folder.": "Kattints a \"Kották hozzáadása\" gombra kották hozzáadásához ehhez a mappához.",
     "Remove from folder": "Eltávolítás a mappából",
-
     "Variations": "Variációk",
     "Add variation": "Variáció hozzáadása",
     ":name (copy)": ":name (másolat)",
@@ -869,7 +827,6 @@
     "Scripture reference (e.g. Jn 3,16)": "Igehely (pl. Jn 3,16)",
     "Link this music to Bible passages. The text is fetched from szentiras.eu.": "Kapcsold az éneket bibliai szakaszokhoz. A szöveget a szentiras.eu szolgáltatja.",
     "Add a Bible passage, e.g. 1Kir2,4. The reference is validated against szentiras.eu.": "Adj meg egy bibliai szakaszt, pl. 1Kir2,4. A hivatkozást a szentiras.eu ellenőrzi.",
-    "Reference": "Hivatkozás",
     "Reference Type": "Hivatkozás típusa",
     "Select a reference type": "Válassz hivatkozástípust",
     "Add Reference": "Hivatkozás hozzáadása",
@@ -901,7 +858,6 @@
     "Also reachable through": "Ezeken keresztül is kölcsönben van",
     "These secret links open this score too, even without a link of its own.": "Ezek a kölcsönlinkek ezt a kottát is megnyitják, akkor is, ha nincs saját linkje.",
     "This will invalidate that link entirely. Are you sure?": "Ez teljesen érvényteleníti azt a linket. Biztosan folytatod?",
-
     "View sheet music": "Kotta megtekintése",
     "Page :page of :total": ":page. oldal / :total",
     "Previous page": "Előző oldal",
@@ -912,7 +868,6 @@
     "Ready": "Kész",
     "Rendering failed": "A feldolgozás nem sikerült",
     "Preview not supported": "Ehhez a formátumhoz nincs előnézet",
-
     "Sheet music files": "Kottafájlok",
     "File": "Fájl",
     "Rights": "Jogok",
@@ -940,8 +895,6 @@
     "Tells this version apart from the other scores of the same music.": "Ezzel különböztetheted meg ugyanannak az éneknek a többi kottájától.",
     "Open link": "Link megnyitása",
     "Remove link": "Link törlése",
-
-
     "Loans": "Kölcsönzések",
     "On loan": "Kölcsönben",
     ":name lent you this.": ":name kölcsönadta neked.",
@@ -952,7 +905,6 @@
     "Saved to your loans.": "Elmentve a kölcsönzéseid közé.",
     "Lent by link": "Kölcsönadva linkkel",
     "On loan · :name's score": "Kölcsönben · :name kottája",
-
     "A loan is not a gift: the score stays its owner's, and they can recall it at any time.": "A kölcsönzés nem ajándék: a kotta a tulajdonosáé marad, és bármikor visszakérheti.",
     "Borrowed scores": "Kölcsönkapott kották",
     "Lent scores": "Kölcsönadott kották",
@@ -974,7 +926,6 @@
     "Loan request": "Kölcsönkérés",
     "Loan recalled.": "A kölcsönzés visszavonva.",
     "Removed from your loans.": "Eltávolítva a kölcsönzéseid közül.",
-
     "You have not lent anything yet": "Még nem adtál kölcsön semmit",
     "Lend a score, folder or music plan to create a lending link.": "Adj kölcsön egy kottát, mappát vagy énekrendet a kölcsönlink létrehozásához.",
     "A folder or music plan link also opens the scores it contains. Recalling it closes those too.": "A mappa- és énekrendlinkek a bennük szereplő kottákat is megnyitják. A visszavonással azok is elérhetetlenné válnak.",
@@ -988,13 +939,11 @@
     "Readers who were not signed in stay anonymous, so this is never the whole list.": "A be nem jelentkezett olvasók névtelenek maradnak, tehát ez sosem a teljes lista.",
     "Recall this loan? Anyone still holding the link will lose access.": "Visszavonod ezt a kölcsönzést? Aki még birtokolja a linket, elveszíti a hozzáférést.",
     "Recall": "Visszavonás",
-
     "You have not offered any score to the public library": "Még egy kottát sem ajánlottál fel a nyilvános kottatárba",
     "Publishing is separate from lending: it is open to strangers and reviewed first.": "A közzététel nem kölcsönzés: idegenek is elérik, és előbb átnézi egy szerkesztő.",
     "The public is reading": "A nyilvánosság ezt olvassa",
     "Reviewer's note": "Szerkesztői megjegyzés",
     "Newer version awaiting review": "Újabb változat jóváhagyásra vár",
-
     "What this loan opens": "Mit nyit meg ez a kölcsönzés",
     "Everything is lent by default, and a score added later is lent too. Untick what should stay behind.": "Alapból minden kölcsönben van, és a később hozzáadott kotta is. Vedd ki a pipát arról, ami nem megy vele.",
     "This loan opens nothing yet": "Ez a kölcsönzés még semmit sem nyit meg",
@@ -1003,11 +952,9 @@
     "Taking a score out closes it for everyone holding this link.": "Ha kiveszel egy kottát, mindenki elveszíti, aki a linket birtokolja.",
     "Mark as reviewed": "Átnézve",
     "Loan contents reviewed.": "A kölcsönzés tartalma átnézve.",
-
     "The public keeps reading the approved version until an editor has seen this change.": "A nyilvánosság a jóváhagyott változatot olvassa, amíg a szerkesztő meg nem nézi ezt a módosítást.",
     "The public reads the version an editor approved. Changing the notes or the links sends the change back for review, and the approved version stays up meanwhile; changing the display settings does not show publicly until the next submission.": "A nyilvánosság azt a változatot olvassa, amelyet a szerkesztő jóváhagyott. Ha a kottán vagy a hivatkozásokon módosítasz, az újra átnézésre kerül – addig a jóváhagyott változat marad kint; a megjelenítési beállítások módosítása viszont csak a következő beküldéskor kerül ki.",
     "Returned for review: the score changed after approval.": "Újra átnézésre vár: a kotta a jóváhagyás után módosult.",
-
     "Lend": "Kölcsönadás",
     "Lend this score": "Kotta kölcsönadása",
     "Lending link copied!": "Kölcsönlink másolva!",
@@ -1018,11 +965,9 @@
     "Whoever holds this link may read the score and keep it. Recall the link to close it for everyone.": "Aki birtokolja ezt a linket, elolvashatja és megtarthatja a kottát. A visszavonással mindenki számára lezárul.",
     "Recall the loan": "Kölcsönzés visszavonása",
     "Recall that loan entirely? Anyone still holding the link will lose access.": "Teljesen visszavonod azt a kölcsönzést? Aki még birtokolja a linket, elveszíti a hozzáférést.",
-
     "Add to a folder": "Mappához adás",
     "Added to :folder.": "Hozzáadva ehhez: :folder.",
     "This loan has ended.": "Ez a kölcsönzés lejárt.",
-
     "Free sheet music": "Ingyenes kották",
     "Public domain and Creative Commons scores you may download, print and sing. Every item here has been checked by an editor.": "Közkincs és Creative Commons licencű kották, amelyeket letölthetsz, kinyomtathatsz és énekelhetsz. Minden itt található tételt szerkesztő ellenőrzött.",
     "What may be published here": "Mit lehet itt közzétenni",
@@ -1036,7 +981,6 @@
     "Add file": "Fájl hozzáadása",
     "Withdraw": "Visszavonás",
     "Awaiting review": "Jóváhagyásra vár",
-
     "Daily": "Napi",
     "Rights complaint": "Jogi panasz",
     "My own work": "Saját munkám",
@@ -1333,10 +1277,50 @@
     "How much content each nickname has added. Private scores and plans are counted, never shown.": "Mennyi tartalmat adott hozzá az oldalhoz az adott becenév. A privát kották és énekrendek csak számként jelennek meg, tartalmuk soha.",
     "Music": "Zeneművek",
     "Total": "Összesen",
-
     "Human check": "Emberi ellenőrzés",
     "Just checking you are a person": "Csak ellenőrizzük, hogy ember vagy",
     "Scores are lent to people, not to robots. This takes a moment and you will only be asked once.": "A kottákat embereknek kölcsönözzük, nem robotoknak. Ez csak egy pillanat, és munkamenetenként csak egyszer kérdezünk rá.",
     "Please complete the check to show you are not a robot.": "Kérjük, végezd el az ellenőrzést, hogy lássuk, nem robot vagy.",
-    "Signed-in members are never asked.": "Bejelentkezve soha nem kérdezünk rá."
+    "Signed-in members are never asked.": "Bejelentkezve soha nem kérdezünk rá.",
+    "My Booklets": "Füzeteim",
+    "Booklet": "Füzet",
+    "New Booklet": "Új füzet",
+    "Printable booklets built from your music plans.": "Az énekrendjeidből épített, nyomtatható füzetek.",
+    "No booklets yet": "Még nincs füzet",
+    "Open a music plan and press Booklet to build one from its scores.": "Nyiss meg egy énekrendet, és a Füzet készítése gombbal állítsd össze a kottáiból.",
+    "Booklet deleted.": "Füzet törölve.",
+    "Delete this booklet?": "Törlöd ezt a füzetet?",
+    "Page size": "Lapméret",
+    "Orientation": "Tájolás",
+    "Portrait": "Álló",
+    "Landscape": "Fekvő",
+    "Margin (mm)": "Margó (mm)",
+    "Staff height (mm)": "Vonalrendszer magassága (mm)",
+    "Titles": "Címek",
+    "pages": "oldal",
+    "Download PDF": "PDF letöltése",
+    "Generating…": "Készül…",
+    "Laying out…": "Tördelés…",
+    "In this booklet": "A füzetben",
+    "Nothing chosen yet. Pick scores from the plan below.": "Még nincs kiválasztva semmi. Válassz kottákat az alábbi énekrendből.",
+    "From the plan": "Az énekrendből",
+    "No music plan": "Nincs énekrend",
+    "This booklet is not linked to a music plan.": "Ez a füzet nem kapcsolódik énekrendhez.",
+    "No scores available": "Nincs elérhető kotta",
+    "Choose a score to see the pages.": "Válassz kottát az oldalak megjelenítéséhez.",
+    "Start on a new page": "Új oldalon kezdődjön",
+    "Adjust this score": "Ennek a kottának a beállítása",
+    "Back to the booklet defaults": "Vissza a füzet beállításaihoz",
+    "Changed for this booklet": "Ebben a füzetben módosítva",
+    "Changes here apply to this booklet only — the score itself is untouched. Widen a score to stop a line breaking; lower its staff height to stop a page breaking.": "Az itteni módosítások csak ehhez a füzethez tartoznak – magát a kottát nem érintik. Szélesítsd a kottát, hogy ne törjön a sor; csökkentsd a vonalrendszer magasságát, hogy ne törjön az oldal.",
+    "Layout width (px)": "Tördelési szélesség (px)",
+    "Layout width (mm)": "Tördelési szélesség (mm)",
+    "Lyric size": "Szövegméret",
+    "Staff scale": "Vonalrendszer léptéke",
+    "Staff gap": "Vonalrendszer-köz",
+    "Vocal space": "Szövegtávolság",
+    "Hide clef": "Kulcs elrejtése",
+    "Hide repeated clef": "Ismételt kulcs elrejtése",
+    "German notation": "Német hangnevek",
+    "Font size": "Betűméret"
 }

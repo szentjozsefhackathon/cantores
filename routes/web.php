@@ -262,6 +262,29 @@ Route::livewire('/folders/{folder}/edit', \App\Livewire\Pages\FolderEditor::clas
     ->middleware(['auth', 'verified'])
     ->name('folders.edit');
 
+// Booklets: a music plan's scores laid onto real A4 or A5 pages. The editor
+// chooses and arranges; the pages themselves are engraved in the browser and
+// only come back here to be turned into a PDF.
+Route::livewire('/booklets', \App\Livewire\Pages\Booklets::class)
+    ->middleware(['auth', 'verified'])
+    ->name('booklets');
+
+Route::post('/booklets', [\App\Http\Controllers\BookletController::class, 'store'])
+    ->middleware(['auth', 'verified'])
+    ->name('booklets.store');
+
+Route::livewire('/booklets/{booklet}/edit', \App\Livewire\Pages\BookletEditor::class)
+    ->middleware(['auth', 'verified'])
+    ->name('booklets.edit');
+
+Route::delete('/booklets/{booklet}', [\App\Http\Controllers\BookletController::class, 'destroy'])
+    ->middleware(['auth', 'verified'])
+    ->name('booklets.destroy');
+
+Route::post('/booklets/{booklet}/export-pdf', \App\Http\Controllers\BookletPdfExportController::class)
+    ->middleware(['auth', 'verified', 'throttle:20,1'])
+    ->name('booklets.export-pdf');
+
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');
