@@ -6,6 +6,8 @@ import { aretinoMixin } from './score-editor-aretino.js';
 import { applyPhysicalSvgSize, removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
+import { injectWebFontsIntoSvg } from './svg-fonts.js';
+import { stackSvgs } from './svg-stack.js';
 import { renderAretino, renderFirstRow } from '@aretino-chant/core';
 
 let aretinoEditorDefinitionPromise = null;
@@ -46,58 +48,6 @@ const AUTOSAVE_INCIPIT_MS = 60000;
 
 const ARETINO_CODEMIRROR_FONT_STYLE_ID = 'score-editor-aretino-codemirror-font-size';
 const ARETINO_CODEMIRROR_FONT_SIZE = '14px';
-const LATIN_EXT = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
-const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
-
-const WEB_FONTS = {
-    'EB Garamond': [
-        { style: 'normal', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-400.woff2' },
-        { style: 'normal', weight: '400', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-400.woff2' },
-        { style: 'italic', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-400i.woff2' },
-        { style: 'italic', weight: '400', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-400i.woff2' },
-        { style: 'normal', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-700.woff2' },
-        { style: 'normal', weight: '700', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-700.woff2' },
-        { style: 'italic', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-700i.woff2' },
-        { style: 'italic', weight: '700', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-700i.woff2' },
-    ],
-    'Lora': [
-        { style: 'normal', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-400.woff2' },
-        { style: 'normal', weight: '400', unicodeRange: LATIN,     url: '/fonts/lora-latin-400.woff2' },
-        { style: 'italic', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-400i.woff2' },
-        { style: 'italic', weight: '400', unicodeRange: LATIN,     url: '/fonts/lora-latin-400i.woff2' },
-        { style: 'normal', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-700.woff2' },
-        { style: 'normal', weight: '700', unicodeRange: LATIN,     url: '/fonts/lora-latin-700.woff2' },
-        { style: 'italic', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-700i.woff2' },
-        { style: 'italic', weight: '700', unicodeRange: LATIN,     url: '/fonts/lora-latin-700i.woff2' },
-    ],
-    'Inter': [
-        { style: 'normal', weight: '100 900', unicodeRange: LATIN_EXT, url: '/fonts/inter-latin-ext.woff2' },
-        { style: 'normal', weight: '100 900', unicodeRange: LATIN,     url: '/fonts/inter-latin.woff2' },
-    ],
-    'Barlow Condensed': [
-        { style: 'normal', weight: '500', unicodeRange: LATIN_EXT, url: '/fonts/barlow-condensed-latin-ext-500.woff2' },
-        { style: 'normal', weight: '500', unicodeRange: LATIN,     url: '/fonts/barlow-condensed-latin-500.woff2' },
-        { style: 'normal', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/barlow-condensed-latin-ext-700.woff2' },
-        { style: 'normal', weight: '700', unicodeRange: LATIN,     url: '/fonts/barlow-condensed-latin-700.woff2' },
-    ],
-};
-
-const fontBase64Cache = {};
-
-async function fetchFontBase64(url) {
-    if (fontBase64Cache[url]) { return fontBase64Cache[url]; }
-    const res = await fetch(url);
-    const buf = await res.arrayBuffer();
-    let binary = '';
-    new Uint8Array(buf).forEach(b => { binary += String.fromCharCode(b); });
-    const b64 = btoa(binary);
-    fontBase64Cache[url] = b64;
-    return b64;
-}
-
-function parsePrimaryFontFamily(fontValue) {
-    return (fontValue ?? '').split(',')[0].trim().replace(/['"]/g, '');
-}
 
 const ARETINO_VERSE_INCIPIT_LINES = 7;
 
@@ -148,38 +98,6 @@ function applyAretinoCodeMirrorFontSize(editor) {
 `;
     root.append(style);
     editor._view?.requestMeasure?.();
-}
-
-async function injectWebFontsIntoSvg(svgEl, fontValues) {
-    const rules = [];
-    const seenFamilies = new Set();
-    for (const value of fontValues) {
-        const family = parsePrimaryFontFamily(value);
-        if (seenFamilies.has(family)) { continue; }
-        const descriptors = WEB_FONTS[family];
-        if (!descriptors) { continue; }
-        seenFamilies.add(family);
-        for (const d of descriptors) {
-            try {
-                const b64 = await fetchFontBase64(d.url);
-                rules.push(
-                    `@font-face{font-family:'${family}';font-style:${d.style};font-weight:${d.weight};` +
-                    `unicode-range:${d.unicodeRange};src:url('data:font/woff2;base64,${b64}')format('woff2');}`
-                );
-            } catch (e) {
-                console.warn('[score-editor] could not embed font:', family, d.url, e);
-            }
-        }
-    }
-    if (!rules.length) { return; }
-    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = rules.join('');
-    let defs = svgEl.querySelector('defs');
-    if (!defs) {
-        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        svgEl.insertBefore(defs, svgEl.firstChild);
-    }
-    defs.insertBefore(style, defs.firstChild);
 }
 
 document.addEventListener('alpine:init', () => {
@@ -1580,139 +1498,32 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        // The abc stroke widths, which live on the score rather than in the
+        // fragments, and so have to be restated over the merged document.
+        abcStackStyle() {
+            return `.sW{stroke-width:${this.abcStemWidth}!important}.slW{stroke-width:${this.abcStaffLineWidth}!important}\n`;
+        },
+
+        // One font-embedded SVG document for export. Intrinsic width/height are
+        // written so a consumer with no CSS still knows how big the page is.
         async buildMergedSvg(svgs) {
-            const dims = svgs.map(svg => {
-                const vb = svg.getAttribute('viewBox');
-                if (vb) {
-                    const [x, y, w, h] = vb.split(/\s+/).map(Number);
-                    return { x, y, w, h };
-                }
-                return { x: 0, y: 0, w: 1920, h: 200 };
-            });
-            const maxW = Math.max(...dims.map(d => d.w));
-            const totalH = dims.reduce((sum, d) => sum + d.h, 0);
-            const ns = 'http://www.w3.org/2000/svg';
-            const wrapper = document.createElementNS(ns, 'svg');
-            wrapper.setAttribute('xmlns', ns);
-            wrapper.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:xlink', 'http://www.w3.org/1999/xlink');
-            wrapper.setAttribute('viewBox', `0 0 ${maxW} ${totalH}`);
-            wrapper.setAttribute('width', String(maxW));
-            wrapper.setAttribute('height', String(totalH));
-            wrapper.setAttribute('color', '#000');
-            wrapper.setAttribute('fill', 'currentColor');
-
-            // Hoist <style> and <defs> to the wrapper root so @font-face rules
-            // and glyph definitions are at document scope, not buried inside <g>
-            // elements where some SVG renderers won't process them.
-            let combinedStyle = `.sW{stroke-width:${this.abcStemWidth}!important}.slW{stroke-width:${this.abcStaffLineWidth}!important}\n`;
-            const mergedDefs = document.createElementNS(ns, 'defs');
-            const seenIds = new Set();
-
-            let yOffset = 0;
-            svgs.forEach((svg, i) => {
-                const d = dims[i];
-                const clone = svg.cloneNode(true);
-                const g = document.createElementNS(ns, 'g');
-                g.setAttribute('transform', `translate(${-d.x} ${yOffset - d.y})`);
-                ['class', 'fill', 'stroke-width', 'color'].forEach(attr => {
-                    const val = clone.getAttribute(attr);
-                    if (val) { g.setAttribute(attr, val); }
-                });
-                Array.from(clone.childNodes).forEach(child => {
-                    const tag = child.nodeName.toLowerCase();
-                    if (tag === 'style') {
-                        combinedStyle += child.textContent + '\n';
-                    } else if (tag === 'defs') {
-                        Array.from(child.childNodes).forEach(def => {
-                            if (def.nodeType !== 1) { return; }
-                            const id = def.getAttribute && def.getAttribute('id');
-                            if (id) {
-                                if (seenIds.has(id)) { return; }
-                                seenIds.add(id);
-                            }
-                            mergedDefs.appendChild(def.cloneNode(true));
-                        });
-                    } else {
-                        g.appendChild(child);
-                    }
-                });
-                wrapper.appendChild(g);
-                yOffset += d.h;
+            const { svg } = stackSvgs(svgs, {
+                extraStyle: this.abcStackStyle(),
+                intrinsicSize: true,
             });
 
-            const styleEl = document.createElementNS(ns, 'style');
-            styleEl.textContent = combinedStyle;
-            wrapper.insertBefore(styleEl, wrapper.firstChild);
-            if (mergedDefs.childNodes.length) {
-                wrapper.insertBefore(mergedDefs, wrapper.firstChild);
-            }
+            await injectWebFontsIntoSvg(svg, [this.abcLyricFont]);
 
-            await injectWebFontsIntoSvg(wrapper, [this.abcLyricFont]);
-            return new XMLSerializer().serializeToString(wrapper);
+            return new XMLSerializer().serializeToString(svg);
         },
 
         // Stack multiple abc2svg output chunks into a single <svg> element for
         // the fixed-ratio preview, so projector-frame scaling, clipping and
         // fullscreen treat the page as one unit. Returns { svg, totalHeight }.
         mergeAbcSvgsToElement(svgs) {
-            const dims = svgs.map(svg => {
-                const vb = svg.getAttribute('viewBox');
-                if (vb) {
-                    const [x, y, w, h] = vb.split(/\s+/).map(Number);
-                    return { x, y, w, h };
-                }
-                return { x: 0, y: 0, w: 1920, h: 200 };
-            });
-            const maxW = Math.max(...dims.map(d => d.w));
-            const totalH = dims.reduce((sum, d) => sum + d.h, 0);
-            const ns = 'http://www.w3.org/2000/svg';
-            const wrapper = document.createElementNS(ns, 'svg');
-            wrapper.setAttribute('xmlns', ns);
-            wrapper.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:xlink', 'http://www.w3.org/1999/xlink');
-            wrapper.setAttribute('viewBox', `0 0 ${maxW} ${totalH}`);
-            wrapper.setAttribute('color', '#000');
-            wrapper.setAttribute('fill', 'currentColor');
-            let combinedStyle = `.sW{stroke-width:${this.abcStemWidth}!important}.slW{stroke-width:${this.abcStaffLineWidth}!important}\n`;
-            const mergedDefs = document.createElementNS(ns, 'defs');
-            const seenIds = new Set();
-            let yOffset = 0;
-            svgs.forEach((svg, i) => {
-                const d = dims[i];
-                const clone = svg.cloneNode(true);
-                const g = document.createElementNS(ns, 'g');
-                g.setAttribute('transform', `translate(${-d.x} ${yOffset - d.y})`);
-                ['class', 'fill', 'stroke-width', 'color'].forEach(attr => {
-                    const val = clone.getAttribute(attr);
-                    if (val) { g.setAttribute(attr, val); }
-                });
-                Array.from(clone.childNodes).forEach(child => {
-                    const tag = child.nodeName.toLowerCase();
-                    if (tag === 'style') {
-                        combinedStyle += child.textContent + '\n';
-                    } else if (tag === 'defs') {
-                        Array.from(child.childNodes).forEach(def => {
-                            if (def.nodeType !== 1) { return; }
-                            const id = def.getAttribute && def.getAttribute('id');
-                            if (id) {
-                                if (seenIds.has(id)) { return; }
-                                seenIds.add(id);
-                            }
-                            mergedDefs.appendChild(def.cloneNode(true));
-                        });
-                    } else {
-                        g.appendChild(child);
-                    }
-                });
-                wrapper.appendChild(g);
-                yOffset += d.h;
-            });
-            const styleEl = document.createElementNS(ns, 'style');
-            styleEl.textContent = combinedStyle;
-            wrapper.insertBefore(styleEl, wrapper.firstChild);
-            if (mergedDefs.childNodes.length) {
-                wrapper.insertBefore(mergedDefs, wrapper.firstChild);
-            }
-            return { svg: wrapper, totalHeight: totalH, width: maxW };
+            const { svg, width, height } = stackSvgs(svgs, { extraStyle: this.abcStackStyle() });
+
+            return { svg, totalHeight: height, width };
         },
 
         async copyPageImage(pageEl, format, showFeedback) {

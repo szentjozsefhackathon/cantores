@@ -46,26 +46,8 @@ class MusicPlanScoreListService
             return collect();
         }
 
-        $keptIds = $viewer instanceof User ? $this->loans->keptScoreIds($viewer) : [];
-        $viewerId = $viewer?->getKey();
-
-        if ($viewerId === null && $keptIds === []) {
-            $scores = Score::query()->whereIn('music_id', $musicIds)->published();
-        } else {
-            $scores = Score::query()
-                ->whereIn('music_id', $musicIds)
-                ->where(function (Builder $query) use ($viewerId, $keptIds): void {
-                    $query->published();
-
-                    if ($viewerId !== null) {
-                        $query->orWhere('user_id', $viewerId);
-                    }
-
-                    if ($keptIds !== []) {
-                        $query->orWhereIn('id', $keptIds);
-                    }
-                });
-        }
+        $scores = Score::query()->whereIn('music_id', $musicIds);
+        $this->scopeToViewer($scores, $viewer);
 
         $loansByScoreId = $viewer instanceof User ? $this->keptLoansByScoreId($viewer) : collect();
 
@@ -75,6 +57,77 @@ class MusicPlanScoreListService
             ->get()
             ->map(fn (Score $score): array => $this->describe($score, $viewer, $loansByScoreId))
             ->groupBy('music_id');
+    }
+
+    /**
+     * The typed source of each named score this viewer may read.
+     *
+     * The booklet editor needs what forViewer() deliberately withholds — the
+     * content itself — because it re-engraves every score in the browser at the
+     * booklet's page size. It is the same three access axes and the same query,
+     * so nothing is widened: a score reaches a booklet exactly when it would
+     * reach the service list.
+     *
+     * Resolved per request, like everything else here, which is what makes a
+     * recalled loan drop out of the booklet rather than leaving a copy behind.
+     *
+     * @param  list<int>  $scoreIds
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function sourcesFor(array $scoreIds, ?User $viewer): Collection
+    {
+        if ($scoreIds === []) {
+            return collect();
+        }
+
+        $query = Score::query()->whereIn('id', $scoreIds)->whereNotNull('format');
+        $this->scopeToViewer($query, $viewer);
+
+        return $query
+            ->with('publication')
+            ->get()
+            ->mapWithKeys(fn (Score $score): array => [$score->getKey() => [
+                'id' => $score->id,
+                'title' => $score->variationLabel(),
+                'format' => $score->format?->value,
+                'content' => $score->content ?? '',
+                'settings' => $score->settings ?? [],
+                // A published score carries its credit into the booklet, beneath
+                // its own music rather than stamped across every page.
+                'credit' => $score->isPublished()
+                    ? app(ScoreAttributionBuilder::class)->line($score->publication)
+                    : null,
+            ]]);
+    }
+
+    /**
+     * Narrow a score query to what this viewer holds: the public library, their
+     * own scores, and the ones they kept out of a live loan.
+     *
+     * @param  Builder<Score>  $query
+     */
+    private function scopeToViewer(Builder $query, ?User $viewer): void
+    {
+        $keptIds = $viewer instanceof User ? $this->loans->keptScoreIds($viewer) : [];
+        $viewerId = $viewer?->getKey();
+
+        if ($viewerId === null && $keptIds === []) {
+            $query->published();
+
+            return;
+        }
+
+        $query->where(function (Builder $inner) use ($viewerId, $keptIds): void {
+            $inner->published();
+
+            if ($viewerId !== null) {
+                $inner->orWhere('user_id', $viewerId);
+            }
+
+            if ($keptIds !== []) {
+                $inner->orWhereIn('id', $keptIds);
+            }
+        });
     }
 
     /**
