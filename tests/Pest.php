@@ -45,3 +45,14 @@ function something()
 {
     // ..
 }
+
+/**
+ * Put the session past the Turnstile gate that guards every lending link, the way
+ * a guest does by answering the challenge once.
+ *
+ * @see \App\Http\Middleware\EnsureVisitorIsHuman
+ */
+function passHumanCheck(): void
+{
+    app(\App\Services\HumanVerificationService::class)->markVerified();
+}

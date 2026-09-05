@@ -2,18 +2,23 @@
 
 use App\Livewire\MusicPlanLoanModal;
 use App\Livewire\Pages\MusicPlanLoanView;
+use App\Models\Loan;
 use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Models\Score;
-use App\Models\Loan;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
+
+// What the link opens, not who may open it — the Turnstile gate is tested apart.
+beforeEach(function () {
+    passHumanCheck();
+});
 
 /**
  * Attach a music to a plan and return the score the plan then reaches.

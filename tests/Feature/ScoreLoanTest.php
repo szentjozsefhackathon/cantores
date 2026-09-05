@@ -2,14 +2,20 @@
 
 use App\Livewire\Pages\ScoreEditor;
 use App\Livewire\Pages\ScoreView;
-use App\Models\Score;
 use App\Models\Loan;
+use App\Models\Score;
 use App\Models\User;
 use Illuminate\Support\Js;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
+
+// These tests are about what a lending link opens, not about who may open it.
+// The Turnstile gate in front of every one of them has its own test file.
+beforeEach(function () {
+    passHumanCheck();
+});
 
 it('returns 404 for an unknown token', function () {
     get(route('score.loan', ['token' => 'nonexistenttoken12345678901234']))->assertNotFound();

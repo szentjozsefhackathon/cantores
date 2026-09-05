@@ -1332,5 +1332,11 @@
     "Content Statistics": "Tartalom statisztika",
     "How much content each nickname has added. Private scores and plans are counted, never shown.": "Mennyi tartalmat adott hozzá az oldalhoz az adott becenév. A privát kották és énekrendek csak számként jelennek meg, tartalmuk soha.",
     "Music": "Zeneművek",
-    "Total": "Összesen"
+    "Total": "Összesen",
+
+    "Human check": "Emberi ellenőrzés",
+    "Just checking you are a person": "Csak ellenőrizzük, hogy ember vagy",
+    "Scores are lent to people, not to robots. This takes a moment and you will only be asked once.": "A kottákat embereknek kölcsönözzük, nem robotoknak. Ez csak egy pillanat, és munkamenetenként csak egyszer kérdezünk rá.",
+    "Please complete the check to show you are not a robot.": "Kérjük, végezd el az ellenőrzést, hogy lássuk, nem robot vagy.",
+    "Signed-in members are never asked.": "Bejelentkezve soha nem kérdezünk rá."
 }

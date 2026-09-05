@@ -23,6 +23,12 @@ use Livewire\Livewire;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
+// Some of these reach a file through a lending link. What the link serves is the
+// subject here, not the Turnstile gate in front of it, which is tested apart.
+beforeEach(function () {
+    passHumanCheck();
+});
+
 /**
  * A .mscz is a ZIP holding the score's .mscx XML and the thumbnail MuseScore
  * saved with it, so one can be built here without MuseScore being installed.

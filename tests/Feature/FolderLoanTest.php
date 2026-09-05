@@ -10,6 +10,11 @@ use Livewire\Livewire;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
+// What the link opens, not who may open it — the Turnstile gate is tested apart.
+beforeEach(function () {
+    passHumanCheck();
+});
+
 it('returns 404 for an unknown folder token', function () {
     get(route('folder.loan', ['token' => 'nonexistenttoken12345678901234']))->assertNotFound();
 });

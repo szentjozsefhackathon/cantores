@@ -11,6 +11,11 @@ use Livewire\Livewire;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
+// What the link opens, not who may open it — the Turnstile gate is tested apart.
+beforeEach(function () {
+    passHumanCheck();
+});
+
 it('requires authentication', function () {
     get(route('loans'))->assertRedirect();
 });

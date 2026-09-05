@@ -136,36 +136,50 @@ Route::post('/score/export-pdf', \App\Http\Controllers\ScorePdfExportController:
     ->middleware('throttle:20,1')
     ->name('score.export-pdf');
 
-// Lending link — public, resolves to edit for owner or read-only for others
-Route::livewire('/s/{token}', \App\Livewire\Pages\ScoreView::class)
-    ->name('score.loan');
+// Every lending link — a bearer URL anyone holding it may read — sits behind the
+// human check. Borrowing is between people, so a guest proves as much once per
+// session before any of these open. See EnsureVisitorIsHuman.
+Route::middleware('human')->group(function (): void {
+    // Lending link — public, resolves to edit for owner or read-only for others
+    Route::livewire('/s/{token}', \App\Livewire\Pages\ScoreView::class)
+        ->name('score.loan');
 
-Route::get('/s/{token}/incipit', \App\Http\Controllers\ScoreLoanIncipitController::class)
-    ->name('score.loan.incipit');
+    Route::get('/s/{token}/incipit', \App\Http\Controllers\ScoreLoanIncipitController::class)
+        ->name('score.loan.incipit');
 
-// A score reached *through* a loan — the score itself, or a folder or plan that
-// reaches it. Access is derived from the loan on every request, so revoking the
-// loan revokes these URLs too. The /share/ prefix is left alone: these URLs are
-// bearer links already in circulation.
-Route::livewire('/share/{token}/score/{score}', \App\Livewire\Pages\ScoreView::class)
-    ->name('loan.score');
+    // A score reached *through* a loan — the score itself, or a folder or plan that
+    // reaches it. Access is derived from the loan on every request, so revoking the
+    // loan revokes these URLs too. The /share/ prefix is left alone: these URLs are
+    // bearer links already in circulation.
+    Route::livewire('/share/{token}/score/{score}', \App\Livewire\Pages\ScoreView::class)
+        ->name('loan.score');
 
-Route::get('/share/{token}/score/{score}/incipit', \App\Http\Controllers\ScoreLoanIncipitController::class)
-    ->name('loan.score.incipit');
+    Route::get('/share/{token}/score/{score}/incipit', \App\Http\Controllers\ScoreLoanIncipitController::class)
+        ->name('loan.score.incipit');
 
-// Rendered pages and the original file of an uploaded score, reached through a
-// loan. A directly lent score is its own loan, so these serve every kind of
-// link uniformly.
-Route::get('/share/{token}/score/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\ScoreLoanFilePageController::class)
-    ->whereNumber('page')
-    ->name('loan.score.file.page');
+    // Rendered pages and the original file of an uploaded score, reached through a
+    // loan. A directly lent score is its own loan, so these serve every kind of
+    // link uniformly.
+    Route::get('/share/{token}/score/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\ScoreLoanFilePageController::class)
+        ->whereNumber('page')
+        ->name('loan.score.file.page');
 
-Route::get('/share/{token}/score/{score}/file/{scoreFile}/download', \App\Http\Controllers\ScoreLoanFileDownloadController::class)
-    ->name('loan.score.file.download');
+    Route::get('/share/{token}/score/{score}/file/{scoreFile}/download', \App\Http\Controllers\ScoreLoanFileDownloadController::class)
+        ->name('loan.score.file.download');
 
-// Plan lending link — public, no authentication required
-Route::livewire('/p/{token}', \App\Livewire\Pages\MusicPlanLoanView::class)
-    ->name('music-plan.loan');
+    // Plan lending link — public, no authentication required
+    Route::livewire('/p/{token}', \App\Livewire\Pages\MusicPlanLoanView::class)
+        ->name('music-plan.loan');
+});
+
+// The human check itself: guests only, rate limited because it is the one page a
+// crawler that found a lending link is allowed to reach.
+Route::get('/emberi-ellenorzes', [\App\Http\Controllers\HumanCheckController::class, 'show'])
+    ->name('human-check');
+
+Route::post('/emberi-ellenorzes', [\App\Http\Controllers\HumanCheckController::class, 'store'])
+    ->middleware('throttle:20,1')
+    ->name('human-check.store');
 
 Route::livewire('/scores', \App\Livewire\Pages\Scores::class)
     ->middleware(['auth', 'verified'])
@@ -217,8 +231,10 @@ Route::get('/ingyenes-kottak/{score}/file/{scoreFile}/download', \App\Http\Contr
     ->middleware('throttle:60,1')
     ->name('public-scores.file.download');
 
-// Folder lending link — public, read-only
+// Folder lending link — public, read-only, behind the human check like every
+// other lending link
 Route::livewire('/f/{token}', \App\Livewire\Pages\FolderView::class)
+    ->middleware('human')
     ->name('folder.loan');
 
 Route::livewire('/folders', \App\Livewire\Pages\Folders::class)
