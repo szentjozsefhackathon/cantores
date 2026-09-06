@@ -68,6 +68,69 @@ const ABC_RATIO_DEFAULTS = {
 
 export { ABC_RATIO_DEFAULTS };
 
+/**
+ * The abc2svg preamble a settings bucket describes.
+ *
+ * Shared by the preview and the incipit so that a render at the format's
+ * factory defaults differs from the on-screen one only in the settings handed
+ * in, never in how they are turned into directives.
+ */
+export function buildAbcPreamble(settings, pageWidth) {
+    const rawFont = (settings.abcLyricFont || '').trim();
+    const safeFont = /^[a-zA-Z0-9 .\-'&]+$/.test(rawFont) ? rawFont : DEFAULT_ABC_FONT;
+    const fontName = /[ .\-'&]/.test(safeFont) ? `"${safeFont}"` : safeFont;
+    const pageScale = Number(settings.abcPageScale) > 0 ? Number(settings.abcPageScale) : 1;
+    const rawLyricSize = Number(settings.abcLyricSize) > 0 ? Number(settings.abcLyricSize) : 12;
+    const lyricSize = Number((rawLyricSize / pageScale * 3).toFixed(3));
+    const vocalfontLine = ['%%vocalfont', fontName, settings.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
+    const transposeSemitones = Number(settings.abcTranspose) || 0;
+    const transposeLine = transposeSemitones !== 0 ? `%%transpose ${transposeSemitones}\n` : '';
+
+    return `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace ${settings.abcVocalSpace}\n${transposeLine}`;
+}
+
+/** Engraves an ABC source (preamble included) into SVG markup. */
+export function renderAbcToSvgMarkup(source) {
+    if (typeof abc2svg === 'undefined' || !abc2svg.Abc) {
+        console.error('[score-editor] abc2svg not loaded');
+
+        return '';
+    }
+
+    const svgChunks = [];
+    const errs = [];
+    const user = {
+        img_out: (str) => svgChunks.push(str),
+        errmsg: (msg, l) => errs.push(`${msg} (line ${l})`),
+        read_file: () => null,
+    };
+    const abc = new abc2svg.Abc(user);
+    abc.tosvg('score', source);
+    if (errs.length) {
+        console.warn('[score-editor] abc2svg warnings:', errs);
+    }
+
+    return svgChunks.join('\n');
+}
+
+/** abc2svg omits the viewBox on some pages; without it nothing can be scaled. */
+export function ensureAbcSvgViewBox(svg, fallbackWidth) {
+    if (svg.getAttribute('viewBox')) { return; }
+    const w = parseFloat(svg.getAttribute('width')) || fallbackWidth;
+    const h = parseFloat(svg.getAttribute('height')) || 0;
+    if (h) {
+        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    }
+}
+
+/** Ink colour and the stroke widths of stems and staff lines, scoped by id. */
+export function applyAbcSvgStyle(svg, svgId, settings) {
+    svg.id = svgId;
+    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${settings.abcStemWidth}!important}#${svgId} .slW{stroke-width:${settings.abcStaffLineWidth}!important}`;
+    svg.appendChild(style);
+}
+
 export function abcMixin() {
     return {
         diatarSource: '',
@@ -139,16 +202,7 @@ export function abcMixin() {
                 : isPaper
                     ? paperPageWidth
                     : canvas.width;
-            const rawFont = (this.abcLyricFont || '').trim();
-            const safeFont = /^[a-zA-Z0-9 .\-'&]+$/.test(rawFont) ? rawFont : DEFAULT_ABC_FONT;
-            const fontName = /[ .\-'&]/.test(safeFont) ? `"${safeFont}"` : safeFont;
-            const pageScale = Number(this.abcPageScale) > 0 ? Number(this.abcPageScale) : 1;
-            const rawLyricSize = Number(this.abcLyricSize) > 0 ? Number(this.abcLyricSize) : 12;
-            const lyricSize = Number((rawLyricSize / pageScale * 3).toFixed(3));
-            const vocalfontLine = ['%%vocalfont', fontName, this.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
-            const transposeSemitones = Number(this.abcTranspose) || 0;
-            const transposeLine = transposeSemitones !== 0 ? `%%transpose ${transposeSemitones}\n` : '';
-            const preamble = `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${this.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${this.abcStaffSep}\n%%vocalspace ${this.abcVocalSpace}\n${transposeLine}`;
+            const preamble = buildAbcPreamble(this, pageWidth);
             const pages = this.splitPages(content, 'abc', ratio);
             pages.forEach((pageContent, idx) => {
                 const pageEl = document.createElement('div');
@@ -164,37 +218,12 @@ export function abcMixin() {
                 }
                 container.appendChild(pageEl);
                 try {
-                    const source = preamble + pageContent;
-                    const svgChunks = [];
-                    const errs = [];
-                    const user = {
-                        img_out: (str) => svgChunks.push(str),
-                        errmsg: (msg, l) => errs.push(`${msg} (line ${l})`),
-                        read_file: () => null,
-                    };
-                    const abc = new abc2svg.Abc(user);
-                    abc.tosvg('score', source);
-                    pageEl.innerHTML = svgChunks.join('\n');
-                    if (errs.length) {
-                        console.warn('[score-editor] abc2svg warnings:', errs);
-                    }
+                    pageEl.innerHTML = renderAbcToSvgMarkup(preamble + pageContent);
                     const svgs = Array.from(pageEl.querySelectorAll('svg'));
-                    svgs.forEach((svg) => {
-                        if (!svg.getAttribute('viewBox')) {
-                            const w = parseFloat(svg.getAttribute('width')) || pageWidth;
-                            const h = parseFloat(svg.getAttribute('height')) || 0;
-                            if (h) {
-                                svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-                            }
-                        }
-                    });
+                    svgs.forEach((svg) => ensureAbcSvgViewBox(svg, pageWidth));
                     if (isFixed && svgs.length > 0) {
                         const { svg: merged, totalHeight } = this.mergeAbcSvgsToElement(svgs);
-                        const svgId = `abc-svg-${idx}-${Date.now()}`;
-                        merged.id = svgId;
-                        const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-                        style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${this.abcStemWidth}!important}#${svgId} .slW{stroke-width:${this.abcStaffLineWidth}!important}`;
-                        merged.appendChild(style);
+                        applyAbcSvgStyle(merged, `abc-svg-${idx}-${Date.now()}`, this);
                         merged.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
                         merged.setAttribute('width', '100%');
                         merged.setAttribute('preserveAspectRatio', 'xMidYMin meet');
@@ -209,11 +238,7 @@ export function abcMixin() {
                         this.hasPages = true;
                     } else {
                         svgs.forEach((svg, svgIdx) => {
-                            const svgId = `abc-svg-${idx}-${svgIdx}-${Date.now()}`;
-                            svg.id = svgId;
-                            const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-                            style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${this.abcStemWidth}!important}#${svgId} .slW{stroke-width:${this.abcStaffLineWidth}!important}`;
-                            svg.appendChild(style);
+                            applyAbcSvgStyle(svg, `abc-svg-${idx}-${svgIdx}-${Date.now()}`, this);
                             svg.setAttribute('width', '100%');
                             svg.removeAttribute('height');
                             svg.style.display = 'block';

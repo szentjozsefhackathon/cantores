@@ -1,8 +1,9 @@
 import { applyConditionalBlocks } from './score-editor-pages.js';
-import { abcMixin, ABC_RATIO_DEFAULTS, normalizeAbcPageWidth } from './score-editor-abc.js';
-import { gabcMixin } from './score-editor-gabc.js';
+import { abcMixin, ABC_RATIO_DEFAULTS, applyAbcSvgStyle, buildAbcPreamble, ensureAbcSvgViewBox, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
+import { gabcMixin, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
+import { formatDefaults, incipitSettings } from './score-editor-settings.js';
 import { applyPhysicalSvgSize, removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
@@ -45,6 +46,9 @@ const AUTOSAVE_INTERVAL_MS = 20000;
 
 /** How often an autosave may also redraw the incipit. */
 const AUTOSAVE_INCIPIT_MS = 60000;
+
+/** How long the incipit's own render may take before the save goes on without it. */
+const INCIPIT_RENDER_TIMEOUT_MS = 8000;
 
 const ARETINO_CODEMIRROR_FONT_STYLE_ID = 'score-editor-aretino-codemirror-font-size';
 const ARETINO_CODEMIRROR_FONT_SIZE = '14px';
@@ -510,11 +514,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         getFormatDefaults(format) {
-            if (format === 'gabc') { const m = gabcMixin(); return { fields: m.gabcFields, defaults: m }; }
-            if (format === 'abc') { const m = abcMixin(); return { fields: m.abcFields, defaults: m }; }
-            if (format === 'chordpro') { const m = chordproMixin(); return { fields: m.chordproFields, defaults: m }; }
-            if (format === 'aretino') { const m = aretinoMixin(); return { fields: m.aretinoFields, defaults: m }; }
-            return { fields: [], defaults: {} };
+            return formatDefaults(format);
         },
 
         captureCurrentSettings(format, ratio) {
@@ -654,12 +654,18 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        // The incipit is drawn from a render of its own rather than from what is
+        // on screen, at the format's factory defaults (see incipitSettings):
+        // settings tuned for a purpose — projector-sized lyrics, a condensed
+        // booklet staff — must not become the thumbnail every listing shows.
         async generateIncipit() {
             const targetWidth = 800;
+            const format = this.$wire.format;
+            const settings = incipitSettings(format);
             let clone;
 
-            if (this.$wire.format === 'aretino') {
-                const source = this.splitPages(this.localContent, 'aretino', this.aretinoPageRatio)[0] ?? this.localContent;
+            if (format === 'aretino') {
+                const source = this.splitPages(this.localContent, 'aretino', settings.aretinoPageRatio)[0] ?? this.localContent;
                 if (!source?.trim()) { return null; }
                 const firstRowSvg = renderFirstRow(source, { width: targetWidth, textFont: 'EB Garamond' });
                 if (firstRowSvg) {
@@ -675,45 +681,22 @@ document.addEventListener('alpine:init', () => {
                     clone = new DOMParser().parseFromString(verseSvg, 'image/svg+xml').documentElement;
                     cropAretinoVerseToFirstLines(clone);
                 }
+            } else if (format === 'abc' || format === 'gabc') {
+                clone = await this.withOffscreenRender(async (holder) => {
+                    const svg = format === 'abc'
+                        ? this.renderAbcIncipitSvg(holder, settings)
+                        : await this.renderGabcIncipitSvg(holder, settings);
+                    if (!svg) { return null; }
+
+                    const copy = svg.cloneNode(true);
+                    removeEditorOnlySvgMarkup(copy);
+                    this.cropSvgHeaderInto(svg, copy);
+
+                    return copy;
+                });
+                if (!clone) { return null; }
             } else {
-                const refMap = {
-                    abc: this.$refs.abcPreview,
-                    gabc: this.$refs.preview,
-                };
-                const container = refMap[this.$wire.format];
-                if (!container) { return null; }
-
-                // For ABC, skip title-only SVG blocks; the first staff SVG has <defs class="slW">.
-                const svg = this.$wire.format === 'abc'
-                    ? (Array.from(container.querySelectorAll('svg')).find(s => s.querySelector('.slW')) ?? container.querySelector('svg'))
-                    : container.querySelector('svg');
-                if (!svg) { return null; }
-
-                clone = svg.cloneNode(true);
-                removeEditorOnlySvgMarkup(clone);
-
-                // Crop away any header text (titles, subtitles) above the first staff
-                // by adjusting the viewBox to start at the top of the first drawn element.
-                // Use getBBox() on the live SVG (not the clone) so that path geometry and
-                // parent-transform offsets are included — getAttribute('y') misses path elements.
-                const vbAttr = svg.getAttribute('viewBox');
-                if (vbAttr) {
-                    const [vbX, vbY, vbW, vbH] = vbAttr.split(/\s+/).map(Number);
-                    let minY = Infinity;
-                    for (const el of svg.querySelectorAll('path, use, line, rect')) {
-                        try {
-                            const bb = el.getBBox();
-                            if (bb.width > 0 || bb.height > 0) {
-                                minY = Math.min(minY, bb.y);
-                            }
-                        } catch (_) {}
-                    }
-                    const padding = 4;
-                    const cropY = Number.isFinite(minY) && minY > vbY + 5 ? minY - padding : vbY;
-                    const newH = vbH - (cropY - vbY);
-                    clone.setAttribute('viewBox', `${vbX} ${cropY} ${vbW} ${newH}`);
-                    clone.setAttribute('height', String(newH));
-                }
+                return null;
             }
 
             const vbFinal = clone.getAttribute('viewBox');
@@ -727,7 +710,9 @@ document.addEventListener('alpine:init', () => {
             clone.setAttribute('width', String(targetWidth));
             clone.setAttribute('height', String(outputHeight));
 
-            const lyricFont = this.$wire.format === 'aretino' ? 'EB Garamond' : this.lyricFont;
+            const lyricFont = format === 'aretino'
+                ? 'EB Garamond'
+                : (format === 'abc' ? settings.abcLyricFont : settings.lyricFont);
             await injectWebFontsIntoSvg(clone, [lyricFont]);
 
             const svgData = new XMLSerializer().serializeToString(clone);
@@ -757,6 +742,101 @@ document.addEventListener('alpine:init', () => {
                 img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
                 img.src = url;
             });
+        },
+
+        /**
+         * Runs `render` against a container that is attached to the page but out
+         * of sight: the incipit crop measures with getBBox(), which only answers
+         * for elements the browser has actually laid out.
+         */
+        async withOffscreenRender(render) {
+            const holder = document.createElement('div');
+            holder.setAttribute('aria-hidden', 'true');
+            holder.style.cssText = 'position:absolute;left:-10000px;top:0;width:2400px;pointer-events:none;';
+            document.body.appendChild(holder);
+            try {
+                return await render(holder);
+            } finally {
+                holder.remove();
+            }
+        },
+
+        /** Engraves the ABC source into `holder` and returns its first staff SVG. */
+        renderAbcIncipitSvg(holder, settings) {
+            let content = this.localContent;
+            if (!content || !content.trim()) { return null; }
+            if (!/^X:/m.test(content)) {
+                content = 'X:1\n' + content;
+            }
+
+            const pageWidth = normalizeAbcPageWidth(settings.abcPageWidth);
+            const page = this.splitPages(content, 'abc', settings.abcPageRatio)[0] ?? content;
+            holder.innerHTML = renderAbcToSvgMarkup(buildAbcPreamble(settings, pageWidth) + page);
+
+            const svgs = Array.from(holder.querySelectorAll('svg'));
+            svgs.forEach(svg => ensureAbcSvgViewBox(svg, pageWidth));
+            // Skip title-only SVG blocks; the first staff SVG has <defs class="slW">.
+            const svg = svgs.find(s => s.querySelector('.slW')) ?? svgs[0] ?? null;
+            if (svg) {
+                applyAbcSvgStyle(svg, `abc-incipit-${Date.now()}`, settings);
+            }
+
+            return svg;
+        },
+
+        /** Engraves the GABC source into `holder` and returns the resulting SVG. */
+        async renderGabcIncipitSvg(holder, settings) {
+            const content = this.localContent;
+            if (!content || !content.trim() || !window.exsurge) { return null; }
+
+            const page = this.splitPages(content, 'gabc', settings.pageRatio)[0] ?? content;
+            const layoutWidth = this.getVirtualCanvasSize('gabc').width;
+            // A layout that never calls back would leave the save waiting on it.
+            const markup = await Promise.race([
+                renderGabcToSvgMarkup(page, settings, layoutWidth),
+                new Promise(resolve => setTimeout(() => resolve(null), INCIPIT_RENDER_TIMEOUT_MS)),
+            ]);
+            if (!markup) { return null; }
+
+            holder.innerHTML = markup;
+            const svg = holder.querySelector('svg');
+            if (!svg) { return null; }
+            const contentHeight = parseFloat(svg.getAttribute('height')) || 0;
+            if (contentHeight > 0) {
+                svg.setAttribute('viewBox', `0 0 ${layoutWidth} ${contentHeight}`);
+            }
+
+            return svg;
+        },
+
+        /**
+         * Copies `svg`'s viewBox onto `clone`, cropped to start at the topmost
+         * drawn element so any header text (title, subtitle) above the first
+         * staff falls outside it.
+         *
+         * The measuring happens on the rendered SVG rather than on the clone:
+         * getBBox() accounts for path geometry and parent transforms, which
+         * reading a `y` attribute would miss.
+         */
+        cropSvgHeaderInto(svg, clone) {
+            const vbAttr = svg.getAttribute('viewBox');
+            if (!vbAttr) { return; }
+
+            const [vbX, vbY, vbW, vbH] = vbAttr.split(/\s+/).map(Number);
+            let minY = Infinity;
+            for (const el of svg.querySelectorAll('path, use, line, rect')) {
+                try {
+                    const bb = el.getBBox();
+                    if (bb.width > 0 || bb.height > 0) {
+                        minY = Math.min(minY, bb.y);
+                    }
+                } catch (_) {}
+            }
+            const padding = 4;
+            const cropY = Number.isFinite(minY) && minY > vbY + 5 ? minY - padding : vbY;
+            const newH = vbH - (cropY - vbY);
+            clone.setAttribute('viewBox', `${vbX} ${cropY} ${vbW} ${newH}`);
+            clone.setAttribute('height', String(newH));
         },
 
         toggleSplitScreen() {
@@ -864,26 +944,7 @@ document.addEventListener('alpine:init', () => {
 
         resetToDefaults() {
             const format = this.$wire.format;
-            let defaults = {};
-            let fields = [];
-
-            if (format === 'gabc') {
-                const m = gabcMixin();
-                fields = m.gabcFields;
-                defaults = m;
-            } else if (format === 'abc') {
-                const m = abcMixin();
-                fields = m.abcFields;
-                defaults = m;
-            } else if (format === 'chordpro') {
-                const m = chordproMixin();
-                fields = m.chordproFields;
-                defaults = m;
-            } else if (format === 'aretino') {
-                const m = aretinoMixin();
-                fields = m.aretinoFields;
-                defaults = m;
-            }
+            const { fields, defaults } = formatDefaults(format);
 
             const applyDefaults = () => {
                 fields.forEach(field => {
