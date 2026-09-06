@@ -5,10 +5,6 @@
 
     $entries = $this->entries;
     $chosen = $this->chosenScoreIds;
-    $editingEntry = $this->editingEntryId
-        ? $entries->firstWhere('id', $this->editingEntryId)
-        : null;
-    $editingFormat = $editingEntry?->score?->format?->value;
 @endphp
 
 <div
@@ -109,10 +105,15 @@
             <p class="mt-2 text-sm text-red-600 dark:text-red-400" x-show="message" x-cloak x-text="message"></p>
         </flux:card>
 
-        <div class="grid gap-4 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+        {{-- items-start keeps the columns from stretching, which is what lets each
+             one stick and scroll inside its own box instead of dragging the page. --}}
+        <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
 
             {{-- Choosing --}}
-            <div class="space-y-4">
+            <div
+                data-booklet-pane="plan"
+                class="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain lg:pe-1"
+            >
                 <flux:card class="p-4">
                     <div class="mb-3 flex items-center justify-between gap-2">
                         <flux:heading size="lg">{{ __('In this booklet') }}</flux:heading>
@@ -168,11 +169,21 @@
                                                     size="sm"
                                                     variant="ghost"
                                                     icon="pencil-square"
-                                                    wire:click="editText({{ $entry->id }})"
+                                                    wire:click="editText({{ $this->editingTextId === $entry->id ? 'null' : $entry->id }})"
                                                     class="{{ $this->editingTextId === $entry->id ? '!text-blue-600 dark:!text-blue-400' : '' }}"
                                                 />
                                             </flux:tooltip>
                                         @else
+                                            <flux:tooltip :content="__('Print the music title')">
+                                                <flux:button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    icon="musical-note"
+                                                    wire:click="toggleShowMusicTitle({{ $entry->id }})"
+                                                    class="{{ $entry->show_music_title ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                />
+                                            </flux:tooltip>
+
                                             <flux:tooltip :content="__('Print the variation name')">
                                                 <flux:button
                                                     size="sm"
@@ -188,8 +199,7 @@
                                                     size="sm"
                                                     variant="ghost"
                                                     icon="adjustments-horizontal"
-                                                    wire:click="editSettings({{ $entry->id }})"
-                                                    x-on:click="openPanel({{ $entry->id }})"
+                                                    wire:click="editSettings({{ $this->editingEntryId === $entry->id ? 'null' : $entry->id }})"
                                                     class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
                                                 />
                                             </flux:tooltip>
@@ -201,95 +211,96 @@
                                         <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="move({{ $entry->id }}, 1)" :disabled="$index === $entries->count() - 1" />
                                         <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="removeEntry({{ $entry->id }})" />
                                     </div>
+
+                                    {{-- Both panels open inside the row they belong to: what is
+                                         being adjusted is right above the controls adjusting it,
+                                         and a list of twenty scores does not have to be scrolled
+                                         to the end to find out which one is being talked about. --}}
+                                    @if($entry->isText() && $this->editingTextId === $entry->id)
+                                        <div class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700">
+                                            <flux:textarea
+                                                rows="6"
+                                                wire:model.live.debounce.600ms="editingText"
+                                                :placeholder="__('Stand. The cantor sings the verses, **all** repeat the antiphon.')"
+                                            />
+
+                                            <flux:text class="mt-2 text-xs text-zinc-500">
+                                                {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote.') }}
+                                            </flux:text>
+                                        </div>
+                                    @endif
+
+                                    @if(! $entry->isText() && $this->editingEntryId === $entry->id && $entry->score?->format)
+                                        <div
+                                            class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700"
+                                            data-booklet-panel="{{ $entry->id }}"
+                                        >
+                                            <div class="mb-2 flex items-start justify-between gap-2">
+                                                <flux:text class="text-xs text-zinc-500">
+                                                    {{ __('Changes here apply to this booklet only — the score itself is untouched. Widen a score to stop a line breaking; lower its staff height to stop a page breaking.') }}
+                                                </flux:text>
+
+                                                <flux:tooltip :content="__('Back to the booklet defaults')">
+                                                    <flux:button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        icon="arrow-path"
+                                                        class="shrink-0"
+                                                        x-on:click="resetOverride({{ $entry->id }})"
+                                                    />
+                                                </flux:tooltip>
+                                            </div>
+
+                                            <div class="grid grid-cols-2 gap-x-3 gap-y-2">
+                                                @foreach(BookletSettingFields::panelFor($entry->score->format->value) as $field)
+                                                    <div class="flex flex-col gap-0.5" wire:key="field-{{ $entry->id }}-{{ $field['key'] }}">
+                                                        <label class="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                                            {{ $field['label'] }}
+                                                            <span
+                                                                class="text-blue-600 dark:text-blue-400"
+                                                                x-show="isOverridden({{ $entry->id }}, '{{ $field['key'] }}')"
+                                                                x-cloak
+                                                                title="{{ __('Changed for this booklet') }}"
+                                                            >●</span>
+                                                        </label>
+
+                                                        @if($field['type'] === 'number')
+                                                            <flux:input
+                                                                size="sm"
+                                                                type="number"
+                                                                min="{{ $field['min'] }}"
+                                                                max="{{ $field['max'] }}"
+                                                                step="{{ $field['step'] }}"
+                                                                x-bind:value="settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
+                                                                x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', Number($event.target.value))"
+                                                            />
+                                                        @elseif($field['type'] === 'boolean')
+                                                            <flux:switch
+                                                                x-bind:checked="!!settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
+                                                                x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', $event.target.checked)"
+                                                            />
+                                                        @else
+                                                            <flux:select
+                                                                size="sm"
+                                                                class="text-xs"
+                                                                x-bind:value="settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
+                                                                x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', $event.target.value)"
+                                                            >
+                                                                @foreach(BookletSettingFields::fontOptions() as $font)
+                                                                    <flux:select.option value="'{{ $font }}'">{{ $font }}</flux:select.option>
+                                                                @endforeach
+                                                            </flux:select>
+                                                        @endif
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
                                 </li>
                             @endforeach
                         </ul>
                     @endif
                 </flux:card>
-
-                {{-- Words the booklet says rather than sings --}}
-                @if($this->editingTextId)
-                    <flux:card class="p-4" wire:key="text-{{ $this->editingTextId }}">
-                        <div class="mb-2 flex items-center justify-between">
-                            <flux:heading size="lg">{{ __('Custom text') }}</flux:heading>
-                            <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="editText(null)" />
-                        </div>
-
-                        <flux:textarea
-                            rows="6"
-                            wire:model.live.debounce.600ms="editingText"
-                            :placeholder="__('Stand. The cantor sings the verses, **all** repeat the antiphon.')"
-                        />
-
-                        <flux:text class="mt-2 text-xs text-zinc-500">
-                            {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote.') }}
-                        </flux:text>
-                    </flux:card>
-                @endif
-
-                {{-- The per-score override panel --}}
-                @if($editingEntry && $editingFormat)
-                    <flux:card class="p-4" wire:key="panel-{{ $editingEntry->id }}">
-                        <div class="mb-3 flex items-center justify-between">
-                            <flux:heading size="lg">{{ $editingEntry->score?->variationLabel() }}</flux:heading>
-                            <div class="flex items-center gap-1">
-                                {{-- resetPanel() calls $wire.resetOverride itself, so no wire:click here. --}}
-                                <flux:tooltip :content="__('Back to the booklet defaults')">
-                                    <flux:button size="sm" variant="ghost" icon="arrow-path" x-on:click="resetPanel()" />
-                                </flux:tooltip>
-                                <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="editSettings(null)" x-on:click="closePanel()" />
-                            </div>
-                        </div>
-
-                        <flux:text class="mb-3 text-xs text-zinc-500">
-                            {{ __('Changes here apply to this booklet only — the score itself is untouched. Widen a score to stop a line breaking; lower its staff height to stop a page breaking.') }}
-                        </flux:text>
-
-                        <div class="grid grid-cols-2 gap-x-3 gap-y-2">
-                            @foreach(BookletSettingFields::panelFor($editingFormat) as $field)
-                                <div class="flex flex-col gap-0.5" wire:key="field-{{ $editingEntry->id }}-{{ $field['key'] }}">
-                                    <label class="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                        {{ $field['label'] }}
-                                        <span
-                                            class="text-blue-600 dark:text-blue-400"
-                                            x-show="isOverridden('{{ $field['key'] }}')"
-                                            x-cloak
-                                            title="{{ __('Changed for this booklet') }}"
-                                        >●</span>
-                                    </label>
-
-                                    @if($field['type'] === 'number')
-                                        <flux:input
-                                            size="sm"
-                                            type="number"
-                                            min="{{ $field['min'] }}"
-                                            max="{{ $field['max'] }}"
-                                            step="{{ $field['step'] }}"
-                                            x-bind:value="panelValues['{{ $field['key'] }}']"
-                                            x-on:change="setOverride('{{ $field['key'] }}', Number($event.target.value))"
-                                        />
-                                    @elseif($field['type'] === 'boolean')
-                                        <flux:switch
-                                            x-bind:checked="!!panelValues['{{ $field['key'] }}']"
-                                            x-on:change="setOverride('{{ $field['key'] }}', $event.target.checked)"
-                                        />
-                                    @else
-                                        <flux:select
-                                            size="sm"
-                                            class="text-xs"
-                                            x-bind:value="panelValues['{{ $field['key'] }}']"
-                                            x-on:change="setOverride('{{ $field['key'] }}', $event.target.value)"
-                                        >
-                                            @foreach(BookletSettingFields::fontOptions() as $font)
-                                                <flux:select.option value="'{{ $font }}'">{{ $font }}</flux:select.option>
-                                            @endforeach
-                                        </flux:select>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
-                    </flux:card>
-                @endif
 
                 {{-- The plan --}}
                 <flux:card class="p-4">
@@ -346,7 +357,7 @@
             </div>
 
             {{-- The pages --}}
-            <flux:card class="relative p-4">
+            <flux:card class="relative flex flex-col p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)]">
                 <div
                     class="absolute right-4 top-4 flex items-center gap-1.5 text-sm text-zinc-500"
                     x-show="rendering"
@@ -356,7 +367,14 @@
                     {{ __('Laying out…') }}
                 </div>
 
-                <div x-ref="pages" class="booklet-pages" wire:ignore></div>
+                {{-- The negative margin gives the sheets' shadows room inside the
+                     scroll box without narrowing them. --}}
+                <div
+                    data-booklet-pane="pages"
+                    class="lg:-mx-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:px-4"
+                >
+                    <div x-ref="pages" class="booklet-pages" wire:ignore></div>
+                </div>
 
                 <flux:text class="text-sm text-zinc-500" x-show="!rendering && pageCount === 0" x-cloak>
                     {{ __('Choose a score to see the pages.') }}

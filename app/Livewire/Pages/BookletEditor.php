@@ -186,7 +186,6 @@ class BookletEditor extends Component
                     'format' => $source['format'],
                     'content' => $source['content'],
                     'settings' => $source['settings'],
-                    'credit' => $source['credit'],
                     'override' => $entry->settings_override ?? [],
                     'startOnNewPage' => $entry->start_on_new_page,
                 ];
@@ -200,12 +199,14 @@ class BookletEditor extends Component
      * What is printed above each entry, resolved from the plan rather than stored.
      *
      * A booklet names the moment in the service, not the engraving: the slot is
-     * the heading, and the music's own name joins it on that line when the slot
-     * holds only one — there is nothing to tell apart. Where a slot holds several
-     * musics each gets its own line beneath the slot's. A line is dropped when
-     * the score above it already said the same thing, so a slot with three scores
-     * is announced once — a paragraph of instructions in between is not a score
-     * and does not start the naming over.
+     * the heading, and it is announced once, so a slot with three scores under it
+     * is not announced three times — a paragraph of instructions in between is
+     * not a score and does not start the naming over. The music's own name is
+     * off until someone asks for it on that row. It then joins the slot on its
+     * line only where the slot holds a single music and there is nothing to tell
+     * apart; where the slot holds several, every one of them takes a line of its
+     * own beneath the slot's, so they read as the list they are rather than the
+     * first being promoted into the heading.
      *
      * @return array<int, array{slot: ?string, music: ?string, variation: ?string}>
      */
@@ -214,11 +215,10 @@ class BookletEditor extends Component
     {
         $entries = $this->entries();
         $assignments = $this->assignmentsFor($entries);
-        $musicCounts = $this->musicCountsPerSlot($assignments);
+        $musicCounts = $this->musicCountsPerSlot($entries, $assignments);
 
         $lines = [];
         $lastSlotKey = null;
-        $lastMusicKey = null;
 
         foreach ($entries as $entry) {
             if ($entry->isText()) {
@@ -231,36 +231,33 @@ class BookletEditor extends Component
 
             $assignment = $assignments->get($entry->music_plan_slot_assignment_id);
             $slotKey = $assignment?->music_plan_slot_plan_id;
-            $musicKey = $assignment?->music_id;
             $slotName = $assignment?->musicPlanSlot?->name;
-            $musicTitle = $assignment?->music?->title;
-            $alone = $slotKey !== null && ($musicCounts[$slotKey] ?? 0) <= 1;
+            $musicTitle = $entry->show_music_title ? $assignment?->music?->title : null;
 
             $slotLine = null;
-            $musicLine = null;
 
             if ($assignment === null) {
                 // Chosen outside the plan, or from an assignment since removed:
                 // the score speaks for itself.
                 $slotLine = $entry->score?->title;
             } elseif ($slotKey !== $lastSlotKey || $slotKey === null) {
-                $slotLine = $alone && $musicTitle !== null
-                    ? trim($slotName.' – '.$musicTitle)
-                    : $slotName;
+                $slotLine = $slotName;
             }
 
-            if (! $alone && $musicTitle !== null && ($musicKey !== $lastMusicKey || $slotKey !== $lastSlotKey)) {
-                $musicLine = $musicTitle;
+            $alone = $slotKey !== null && ($musicCounts[$slotKey] ?? 0) <= 1;
+
+            if ($slotLine !== null && $musicTitle !== null && $alone) {
+                $slotLine = implode(' – ', [$slotLine, $musicTitle]);
+                $musicTitle = null;
             }
 
             $lines[$entry->id] = [
                 'slot' => $slotLine,
-                'music' => $musicLine,
+                'music' => $musicTitle,
                 'variation' => $entry->show_variation ? $entry->score?->variationLabel() : null,
             ];
 
             $lastSlotKey = $slotKey;
-            $lastMusicKey = $musicKey;
         }
 
         return $lines;
@@ -327,7 +324,8 @@ class BookletEditor extends Component
      * Adding checks that the viewer may actually read it, so a score id typed
      * into a request cannot pull someone else's work into a booklet. The
      * assignment it was chosen from rides along, because that — not the score —
-     * is what names it on the page.
+     * is what names it on the page, and it is also what says where the score
+     * lands: with its own slot, rather than at the end.
      */
     public function toggleScore(int $scoreId, ?int $assignmentId = null): void
     {
@@ -347,11 +345,21 @@ class BookletEditor extends Component
             return;
         }
 
-        $this->booklet->entries()->create([
+        $assignment = $this->assignmentInPlan($assignmentId);
+
+        $entry = $this->booklet->entries()->create([
             'score_id' => $scoreId,
-            'music_plan_slot_assignment_id' => $this->assignmentInPlan($assignmentId),
+            'music_plan_slot_assignment_id' => $assignment?->id,
             'sequence' => (int) $this->booklet->entries()->max('sequence') + 1,
         ]);
+
+        $order = $this->orderJoiningSlot($entry->id, $assignment?->music_plan_slot_plan_id);
+
+        if ($order !== null) {
+            $this->applyOrder($order);
+
+            return;
+        }
 
         $this->forgetEntries();
     }
@@ -483,6 +491,11 @@ class BookletEditor extends Component
         $this->flip($entryId, 'show_variation');
     }
 
+    public function toggleShowMusicTitle(int $entryId): void
+    {
+        $this->flip($entryId, 'show_music_title');
+    }
+
     public function editSettings(?int $entryId): void
     {
         $this->editingEntryId = $entryId;
@@ -538,45 +551,96 @@ class BookletEditor extends Component
     }
 
     /**
-     * How many musics each of those slots holds, which decides whether the slot
-     * heading can carry the music's name itself.
+     * How many musics each slot holds in this booklet, which decides whether a
+     * slot heading may carry the music's name itself.
      *
+     * Counted from what was chosen rather than from the plan: a slot the plan
+     * fills with three musics but the booklet takes one of is, on the page, a
+     * slot with one music, and reads better named on one line.
+     *
+     * @param  Collection<int, BookletScore>  $entries
      * @param  Collection<int, MusicPlanSlotAssignment>  $assignments
      * @return array<int, int>
      */
-    private function musicCountsPerSlot(Collection $assignments): array
+    private function musicCountsPerSlot(Collection $entries, Collection $assignments): array
     {
-        $slotPlanIds = $assignments->pluck('music_plan_slot_plan_id')->unique()->values()->all();
-
-        if ($slotPlanIds === []) {
-            return [];
-        }
-
-        return MusicPlanSlotAssignment::query()
-            ->whereIn('music_plan_slot_plan_id', $slotPlanIds)
-            ->get(['music_plan_slot_plan_id', 'music_id'])
+        return $entries
+            ->map(fn (BookletScore $entry): ?MusicPlanSlotAssignment => $assignments->get($entry->music_plan_slot_assignment_id))
+            ->filter()
             ->groupBy('music_plan_slot_plan_id')
             ->map(fn (Collection $group): int => $group->pluck('music_id')->unique()->count())
             ->all();
     }
 
     /**
-     * The assignment id, but only when it really belongs to this booklet's plan —
+     * The assignment, but only when it really belongs to this booklet's plan —
      * a heading is read by whoever holds the booklet, and must not be borrowed
      * from someone else's service.
      */
-    private function assignmentInPlan(?int $assignmentId): ?int
+    private function assignmentInPlan(?int $assignmentId): ?MusicPlanSlotAssignment
     {
         if ($assignmentId === null || $this->booklet->music_plan_id === null) {
             return null;
         }
 
-        $belongs = MusicPlanSlotAssignment::query()
+        return MusicPlanSlotAssignment::query()
             ->where('id', $assignmentId)
             ->whereHas('musicPlanSlotPlan', fn ($query) => $query->where('music_plan_id', $this->booklet->music_plan_id))
-            ->exists();
+            ->first();
+    }
 
-        return $belongs ? $assignmentId : null;
+    /**
+     * Where a newly chosen score belongs: with the slot it was chosen from.
+     *
+     * A booklet is read as a service, so a second score for a slot the booklet
+     * already says joins that slot rather than landing at the end: it is added
+     * last under the slot's first appearance — first, because the same slot may
+     * be sung at more than one point and the earliest is the one being filled
+     * out — and the slot ends where the next one begins. Everything already
+     * standing there stays where it was put, words included, so a paragraph
+     * written under the slot keeps whatever it was written beneath.
+     *
+     * @return list<int>|null the ids in their new order, or null to leave the entry at the end
+     */
+    private function orderJoiningSlot(int $entryId, ?int $slotPlanId): ?array
+    {
+        if ($slotPlanId === null) {
+            return null;
+        }
+
+        $others = $this->booklet->entries()
+            ->with('assignment')
+            ->get()
+            ->reject(fn (BookletScore $entry): bool => $entry->id === $entryId)
+            ->values();
+
+        $joined = false;
+        $nextSlotStarts = null;
+
+        foreach ($others as $index => $entry) {
+            $entrySlotPlanId = $entry->assignment?->music_plan_slot_plan_id;
+
+            if ($entrySlotPlanId === $slotPlanId) {
+                $joined = true;
+
+                continue;
+            }
+
+            if ($joined && $entrySlotPlanId !== null) {
+                $nextSlotStarts = $index;
+
+                break;
+            }
+        }
+
+        if (! $joined) {
+            return null;
+        }
+
+        $ids = $others->pluck('id')->all();
+        array_splice($ids, $nextSlotStarts ?? count($ids), 0, [$entryId]);
+
+        return $ids;
     }
 
     private function flip(int $entryId, string $column): void

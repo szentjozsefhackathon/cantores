@@ -29,6 +29,9 @@ import { stackSvgs } from './svg-stack.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/** Declared on every lifted fragment: exsurge draws its glyphs with xlink:href. */
+const XLINK_NS = 'http://www.w3.org/1999/xlink';
+
 /** Space above a score that is not the first thing on its page. */
 const SCORE_GAP_MM = 6;
 
@@ -38,7 +41,7 @@ const TITLE_GAP_MM = 1.5;
 /** A heading is set at the lyric size, told apart by its weight alone. */
 const TITLE_SIZE_FACTOR = 1;
 const VARIATION_SIZE_FACTOR = 0.82;
-const CREDIT_SIZE_FACTOR = 0.62;
+const PAGE_NUMBER_SIZE_FACTOR = 0.62;
 
 const UI_FONT = "'Inter'";
 
@@ -57,7 +60,6 @@ const VARIATION_COLOR = '#555555';
  * @property {object} settings the score's own settings column
  * @property {object|null} override booklet_scores.settings_override
  * @property {boolean} startOnNewPage
- * @property {string|null} credit attribution line, for a published score
  */
 
 /**
@@ -89,7 +91,7 @@ export async function renderBooklet(entries, rawGeometry, host) {
 }
 
 /**
- * Everything one score contributes: its title, its music, and its credit.
+ * Everything one score contributes: what is said above it, and its music.
  *
  * Exported for testing: everything up to page composition is free of the DOM,
  * so the block-building half can be checked against the real renderers.
@@ -128,21 +130,6 @@ export async function buildScoreBlocks(entry, geometry, host) {
             breakBefore: i === 0 && blocks.length === 0 ? !!entry.startOnNewPage : false,
         });
     });
-
-    if (entry.credit && blocks.length > 0) {
-        const credit = textRowSvg({
-            content: entry.credit,
-            fontSize: geometry.lyricSizePx * CREDIT_SIZE_FACTOR,
-            fontFamily: UI_FONT,
-            width: geometry.contentWidthPx,
-            italic: true,
-            fill: '#666666',
-        });
-
-        // A licence that asks for attribution gets it beside the work it covers,
-        // not stamped across every page of a booklet full of other people's music.
-        blocks.push({ height: credit.height, svg: credit.svg, scale: 1, spaceBefore: 0 });
-    }
 
     return { blocks, fonts };
 }
@@ -399,6 +386,9 @@ async function chordproBlocks(content, resolved, layoutWidthPx, geometry) {
         : rows;
 }
 
+/** Numbers the documents lifted here, so no two of them are scoped alike. */
+let sliceSerial = 0;
+
 /**
  * Cut a rendered document into one standalone SVG per matching line.
  *
@@ -419,35 +409,95 @@ function sliceRenderedSvg(svgMarkup, selector, host) {
     const viewBox = (root.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number);
     const lines = Array.from(root.querySelectorAll(selector));
     const rootRect = root.getBoundingClientRect();
+    const scope = `exs-${++sliceSerial}`;
+    const ids = Array.from(root.querySelectorAll('defs > [id]')).map((node) => node.getAttribute('id'));
+    const scopedClass = [root.getAttribute('class'), scope].filter(Boolean).join(' ');
 
     if (lines.length === 0 || viewBox.length !== 4 || rootRect.height === 0) {
+        root.setAttribute('class', scopedClass);
+        const whole = scopeLiftedMarkup(root.outerHTML, scope, ids);
         host.innerHTML = '';
 
-        return [{ height: svgHeight(svgMarkup), svg: svgMarkup }];
+        return [{ height: svgHeight(whole), svg: whole }];
     }
 
     const [, viewTop, viewWidth, viewHeight] = viewBox;
     const unitsPerPixel = viewHeight / rootRect.height;
-    const preamble = Array.from(root.childNodes)
-        .filter((node) => ['defs', 'style'].includes(node.nodeName.toLowerCase()))
-        .map((node) => node.outerHTML)
-        .join('');
+    const preamble = definitionsOf(root);
 
     const blocks = lines.map((line) => {
         const rect = line.getBoundingClientRect();
         const top = viewTop + (rect.top - rootRect.top) * unitsPerPixel;
         const height = Math.max(rect.height * unitsPerPixel, 1);
+        const markup = `<svg xmlns="${SVG_NS}" xmlns:xlink="${XLINK_NS}" class="${scopedClass}" `
+            + `viewBox="0 ${top} ${viewWidth} ${height}" `
+            + `width="${viewWidth}" height="${height}">${preamble}${line.outerHTML}</svg>`;
 
-        return {
-            height,
-            svg: `<svg xmlns="${SVG_NS}" viewBox="0 ${top} ${viewWidth} ${height}" `
-                + `width="${viewWidth}" height="${height}">${preamble}${line.outerHTML}</svg>`,
-        };
+        return { height, svg: scopeLiftedMarkup(markup, scope, ids) };
     });
 
     host.innerHTML = '';
 
     return blocks;
+}
+
+/**
+ * Make a lifted fragment's stylesheet and definitions its own.
+ *
+ * Both of exsurge's ways of naming things hold for the one document it drew and
+ * for nothing else. Every rule it writes is scoped to `svg.Exsurge`, which the
+ * root of a cut-out line is not — and stops being altogether once stackSvgs
+ * nests it in a <g> under the page's own <svg> — so unscoped the lyrics come out
+ * in the browser's default face at its default size rather than in the booklet's.
+ * And each glyph is defined under its own name, so two chants on one page both
+ * define PunctumQuadratum; stackSvgs keeps the first, and since the definition
+ * carries the staff scaling it was drawn at, the second chant's notes would come
+ * out at the first one's size.
+ *
+ * Both are answered by a name only this score's fragments carry: the rules are
+ * re-pointed at it, and the glyphs are renamed under it.
+ *
+ * @param {string} markup
+ * @param {string} scope a class the fragment root carries
+ * @param {string[]} ids what the document it came from defines
+ */
+export function scopeLiftedMarkup(markup, scope, ids) {
+    let out = markup.replace(/svg\.Exsurge\b/g, `.${scope}`);
+
+    for (const id of ids) {
+        // Split rather than a regex: a glyph name is not escaped for one.
+        out = out.split(`id="${id}"`).join(`id="${scope}-${id}"`);
+        // Catches xlink:href as well, which is what exsurge actually writes.
+        out = out.split(`href="#${id}"`).join(`href="#${scope}-${id}"`);
+    }
+
+    return out;
+}
+
+/**
+ * Everything a lifted line still needs from the document it was cut out of: the
+ * glyph symbols its <use> elements point at, and the stylesheet that faces them.
+ *
+ * Searched through the whole tree rather than among the root's own children,
+ * because exsurge buries its <defs> in the same <g> as the music — cut a line out
+ * without them and it draws nothing at all. The stylesheet comes back out to the
+ * top, where rsvg-convert will read it and where stackSvgs looks for it.
+ */
+function definitionsOf(root) {
+    const styles = Array.from(root.querySelectorAll('style'))
+        .map((node) => node.outerHTML)
+        .join('');
+
+    const defs = Array.from(root.querySelectorAll('defs'))
+        .map((node) => {
+            const clone = node.cloneNode(true);
+            clone.querySelectorAll('style').forEach((style) => style.remove());
+
+            return clone.outerHTML;
+        })
+        .join('');
+
+    return styles + defs;
 }
 
 /**
@@ -473,7 +523,7 @@ function composePage(page, geometry, pageNumber, pageCount) {
     if (pageCount > 1) {
         const number = textRowSvg({
             content: String(pageNumber),
-            fontSize: geometry.lyricSizePx * CREDIT_SIZE_FACTOR,
+            fontSize: geometry.lyricSizePx * PAGE_NUMBER_SIZE_FACTOR,
             fontFamily: UI_FONT,
             width: geometry.contentWidthPx,
             fill: '#666666',

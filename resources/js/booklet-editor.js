@@ -32,11 +32,6 @@ document.addEventListener('alpine:init', () => {
         exporting: false,
         message: '',
 
-        /** The entry whose settings panel is open, and its working values. */
-        panelEntryId: null,
-        panelValues: {},
-        panelOverride: {},
-
         _renderTimer: null,
         _renderToken: 0,
 
@@ -55,12 +50,6 @@ document.addEventListener('alpine:init', () => {
         applyUpdate(detail = {}) {
             if (detail.payload) { this.entries = detail.payload; }
             if (detail.geometry) { this.geometry = detail.geometry; }
-
-            // An entry may have been removed while its panel was open.
-            if (this.panelEntryId !== null
-                && !this.entries.some((entry) => entry.id === this.panelEntryId)) {
-                this.panelEntryId = null;
-            }
 
             this.scheduleRender();
         },
@@ -112,67 +101,61 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Open the settings panel for one score, pre-filled with the values it is
-         * actually being drawn at — the booklet's, unless something was already
-         * changed by hand.
+         * The values one score is actually being drawn at — the booklet's, unless
+         * something was changed by hand.
+         *
+         * Worked out afresh whenever the panel reads it rather than snapshotted
+         * when the panel opens: the panel is one card per entry, the booklet's own
+         * size can move underneath it, and a snapshot taken at the wrong moment is
+         * how a panel ends up showing a blank where a number belongs.
          */
-        openPanel(entryId) {
+        settingsOf(entryId) {
             const entry = this.entries.find((candidate) => candidate.id === entryId);
 
-            if (!entry || entry.kind === 'text') {
-                this.panelEntryId = null;
+            if (!entry || entry.kind === 'text') { return {}; }
 
-                return;
-            }
-
-            this.panelEntryId = entryId;
-            this.panelOverride = { ...(entry.override ?? {}) };
-            this.panelValues = resolveSettings(
+            return resolveSettings(
                 entry.format,
                 formatDefaults(entry.format),
                 entry.settings ?? {},
                 pageGeometry(this.geometry),
-                this.panelOverride,
+                entry.override ?? {},
             );
-        },
-
-        closePanel() {
-            this.panelEntryId = null;
         },
 
         /**
          * A knob moved. Only the keys someone actually touched are stored, so a
          * booklet resized later still re-unifies everything nobody pinned.
          */
-        setOverride(key, value) {
-            if (this.panelEntryId === null) { return; }
+        setOverride(entryId, key, value) {
+            const entry = this.entries.find((candidate) => candidate.id === entryId);
 
-            this.panelValues[key] = value;
-            this.panelOverride[key] = value;
+            if (!entry) { return; }
 
-            const entry = this.entries.find((candidate) => candidate.id === this.panelEntryId);
-            if (entry) { entry.override = { ...this.panelOverride }; }
+            // Built plainly and then assigned, so what goes to the server is an
+            // ordinary object rather than the reactive proxy the entry holds.
+            const override = { ...(entry.override ?? {}), [key]: value };
+            entry.override = override;
 
             this.scheduleRender();
-            this.$wire.saveOverride(this.panelEntryId, this.panelOverride);
+            this.$wire.saveOverride(entryId, override);
         },
 
-        resetPanel() {
-            if (this.panelEntryId === null) { return; }
-
-            const entryId = this.panelEntryId;
-            this.panelOverride = {};
-
+        resetOverride(entryId) {
             const entry = this.entries.find((candidate) => candidate.id === entryId);
-            if (entry) { entry.override = {}; }
 
-            this.openPanel(entryId);
+            if (!entry) { return; }
+
+            entry.override = {};
+
             this.scheduleRender();
             this.$wire.resetOverride(entryId);
         },
 
-        isOverridden(key) {
-            return Object.prototype.hasOwnProperty.call(this.panelOverride, key);
+        isOverridden(entryId, key) {
+            const entry = this.entries.find((candidate) => candidate.id === entryId);
+
+            return !!entry && Object.prototype.hasOwnProperty.call(entry.override ?? {}, key);
         },
 
         async exportPdf() {

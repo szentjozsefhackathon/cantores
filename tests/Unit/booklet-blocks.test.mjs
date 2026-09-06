@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildScoreBlocks, buildTextBlocks } from '../../resources/js/booklet-render.js';
+import { buildScoreBlocks, buildTextBlocks, scopeLiftedMarkup } from '../../resources/js/booklet-render.js';
 import { packPages } from '../../resources/js/booklet-flow.js';
 import { pageGeometry, pxToMm } from '../../resources/js/booklet-geometry.js';
 
@@ -143,16 +143,6 @@ test('an empty score contributes nothing', async () => {
     assert.equal(blocks.filter(block => !block.keepWithNext).length, 0);
 });
 
-test('a published score carries its credit line under its own music', async () => {
-    const { blocks } = await buildScoreBlocks(
-        entry({ credit: 'Ászáf · CC BY-SA 4.0' }),
-        geometry,
-        null,
-    );
-
-    assert.match(blocks[blocks.length - 1].svg, /CC BY-SA 4\.0/);
-});
-
 test('titles can be turned off', async () => {
     const { blocks } = await buildScoreBlocks(
         entry(),
@@ -179,4 +169,38 @@ test('a paragraph of instructions flows as blocks like everything else', () => {
 
     const pages = packPages(blocks, geometry.contentHeightPx);
     assert.equal(pages.length, 1);
+});
+
+/**
+ * exsurge names things for the one document it drew, and a booklet page is made
+ * of lines cut out of several such documents laid side by side.
+ */
+test('a lifted chant line takes its stylesheet and its glyphs with it, under its own name', () => {
+    const markup = '<svg class="Exsurge ChantScore exs-4">'
+        + '<style>svg.Exsurge .lyric{font-family:\'EB Garamond\';font-size:15px}'
+        + 'svg.Exsurge .dropCap{font-size:66px}</style>'
+        + '<defs><g id="PunctumQuadratum" class="glyph" transform="scale(0.03)"><path d="M0 0"/></g></defs>'
+        + '<g class="chantLine"><use xlink:href="#PunctumQuadratum" id="note-1"/></g>'
+        + '</svg>';
+
+    const scoped = scopeLiftedMarkup(markup, 'exs-4', ['PunctumQuadratum']);
+
+    assert.doesNotMatch(scoped, /svg\.Exsurge/, 'no rule may depend on a root the fragment has lost');
+    assert.match(scoped, /\.exs-4 \.lyric\{/);
+    assert.match(scoped, /\.exs-4 \.dropCap\{/);
+    assert.match(scoped, /id="exs-4-PunctumQuadratum"/);
+    assert.match(scoped, /xlink:href="#exs-4-PunctumQuadratum"/);
+    assert.match(scoped, /id="note-1"/, 'only what the document defines is renamed');
+});
+
+test('two chants on one page keep their own glyphs', () => {
+    const chant = (id) => `<defs><g id="${id}" transform="scale(0.03)"/></defs>`
+        + `<use xlink:href="#${id}"/>`;
+
+    const first = scopeLiftedMarkup(chant('PunctumQuadratum'), 'exs-1', ['PunctumQuadratum']);
+    const second = scopeLiftedMarkup(chant('PunctumQuadratum'), 'exs-2', ['PunctumQuadratum']);
+
+    assert.match(first, /id="exs-1-PunctumQuadratum"/);
+    assert.match(second, /id="exs-2-PunctumQuadratum"/);
+    assert.doesNotMatch(second, /"#exs-1-/, 'the second chant must not draw with the first one\'s scaling');
 });

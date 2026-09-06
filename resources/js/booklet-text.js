@@ -1,10 +1,10 @@
 /**
  * Plain text as a flowable block.
  *
- * A booklet adds words of its own to the music: a score's title above it, and,
- * for anything taken from the published library, the credit line its licence
- * asks for. Both are the same shape as everything else on the page — a standalone
- * SVG with a height — so the packer treats them no differently from a staff.
+ * A booklet adds words of its own to the music: the heading above each score, the
+ * page number at the foot. Both are the same shape as everything else on the
+ * page — a standalone SVG with a height — so the packer treats them no
+ * differently from a staff.
  */
 
 /** Line height as a multiple of the font size. */

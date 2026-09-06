@@ -35,7 +35,9 @@ it('withholds a score belonging to someone else', function () {
     expect(sources([$score->id], $stranger)->has($score->id))->toBeFalse();
 });
 
-it('gives anyone a published score, and its credit line with it', function () {
+// A booklet is a service sheet, not a publication: the licence credit stays on
+// the library page the score was taken from and never reaches the pews.
+it('gives anyone a published score, and no credit line with it', function () {
     $owner = User::factory()->create();
     $reader = User::factory()->create();
     $score = Score::factory()->abc()->create(['user_id' => $owner->id]);
@@ -44,7 +46,7 @@ it('gives anyone a published score, and its credit line with it', function () {
     $source = sources([$score->id], $reader)->get($score->id);
 
     expect($source)->not->toBeNull()
-        ->and($source['credit'])->not->toBeNull();
+        ->and($source)->not->toHaveKey('credit');
 });
 
 it('gives me a score I kept out of a live loan', function () {

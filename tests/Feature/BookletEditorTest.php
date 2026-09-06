@@ -194,6 +194,26 @@ it('compiles every component tag on the page', function () {
     expect($html)->not->toContain('<flux:');
 });
 
+// The plan can run far longer than the pages, or the other way round; neither
+// side may drag the other along when it is scrolled.
+it('gives the plan and the pages a scroll box each', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])->html();
+
+    $panes = collect(['plan', 'pages'])->mapWithKeys(function (string $pane) use ($html) {
+        preg_match('/<div\b[^>]*data-booklet-pane="'.$pane.'"[^>]*>/', $html, $matches);
+
+        return [$pane => $matches[0] ?? ''];
+    });
+
+    expect($panes['plan'])->toContain('lg:overflow-y-auto')
+        ->and($panes['pages'])->toContain('lg:overflow-y-auto');
+});
+
 it('saves geometry changes as they are made', function () {
     $user = User::factory()->create();
     $booklet = bookletFor($user);
@@ -270,6 +290,89 @@ it('forgets an override when it is reset', function () {
     expect($booklet->entries()->first()->settings_override)->toBeNull();
 });
 
+/**
+ * The two entries a settings test needs: one score in each of two formats, in the
+ * order they were added.
+ *
+ * @return array{0: \App\Models\Booklet, 1: BookletScore, 2: BookletScore}
+ */
+function bookletWithAbcAndGabc(User $user): array
+{
+    $booklet = bookletFor($user);
+
+    foreach ([Score::factory()->abc(), Score::factory()->gabc()] as $factory) {
+        $score = $factory->create(['user_id' => $user->id]);
+        BookletScore::factory()->create([
+            'booklet_id' => $booklet->id,
+            'score_id' => $score->id,
+            'sequence' => $booklet->entries()->count(),
+        ]);
+    }
+
+    [$abc, $gabc] = $booklet->entries()->orderBy('sequence')->get()->all();
+
+    return [$booklet, $abc, $gabc];
+}
+
+// Settings belong to one score, so they are asked for where that score stands.
+// A panel below a list of twenty says nothing about which of them it adjusts.
+it('opens a score’s settings inside the row they belong to', function () {
+    $user = User::factory()->create();
+    [$booklet, $abc, $gabc] = bookletWithAbcAndGabc($user);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('editSettings', $abc->id)
+        ->html();
+
+    $panel = strpos($html, 'data-booklet-panel="'.$abc->id.'"');
+    $nextEntry = strpos($html, 'wire:key="entry-'.$gabc->id.'"');
+
+    expect($panel)->not->toBeFalse()
+        ->and($nextEntry)->not->toBeFalse()
+        ->and($panel)->toBeLessThan($nextEntry);
+});
+
+// Every control names the entry it adjusts. A panel that only knew "the open
+// one" was a panel the browser could leave pointing at the previous score,
+// which is how a GABC panel came to be writing ABC keys and showing blanks.
+it('names the entry and the format in every control of a panel', function () {
+    $user = User::factory()->create();
+    [$booklet, , $gabc] = bookletWithAbcAndGabc($user);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('editSettings', $gabc->id)
+        ->html();
+
+    expect($html)->toContain("settingsOf({$gabc->id})['staffSize']")
+        ->and($html)->toContain("setOverride({$gabc->id}, 'staffSize'")
+        ->and($html)->toContain("isOverridden({$gabc->id}, 'staffSize')")
+        ->and($html)->not->toContain('abcPageWidth');
+});
+
+it('writes a paragraph of instructions inside the row it belongs to', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('addText')
+        ->call('toggleScore', $score->id);
+
+    $text = $booklet->entries()->whereNull('score_id')->firstOrFail();
+    $music = $booklet->entries()->whereNotNull('score_id')->firstOrFail();
+
+    $html = $component->call('editText', $text->id)->html();
+
+    expect(strpos($html, 'wire:model.live.debounce.600ms="editingText"'))
+        ->toBeLessThan(strpos($html, 'wire:key="entry-'.$music->id.'"'));
+});
+
 it('only accepts a font the exporter can embed', function () {
     expect(BookletSettingFields::sanitize('abc', ['abcLyricFont' => 'Lora']))
         ->toBe(['abcLyricFont' => "'Lora'"])
@@ -291,7 +394,7 @@ it('hands the browser everything it needs to draw a score', function () {
         ->and($payload[0]['kind'])->toBe('score')
         ->and($payload[0]['format'])->toBe('abc')
         ->and($payload[0]['content'])->toContain('X:1')
-        ->and($payload[0]['credit'])->toBeNull();
+        ->and($payload[0])->not->toHaveKey('credit');
 });
 
 /**
@@ -329,7 +432,7 @@ function slotWithMusics(MusicPlan $plan, string $slotName, array $musicTitles): 
     return [$slotPlan, $assignments, $scores];
 }
 
-it('names a lone music beside its slot and says nothing of the score', function () {
+it('names the slot alone and says nothing of the music or the score', function () {
     $user = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
     $booklet = bookletFor($user, $plan);
@@ -342,12 +445,56 @@ it('names a lone music beside its slot and says nothing of the score', function 
 
     $payload = Livewire::test(BookletEditor::class, ['booklet' => $booklet])->get('renderPayload');
 
-    expect($payload[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem')
+    expect($payload[0]['slot'])->toBe('Kezdőének')
         ->and($payload[0]['music'])->toBeNull()
         ->and($payload[0]['variation'])->toBeNull();
 });
 
-it('announces a shared slot once and names each music under it', function () {
+it('puts the music title on the slots own line when asked for it', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
+
+    $component->call('toggleShowMusicTitle', $booklet->entries()->firstOrFail()->id);
+
+    $payload = $component->get('renderPayload');
+
+    expect($payload[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem')
+        ->and($payload[0]['music'])->toBeNull();
+});
+
+it('still names the music beside the slot when the slot holds two engravings of it', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    $organ = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'music_id' => $scores[0]->music_id,
+        'title' => 'Áldjad, én lelkem',
+    ]);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id)
+        ->call('toggleScore', $organ->id, $assignments[0]->id);
+
+    $component->call('toggleShowMusicTitle', $booklet->entries()->firstOrFail()->id);
+
+    // Two engravings, one music: there is still nothing to tell apart, so the
+    // slot's line carries the name.
+    expect($component->get('renderPayload')[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem');
+});
+
+it('keeps every music of a shared slot on a line of its own', function () {
     $user = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
     $booklet = bookletFor($user, $plan);
@@ -359,8 +506,14 @@ it('announces a shared slot once and names each music under it', function () {
         ->call('toggleScore', $scores[0]->id, $assignments[0]->id)
         ->call('toggleScore', $scores[1]->id, $assignments[1]->id);
 
+    $booklet->entries()->get()->each(
+        fn (BookletScore $entry) => $component->call('toggleShowMusicTitle', $entry->id)
+    );
+
     $payload = $component->get('renderPayload');
 
+    // Two musics under one slot are a list: the first is not promoted into the
+    // slot's line, or the second would read as something lesser.
     expect($payload[0]['slot'])->toBe('Áldozás')
         ->and($payload[0]['music'])->toBe('Ének egy')
         ->and($payload[1]['slot'])->toBeNull()
@@ -434,6 +587,8 @@ it('keeps the heading run across a paragraph of instructions', function () {
         ->call('addText')
         ->call('toggleScore', $scores[1]->id, $assignments[1]->id);
 
+    $component->call('toggleShowMusicTitle', $booklet->entries()->get()->last()->id);
+
     $payload = $component->get('renderPayload');
 
     expect($payload[1]['kind'])->toBe('text')
@@ -441,14 +596,14 @@ it('keeps the heading run across a paragraph of instructions', function () {
         ->and($payload[2]['music'])->toBe('Ének kettő');
 });
 
-it('does not repeat a lone slot heading after a paragraph of instructions', function () {
+it('does not repeat a slot heading after a paragraph of instructions', function () {
     $user = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
     $booklet = bookletFor($user, $plan);
     [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
 
-    // A second engraving of the same music, so the slot is still held by one
-    // music and its heading is the one that must not come round again.
+    // A second engraving of the same music, under the same slot: its heading is
+    // the one that must not come round again.
     $organ = Score::factory()->abc()->create([
         'user_id' => $user->id,
         'music_id' => $scores[0]->music_id,
@@ -463,7 +618,7 @@ it('does not repeat a lone slot heading after a paragraph of instructions', func
         ->call('toggleScore', $organ->id, $assignments[0]->id)
         ->get('renderPayload');
 
-    expect($payload[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem')
+    expect($payload[0]['slot'])->toBe('Kezdőének')
         ->and($payload[1]['kind'])->toBe('text')
         ->and($payload[2]['slot'])->toBeNull()
         ->and($payload[2]['music'])->toBeNull();
@@ -531,4 +686,60 @@ it('lists only my own booklets', function () {
     Livewire::test(Booklets::class)
         ->assertSee('Adventi füzet')
         ->assertDontSee('Karácsonyi füzet');
+});
+
+it('adds a score to the slot it was chosen from rather than to the end', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $opening, $openingScores] = slotWithMusics($plan, 'Kezdőének', ['Ének egy', 'Ének kettő']);
+    [, $communion, $communionScores] = slotWithMusics($plan, 'Áldozás', ['Ének három']);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $openingScores[0]->id, $opening[0]->id)
+        ->call('toggleScore', $communionScores[0]->id, $communion[0]->id)
+        ->call('toggleScore', $openingScores[1]->id, $opening[1]->id);
+
+    expect($booklet->entries()->orderBy('sequence')->pluck('score_id')->all())
+        ->toBe([$openingScores[0]->id, $openingScores[1]->id, $communionScores[0]->id]);
+});
+
+it('stops at the next slot and leaves the words already written where they stand', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $opening, $openingScores] = slotWithMusics($plan, 'Kezdőének', ['Ének egy', 'Ének kettő']);
+    [, $communion, $communionScores] = slotWithMusics($plan, 'Áldozás', ['Ének három']);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $openingScores[0]->id, $opening[0]->id)
+        ->call('addText')
+        ->call('toggleScore', $communionScores[0]->id, $communion[0]->id)
+        ->call('toggleScore', $openingScores[1]->id, $opening[1]->id);
+
+    expect($booklet->entries()->orderBy('sequence')->pluck('score_id')->all())
+        ->toBe([$openingScores[0]->id, null, $openingScores[1]->id, $communionScores[0]->id]);
+});
+
+it('puts a score at the end when its slot is not in the booklet yet', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $opening, $openingScores] = slotWithMusics($plan, 'Kezdőének', ['Ének egy']);
+    [, $communion, $communionScores] = slotWithMusics($plan, 'Áldozás', ['Ének kettő']);
+
+    actingAs($user);
+
+    // Nothing says the plan's order: the booklet keeps what was chosen, in the
+    // order it was chosen.
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $communionScores[0]->id, $communion[0]->id)
+        ->call('toggleScore', $openingScores[0]->id, $opening[0]->id);
+
+    expect($booklet->entries()->orderBy('sequence')->pluck('score_id')->all())
+        ->toBe([$communionScores[0]->id, $openingScores[0]->id]);
 });

@@ -71,6 +71,11 @@ class MusicPlanScoreListService
      * Resolved per request, like everything else here, which is what makes a
      * recalled loan drop out of the booklet rather than leaving a copy behind.
      *
+     * No attribution line travels with the source. A booklet is a service sheet
+     * printed for the people in the pews, and a licence credit under every second
+     * item reads as clutter to them; the credits stay on the library page the
+     * score was taken from.
+     *
      * @param  list<int>  $scoreIds
      * @return Collection<int, array<string, mixed>>
      */
@@ -84,7 +89,6 @@ class MusicPlanScoreListService
         $this->scopeToViewer($query, $viewer);
 
         return $query
-            ->with('publication')
             ->get()
             ->mapWithKeys(fn (Score $score): array => [$score->getKey() => [
                 'id' => $score->id,
@@ -92,11 +96,6 @@ class MusicPlanScoreListService
                 'format' => $score->format?->value,
                 'content' => $score->content ?? '',
                 'settings' => $score->settings ?? [],
-                // A published score carries its credit into the booklet, beneath
-                // its own music rather than stamped across every page.
-                'credit' => $score->isPublished()
-                    ? app(ScoreAttributionBuilder::class)->line($score->publication)
-                    : null,
             ]]);
     }
 
