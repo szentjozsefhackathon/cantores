@@ -3,6 +3,7 @@ import { renderAretino, splitRowSVGs } from '@aretino-chant/core';
 import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
 import { packPages } from './booklet-flow.js';
 import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
+import { markdownRows } from './booklet-markdown.js';
 import { layoutWidthFor, resolveSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
 import { abcMixin } from './score-editor-abc.js';
@@ -34,17 +35,25 @@ const SCORE_GAP_MM = 6;
 /** Space between a score's title and its first staff. */
 const TITLE_GAP_MM = 1.5;
 
-const TITLE_SIZE_FACTOR = 1.15;
+/** A heading is set at the lyric size, told apart by its weight alone. */
+const TITLE_SIZE_FACTOR = 1;
+const VARIATION_SIZE_FACTOR = 0.82;
 const CREDIT_SIZE_FACTOR = 0.62;
 
 const UI_FONT = "'Inter'";
 
+const VARIATION_COLOR = '#555555';
+
 /**
  * @typedef {object} BookletEntry
- * @property {number} id
- * @property {string} title
+ * @property {number} id the booklet_scores row
+ * @property {'score'|'text'} kind
+ * @property {string|null} slot the slot heading, when this entry opens one
+ * @property {string|null} music the music's own name, under a shared slot
+ * @property {string|null} variation the score's variation name, when asked for
  * @property {string} format
  * @property {string} content
+ * @property {string} text Markdown, for a text entry
  * @property {object} settings the score's own settings column
  * @property {object|null} override booklet_scores.settings_override
  * @property {boolean} startOnNewPage
@@ -65,7 +74,9 @@ export async function renderBooklet(entries, rawGeometry, host) {
     const fonts = new Set([UI_FONT]);
 
     for (const entry of entries) {
-        const built = await buildScoreBlocks(entry, geometry, host);
+        const built = entry.kind === 'text'
+            ? buildTextBlocks(entry, geometry)
+            : await buildScoreBlocks(entry, geometry, host);
 
         built.fonts.forEach((font) => fonts.add(font));
         built.blocks.forEach((block) => blocks.push(block));
@@ -92,25 +103,8 @@ export async function buildScoreBlocks(entry, geometry, host) {
     const fonts = [fontOf(format, resolved)];
     const blocks = [];
 
-    if (geometry.showTitles && entry.title) {
-        const title = textRowSvg({
-            content: entry.title,
-            fontSize: geometry.lyricSizePx * TITLE_SIZE_FACTOR,
-            fontFamily: UI_FONT,
-            width: geometry.contentWidthPx,
-            bold: true,
-        });
-
-        blocks.push({
-            height: title.height,
-            svg: title.svg,
-            scale: 1,
-            spaceBefore: mmToPx(SCORE_GAP_MM),
-            // The title moves with the music it names, whatever else happens.
-            keepWithNext: true,
-            startsScore: true,
-            breakBefore: !!entry.startOnNewPage,
-        });
+    if (geometry.showTitles) {
+        headingBlocks(entry, geometry).forEach((block) => blocks.push(block));
     }
 
     const music = await musicBlocks(format, entry, resolved, layoutWidthPx, geometry, host);
@@ -151,6 +145,75 @@ export async function buildScoreBlocks(entry, geometry, host) {
     }
 
     return { blocks, fonts };
+}
+
+/**
+ * What is said above a score: the slot in the service, the music's own name
+ * where the slot holds several, and the variation someone asked to see named.
+ *
+ * Every one of them moves with the music it names, whatever else happens.
+ */
+function headingBlocks(entry, geometry) {
+    const lines = [
+        { content: entry.slot, size: geometry.lyricSizePx * TITLE_SIZE_FACTOR, bold: true },
+        { content: entry.music, size: geometry.lyricSizePx * TITLE_SIZE_FACTOR, bold: true },
+        {
+            content: entry.variation,
+            size: geometry.lyricSizePx * VARIATION_SIZE_FACTOR,
+            italic: true,
+            fill: VARIATION_COLOR,
+        },
+    ].filter((line) => !!line.content);
+
+    return lines.map((line, i) => {
+        const row = textRowSvg({
+            content: line.content,
+            fontSize: line.size,
+            fontFamily: UI_FONT,
+            width: geometry.contentWidthPx,
+            bold: !!line.bold,
+            italic: !!line.italic,
+            fill: line.fill ?? '#000000',
+        });
+
+        return {
+            height: row.height,
+            svg: row.svg,
+            scale: 1,
+            spaceBefore: i === 0 ? mmToPx(SCORE_GAP_MM) : 0,
+            keepWithNext: true,
+            startsScore: i === 0,
+            breakBefore: i === 0 && !!entry.startOnNewPage,
+        };
+    });
+}
+
+/**
+ * A paragraph of instructions, flowed like everything else.
+ *
+ * It is set in the interface font at the booklet's lyric size, so a rubric
+ * between two scores reads as the booklet talking rather than as more music.
+ */
+export function buildTextBlocks(entry, geometry, measure = null) {
+    const fontSize = geometry.lyricSizePx;
+    const rows = markdownRows(entry.text ?? '', {
+        fontSize,
+        fontFamily: UI_FONT,
+        layoutWidth: geometry.contentWidthPx,
+        measure: measure ?? canvasMeasurer(UI_FONT, fontSize),
+    });
+
+    const blocks = rows.map((row, i) => ({
+        height: row.height,
+        svg: row.svg,
+        scale: 1,
+        spaceBefore: (row.spaceBefore ?? 0) + (i === 0 ? mmToPx(SCORE_GAP_MM) : 0),
+        keepWithNext: !!row.keepWithNext,
+        startsScore: i === 0,
+        breakBefore: i === 0 && !!entry.startOnNewPage,
+    }));
+
+    return { blocks, fonts: [UI_FONT] };
 }
 
 /**

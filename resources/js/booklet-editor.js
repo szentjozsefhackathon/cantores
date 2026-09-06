@@ -32,8 +32,8 @@ document.addEventListener('alpine:init', () => {
         exporting: false,
         message: '',
 
-        /** The score whose settings panel is open, and its working values. */
-        panelScoreId: null,
+        /** The entry whose settings panel is open, and its working values. */
+        panelEntryId: null,
         panelValues: {},
         panelOverride: {},
 
@@ -56,10 +56,10 @@ document.addEventListener('alpine:init', () => {
             if (detail.payload) { this.entries = detail.payload; }
             if (detail.geometry) { this.geometry = detail.geometry; }
 
-            // A score may have been removed while its panel was open.
-            if (this.panelScoreId !== null
-                && !this.entries.some((entry) => entry.id === this.panelScoreId)) {
-                this.panelScoreId = null;
+            // An entry may have been removed while its panel was open.
+            if (this.panelEntryId !== null
+                && !this.entries.some((entry) => entry.id === this.panelEntryId)) {
+                this.panelEntryId = null;
             }
 
             this.scheduleRender();
@@ -116,16 +116,16 @@ document.addEventListener('alpine:init', () => {
          * actually being drawn at — the booklet's, unless something was already
          * changed by hand.
          */
-        openPanel(scoreId) {
-            const entry = this.entries.find((candidate) => candidate.id === scoreId);
+        openPanel(entryId) {
+            const entry = this.entries.find((candidate) => candidate.id === entryId);
 
-            if (!entry) {
-                this.panelScoreId = null;
+            if (!entry || entry.kind === 'text') {
+                this.panelEntryId = null;
 
                 return;
             }
 
-            this.panelScoreId = scoreId;
+            this.panelEntryId = entryId;
             this.panelOverride = { ...(entry.override ?? {}) };
             this.panelValues = resolveSettings(
                 entry.format,
@@ -137,7 +137,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         closePanel() {
-            this.panelScoreId = null;
+            this.panelEntryId = null;
         },
 
         /**
@@ -145,30 +145,30 @@ document.addEventListener('alpine:init', () => {
          * booklet resized later still re-unifies everything nobody pinned.
          */
         setOverride(key, value) {
-            if (this.panelScoreId === null) { return; }
+            if (this.panelEntryId === null) { return; }
 
             this.panelValues[key] = value;
             this.panelOverride[key] = value;
 
-            const entry = this.entries.find((candidate) => candidate.id === this.panelScoreId);
+            const entry = this.entries.find((candidate) => candidate.id === this.panelEntryId);
             if (entry) { entry.override = { ...this.panelOverride }; }
 
             this.scheduleRender();
-            this.$wire.saveOverride(this.panelScoreId, this.panelOverride);
+            this.$wire.saveOverride(this.panelEntryId, this.panelOverride);
         },
 
         resetPanel() {
-            if (this.panelScoreId === null) { return; }
+            if (this.panelEntryId === null) { return; }
 
-            const scoreId = this.panelScoreId;
+            const entryId = this.panelEntryId;
             this.panelOverride = {};
 
-            const entry = this.entries.find((candidate) => candidate.id === scoreId);
+            const entry = this.entries.find((candidate) => candidate.id === entryId);
             if (entry) { entry.override = {}; }
 
-            this.openPanel(scoreId);
+            this.openPanel(entryId);
             this.scheduleRender();
-            this.$wire.resetOverride(scoreId);
+            this.$wire.resetOverride(entryId);
         },
 
         isOverridden(key) {

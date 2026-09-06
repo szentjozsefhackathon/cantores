@@ -222,8 +222,8 @@ export function canvasMeasurer(fontFamily, fontSize) {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
 
-    return (content, { bold = false } = {}) => {
-        context.font = `${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
+    return (content, { bold = false, italic = false, fontSize: size = fontSize } = {}) => {
+        context.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${size}px ${fontFamily}`;
 
         return context.measureText(content ?? '').width;
     };

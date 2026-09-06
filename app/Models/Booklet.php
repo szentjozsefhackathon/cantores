@@ -160,6 +160,22 @@ class Booklet extends Model
     }
 
     /**
+     * What a booklet is called when it is started from a plan: the celebration
+     * and its date, which is how anyone looking for it later will think of it.
+     */
+    public static function titleFor(?MusicPlan $plan): string
+    {
+        if (! $plan instanceof MusicPlan) {
+            return __('Booklet');
+        }
+
+        $celebration = $plan->celebration_name;
+        $date = $plan->actual_date?->translatedFormat('Y. F j.');
+
+        return trim(implode(' – ', array_filter([$celebration ?: __('Booklet'), $date])));
+    }
+
+    /**
      * @param  Builder<Booklet>  $query
      */
     public function scopeMine(Builder $query, ?User $user = null): void

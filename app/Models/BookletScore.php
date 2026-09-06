@@ -15,16 +15,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * to the score, which may not even be the booklet owner's, and not to any other
  * booklet the same score appears in.
  *
+ * A row may also carry no score at all: a paragraph of instructions, written in
+ * Markdown, that is set between the music.
+ *
  * @property int $id
  * @property int $booklet_id
- * @property int $score_id
+ * @property int|null $score_id
+ * @property int|null $music_plan_slot_assignment_id
+ * @property string|null $text
  * @property int $sequence
  * @property array<string, mixed>|null $settings_override
  * @property bool $start_on_new_page
+ * @property bool $show_variation
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\Booklet $booklet
- * @property-read \App\Models\Score $score
+ * @property-read \App\Models\Score|null $score
+ * @property-read \App\Models\MusicPlanSlotAssignment|null $assignment
  *
  * @method static \Database\Factories\BookletScoreFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BookletScore newModelQuery()
@@ -44,9 +51,12 @@ class BookletScore extends Model
     protected $fillable = [
         'booklet_id',
         'score_id',
+        'music_plan_slot_assignment_id',
+        'text',
         'sequence',
         'settings_override',
         'start_on_new_page',
+        'show_variation',
     ];
 
     /**
@@ -57,7 +67,16 @@ class BookletScore extends Model
         return [
             'settings_override' => 'array',
             'start_on_new_page' => 'boolean',
+            'show_variation' => 'boolean',
         ];
+    }
+
+    /**
+     * A row that holds words rather than music.
+     */
+    public function isText(): bool
+    {
+        return $this->score_id === null;
     }
 
     public function booklet(): BelongsTo
@@ -68,5 +87,14 @@ class BookletScore extends Model
     public function score(): BelongsTo
     {
         return $this->belongsTo(Score::class);
+    }
+
+    /**
+     * Where in the plan this score was chosen from — the slot and music that
+     * name it on the page.
+     */
+    public function assignment(): BelongsTo
+    {
+        return $this->belongsTo(MusicPlanSlotAssignment::class, 'music_plan_slot_assignment_id');
     }
 }

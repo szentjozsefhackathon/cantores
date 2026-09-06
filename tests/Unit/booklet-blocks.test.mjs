@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { buildScoreBlocks } from '../../resources/js/booklet-render.js';
+import { buildScoreBlocks, buildTextBlocks } from '../../resources/js/booklet-render.js';
 import { packPages } from '../../resources/js/booklet-flow.js';
 import { pageGeometry, pxToMm } from '../../resources/js/booklet-geometry.js';
 
@@ -31,7 +31,10 @@ const CHANT = 'c: f\nn: fg h g f g h\nw: Ky-ri-e e-lei-son Chri-ste e-lei-son\n'
 
 const entry = (over = {}) => ({
     id: 1,
-    title: 'Kyrie',
+    kind: 'score',
+    slot: 'Kyrie',
+    music: null,
+    variation: null,
     format: 'aretino',
     content: CHANT,
     settings: {},
@@ -43,12 +46,41 @@ const entry = (over = {}) => ({
 
 const widthOf = (svg) => parseFloat(svg.match(/viewBox="\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)/)[1]);
 
-test('a chant becomes a title block and one block per staff row', async () => {
+test('a chant becomes a heading block and one block per staff row', async () => {
     const { blocks } = await buildScoreBlocks(entry(), geometry, null);
 
-    assert.ok(blocks.length >= 2, 'expected a title and at least one staff row');
-    assert.equal(blocks[0].keepWithNext, true, 'the title must not be orphaned');
+    assert.ok(blocks.length >= 2, 'expected a heading and at least one staff row');
+    assert.equal(blocks[0].keepWithNext, true, 'the heading must not be orphaned');
     assert.match(blocks[0].svg, /Kyrie/);
+});
+
+// What is said above a score comes from the plan: the moment in the service,
+// the music where a slot holds several, and the variation only when asked for.
+test('every heading line the entry carries is set above the music', async () => {
+    const { blocks } = await buildScoreBlocks(
+        entry({ slot: 'Áldozás', music: 'Ének egy', variation: 'orgonakíséret' }),
+        geometry,
+        null,
+    );
+
+    assert.match(blocks[0].svg, /Áldozás/);
+    assert.match(blocks[1].svg, /Ének egy/);
+    assert.match(blocks[2].svg, /orgonakíséret/);
+    assert.match(blocks[2].svg, /font-style="italic"/);
+
+    // Set at the lyric size, told apart by weight alone.
+    assert.match(blocks[0].svg, new RegExp(`font-size="${geometry.lyricSizePx.toFixed(3).replace(/\.?0+$/, '')}`));
+    assert.deepEqual(blocks.slice(0, 3).map(block => block.keepWithNext), [true, true, true]);
+    assert.deepEqual(blocks.slice(1, 3).map(block => block.spaceBefore), [0, 0]);
+});
+
+test('a heading the entry does not carry is not printed', async () => {
+    const withSlot = await buildScoreBlocks(entry(), geometry, null);
+    const without = await buildScoreBlocks(entry({ slot: null }), geometry, null);
+
+    assert.equal(without.blocks.length, withSlot.blocks.length - 1);
+    assert.equal(without.blocks[0].startsScore, true);
+    assert.ok(without.blocks[0].spaceBefore > 0, 'the music takes over the gap the heading had');
 });
 
 // The guarantee the page depends on: nothing is ever wider than the content box,
@@ -129,4 +161,22 @@ test('titles can be turned off', async () => {
     );
 
     assert.doesNotMatch(blocks[0].svg, /Kyrie/);
+});
+
+test('a paragraph of instructions flows as blocks like everything else', () => {
+    const { blocks } = buildTextBlocks(
+        { id: 2, kind: 'text', text: '# Rubrika\n\nÁlljunk **fel**.', startOnNewPage: true },
+        geometry,
+        (text, { fontSize = geometry.lyricSizePx } = {}) => text.length * fontSize * 0.5,
+    );
+
+    assert.ok(blocks.length >= 2);
+    assert.equal(blocks[0].startsScore, true);
+    assert.equal(blocks[0].breakBefore, true, 'a text entry can ask for a fresh page too');
+    assert.ok(blocks[0].spaceBefore > 0);
+    assert.match(blocks[0].svg, /Rubrika/);
+    assert.match(blocks[blocks.length - 1].svg, /font-weight="bold"[^>]*>fel/);
+
+    const pages = packPages(blocks, geometry.contentHeightPx);
+    assert.equal(pages.length, 1);
 });

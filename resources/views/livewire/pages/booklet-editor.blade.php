@@ -5,8 +5,8 @@
 
     $entries = $this->entries;
     $chosen = $this->chosenScoreIds;
-    $editingEntry = $this->editingScoreId
-        ? $entries->firstWhere('score_id', $this->editingScoreId)
+    $editingEntry = $this->editingEntryId
+        ? $entries->firstWhere('id', $this->editingEntryId)
         : null;
     $editingFormat = $editingEntry?->score?->format?->value;
 @endphp
@@ -114,54 +114,122 @@
             {{-- Choosing --}}
             <div class="space-y-4">
                 <flux:card class="p-4">
-                    <flux:heading size="lg" class="mb-3">{{ __('In this booklet') }}</flux:heading>
+                    <div class="mb-3 flex items-center justify-between gap-2">
+                        <flux:heading size="lg">{{ __('In this booklet') }}</flux:heading>
+                        <flux:button size="sm" variant="ghost" icon="document-plus" wire:click="addText">
+                            {{ __('Add text') }}
+                        </flux:button>
+                    </div>
 
                     @if($entries->isEmpty())
                         <flux:text class="text-sm text-zinc-500">{{ __('Nothing chosen yet. Pick scores from the plan below.') }}</flux:text>
                     @else
                         <ul class="space-y-1.5">
                             @foreach($entries as $index => $entry)
-                                <li wire:key="entry-{{ $entry->id }}" class="flex items-center gap-1.5 rounded-md border border-zinc-200 px-2 py-1.5 dark:border-zinc-700">
-                                    <span class="w-5 shrink-0 text-xs text-zinc-400">{{ $index + 1 }}.</span>
-                                    <span class="min-w-0 flex-1 truncate text-sm">{{ $entry->score?->variationLabel() }}</span>
+                                <li
+                                    wire:key="entry-{{ $entry->id }}"
+                                    class="rounded-md border border-zinc-200 px-2 py-1.5 dark:border-zinc-700"
+                                >
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="w-5 shrink-0 text-xs text-zinc-400">{{ $index + 1 }}.</span>
 
-                                    @if($entry->score?->format)
-                                        <flux:badge size="sm" color="zinc">{{ $entry->score->format->label() }}</flux:badge>
-                                    @endif
+                                        @if($entry->isText())
+                                            <span class="min-w-0 flex-1 truncate text-sm italic text-zinc-600 dark:text-zinc-300">
+                                                {{ \Illuminate\Support\Str::limit(trim(strtok($entry->text ?? '', "\n")) ?: __('Empty text'), 40) }}
+                                            </span>
+                                            <flux:badge size="sm" color="zinc">{{ __('Text') }}</flux:badge>
+                                        @else
+                                            <span class="min-w-0 flex-1 truncate text-sm">
+                                                {{ $entry->score?->variationLabel() }}
+                                                @if($entry->assignment?->musicPlanSlot?->name)
+                                                    <span class="text-xs text-zinc-400">· {{ $entry->assignment->musicPlanSlot->name }}</span>
+                                                @endif
+                                            </span>
+                                            @if($entry->score?->format)
+                                                <flux:badge size="sm" color="zinc">{{ $entry->score->format->label() }}</flux:badge>
+                                            @endif
+                                        @endif
+                                    </div>
 
-                                    <flux:tooltip :content="__('Start on a new page')">
-                                        <flux:button
-                                            size="sm"
-                                            variant="ghost"
-                                            icon="scissors"
-                                            wire:click="toggleStartOnNewPage({{ $entry->score_id }})"
-                                            class="{{ $entry->start_on_new_page ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                        />
-                                    </flux:tooltip>
+                                    <div class="mt-0.5 flex items-center justify-end gap-0.5">
+                                        <flux:tooltip :content="__('Start on a new page')">
+                                            <flux:button
+                                                size="sm"
+                                                variant="ghost"
+                                                icon="scissors"
+                                                wire:click="toggleStartOnNewPage({{ $entry->id }})"
+                                                class="{{ $entry->start_on_new_page ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                            />
+                                        </flux:tooltip>
 
-                                    <flux:tooltip :content="__('Adjust this score')">
-                                        <flux:button
-                                            size="sm"
-                                            variant="ghost"
-                                            icon="adjustments-horizontal"
-                                            wire:click="editSettings({{ $entry->score_id }})"
-                                            x-on:click="openPanel({{ $entry->score_id }})"
-                                            class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                        />
-                                    </flux:tooltip>
+                                        @if($entry->isText())
+                                            <flux:tooltip :content="__('Edit this text')">
+                                                <flux:button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    icon="pencil-square"
+                                                    wire:click="editText({{ $entry->id }})"
+                                                    class="{{ $this->editingTextId === $entry->id ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                />
+                                            </flux:tooltip>
+                                        @else
+                                            <flux:tooltip :content="__('Print the variation name')">
+                                                <flux:button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    icon="tag"
+                                                    wire:click="toggleShowVariation({{ $entry->id }})"
+                                                    class="{{ $entry->show_variation ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                />
+                                            </flux:tooltip>
 
-                                    <flux:button size="sm" variant="ghost" icon="chevron-up" wire:click="move({{ $entry->score_id }}, -1)" @disabled($index === 0) />
-                                    <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="move({{ $entry->score_id }}, 1)" @disabled($index === $entries->count() - 1) />
-                                    <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="toggleScore({{ $entry->score_id }})" />
+                                            <flux:tooltip :content="__('Adjust this score')">
+                                                <flux:button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    icon="adjustments-horizontal"
+                                                    wire:click="editSettings({{ $entry->id }})"
+                                                    x-on:click="openPanel({{ $entry->id }})"
+                                                    class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                />
+                                            </flux:tooltip>
+                                        @endif
+
+                                        {{-- :disabled, never @disabled: a directive inside a component
+                                             tag stops Blade compiling the tag at all. --}}
+                                        <flux:button size="sm" variant="ghost" icon="chevron-up" wire:click="move({{ $entry->id }}, -1)" :disabled="$index === 0" />
+                                        <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="move({{ $entry->id }}, 1)" :disabled="$index === $entries->count() - 1" />
+                                        <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="removeEntry({{ $entry->id }})" />
+                                    </div>
                                 </li>
                             @endforeach
                         </ul>
                     @endif
                 </flux:card>
 
+                {{-- Words the booklet says rather than sings --}}
+                @if($this->editingTextId)
+                    <flux:card class="p-4" wire:key="text-{{ $this->editingTextId }}">
+                        <div class="mb-2 flex items-center justify-between">
+                            <flux:heading size="lg">{{ __('Custom text') }}</flux:heading>
+                            <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="editText(null)" />
+                        </div>
+
+                        <flux:textarea
+                            rows="6"
+                            wire:model.live.debounce.600ms="editingText"
+                            :placeholder="__('Stand. The cantor sings the verses, **all** repeat the antiphon.')"
+                        />
+
+                        <flux:text class="mt-2 text-xs text-zinc-500">
+                            {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote.') }}
+                        </flux:text>
+                    </flux:card>
+                @endif
+
                 {{-- The per-score override panel --}}
                 @if($editingEntry && $editingFormat)
-                    <flux:card class="p-4" wire:key="panel-{{ $editingEntry->score_id }}">
+                    <flux:card class="p-4" wire:key="panel-{{ $editingEntry->id }}">
                         <div class="mb-3 flex items-center justify-between">
                             <flux:heading size="lg">{{ $editingEntry->score?->variationLabel() }}</flux:heading>
                             <div class="flex items-center gap-1">
@@ -179,7 +247,7 @@
 
                         <div class="grid grid-cols-2 gap-x-3 gap-y-2">
                             @foreach(BookletSettingFields::panelFor($editingFormat) as $field)
-                                <div class="flex flex-col gap-0.5" wire:key="field-{{ $editingEntry->score_id }}-{{ $field['key'] }}">
+                                <div class="flex flex-col gap-0.5" wire:key="field-{{ $editingEntry->id }}-{{ $field['key'] }}">
                                     <label class="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
                                         {{ $field['label'] }}
                                         <span
@@ -240,23 +308,29 @@
                                     <div class="text-sm font-medium">{{ $assignment['music_title'] }}</div>
 
                                     @forelse($assignment['scores'] as $score)
-                                        <label
-                                            class="flex cursor-pointer items-center gap-2 py-0.5 pl-2 text-sm"
+                                        @php $isChosen = in_array($score['id'], $chosen, true); @endphp
+                                        <div
+                                            class="flex items-center gap-2 py-0.5 pl-2 text-sm"
                                             wire:key="score-{{ $assignment['id'] }}-{{ $score['id'] }}"
                                         >
-                                            <flux:checkbox
-                                                :checked="in_array($score['id'], $chosen, true)"
-                                                wire:click="toggleScore({{ $score['id'] }})"
-                                                @disabled($score['format_value'] === null)
-                                            />
-                                            <span class="min-w-0 flex-1 truncate">{{ $score['title'] }}</span>
+                                            <flux:tooltip :content="$isChosen ? __('In the booklet — click to take it out') : __('Add to the booklet')">
+                                                <flux:button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    :icon="$isChosen ? 'check-circle' : 'plus'"
+                                                    wire:click="toggleScore({{ $score['id'] }}, {{ $assignment['id'] }})"
+                                                    class="shrink-0 {{ $isChosen ? '!text-green-600 dark:!text-green-400' : '' }}"
+                                                    :disabled="$score['format_value'] === null"
+                                                />
+                                            </flux:tooltip>
+                                            <span class="min-w-0 flex-1 truncate {{ $isChosen ? 'text-zinc-500' : '' }}">{{ $score['title'] }}</span>
                                             <flux:badge size="sm" color="zinc">{{ $score['format'] }}</flux:badge>
                                             @if(!$score['is_own'])
                                                 <flux:tooltip :content="$score['owner_name']">
                                                     <flux:icon name="user" variant="micro" class="shrink-0 text-zinc-400" />
                                                 </flux:tooltip>
                                             @endif
-                                        </label>
+                                        </div>
                                     @empty
                                         <div class="pl-2 text-xs text-zinc-400">{{ __('No scores available') }}</div>
                                     @endforelse

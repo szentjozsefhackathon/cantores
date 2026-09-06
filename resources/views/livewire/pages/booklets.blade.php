@@ -7,12 +7,11 @@
                     <flux:subheading>{{ __('Printable booklets built from your music plans.') }}</flux:subheading>
                 </div>
 
-                <form method="POST" action="{{ route('booklets.store') }}">
-                    @csrf
-                    <flux:button type="submit" variant="primary" icon="plus">
+                <flux:modal.trigger name="new-booklet">
+                    <flux:button variant="primary" icon="plus">
                         {{ __('New Booklet') }}
                     </flux:button>
-                </form>
+                </flux:modal.trigger>
             </div>
 
             <div class="mb-6">
@@ -76,4 +75,56 @@
             @endif
         </flux:card>
     </div>
+
+    {{-- A booklet is the scores of one service, so it starts from that
+         service's plan. --}}
+    <flux:modal name="new-booklet" class="w-full max-w-lg">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">{{ __('New Booklet') }}</flux:heading>
+                <flux:subheading>{{ __('Choose the music plan the booklet is for.') }}</flux:subheading>
+            </div>
+
+            <flux:input
+                type="search"
+                wire:model.live.debounce.400ms="planSearch"
+                icon="magnifying-glass"
+                :placeholder="__('Search celebrations')"
+            />
+
+            <div class="max-h-96 space-y-1 overflow-y-auto">
+                @forelse($this->selectablePlans as $plan)
+                    <button
+                        type="button"
+                        wire:key="plan-{{ $plan->id }}"
+                        wire:click="createFromPlan({{ $plan->id }})"
+                        class="flex w-full items-center justify-between gap-3 rounded-md border border-zinc-200 px-3 py-2 text-left hover:border-blue-500 dark:border-zinc-700"
+                    >
+                        <span class="min-w-0">
+                            <span class="block truncate text-sm font-medium">
+                                {{ $plan->celebration_name ?: __('Untitled plan') }}
+                            </span>
+                            @if($plan->actual_date)
+                                <span class="block text-xs text-zinc-500">
+                                    {{ $plan->actual_date->translatedFormat('Y. F j.') }}
+                                </span>
+                            @endif
+                        </span>
+                        <flux:icon name="chevron-right" variant="micro" class="shrink-0 text-zinc-400" />
+                    </button>
+                @empty
+                    <flux:text class="text-sm text-zinc-500">{{ __('No music plans found.') }}</flux:text>
+                @endforelse
+            </div>
+
+            <div class="flex items-center justify-between gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-700">
+                <flux:button size="sm" variant="ghost" wire:click="createBlank">
+                    {{ __('Start without a plan') }}
+                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
 </div>

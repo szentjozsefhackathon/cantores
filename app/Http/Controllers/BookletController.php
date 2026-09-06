@@ -32,7 +32,7 @@ class BookletController extends Controller
         $booklet = Booklet::create([
             'user_id' => Auth::id(),
             'music_plan_id' => $plan?->getKey(),
-            'title' => $this->titleFor($plan),
+            'title' => Booklet::titleFor($plan),
         ]);
 
         return redirect()->route('booklets.edit', ['booklet' => $booklet->id]);
@@ -45,17 +45,5 @@ class BookletController extends Controller
         $booklet->delete();
 
         return redirect()->route('booklets');
-    }
-
-    private function titleFor(?MusicPlan $plan): string
-    {
-        if (! $plan instanceof MusicPlan) {
-            return __('Booklet');
-        }
-
-        $celebration = $plan->celebration_name;
-        $date = $plan->actual_date?->translatedFormat('Y. F j.');
-
-        return trim(implode(' – ', array_filter([$celebration ?: __('Booklet'), $date])));
     }
 }

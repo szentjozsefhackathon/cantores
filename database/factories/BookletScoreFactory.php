@@ -22,6 +22,18 @@ class BookletScoreFactory extends Factory
             'sequence' => 0,
             'settings_override' => null,
             'start_on_new_page' => false,
+            'show_variation' => false,
         ];
+    }
+
+    /**
+     * A paragraph of instructions rather than a score.
+     */
+    public function text(string $markdown = 'Álljunk fel.'): static
+    {
+        return $this->state(fn (): array => [
+            'score_id' => null,
+            'text' => $markdown,
+        ]);
     }
 }
