@@ -61,9 +61,53 @@ The primary argument is version integrity, not tolerance. In Hungarian church mu
 
 ### Forking a lent part
 
-The table above argues against **re-uploading in place of borrowing**, and that is all it argues. It does not settle whether a performer may fork a part she was lent into her own annotated copy — a different act, with the person doing it holding the sheet legitimately, and one that the paragraph above calls free use in the same breath.
+The table above argues against **re-uploading in place of borrowing**, and that is all it argues. It does not settle whether a performer may fork a part she was lent into her own copy — a different act, done by someone who holds the sheet legitimately, and one that the paragraph above calls free use in the same breath.
 
-That question is open. Today it is closed by implementation rather than by decision: `ScoreDuplicator` copies `user_id` from the source, and `addVariation` authorizes `update` on it, so only an owner can duplicate. Anyone reopening it should decide the rights posture first — a fork duplicates the bytes into a second account, which is what the "one row, one takedown" argument was protecting — and only then the mechanics (a `copied_from_score_id` provenance column, and whether `allow_download` is the right gate, since copying the bytes is a download).
+It is a frequent thing to want, and it is resolved here rather than left to `ScoreDuplicator`'s accidents. The word covers two acts with different frequencies and different consequences, and the design separates them.
+
+**Marking is not editing.** Most of the time the musician does not want a second edition. She wants this edition, on her stand, in her key, with her breath marks and her verse selection. That is a rendering, not a reading of the notes — the layer `settings` and `User::score_settings` already model. A **personal overlay on the borrowed score** covers it: her own transposition, staff size and annotations over the lender's score, stored against her and invisible to everyone else. Nothing is copied, so everything the loan is for survives — the owner's correction still arrives before Sunday, attribution cannot be stripped, revocation still closes it, one file is still one file. Implementing this common case as a copy is what would break the argument the whole private axis rests on: **a loan is a live subscription and a copy is a dead snapshot.**
+
+**Editing the edition is the rare act**, and the only one that can spread a dubious reading. It is allowed, because refusing it does not stop it — the performer exports the PDF, retypes or annotates it elsewhere, and the site has produced an untraceable fork with no provenance at all. This is Decision 1 one level down: blocking selects for the worst available form of the thing. What makes the fork acceptable is not permission but legibility.
+
+#### What a fork carries
+
+A fork takes only what the forker will author. Everything that points outward or holds someone else's bytes stays with the original.
+
+| | Forked | Why |
+|---|---|---|
+| `content`, `format` | Yes | This is the thing she is editing, and the thing she will answer for |
+| `settings` | Yes | Rendering; cannot introduce anyone else's work |
+| `music_id`, `title` | Yes | The fork is another variation of the same music |
+| `score_files` | **No** | The bytes never duplicate into a second account, so *one row, one takedown* holds |
+| `score_urls` | **No** | A link is a claim about where the score comes from; a fork that inherits it makes that claim about a document it has changed |
+| `folders` | **No** | They are the source owner's shelves, not hers |
+| `copied_from_score_id` | Set | The honest version of what inheriting the urls would have faked |
+
+Excluding urls draws the boundary where the code already draws it. `ScoreUrl::booted()` treats a link as material that can carry someone else's work — the reason a link edit re-enters review, exactly as a file upload does. Links belong on the files side of the fork line, not the content side. The harm the exclusion prevents is the credible-looking one: a changed reading wearing the original's citation, *„Kodály, IMSLP"* vouching for three bars Kodály did not write.
+
+Because no bytes move, `allow_download` does not enter into it. Forking is not downloading, and the gate the open question reached for is not needed.
+
+#### Where the dubious edition is actually caught
+
+A fork sitting in one account, used by one choir, is the free-use copy this document already concedes. A bad edition does not spread by existing; it spreads when it acquires an audience. So the controls sit on the fork's outbound edges, not on the act:
+
+- **Provenance is permanent and shown.** A forked score carries an unremovable origin line — *„… kottája alapján"* — beside the `kölcsönben` badge it already knows how to render. The dangerous fork is the anonymous one.
+- **Divergence is inspectable.** While the source is on site and both are typed, a fork can be diffed against what it came from. This is the real answer to *dubious changes*: not preventing them, but letting the person choosing a sheet for the stand see what was changed and by whom.
+- **Publishing a derivative is reviewed as a derivative.** `/ingyenes-kottak` already has a queue; a nomination whose score has a `copied_from_score_id` must reach the reviewer with the source named.
+- **Lending a fork onward is ordinary lending.** It travels under her name with the origin line attached, which is what distinguishes it from the re-upload the whole model exists to avoid.
+
+#### This is the argument for typed source
+
+A fork is only accountable in a text format. Provenance plus a visible diff — the entire defence above — needs source that diffs. A PDF has nothing to fork; copying one is redistribution with extra steps.
+
+So let the capability follow the format instead of apologising for it. **Fork appears on a borrowed score that has typed `content`**; a file-only borrowed score offers what the plan already gives, a score of her own beside it on the same music. The format choice then teaches itself at the moment it matters: typed source is the kind whose corrections reach you, and the kind you can make your own version of. It joins what typed source already buys — browser rendering, per-ratio settings, incipits, cheap storage, no byte-level takedown exposure — with the one that matters here: it is the only format in which a fork stays legible.
+
+#### Mechanics
+
+- `ScoreDuplicator::duplicate()` is a same-owner variation copier and must stay one. The cross-account path is its own method, not a flag: `user_id` from the actor, no files, no urls, no folders, `copied_from_score_id` set, `public_preview` false and no publication, as today.
+- `addVariation()` authorizes `update` on the source, which is what closes forking today. The fork action authorizes `create` on `Score` plus read access through `ShareAccessService` — the same gate the borrowed view already passed.
+- `copied_from_score_id` on `scores`, nullable, FK to `scores.id`, null on delete of the source. Provenance outlives the source's owner deleting it only as far as the row does; the origin line degrades to the stored name.
+- The overlay needs its own store keyed by user and score, since `Score::settings` belongs to the owner. Per-user annotations on a borrowed score are the larger half of this work and the half that should ship first.
 
 The copyright worry belongs to `/ingyenes-kottak`, where an indexable page reaches an open-ended public and a review queue already exists. It is not a reason to constrain the private axis. (Worth a look from someone who does this professionally before it goes in writing on the site.)
 
@@ -114,7 +158,7 @@ The plan's grant carries the set of scores it opens — the owner's, and borrowe
 
 **An exclusion governs what the loan reaches, not what the reader holds.** A ticked-off score still appears for a reader who owns it, kept it from somebody else's loan, or finds it in the free library — through that right, and linked through it, never through this loan, which 404s for it as it should. This reads as a bypass and is not one. The alternative is a lending link that hides a reader's own work from them at their own music stand, on the say-so of a lender who neither intended it nor can see they have done it. What a lender controls is their own material; what a reader may see of their own is not a lender's to close.
 
-What this buys, concretely: the band leader lends the plan, and his flutist — who wants the flute solo with her own articulations — writes her own setting of that music and finds it on his link, beside his, marked as hers, visible to nobody else. Today she cannot fork his score into hers (see *Forking a lent part*, below); she can put her own beside it, which is the half that needed no rights argument.
+What this buys, concretely: the band leader lends the plan, and his flutist — who wants the flute solo with her own articulations — finds his score on his link with her own articulations laid over it, and beside it, if she has written one, her own setting of the same music, marked as hers and visible to nobody else. Both routes are described in *Forking a lent part* above: the overlay for the ordinary case, a source-only fork with its origin line attached when she really means a second reading.
 
 ### Published
 
@@ -276,6 +320,7 @@ Two independent tracks.
 4. **The service list.** A plan showing, per music, every score the viewer may see, each borrowed entry resolved through its loan with last-changed date and expiry. No new selection data; the work is in `ShareAccessService` and the plan view.
 5. **Loan management for plans.** The exclusion set and the screen that edits it. Borrowed scores marked as passed on.
 6. **Ask for access again.** An ended loan offers to notify its owner through the existing notification system. No approval flow, no per-person grants.
+7. **Marking and forking a borrowed score.** The personal overlay first — per-user settings and annotations over a borrowed score, which is the frequent case and the larger half of the work. Then the source-only fork: a cross-account method beside `ScoreDuplicator::duplicate()`, `copied_from_score_id`, the origin line, and the fork action offered only where the borrowed score has typed `content`. The diff against the source and the derivative's path through review follow it.
 
 ### Publication
 
@@ -299,5 +344,7 @@ Two independent tracks.
 | 10 | Re-review triggers on anything that can carry someone else's work | The review exists for copyright, so the trigger is drawn on the same line |
 | 11 | The site lends and borrows, it does not share | The word carries the obligation, which no permission flag can do |
 | 12 | A lending link composes the reader's own axes alongside the loan, and an exclusion closes the loan's route only | One list, four axes, resolved in one place; and what a reader may see of their own work is not a lender's to close |
+| 13 | A borrower marks a borrowed score with a personal overlay rather than a copy | The common case is a rendering, not a second edition, and a copy would trade away the correction that made lending worth doing |
+| 14 | A fork carries source and settings only — never files, urls or folders — and carries its origin permanently | The bytes and the citation are the parts that can misrepresent someone else; what stops a bad edition spreading is that it can be seen for what it is, not that it was forbidden |
 
 Reference: the full design discussion is published at <https://claude.ai/code/artifact/8e6a58ff-a39a-4d60-8ade-6d492977d305>.
