@@ -12,7 +12,7 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white antialiased dark:bg-linear-to-b dark:from-neutral-950 dark:to-neutral-900">
-        <header class="w-full lg:max-w-4xl mx-auto flex items-center justify-between text-sm mb-6">
+        <header class="w-full lg:max-w-4xl mx-auto flex items-center justify-between gap-2 text-sm px-4 py-3 sm:px-6 lg:px-8 mb-6">
             <div class="flex items-center gap-4">
                 {{-- Mobile: icon only --}}
                 <div class="lg:hidden">
@@ -94,53 +94,63 @@
                     @endauth
                 </nav>
         
-                <!-- Mobile hamburger menu (visible on mobile) -->
-                <div class="lg:hidden flex items-center gap-2">
+                {{--
+                    Mobile navigation. The same three destinations as the desktop
+                    nav, but the labels collapse to their icons below `sm` so the
+                    row still fits on a narrow phone; the label stays in the
+                    markup for screen readers.
+                --}}
+                <nav class="lg:hidden flex items-center gap-1 sm:gap-3">
                     @auth
                         <a href="{{ url('/dashboard') }}">
-                            <flux:button variant="primary" icon="home" size="sm">Irányítópult</flux:button>
+                            <flux:button variant="primary" icon="home" size="sm" class="max-sm:px-2!">
+                                <span class="max-sm:sr-only">Irányítópult</span>
+                            </flux:button>
                         </a>
                     @endauth
-                    <a href="{{ route('music-database') }}" class="text-accent hover:underline font-medium text-sm">
-                        <flux:icon name="circle-stack" class="inline" variant="mini"></flux:icon>
-                        Énektár
+                    <a href="{{ route('music-database') }}" class="inline-flex items-center gap-1 p-1 text-accent hover:underline font-medium text-sm">
+                        <flux:icon name="circle-stack" variant="mini"></flux:icon>
+                        <span class="max-sm:sr-only">Énektár</span>
                     </a>
-                    <a href="{{ route('music-plans') }}" class="text-accent hover:underline font-medium text-sm">
-                        <flux:icon name="list-music" class="inline" variant="mini"></flux:icon>
-                        Énekrendek
-                    </a>
-                    <a href="{{ route('public-scores') }}" class="text-accent hover:underline font-medium text-sm">
-                        <flux:icon name="arrow-down-tray" class="inline" variant="mini"></flux:icon>
-                        Ingyenes kották
+                    <a href="{{ route('music-plans') }}" class="inline-flex items-center gap-1 p-1 text-accent hover:underline font-medium text-sm">
+                        <flux:icon name="list-music" variant="mini"></flux:icon>
+                        <span class="max-sm:sr-only">Énekrendek</span>
                     </a>
                     <flux:dropdown align="end">
-                        <flux:button variant="ghost" square icon="bars-3" aria-label="Menu" />
+                        <flux:button variant="ghost" size="sm" icon="arrow-down-tray" icon-trailing="chevron-down" class="text-accent! font-medium text-sm! max-sm:px-1.5! max-sm:gap-0!">
+                            <span class="max-sm:sr-only">Kottatár</span>
+                        </flux:button>
                         <flux:menu>
-                            <flux:menu.item href="{{ route('score.preview') }}" icon="musical-note">
-                                Kottaszerkesztő
+                            <flux:menu.item href="{{ route('public-scores') }}" icon="arrow-down-tray">
+                                Ingyenes kották
                             </flux:menu.item>
+                            @guest
+                                <flux:menu.item href="{{ route('score.preview') }}" icon="musical-note">
+                                    Kottaszerkesztő
+                                </flux:menu.item>
+                            @endguest
+                        </flux:menu>
+                    </flux:dropdown>
+                    <flux:dropdown align="end">
+                        <flux:button variant="ghost" size="sm" square icon="bars-3" aria-label="Menü" />
+                        <flux:menu>
                             <flux:menu.item href="{{ url('/about') }}" icon="information-circle">
                                 Rólunk
                             </flux:menu.item>
-                            @auth
-                                <flux:menu.item href="{{ url('/dashboard') }}" icon="home">
-                                    Irányítópult
-                                </flux:menu.item>
-                            @else
+                            @guest
                                 <flux:menu.item href="{{ route('login') }}" icon="log-in">
                                     {{ __('Log in') }}
                                 </flux:menu.item>
-                            @endauth
+                            @endguest
                             <flux:menu.separator />
                             <flux:menu.radio.group x-model="$flux.appearance">
                                 <flux:menu.radio value="light"><flux:icon name="sun" class="inline" variant="mini"></flux:icon></flux:menu.radio>
                                 <flux:menu.radio value="dark"><flux:icon name="moon" class="inline" variant="mini"></flux:icon></flux:menu.radio>
                                 <flux:menu.radio value="system"><flux:icon name="computer-desktop" class="inline" variant="mini"></flux:icon></flux:menu.radio>
                             </flux:menu.radio.group>
-                            <flux:menu.separator />
                         </flux:menu>
                     </flux:dropdown>
-                </div>
+                </nav>
             @endif
         </header>
         {{ $slot }}
