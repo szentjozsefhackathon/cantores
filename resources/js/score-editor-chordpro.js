@@ -235,7 +235,8 @@ p.artist{color:#555;margin:0 0 1.5em;}
 .paragraph-header{font-weight:bold;font-style:italic;color:#555;margin-bottom:0.4rem;}
 .row{display:flex;flex-wrap:wrap;margin-bottom:0.25rem;align-items:flex-end;}
 .column{display:flex;flex-direction:column;margin-right:0.1em;}
-.chord{font-weight:bold;color:#1d4ed8;min-height:1.3em;white-space:nowrap;}
+.chord{font-weight:bold;color:#1d4ed8;white-space:nowrap;}
+.row:has(.chord:not(:empty)) .chord{min-height:1.3em;}
 .lyrics{white-space:pre;}
 </style>
 </head>

@@ -341,7 +341,11 @@ select:focus[data-flux-control] {
 .chordpro-preview .paragraph-header { font-weight: bold; font-style: italic; color: #666; margin-bottom: 0.4rem; }
 .chordpro-preview .row { display: flex; flex-wrap: wrap; margin-bottom: 0.25rem; align-items: flex-end; }
 .chordpro-preview .column { display: flex; flex-direction: column; margin-right: 0.1em; }
-.chordpro-preview .chord { font-weight: bold; color: #1d4ed8; min-height: 1.4em; white-space: nowrap; }
+.chordpro-preview .chord { font-weight: bold; color: #1d4ed8; white-space: nowrap; }
+/* Only a row that carries a chord reserves the line above the lyrics; chordsheetjs
+   emits an empty chord div for every syllable, so an unconditional min-height puts a
+   blank line over every line of a lyrics-only sheet. */
+.chordpro-preview .row:has(.chord:not(:empty)) .chord { min-height: 1.4em; }
 .chordpro-preview .lyrics { white-space: pre; }
 .dark .chordpro-preview p.artist { color: #9ca3af; }
 .dark .chordpro-preview .paragraph-header { color: #9ca3af; }
