@@ -12,6 +12,7 @@ use App\Services\MusicPlanScoreListService;
 use App\Services\PdfPageRasterizer;
 use App\Services\ScoreFileIncipitCropper;
 use App\Services\ScoreFileStorage;
+use App\Services\ScoreImageCompressor;
 use App\Services\ScorePageBander;
 use App\Services\ScoreStripCutter;
 use Illuminate\Support\Facades\Storage;
@@ -89,6 +90,7 @@ function renderWithBanding(ScoreFile $scoreFile): void
         app(ScoreFileIncipitCropper::class),
         app(ScorePageBander::class),
         app(ScoreStripCutter::class),
+        app(ScoreImageCompressor::class),
     );
 }
 
@@ -112,6 +114,32 @@ it('cuts a rendered file into systems and stores them', function () {
             ->and(Storage::disk('private')->exists(
                 $scoreFile->stripPath($strip['page'], $strip['index'])
             ))->toBeTrue();
+    }
+});
+
+// Strips are the densest thing stored per page and are written whether or not
+// anyone puts the score in a booklet, so they are stored a byte a pixel rather
+// than three. The page images and the incipit go the same way.
+it('stores every rendered image as a palette, not as 24-bit colour', function () {
+    Storage::fake('private');
+
+    $scoreFile = ScoreFile::factory()->create();
+    app(ScoreFileStorage::class)->put($scoreFile->path, 'source bytes');
+
+    renderWithBanding($scoreFile);
+
+    $scoreFile->refresh();
+    $storage = app(ScoreFileStorage::class);
+
+    $paths = [$scoreFile->pagePath(1), $scoreFile->thumbPath()];
+    foreach ($scoreFile->stripList() as $strip) {
+        $paths[] = $scoreFile->stripPath($strip['page'], $strip['index']);
+    }
+
+    foreach ($paths as $path) {
+        $image = imagecreatefromstring($storage->get($path));
+
+        expect(imageistruecolor($image))->toBeFalse("{$path} is still truecolor");
     }
 });
 
@@ -160,6 +188,7 @@ it('still renders a file it cannot cut up', function () {
         app(ScoreFileIncipitCropper::class),
         app(ScorePageBander::class),
         app(ScoreStripCutter::class),
+        app(ScoreImageCompressor::class),
     );
 
     $scoreFile->refresh();

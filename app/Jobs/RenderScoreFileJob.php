@@ -8,6 +8,7 @@ use App\Services\MuseScoreRenderer;
 use App\Services\PdfPageRasterizer;
 use App\Services\ScoreFileIncipitCropper;
 use App\Services\ScoreFileStorage;
+use App\Services\ScoreImageCompressor;
 use App\Services\ScorePageBander;
 use App\Services\ScoreStripCutter;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -47,10 +48,11 @@ class RenderScoreFileJob implements ShouldQueue
         ScoreFileIncipitCropper $cropper,
         ScorePageBander $bander,
         ScoreStripCutter $cutter,
+        ScoreImageCompressor $compressor,
     ): void {
-        // Crypt is not streaming and base64 inflates by a third, so the whole
-        // file plus its ciphertext are resident at once. The 25 MB upload cap
-        // bounds that; the page images that follow are far smaller.
+        // Nothing here streams: the whole file and its ciphertext are resident
+        // at once, and the rasterised pages after them. The 25 MB upload cap
+        // bounds the first two; the pages are far smaller.
         ini_set('memory_limit', '512M');
 
         if (! $this->scoreFile->isRenderable()) {
@@ -82,15 +84,15 @@ class RenderScoreFileJob implements ShouldQueue
 
             $pages = $rasterizer->rasterize($pdf);
             foreach ($pages as $index => $page) {
-                $storage->put($this->scoreFile->pagePath($index + 1), $page);
+                $storage->put($this->scoreFile->pagePath($index + 1), $compressor->compress($page));
             }
 
             $storage->put(
                 $this->scoreFile->thumbPath(),
-                $cropper->crop($rasterizer->rasterizePage($pdf, 1, self::INCIPIT_DPI)),
+                $compressor->compress($cropper->crop($rasterizer->rasterizePage($pdf, 1, self::INCIPIT_DPI))),
             );
 
-            $strips = $this->cutStrips($pdf, $pages, $storage, $rasterizer, $bander, $cutter);
+            $strips = $this->cutStrips($pdf, $pages, $storage, $rasterizer, $bander, $cutter, $compressor);
 
             $this->scoreFile->update([
                 'render_status' => ScoreFileRenderStatus::Ready,
@@ -145,6 +147,7 @@ class RenderScoreFileJob implements ShouldQueue
         PdfPageRasterizer $rasterizer,
         ScorePageBander $bander,
         ScoreStripCutter $cutter,
+        ScoreImageCompressor $compressor,
     ): array {
         try {
             $analyses = array_map(fn (string $page): array => $bander->analyse($page), $pages);
@@ -175,7 +178,7 @@ class RenderScoreFileJob implements ShouldQueue
 
                 foreach ($cutter->cut($dense, $window, $analysis['bands']) as $offset => $strip) {
                     $number = $offset + 1;
-                    $storage->put($this->scoreFile->stripPath($page, $number), $strip['png']);
+                    $storage->put($this->scoreFile->stripPath($page, $number), $compressor->compress($strip['png']));
 
                     $strips[] = [
                         'page' => $page,
