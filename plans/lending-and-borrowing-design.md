@@ -59,6 +59,12 @@ Blocking does not stop redistribution, it selects the worst form of it. When Ger
 
 The primary argument is version integrity, not tolerance. In Hungarian church music, liturgical performance and a musician's own copy are free use; what no licence settles is whether the sheet on the stand is the corrected one. **A loan is a live subscription and a copy is a dead snapshot, and only one can carry a correction.** Márta attaches a flute part on Thursday and Gergely's flautist has it on Sunday.
 
+### Forking a lent part
+
+The table above argues against **re-uploading in place of borrowing**, and that is all it argues. It does not settle whether a performer may fork a part she was lent into her own annotated copy — a different act, with the person doing it holding the sheet legitimately, and one that the paragraph above calls free use in the same breath.
+
+That question is open. Today it is closed by implementation rather than by decision: `ScoreDuplicator` copies `user_id` from the source, and `addVariation` authorizes `update` on it, so only an owner can duplicate. Anyone reopening it should decide the rights posture first — a fork duplicates the bytes into a second account, which is what the "one row, one takedown" argument was protecting — and only then the mechanics (a `copied_from_score_id` provenance column, and whether `allow_download` is the right gate, since copying the bytes is a download).
+
 The copyright worry belongs to `/ingyenes-kottak`, where an indexable page reaches an open-ended public and a review queue already exists. It is not a reason to constrain the private axis. (Worth a look from someone who does this professionally before it goes in writing on the site.)
 
 ### `allow_reshare` is not adopted
@@ -96,7 +102,9 @@ A plan holds musics, not scores. Nobody edits anyone else's plan and nobody alte
 
 ### Private
 
-For each music in a slot, the owner sees every score they have a right to — their own, ones they kept, and the public library. Nothing is chosen and nothing is stored. **The service list is this view**: a plan opened before a service, each borrowed entry resolved through its loan and carrying the score's last-changed date and any expiry. A list of live references rather than a folder of downloaded PDFs; a tablet on a music stand is ordinary now, and PDF, ChordPro and HTML remain export paths.
+For each music in a slot, the reader sees every score they have a right to — their own, ones they kept, the public library, and, when they arrived on a lending link, whatever that link reaches. Nothing is chosen and nothing is stored. **The service list is this view**: a plan opened before a service, each borrowed entry resolved through its loan and carrying the score's last-changed date and any expiry. A list of live references rather than a folder of downloaded PDFs; a tablet on a music stand is ordinary now, and PDF, ChordPro and HTML remain export paths.
+
+The four axes are composed in one place, `MusicPlanScoreListService::forViewer()`, for every way a plan can be read. A lending link is not a second list with its own rules; it is this list with the open loan supplied. The composition has to be central because *which* token an entry links back through depends on how the reader arrived: the link they are on outranks a loan they kept of the same score, so a reader stays inside the link they were given.
 
 ### Lent by link
 
@@ -104,9 +112,13 @@ The plan's grant carries the set of scores it opens — the owner's, and borrowe
 
 **Everything is included by default, and a score added later is included too.** The failure modes are not symmetric: a musician at a service who cannot open a score because of a forgotten tick is worse than one who sees a half-finished arrangement. Stored as **exclusions** on the grant, so an empty set means everything and nothing is written in the common case. The management screen marks what has joined since it was last opened.
 
+**An exclusion governs what the loan reaches, not what the reader holds.** A ticked-off score still appears for a reader who owns it, kept it from somebody else's loan, or finds it in the free library — through that right, and linked through it, never through this loan, which 404s for it as it should. This reads as a bypass and is not one. The alternative is a lending link that hides a reader's own work from them at their own music stand, on the say-so of a lender who neither intended it nor can see they have done it. What a lender controls is their own material; what a reader may see of their own is not a lender's to close.
+
+What this buys, concretely: the band leader lends the plan, and his flutist — who wants the flute solo with her own articulations — writes her own setting of that music and finds it on his link, beside his, marked as hers, visible to nobody else. Today she cannot fork his score into hers (see *Forking a lent part*, below); she can put her own beside it, which is the half that needed no rights argument.
+
 ### Published
 
-A published plan is indexable and open to strangers, so it carries only the plan owner's scores. A borrowed one appears there for a reader who independently holds it and is invisible to everyone else — as private musics and private parts already behave.
+A published plan is indexable and open to strangers, so it carries only the plan owner's scores. A borrowed one appears there for a reader who independently holds it and is invisible to everyone else — as private musics and private parts already behave. The same is true of a lent plan: what the reader brings to it is theirs alone, and the lender cannot see that it is there.
 
 All cases resolve in `ShareAccessService::scoresFor()`.
 
@@ -286,5 +298,6 @@ Two independent tracks.
 | 9 | Versioning is publication-only | The public needs a fixed thing to have approved; a borrower needs the opposite |
 | 10 | Re-review triggers on anything that can carry someone else's work | The review exists for copyright, so the trigger is drawn on the same line |
 | 11 | The site lends and borrows, it does not share | The word carries the obligation, which no permission flag can do |
+| 12 | A lending link composes the reader's own axes alongside the loan, and an exclusion closes the loan's route only | One list, four axes, resolved in one place; and what a reader may see of their own work is not a lender's to close |
 
 Reference: the full design discussion is published at <https://claude.ai/code/artifact/8e6a58ff-a39a-4d60-8ade-6d492977d305>.

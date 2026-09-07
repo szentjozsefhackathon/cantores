@@ -177,8 +177,8 @@
     <div class="border-b border-gray-200 dark:border-gray-700 px-4 py-3 space-y-3">
         @foreach($loanScores as $loanScore)
         <div class="space-y-1">
-            @if(!empty($loanScore['loan_url']))
-            <a href="{{ $loanScore['loan_url'] }}"
+            @if(!empty($loanScore['url']))
+            <a href="{{ $loanScore['url'] }}"
                target="_blank"
                rel="noopener noreferrer"
                class="relative z-10 inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline">
@@ -193,8 +193,25 @@
             </span>
             @endif
 
-            @if(!empty($loanScore['is_passed_on']) && !empty($loanScore['owner_name']))
-            {{-- Attribution is what lending buys over re-uploading, so it is not removable. --}}
+            @if(!empty($loanScore['is_own']))
+            {{--
+                A reader's own setting of a music in somebody else's plan sits in this
+                list beside the one they were lent. Which is which is the whole point of
+                it being here, so the one that is theirs says so.
+            --}}
+            <div>
+                <flux:badge size="sm" color="green" icon="user">{{ __('Your score') }}</flux:badge>
+            </div>
+            @endif
+
+            @if(empty($loanScore['is_own']) && empty($loanScore['is_plan_owners']) && !empty($loanScore['owner_name']))
+            {{--
+                Attribution is what lending buys over re-uploading, so it is not removable.
+
+                Not on every line, though: the page already names whose plan this is, and
+                the reader knows their own work. What needs saying is the third case — a
+                score that is neither, passed on from someone else.
+            --}}
             <div>
                 <flux:badge size="sm" color="amber" icon="arrow-path-rounded-square">
                     {{ __('On loan · :name\'s score', ['name' => $loanScore['owner_name']]) }}

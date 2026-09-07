@@ -2,8 +2,13 @@
 
 use App\Livewire\Pages\FolderView;
 use App\Livewire\Pages\LoanManager;
+use App\Livewire\Pages\MusicPlanLoanView;
 use App\Models\Folder;
 use App\Models\Loan;
+use App\Models\Music;
+use App\Models\MusicPlan;
+use App\Models\MusicPlanSlotAssignment;
+use App\Models\MusicPlanSlotPlan;
 use App\Models\Score;
 use App\Models\User;
 use App\Services\LoanAccessService;
@@ -114,4 +119,53 @@ it('has no management screen for a single score, which has nothing to exclude', 
     actingAs($owner);
 
     Livewire::test(LoanManager::class, ['loan' => $loan])->assertNotFound();
+});
+
+/**
+ * An exclusion governs what the loan reaches, not what the reader already holds.
+ *
+ * Ticking a score off a lent plan closes the loan's route to it and nothing else.
+ * A reader who owns it, kept it from somebody else's loan, or finds it in the free
+ * library still sees it — through that right, not through this link. The
+ * alternative is a lending link that hides a reader's own work from them, which no
+ * lender intended and none can see they have done.
+ */
+it('leaves an excluded score visible to a reader who holds it another way', function () {
+    $owner = User::factory()->create();
+
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
+    $music = Music::factory()->create(['user_id' => $owner->id]);
+    $slotPlan = MusicPlanSlotPlan::factory()->create(['music_plan_id' => $plan->id]);
+    MusicPlanSlotAssignment::factory()->create([
+        'music_plan_slot_plan_id' => $slotPlan->id,
+        'music_id' => $music->id,
+    ]);
+
+    $score = Score::factory()->create([
+        'user_id' => $owner->id,
+        'music_id' => $music->id,
+        'title' => 'Kihagyott, de kozzetett',
+    ]);
+    \App\Models\ScorePublication::factory()->of($score)->approved()->create();
+
+    $loan = Loan::factory()->of($plan)->create();
+
+    actingAs($owner);
+
+    Livewire::test(LoanManager::class, ['loan' => $loan])
+        ->call('toggle', $score->id);
+
+    auth()->logout();
+
+    // The exclusion did what it says: the loan no longer reaches it.
+    expect(app(LoanAccessService::class)->scoreIdsFor($loan->fresh()))->toBe([]);
+
+    Livewire::test(\App\Livewire\Pages\ScoreView::class, ['token' => $loan->token, 'score' => $score])
+        ->assertNotFound();
+
+    // And yet a reader still sees it, by the right they hold independently.
+    Livewire::test(MusicPlanLoanView::class, ['token' => $loan->token])
+        ->assertSee('Kihagyott, de kozzetett')
+        ->assertSee($score->publicUrl())
+        ->assertDontSee($score->loanUrl($loan->token));
 });

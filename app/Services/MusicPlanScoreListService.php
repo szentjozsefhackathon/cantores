@@ -6,6 +6,7 @@ use App\Models\Loan;
 use App\Models\MusicPlan;
 use App\Models\ReceivedLoan;
 use App\Models\Score;
+use App\Models\ScoreUrl;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -21,10 +22,15 @@ use Illuminate\Support\Collection;
  * PublicScoreAccessService for the library, and ownership answers for itself.
  * Composing them is a reading concern, not a widening of either.
  *
- * The upshot is that a published plan needs no special case. Each viewer sees
- * what they hold: the library, their own scores, and the ones they kept. A
- * borrowed score appears for a reader who independently holds it and is invisible
- * to everyone else, exactly as private musics and private parts already behave.
+ * The upshot is that neither a published plan nor a lent one needs a special
+ * case. Each viewer sees what they hold: the library, their own scores, the ones
+ * they kept, and — on a lending link — whatever that link reaches. A borrowed
+ * score appears for a reader who independently holds it and is invisible to
+ * everyone else, exactly as private musics and private parts already behave.
+ *
+ * The lending link is why the open loan is an argument here rather than a union
+ * performed by the caller: which token a score is read through depends on how the
+ * reader arrived, and that decision belongs beside the other three.
  *
  * Entries are live references rather than downloaded PDFs, so a correction the
  * lender makes on Thursday is on the stand on Sunday.
@@ -36,9 +42,14 @@ class MusicPlanScoreListService
     /**
      * Every score this viewer may see for the plan's musics, grouped by music id.
      *
+     * `$openLoan` is the lending link the reader arrived on, when they arrived on
+     * one. It widens the list by what that link reaches and decides which token
+     * those entries are read through; everything else about the list is the same
+     * on a lending link as it is on a published plan.
+     *
      * @return Collection<int, Collection<int, array<string, mixed>>>
      */
-    public function forViewer(MusicPlan $plan, ?User $viewer): Collection
+    public function forViewer(MusicPlan $plan, ?User $viewer, ?Loan $openLoan = null): Collection
     {
         $musicIds = $plan->assignedMusicIds();
 
@@ -46,17 +57,36 @@ class MusicPlanScoreListService
             return collect();
         }
 
-        $scores = Score::query()->whereIn('music_id', $musicIds);
-        $this->scopeToViewer($scores, $viewer);
+        $openLoan = $this->loanLending($plan, $openLoan);
+        $openLoanScoreIds = $openLoan instanceof Loan ? $this->loans->scoreIdsFor($openLoan) : [];
 
-        $loansByScoreId = $viewer instanceof User ? $this->keptLoansByScoreId($viewer) : collect();
+        $scores = Score::query()->whereIn('music_id', $musicIds);
+        $this->scopeToViewer($scores, $viewer, $openLoanScoreIds);
+
+        $loansByScoreId = $this->loansByScoreId($viewer, $openLoan, $openLoanScoreIds);
 
         return $scores
             ->with(['user', 'urls', 'publication', 'files'])
             ->orderBy('title')
             ->get()
-            ->map(fn (Score $score): array => $this->describe($score, $viewer, $loansByScoreId))
+            ->map(fn (Score $score): array => $this->describe($score, $viewer, $plan, $loansByScoreId))
             ->groupBy('music_id');
+    }
+
+    /**
+     * The given loan, but only when it is really a loan of this plan.
+     *
+     * The loan arrives resolved from a URL token, so that it lends the plan being
+     * read is checked here rather than assumed: a token for somebody else's plan
+     * must widen nothing.
+     */
+    private function loanLending(MusicPlan $plan, ?Loan $openLoan): ?Loan
+    {
+        if (! $openLoan instanceof Loan) {
+            return null;
+        }
+
+        return $openLoan->lendable?->is($plan) === true ? $openLoan : null;
     }
 
     /**
@@ -64,9 +94,10 @@ class MusicPlanScoreListService
      *
      * The booklet editor needs what forViewer() deliberately withholds — the
      * content itself — because it re-engraves every score in the browser at the
-     * booklet's page size. It is the same three access axes and the same query,
-     * so nothing is widened: a score reaches a booklet exactly when it would
-     * reach the service list.
+     * booklet's page size. It is the same access axes and the same query, so
+     * nothing is widened: a score reaches a booklet exactly when it would reach
+     * the service list. A booklet is built by its owner from their own plan, so
+     * there is no link to have arrived on and no loan to supply here.
      *
      * Resolved per request, like everything else here, which is what makes a
      * recalled loan drop out of the booklet rather than leaving a copy behind.
@@ -119,22 +150,24 @@ class MusicPlanScoreListService
 
     /**
      * Narrow a score query to what this viewer holds: the public library, their
-     * own scores, and the ones they kept out of a live loan.
+     * own scores, the ones they kept out of a live loan, and the ones the lending
+     * link they are reading reaches.
      *
      * @param  Builder<Score>  $query
+     * @param  list<int>  $openLoanScoreIds
      */
-    private function scopeToViewer(Builder $query, ?User $viewer): void
+    private function scopeToViewer(Builder $query, ?User $viewer, array $openLoanScoreIds = []): void
     {
         $keptIds = $viewer instanceof User ? $this->loans->keptScoreIds($viewer) : [];
         $viewerId = $viewer?->getKey();
 
-        if ($viewerId === null && $keptIds === []) {
+        if ($viewerId === null && $keptIds === [] && $openLoanScoreIds === []) {
             $query->published();
 
             return;
         }
 
-        $query->where(function (Builder $inner) use ($viewerId, $keptIds): void {
+        $query->where(function (Builder $inner) use ($viewerId, $keptIds, $openLoanScoreIds): void {
             $inner->published();
 
             if ($viewerId !== null) {
@@ -144,14 +177,22 @@ class MusicPlanScoreListService
             if ($keptIds !== []) {
                 $inner->orWhereIn('id', $keptIds);
             }
+
+            if ($openLoanScoreIds !== []) {
+                $inner->orWhereIn('id', $openLoanScoreIds);
+            }
         });
     }
 
     /**
+     * Dates are rendered here rather than handed on as instants. The reader of
+     * this list is a person at a music stand, and one of the two views that
+     * renders it is a Livewire component, whose properties these entries become.
+     *
      * @param  Collection<int, Loan>  $loansByScoreId
      * @return array<string, mixed>
      */
-    private function describe(Score $score, ?User $viewer, Collection $loansByScoreId): array
+    private function describe(Score $score, ?User $viewer, MusicPlan $plan, Collection $loansByScoreId): array
     {
         $isOwn = $viewer instanceof User && $score->user_id === $viewer->getKey();
         $loan = $loansByScoreId->get($score->getKey());
@@ -165,17 +206,21 @@ class MusicPlanScoreListService
             // Whether a booklet can draw it: either it has a source to
             // re-engrave, or it has been cut into systems that can be flowed.
             'in_booklets' => $score->format !== null || ($score->primaryFile()?->stripList() ?? []) !== [],
+            'owner_id' => $score->user_id,
             'owner_name' => $score->user?->displayName,
             'is_own' => $isOwn,
             'is_borrowed' => ! $isOwn && $loan instanceof Loan,
+            // Whose plan this is, so a view that already names the plan's owner
+            // can attribute the entries that are somebody else's without
+            // repeating them on every line.
+            'is_plan_owners' => $score->user_id === $plan->user_id,
             // Read before a service, so what matters is whether the arrangement has
             // moved since it was last looked at, and when it stops opening.
-            'changed_at' => $score->updated_at,
-            'expires_at' => $loan?->expires_at,
+            'changed_at' => $score->updated_at?->translatedFormat('Y-m-d'),
+            'expires_at' => $loan?->expires_at?->translatedFormat('Y-m-d'),
             'url' => $this->urlFor($score, $viewer, $loan),
-            'incipit_url' => $score->hasIncipit() && $loan instanceof Loan
-                ? $score->loanIncipitUrl($loan->token)
-                : null,
+            'incipit_url' => $this->incipitUrlFor($score, $viewer, $loan),
+            'urls' => $this->externalUrlsFor($score),
         ];
     }
 
@@ -194,6 +239,70 @@ class MusicPlanScoreListService
         }
 
         return $score->isPublished() ? $score->publicUrl() : null;
+    }
+
+    /**
+     * The incipit, from wherever this viewer is entitled to read the score — the
+     * same four cases as urlFor(), because a list that links a score and cannot
+     * draw it comes out looking broken rather than restricted.
+     */
+    private function incipitUrlFor(Score $score, ?User $viewer, ?Loan $loan): ?string
+    {
+        if (! $score->hasIncipit()) {
+            return null;
+        }
+
+        if ($viewer instanceof User && $score->user_id === $viewer->getKey()) {
+            return $score->incipitUrl();
+        }
+
+        if ($loan instanceof Loan) {
+            return $score->loanIncipitUrl($loan->token);
+        }
+
+        return $score->isPublished() ? $score->publicIncipitUrl() : null;
+    }
+
+    /**
+     * The score's own links out — a publisher's page, a recording — as a listing
+     * renders them. Nothing here is gated: a link is not the score.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function externalUrlsFor(Score $score): array
+    {
+        return $score->urls->map(fn (ScoreUrl $url): array => [
+            'url' => $url->url,
+            'label' => $url->label?->label() ?? $url->url,
+            'icon' => $url->label?->icon() ?? 'link',
+            'color' => $url->label?->color() ?? 'text-gray-500',
+            'host' => preg_replace('/^www\./', '', parse_url($url->url, PHP_URL_HOST) ?? $url->url),
+            'comment' => $url->comment,
+        ])->all();
+    }
+
+    /**
+     * The loan each score is read through, keyed by score id.
+     *
+     * The lending link the reader is actually on is laid over the loans they kept,
+     * so an entry reached both ways links back into the link they arrived on and
+     * carries that link's expiry. Reading resolves through the loan opened; this
+     * is that rule, applied to a list rather than to one score.
+     *
+     * @param  list<int>  $openLoanScoreIds
+     * @return Collection<int, Loan>
+     */
+    private function loansByScoreId(?User $viewer, ?Loan $openLoan, array $openLoanScoreIds): Collection
+    {
+        $byScoreId = $viewer instanceof User ? $this->keptLoansByScoreId($viewer) : collect();
+
+        if ($openLoan instanceof Loan) {
+            foreach ($openLoanScoreIds as $scoreId) {
+                $byScoreId->put($scoreId, $openLoan);
+            }
+        }
+
+        return $byScoreId;
     }
 
     /**

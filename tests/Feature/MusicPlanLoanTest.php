@@ -267,3 +267,91 @@ it('non-owner cannot generate a plan secret link', function () {
         ->call('lendByLink')
         ->assertForbidden();
 });
+
+/**
+ * The flutist's case: she opens the band leader's link, finds her part in it, and
+ * writes her own setting of the same music. It belongs on the link she was given.
+ */
+it('shows the reader their own score for a music in the lent plan', function () {
+    $owner = User::factory()->create();
+    $flutist = User::factory()->create();
+
+    [$plan, $music] = planWithScore($owner, ['title' => 'Kantor kottaja']);
+    $ownScore = Score::factory()->create([
+        'user_id' => $flutist->id,
+        'music_id' => $music->id,
+        'title' => 'Fuvolaszolam',
+    ]);
+
+    $loan = Loan::factory()->of($plan)->create();
+
+    actingAs($flutist);
+
+    Livewire::test(MusicPlanLoanView::class, ['token' => $loan->token])
+        ->assertSee('Kantor kottaja')
+        ->assertSee('Fuvolaszolam')
+        // Hers opens in her own editor, not through somebody else's link.
+        ->assertSee(route('scores.edit', ['score' => $ownScore->id]));
+});
+
+it('keeps the reader own score to themselves', function () {
+    $owner = User::factory()->create();
+    $flutist = User::factory()->create();
+    $stranger = User::factory()->create();
+
+    [$plan, $music] = planWithScore($owner);
+    Score::factory()->create([
+        'user_id' => $flutist->id,
+        'music_id' => $music->id,
+        'title' => 'Fuvolaszolam',
+    ]);
+
+    $loan = Loan::factory()->of($plan)->create();
+
+    Livewire::test(MusicPlanLoanView::class, ['token' => $loan->token])
+        ->assertDontSee('Fuvolaszolam');
+
+    actingAs($stranger);
+
+    Livewire::test(MusicPlanLoanView::class, ['token' => $loan->token])
+        ->assertDontSee('Fuvolaszolam');
+});
+
+it('marks which score on the link is the reader own', function () {
+    $owner = User::factory()->create();
+    $flutist = User::factory()->create();
+
+    [$plan, $music] = planWithScore($owner);
+    Score::factory()->create(['user_id' => $flutist->id, 'music_id' => $music->id]);
+
+    $loan = Loan::factory()->of($plan)->create();
+
+    actingAs($flutist);
+
+    Livewire::test(MusicPlanLoanView::class, ['token' => $loan->token])
+        ->assertSee(__('Your score'))
+        // The page header already says whose plan it is, so his own scores are
+        // not attributed line by line.
+        ->assertDontSee(__("On loan · :name's score", ['name' => $owner->displayName]));
+});
+
+it('shows a published library score on the lending link', function () {
+    $owner = User::factory()->create();
+    $stranger = User::factory()->create();
+
+    [$plan, $music] = planWithScore($owner);
+    $published = Score::factory()->create([
+        'user_id' => $stranger->id,
+        'music_id' => $music->id,
+        'title' => 'Szabad kotta',
+    ]);
+    \App\Models\ScorePublication::factory()->of($published)->approved()->create();
+
+    $loan = Loan::factory()->of($plan)->create();
+
+    Livewire::test(MusicPlanLoanView::class, ['token' => $loan->token])
+        ->assertSee('Szabad kotta')
+        // Read from the library, not through a loan that never reached it.
+        ->assertSee($published->publicUrl())
+        ->assertDontSee($published->loanUrl($loan->token));
+});

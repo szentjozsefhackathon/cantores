@@ -329,6 +329,17 @@ Az énekrend alján egy szövegmezőbe írhatsz **privát megjegyzéseket** (pl.
 
 > **Adatvédelem:** A közzétett énekrendeken csak a beceneved jelenik meg, valódi neved nem. Ha szeretnéd, hogy a valódi neved is megjelenjen, ezt a Beállításokban engedélyezheted – de ekkor is csak bejelentkezett felhasználók láthatják.
 
+#### Titkos link (kölcsönzés)
+
+A közzététel nyilvános; ha csak a saját zenészeidnek szeretnéd megmutatni az énekrendet, készíts hozzá **titkos linket**. Aki megkapja a linket, megnyithatja az énekrendet és a benne szereplő kottáidat akkor is, ha nincs fiókja a Cantores.hu-n.
+
+- **Bejelentkezett olvasó a saját kottáit is látja** az énekrend énekei mellett, „Saját kottád" jelöléssel. Ezt rajta kívül **senki más nem látja – te sem**. Így például a fuvolistád a saját, artikulációkkal kiegészített szólamát ugyanazon a linken találja meg, amit tőled kapott, a te kottád mellett.
+- Ugyanígy megjelennek az **Ingyenes kották** közt szabadon elérhető kották is az adott énekhez.
+- A linket **bármikor visszavonhatod**, és ezzel a rajta keresztül elért kották is bezárulnak mindenki előtt.
+- A **Kölcsönzések** menüpontban kiveheted egy-egy kottádat a kölcsönzésből. Ezt a kottát a link többé nem nyitja meg. Ha viszont az adott kotta amúgy is szabadon elérhető, vagy az olvasó sajátja, ő továbbra is látja – de nem a te linkeden keresztül, hanem a saját jogán.
+
+> **Megjegyzés:** A titkos link élő hivatkozás, nem letöltött másolat. Ha csütörtökön javítasz egy ütemet a kottádon, vasárnap már a javított változat van a kottatartón.
+
 ### 6.4 Énekrend másolása
 
 Meglévő énekrendet (sajátodat vagy mások közzétett énekrendjét) lemásolhatod:

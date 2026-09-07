@@ -27,13 +27,13 @@
 
             @if($planScore['expires_at'])
                 <flux:badge size="sm" color="amber" icon="clock">
-                    {{ __('Until :date', ['date' => $planScore['expires_at']->translatedFormat('Y-m-d')]) }}
+                    {{ __('Until :date', ['date' => $planScore['expires_at']]) }}
                 </flux:badge>
             @endif
 
             @if($planScore['changed_at'])
                 <span class="text-xs text-zinc-500 dark:text-zinc-400">
-                    {{ __('Last changed') }}: {{ $planScore['changed_at']->translatedFormat('Y-m-d') }}
+                    {{ __('Last changed') }}: {{ $planScore['changed_at'] }}
                 </span>
             @endif
         </div>

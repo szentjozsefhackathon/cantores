@@ -4,10 +4,9 @@ namespace App\Livewire\Pages;
 
 use App\Models\Loan;
 use App\Models\MusicPlan;
-use App\Models\Score;
-use App\Models\ScoreUrl;
 use App\Services\LoanAccessService;
 use App\Services\LoanKeepingService;
+use App\Services\MusicPlanScoreListService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
@@ -103,19 +102,21 @@ class MusicPlanLoanView extends Component
     }
 
     /**
-     * The scores each music in the plan opens for this reader.
+     * The plan as this reader sees it: for each music, every score they may
+     * actually open.
      *
-     * Resolved through the loan rather than off the plan, so the lender's exclusions
-     * apply and any score they borrowed and are passing on travels with the link.
+     * The service list, with the lending link as a fourth axis beside the
+     * reader's own scores, the ones they kept and the public library. So a
+     * flutist who has written her own setting of a music in the plan finds it
+     * here, beside the part she was lent, on the link she was given — and nobody
+     * else sees it. Composing is MusicPlanScoreListService's job, which is why
+     * the loan is handed to it rather than resolved here: the entries have to
+     * link back through the token this reader arrived on.
      */
     private function loadPlanSlots(Loan $loan): void
     {
-        $scoresByMusicId = app(LoanAccessService::class)
-            ->scoresFor($loan)
-            ->load(['urls', 'user'])
-            ->groupBy('music_id');
-
-        $lenderId = $loan->user_id;
+        $scoresByMusicId = app(MusicPlanScoreListService::class)
+            ->forViewer($this->musicPlan, Auth::user(), $loan);
 
         $assignmentsByPivot = $this->musicPlan->musicAssignments()
             ->with(['music.collections', 'music.authors', 'scopes'])
@@ -128,7 +129,7 @@ class MusicPlanLoanView extends Component
             ->withPivot('id', 'sequence')
             ->orderBy('music_plan_slot_plan.sequence')
             ->get()
-            ->map(function ($slot) use ($assignmentsByPivot, $scoresByMusicId, $lenderId) {
+            ->map(function ($slot) use ($assignmentsByPivot, $scoresByMusicId) {
                 $pivotId = $slot->pivot->id;
                 $assignments = $assignmentsByPivot->get($pivotId, collect());
 
@@ -138,40 +139,15 @@ class MusicPlanLoanView extends Component
                     'name' => $slot->name,
                     'description' => $slot->description,
                     'sequence' => $slot->pivot->sequence,
-                    'assignments' => $assignments->map(function ($assignment) use ($scoresByMusicId, $lenderId) {
-                        $scores = $scoresByMusicId->get($assignment->music_id, collect());
-
-                        return [
-                            'id' => $assignment->id,
-                            'music_id' => $assignment->music_id,
-                            'music_sequence' => $assignment->music_sequence,
-                            'notes' => $assignment->notes,
-                            'music' => $assignment->music,
-                            'scope_label' => $assignment->scope_label,
-                            'scores' => $scores->map(fn (Score $s) => [
-                                'id' => $s->id,
-                                'title' => $s->title,
-                                // Attribution is what lending buys over re-uploading,
-                                // so a score the lender borrowed says whose it is.
-                                'owner_name' => $s->user?->displayName,
-                                'is_passed_on' => $s->user_id !== $lenderId,
-                                'format' => $s->format?->label() ?? __('Links'),
-                                'format_value' => $s->format?->value,
-                                'loan_url' => $s->loanUrl($this->loanToken),
-                                'incipit_url' => $s->hasIncipit()
-                                    ? $s->loanIncipitUrl($this->loanToken)
-                                    : null,
-                                'urls' => $s->urls->map(fn (ScoreUrl $url) => [
-                                    'url' => $url->url,
-                                    'label' => $url->label?->label() ?? $url->url,
-                                    'icon' => $url->label?->icon() ?? 'link',
-                                    'color' => $url->label?->color() ?? 'text-gray-500',
-                                    'host' => preg_replace('/^www\./', '', parse_url($url->url, PHP_URL_HOST) ?? $url->url),
-                                    'comment' => $url->comment,
-                                ])->all(),
-                            ])->all(),
-                        ];
-                    })->all(),
+                    'assignments' => $assignments->map(fn ($assignment) => [
+                        'id' => $assignment->id,
+                        'music_id' => $assignment->music_id,
+                        'music_sequence' => $assignment->music_sequence,
+                        'notes' => $assignment->notes,
+                        'music' => $assignment->music,
+                        'scope_label' => $assignment->scope_label,
+                        'scores' => $scoresByMusicId->get($assignment->music_id, collect())->all(),
+                    ])->all(),
                 ];
             })
             ->values()
