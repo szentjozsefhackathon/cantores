@@ -3,6 +3,7 @@
 use App\Facades\GenreContext;
 use App\Models\Celebration;
 use App\Models\MusicPlan;
+use App\Models\MusicPlanSlotAssignment;
 use App\Services\CelebrationSearchService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -100,6 +101,7 @@ new class extends Component
                 'musicAssignments.music.collections' => fn($q) => $q->visibleTo($user),
                 'musicAssignments.musicPlanSlotPlan.musicPlanSlot' => fn($q) => $q->visibleToUser($user),
                 'musicAssignments.scopes',
+                'musicAssignments.flag',
             ]);
 
         // Filter by genre: include plans that belong to the current genre OR have no genre
@@ -181,6 +183,10 @@ new class extends Component
                     $collectionInfo = $primaryCollection->formatWithPivot($primaryCollection->pivot);
                 }
 
+                // A low priority assignment is a hesitant choice even in its own plan, so it
+                // must not inherit the full weight of the celebration match.
+                [$assignmentScore, $assignmentReasons] = $this->weighByAssignmentFlag($maxScore, $scoreReasons, $assignment);
+
                 $slotKey = $slot->id;
                 $slotName = $slot->name;
                 $priority = $slot->priority;
@@ -207,15 +213,15 @@ new class extends Component
                     $existing['plan_ids'][$musicPlan->id] = true;
 
                     if (
-                        $maxScore > $existing['celebration_score'] ||
-                        ($maxScore === $existing['celebration_score'] && ($assignment->music_sequence ?? 0) < $existing['music_sequence'])
+                        $assignmentScore > $existing['celebration_score'] ||
+                        ($assignmentScore === $existing['celebration_score'] && ($assignment->music_sequence ?? 0) < $existing['music_sequence'])
                     ) {
-                        $existing['celebration_score'] = $maxScore;
+                        $existing['celebration_score'] = $assignmentScore;
                         $existing['music_sequence'] = $assignment->music_sequence ?? 0;
                         $existing['collection_info'] = $collectionInfo;
                         $existing['celebration'] = $relatedCelebration;
                         $existing['scope_label'] = $assignment->scope_label;
-                        $existing['score_reasons'] = $scoreReasons;
+                        $existing['score_reasons'] = $assignmentReasons;
                     }
                     // else keep existing descriptive fields
                     unset($existing);
@@ -224,12 +230,12 @@ new class extends Component
                     $slotMap[$sortKey]['music_ids'][$musicId] = count($slotMap[$sortKey]['musics']);
                     $slotMap[$sortKey]['musics'][] = [
                         'music' => $music,
-                        'celebration_score' => $maxScore,
+                        'celebration_score' => $assignmentScore,
                         'music_sequence' => $assignment->music_sequence ?? 0,
                         'collection_info' => $collectionInfo,
                         'celebration' => $relatedCelebration,
                         'scope_label' => $assignment->scope_label,
-                        'score_reasons' => $scoreReasons,
+                        'score_reasons' => $assignmentReasons,
                         'plan_ids' => [$musicPlan->id => true],
                     ];
                 }
@@ -278,6 +284,34 @@ new class extends Component
         }
 
         return $result;
+    }
+
+    /**
+     * Weigh the celebration relevance down when the assignment it comes from was
+     * flagged as low priority.
+     *
+     * Such an assignment says "this may be sung here, but it does not really fit", so
+     * the suggestion keeps half of the celebration score (never less than one point,
+     * so it stays visible with a single star). The reduction is reported as a negative
+     * reason, keeping the breakdown a sum of the score.
+     *
+     * @param  array<int, array{label: string, points: int}>  $reasons
+     * @return array{int, array<int, array{label: string, points: int}>}
+     */
+    protected function weighByAssignmentFlag(int $score, array $reasons, MusicPlanSlotAssignment $assignment): array
+    {
+        if ($assignment->flag?->name !== 'low_priority') {
+            return [$score, $reasons];
+        }
+
+        $reduced = max(1, intdiv($score, 2));
+        $penalty = $reduced - $score;
+
+        if ($penalty < 0) {
+            $reasons[] = ['label' => __('Low priority in the source plan'), 'points' => $penalty];
+        }
+
+        return [$reduced, $reasons];
     }
 
     /**

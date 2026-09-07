@@ -66,7 +66,7 @@
                             @foreach($scoreReasons as $reason)
                                 <li class="flex items-start justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
                                     <span>{{ $reason['label'] }}</span>
-                                    <span class="shrink-0 font-medium text-amber-600 dark:text-amber-400">+{{ $reason['points'] }}</span>
+                                    <span class="shrink-0 font-medium {{ $reason['points'] < 0 ? 'text-gray-500 dark:text-gray-400' : 'text-amber-600 dark:text-amber-400' }}">{{ $reason['points'] < 0 ? '' : '+' }}{{ $reason['points'] }}</span>
                                 </li>
                             @endforeach
                         </ul>

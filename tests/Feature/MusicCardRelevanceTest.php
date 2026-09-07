@@ -31,6 +31,24 @@ test('music card renders the relevance popup with each scoring reason', function
         ->assertSee('+5');
 });
 
+test('music card renders a reduction reason without a plus sign', function () {
+    $this->actingAs(User::factory()->create());
+
+    $music = Music::factory()->create();
+
+    Livewire::test('music-card', [
+        'music' => $music,
+        'score' => 9,
+        'score_reasons' => [
+            ['label' => __('Same celebration name'), 'points' => 10],
+            ['label' => __('Low priority in the source plan'), 'points' => -9],
+        ],
+    ])
+        ->assertSee(__('Low priority in the source plan'))
+        ->assertSee('-9')
+        ->assertDontSee('+-9');
+});
+
 test('music card popup falls back to a generic message without reasons', function () {
     $this->actingAs(User::factory()->create());
 

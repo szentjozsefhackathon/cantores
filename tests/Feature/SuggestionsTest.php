@@ -15,7 +15,7 @@ uses(RefreshDatabase::class);
 /**
  * Attach a music to a slot of a celebration's music plan, creating the plan and slot wiring.
  */
-function attachMusicToSlot(Celebration $celebration, MusicPlanSlot $slot, Music $music, User $user, int $musicSequence = 1): void
+function attachMusicToSlot(Celebration $celebration, MusicPlanSlot $slot, Music $music, User $user, int $musicSequence = 1, ?string $flag = null): void
 {
     $musicPlan = MusicPlan::factory()->create(['user_id' => $user->id, 'is_private' => false]);
     $musicPlan->celebration()->associate($celebration);
@@ -30,6 +30,9 @@ function attachMusicToSlot(Celebration $celebration, MusicPlanSlot $slot, Music 
         'music_plan_slot_plan_id' => $pivot->id,
         'music_id' => $music->id,
         'music_sequence' => $musicSequence,
+        'music_assignment_flag_id' => $flag === null
+            ? null
+            : \App\Models\MusicAssignmentFlag::firstOrCreate(['name' => $flag])->id,
     ]);
 }
 
@@ -364,4 +367,92 @@ test('music card omits the plan count when popularity is unknown', function () {
 
     Livewire::test('music-card', ['music' => $music])
         ->assertDontSee('music plan for this celebration');
+});
+
+test('a low priority assignment halves the relevance of the suggestion it produces', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $celebration = Celebration::factory()->create([
+        'name' => 'Low Priority Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 0,
+        'readings_code' => 'ABC123',
+        'year_letter' => 'A',
+        'year_parity' => 'I',
+    ]);
+
+    $slot = MusicPlanSlot::factory()->create(['priority' => 1, 'name' => 'Opening']);
+
+    // Both plans match the celebration perfectly, so only the flag separates them.
+    $wholehearted = Music::factory()->create();
+    $tolerated = Music::factory()->create();
+
+    attachMusicToSlot($celebration, $slot, $tolerated, $user, musicSequence: 1, flag: 'low_priority');
+    attachMusicToSlot($celebration, $slot, $wholehearted, $user, musicSequence: 2);
+
+    $criteria = [
+        'name' => 'Low Priority Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 0,
+        'readings_code' => 'ABC123',
+        'year_letter' => 'A',
+        'year_parity' => 'I',
+    ];
+
+    $musics = Livewire::test('suggestions-content', ['criteria' => $criteria])
+        ->get('slotMusicMap')['Opening']['musics'];
+
+    $byId = collect($musics)->keyBy(fn (array $entry): int => $entry['music']->id);
+
+    // A full match is 18 points (4 stars); the low priority one keeps half of it (2 stars).
+    expect($byId[$wholehearted->id]['celebration_score'])->toBe(18);
+    expect($byId[$tolerated->id]['celebration_score'])->toBe(9);
+
+    // The reduction is explained, and the breakdown still sums to the score.
+    $reasons = $byId[$tolerated->id]['score_reasons'];
+    expect(collect($reasons)->sum('points'))->toBe(9);
+    expect(collect($reasons)->pluck('label'))->toContain(__('Low priority in the source plan'));
+    expect(collect($byId[$wholehearted->id]['score_reasons'])->pluck('label'))
+        ->not->toContain(__('Low priority in the source plan'));
+
+    // The weaker suggestion sorts below the wholehearted one despite its lower sequence.
+    expect($musics[0]['music']->id)->toBe($wholehearted->id);
+    expect($musics[1]['music']->id)->toBe($tolerated->id);
+});
+
+test('a low priority assignment for a distantly related celebration still keeps one star', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    // Only the liturgical day matches (1 point), so halving must not zero the suggestion out.
+    $celebration = Celebration::factory()->create([
+        'name' => 'Distant Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 3,
+        'readings_code' => 'OTHER',
+        'year_letter' => 'A',
+        'year_parity' => 'I',
+    ]);
+
+    $slot = MusicPlanSlot::factory()->create(['priority' => 1, 'name' => 'Opening']);
+    $music = Music::factory()->create();
+
+    attachMusicToSlot($celebration, $slot, $music, $user, flag: 'low_priority');
+
+    $musics = Livewire::test('suggestions-content', ['criteria' => [
+        'name' => 'Different Celebration',
+        'season' => 1,
+        'week' => 2,
+        'day' => 3,
+        'readings_code' => 'ABC123',
+        'year_letter' => 'A',
+        'year_parity' => 'II',
+    ]])->get('slotMusicMap')['Opening']['musics'];
+
+    expect($musics[0]['celebration_score'])->toBe(1);
+    expect(collect($musics[0]['score_reasons'])->sum('points'))->toBe(1);
 });
