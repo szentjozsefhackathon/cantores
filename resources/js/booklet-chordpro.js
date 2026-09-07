@@ -38,6 +38,8 @@ const CHORD_GAP = 0.4;
  * @param {string} options.fontFamily
  * @param {number} options.layoutWidth in px
  * @param {(text: string, opts?: {bold?: boolean}) => number} options.measure
+ * @param {(chord: string) => string} [options.spell] respells a rendered chord,
+ *        for the notations chordsheetjs has no setting for
  * @param {number} [options.contentHeight] page height, to decide whether a
  *        paragraph is short enough to be kept whole
  * @returns {Array<{height: number, spaceBefore: number, keepWithNext: boolean, svg: string}>}
@@ -99,12 +101,12 @@ export function chordproRows(paragraphs, options) {
  * The renderable chord/lyric columns of one line.
  */
 function columnsOf(line, options) {
-    const { measure, fontSize } = options;
+    const { measure, fontSize, spell = (chord) => chord } = options;
 
     return (line.items ?? [])
         .filter((item) => typeof item?.chords === 'string' || typeof item?.lyrics === 'string')
         .map((item) => {
-            const chord = (item.chords ?? '').trim();
+            const chord = spell((item.chords ?? '').trim());
             const lyric = item.lyrics ?? '';
             const chordWidth = chord === '' ? 0 : measure(chord, { bold: true }) + fontSize * CHORD_GAP;
 

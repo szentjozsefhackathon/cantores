@@ -1,25 +1,11 @@
+import { chordStringsOf, spellFlatBInHtml, spellFlatBInText } from './chordpro-notation.js';
+
 let chordSheetJsPromise = null;
 function loadChordSheetJS() {
     if (!chordSheetJsPromise) {
         chordSheetJsPromise = import('chordsheetjs').then(m => m.default);
     }
     return chordSheetJsPromise;
-}
-
-function convertGermanNote(note) {
-    if (note === 'H') { return 'B'; }
-    if (note === 'B') { return 'Bb'; }
-    return note;
-}
-
-function germanChordsToEnglish(content) {
-    content = content.replace(/\[([^\]]+)\]/g, (_, chord) => {
-        let result = chord.replace(/^(H|Bb?)/, n => convertGermanNote(n));
-        result = result.replace(/\/(H|Bb?)/, (_, n) => '/' + convertGermanNote(n));
-        return '[' + result + ']';
-    });
-    content = content.replace(/\{key:\s*(H|Bb?)\s*\}/gi, (_, k) => `{key: ${convertGermanNote(k)}}`);
-    return content;
 }
 
 const DEFAULT_FONT_FAMILY = "'Lora'";
@@ -45,11 +31,27 @@ function sanitizeChordproContent(content) {
 }
 
 
-function englishChordsToGerman(html) {
-    return html.replace(/(<(?:div|td) class="chord">)([^<]*)(<\/(?:div|td)>)/g, (_, open, content, close) => {
-        const converted = content.replace(/B(?!b)/g, 'H');
-        return open + converted + close;
-    });
+/**
+ * Parse a sheet and apply the transpose, in the note names the user reads in.
+ *
+ * chordsheetjs speaks German natively: with `notation: 'german'` a `B` is B flat
+ * and an `H` is B natural, both on the way in and in everything it renders —
+ * transposition included, which is the part a text substitution on the output
+ * could never get right, since it never knew that A + 1 is B and not A#.
+ *
+ * @param {string} content raw ChordPro
+ * @param {{german: boolean, transpose: number|string}} options
+ */
+export async function parseChordproSong(content, { german, transpose }) {
+    const ChordSheetJS = await loadChordSheetJS();
+    const song = new ChordSheetJS.ChordProParser().parse(
+        sanitizeChordproContent(content),
+        german ? { notation: 'german' } : {},
+    );
+
+    const steps = Number(transpose) || 0;
+
+    return steps === 0 ? song : song.transpose(steps);
 }
 
 export function chordproMixin() {
@@ -61,28 +63,29 @@ export function chordproMixin() {
         chordproGermanNotation: true,
         chordproFields: ['chordproFontSize', 'chordproFontFamily', 'chordproColumns', 'chordproTranspose', 'chordproGermanNotation'],
 
+        parseChordpro(content) {
+            return parseChordproSong(content, {
+                german: this.chordproGermanNotation,
+                transpose: this.chordproTranspose,
+            });
+        },
+
+        /** German renders B flat as `B`; this app spells it `Bb`. */
+        spellChordsInHtml(html) {
+            return this.chordproGermanNotation ? spellFlatBInHtml(html) : html;
+        },
 
         async renderChordproPreview() {
             const container = this.$refs.chordproPreview;
             if (!container) { return; }
             container.innerHTML = '';
             this.hasPages = false;
-            let content = this.localContent;
+            const content = this.localContent;
             if (!content || !content.trim()) { return; }
-            if (this.chordproGermanNotation) {
-                content = germanChordsToEnglish(content);
-            }
-            content = sanitizeChordproContent(content);
             try {
                 const ChordSheetJS = await loadChordSheetJS();
-                const parser = new ChordSheetJS.ChordProParser();
-                const formatter = new ChordSheetJS.HtmlDivFormatter();
-                let song = parser.parse(content);
-                const transpose = Number(this.chordproTranspose);
-                if (transpose !== 0) {
-                    song = song.transpose(transpose);
-                }
-                let html = englishChordsToGerman(formatter.format(song));
+                const song = await this.parseChordpro(content);
+                const html = this.spellChordsInHtml(new ChordSheetJS.HtmlDivFormatter().format(song));
                 const pageEl = document.createElement('div');
                 pageEl.className = 'chordpro-preview overflow-auto rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900';
                 pageEl.style.fontFamily = this.chordproFontFamily;
@@ -121,25 +124,15 @@ export function chordproMixin() {
                 this.showCopyFeedback(this.clipboardNotSupported);
                 return;
             }
-            let content = this.localContent;
+            const content = this.localContent;
             if (!content || !content.trim()) { return; }
-            if (this.chordproGermanNotation) {
-                content = germanChordsToEnglish(content);
-            }
-            content = sanitizeChordproContent(content);
             try {
                 const ChordSheetJS = await loadChordSheetJS();
-                const parser = new ChordSheetJS.ChordProParser();
-                const formatter = new ChordSheetJS.TextFormatter();
-                let song = parser.parse(content);
-                const transpose = Number(this.chordproTranspose);
-                if (transpose !== 0) {
-                    song = song.transpose(transpose);
-                }
-                let text = formatter.format(song);
-                if (this.chordproGermanNotation) {
-                    text = text.replace(/\bBb/g, '\x00').replace(/\bB(?!b)/g, 'H').replace(/\x00/g, 'B');
-                }
+                const song = await this.parseChordpro(content);
+                const rendered = new ChordSheetJS.TextFormatter().format(song);
+                const text = this.chordproGermanNotation
+                    ? spellFlatBInText(rendered, chordStringsOf(song))
+                    : rendered;
                 navigator.clipboard.writeText(text)
                     .then(() => this.showCopyFeedback(this.plainTextCopied))
                     .catch(() => this.showCopyFeedback(this.failedToCopy));
@@ -154,22 +147,12 @@ export function chordproMixin() {
                 this.showCopyFeedback(this.clipboardNotSupported);
                 return;
             }
-            let content = this.localContent;
+            const content = this.localContent;
             if (!content || !content.trim()) { return; }
-            if (this.chordproGermanNotation) {
-                content = germanChordsToEnglish(content);
-            }
-            content = sanitizeChordproContent(content);
             try {
                 const ChordSheetJS = await loadChordSheetJS();
-                const parser = new ChordSheetJS.ChordProParser();
-                const formatter = new ChordSheetJS.HtmlTableFormatter();
-                let song = parser.parse(content);
-                const transpose = Number(this.chordproTranspose);
-                if (transpose !== 0) {
-                    song = song.transpose(transpose);
-                }
-                let body = englishChordsToGerman(formatter.format(song));
+                const song = await this.parseChordpro(content);
+                const body = this.spellChordsInHtml(new ChordSheetJS.HtmlTableFormatter().format(song));
                 const fontFamily = safeFontFamily(this.chordproFontFamily);
                 const fontSize = Number(this.chordproFontSize);
                 const cols = Number(this.chordproColumns);
@@ -199,22 +182,12 @@ td.column{vertical-align:bottom;padding-right:0.1em;}
         },
 
         async exportChordproHtml() {
-            let content = this.localContent;
+            const content = this.localContent;
             if (!content || !content.trim()) { return; }
-            if (this.chordproGermanNotation) {
-                content = germanChordsToEnglish(content);
-            }
-            content = sanitizeChordproContent(content);
             try {
                 const ChordSheetJS = await loadChordSheetJS();
-                const parser = new ChordSheetJS.ChordProParser();
-                const formatter = new ChordSheetJS.HtmlDivFormatter();
-                let song = parser.parse(content);
-                const transpose = Number(this.chordproTranspose);
-                if (transpose !== 0) {
-                    song = song.transpose(transpose);
-                }
-                let body = englishChordsToGerman(formatter.format(song));
+                const song = await this.parseChordpro(content);
+                const body = this.spellChordsInHtml(new ChordSheetJS.HtmlDivFormatter().format(song));
                 const title = this.$wire.title || 'score';
                 const fontFamily = safeFontFamily(this.chordproFontFamily);
                 const fontSize = Number(this.chordproFontSize);

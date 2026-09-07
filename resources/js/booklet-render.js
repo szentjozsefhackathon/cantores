@@ -1,6 +1,7 @@
 import { renderAretino, splitRowSVGs } from '@aretino-chant/core';
 
 import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
+import { spellFlatB } from './chordpro-notation.js';
 import { packPages } from './booklet-flow.js';
 import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
 import { markdownRows } from './booklet-markdown.js';
@@ -495,12 +496,13 @@ async function gabcBlocks(content, resolved, layoutWidthPx, host) {
 async function chordproBlocks(content, resolved, layoutWidthPx, geometry) {
     const ChordSheetJS = (await import('chordsheetjs')).default;
 
-    let source = content;
-    if (resolved.chordproGermanNotation) {
-        source = germanChordsToEnglish(source);
-    }
-
-    let song = new ChordSheetJS.ChordProParser().parse(source);
+    // German note names are the parser's own business: `B` means B flat and `H`
+    // means B natural throughout, so the chords the paragraphs carry are already
+    // right, transposed or not. Only the spelling of the flat is ours to set.
+    let song = new ChordSheetJS.ChordProParser().parse(
+        content,
+        resolved.chordproGermanNotation ? { notation: 'german' } : {},
+    );
     const transpose = Number(resolved.chordproTranspose) || 0;
     if (transpose !== 0) {
         song = song.transpose(transpose);
@@ -510,17 +512,14 @@ async function chordproBlocks(content, resolved, layoutWidthPx, geometry) {
     const fontSize = Number(resolved.chordproFontSize);
     const paragraphs = song.bodyParagraphs ?? song.paragraphs ?? [];
 
-    const rows = chordproRows(paragraphs, {
+    return chordproRows(paragraphs, {
         fontSize,
         fontFamily,
         layoutWidth: layoutWidthPx,
         contentHeight: geometry.contentHeightPx,
         measure: canvasMeasurer(fontFamily, fontSize),
+        spell: resolved.chordproGermanNotation ? spellFlatB : undefined,
     });
-
-    return resolved.chordproGermanNotation
-        ? rows.map((row) => ({ ...row, svg: englishChordsToGermanSvg(row.svg) }))
-        : rows;
 }
 
 /** Numbers the documents lifted here, so no two of them are scoped alike. */
@@ -784,23 +783,4 @@ function safeAbcFont(value) {
     const safe = /^[a-zA-Z0-9 .\-'&]+$/.test(raw) ? raw : 'EB Garamond';
 
     return /[ .\-'&]/.test(safe) ? `"${safe}"` : safe;
-}
-
-function germanChordsToEnglish(content) {
-    const convert = (note) => (note === 'H' ? 'B' : note === 'B' ? 'Bb' : note);
-
-    return content
-        .replace(/\[([^\]]+)\]/g, (_, chord) => '['
-            + chord.replace(/^(H|Bb?)/, convert).replace(/\/(H|Bb?)/, (__, n) => '/' + convert(n))
-            + ']')
-        .replace(/\{key:\s*(H|Bb?)\s*\}/gi, (_, key) => `{key: ${convert(key)}}`);
-}
-
-/**
- * Put the German note names back after chordsheetjs has done its English-only
- * transposition, matching what the score editor shows on screen.
- */
-function englishChordsToGermanSvg(svg) {
-    return svg.replace(/(fill="#1d4ed8"[^>]*>)([^<]*)(<\/text>)/g, (_, open, chord, close) =>
-        open + chord.replace(/B(?!b)/g, 'H') + close);
 }
