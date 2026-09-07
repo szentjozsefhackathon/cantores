@@ -30,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $render_error
  * @property bool $has_thumbnail
  * @property int|null $page_count
+ * @property list<array{page: int, index: int, width: int, height: int}>|null $strips
  * @property \Carbon\CarbonImmutable|null $rendered_at
  * @property \Carbon\CarbonImmutable|null $superseded_at
  * @property int|null $superseded_by_id
@@ -65,6 +66,15 @@ class ScoreFile extends Model
     public const PRERENDERED_EXTENSIONS = ['pdf'];
 
     /**
+     * The resolution the booklet strips are cut at.
+     *
+     * Denser than the reading view, because a strip is printed rather than
+     * looked at on a screen, and not denser still because a booklet is a service
+     * sheet for the pews and not a press proof.
+     */
+    public const STRIP_DPI = 300;
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -83,6 +93,7 @@ class ScoreFile extends Model
         'render_error',
         'has_thumbnail',
         'page_count',
+        'strips',
         'rendered_at',
         'superseded_at',
         'superseded_by_id',
@@ -97,6 +108,7 @@ class ScoreFile extends Model
     {
         return [
             'has_thumbnail' => 'boolean',
+            'strips' => 'array',
             'is_published' => 'boolean',
             'rights' => ScoreFileRights::class,
             'render_status' => ScoreFileRenderStatus::class,
@@ -185,6 +197,14 @@ class ScoreFile extends Model
         return $this->directory().'/thumb.png';
     }
 
+    /**
+     * One system, cut out of a page for a booklet to flow.
+     */
+    public function stripPath(int $page, int $index): string
+    {
+        return $this->directory()."/strip-{$page}-{$index}.png";
+    }
+
     public function extension(): string
     {
         return strtolower(pathinfo($this->original_name, PATHINFO_EXTENSION));
@@ -265,5 +285,34 @@ class ScoreFile extends Model
     public function hasPage(int $page): bool
     {
         return $page >= 1 && $page <= ($this->page_count ?? 0);
+    }
+
+    /**
+     * The systems this file offers a booklet, in reading order.
+     *
+     * @return list<array{page: int, index: int, width: int, height: int}>
+     */
+    public function stripList(): array
+    {
+        if (! $this->isReady() || ! is_array($this->strips)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $this->strips,
+            fn (mixed $strip): bool => is_array($strip)
+                && isset($strip['page'], $strip['index'], $strip['width'], $strip['height'])
+        ));
+    }
+
+    public function hasStrip(int $page, int $index): bool
+    {
+        foreach ($this->stripList() as $strip) {
+            if ($strip['page'] === $page && $strip['index'] === $index) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

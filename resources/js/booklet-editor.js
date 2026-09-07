@@ -112,7 +112,7 @@ document.addEventListener('alpine:init', () => {
         settingsOf(entryId) {
             const entry = this.entries.find((candidate) => candidate.id === entryId);
 
-            if (!entry || entry.kind === 'text') { return {}; }
+            if (!entry || entry.kind !== 'score') { return {}; }
 
             return resolveSettings(
                 entry.format,

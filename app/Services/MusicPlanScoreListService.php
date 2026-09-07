@@ -52,7 +52,7 @@ class MusicPlanScoreListService
         $loansByScoreId = $viewer instanceof User ? $this->keptLoansByScoreId($viewer) : collect();
 
         return $scores
-            ->with(['user', 'urls', 'publication'])
+            ->with(['user', 'urls', 'publication', 'files'])
             ->orderBy('title')
             ->get()
             ->map(fn (Score $score): array => $this->describe($score, $viewer, $loansByScoreId))
@@ -76,6 +76,12 @@ class MusicPlanScoreListService
      * item reads as clutter to them; the credits stay on the library page the
      * score was taken from.
      *
+     * A score reaches a booklet two ways. One written in the editor arrives as
+     * its source, to be re-engraved at the booklet's size. An uploaded one cannot
+     * be re-engraved, so it arrives as the systems RenderScoreFileJob cut out of
+     * its pages — which is why it is listed here at all, having no format of its
+     * own. A score offering neither is a page of links, and is left out.
+     *
      * @param  list<int>  $scoreIds
      * @return Collection<int, array<string, mixed>>
      */
@@ -85,18 +91,30 @@ class MusicPlanScoreListService
             return collect();
         }
 
-        $query = Score::query()->whereIn('id', $scoreIds)->whereNotNull('format');
+        $query = Score::query()->whereIn('id', $scoreIds);
         $this->scopeToViewer($query, $viewer);
 
         return $query
+            ->with('files')
             ->get()
-            ->mapWithKeys(fn (Score $score): array => [$score->getKey() => [
-                'id' => $score->id,
-                'title' => $score->variationLabel(),
-                'format' => $score->format?->value,
-                'content' => $score->content ?? '',
-                'settings' => $score->settings ?? [],
-            ]]);
+            ->mapWithKeys(function (Score $score): array {
+                $file = $score->format === null ? $score->primaryFile() : null;
+                $strips = $file?->stripList() ?? [];
+
+                if ($score->format === null && $strips === []) {
+                    return [];
+                }
+
+                return [$score->getKey() => [
+                    'id' => $score->id,
+                    'title' => $score->variationLabel(),
+                    'format' => $score->format?->value,
+                    'content' => $score->content ?? '',
+                    'settings' => $score->settings ?? [],
+                    'file_id' => $file?->id,
+                    'strips' => $strips,
+                ]];
+            });
     }
 
     /**
@@ -142,8 +160,11 @@ class MusicPlanScoreListService
             'id' => $score->id,
             'music_id' => $score->music_id,
             'title' => $score->variationLabel(),
-            'format' => $score->format?->label() ?? __('Links'),
+            'format' => $score->format?->label() ?? ($score->primaryFile()?->isReady() === true ? __('File') : __('Links')),
             'format_value' => $score->format?->value,
+            // Whether a booklet can draw it: either it has a source to
+            // re-engrave, or it has been cut into systems that can be flowed.
+            'in_booklets' => $score->format !== null || ($score->primaryFile()?->stripList() ?? []) !== [],
             'owner_name' => $score->user?->displayName,
             'is_own' => $isOwn,
             'is_borrowed' => ! $isOwn && $loan instanceof Loan,

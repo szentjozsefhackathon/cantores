@@ -176,18 +176,43 @@ class BookletEditor extends Component
                     return null;
                 }
 
-                return [
+                $common = [
                     'id' => $entry->id,
-                    'kind' => 'score',
                     'scoreId' => $entry->score_id,
                     'slot' => $heading['slot'],
                     'music' => $heading['music'],
                     'variation' => $heading['variation'],
+                    'startOnNewPage' => $entry->start_on_new_page,
+                ];
+
+                // An uploaded score has no source to re-engrave, so it travels
+                // as the systems it was cut into — by URL rather than inline,
+                // because these are images and this payload crosses the wire on
+                // every change.
+                if ($source['format'] === null) {
+                    return [
+                        ...$common,
+                        'kind' => 'file',
+                        'strips' => array_map(fn (array $strip): array => [
+                            'url' => route('booklets.strip', [
+                                'booklet' => $this->booklet->id,
+                                'scoreFile' => $source['file_id'],
+                                'page' => $strip['page'],
+                                'index' => $strip['index'],
+                            ]),
+                            'width' => $strip['width'],
+                            'height' => $strip['height'],
+                        ], $source['strips']),
+                    ];
+                }
+
+                return [
+                    ...$common,
+                    'kind' => 'score',
                     'format' => $source['format'],
                     'content' => $source['content'],
                     'settings' => $source['settings'],
                     'override' => $entry->settings_override ?? [],
-                    'startOnNewPage' => $entry->start_on_new_page,
                 ];
             })
             ->filter()

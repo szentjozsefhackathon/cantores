@@ -146,9 +146,9 @@
                                                     <span class="text-xs text-zinc-400">· {{ $entry->assignment->musicPlanSlot->name }}</span>
                                                 @endif
                                             </span>
-                                            @if($entry->score?->format)
-                                                <flux:badge size="sm" color="zinc">{{ $entry->score->format->label() }}</flux:badge>
-                                            @endif
+                                            <flux:badge size="sm" color="zinc">
+                                                {{ $entry->score?->format?->label() ?? __('File') }}
+                                            </flux:badge>
                                         @endif
                                     </div>
 
@@ -194,15 +194,20 @@
                                                 />
                                             </flux:tooltip>
 
-                                            <flux:tooltip :content="__('Adjust this score')">
-                                                <flux:button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    icon="adjustments-horizontal"
-                                                    wire:click="editSettings({{ $this->editingEntryId === $entry->id ? 'null' : $entry->id }})"
-                                                    class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                                />
-                                            </flux:tooltip>
+                                            {{-- An uploaded score has no knobs: it is a picture by the
+                                                 time it reaches a booklet, and the only thing that can be
+                                                 done to it is the scaling the page already does. --}}
+                                            @if($entry->score?->format)
+                                                <flux:tooltip :content="__('Adjust this score')">
+                                                    <flux:button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        icon="adjustments-horizontal"
+                                                        wire:click="editSettings({{ $this->editingEntryId === $entry->id ? 'null' : $entry->id }})"
+                                                        class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                    />
+                                                </flux:tooltip>
+                                            @endif
                                         @endif
 
                                         {{-- :disabled, never @disabled: a directive inside a component
@@ -331,7 +336,7 @@
                                                     :icon="$isChosen ? 'check-circle' : 'plus'"
                                                     wire:click="toggleScore({{ $score['id'] }}, {{ $assignment['id'] }})"
                                                     class="shrink-0 {{ $isChosen ? '!text-green-600 dark:!text-green-400' : '' }}"
-                                                    :disabled="$score['format_value'] === null"
+                                                    :disabled="! $score['in_booklets']"
                                                 />
                                             </flux:tooltip>
                                             <span class="min-w-0 flex-1 truncate {{ $isChosen ? 'text-zinc-500' : '' }}">{{ $score['title'] }}</span>
