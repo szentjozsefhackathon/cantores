@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\ScoreFile;
 use Illuminate\Contracts\Filesystem\Filesystem;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -19,10 +18,15 @@ use RuntimeException;
  *
  * The cost is that losing APP_KEY loses the library irrecoverably, so the key
  * belongs in the password manager next to RESTIC_PASSWORD.
+ *
+ * What the envelope looks like is ScoreFileCipher's business; this class only
+ * knows that bytes go in and come back.
  */
 class ScoreFileStorage
 {
     public const DISK = 'private';
+
+    public function __construct(private readonly ScoreFileCipher $cipher) {}
 
     public function disk(): Filesystem
     {
@@ -31,7 +35,7 @@ class ScoreFileStorage
 
     public function put(string $path, string $bytes): void
     {
-        $this->disk()->put($path, Crypt::encryptString($bytes));
+        $this->disk()->put($path, $this->cipher->encrypt($bytes));
     }
 
     /**
@@ -48,7 +52,7 @@ class ScoreFileStorage
         }
 
         try {
-            return Crypt::decryptString($ciphertext);
+            return $this->cipher->decrypt($ciphertext);
         } catch (\Throwable $e) {
             throw new RuntimeException("Score file could not be decrypted: {$path}", previous: $e);
         }

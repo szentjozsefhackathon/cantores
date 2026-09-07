@@ -13,8 +13,8 @@ use Symfony\Component\HttpFoundation\Response;
  * built in memory. What survives from the streamed version is the caching:
  * the ETag comes from the stored plaintext checksum and Last-Modified from the
  * row, so the 304 is decided before anything is decrypted and a repeat view
- * costs no crypto at all. Page images run 100–300 KB; the whole-file download
- * is bounded by the 25 MB upload cap.
+ * costs no crypto at all. Page images run well under 100 KB; the whole-file
+ * download is bounded by the 25 MB upload cap.
  *
  * Private and public responses cache very differently. A private artifact has
  * a stable URL whose bytes only change on re-upload, so it is immutable for a
@@ -50,6 +50,20 @@ class ScoreFileResponder
             $scoreFile,
             $scoreFile->pagePath($page),
             "page-{$page}",
+            'image/png',
+            $public,
+        );
+    }
+
+    /**
+     * One system, cut out of a page for a booklet.
+     */
+    public function strip(ScoreFile $scoreFile, int $page, int $index, bool $public): Response
+    {
+        return $this->respond(
+            $scoreFile,
+            $scoreFile->stripPath($page, $index),
+            "strip-{$page}-{$index}",
             'image/png',
             $public,
         );

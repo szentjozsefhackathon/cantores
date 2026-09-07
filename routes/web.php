@@ -285,6 +285,14 @@ Route::post('/booklets/{booklet}/export-pdf', \App\Http\Controllers\BookletPdfEx
     ->middleware(['auth', 'verified', 'throttle:20,1'])
     ->name('booklets.export-pdf');
 
+// One system of an uploaded score, for a booklet that flows systems rather than
+// pages. The booklet is in the path because it is the booklet's access to the
+// score that is being checked.
+Route::get('/booklets/{booklet}/strip/{scoreFile}/{page}/{index}', \App\Http\Controllers\BookletStripController::class)
+    ->whereNumber(['page', 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('booklets.strip');
+
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');

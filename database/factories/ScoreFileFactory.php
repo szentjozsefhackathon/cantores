@@ -83,6 +83,25 @@ class ScoreFileFactory extends Factory
         ]);
     }
 
+    /**
+     * A file already cut into systems, as a booklet needs it.
+     *
+     * The strips are the index only — the images themselves belong to whatever
+     * disk the test fakes — so a test that cares about the booklet's arithmetic
+     * need not run a renderer to get there.
+     */
+    public function banded(int $systems = 3, int $width = 2032): static
+    {
+        return $this->ready()->state([
+            'strips' => array_map(fn (int $index): array => [
+                'page' => 1,
+                'index' => $index,
+                'width' => $width,
+                'height' => 200 + $index * 40,
+            ], range(1, $systems)),
+        ]);
+    }
+
     public function failed(string $error = 'Score rendering failed.'): static
     {
         return $this->state([

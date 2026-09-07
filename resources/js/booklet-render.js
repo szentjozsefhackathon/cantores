@@ -38,6 +38,16 @@ const SCORE_GAP_MM = 6;
 /** Space between a score's title and its first staff. */
 const TITLE_GAP_MM = 1.5;
 
+/**
+ * Space between two systems cut out of the same uploaded page.
+ *
+ * The engraver's own spacing was trimmed away with the margins, so it has to be
+ * restated here — and restated in millimetres rather than in source pixels,
+ * because the point of cutting the page up is that its systems now answer to the
+ * booklet's spacing rather than to the paper they were engraved for.
+ */
+const STRIP_GAP_MM = 3;
+
 /** A heading is set at the lyric size, told apart by its weight alone. */
 const TITLE_SIZE_FACTOR = 1;
 const VARIATION_SIZE_FACTOR = 0.82;
@@ -50,7 +60,7 @@ const VARIATION_COLOR = '#555555';
 /**
  * @typedef {object} BookletEntry
  * @property {number} id the booklet_scores row
- * @property {'score'|'text'} kind
+ * @property {'score'|'text'|'file'} kind
  * @property {string|null} slot the slot heading, when this entry opens one
  * @property {string|null} music the music's own name, under a shared slot
  * @property {string|null} variation the score's variation name, when asked for
@@ -76,9 +86,14 @@ export async function renderBooklet(entries, rawGeometry, host) {
     const fonts = new Set([UI_FONT]);
 
     for (const entry of entries) {
-        const built = entry.kind === 'text'
-            ? buildTextBlocks(entry, geometry)
-            : await buildScoreBlocks(entry, geometry, host);
+        let built;
+        if (entry.kind === 'text') {
+            built = buildTextBlocks(entry, geometry);
+        } else if (entry.kind === 'file') {
+            built = await buildFileBlocks(entry, geometry);
+        } else {
+            built = await buildScoreBlocks(entry, geometry, host);
+        }
 
         built.fonts.forEach((font) => fonts.add(font));
         built.blocks.forEach((block) => blocks.push(block));
@@ -201,6 +216,128 @@ export function buildTextBlocks(entry, geometry, measure = null) {
     }));
 
     return { blocks, fonts: [UI_FONT] };
+}
+
+/**
+ * An uploaded score: the systems RenderScoreFileJob cut out of its pages.
+ *
+ * This is the one format that cannot be re-engraved at the booklet's size — a
+ * PDF is a picture by the time it gets here — so it is unified the only way a
+ * picture can be: every system is scaled by the same factor, the one that takes
+ * the window they were all cut to out to the width of the page. Systems that
+ * shared a left margin in the source therefore still share one on the sheet.
+ */
+export async function buildFileBlocks(entry, geometry) {
+    const blocks = [];
+
+    if (geometry.showTitles) {
+        headingBlocks(entry, geometry).forEach((block) => blocks.push(block));
+    }
+
+    // Fetched before anything is placed, and all at once, so the systems that
+    // did arrive are laid out as though they were the whole score — a page break
+    // is not lost with the system that would have carried it.
+    const fetched = await Promise.all((entry.strips ?? []).map(
+        (strip) => stripDataUri(strip.url)
+            .then((dataUri) => ({ ...strip, dataUri }))
+            .catch((e) => {
+                console.error('[booklet] could not fetch a system', strip.url, e);
+
+                return null;
+            })
+    ));
+
+    const drawable = fetched.filter(Boolean);
+
+    stripPlacements(drawable, geometry, {
+        afterHeading: blocks.length > 0,
+        startOnNewPage: !!entry.startOnNewPage,
+    }).forEach((placement, i) => {
+        blocks.push({
+            ...placement,
+            svg: imageSvg(drawable[i].dataUri, drawable[i].width, drawable[i].height),
+        });
+    });
+
+    return { blocks, fonts: [UI_FONT] };
+}
+
+/**
+ * How tall each system stands once it is on the booklet's page, and how much of
+ * a gap precedes it.
+ *
+ * Kept apart from the fetching so the arithmetic can be checked without a
+ * browser. Nothing is glued to anything: a run of systems is exactly what should
+ * be free to break across a page turn, which is the whole reason for cutting the
+ * pages up in the first place.
+ *
+ * @param {Array<{width: number, height: number}>} strips
+ * @param {object} geometry from pageGeometry()
+ * @returns {Array<{height: number, scale: number, keepWithNext: boolean}>}
+ */
+export function stripPlacements(strips, geometry, { afterHeading = false, startOnNewPage = false } = {}) {
+    const window = strips.reduce((widest, strip) => Math.max(widest, strip.width || 0), 0);
+    const scale = window > 0 ? geometry.contentWidthPx / window : 1;
+
+    return strips.map((strip, i) => ({
+        height: (strip.height || 0) * scale,
+        scale,
+        keepWithNext: false,
+        spaceBefore: i > 0 ? mmToPx(STRIP_GAP_MM)
+            : mmToPx(afterHeading ? TITLE_GAP_MM : SCORE_GAP_MM),
+        startsScore: i === 0 && !afterHeading,
+        breakBefore: i === 0 && !afterHeading && startOnNewPage,
+    }));
+}
+
+/**
+ * Strips are fetched once and kept. A booklet redraws on every change, and the
+ * bytes behind one of these URLs never move: the path names a rendered artifact
+ * of one uploaded file, and re-uploading makes a new file rather than new bytes.
+ */
+const stripCache = new Map();
+
+function stripDataUri(url) {
+    if (!stripCache.has(url)) {
+        stripCache.set(url, fetch(url, { credentials: 'same-origin' })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`strip request failed with ${response.status}`);
+                }
+
+                return response.blob();
+            })
+            .then((blob) => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(blob);
+            }))
+            .catch((e) => {
+                // Not kept, so the next render tries again rather than
+                // remembering a failure for as long as the page is open.
+                stripCache.delete(url);
+
+                throw e;
+            }));
+    }
+
+    return stripCache.get(url);
+}
+
+/**
+ * One system as a standalone document.
+ *
+ * The image is inlined rather than linked because the page has to survive the
+ * trip to rsvg-convert, which has no network and no session. Both spellings of
+ * the reference are written: librsvg reads the SVG2 `href`, and the xlink form
+ * is what older renderers look for.
+ */
+function imageSvg(dataUri, width, height) {
+    return `<svg xmlns="${SVG_NS}" xmlns:xlink="${XLINK_NS}" viewBox="0 0 ${width} ${height}" `
+        + `width="${width}" height="${height}">`
+        + `<image x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none" `
+        + `href="${dataUri}" xlink:href="${dataUri}"/></svg>`;
 }
 
 /**
