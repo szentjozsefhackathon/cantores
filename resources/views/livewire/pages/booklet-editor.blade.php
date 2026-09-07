@@ -107,7 +107,10 @@
 
         {{-- items-start keeps the columns from stretching, which is what lets each
              one stick and scroll inside its own box instead of dragging the page. --}}
-        <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+        <div
+            class="grid items-start gap-4"
+            :class="previewExpanded ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]' : 'lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]'"
+        >
 
             {{-- Choosing --}}
             <div
@@ -131,7 +134,7 @@
                                     wire:key="entry-{{ $entry->id }}"
                                     class="rounded-md border border-zinc-200 px-2 py-1.5 dark:border-zinc-700"
                                 >
-                                    <div class="flex items-center gap-1.5">
+                                    <div data-entry-header class="flex items-center gap-1.5">
                                         <span class="w-5 shrink-0 text-xs text-zinc-400">{{ $index + 1 }}.</span>
 
                                         @if($entry->isText())
@@ -150,16 +153,29 @@
                                                 {{ $entry->score?->format?->label() ?? __('File') }}
                                             </flux:badge>
                                         @endif
+                                        <div class="ml-auto flex shrink-0 items-center gap-0.5">
+                                            <flux:tooltip :content="__('Move up')">
+                                                <flux:button size="sm" variant="ghost" icon="chevron-up" :aria-label="__('Move up')" wire:click="move({{ $entry->id }}, -1)" :disabled="$index === 0" />
+                                            </flux:tooltip>
+                                            <flux:tooltip :content="__('Move down')">
+                                                <flux:button size="sm" variant="ghost" icon="chevron-down" :aria-label="__('Move down')" wire:click="move({{ $entry->id }}, 1)" :disabled="$index === $entries->count() - 1" />
+                                            </flux:tooltip>
+                                            <flux:tooltip :content="__('Remove')">
+                                                <flux:button size="sm" variant="ghost" icon="x-mark" :aria-label="__('Remove')" wire:click="removeEntry({{ $entry->id }})" />
+                                            </flux:tooltip>
+                                        </div>
                                     </div>
 
-                                    <div class="mt-0.5 flex items-center justify-end gap-0.5">
+                                    <div data-entry-options class="mt-2 flex flex-wrap items-center gap-0.5 border-t border-zinc-100 pt-2 dark:border-zinc-800">
                                         <flux:tooltip :content="__('Start on a new page')">
                                             <flux:button
                                                 size="sm"
                                                 variant="ghost"
                                                 icon="scissors"
                                                 wire:click="toggleStartOnNewPage({{ $entry->id }})"
+                                                aria-pressed="{{ $entry->start_on_new_page ? 'true' : 'false' }}"
                                                 class="{{ $entry->start_on_new_page ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                :aria-label="__('Start on a new page')"
                                             />
                                         </flux:tooltip>
 
@@ -171,6 +187,8 @@
                                                     icon="pencil-square"
                                                     wire:click="editText({{ $this->editingTextId === $entry->id ? 'null' : $entry->id }})"
                                                     class="{{ $this->editingTextId === $entry->id ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                    aria-expanded="{{ $this->editingTextId === $entry->id ? 'true' : 'false' }}"
+                                                    :aria-label="__('Edit this text')"
                                                 />
                                             </flux:tooltip>
                                         @else
@@ -180,7 +198,9 @@
                                                     variant="ghost"
                                                     icon="musical-note"
                                                     wire:click="toggleShowMusicTitle({{ $entry->id }})"
+                                                    aria-pressed="{{ $entry->show_music_title ? 'true' : 'false' }}"
                                                     class="{{ $entry->show_music_title ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                    :aria-label="__('Print the music title')"
                                                 />
                                             </flux:tooltip>
 
@@ -190,7 +210,9 @@
                                                     variant="ghost"
                                                     icon="tag"
                                                     wire:click="toggleShowVariation({{ $entry->id }})"
+                                                    aria-pressed="{{ $entry->show_variation ? 'true' : 'false' }}"
                                                     class="{{ $entry->show_variation ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                    :aria-label="__('Print the variation name')"
                                                 />
                                             </flux:tooltip>
 
@@ -205,16 +227,13 @@
                                                         icon="adjustments-horizontal"
                                                         wire:click="editSettings({{ $this->editingEntryId === $entry->id ? 'null' : $entry->id }})"
                                                         class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                        aria-expanded="{{ $this->editingEntryId === $entry->id ? 'true' : 'false' }}"
+                                                        :aria-label="__('Adjust this score')"
                                                     />
                                                 </flux:tooltip>
                                             @endif
                                         @endif
 
-                                        {{-- :disabled, never @disabled: a directive inside a component
-                                             tag stops Blade compiling the tag at all. --}}
-                                        <flux:button size="sm" variant="ghost" icon="chevron-up" wire:click="move({{ $entry->id }}, -1)" :disabled="$index === 0" />
-                                        <flux:button size="sm" variant="ghost" icon="chevron-down" wire:click="move({{ $entry->id }}, 1)" :disabled="$index === $entries->count() - 1" />
-                                        <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="removeEntry({{ $entry->id }})" />
                                     </div>
 
                                     {{-- Both panels open inside the row they belong to: what is
@@ -339,7 +358,17 @@
                                                     :disabled="! $score['in_booklets']"
                                                 />
                                             </flux:tooltip>
-                                            <span class="min-w-0 flex-1 truncate {{ $isChosen ? 'text-zinc-500' : '' }}">{{ $score['title'] }}</span>
+                                            <div class="min-w-0 flex-1">
+                                                <span class="block {{ $isChosen ? 'text-zinc-500' : '' }}">{{ $score['title'] }}</span>
+                                                @if($score['incipit_url'])
+                                                    <x-incipit-image
+                                                        :src="$score['incipit_url']"
+                                                        :alt="__('Incipit').' — '.$score['title']"
+                                                        class="mt-1 max-w-full"
+                                                        imgClass="max-h-24 max-w-full rounded bg-white object-contain"
+                                                    />
+                                                @endif
+                                            </div>
                                             <flux:badge size="sm" color="zinc">{{ $score['format'] }}</flux:badge>
                                             @if(!$score['is_own'])
                                                 <flux:tooltip :content="$score['owner_name']">
@@ -363,8 +392,15 @@
 
             {{-- The pages --}}
             <flux:card class="relative flex flex-col p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)]">
+                <div class="mb-3 flex items-center justify-between gap-2">
+                    <flux:heading>{{ __('Preview') }}</flux:heading>
+                    <flux:button size="sm" variant="ghost" class="hidden lg:inline-flex" x-on:click="previewExpanded = !previewExpanded" x-bind:aria-expanded="previewExpanded">
+                        <span x-show="!previewExpanded">{{ __('Widen preview') }}</span>
+                        <span x-show="previewExpanded" x-cloak>{{ __('Compact preview') }}</span>
+                    </flux:button>
+                </div>
                 <div
-                    class="absolute right-4 top-4 flex items-center gap-1.5 text-sm text-zinc-500"
+                    class="mb-2 flex items-center gap-1.5 text-sm text-zinc-500"
                     x-show="rendering"
                     x-cloak
                 >

@@ -214,6 +214,90 @@ it('gives the plan and the pages a scroll box each', function () {
         ->and($panes['pages'])->toContain('lg:overflow-y-auto');
 });
 
+it('starts with a compact preview and offers a wider view', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])
+        ->assertSee('minmax(0,24rem)', false)
+        ->assertSee(__('Widen preview'))
+        ->assertSee(__('Compact preview'));
+});
+
+it('keeps the preview references in the booklet renderer component', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])->html();
+    $document = new DOMDocument;
+    @$document->loadHTML($html);
+    $xpath = new DOMXPath($document);
+
+    foreach (['measure', 'pages'] as $reference) {
+        $component = $xpath->query('//*[@x-ref="'.$reference.'"]/ancestor::*[@x-data][1]')->item(0);
+
+        expect($component)->not->toBeNull()
+            ->and($component->getAttribute('x-data'))->toStartWith('bookletEditor(');
+    }
+});
+
+it('separates entry controls from icon-only score options and reflects their selected state', function () {
+    $user = User::factory()->create();
+    [$booklet, $entries] = bookletWithEntries($user, 1);
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->assertSee(__('Start on a new page'))
+        ->assertSee(__('Print the music title'))
+        ->assertSee(__('Print the variation name'))
+        ->assertSee(__('Adjust this score'))
+        ->assertSee(__('Remove'));
+
+    $document = new DOMDocument;
+    @$document->loadHTML($component->html());
+    $xpath = new DOMXPath($document);
+    $headerButtons = $xpath->query('//*[@data-entry-header]//button');
+    $optionButtons = $xpath->query('//*[@data-entry-options]//button');
+
+    expect($headerButtons)->toHaveCount(3)
+        ->and($optionButtons)->toHaveCount(4);
+
+    foreach ($headerButtons as $button) {
+        expect($button->getAttribute('wire:click'))->toMatch('/^(move|removeEntry)\(/');
+    }
+
+    foreach ($optionButtons as $button) {
+        expect($button->getAttribute('wire:click'))->not->toMatch('/^(move|removeEntry)\(/');
+    }
+
+    foreach ([...$headerButtons, ...$optionButtons] as $button) {
+        expect(trim($button->textContent))->toBe('')
+            ->and($button->getAttribute('aria-label'))->not->toBe('');
+    }
+
+    foreach (['toggleStartOnNewPage', 'toggleShowMusicTitle', 'toggleShowVariation'] as $action) {
+        $component->call($action, $entries[0]->id);
+        $html = $component->html();
+        preg_match('/<button\b[^>]*wire:click="'.$action.'\('.$entries[0]->id.'\)"[^>]*>/', $html, $matches);
+        expect($matches[0] ?? '')->toContain('aria-pressed="true"');
+    }
+});
+
+it('shows available incipits in the music slot selector', function () {
+    \Illuminate\Support\Facades\Storage::fake();
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    [, , $scores] = slotWithMusics($plan, 'Entrance', ['With incipit', 'Without incipit']);
+    \Illuminate\Support\Facades\Storage::put($scores[0]->incipit_path, 'image');
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user, $plan)])
+        ->assertSeeHtml('src="'.$scores[0]->incipitUrl().'"')
+        ->assertDontSeeHtml('src="'.$scores[1]->incipitUrl().'"')
+        ->assertSee(__('View full image'))
+        ->assertSee('Without incipit');
+});
+
 it('saves geometry changes as they are made', function () {
     $user = User::factory()->create();
     $booklet = bookletFor($user);

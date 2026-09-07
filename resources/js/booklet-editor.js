@@ -28,6 +28,7 @@ document.addEventListener('alpine:init', () => {
 
         pages: [],
         pageCount: 0,
+        previewExpanded: false,
         rendering: false,
         exporting: false,
         message: '',
