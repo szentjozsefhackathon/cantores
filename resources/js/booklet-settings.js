@@ -85,6 +85,18 @@ export function unifiedSettings(format, geometry) {
 }
 
 /**
+ * What an uploaded score is drawn at.
+ *
+ * A picture has no settings to unify, only a size: it arrives scaled to the
+ * width of the page, and this is the factor someone may take it down by.
+ *
+ * @param {object|null} override booklet_scores.settings_override
+ */
+export function fileSettings(override) {
+    return { fileZoom: 1, ...(override ?? {}) };
+}
+
+/**
  * The width a score is laid out at, and what to do if that overflows the page.
  *
  * A width override above the content box is a request to lay the score out on a

@@ -74,6 +74,34 @@ test('every heading line the entry carries is set above the music', async () => 
     assert.deepEqual(blocks.slice(1, 3).map(block => block.spaceBefore), [0, 0]);
 });
 
+// A heading at the full lyric size shouts on a small page, and a booklet set in
+// Garamond wants its headings in Garamond: both are the booklet's to decide.
+test('headings are set in the booklet\'s own face at its own heading size', async () => {
+    const { blocks, fonts } = await buildScoreBlocks(
+        entry({ variation: 'orgonakíséret' }),
+        { ...geometry, textFont: "'Lora'", headingScale: 0.6 },
+        null,
+    );
+
+    const sizeOf = (svg) => parseFloat(svg.match(/font-size="([\d.]+)"/)[1]);
+
+    assert.match(blocks[0].svg, /font-family="&apos;Lora&apos;"/);
+    assert.ok(Math.abs(sizeOf(blocks[0].svg) - geometry.lyricSizePx * 0.6) < 0.01);
+    assert.ok(Math.abs(sizeOf(blocks[1].svg) - geometry.lyricSizePx * 0.6 * 0.82) < 0.01);
+    // The music keeps the face its own author chose.
+    assert.ok(!fonts.includes("'Lora'"), 'the heading face is not forced onto the engraving');
+});
+
+// The gap under a heading is part of the heading: a heading taken down to half
+// its size and left sitting in a full-sized gap reads as a mistake.
+test('the gap between a heading and its music shrinks with the heading', async () => {
+    const full = await buildScoreBlocks(entry(), geometry, null);
+    const small = await buildScoreBlocks(entry(), { ...geometry, headingScale: 0.6 }, null);
+
+    assert.ok(full.blocks[1].spaceBefore > 0);
+    assert.ok(Math.abs(small.blocks[1].spaceBefore - full.blocks[1].spaceBefore * 0.6) < 1e-9);
+});
+
 test('a heading the entry does not carry is not printed', async () => {
     const withSlot = await buildScoreBlocks(entry(), geometry, null);
     const without = await buildScoreBlocks(entry({ slot: null }), geometry, null);
@@ -169,6 +197,23 @@ test('a paragraph of instructions flows as blocks like everything else', () => {
 
     const pages = packPages(blocks, geometry.contentHeightPx);
     assert.equal(pages.length, 1);
+});
+
+// A rubric speaks at the same size as the lyrics beside it, in the face the
+// booklet was set in rather than the one an engraver happened to choose.
+test('a rubric is set at the lyric size, in the booklet\'s own face', () => {
+    const typography = { ...geometry, textFont: "'EB Garamond'" };
+    const { blocks, fonts } = buildTextBlocks(
+        { id: 2, kind: 'text', text: 'Álljunk fel.' },
+        typography,
+        (text, { fontSize = geometry.lyricSizePx } = {}) => text.length * fontSize * 0.5,
+    );
+
+    const size = parseFloat(blocks[0].svg.match(/font-size="([\d.]+)"/)[1]);
+
+    assert.ok(Math.abs(size - geometry.lyricSizePx) < 0.01);
+    assert.match(blocks[0].svg, /font-family="&apos;EB Garamond&apos;"/);
+    assert.deepEqual(fonts, ["'EB Garamond'"]);
 });
 
 /**

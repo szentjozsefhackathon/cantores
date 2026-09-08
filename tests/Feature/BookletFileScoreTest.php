@@ -649,6 +649,63 @@ it('keeps a links-only score out of a booklet', function () {
 });
 
 /**
+ * An uploaded score is a picture by the time it reaches a booklet, so the panel
+ * it gets holds the one thing that can be said about a picture: make it smaller.
+ * The page already prints it at full width, which is why there is no way up.
+ */
+it('lets an uploaded score be taken down from the width of the page', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $user->id]);
+    ScoreFile::factory()->banded()->create(['score_id' => $score->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $user->id]);
+    $entry = $booklet->entries()->create(['score_id' => $score->id, 'sequence' => 1]);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('saveOverride', $entry->id, ['fileZoom' => 0.6]);
+
+    expect($entry->fresh()->settings_override)->toEqual(['fileZoom' => 0.6]);
+
+    // And the browser is told, so the systems are drawn at what was asked for.
+    expect($component->instance()->renderPayload()[0]['override'])->toEqual(['fileZoom' => 0.6]);
+});
+
+it('holds an uploaded score to the one knob a picture has', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $user->id]);
+    ScoreFile::factory()->banded()->create(['score_id' => $score->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $user->id]);
+    $entry = $booklet->entries()->create(['score_id' => $score->id, 'sequence' => 1]);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('saveOverride', $entry->id, ['fileZoom' => 4, 'abcPageWidth' => 700]);
+
+    expect($entry->fresh()->settings_override)->toEqual(['fileZoom' => 1]);
+});
+
+it('opens the size panel on an uploaded score', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $user->id]);
+    ScoreFile::factory()->banded()->create(['score_id' => $score->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $user->id]);
+    $entry = $booklet->entries()->create(['score_id' => $score->id, 'sequence' => 1]);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('editSettings', $entry->id)
+        ->html();
+
+    expect($html)->toContain('data-booklet-panel="'.$entry->id.'"')
+        ->and($html)->toContain("settingsOf({$entry->id})['fileZoom']")
+        ->and($html)->toContain("setOverride({$entry->id}, 'fileZoom'")
+        ->and($html)->not->toContain('abcPageWidth');
+});
+
+/**
  * A score holding several uploaded files.
  *
  * They are not versions of one another — the projection slide is not the

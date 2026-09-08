@@ -5,7 +5,7 @@ import { spellFlatB } from './chordpro-notation.js';
 import { packPages } from './booklet-flow.js';
 import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
 import { markdownRows } from './booklet-markdown.js';
-import { layoutWidthFor, resolveSettings } from './booklet-settings.js';
+import { fileSettings, layoutWidthFor, resolveSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -34,9 +34,15 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
 /** Space above a score that is not the first thing on its page. */
-const SCORE_GAP_MM = 6;
+const SCORE_GAP_MM = 3;
 
-/** Space between a score's title and its first staff. */
+/**
+ * Space between a score's title and its first staff.
+ *
+ * Scaled with the booklet's heading size, like the air around a rubric's
+ * headings: the gap is part of how loudly a heading speaks, and a heading taken
+ * down to half its size wants the space under it taken down too.
+ */
 const TITLE_GAP_MM = 1.5;
 
 /**
@@ -49,12 +55,20 @@ const TITLE_GAP_MM = 1.5;
  */
 const STRIP_GAP_MM = 3;
 
-/** A heading is set at the lyric size, told apart by its weight alone. */
+/**
+ * A heading is set at the lyric size, told apart by its weight alone — times
+ * whatever the booklet's own heading scale says, which is how a heading is made
+ * to stop shouting on a small page.
+ */
 const TITLE_SIZE_FACTOR = 1;
 const VARIATION_SIZE_FACTOR = 0.82;
 const PAGE_NUMBER_SIZE_FACTOR = 0.62;
 
-const UI_FONT = "'Inter'";
+/**
+ * A rubric is set at the lyric size, so a paragraph between two scores reads as
+ * loudly as the lyrics beside it.
+ */
+const TEXT_SIZE_FACTOR = 1;
 
 const VARIATION_COLOR = '#555555';
 
@@ -84,7 +98,7 @@ const VARIATION_COLOR = '#555555';
 export async function renderBooklet(entries, rawGeometry, host) {
     const geometry = pageGeometry(rawGeometry);
     const blocks = [];
-    const fonts = new Set([UI_FONT]);
+    const fonts = new Set([geometry.textFont]);
 
     for (const entry of entries) {
         let built;
@@ -118,7 +132,7 @@ export async function buildScoreBlocks(entry, geometry, host) {
     const resolved = resolveSettings(format, defaults, entry.settings ?? {}, geometry, entry.override);
     const { layoutWidthPx, scale } = layoutWidthFor(format, resolved, geometry);
 
-    const fonts = [fontOf(format, resolved)];
+    const fonts = [fontOf(format, resolved, geometry)];
     const blocks = [];
 
     if (geometry.showTitles) {
@@ -140,7 +154,7 @@ export async function buildScoreBlocks(entry, geometry, host) {
             scale: blockScale,
             spaceBefore: (block.spaceBefore ?? 0) * blockScale
                 + (i === 0 && blocks.length === 0 ? mmToPx(SCORE_GAP_MM) : 0)
-                + (i === 0 && blocks.length > 0 ? mmToPx(TITLE_GAP_MM) : 0),
+                + (i === 0 && blocks.length > 0 ? titleGapPx(geometry) : 0),
             keepWithNext: block.keepWithNext ?? false,
             startsScore: i === 0 && blocks.length === 0,
             breakBefore: i === 0 && blocks.length === 0 ? !!entry.startOnNewPage : false,
@@ -150,6 +164,11 @@ export async function buildScoreBlocks(entry, geometry, host) {
     return { blocks, fonts };
 }
 
+/** The gap under a heading, which grows and shrinks with the heading itself. */
+function titleGapPx(geometry) {
+    return mmToPx(TITLE_GAP_MM) * (geometry.headingScale ?? 1);
+}
+
 /**
  * What is said above a score: the slot in the service, the music's own name
  * where the slot holds several, and the variation someone asked to see named.
@@ -157,12 +176,13 @@ export async function buildScoreBlocks(entry, geometry, host) {
  * Every one of them moves with the music it names, whatever else happens.
  */
 function headingBlocks(entry, geometry) {
+    const heading = geometry.lyricSizePx * geometry.headingScale;
     const lines = [
-        { content: entry.slot, size: geometry.lyricSizePx * TITLE_SIZE_FACTOR, bold: true },
-        { content: entry.music, size: geometry.lyricSizePx * TITLE_SIZE_FACTOR, bold: true },
+        { content: entry.slot, size: heading * TITLE_SIZE_FACTOR, bold: true },
+        { content: entry.music, size: heading * TITLE_SIZE_FACTOR, bold: true },
         {
             content: entry.variation,
-            size: geometry.lyricSizePx * VARIATION_SIZE_FACTOR,
+            size: heading * VARIATION_SIZE_FACTOR,
             italic: true,
             fill: VARIATION_COLOR,
         },
@@ -172,7 +192,7 @@ function headingBlocks(entry, geometry) {
         const row = textRowSvg({
             content: line.content,
             fontSize: line.size,
-            fontFamily: UI_FONT,
+            fontFamily: geometry.textFont,
             width: geometry.contentWidthPx,
             bold: !!line.bold,
             italic: !!line.italic,
@@ -198,12 +218,13 @@ function headingBlocks(entry, geometry) {
  * between two scores reads as the booklet talking rather than as more music.
  */
 export function buildTextBlocks(entry, geometry, measure = null) {
-    const fontSize = geometry.lyricSizePx;
+    const fontSize = geometry.lyricSizePx * TEXT_SIZE_FACTOR;
     const rows = markdownRows(entry.text ?? '', {
         fontSize,
-        fontFamily: UI_FONT,
+        fontFamily: geometry.textFont,
+        headingScale: geometry.headingScale,
         layoutWidth: geometry.contentWidthPx,
-        measure: measure ?? canvasMeasurer(UI_FONT, fontSize),
+        measure: measure ?? canvasMeasurer(geometry.textFont, fontSize),
     });
 
     const blocks = rows.map((row, i) => ({
@@ -216,7 +237,7 @@ export function buildTextBlocks(entry, geometry, measure = null) {
         breakBefore: i === 0 && !!entry.startOnNewPage,
     }));
 
-    return { blocks, fonts: [UI_FONT] };
+    return { blocks, fonts: [geometry.textFont] };
 }
 
 /**
@@ -263,6 +284,7 @@ export async function buildFileBlocks(entry, geometry) {
     stripPlacements(drawable, geometry, {
         afterHeading: blocks.length > 0,
         startOnNewPage: !!entry.startOnNewPage,
+        zoom: Number(fileSettings(entry.override).fileZoom),
     }).forEach((placement, i) => {
         const strip = drawable[i];
 
@@ -274,7 +296,7 @@ export async function buildFileBlocks(entry, geometry) {
         });
     });
 
-    return { blocks, fonts: [UI_FONT] };
+    return { blocks, fonts: [geometry.textFont] };
 }
 
 /**
@@ -334,20 +356,25 @@ export function scopePageIds(markup, prefix) {
  * be free to break across a page turn, which is the whole reason for cutting the
  * pages up in the first place.
  *
+ * The zoom is the one knob an uploaded score has. It multiplies the fit-to-width
+ * scale rather than replacing it, so every system of the file still shrinks by
+ * the same factor and the file stays as wide as it is tall.
+ *
  * @param {Array<{width: number, height: number}>} strips
  * @param {object} geometry from pageGeometry()
  * @returns {Array<{height: number, scale: number, keepWithNext: boolean}>}
  */
-export function stripPlacements(strips, geometry, { afterHeading = false, startOnNewPage = false } = {}) {
+export function stripPlacements(strips, geometry, { afterHeading = false, startOnNewPage = false, zoom = 1 } = {}) {
     const window = strips.reduce((widest, strip) => Math.max(widest, strip.width || 0), 0);
-    const scale = window > 0 ? geometry.contentWidthPx / window : 1;
+    const factor = Number(zoom) > 0 ? Number(zoom) : 1;
+    const scale = (window > 0 ? geometry.contentWidthPx / window : 1) * factor;
 
     return strips.map((strip, i) => ({
         height: (strip.height || 0) * scale,
         scale,
         keepWithNext: false,
         spaceBefore: i > 0 ? mmToPx(STRIP_GAP_MM)
-            : mmToPx(afterHeading ? TITLE_GAP_MM : SCORE_GAP_MM),
+            : (afterHeading ? titleGapPx(geometry) : mmToPx(SCORE_GAP_MM)),
         startsScore: i === 0 && !afterHeading,
         breakBefore: i === 0 && !afterHeading && startOnNewPage,
     }));
@@ -748,7 +775,7 @@ function composePage(page, geometry, pageNumber, pageCount) {
         const number = textRowSvg({
             content: String(pageNumber),
             fontSize: geometry.lyricSizePx * PAGE_NUMBER_SIZE_FACTOR,
-            fontFamily: UI_FONT,
+            fontFamily: geometry.textFont,
             width: geometry.contentWidthPx,
             fill: '#666666',
         });
@@ -822,13 +849,13 @@ function formatDefaults(format) {
     return {};
 }
 
-function fontOf(format, resolved) {
+function fontOf(format, resolved, geometry) {
     if (format === 'gabc') { return resolved.lyricFont; }
     if (format === 'abc') { return resolved.abcLyricFont; }
     if (format === 'chordpro') { return resolved.chordproFontFamily; }
     if (format === 'aretino') { return resolved.aretinoTextFont; }
 
-    return UI_FONT;
+    return geometry.textFont;
 }
 
 function parseSvg(markup) {

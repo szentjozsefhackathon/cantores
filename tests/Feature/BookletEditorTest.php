@@ -326,6 +326,45 @@ it('saves geometry changes as they are made', function () {
         ->and($booklet->contentMm()['width'])->toBe(210.0 - 24);
 });
 
+// Everything the booklet writes rather than engraves — the headings, the
+// rubrics, the page numbers — is set in one face at one size, and both are the
+// booklet's to choose.
+it('saves the face and the heading size the booklet is set in', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->set('textFont', 'EB Garamond')
+        ->set('headingScale', 0.8)
+        ->assertHasNoErrors();
+
+    $booklet->refresh();
+
+    expect($booklet->text_font)->toBe('EB Garamond')
+        ->and($booklet->heading_scale)->toBe(0.8)
+        ->and($booklet->geometry())->toMatchArray([
+            'textFont' => 'EB Garamond',
+            'headingScale' => 0.8,
+        ]);
+});
+
+// rsvg-convert has no network: a face that cannot be embedded is a face that is
+// not printed, so it is not one a booklet may be set in.
+it('refuses a text font the exporter cannot embed', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->set('textFont', 'Comic Sans MS')
+        ->assertHasErrors('textFont');
+
+    expect($booklet->fresh()->text_font)->toBe('Inter');
+});
+
 // The whole point of holding overrides on the pivot: a booklet adjusts how a
 // score is printed here, and changes nothing anywhere else.
 it('keeps an override to one booklet and never writes it back to the score', function () {

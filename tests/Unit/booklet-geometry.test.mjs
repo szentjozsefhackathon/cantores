@@ -13,6 +13,7 @@ import {
     pageGeometry,
     ptToPx,
     pxToMm,
+    quoteFontFamily,
 } from '../../resources/js/booklet-geometry.js';
 
 const close = (actual, expected, tolerance = 1e-6) => assert.ok(
@@ -48,6 +49,46 @@ test('A5 portrait with a 12mm margin becomes the expected pixel box', () => {
     close(geometry.contentWidthPx, 468.66, 0.01);
     close(geometry.marginPx, 45.35, 0.01);
     close(geometry.lyricSizePx, 14.6667, 1e-4);
+});
+
+// A family with a space in it, written unquoted into a font-family attribute,
+// is two families neither of which exists — and the booklet's own face is the
+// one every heading and every rubric is set in.
+test('the booklet\'s text font reaches the page quoted', () => {
+    assert.equal(quoteFontFamily('EB Garamond'), "'EB Garamond'");
+    assert.equal(quoteFontFamily("'Lora'"), "'Lora'");
+    assert.equal(quoteFontFamily(null), "'Inter'");
+    assert.equal(quoteFontFamily('  '), "'Inter'");
+});
+
+test('the typography a booklet chose travels with its geometry', () => {
+    const geometry = pageGeometry({
+        pageWidthMm: 148,
+        pageHeightMm: 210,
+        marginMm: 12,
+        contentWidthMm: 124,
+        contentHeightMm: 186,
+        lyricSizePt: 11,
+        staffHeightMm: 7,
+        textFont: 'Lora',
+        headingScale: 0.8,
+        showTitles: true,
+    });
+
+    assert.equal(geometry.textFont, "'Lora'");
+    assert.equal(geometry.headingScale, 0.8);
+});
+
+// An older booklet, or a payload written before these existed, must still draw.
+test('a geometry that says nothing about type falls back to Inter at full size', () => {
+    const geometry = pageGeometry({
+        pageWidthMm: 148, pageHeightMm: 210, marginMm: 12,
+        contentWidthMm: 124, contentHeightMm: 186,
+        lyricSizePt: 11, staffHeightMm: 7,
+    });
+
+    assert.equal(geometry.textFont, "'Inter'");
+    assert.equal(geometry.headingScale, 1);
 });
 
 // Each conversion is the inverse of what the renderer does with the number, so

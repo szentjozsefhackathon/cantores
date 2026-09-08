@@ -56,10 +56,31 @@ test('the widest system sets the scale, so a short one is not blown up', () => {
     assert.ok(placements[1].height < placements[0].height);
 });
 
+// The one knob a picture has. It multiplies the fit-to-width scale rather than
+// replacing it, so the file stays as wide as it is tall and every system of it
+// still shrinks by the same factor.
+test('a file taken down by hand shrinks every one of its systems alike', () => {
+    const full = stripPlacements(strips, geometry);
+    const smaller = stripPlacements(strips, geometry, { zoom: 0.6 });
+
+    smaller.forEach((placement, i) => {
+        assert.ok(Math.abs(placement.scale - full[i].scale * 0.6) < 1e-9);
+        assert.ok(Math.abs(placement.height - full[i].height * 0.6) < 1e-9);
+    });
+});
+
+test('a zoom that says nothing leaves the file at the width of the page', () => {
+    const full = stripPlacements(strips, geometry)[0];
+
+    for (const zoom of [undefined, null, 0, NaN, 1]) {
+        assert.equal(stripPlacements(strips, geometry, { zoom })[0].scale, full.scale);
+    }
+});
+
 test('the first system carries the score gap, the rest a system gap', () => {
     const placements = stripPlacements(strips, geometry);
 
-    assert.ok(Math.abs(placements[0].spaceBefore - mmToPx(6)) < 1e-9);
+    assert.ok(Math.abs(placements[0].spaceBefore - mmToPx(3)) < 1e-9);
     assert.ok(Math.abs(placements[1].spaceBefore - mmToPx(3)) < 1e-9);
     assert.ok(Math.abs(placements[2].spaceBefore - mmToPx(3)) < 1e-9);
 });
@@ -70,6 +91,14 @@ test('a heading above the music takes the gap over from the first system', () =>
     assert.ok(Math.abs(first.spaceBefore - mmToPx(1.5)) < 1e-9);
     assert.equal(first.startsScore, false);
     assert.equal(first.breakBefore, false);
+});
+
+// The gap under a heading is part of the heading, so it answers to the booklet's
+// heading scale exactly as the type does.
+test('the gap under a heading shrinks with the heading', () => {
+    const [first] = stripPlacements(strips, { ...geometry, headingScale: 0.6 }, { afterHeading: true });
+
+    assert.ok(Math.abs(first.spaceBefore - mmToPx(1.5) * 0.6) < 1e-9);
 });
 
 test('a score asked to start a page says so on its first system', () => {

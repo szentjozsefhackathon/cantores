@@ -98,12 +98,62 @@ test('a heading is set larger and holds on to what follows it', () => {
     assert.match(rows[0].svg, /font-weight="bold"/);
 });
 
+// Modest on purpose: these headings sit between staves on a page the size of a
+// hand, where a document's proportions read as a shout.
+test('the heading levels are only a little larger than the text', () => {
+    const size = (source) => parseFloat(
+        markdownRows(source, options)[0].svg.match(/font-size="([\d.]+)"/)[1],
+    );
+
+    assert.equal(size('# Egy'), 12);
+    assert.equal(size('## Kettő'), 11);
+    assert.equal(size('### Három'), 10);
+    assert.equal(size('Szöveg.'), 10);
+});
+
+test('the booklet\'s heading scale multiplies every level', () => {
+    const rows = markdownRows('# Cím\n\n## Alcím\n\nSzöveg.', { ...options, headingScale: 0.5 });
+    const size = (row) => parseFloat(row.svg.match(/font-size="([\d.]+)"/)[1]);
+
+    assert.equal(size(rows[0]), 6);
+    assert.equal(size(rows[1]), 5.5);
+    // The body is not a heading and is not touched by it.
+    assert.equal(size(rows[2]), 10);
+});
+
 test('paragraphs are spaced apart but may break across pages', () => {
     const rows = markdownRows('Első.\n\nMásodik.', options);
 
     assert.equal(rows[0].spaceBefore, 0);
     assert.ok(rows[1].spaceBefore > 0);
+    // Less than a line of it: the leading already separates them.
+    assert.ok(rows[1].spaceBefore < options.fontSize);
     assert.equal(rows[0].keepWithNext, false);
+});
+
+// The gap is part of how loudly a heading speaks, so it answers to the same
+// knob the type does — a heading halved and left in a full-sized gap reads as a
+// paragraph someone bolded by accident.
+test('the heading scale moves the air around a heading with it', () => {
+    const source = 'Előtte.\n\n# Cím\n\nUtána.';
+    const full = markdownRows(source, options);
+    const half = markdownRows(source, { ...options, headingScale: 0.5 });
+
+    // Above the heading, and between the heading and the text it introduces.
+    assert.ok(Math.abs(half[1].spaceBefore - full[1].spaceBefore / 2) < 1e-9);
+    assert.ok(Math.abs(half[2].spaceBefore - full[2].spaceBefore / 2) < 1e-9);
+
+    // Two paragraphs are the body's business, and are left alone by it.
+    const plain = (scale) => markdownRows('Első.\n\nMásodik.', { ...options, headingScale: scale });
+    assert.equal(plain(0.5)[1].spaceBefore, plain(1)[1].spaceBefore);
+});
+
+test('a heading is given more air above it than between it and its text', () => {
+    const rows = markdownRows('Előtte.\n\n# Cím\n\nUtána.', options);
+    const paragraphGap = markdownRows('Első.\n\nMásodik.', options)[1].spaceBefore;
+
+    assert.ok(rows[1].spaceBefore > paragraphGap, 'a heading opens something and is given room to');
+    assert.ok(rows[2].spaceBefore < rows[1].spaceBefore, 'a heading sits closer to its text than to what precedes it');
 });
 
 test('a list item is marked and indented', () => {

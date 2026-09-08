@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+    fileSettings,
     layoutWidthFor,
     paperBucket,
     resolveSettings,
@@ -91,6 +92,14 @@ test('every format is unified to the same lyric point size', () => {
 
 test('ChordPro is forced to a single column so the booklet does the packing', () => {
     assert.equal(unifiedSettings('chordpro', geometry).chordproColumns, 1);
+});
+
+// An uploaded score has nothing to unify: it is a picture, and the page already
+// prints it at full width. The one thing that can be said about it is "smaller".
+test('an uploaded score is printed at full size unless taken down by hand', () => {
+    assert.deepEqual(fileSettings(null), { fileZoom: 1 });
+    assert.deepEqual(fileSettings({}), { fileZoom: 1 });
+    assert.deepEqual(fileSettings({ fileZoom: 0.6 }), { fileZoom: 0.6 });
 });
 
 test('an unknown format contributes nothing', () => {

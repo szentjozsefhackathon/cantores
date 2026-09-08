@@ -13,6 +13,7 @@ use App\Support\BookletSettingFields;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Validate;
@@ -51,6 +52,17 @@ class BookletEditor extends Component
     #[Validate('required|numeric|min:2|max:20')]
     public float $staffHeightMm = 7;
 
+    /**
+     * The face everything the booklet writes rather than engraves is set in.
+     */
+    public string $textFont = 'Inter';
+
+    /**
+     * How big a heading is beside the lyrics it stands over.
+     */
+    #[Validate('required|numeric|min:0.5|max:2')]
+    public float $headingScale = 1;
+
     public bool $showTitles = true;
 
     /**
@@ -77,7 +89,23 @@ class BookletEditor extends Component
         $this->marginMm = $booklet->margin_mm;
         $this->lyricSizePt = $booklet->lyric_size_pt;
         $this->staffHeightMm = $booklet->staff_height_mm;
+        $this->textFont = $booklet->text_font;
+        $this->headingScale = $booklet->heading_scale;
         $this->showTitles = $booklet->show_titles;
+    }
+
+    /**
+     * The one rule that cannot be stated as an attribute: the faces a booklet
+     * may be set in are the ones the exporter can embed, and that list lives
+     * with the rest of the font handling in BookletSettingFields.
+     *
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return [
+            'textFont' => ['required', 'string', Rule::in(BookletSettingFields::fontOptions())],
+        ];
     }
 
     public function rendering(IlluminateView $view): void
@@ -197,6 +225,7 @@ class BookletEditor extends Component
                         ...$common,
                         'kind' => 'file',
                         'fileId' => $file['file_id'],
+                        'override' => $entry->settings_override ?? [],
                         'strips' => array_map(function (array $strip) use ($file): array {
                             if (isset($strip['rect'])) {
                                 return [
@@ -403,7 +432,7 @@ class BookletEditor extends Component
             return;
         }
 
-        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'showTitles'], true)) {
+        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'textFont', 'headingScale', 'showTitles'], true)) {
             return;
         }
 
@@ -422,6 +451,8 @@ class BookletEditor extends Component
             'margin_mm' => $this->marginMm,
             'lyric_size_pt' => $this->lyricSizePt,
             'staff_height_mm' => $this->staffHeightMm,
+            'text_font' => $this->textFont,
+            'heading_scale' => $this->headingScale,
             'show_titles' => $this->showTitles,
         ]);
 
@@ -652,11 +683,26 @@ class BookletEditor extends Component
             return;
         }
 
-        $clean = BookletSettingFields::sanitize($entry->score?->format?->value, $override);
+        $clean = BookletSettingFields::sanitize(self::overrideFormat($entry), $override);
 
         $entry->update(['settings_override' => $clean === [] ? null : $clean]);
 
         $this->forgetEntries();
+    }
+
+    /**
+     * Which set of knobs a row answers to.
+     *
+     * A score engraved from source answers to its format's; an uploaded one has
+     * no format and answers to the single knob a picture has.
+     */
+    public static function overrideFormat(BookletScore $entry): ?string
+    {
+        if ($entry->isText()) {
+            return null;
+        }
+
+        return $entry->score?->format?->value ?? 'file';
     }
 
     public function resetOverride(int $entryId): void

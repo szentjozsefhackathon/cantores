@@ -30,6 +30,21 @@ export function ptToPx(pt) {
     return pt * PX_PER_PT;
 }
 
+/** The face the booklet speaks in when nothing else has been chosen. */
+export const DEFAULT_TEXT_FONT = 'Inter';
+
+/**
+ * A family as an SVG font-family value.
+ *
+ * Quoted, because the names in play have spaces in them and a bare
+ * `font-family="EB Garamond"` is two families neither of which exists.
+ */
+export function quoteFontFamily(family) {
+    const bare = String(family ?? '').trim().replace(/['"]/g, '');
+
+    return `'${bare === '' ? DEFAULT_TEXT_FONT : bare}'`;
+}
+
 /**
  * Convert a booklet's millimetre geometry into the pixel geometry the renderers
  * and the page composer work in.
@@ -49,6 +64,8 @@ export function pageGeometry(geometry) {
         lyricSizePt: geometry.lyricSizePt,
         lyricSizePx: ptToPx(geometry.lyricSizePt),
         staffHeightMm: geometry.staffHeightMm,
+        textFont: quoteFontFamily(geometry.textFont),
+        headingScale: Number(geometry.headingScale) > 0 ? Number(geometry.headingScale) : 1,
         showTitles: geometry.showTitles !== false,
     };
 }

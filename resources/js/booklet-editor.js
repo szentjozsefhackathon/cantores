@@ -1,6 +1,6 @@
 import { pageGeometry } from './booklet-geometry.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
-import { resolveSettings } from './booklet-settings.js';
+import { fileSettings, resolveSettings } from './booklet-settings.js';
 import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -18,6 +18,17 @@ import { gabcMixin } from './score-editor-gabc.js';
  */
 
 const RENDER_DEBOUNCE_MS = 250;
+
+/**
+ * How long a knob is left alone before the change is sent to the server.
+ *
+ * A number field steps once per arrow click, and every step used to be a round
+ * trip that re-rendered the whole component and pushed a fresh payload back —
+ * so nudging a staff size from 7 to 12 cost five of them, each one landing in
+ * the middle of the next. The preview redraws locally on every step regardless;
+ * only the saving waits.
+ */
+const SAVE_DEBOUNCE_MS = 600;
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('bookletEditor', (config = {}) => ({
@@ -37,6 +48,8 @@ document.addEventListener('alpine:init', () => {
 
         _renderTimer: null,
         _renderToken: 0,
+        _saveTimers: {},
+        _pendingOverrides: {},
 
         init() {
             this.$nextTick(() => this.scheduleRender());
@@ -44,15 +57,27 @@ document.addEventListener('alpine:init', () => {
 
         destroy() {
             clearTimeout(this._renderTimer);
+            this.flushOverrides();
         },
 
         /**
          * A change came back from the server. The payload is pushed rather than
          * read, because it is a computed property with no client-side existence.
+         *
+         * A payload that left the server before the knob currently being turned
+         * was saved carries the older value, so anything still waiting to be
+         * sent is put back on top of it — otherwise the preview would flick back
+         * to where the score was a moment ago and then forward again.
          */
         applyUpdate(detail = {}) {
             if (detail.payload) { this.entries = detail.payload; }
             if (detail.geometry) { this.geometry = detail.geometry; }
+
+            Object.entries(this._pendingOverrides).forEach(([entryId, override]) => {
+                const entry = this.entries.find((candidate) => String(candidate.id) === entryId);
+
+                if (entry) { entry.override = override; }
+            });
 
             this.scheduleRender();
         },
@@ -139,7 +164,13 @@ document.addEventListener('alpine:init', () => {
         settingsOf(entryId) {
             const entry = this.entries.find((candidate) => candidate.id === entryId);
 
-            if (!entry || entry.kind !== 'score') { return {}; }
+            if (!entry) { return {}; }
+
+            // An uploaded score is a picture: there is nothing to resolve, only
+            // the factor it is being taken down by.
+            if (entry.kind === 'file') { return fileSettings(entry.override); }
+
+            if (entry.kind !== 'score') { return {}; }
 
             return resolveSettings(
                 entry.format,
@@ -165,7 +196,7 @@ document.addEventListener('alpine:init', () => {
             entry.override = override;
 
             this.scheduleRender();
-            this.$wire.saveOverride(entryId, override);
+            this.scheduleSave(entryId, override);
         },
 
         resetOverride(entryId) {
@@ -175,8 +206,49 @@ document.addEventListener('alpine:init', () => {
 
             entry.override = {};
 
+            clearTimeout(this._saveTimers[entryId]);
+            delete this._saveTimers[entryId];
+            delete this._pendingOverrides[entryId];
+
             this.scheduleRender();
             this.$wire.resetOverride(entryId);
+        },
+
+        /**
+         * Hold one entry's changes back until the knob stops moving.
+         *
+         * Held per entry rather than globally: two panels may be open, and a
+         * score whose settings someone finished with should not wait on another
+         * they have only just started on.
+         */
+        scheduleSave(entryId, override) {
+            this._pendingOverrides[entryId] = override;
+
+            clearTimeout(this._saveTimers[entryId]);
+            this._saveTimers[entryId] = setTimeout(() => this.saveNow(entryId), SAVE_DEBOUNCE_MS);
+        },
+
+        saveNow(entryId) {
+            const override = this._pendingOverrides[entryId];
+
+            clearTimeout(this._saveTimers[entryId]);
+            delete this._saveTimers[entryId];
+            delete this._pendingOverrides[entryId];
+
+            if (!override) { return; }
+
+            try {
+                this.$wire.saveOverride(Number(entryId), override);
+            } catch (e) {
+                // Reached from destroy() as well, where the component may
+                // already be half gone; a redraw is not worth a broken teardown.
+                console.error('[booklet] could not save an override', e);
+            }
+        },
+
+        /** Nothing half-turned may be lost to a page leaving. */
+        flushOverrides() {
+            Object.keys(this._pendingOverrides).forEach((entryId) => this.saveNow(entryId));
         },
 
         isOverridden(entryId, key) {

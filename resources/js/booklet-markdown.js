@@ -21,12 +21,26 @@ import { escapeXml, round } from './booklet-text.js';
 
 /** Multiples of the font size. */
 const LINE = 1.45;
-const BLOCK_GAP = 0.6;
+const BLOCK_GAP = 0.35;
 const LIST_INDENT = 1.4;
 const QUOTE_INDENT = 1.0;
 const RULE_HEIGHT = 0.9;
 
-const HEADING_SCALE = [1.3, 1.15, 1.0, 1.0, 1.0, 1.0];
+/**
+ * The air around a heading, as multiples of the heading's own size rather than
+ * the body's — so the booklet's heading scale moves the space along with the
+ * type. A heading taken down to half its size and left sitting in a full-sized
+ * gap reads as a paragraph someone bolded by accident.
+ */
+const HEADING_GAP_ABOVE = 0.7;
+const HEADING_GAP_BELOW = 0.2;
+
+/**
+ * A rubric's headings, by level. Modest on purpose: these sit between staves on
+ * a page the size of a hand, where a document's proportions would read as a
+ * shout. The booklet's own heading scale multiplies whichever one applies.
+ */
+const HEADING_SCALE = [1.2, 1.1, 1.0, 1.0, 1.0, 1.0];
 
 const QUOTE_COLOR = '#555555';
 const RULE_COLOR = '#999999';
@@ -47,19 +61,22 @@ const RULE_COLOR = '#999999';
  * @param {number} options.fontSize in px
  * @param {string} options.fontFamily
  * @param {number} options.layoutWidth in px
+ * @param {number} [options.headingScale] the booklet's own heading factor
  * @param {(text: string, opts?: {bold?: boolean, italic?: boolean}) => number} options.measure
  * @returns {MarkdownRow[]}
  */
 export function markdownRows(source, options) {
     const rows = [];
+    const blocks = parseBlocks(source);
+    const sizes = blocks.map((block) => blockFontSize(block, options));
 
-    parseBlocks(source).forEach((block, blockIndex) => {
-        const built = renderBlock(block, options);
+    blocks.forEach((block, blockIndex) => {
+        const built = renderBlock(block, options, sizes[blockIndex]);
 
         built.forEach((row, i) => {
             rows.push({
                 ...row,
-                spaceBefore: i === 0 && blockIndex > 0 ? options.fontSize * BLOCK_GAP : 0,
+                spaceBefore: i === 0 ? gapBefore(blocks, sizes, blockIndex, options) : 0,
                 // A heading belongs to what follows it; the lines of one
                 // paragraph do not, so a long rubric may break across pages.
                 keepWithNext: i < built.length - 1
@@ -70,6 +87,41 @@ export function markdownRows(source, options) {
     });
 
     return rows;
+}
+
+/**
+ * The size one block is set at: the body size, or the heading level's share of
+ * it times whatever the booklet's own heading scale says.
+ */
+function blockFontSize(block, options) {
+    const headingScale = Number(options.headingScale) > 0 ? Number(options.headingScale) : 1;
+
+    return block.type === 'heading'
+        ? options.fontSize * (HEADING_SCALE[block.level - 1] ?? 1) * headingScale
+        : options.fontSize;
+}
+
+/**
+ * The space above one block.
+ *
+ * A heading's gaps belong to the heading — the one above it and the one that
+ * separates it from the text it introduces — so both are measured in the
+ * heading's own size and both move when the booklet's heading scale does.
+ */
+function gapBefore(blocks, sizes, index, options) {
+    if (index === 0) {
+        return 0;
+    }
+
+    if (blocks[index].type === 'heading') {
+        return sizes[index] * HEADING_GAP_ABOVE;
+    }
+
+    if (blocks[index - 1].type === 'heading') {
+        return sizes[index - 1] * HEADING_GAP_BELOW;
+    }
+
+    return options.fontSize * BLOCK_GAP;
 }
 
 /**
@@ -145,7 +197,7 @@ export function parseBlocks(source) {
     return blocks;
 }
 
-function renderBlock(block, options) {
+function renderBlock(block, options, size) {
     const { fontSize, fontFamily, layoutWidth } = options;
 
     if (block.type === 'rule') {
@@ -156,10 +208,6 @@ function renderBlock(block, options) {
 
         return [{ height, svg: svgDocument(body, layoutWidth, height) }];
     }
-
-    const size = block.type === 'heading'
-        ? fontSize * (HEADING_SCALE[block.level - 1] ?? 1)
-        : fontSize;
 
     const style = {
         bold: block.type === 'heading',

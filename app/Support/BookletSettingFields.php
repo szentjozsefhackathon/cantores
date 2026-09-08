@@ -59,6 +59,14 @@ class BookletSettingFields
             'abcTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose'],
             'abcZoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)'],
         ],
+        // An uploaded score is a picture by the time it reaches a booklet, so
+        // the only thing that can be done to it is scale it. It already arrives
+        // scaled to the width of the page, which is right for nearly every file;
+        // this is the way down from there, for the scan engraved so large that
+        // filling the page makes it shout.
+        'file' => [
+            'fileZoom' => ['type' => 'number', 'min' => 0.2, 'max' => 1, 'step' => 0.05, 'label' => 'Size (×)'],
+        ],
         'chordpro' => [
             'chordproFontSize' => ['type' => 'number', 'min' => 6, 'max' => 32, 'step' => 0.5, 'label' => 'Font size'],
             'chordproFontFamily' => ['type' => 'font', 'label' => 'Font'],

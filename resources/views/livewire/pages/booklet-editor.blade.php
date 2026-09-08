@@ -1,6 +1,7 @@
 @php
     use App\Enums\BookletOrientation;
     use App\Enums\BookletPageSize;
+    use App\Livewire\Pages\BookletEditor;
     use App\Support\BookletSettingFields;
 
     $entries = $this->entries;
@@ -80,6 +81,20 @@
                 <flux:field>
                     <flux:label>{{ __('Staff height (mm)') }}</flux:label>
                     <flux:input type="number" wire:model.live.debounce.500ms="staffHeightMm" min="2" max="20" step="0.5" class="w-20!" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>{{ __('Text font') }}</flux:label>
+                    <flux:select wire:model.live="textFont" class="w-40">
+                        @foreach(BookletSettingFields::fontOptions() as $font)
+                            <flux:select.option value="{{ $font }}">{{ $font }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>{{ __('Heading size (×)') }}</flux:label>
+                    <flux:input type="number" wire:model.live.debounce.500ms="headingScale" min="0.5" max="2" step="0.05" class="w-20!" />
                 </flux:field>
 
                 <flux:field variant="inline">
@@ -221,22 +236,20 @@
                                                 />
                                             </flux:tooltip>
 
-                                            {{-- An uploaded score has no knobs: it is a picture by the
-                                                 time it reaches a booklet, and the only thing that can be
-                                                 done to it is the scaling the page already does. --}}
-                                            @if($entry->score?->format)
-                                                <flux:tooltip :content="__('Adjust this score')">
-                                                    <flux:button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        icon="adjustments-horizontal"
-                                                        wire:click="editSettings({{ $this->editingEntryId === $entry->id ? 'null' : $entry->id }})"
-                                                        class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                                        aria-expanded="{{ $this->editingEntryId === $entry->id ? 'true' : 'false' }}"
-                                                        :aria-label="__('Adjust this score')"
-                                                    />
-                                                </flux:tooltip>
-                                            @endif
+                                            {{-- An uploaded score is a picture by the time it reaches a
+                                                 booklet, so it gets a panel with the one knob a picture
+                                                 has; an engraved one gets its format's. --}}
+                                            <flux:tooltip :content="__('Adjust this score')">
+                                                <flux:button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    icon="adjustments-horizontal"
+                                                    wire:click="editSettings({{ $this->editingEntryId === $entry->id ? 'null' : $entry->id }})"
+                                                    class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                    aria-expanded="{{ $this->editingEntryId === $entry->id ? 'true' : 'false' }}"
+                                                    :aria-label="__('Adjust this score')"
+                                                />
+                                            </flux:tooltip>
                                         @endif
 
                                     </div>
@@ -259,14 +272,19 @@
                                         </div>
                                     @endif
 
-                                    @if(! $entry->isText() && $this->editingEntryId === $entry->id && $entry->score?->format)
+                                    @if(! $entry->isText() && $this->editingEntryId === $entry->id)
+                                        @php $panelFormat = BookletEditor::overrideFormat($entry); @endphp
                                         <div
                                             class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700"
                                             data-booklet-panel="{{ $entry->id }}"
                                         >
                                             <div class="mb-2 flex items-start justify-between gap-2">
                                                 <flux:text class="text-xs text-zinc-500">
-                                                    {{ __('Changes here apply to this booklet only — the score itself is untouched. Widen a score to stop a line breaking; lower its staff height to stop a page breaking.') }}
+                                                    @if($panelFormat === 'file')
+                                                        {{ __('Changes here apply to this booklet only. An uploaded score is printed at the full width of the page; make it smaller where that is too big.') }}
+                                                    @else
+                                                        {{ __('Changes here apply to this booklet only — the score itself is untouched. Widen a score to stop a line breaking; lower its staff height to stop a page breaking.') }}
+                                                    @endif
                                                 </flux:text>
 
                                                 <flux:tooltip :content="__('Back to the booklet defaults')">
@@ -281,7 +299,7 @@
                                             </div>
 
                                             <div class="grid grid-cols-2 gap-x-3 gap-y-2">
-                                                @foreach(BookletSettingFields::panelFor($entry->score->format->value) as $field)
+                                                @foreach(BookletSettingFields::panelFor($panelFormat) as $field)
                                                     <div class="flex flex-col gap-0.5" wire:key="field-{{ $entry->id }}-{{ $field['key'] }}">
                                                         <label class="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
                                                             {{ $field['label'] }}
