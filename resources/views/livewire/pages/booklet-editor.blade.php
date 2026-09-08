@@ -109,8 +109,9 @@
         {{-- items-start keeps the columns from stretching, which is what lets each
              one stick and scroll inside its own box instead of dragging the page. --}}
         <div
-            class="grid items-start gap-4"
-            :class="previewExpanded ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]' : 'lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]'"
+            class="booklet-split grid items-start gap-4"
+            x-bind:style="`--booklet-split: ${splitPercent}%`"
+            x-bind:class="splitDragging ? 'cursor-col-resize select-none' : ''"
         >
 
             {{-- Choosing --}}
@@ -428,15 +429,31 @@
                 </flux:card>
             </div>
 
+            {{-- The handle owns a grid column of its own, so dragging it moves
+                 nothing but the boundary the two panes share. Keyboard users move
+                 it with the arrow keys; a double click puts it back. --}}
+            <div
+                data-booklet-handle
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="{{ __('Resize the preview') }}"
+                aria-valuemin="20"
+                aria-valuemax="80"
+                x-bind:aria-valuenow="Math.round(splitPercent)"
+                tabindex="0"
+                class="group hidden touch-none select-none lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-2 lg:cursor-col-resize lg:items-center lg:justify-center"
+                x-on:pointerdown="startSplitDrag($event)"
+                x-on:dblclick="resetSplit()"
+                x-on:keydown.arrow-left.prevent="nudgeSplit(-2)"
+                x-on:keydown.arrow-right.prevent="nudgeSplit(2)"
+                x-on:keydown.home.prevent="resetSplit()"
+            >
+                <div class="h-16 w-1 rounded-full bg-zinc-200 transition-colors group-hover:bg-blue-500 group-focus:bg-blue-500 dark:bg-zinc-700 dark:group-hover:bg-blue-400 dark:group-focus:bg-blue-400"></div>
+            </div>
+
             {{-- The pages --}}
             <flux:card class="relative flex flex-col p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)]">
-                <div class="mb-3 flex items-center justify-between gap-2">
-                    <flux:heading>{{ __('Preview') }}</flux:heading>
-                    <flux:button size="sm" variant="ghost" class="hidden lg:inline-flex" x-on:click="previewExpanded = !previewExpanded" x-bind:aria-expanded="previewExpanded">
-                        <span x-show="!previewExpanded">{{ __('Widen preview') }}</span>
-                        <span x-show="previewExpanded" x-cloak>{{ __('Compact preview') }}</span>
-                    </flux:button>
-                </div>
+                <flux:heading class="mb-3">{{ __('Preview') }}</flux:heading>
                 <div
                     class="mb-2 flex items-center gap-1.5 text-sm text-zinc-500"
                     x-show="rendering"

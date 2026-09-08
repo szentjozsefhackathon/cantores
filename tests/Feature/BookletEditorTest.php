@@ -215,14 +215,23 @@ it('gives the plan and the pages a scroll box each', function () {
         ->and($panes['pages'])->toContain('lg:overflow-y-auto');
 });
 
-it('starts with a compact preview and offers a wider view', function () {
+it('divides the plan from the preview with a draggable handle', function () {
     $user = User::factory()->create();
     actingAs($user);
 
-    Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])
-        ->assertSee('minmax(0,24rem)', false)
-        ->assertSee(__('Widen preview'))
-        ->assertSee(__('Compact preview'));
+    $html = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])->html();
+
+    preg_match('/<div\b[^>]*data-booklet-handle[^>]*>/', $html, $matches);
+    $handle = $matches[0] ?? '';
+
+    expect($html)->toContain('booklet-split')
+        ->and($handle)->toContain('role="separator"')
+        ->and($handle)->toContain(__('Resize the preview'))
+        ->and($handle)->toContain('startSplitDrag')
+        ->and(strpos($html, 'data-booklet-handle'))
+        ->toBeGreaterThan(strpos($html, 'data-booklet-pane="plan"'))
+        ->and(strpos($html, 'data-booklet-handle'))
+        ->toBeLessThan(strpos($html, 'data-booklet-pane="pages"'));
 });
 
 it('keeps the preview references in the booklet renderer component', function () {

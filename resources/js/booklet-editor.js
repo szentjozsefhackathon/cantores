@@ -1,6 +1,7 @@
 import { pageGeometry } from './booklet-geometry.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
 import { resolveSettings } from './booklet-settings.js';
+import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
@@ -28,7 +29,8 @@ document.addEventListener('alpine:init', () => {
 
         pages: [],
         pageCount: 0,
-        previewExpanded: false,
+        splitPercent: SPLIT_DEFAULT,
+        splitDragging: false,
         rendering: false,
         exporting: false,
         message: '',
@@ -53,6 +55,30 @@ document.addEventListener('alpine:init', () => {
             if (detail.geometry) { this.geometry = detail.geometry; }
 
             this.scheduleRender();
+        },
+
+        /** The handle between the plan and the pages was grabbed. */
+        startSplitDrag(event) {
+            const handle = event.currentTarget;
+            const row = handle.parentElement;
+
+            if (!row) { return; }
+
+            event.preventDefault();
+            this.splitDragging = true;
+
+            beginSplitDrag(handle, row, event, {
+                onMove: (percent) => { this.splitPercent = percent; },
+                onEnd: () => { this.splitDragging = false; },
+            });
+        },
+
+        nudgeSplit(delta) {
+            this.splitPercent = clampSplitPercent(this.splitPercent + delta);
+        },
+
+        resetSplit() {
+            this.splitPercent = SPLIT_DEFAULT;
         },
 
         scheduleRender() {

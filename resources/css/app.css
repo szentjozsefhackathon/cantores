@@ -323,6 +323,13 @@ select:focus[data-flux-control] {
     margin: 16px 32px 32px 16px;
 }
 
+/* Booklet editor — the plan and the preview side by side, with the share of the
+   row the plan keeps set by the handle between them. Below lg the two panes
+   stack, and a split has nothing to divide. */
+@media (min-width: 64rem) {
+    .booklet-split { grid-template-columns: minmax(0, var(--booklet-split, 60%)) auto minmax(0, 1fr); }
+}
+
 /* Booklet preview — sheets of paper stacked down the pane */
 .booklet-pages { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
 .booklet-page {
