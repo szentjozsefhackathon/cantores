@@ -124,6 +124,34 @@ it('keeps a braced system whole', function () {
         ->and($result['bands'][0]['bottom'] * $result['height'])->toBeGreaterThan(1226);
 });
 
+// The rows under a staff hold the thinnest ink on the page: a stem is one or two
+// pixels wide and nothing else is on the row with it. Measured as a share of a
+// sampling window that spans a fortieth of the page, that is a twentieth of the
+// window, and a system whose lowest notes hang below the staff had them cut off.
+it('keeps the notes hanging below a staff inside its band', function () {
+    $page = blankPage();
+    $black = imagecolorallocate($page, 0, 0, 0);
+    $spacing = 19.0;
+
+    drawStaff($page, 900, 210, 2250, $spacing);
+    drawStaff($page, 1600, 210, 2250, $spacing);
+
+    $foot = (int) round(900 + 4 * $spacing);
+    $lowest = (int) round($foot + 3 * $spacing);
+
+    // Stems only, and nothing wider anywhere on those rows: whether the band
+    // reaches them says exactly whether two dark pixels in a window are read as
+    // ink, which is what the page's own thinnest stroke amounts to.
+    foreach ([600, 900, 1500] as $x) {
+        imagefilledrectangle($page, $x, $foot, $x + 1, $lowest, $black);
+    }
+
+    $result = (new ScorePageBander)->analyse(pngOf($page));
+
+    expect($result['bands'])->toHaveCount(2)
+        ->and($result['bands'][0]['bottom'] * $result['height'])->toBeGreaterThan($lowest);
+});
+
 it('drops the page number', function () {
     $withNumber = (new ScorePageBander)->analyse(engravedPage());
 

@@ -35,8 +35,22 @@ class ScorePageBander
     /** Sampling windows across the width. Ink is localised, so a narrow window keeps a page number visible. */
     private const COLUMNS = 64;
 
-    /** How dark one window must be before its row counts as ink at all. */
-    private const WINDOW_INK = 0.08;
+    /**
+     * How much ink one sampling window must hold before it counts as ink at all,
+     * measured in fully dark pixels of the page as rendered.
+     *
+     * A window is an area average, so a thin stroke is diluted by however much of
+     * the page the window spans: at 64 columns across a 1240 pixel page, a note
+     * stem or a ledger line is one dark pixel in nineteen and averages to 0.05.
+     * A threshold stated as a fixed share of the window would therefore mean
+     * something different at every page size — and at the sizes poppler actually
+     * renders, it read the rows below a staff that carry only stems as blank
+     * paper and cut the notes hanging off the bottom of a system away. Stated in
+     * pixels and divided by the window's own size, it means the same thing at
+     * every resolution. Half a pixel, so that a stroke smeared across two by
+     * anti-aliasing still counts as the one pixel of ink it is.
+     */
+    private const WINDOW_INK_PIXELS = 0.5;
 
     /** How dark a whole row must be, averaged, to be a staff line. */
     private const STAFF_ROW_INK = 0.4;
@@ -100,7 +114,7 @@ class ScorePageBander
             $spacing = $this->staffSpacing($rows);
             [$left, $right] = $this->inkColumns($page, $width, $height);
 
-            $bands = $this->bandsOf($rows, $height, $spacing);
+            $bands = $this->bandsOf($rows, $height, $spacing, $this->inkThreshold($width / self::COLUMNS));
 
             return [
                 'width' => $width,
@@ -168,6 +182,7 @@ class ScorePageBander
 
         try {
             $rows = imagesy($strip);
+            $threshold = $this->inkThreshold($height / $rows);
             $left = null;
             $right = null;
 
@@ -177,7 +192,7 @@ class ScorePageBander
                     $max = max($max, $this->inkAt($strip, $x, $y));
                 }
 
-                if ($max >= self::WINDOW_INK) {
+                if ($max >= $threshold) {
                     $left ??= $x;
                     $right = $x;
                 }
@@ -255,9 +270,9 @@ class ScorePageBander
      * @param  list<array{max: float, mean: float}>  $rows
      * @return list<array{int, int}>
      */
-    private function bandsOf(array $rows, int $height, ?float $spacing): array
+    private function bandsOf(array $rows, int $height, ?float $spacing, float $threshold): array
     {
-        $runs = $this->runsOf($rows, fn (array $row): bool => $row['max'] >= self::WINDOW_INK);
+        $runs = $this->runsOf($rows, fn (array $row): bool => $row['max'] >= $threshold);
 
         if ($runs === []) {
             return [];
@@ -377,6 +392,18 @@ class ScorePageBander
         imagecopyresampled($strip, $page, 0, 0, 0, 0, $width, $height, imagesx($page), imagesy($page));
 
         return $strip;
+    }
+
+    /**
+     * The ink level at which a sampling window holds WINDOW_INK_PIXELS of ink,
+     * given how many pixels of the original page that window spans.
+     *
+     * A window narrower than a pixel is one the page was stretched into rather
+     * than squeezed, and it dilutes nothing, so it is read as a whole pixel.
+     */
+    private function inkThreshold(float $windowPixels): float
+    {
+        return self::WINDOW_INK_PIXELS / max(1.0, $windowPixels);
     }
 
     /**
