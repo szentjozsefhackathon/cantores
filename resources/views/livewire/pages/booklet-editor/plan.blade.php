@@ -123,6 +123,41 @@
                                                     />
                                                 </flux:tooltip>
                                             @endif
+
+                                            {{-- Where the music is to be found in the books the
+                                                 congregation already holds, said as briefly as it
+                                                 can be.
+
+                                                 No third eye beside the other two: the reference
+                                                 itself is the switch, and it is drawn as it will
+                                                 be printed — solid once the booklet says it,
+                                                 outlined and pale while it does not. So there is
+                                                 nothing to read to know what will happen, and
+                                                 nothing to tell apart from the eyes that govern
+                                                 the names. --}}
+                                            @if($child['reference'])
+                                                @if($musicChosen)
+                                                    <flux:tooltip :content="$child['showsReference']
+                                                        ? __('Printed in the booklet — click to leave it out')
+                                                        : __('Not printed — click to put it in the booklet')">
+                                                        <button
+                                                            type="button"
+                                                            data-plan-music-reference
+                                                            wire:click="toggleMusicCollections({{ $child['headingEntryId'] }})"
+                                                            aria-pressed="{{ $child['showsReference'] ? 'true' : 'false' }}"
+                                                            class="shrink-0 cursor-pointer rounded-md border px-1.5 py-0.5 text-xs font-normal transition
+                                                                {{ $child['showsReference']
+                                                                    ? 'border-blue-600 bg-blue-600/10 text-blue-700 dark:border-blue-400 dark:bg-blue-400/15 dark:text-blue-300'
+                                                                    : 'border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300' }}"
+                                                        >{{ $child['reference'] }}</button>
+                                                    </flux:tooltip>
+                                                @else
+                                                    {{-- Nothing of this music is in the booklet, so
+                                                         there is no row to keep the answer on: the
+                                                         reference is only told, not offered. --}}
+                                                    <span data-plan-music-reference class="shrink-0 text-xs font-normal text-zinc-400 dark:text-zinc-500">{{ $child['reference'] }}</span>
+                                                @endif
+                                            @endif
                                         </div>
 
                                         <div class="flex shrink-0 items-center gap-0.5">

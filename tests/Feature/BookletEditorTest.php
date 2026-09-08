@@ -5,6 +5,7 @@ use App\Livewire\Pages\BookletEditor;
 use App\Livewire\Pages\Booklets;
 use App\Models\Booklet;
 use App\Models\BookletScore;
+use App\Models\Collection as CollectionModel;
 use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
@@ -1309,10 +1310,13 @@ it('adds a paragraph of instructions and keeps its Markdown', function () {
         ->toMatchArray(['kind' => 'text', 'id' => $entry->id]);
 });
 
-it('fills new top-level text with the booklet title when there is no text yet', function () {
+// The words a booklet opens with are almost always its name, so the paragraph
+// written as its first row starts off holding the title as a heading — named
+// the way a name is written, whatever case the plan handed the booklet.
+it('opens the booklet with its title when the first words are written there', function () {
     $user = User::factory()->create();
     $booklet = bookletFor($user);
-    $booklet->update(['title' => 'Advent Sunday']);
+    $booklet->update(['title' => 'évközi 12. vasárnap']);
 
     actingAs($user);
 
@@ -1320,42 +1324,100 @@ it('fills new top-level text with the booklet title when there is no text yet', 
 
     $entry = $booklet->entries()->firstOrFail();
 
-    // The new text entry is pre-filled with the booklet title formatted as a heading
     expect($entry->isText())->toBeTrue()
-        ->and($entry->text)->toBe('# Advent Sunday');
+        ->and($entry->text)->toBe('# Évközi 12. vasárnap');
 });
 
-it('does not fill text with title when text already exists at the top', function () {
+// What counts is how the booklet opens, not what it says elsewhere: paragraphs
+// standing at the back of it, outside the plan, are not its name.
+it('opens the booklet with its title though words stand at the back of it', function () {
     $user = User::factory()->create();
-    $booklet = bookletFor($user);
-    $booklet->update(['title' => 'Advent Sunday']);
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    $booklet->update(['title' => 'Advent vasárnapja']);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Ének egy']);
 
     actingAs($user);
 
-    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet]);
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
 
-    // Add the first text - should be filled with title
+    // Words after the music, belonging to no slot — the shape a booklet takes
+    // once something has been written under its last score.
+    $trailing = $booklet->entries()->create(['text' => 'Vége', 'sequence' => 99]);
+
     $component->call('addText');
 
-    $firstEntry = $booklet->entries()->orderBy('sequence')->first();
+    $order = $booklet->entries()->orderBy('sequence')->get();
 
-    expect($firstEntry->text)->toBe('# Advent Sunday');
+    expect($order->first()->text)->toBe('# Advent vasárnapja')
+        ->and($order->last()->id)->toBe($trailing->id);
+});
 
-    // Add a second text - should be empty since text already exists at top
+// Words at the head of the first slot are that slot's, and the booklet is still
+// nameless above them — so it is named when something is written over them.
+it('opens the booklet with its title above words that belong to the first slot', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    $booklet->update(['title' => 'Advent vasárnapja']);
+    [$slotPlan, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Ének egy']);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id)
+        ->call('addText', $slotPlan->id);
+
     $component->call('addText');
+
+    $order = $booklet->entries()->orderBy('sequence')->get();
+
+    expect($order->first()->text)->toBe('# Advent vasárnapja')
+        ->and($order->first()->music_plan_slot_plan_id)->toBeNull();
+});
+
+// Only the opening words, though: once the booklet says something of its own,
+// the next paragraph is the writer's to fill.
+it('leaves later words at the top of the booklet empty', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $booklet->update(['title' => 'Advent vasárnapja']);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('addText')
+        ->call('addText');
 
     $entries = $booklet->entries()->orderBy('sequence')->get();
 
-    expect($entries)->toHaveCount(2);
+    expect($entries)->toHaveCount(2)
+        ->and($entries->pluck('text')->sort()->values()->all())
+        ->toBe(['', '# Advent vasárnapja']);
+});
 
-    // Find which entry has the title and which is empty
-    $titleEntry = $entries->firstWhere('text', '# Advent Sunday');
-    $emptyEntry = $entries->firstWhere('text', '');
+// And only the first row: words written under a score that opens the booklet
+// stand after it, so they are not the booklet's name.
+it('leaves words written under the opening score empty', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    $booklet->update(['title' => 'Advent vasárnapja']);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Ének egy']);
 
-    expect($titleEntry)->not->toBeNull()
-        ->and($titleEntry->text)->toBe('# Advent Sunday')
-        ->and($emptyEntry)->not->toBeNull()
-        ->and($emptyEntry->text)->toBe('');
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
+
+    $score = $booklet->entries()->firstOrFail();
+
+    $component->call('addText', null, null, $score->id);
+
+    $written = $booklet->entries()->whereNull('score_id')->firstOrFail();
+
+    expect($written->text)->toBe('');
 });
 
 // A paragraph is added in order to be written, so it opens with the cursor's place
@@ -1821,6 +1883,67 @@ it('writes a paragraph into the plan where it was asked for', function () {
         ->and($entries[3]->music_plan_slot_assignment_id)->toBe($assignments[0]->id);
 });
 
+// Words written at the head of a slot are the first thing that slot says, so
+// they must be drawn there — above the music nothing has been chosen from,
+// which waits underneath and prints nothing.
+it('shows words written at the head of a slot above the music not chosen from', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [$slotPlan] = slotWithMusics($plan, 'Kezdőének', ['Ének egy', 'Ének kettő']);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('addText', $slotPlan->id)
+        ->html();
+
+    $slot = planSlotElements($html)[0];
+    $document = new DOMXPath($slot->ownerDocument);
+
+    $text = $document->query('.//*[@data-entry="text"]', $slot)->item(0);
+    $musics = $document->query('.//*[@data-plan-music]', $slot);
+
+    expect($text)->not->toBeNull()
+        ->and($musics->length)->toBe(2);
+
+    foreach ($musics as $music) {
+        expect($text->compareDocumentPosition($music) & DOMNode::DOCUMENT_POSITION_FOLLOWING)
+            ->not->toBe(0);
+    }
+});
+
+// The same at the top of the booklet: the opening words come before the slots,
+// including the ones the booklet has taken nothing from yet.
+it('shows words written at the top of the booklet above the slots not chosen from', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    slotWithMusics($plan, 'Kezdőének', ['Ének egy']);
+    slotWithMusics($plan, 'Áldozás', ['Ének kettő']);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('addText')
+        ->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+
+    $text = $xpath->query('//*[@data-entry="text"]')->item(0);
+    $slots = $xpath->query('//*[@data-plan-slot]');
+
+    expect($text)->not->toBeNull()
+        ->and($slots->length)->toBe(2);
+
+    foreach ($slots as $slot) {
+        expect($text->compareDocumentPosition($slot) & DOMNode::DOCUMENT_POSITION_FOLLOWING)
+            ->not->toBe(0);
+    }
+});
+
 it('lets the words at the head of a slot carry its name', function () {
     $user = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
@@ -1887,3 +2010,168 @@ it('straightens a booklet whose rows no longer follow the plan', function () {
     expect($booklet->entries()->orderBy('sequence')->pluck('score_id')->all())
         ->toBe([$openingScores[0]->id, $openingScores[1]->id, $communionScores[0]->id]);
 });
+
+/**
+ * Put a music in a collection at a given number, the way an editor would.
+ */
+function musicInCollection(int $musicId, string $abbreviation, ?string $orderNumber = null, int $priority = 100): CollectionModel
+{
+    // The abbreviations are the real ones, and the test database may already hold
+    // them: an abbreviation names one book, so the one that is there is used.
+    $collection = CollectionModel::query()->firstOrNew(['abbreviation' => $abbreviation]);
+
+    if (! $collection->exists) {
+        $collection = CollectionModel::factory()->make(['abbreviation' => $abbreviation]);
+    }
+
+    // Ranked by the priority given here, so a reference naming several books is
+    // asserted in the order it will really be printed in.
+    $collection->forceFill(['is_private' => false, 'is_verified' => false, 'priority' => $priority])->save();
+    $collection->genres()->detach();
+
+    Music::findOrFail($musicId)->collections()->attach($collection->id, ['order_number' => $orderNumber]);
+
+    return $collection;
+}
+
+it('prints where the music can be looked up beside its name', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    musicInCollection($scores[0]->music_id, 'DÚR', '47', priority: 10);
+    musicInCollection($scores[0]->music_id, 'ÉE', '131', priority: 20);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleMusicCollections', $booklet->entries()->firstOrFail()->id);
+
+    $payload = payloadOf($booklet);
+
+    // One parenthesis, one word per collection, a single space between them: it
+    // is a reference and not a sentence, and rides on the line that names the
+    // music rather than taking one of its own.
+    expect($payload[0]['reference'])->toBe('(DÚR47 ÉE131)')
+        ->and($payload[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem');
+});
+
+it('says where the music can be looked up once, over the row that opens it', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    musicInCollection($scores[0]->music_id, 'ÉE', '232B');
+
+    $organ = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'music_id' => $scores[0]->music_id,
+        'title' => 'Áldjad, én lelkem',
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id)
+        ->call('toggleScore', $organ->id, $assignments[0]->id);
+
+    // The switch is the opening row's, and so is the line it prints: the second
+    // engraving of the same music says nothing about where to look it up.
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleMusicCollections', $booklet->entries()->orderBy('sequence')->firstOrFail()->id);
+
+    $payload = payloadOf($booklet);
+
+    expect($payload[0]['reference'])->toBe('(ÉE232B)')
+        ->and($payload[1]['reference'])->toBeNull();
+});
+
+it('says nothing about the collections until a row is asked for them', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    musicInCollection($scores[0]->music_id, 'DÚR', '47');
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
+
+    // A booklet is printed because the books it would point at are not in every
+    // hand, so the numbers wait for the switch beside them in the plan — and the
+    // music is named on the page either way.
+    $payload = payloadOf($booklet);
+
+    expect($payload[0]['reference'])->toBeNull()
+        ->and($payload[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem');
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleMusicCollections', $booklet->entries()->firstOrFail()->id);
+
+    expect(payloadOf($booklet)[0]['reference'])->toBe('(DÚR47)');
+});
+
+it('shows where the music can be looked up in the plan, chosen or not', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, , $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    musicInCollection($scores[0]->music_id, 'KÉK', '23');
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+
+    $reference = (new DOMXPath($document))->query('//*[@data-plan-music-reference]')->item(0);
+
+    expect($reference)->not->toBeNull()
+        ->and(trim($reference->textContent))->toBe('(KÉK23)');
+});
+
+it('makes the reference itself the switch that prints it', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    musicInCollection($scores[0]->music_id, 'KÉK', '23');
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
+
+    // The thing that is printed is the thing that is clicked, so there is no
+    // third eye on the row to tell apart from the two that govern the names.
+    $pressed = fn (string $html): ?string => referenceButton($html)?->getAttribute('aria-pressed');
+
+    expect($pressed($component->html()))->toBe('false');
+
+    $component->call('toggleMusicCollections', $booklet->entries()->firstOrFail()->id);
+
+    expect($pressed($component->html()))->toBe('true');
+});
+
+/**
+ * The plan's reference switch, if it is one.
+ */
+function referenceButton(string $html): ?DOMElement
+{
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+
+    $element = (new DOMXPath($document))->query('//button[@data-plan-music-reference]')->item(0);
+
+    return $element instanceof DOMElement ? $element : null;
+}

@@ -34,6 +34,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $show_slot
  * @property bool $show_variation
  * @property bool $show_music_title
+ * @property bool $show_collections
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\Booklet $booklet
@@ -70,6 +71,7 @@ class BookletScore extends Model
         'show_slot',
         'show_variation',
         'show_music_title',
+        'show_collections',
     ];
 
     /**
@@ -83,6 +85,7 @@ class BookletScore extends Model
             'show_slot' => 'boolean',
             'show_variation' => 'boolean',
             'show_music_title' => 'boolean',
+            'show_collections' => 'boolean',
         ];
     }
 

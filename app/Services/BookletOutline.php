@@ -321,7 +321,7 @@ class BookletOutline
         $scoresByMusicId = $this->scores->forViewer($plan, $viewer);
 
         $assignments = $plan->musicAssignments()
-            ->with(['music'])
+            ->with(['music.collections'])
             ->orderBy('music_plan_slot_plan_id')
             ->orderBy('music_sequence')
             ->get()
@@ -339,6 +339,7 @@ class BookletOutline
                         'id' => $assignment->id,
                         'music_id' => $assignment->music_id,
                         'music_title' => $assignment->music?->title,
+                        'music_reference' => $assignment->music?->collectionReference($viewer),
                         'scores' => $scoresByMusicId->get($assignment->music_id, collect())->all(),
                     ])
                     ->all(),
@@ -420,6 +421,7 @@ class BookletOutline
             'planIndex' => $planIndex,
             'musicId' => $assignment['music_id'],
             'title' => $assignment['music_title'],
+            'reference' => $assignment['music_reference'],
             'children' => $this->withMoves($children),
             'offers' => $this->offers($assignment['scores'], $chosenScoreIds, $chosenFileIds),
             'weight' => count($children),
@@ -428,6 +430,9 @@ class BookletOutline
             // switch stands beside the name in the plan, the choice is the row's.
             'headingEntryId' => $headingEntry?->id,
             'showsName' => ! $headingEntry instanceof BookletScore || $headingEntry->show_music_title,
+            // Where the music can be looked up is asked for rather than kept
+            // off, and the answer is the opening row's, like the names above it.
+            'showsReference' => $headingEntry instanceof BookletScore && $headingEntry->show_collections,
         ];
     }
 
@@ -513,11 +518,16 @@ class BookletOutline
      * Put the slots — or the musics — the booklet takes nothing from back where
      * the plan has them.
      *
-     * They have no row to stand behind, so they stand behind the last thing the
-     * plan puts before them, which keeps the pane readable as the service even
+     * They have no row to stand behind, so they stand in front of the first thing
+     * the plan puts after them, which keeps the pane readable as the service even
      * where half of it has not been chosen from. It is also what gives an empty
      * slot a place for a score to be added at: turning one off and on again
      * leaves the booklet in the order it was.
+     *
+     * In front of rather than behind, because words written at the head of a slot
+     * — or of the booklet — are a row and not a plan node, and would otherwise be
+     * pushed under every part that has nothing chosen from it. Nothing empty is
+     * printed, so which side of a paragraph it waits on changes only the pane.
      *
      * @param  list<array<string, mixed>>  $ordered
      * @param  list<array<string, mixed>>  $empty
@@ -526,11 +536,13 @@ class BookletOutline
     private function anchor(array $ordered, array $empty): array
     {
         foreach ($empty as $node) {
-            $at = 0;
+            $at = count($ordered);
 
             foreach ($ordered as $index => $placed) {
-                if ($placed['kind'] === $node['kind'] && $placed['planIndex'] < $node['planIndex']) {
-                    $at = $index + 1;
+                if ($placed['kind'] === $node['kind'] && $placed['planIndex'] > $node['planIndex']) {
+                    $at = $index;
+
+                    break;
                 }
             }
 

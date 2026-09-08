@@ -167,6 +167,28 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Where this music is to be found in print, as one parenthesis: every
+     * collection the viewer may see, named as briefly as it can be and carrying
+     * the number the music has there, separated by single spaces —
+     * `(DÚR47 KÉK23 ÉE131)`.
+     *
+     * Null where there is no such collection, so a caller can tell "nothing to
+     * say" from "an empty pair of brackets".
+     */
+    public function collectionReference(?User $user = null): ?string
+    {
+        $collections = $this->displayCollections($user);
+
+        if ($collections->isEmpty()) {
+            return null;
+        }
+
+        return '('.$collections
+            ->map(fn (Collection $collection): string => $collection->shortReference($collection->pivot))
+            ->implode(' ').')';
+    }
+
+    /**
      * Determine whether a collection belongs to the given genre context.
      * Collections without any genre association belong to every genre.
      */

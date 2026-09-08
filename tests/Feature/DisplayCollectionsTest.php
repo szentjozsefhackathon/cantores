@@ -144,3 +144,29 @@ it('does not let a non-editor owner change display priority', function () {
 
     expect($collection->fresh()->priority)->toBe(100);
 });
+
+it('names where a music can be looked up in one parenthesis', function () {
+    $music = Music::factory()->create();
+
+    $first = Collection::factory()->create(['abbreviation' => 'XDUR', 'priority' => 10, 'is_private' => false]);
+    $second = Collection::factory()->create(['abbreviation' => 'XEE', 'priority' => 20, 'is_private' => false]);
+
+    attachCollection($music, $first, '47');
+    attachCollection($music, $second, '232B');
+
+    // The number is written straight onto the abbreviation, the books are told
+    // apart by a single space, and the lot is one parenthesis.
+    expect($music->collectionReference())->toBe('(XDUR47 XEE232B)');
+});
+
+it('says nothing about collections for a music in none', function () {
+    expect(Music::factory()->create()->collectionReference())->toBeNull();
+});
+
+it('names a collection without a number by its abbreviation alone', function () {
+    $music = Music::factory()->create();
+
+    attachCollection($music, Collection::factory()->create(['abbreviation' => 'XSZVU', 'is_private' => false]));
+
+    expect($music->collectionReference())->toBe('(XSZVU)');
+});

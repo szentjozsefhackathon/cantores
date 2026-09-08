@@ -6,6 +6,7 @@ use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
 use App\Models\Booklet;
 use App\Models\BookletScore;
+use App\Models\Music;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Services\BookletOutline;
@@ -14,6 +15,7 @@ use App\Support\BookletSettingFields;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Computed;
@@ -160,7 +162,7 @@ class BookletEditor extends Component
     public function entries(): Collection
     {
         return $this->booklet->entries()
-            ->with(['score.music', 'scoreFile', 'assignment.music', 'assignment.musicPlanSlot', 'slotPlan.musicPlanSlot'])
+            ->with(['score.music.collections', 'scoreFile', 'assignment.music.collections', 'assignment.musicPlanSlot', 'slotPlan.musicPlanSlot'])
             ->get();
     }
 
@@ -182,7 +184,7 @@ class BookletEditor extends Component
 
         return $entries
             ->map(function (BookletScore $entry) use ($sources, $headings): ?array {
-                $heading = $headings[$entry->id] ?? ['slot' => null, 'music' => null, 'variation' => null];
+                $heading = $headings[$entry->id] ?? ['slot' => null, 'music' => null, 'reference' => null, 'variation' => null];
 
                 if ($entry->isText()) {
                     return [
@@ -194,6 +196,7 @@ class BookletEditor extends Component
                         // heading is printed under it rather than above it.
                         'slot' => $heading['slot'],
                         'music' => $heading['music'],
+                        'reference' => $heading['reference'],
                         'startOnNewPage' => $entry->start_on_new_page,
                     ];
                 }
@@ -209,6 +212,7 @@ class BookletEditor extends Component
                     'scoreId' => $entry->score_id,
                     'slot' => $heading['slot'],
                     'music' => $heading['music'],
+                    'reference' => $heading['reference'],
                     'variation' => $heading['variation'],
                     'startOnNewPage' => $entry->start_on_new_page,
                 ];
@@ -295,7 +299,7 @@ class BookletEditor extends Component
      * A row can be told to keep its music's name off the page, which is how a
      * music the slot already names is stopped from saying it twice.
      *
-     * @return array<int, array{slot: ?string, music: ?string, variation: ?string}>
+     * @return array<int, array{slot: ?string, music: ?string, reference: ?string, variation: ?string}>
      */
     #[Computed]
     public function headings(): array
@@ -329,8 +333,24 @@ class BookletEditor extends Component
                 $slotLine = $assignment?->musicPlanSlot?->name ?? $entry->slotPlan?->musicPlanSlot?->name;
             }
 
-            $musicTitle = $musicKey !== null && $musicKey !== $lastMusicKey && $entry->show_music_title
+            // The music is named once, by the row that opens it — and where the
+            // score was chosen from no plan at all, by every row of it, there
+            // being nothing that groups them.
+            $music = $assignment?->music ?? ($entry->isText() ? null : $entry->score?->music);
+            $namesMusic = $assignment instanceof MusicPlanSlotAssignment
+                ? $musicKey !== $lastMusicKey
+                : $music instanceof Music;
+
+            $musicTitle = $namesMusic && $musicKey !== null && $entry->show_music_title
                 ? $assignment?->music?->title
+                : null;
+
+            // Where it can be looked up follows the name it belongs to, and is
+            // asked for on its own: a booklet is printed because the books it
+            // would point at are not in every hand, so it says nothing about
+            // them until someone wants it to.
+            $reference = $namesMusic && $entry->show_collections
+                ? $music?->collectionReference(Auth::user())
                 : null;
 
             $alone = $slotKey !== null && ($musicCounts[$slotKey] ?? 0) <= 1;
@@ -343,6 +363,7 @@ class BookletEditor extends Component
             $lines[$entry->id] = [
                 'slot' => $slotLine,
                 'music' => $musicTitle,
+                'reference' => $reference,
                 'variation' => ! $entry->isText() && $entry->show_variation
                     ? $entry->score?->variationLabel()
                     : null,
@@ -548,9 +569,11 @@ class BookletEditor extends Component
      * its musics, or straight after a row already standing there. Given none of
      * those, it opens the booklet.
      *
-     * When adding text at the very top of the booklet (no slot, no music) and
-     * there is no text there yet, the text is filled with the booklet's title
-     * formatted as a heading.
+     * Words that open the booklet are almost always its name, so a paragraph
+     * written as its very first row starts off holding the title as a heading —
+     * unless the booklet opens with words already, in which case whatever they
+     * are is the opening it has, and the new paragraph starts empty like any
+     * other.
      */
     public function addText(?int $slotPlanId = null, ?int $assignmentId = null, ?int $afterEntryId = null): void
     {
@@ -567,23 +590,10 @@ class BookletEditor extends Component
             in_array($afterEntryId, $order, true) ? $afterEntryId : null,
         );
 
-        // When adding text at the very top and there is no text there yet,
-        // fill it with the booklet's title formatted as a heading
-        $initialText = '';
-        if ($slotPlanId === null && $assignment === null) {
-            $hasTopLevelText = $this->entries
-                ->where('music_plan_slot_assignment_id', null)
-                ->where('music_plan_slot_plan_id', null)
-                ->where('score_id', null)
-                ->isNotEmpty();
-
-            if (! $hasTopLevelText) {
-                $initialText = '# '.ucfirst($this->booklet->title);
-            }
-        }
-
         $entry = $this->booklet->entries()->create([
-            'text' => $initialText,
+            'text' => $this->opensTheBooklet($at, $slotPlanId, $assignment?->id, $order)
+                ? '# '.Str::ucfirst($this->booklet->title)
+                : '',
             'music_plan_slot_assignment_id' => $assignment?->id,
             'music_plan_slot_plan_id' => $slotPlanId,
             'sequence' => (int) $this->booklet->entries()->max('sequence') + 1,
@@ -594,6 +604,35 @@ class BookletEditor extends Component
         $this->openedTextId = $entry->id;
 
         $this->applyOrder($order);
+    }
+
+    /**
+     * Whether a paragraph about to be written is the one that opens the booklet:
+     * the very first row, belonging to no slot and no music, of a booklet whose
+     * own opening words have not been written yet.
+     *
+     * Only the first row is asked about, and only whether it is the booklet
+     * speaking for itself. Words at the head of the first slot are that slot's
+     * — the booklet is still nameless above them — and words further down say
+     * nothing about how it opens, wherever in the plan they stand.
+     *
+     * @param  list<int>  $order  the rows as they are printed, before this one
+     */
+    private function opensTheBooklet(int $at, ?int $slotPlanId, ?int $assignmentId, array $order): bool
+    {
+        if ($at !== 0 || $slotPlanId !== null || $assignmentId !== null) {
+            return false;
+        }
+
+        $first = $order === [] ? null : $this->entries->firstWhere('id', $order[0]);
+
+        if (! $first instanceof BookletScore) {
+            return true;
+        }
+
+        return ! $first->isText()
+            || $first->music_plan_slot_plan_id !== null
+            || $first->music_plan_slot_assignment_id !== null;
     }
 
     /**
@@ -628,6 +667,15 @@ class BookletEditor extends Component
     public function toggleMusicName(int $entryId): void
     {
         $this->toggleHeadingLine($entryId, 'show_music_title');
+    }
+
+    /**
+     * Turn off — or back on — the collections the music can be looked up in,
+     * kept on the row that opens the music like the names above it.
+     */
+    public function toggleMusicCollections(int $entryId): void
+    {
+        $this->toggleHeadingLine($entryId, 'show_collections');
     }
 
     private function toggleHeadingLine(int $entryId, string $column): void

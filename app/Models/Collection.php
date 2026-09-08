@@ -180,6 +180,21 @@ class Collection extends Model implements Auditable
     }
 
     /**
+     * The shortest name this collection answers to, with the number the music
+     * carries in it written straight onto it — DÚR47, ÉE232B.
+     *
+     * Nothing between the two, because that is how such a reference is said and
+     * printed, and because the pair has to read as one word where several of
+     * them stand side by side.
+     */
+    public function shortReference(?\Illuminate\Database\Eloquent\Relations\Pivot $pivot = null): string
+    {
+        $base = $this->abbreviation ?: Str::limit($this->title, 12, '...');
+
+        return $base.($pivot?->order_number ?? '');
+    }
+
+    /**
      * Format the collection with pivot data for display.
      */
     public function formatWithPivot(?\Illuminate\Database\Eloquent\Relations\Pivot $pivot = null): string

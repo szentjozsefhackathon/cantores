@@ -25,6 +25,7 @@ class BookletScoreFactory extends Factory
             'show_slot' => true,
             'show_variation' => false,
             'show_music_title' => true,
+            'show_collections' => false,
         ];
     }
 

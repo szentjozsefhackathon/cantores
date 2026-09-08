@@ -68,6 +68,12 @@ const STRIP_GAP_MM = 3;
  */
 const TITLE_SIZE_FACTOR = 1;
 const VARIATION_SIZE_FACTOR = 0.82;
+
+/**
+ * The collections a music can be looked up in are set smaller than the name
+ * they follow: a reference read off the page once, not part of the heading.
+ */
+const REFERENCE_SIZE_FACTOR = 0.72;
 const PAGE_NUMBER_SIZE_FACTOR = 0.62;
 
 /**
@@ -176,12 +182,38 @@ export async function buildScoreBlocks(entry, geometry, host) {
  * where the slot holds several, and the variation someone asked to see named.
  *
  * Every one of them moves with the music it names, whatever else happens.
+ *
+ * Where the music can be looked up — the collections it stands in, and its
+ * number in each — is not a line but a tail: it is set small, and never bold, at
+ * the end of whichever line names the music, since it is a reference and not
+ * part of the name it follows. With both names off it has nothing to hang from
+ * and takes a small line of its own, which is the only way a booklet can print
+ * the numbers alone.
  */
 function headingBlocks(entry, geometry) {
     const heading = geometry.lyricSizePx * geometry.headingScale;
+    const slot = slotHeadingLine(entry.slot);
+    const reference = entry.reference || null;
+    const referenceSize = heading * REFERENCE_SIZE_FACTOR;
+    const named = entry.music || slot;
+
     const lines = [
-        { content: slotHeadingLine(entry.slot), size: heading * TITLE_SIZE_FACTOR, bold: true },
-        { content: entry.music, size: heading * TITLE_SIZE_FACTOR, bold: true },
+        {
+            content: slot,
+            size: heading * TITLE_SIZE_FACTOR,
+            bold: true,
+            suffix: !entry.music ? reference : null,
+        },
+        {
+            content: entry.music,
+            size: heading * TITLE_SIZE_FACTOR,
+            bold: true,
+            suffix: reference,
+        },
+        {
+            content: named ? null : reference,
+            size: referenceSize,
+        },
         {
             content: entry.variation,
             size: heading * VARIATION_SIZE_FACTOR,
@@ -199,6 +231,8 @@ function headingBlocks(entry, geometry) {
             bold: !!line.bold,
             italic: !!line.italic,
             fill: line.fill ?? '#000000',
+            suffix: line.suffix ?? null,
+            suffixSize: referenceSize,
         });
 
         return {

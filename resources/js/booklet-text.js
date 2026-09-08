@@ -33,6 +33,8 @@ export function round(value) {
  * @param {boolean} [options.italic]
  * @param {string} [options.fill]
  * @param {number} [options.lineHeight] multiple of the font size
+ * @param {string} [options.suffix] set smaller on the same line, after a space
+ * @param {number} [options.suffixSize] in px; defaults to three quarters of the text's
  * @returns {{height: number, svg: string}}
  */
 export function textRowSvg({
@@ -44,14 +46,24 @@ export function textRowSvg({
     italic = false,
     fill = '#000000',
     lineHeight = LINE,
+    suffix = null,
+    suffixSize = null,
 }) {
     const height = fontSize * lineHeight;
     const weight = bold ? ' font-weight="bold"' : '';
     const style = italic ? ' font-style="italic"' : '';
 
+    // Said on the line it belongs to and in the same breath, so it is a span of
+    // the same text rather than a row of its own: a reference set beside a title
+    // must not be able to break away from it, and the line it shares keeps its
+    // own height whatever size the span is set in.
+    const tail = suffix
+        ? `<tspan font-size="${round(suffixSize ?? fontSize * 0.75)}" font-weight="normal"> ${escapeXml(suffix)}</tspan>`
+        : '';
+
     const body = `<text x="0" y="${round(height * 0.75)}" font-family="${escapeXml(fontFamily)}" `
         + `font-size="${round(fontSize)}" fill="${fill}"${weight}${style} `
-        + `xml:space="preserve">${escapeXml(content)}</text>`;
+        + `xml:space="preserve">${escapeXml(content)}${tail}</text>`;
 
     return {
         height,
