@@ -47,8 +47,15 @@
              every knob is its icon, and its name is in the tooltip, so a dozen
              of them fit on one line above a booklet rather than in a block of
              labelled fields as tall as the preview beside it. --}}
-        <div data-booklet-toolbar class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
-            <div class="flex min-w-48 flex-1 items-center gap-1">
+        <div
+            data-booklet-toolbar
+            class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50"
+            x-on:input="markBusy($event)"
+        >
+            {{-- The one knob on this bar that leaves the pages exactly as they
+                 were, so typing in it must not claim the booklet is being laid
+                 out again. --}}
+            <div data-booklet-quiet class="flex min-w-48 flex-1 items-center gap-1">
                 <flux:tooltip :content="__('Title')">
                     <flux:icon name="book-open-text" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
@@ -138,15 +145,24 @@
                 <span class="text-sm text-zinc-500 dark:text-zinc-400" x-show="pageCount > 0" x-cloak>
                     <span x-text="pageCount"></span> {{ __('pages') }}
                 </span>
+
+                {{-- The preview sits beside the bar on a wide screen and far
+                     below it on a narrow one, so the news that the booklet is
+                     being laid out again is carried here too — by the one control
+                     that has to be out of use while it happens anyway. Flux draws
+                     its spinner over the button's own contents rather than in
+                     place of them, so nothing on the bar moves as it comes and
+                     goes; the label is left alone for the same reason. --}}
                 <flux:button
                     size="sm"
                     variant="primary"
                     icon="arrow-down-tray"
+                    :loading="true"
                     x-on:click="exportPdf()"
-                    x-bind:disabled="exporting || rendering || pageCount === 0"
+                    x-bind:data-loading="busy || exporting ? '' : false"
+                    x-bind:disabled="exporting || busy || pageCount === 0"
                 >
-                    <span x-show="!exporting">{{ __('Download PDF') }}</span>
-                    <span x-show="exporting" x-cloak>{{ __('Generating…') }}</span>
+                    {{ __('Download PDF') }}
                 </flux:button>
             </div>
         </div>
@@ -578,14 +594,19 @@
 
             {{-- The pages --}}
             <flux:card class="relative flex flex-col p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)]">
-                <flux:heading class="mb-3">{{ __('Preview') }}</flux:heading>
-                <div
-                    class="mb-2 flex items-center gap-1.5 text-sm text-zinc-500"
-                    x-show="rendering"
-                    x-cloak
-                >
-                    <flux:icon name="loading" variant="micro" />
-                    {{ __('Laying out…') }}
+                {{-- The badge sits in the heading row rather than above the
+                     sheets, so it stays put while the pages are scrolled. --}}
+                <div class="mb-3 flex items-center justify-between gap-2">
+                    <flux:heading>{{ __('Preview') }}</flux:heading>
+                    <span
+                        class="flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                        role="status"
+                        x-show="busy"
+                        x-cloak
+                    >
+                        <flux:icon name="loading" variant="micro" />
+                        {{ __('Laying out…') }}
+                    </span>
                 </div>
 
                 {{-- The negative margin gives the sheets' shadows room inside the
@@ -594,10 +615,19 @@
                     data-booklet-pane="pages"
                     class="lg:-mx-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:px-4"
                 >
-                    <div x-ref="pages" class="booklet-pages" wire:ignore></div>
+                    {{-- Faded while the layout is being redone: a booklet can be
+                         typeset again with barely a mark moving, and a preview
+                         that never dims cannot say whether the change landed or
+                         nothing happened at all. --}}
+                    <div
+                        x-ref="pages"
+                        class="booklet-pages transition-opacity duration-200"
+                        x-bind:class="busy ? 'opacity-40' : ''"
+                        wire:ignore
+                    ></div>
                 </div>
 
-                <flux:text class="text-sm text-zinc-500" x-show="!rendering && pageCount === 0" x-cloak>
+                <flux:text class="text-sm text-zinc-500" x-show="!busy && pageCount === 0" x-cloak>
                     {{ __('Choose a score to see the pages.') }}
                 </flux:text>
             </flux:card>

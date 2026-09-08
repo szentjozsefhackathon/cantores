@@ -1,4 +1,5 @@
 import { pageGeometry } from './booklet-geometry.js';
+import { createBusyFlag, renderDelayFor } from './booklet-pacing.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
 import { fileSettings, resolveSettings } from './booklet-settings.js';
 import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
@@ -17,16 +18,14 @@ import { gabcMixin } from './score-editor-gabc.js';
  * after it.
  */
 
-const RENDER_DEBOUNCE_MS = 250;
-
 /**
  * How long a knob is left alone before the change is sent to the server.
  *
  * A number field steps once per arrow click, and every step used to be a round
  * trip that re-rendered the whole component and pushed a fresh payload back —
  * so nudging a staff size from 7 to 12 cost five of them, each one landing in
- * the middle of the next. The preview redraws locally on every step regardless;
- * only the saving waits.
+ * the middle of the next. The preview waits its own gap before redrawing; only
+ * the saving waits this one.
  */
 const SAVE_DEBOUNCE_MS = 600;
 
@@ -42,7 +41,7 @@ document.addEventListener('alpine:init', () => {
         pageCount: 0,
         splitPercent: SPLIT_DEFAULT,
         splitDragging: false,
-        rendering: false,
+        busy: false,
         exporting: false,
         message: '',
 
@@ -50,14 +49,34 @@ document.addEventListener('alpine:init', () => {
         _renderToken: 0,
         _saveTimers: {},
         _pendingOverrides: {},
+        _busy: null,
+        _lastRenderMs: 0,
 
         init() {
+            this._busy = createBusyFlag({ onChange: (busy) => { this.busy = busy; } });
+
             this.$nextTick(() => this.scheduleRender());
         },
 
         destroy() {
             clearTimeout(this._renderTimer);
+            this._busy?.stop();
             this.flushOverrides();
+        },
+
+        /**
+         * A knob was touched. Said now, rather than when the layout run starts,
+         * because between the two lie a trip to the server and the render
+         * debounce — a second or so in which the preview would sit there looking
+         * settled and finished while showing the booklet as it was.
+         *
+         * The title is the one control that changes nothing on the page, so a
+         * field that opts out with data-booklet-quiet is left alone.
+         */
+        markBusy(event = null) {
+            if (event?.target?.closest?.('[data-booklet-quiet]')) { return; }
+
+            this._busy?.start();
         },
 
         /**
@@ -106,15 +125,23 @@ document.addEventListener('alpine:init', () => {
             this.splitPercent = SPLIT_DEFAULT;
         },
 
+        /**
+         * Put off laying the booklet out until the knobs have been still for a
+         * moment. The wait is as long as the last layout took, because that is
+         * the stretch in which the browser answers nothing: start it under a
+         * finger going back for a second click and the click is what suffers.
+         */
         scheduleRender() {
+            this.markBusy();
+
             clearTimeout(this._renderTimer);
-            this._renderTimer = setTimeout(() => this.render(), RENDER_DEBOUNCE_MS);
+            this._renderTimer = setTimeout(() => this.render(), renderDelayFor(this._lastRenderMs));
         },
 
         async render() {
             // A slow render must not overwrite a newer one that finished first.
             const token = ++this._renderToken;
-            this.rendering = true;
+            const startedAt = performance.now();
 
             try {
                 const { pages, fonts } = await renderBooklet(this.entries, this.geometry, this.$refs.measure);
@@ -128,7 +155,10 @@ document.addEventListener('alpine:init', () => {
             } catch (e) {
                 console.error('[booklet] render failed', e);
             } finally {
-                if (token === this._renderToken) { this.rendering = false; }
+                if (token === this._renderToken) {
+                    this._lastRenderMs = performance.now() - startedAt;
+                    this._busy?.settle();
+                }
             }
         },
 

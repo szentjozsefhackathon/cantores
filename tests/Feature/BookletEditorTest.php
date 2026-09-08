@@ -285,6 +285,60 @@ it('names every booklet setting by its icon rather than a label', function () {
     expect($xpath->query('.//*[@data-flux-icon]', $toolbar)->length)->toBeGreaterThanOrEqual(count($settings));
 });
 
+// A booklet is typeset again on every knob, and often comes back looking much as
+// it did — a margin a millimetre narrower moves almost nothing. So the work has
+// to announce itself rather than be left for the reader to spot, and it has to do
+// so from the moment the knob is touched: the trip to the server and the render
+// debounce that follow it are a second in which the preview would otherwise sit
+// there looking finished while showing the booklet as it was.
+it('says the booklet is being laid out again from the moment a knob is touched', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+    $toolbar = $xpath->query('//*[@data-booklet-toolbar]')->item(0);
+
+    expect($toolbar)->not->toBeNull()
+        ->and($toolbar->getAttribute('x-on:input'))->toContain('markBusy');
+
+    // The announcement rides on the events the controls themselves fire as they
+    // bubble up to the bar, so they have to be plain form controls.
+    foreach ([__('Page size'), __('Margin (mm)'), __('Lyric size (pt)')] as $knob) {
+        expect($xpath->query('.//select[@aria-label="'.$knob.'"] | .//input[@aria-label="'.$knob.'"]', $toolbar)->length)
+            ->toBeGreaterThan(0, $knob.' is not a control whose changes reach the bar');
+    }
+
+    // The title is the one field on the bar that leaves the pages as they were.
+    $quiet = $xpath->query('.//*[@data-booklet-quiet]', $toolbar);
+
+    expect($quiet->length)->toBe(1)
+        ->and($xpath->query('.//*[@aria-label="'.__('Title').'"]', $quiet->item(0))->length)->toBe(1);
+
+    // Said where the knobs are — by the one control that has to be out of use
+    // while the pages are stale anyway, and without a label that changes width
+    // under a bar this full.
+    $download = $xpath->query('.//button[contains(., "'.__('Download PDF').'")]', $toolbar)->item(0);
+
+    expect($download)->not->toBeNull()
+        ->and($download->getAttribute('x-bind:disabled'))->toContain('busy')
+        ->and($download->getAttribute('x-bind:data-loading'))->toContain('busy')
+        ->and($xpath->query('.//*[@data-flux-loading-indicator]', $download)->length)
+        ->toBe(1, 'the button has no spinner of its own to show');
+
+    // ...and said over the pages themselves, which fade while they are stale.
+    $pages = $xpath->query('//*[@x-ref="pages"]')->item(0);
+    $preview = $xpath->query('//*[@data-booklet-pane="pages"]/ancestor::*[contains(@class, "relative")][1]')->item(0);
+    $badge = $xpath->query('.//*[@role="status"][@x-show="busy"]', $preview)->item(0);
+
+    expect($pages->getAttribute('x-bind:class'))->toContain('busy')
+        ->and($badge)->not->toBeNull()
+        ->and(trim($badge->textContent))->toContain(__('Laying out…'));
+});
+
 it('separates entry controls from icon-only score options and reflects their selected state', function () {
     $user = User::factory()->create();
     [$booklet, $entries] = bookletWithEntries($user, 1);
