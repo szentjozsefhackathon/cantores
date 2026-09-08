@@ -85,4 +85,28 @@ class ScoreFileStorage
     {
         $this->disk()->deleteDirectory($scoreFile->directory());
     }
+
+    /**
+     * Drop the artifacts in a score file's directory whose basename matches one
+     * of the given `fnmatch` patterns.
+     *
+     * A re-render switches a file between the raster and vector representations;
+     * this is how the one it no longer uses stops taking up room, so the library
+     * conversion realises its saving rather than doubling storage.
+     *
+     * @param  list<string>  $patterns
+     */
+    public function deleteMatching(ScoreFile $scoreFile, array $patterns): void
+    {
+        foreach ($this->disk()->files($scoreFile->directory()) as $path) {
+            $name = basename($path);
+
+            foreach ($patterns as $pattern) {
+                if (fnmatch($pattern, $name)) {
+                    $this->disk()->delete($path);
+                    break;
+                }
+            }
+        }
+    }
 }

@@ -113,6 +113,12 @@ class MusicPlanScoreListService
      * its pages — which is why it is listed here at all, having no format of its
      * own. A score offering neither is a page of links, and is left out.
      *
+     * An uploaded score may hold several files, and they are not versions of one
+     * another: the projection slide is not the accompaniment. So every one of
+     * them that has been cut up travels here under `files`, for the booklet to
+     * choose between, with `file_id` and `strips` naming the score's default —
+     * the oldest, which is what a row that names no file gets.
+     *
      * @param  list<int>  $scoreIds
      * @return Collection<int, array<string, mixed>>
      */
@@ -129,10 +135,10 @@ class MusicPlanScoreListService
             ->with('files')
             ->get()
             ->mapWithKeys(function (Score $score): array {
-                $file = $score->format === null ? $score->primaryFile() : null;
-                $strips = $file?->stripList() ?? [];
+                $files = $score->format === null ? $this->drawableFiles($score) : [];
+                $default = reset($files) ?: null;
 
-                if ($score->format === null && $strips === []) {
+                if ($score->format === null && $default === null) {
                     return [];
                 }
 
@@ -142,10 +148,43 @@ class MusicPlanScoreListService
                     'format' => $score->format?->value,
                     'content' => $score->content ?? '',
                     'settings' => $score->settings ?? [],
-                    'file_id' => $file?->id,
-                    'strips' => $strips,
+                    'file_id' => $default['file_id'] ?? null,
+                    'strips' => $default['strips'] ?? [],
+                    'files' => $files,
                 ]];
             });
+    }
+
+    /**
+     * The score's uploaded files a booklet can actually draw, oldest first and
+     * keyed by file id.
+     *
+     * A file that has not been cut into systems is left out rather than offered
+     * and then found empty, which is the same rule the single-file case has
+     * always applied — only now it is applied to each file rather than deciding
+     * the whole score on the first one.
+     *
+     * @return array<int, array{file_id: int, name: string, strips: list<array<string, mixed>>}>
+     */
+    private function drawableFiles(Score $score): array
+    {
+        $files = [];
+
+        foreach ($score->orderedFiles() as $file) {
+            $strips = $file->stripList();
+
+            if ($strips === []) {
+                continue;
+            }
+
+            $files[$file->getKey()] = [
+                'file_id' => $file->id,
+                'name' => $file->displayName(),
+                'strips' => $strips,
+            ];
+        }
+
+        return $files;
     }
 
     /**
@@ -196,6 +235,7 @@ class MusicPlanScoreListService
     {
         $isOwn = $viewer instanceof User && $score->user_id === $viewer->getKey();
         $loan = $loansByScoreId->get($score->getKey());
+        $drawable = $score->format === null ? $this->drawableFiles($score) : [];
 
         return [
             'id' => $score->id,
@@ -205,7 +245,14 @@ class MusicPlanScoreListService
             'format_value' => $score->format?->value,
             // Whether a booklet can draw it: either it has a source to
             // re-engrave, or it has been cut into systems that can be flowed.
-            'in_booklets' => $score->format !== null || ($score->primaryFile()?->stripList() ?? []) !== [],
+            'in_booklets' => $score->format !== null || $drawable !== [],
+            // The uploaded files a booklet may choose between, where there is a
+            // choice to make. Names only: the systems themselves are heavy, and
+            // a list is read long before anything is drawn.
+            'files' => array_values(array_map(
+                fn (array $file): array => ['id' => $file['file_id'], 'name' => $file['name']],
+                $drawable,
+            )),
             'owner_id' => $score->user_id,
             'owner_name' => $score->user?->displayName,
             'is_own' => $isOwn,

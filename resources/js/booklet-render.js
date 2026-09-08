@@ -222,11 +222,15 @@ export function buildTextBlocks(entry, geometry, measure = null) {
 /**
  * An uploaded score: the systems RenderScoreFileJob cut out of its pages.
  *
- * This is the one format that cannot be re-engraved at the booklet's size — a
- * PDF is a picture by the time it gets here — so it is unified the only way a
- * picture can be: every system is scaled by the same factor, the one that takes
- * the window they were all cut to out to the width of the page. Systems that
- * shared a left margin in the source therefore still share one on the sheet.
+ * An engraved PDF is kept in vector form, one SVG per page, and a system is a
+ * `viewBox` window onto it — re-engraved at the booklet's size like every other
+ * format. A scan has no vector form and falls back to the old behaviour: each
+ * system arrives as its own image, and they are unified the only way pictures
+ * can be, by scaling every one of them by the factor that takes the window they
+ * were all cut to out to the width of the page.
+ *
+ * Either way the systems stay independent blocks, free to break across a page
+ * turn, which is the whole point of cutting the pages up.
  */
 export async function buildFileBlocks(entry, geometry) {
     const blocks = [];
@@ -237,16 +241,22 @@ export async function buildFileBlocks(entry, geometry) {
 
     // Fetched before anything is placed, and all at once, so the systems that
     // did arrive are laid out as though they were the whole score — a page break
-    // is not lost with the system that would have carried it.
-    const fetched = await Promise.all((entry.strips ?? []).map(
-        (strip) => stripDataUri(strip.url)
-            .then((dataUri) => ({ ...strip, dataUri }))
-            .catch((e) => {
-                console.error('[booklet] could not fetch a system', strip.url, e);
+    // is not lost with the system that would have carried it. A vector file's
+    // page is fetched once however many systems sit on it: the cache is keyed by
+    // URL, and every system of a page names the same one.
+    const fetched = await Promise.all((entry.strips ?? []).map(async (strip) => {
+        try {
+            if (strip.pageUrl) {
+                return { ...strip, pageSvg: await pageSvgText(strip.pageUrl) };
+            }
 
-                return null;
-            })
-    ));
+            return { ...strip, dataUri: await stripDataUri(strip.url) };
+        } catch (e) {
+            console.error('[booklet] could not fetch a system', strip.pageUrl ?? strip.url, e);
+
+            return null;
+        }
+    }));
 
     const drawable = fetched.filter(Boolean);
 
@@ -254,13 +264,65 @@ export async function buildFileBlocks(entry, geometry) {
         afterHeading: blocks.length > 0,
         startOnNewPage: !!entry.startOnNewPage,
     }).forEach((placement, i) => {
+        const strip = drawable[i];
+
         blocks.push({
             ...placement,
-            svg: imageSvg(drawable[i].dataUri, drawable[i].width, drawable[i].height),
+            svg: strip.pageSvg !== undefined
+                ? windowedPageSvg(strip, entry)
+                : imageSvg(strip.dataUri, strip.width, strip.height),
         });
     });
 
     return { blocks, fonts: [UI_FONT] };
+}
+
+/**
+ * One system of a vector file: the stored page SVG, clipped to the rectangle
+ * the renderer recorded for that system.
+ *
+ * A nested <svg> with a viewBox is what does the clipping — it maps the window
+ * onto a box the system's own size, and `overflow="hidden"` keeps the rest of
+ * the page out. The inner <svg> also carries the marker serializeBookletPages
+ * swaps for a placeholder, so the export POST does not repeat one page's glyph
+ * table once per system standing on it.
+ */
+export function windowedPageSvg(strip, entry) {
+    const inner = scopePageIds(innerMarkupOf(strip.pageSvg), `sp${entry.fileId}_${strip.page}`);
+    const w = strip.width;
+    const h = strip.height;
+
+    return `<svg xmlns="${SVG_NS}" xmlns:xlink="${XLINK_NS}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`
+        + `<svg viewBox="${strip.rect}" width="${w}" height="${h}" overflow="hidden" preserveAspectRatio="none" `
+        + `data-score-page="${entry.fileId}" data-page="${strip.page}" data-rect="${strip.rect}">`
+        + `${inner}</svg></svg>`;
+}
+
+/**
+ * The children of an SVG document, without its root element. Cairo writes
+ * `<?xml …?><svg …>…</svg>` with nothing nested, so trimming the first tag and
+ * the last is enough.
+ */
+export function innerMarkupOf(markup) {
+    return markup
+        .replace(/^[\s\S]*?<svg\b[^>]*>/i, '')
+        .replace(/<\/svg>\s*$/i, '');
+}
+
+/**
+ * Make a page's ids its own before it is placed beside another.
+ *
+ * Cairo names its glyph symbols per document — `glyph0-1`, `clip1` — so two
+ * different files on one booklet page would both define `glyph0-1` and the
+ * second's `<use>` would draw the first's. Prefixing every id and every
+ * reference to one with a per-(file, page) tag keeps them apart; the systems of
+ * one page share a tag, which is harmless because they share the page.
+ */
+export function scopePageIds(markup, prefix) {
+    return markup
+        .replace(/\bid="([^"]+)"/g, `id="${prefix}-$1"`)
+        .replace(/href="#([^"]+)"/g, `href="#${prefix}-$1"`)
+        .replace(/url\(#([^)]+)\)/g, `url(#${prefix}-$1)`);
 }
 
 /**
@@ -324,6 +386,32 @@ function stripDataUri(url) {
     }
 
     return stripCache.get(url);
+}
+
+/**
+ * A vector file's page SVG, as text, fetched once per page. The browser
+ * decompresses the `Content-Encoding: gzip` body; response.text() is the SVG.
+ */
+const pageSvgCache = new Map();
+
+function pageSvgText(url) {
+    if (!pageSvgCache.has(url)) {
+        pageSvgCache.set(url, fetch(url, { credentials: 'same-origin' })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`page request failed with ${response.status}`);
+                }
+
+                return response.text();
+            })
+            .catch((e) => {
+                pageSvgCache.delete(url);
+
+                throw e;
+            }));
+    }
+
+    return pageSvgCache.get(url);
 }
 
 /**
@@ -697,6 +785,11 @@ function composePage(page, geometry, pageNumber, pageCount) {
  * Serialize the pages for the PDF endpoint, with the fonts embedded — rsvg has
  * no network, so a face that is not in the document is a face that is not
  * printed.
+ *
+ * A vector file's windowed page is replaced by a placeholder naming the file,
+ * the page and the rectangle. Inlining it here would repeat one page's glyph
+ * table once per system on it; the server holds the page and windows it once per
+ * system instead, so the POST body carries no engraving at all for these files.
  */
 export async function serializeBookletPages(pages, fonts) {
     const serializer = new XMLSerializer();
@@ -704,6 +797,15 @@ export async function serializeBookletPages(pages, fonts) {
 
     for (const page of pages) {
         const clone = page.cloneNode(true);
+
+        clone.querySelectorAll('[data-score-page]').forEach((node) => {
+            const placeholder = document.createElementNS(SVG_NS, 'g');
+            placeholder.setAttribute('data-score-page', node.getAttribute('data-score-page'));
+            placeholder.setAttribute('data-page', node.getAttribute('data-page'));
+            placeholder.setAttribute('data-rect', node.getAttribute('data-rect'));
+            node.replaceWith(placeholder);
+        });
+
         await injectWebFontsIntoSvg(clone, fonts);
         out.push(serializer.serializeToString(clone));
     }

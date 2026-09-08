@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ExportBookletPdfRequest;
 use App\Models\Booklet;
+use App\Services\BookletScorePageInliner;
 use App\Services\SvgToPdfConverter;
 use Illuminate\Http\Response;
 use Illuminate\Support\Str;
@@ -26,9 +27,14 @@ class BookletPdfExportController extends Controller
         ExportBookletPdfRequest $request,
         Booklet $booklet,
         SvgToPdfConverter $converter,
+        BookletScorePageInliner $inliner,
     ): Response {
         /** @var list<string> $pages */
         $pages = $request->validated('pages');
+
+        // A vector file's systems arrive as placeholders; put the stored page
+        // back behind each one, re-checking access as it does.
+        $pages = $inliner->inline($pages, $booklet, $request->user());
 
         try {
             $pdf = $converter->convert($pages);

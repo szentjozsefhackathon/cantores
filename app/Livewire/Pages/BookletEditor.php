@@ -136,7 +136,7 @@ class BookletEditor extends Component
     #[Computed]
     public function entries(): Collection
     {
-        return $this->booklet->entries()->with(['score', 'assignment.music', 'assignment.musicPlanSlot'])->get();
+        return $this->booklet->entries()->with(['score', 'scoreFile', 'assignment.music', 'assignment.musicPlanSlot'])->get();
     }
 
     /**
@@ -153,9 +153,7 @@ class BookletEditor extends Component
     {
         $entries = $this->entries();
         $headings = $this->headings();
-
-        $sources = app(MusicPlanScoreListService::class)
-            ->sourcesFor($entries->whereNotNull('score_id')->pluck('score_id')->all(), Auth::user());
+        $sources = $this->entrySources();
 
         return $entries
             ->map(function (BookletScore $entry) use ($sources, $headings): ?array {
@@ -187,22 +185,48 @@ class BookletEditor extends Component
 
                 // An uploaded score has no source to re-engrave, so it travels
                 // as the systems it was cut into — by URL rather than inline,
-                // because these are images and this payload crosses the wire on
-                // every change.
+                // because this payload crosses the wire on every change.
+                //
+                // A vector-rendered file names its page once and each system as
+                // a rectangle onto it; a raster one names each system's own
+                // image. The browser tells them apart by which URL is present.
                 if ($source['format'] === null) {
+                    $file = $this->fileOf($entry, $source);
+
                     return [
                         ...$common,
                         'kind' => 'file',
-                        'strips' => array_map(fn (array $strip): array => [
-                            'url' => route('booklets.strip', [
-                                'booklet' => $this->booklet->id,
-                                'scoreFile' => $source['file_id'],
-                                'page' => $strip['page'],
-                                'index' => $strip['index'],
-                            ]),
-                            'width' => $strip['width'],
-                            'height' => $strip['height'],
-                        ], $source['strips']),
+                        'fileId' => $file['file_id'],
+                        'strips' => array_map(function (array $strip) use ($file): array {
+                            if (isset($strip['rect'])) {
+                                return [
+                                    'pageUrl' => route('booklets.score-page', [
+                                        'booklet' => $this->booklet->id,
+                                        'scoreFile' => $file['file_id'],
+                                        'page' => $strip['page'],
+                                    ]),
+                                    // Named as well as addressed: the browser
+                                    // scopes a page's cairo ids by it, and the
+                                    // export placeholder carries it back so the
+                                    // server knows which page to inline.
+                                    'page' => $strip['page'],
+                                    'rect' => implode(' ', $strip['rect']),
+                                    'width' => $strip['width'],
+                                    'height' => $strip['height'],
+                                ];
+                            }
+
+                            return [
+                                'url' => route('booklets.strip', [
+                                    'booklet' => $this->booklet->id,
+                                    'scoreFile' => $file['file_id'],
+                                    'page' => $strip['page'],
+                                    'index' => $strip['index'],
+                                ]),
+                                'width' => $strip['width'],
+                                'height' => $strip['height'],
+                            ];
+                        }, $file['strips']),
                     ];
                 }
 
@@ -308,6 +332,69 @@ class BookletEditor extends Component
         return $this->entries()->whereNotNull('score_id')->pluck('score_id')->all();
     }
 
+    /**
+     * The typed source of each score in the booklet, resolved once per render:
+     * both the pages and the ticks in the list are drawn from it.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    #[Computed]
+    public function entrySources(): Collection
+    {
+        return app(MusicPlanScoreListService::class)->sourcesFor(
+            $this->entries()->whereNotNull('score_id')->pluck('score_id')->unique()->values()->all(),
+            Auth::user(),
+        );
+    }
+
+    /**
+     * The uploaded files already in the booklet, for ticking a score that offers
+     * more than one of them.
+     *
+     * Resolved rather than read off the rows: a row that names no file is the
+     * score's default file, and it ticks that file's line.
+     *
+     * @return list<int>
+     */
+    #[Computed]
+    public function chosenFileIds(): array
+    {
+        $sources = $this->entrySources();
+
+        return $this->entries()
+            ->whereNotNull('score_id')
+            ->map(function (BookletScore $entry) use ($sources): ?int {
+                $source = $sources->get($entry->score_id);
+
+                return $source === null ? null : $this->fileOf($entry, $source)['file_id'];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Which of the score's files this row prints.
+     *
+     * A row names one where its owner chose between them. Where it does not — an
+     * older booklet, or a score holding a single file — it prints the score's
+     * default, and it falls back to that default if the file it named has since
+     * been deleted or superseded, since a booklet that quietly loses a piece is
+     * worse than one that shows the score's own first answer.
+     *
+     * @param  array<string, mixed>  $source
+     * @return array{file_id: int|null, strips: list<array<string, mixed>>}
+     */
+    private function fileOf(BookletScore $entry, array $source): array
+    {
+        $chosen = $entry->score_file_id === null ? null : ($source['files'][$entry->score_file_id] ?? null);
+
+        return [
+            'file_id' => $chosen['file_id'] ?? $source['file_id'],
+            'strips' => $chosen['strips'] ?? $source['strips'],
+        ];
+    }
+
     public function updated(string $property): void
     {
         if ($property === 'editingText') {
@@ -344,19 +431,45 @@ class BookletEditor extends Component
     }
 
     /**
-     * Add or remove one score.
+     * Add or remove one score, or one of the files it holds.
      *
      * Adding checks that the viewer may actually read it, so a score id typed
-     * into a request cannot pull someone else's work into a booklet. The
-     * assignment it was chosen from rides along, because that — not the score —
-     * is what names it on the page, and it is also what says where the score
-     * lands: with its own slot, rather than at the end.
+     * into a request cannot pull someone else's work into a booklet, and a file
+     * id is honoured only where it is one of that score's own drawable files.
+     * The assignment it was chosen from rides along, because that — not the
+     * score — is what names it on the page, and it is also what says where the
+     * score lands: with its own slot, rather than at the end.
+     *
+     * A score holding several files may be in the booklet several times over,
+     * once per file, so it is the file that is toggled rather than the score.
      */
-    public function toggleScore(int $scoreId, ?int $assignmentId = null): void
+    public function toggleScore(int $scoreId, ?int $assignmentId = null, ?int $fileId = null): void
     {
         $this->authorize('update', $this->booklet);
 
-        $existing = $this->booklet->entries()->where('score_id', $scoreId)->first();
+        $source = app(MusicPlanScoreListService::class)->sourcesFor([$scoreId], Auth::user())->get($scoreId);
+
+        if ($source === null) {
+            // Unreadable now — a recalled loan, an unpublished score. It cannot
+            // be added, but one already standing in the booklet must still be
+            // removable.
+            $stale = $this->booklet->entries()->where('score_id', $scoreId)->first();
+
+            if ($stale instanceof BookletScore) {
+                $this->removeEntry($stale->id);
+            }
+
+            return;
+        }
+
+        if ($fileId !== null && ! isset($source['files'][$fileId])) {
+            return;
+        }
+
+        $existing = $this->booklet->entries()
+            ->where('score_id', $scoreId)
+            ->get()
+            ->first(fn (BookletScore $entry): bool => $this->fileOf($entry, $source)['file_id'] === ($fileId ?? $source['file_id']));
 
         if ($existing instanceof BookletScore) {
             $this->removeEntry($existing->id);
@@ -364,16 +477,11 @@ class BookletEditor extends Component
             return;
         }
 
-        $readable = app(MusicPlanScoreListService::class)->sourcesFor([$scoreId], Auth::user());
-
-        if (! $readable->has($scoreId)) {
-            return;
-        }
-
         $assignment = $this->assignmentInPlan($assignmentId);
 
         $entry = $this->booklet->entries()->create([
             'score_id' => $scoreId,
+            'score_file_id' => $fileId,
             'music_plan_slot_assignment_id' => $assignment?->id,
             'sequence' => (int) $this->booklet->entries()->max('sequence') + 1,
         ]);
@@ -691,7 +799,7 @@ class BookletEditor extends Component
     private function forgetEntries(): void
     {
         $this->booklet->unsetRelation('entries');
-        unset($this->entries, $this->renderPayload, $this->chosenScoreIds, $this->headings);
+        unset($this->entries, $this->entrySources, $this->renderPayload, $this->chosenScoreIds, $this->chosenFileIds, $this->headings);
 
         $this->dispatch(
             'booklet-updated',

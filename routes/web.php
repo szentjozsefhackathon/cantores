@@ -293,6 +293,14 @@ Route::get('/booklets/{booklet}/strip/{scoreFile}/{page}/{index}', \App\Http\Con
     ->middleware(['auth', 'verified'])
     ->name('booklets.strip');
 
+// One engraved page in vector form, for a booklet drawing a file whose systems
+// are windows onto it rather than cut-out images. One request per page: a
+// four-system page is fetched once. Same access question as the strip route.
+Route::get('/booklets/{booklet}/score-page/{scoreFile}/{page}', \App\Http\Controllers\BookletScorePageController::class)
+    ->whereNumber('page')
+    ->middleware(['auth', 'verified'])
+    ->name('booklets.score-page');
+
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');

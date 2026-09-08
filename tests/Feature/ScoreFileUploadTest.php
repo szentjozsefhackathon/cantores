@@ -13,6 +13,7 @@ use App\MusicUrlLabel;
 use App\Services\MuseScoreMetadata;
 use App\Services\MuseScoreRenderer;
 use App\Services\PdfPageRasterizer;
+use App\Services\PdfPageVectorizer;
 use App\Services\ScoreFileIncipitCropper;
 use App\Services\ScoreFileStorage;
 use App\Services\ScoreImageCompressor;
@@ -216,6 +217,7 @@ it('renders an uploaded file into pages, a thumbnail and a page count', function
         app(ScorePageBander::class),
         app(ScoreStripCutter::class),
         app(ScoreImageCompressor::class),
+        app(PdfPageVectorizer::class),
     );
 
     $scoreFile->refresh();
@@ -247,6 +249,7 @@ it('records the error when rendering fails', function () {
         app(ScorePageBander::class),
         app(ScoreStripCutter::class),
         app(ScoreImageCompressor::class),
+        app(PdfPageVectorizer::class),
     ))->toThrow(RuntimeException::class);
 
     $scoreFile->refresh();
@@ -270,6 +273,7 @@ it('marks a file the renderer cannot read as unsupported without running it', fu
         app(ScorePageBander::class),
         app(ScoreStripCutter::class),
         app(ScoreImageCompressor::class),
+        app(PdfPageVectorizer::class),
     );
 
     expect($scoreFile->fresh()->render_status)->toBe(ScoreFileRenderStatus::Unsupported);
@@ -783,6 +787,7 @@ it('accepts a PDF upload and cuts it into pages without running MuseScore', func
         app(ScorePageBander::class),
         app(ScoreStripCutter::class),
         app(ScoreImageCompressor::class),
+        app(PdfPageVectorizer::class),
     );
 
     $scoreFile->refresh();

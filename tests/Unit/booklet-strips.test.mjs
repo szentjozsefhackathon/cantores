@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { pageGeometry, mmToPx } from '../../resources/js/booklet-geometry.js';
-import { stripPlacements } from '../../resources/js/booklet-render.js';
+import { innerMarkupOf, scopePageIds, stripPlacements, windowedPageSvg } from '../../resources/js/booklet-render.js';
 
 const geometry = pageGeometry({
     pageWidthMm: 148,
@@ -93,4 +93,60 @@ test('a score with a heading leaves the page break to the heading', () => {
 
 test('no systems, no blocks', () => {
     assert.deepEqual(stripPlacements([], geometry), []);
+});
+
+// A vector file's strips carry point-valued width/height and a rect; the
+// placement arithmetic only uses their ratios, so it is unchanged.
+test('point-valued systems scale by the same factor as pixel ones', () => {
+    const vector = [
+        { width: 452.3, height: 61.1, rect: '40 55 452.3 61.1' },
+        { width: 452.3, height: 44.7, rect: '40 130 452.3 44.7' },
+    ];
+    const placements = stripPlacements(vector, geometry);
+
+    assert.deepEqual(
+        [...new Set(placements.map((placement) => placement.scale))],
+        [geometry.contentWidthPx / 452.3],
+    );
+    assert.ok(Math.abs(placements[0].height - 61.1 * placements[0].scale) < 1e-9);
+});
+
+// The system is a window onto the page: the wrapper's inner <svg> states the
+// rectangle as its viewBox and clips to it, and carries the marker the export
+// swaps for a placeholder.
+test('the vector wrapper is the page clipped to the system rectangle', () => {
+    const page = '<?xml version="1.0"?>\n<svg xmlns="http://www.w3.org/2000/svg" '
+        + 'width="595pt" height="842pt" viewBox="0 0 595 842"><g id="p1"><path d="M0 0"/></g></svg>';
+
+    const svg = windowedPageSvg(
+        { pageSvg: page, width: 452.3, height: 61.1, rect: '40 55 452.3 61.1', page: 2 },
+        { fileId: 7 },
+    );
+
+    assert.match(svg, /<svg viewBox="40 55 452.3 61.1"[^>]*overflow="hidden"/);
+    assert.match(svg, /data-score-page="7"/);
+    assert.match(svg, /data-page="2"/);
+    assert.match(svg, /data-rect="40 55 452.3 61.1"/);
+    // The page's ids are scoped to this file and page.
+    assert.match(svg, /<g id="sp7_2-p1"><path d="M0 0"\/><\/g>/);
+    assert.doesNotMatch(svg, /<\?xml/);
+});
+
+test('innerMarkupOf drops the svg root and keeps its children', () => {
+    assert.equal(
+        innerMarkupOf('<?xml version="1.0"?><svg xmlns="x" viewBox="0 0 1 1"><g/></svg>\n'),
+        '<g/>',
+    );
+});
+
+test('scopePageIds prefixes every id and every reference to one', () => {
+    const scoped = scopePageIds(
+        '<symbol id="glyph0-1"/><use xlink:href="#glyph0-1"/><g clip-path="url(#clip1)"/><clipPath id="clip1"/>',
+        'sp3_1',
+    );
+
+    assert.match(scoped, /id="sp3_1-glyph0-1"/);
+    assert.match(scoped, /href="#sp3_1-glyph0-1"/);
+    assert.match(scoped, /url\(#sp3_1-clip1\)/);
+    assert.match(scoped, /id="sp3_1-clip1"/);
 });

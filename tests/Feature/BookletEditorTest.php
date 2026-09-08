@@ -10,6 +10,7 @@ use App\Models\MusicPlanSlot;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Models\Score;
+use App\Models\ScoreFile;
 use App\Models\User;
 use App\Support\BookletSettingFields;
 use Livewire\Livewire;
@@ -826,4 +827,31 @@ it('puts a score at the end when its slot is not in the booklet yet', function (
 
     expect($booklet->entries()->orderBy('sequence')->pluck('score_id')->all())
         ->toBe([$communionScores[0]->id, $openingScores[0]->id]);
+});
+
+it('lists each file of an uploaded score in the plan, and adds the one clicked', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['A boldog férfiú']);
+
+    $uploaded = Score::factory()->linksOnly()->create([
+        'user_id' => $user->id,
+        'music_id' => $scores[0]->music_id,
+        'title' => 'A boldog férfiú',
+    ]);
+    ScoreFile::factory()->banded(1)->create(['score_id' => $uploaded->id, 'label' => 'Vetítés']);
+    $parts = ScoreFile::factory()->banded(4)->create(['score_id' => $uploaded->id, 'label' => 'SA kísérettel']);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->assertSee('Vetítés')
+        ->assertSee('SA kísérettel')
+        ->call('toggleScore', $uploaded->id, $assignments[0]->id, $parts->id);
+
+    $entry = $booklet->entries()->firstOrFail();
+
+    expect($entry->score_file_id)->toBe($parts->id)
+        ->and($entry->music_plan_slot_assignment_id)->toBe($assignments[0]->id);
 });

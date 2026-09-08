@@ -6,6 +6,7 @@ use App\Enums\ScoreFileRenderStatus;
 use App\Models\ScoreFile;
 use App\Services\MuseScoreRenderer;
 use App\Services\PdfPageRasterizer;
+use App\Services\PdfPageVectorizer;
 use App\Services\ScoreFileIncipitCropper;
 use App\Services\ScoreFileStorage;
 use App\Services\ScoreImageCompressor;
@@ -16,13 +17,22 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Engraves an uploaded score file and stores the artifacts a reader needs:
- * the PDF, one PNG per page, the incipit crop, and the system strips a booklet
- * flows.
+ * Engraves an uploaded score file and stores the artifacts a reader needs.
  *
- * Runs on its own `musescore` queue so a slow or hostile file cannot starve
- * the default queue, and so the worker can live in the renderer image — the
- * app image has neither MuseScore nor poppler.
+ * Every file gets the engraved PDF and the incipit crop. Its pages are then
+ * kept one of two ways, chosen per file by measurement:
+ *
+ * - **vector** — one gzipped `pdftocairo` SVG per page, and a booklet strip is a
+ *   `viewBox` window onto it. Resolution-independent, and its size scales with
+ *   engraved content rather than with dpi times page area. This is what an
+ *   ordinary MuseScore export gets.
+ * - **raster** — one page PNG per page plus one 300 dpi PNG per system, exactly
+ *   as before. The fallback for scans, whose image-only pages have nothing to
+ *   vectorise, and for anything `pdftocairo` cannot handle.
+ *
+ * Runs on its own `musescore` queue so a slow or hostile file cannot starve the
+ * default queue, and so the worker can live in the renderer image — the app
+ * image has neither MuseScore nor poppler.
  */
 class RenderScoreFileJob implements ShouldQueue
 {
@@ -49,10 +59,12 @@ class RenderScoreFileJob implements ShouldQueue
         ScorePageBander $bander,
         ScoreStripCutter $cutter,
         ScoreImageCompressor $compressor,
+        PdfPageVectorizer $vectorizer,
     ): void {
-        // Nothing here streams: the whole file and its ciphertext are resident
-        // at once, and the rasterised pages after them. The 25 MB upload cap
-        // bounds the first two; the pages are far smaller.
+        // Nothing here streams. On the raster path the whole file, its
+        // ciphertext and the rasterised pages are resident at once; on the
+        // vector path the pages are discarded after banding, but one page SVG
+        // and the PDF sit beside them. The 25 MB upload cap bounds the file.
         ini_set('memory_limit', '512M');
 
         if (! $this->scoreFile->isRenderable()) {
@@ -82,17 +94,28 @@ class RenderScoreFileJob implements ShouldQueue
                 $storage->put($this->scoreFile->renderPath(), $pdf);
             }
 
+            // Reading-resolution pages. Always produced — they are what the
+            // bander analyses and what the vector form is measured against — but
+            // only stored on the raster path.
             $pages = $rasterizer->rasterize($pdf);
-            foreach ($pages as $index => $page) {
-                $storage->put($this->scoreFile->pagePath($index + 1), $compressor->compress($page));
-            }
 
             $storage->put(
                 $this->scoreFile->thumbPath(),
                 $compressor->compress($cropper->crop($rasterizer->rasterizePage($pdf, 1, self::INCIPIT_DPI))),
             );
 
-            $strips = $this->cutStrips($pdf, $pages, $storage, $rasterizer, $bander, $cutter, $compressor);
+            $strips = $this->renderPages(
+                $pdf, $pages, $storage, $rasterizer, $bander, $cutter, $compressor, $vectorizer,
+            );
+
+            $isVector = array_filter($strips, fn (array $strip): bool => isset($strip['rect'])) !== [];
+
+            // Drop whichever representation this render did not write, so a
+            // re-render onto the other one does not leave the first behind.
+            $storage->deleteMatching(
+                $this->scoreFile,
+                $isVector ? ['page-*.png', 'strip-*.png'] : ['page-*.svgz'],
+            );
 
             $this->scoreFile->update([
                 'render_status' => ScoreFileRenderStatus::Ready,
@@ -107,6 +130,7 @@ class RenderScoreFileJob implements ShouldQueue
                 'score_file_id' => $this->scoreFile->id,
                 'pages' => count($pages),
                 'strips' => count($strips),
+                'vector' => $isVector,
             ]);
         } catch (\Throwable $e) {
             Log::error('Score file rendering failed', [
@@ -121,26 +145,23 @@ class RenderScoreFileJob implements ShouldQueue
     }
 
     /**
-     * Cut every page into its systems, and store them.
+     * Store this file's pages, and return the systems index for a booklet.
      *
-     * Two passes over the document, because the two halves want different
-     * resolutions. The bands are found on the reading-resolution pages that were
-     * rasterised anyway — a system gap is a system gap at 150 dpi — and the
-     * cutting happens at printing resolution, one page in memory at a time. What
-     * travels between the passes is fractions of a page, which is why that works.
+     * The pages are banded once, here. Where they carry systems and the vector
+     * form of the whole file comes out smaller than its page PNGs, the pages are
+     * stored as gzipped SVGs and each system is recorded as a rectangle onto its
+     * page. Otherwise the page PNGs are stored and the systems are cut at
+     * printing resolution, exactly as before.
      *
-     * The horizontal window is unioned across the whole document before anything
-     * is cut, so every strip of a file comes out the same width and the systems
-     * still line up once the booklet has scaled them to its own page.
-     *
-     * A failure here is logged and swallowed. Strips are what a booklet wants;
-     * the reading view needs only the pages and the thumbnail, and a file that
-     * cannot be banded should still be readable.
+     * A banding failure is logged and swallowed: strips are what a booklet
+     * wants, and a file that cannot be banded should still be readable. A
+     * vectorisation failure falls back to the raster path rather than failing
+     * the render.
      *
      * @param  list<string>  $pages  the reading-resolution renders, in order
-     * @return list<array{page: int, index: int, width: int, height: int}>
+     * @return list<array{page: int, index: int, width: int|float, height: int|float, rect?: array{float, float, float, float}}>
      */
-    private function cutStrips(
+    private function renderPages(
         string $pdf,
         array $pages,
         ScoreFileStorage $storage,
@@ -148,10 +169,163 @@ class RenderScoreFileJob implements ShouldQueue
         ScorePageBander $bander,
         ScoreStripCutter $cutter,
         ScoreImageCompressor $compressor,
+        PdfPageVectorizer $vectorizer,
     ): array {
+        $analyses = null;
+
         try {
             $analyses = array_map(fn (string $page): array => $bander->analyse($page), $pages);
+        } catch (\Throwable $e) {
+            Log::warning('Score file could not be banded', [
+                'score_file_id' => $this->scoreFile->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
+        $hasBands = $analyses !== null && array_filter(
+            $analyses,
+            fn (array $analysis): bool => $analysis['bands'] !== []
+        ) !== [];
+
+        if ($hasBands) {
+            $vectorStrips = $this->vectorPages($pdf, $pages, $analyses, $storage, $compressor, $vectorizer);
+
+            if ($vectorStrips !== null) {
+                return $vectorStrips;
+            }
+        }
+
+        // Raster path: store every page image.
+        foreach ($pages as $index => $page) {
+            $storage->put($this->scoreFile->pagePath($index + 1), $compressor->compress($page));
+        }
+
+        if (! $hasBands) {
+            return [];
+        }
+
+        return $this->cutRasterStrips($pdf, $analyses, $storage, $rasterizer, $cutter, $compressor);
+    }
+
+    /**
+     * Keep the file's pages as vector SVGs, if that is worth doing.
+     *
+     * Returns the systems index once every page is stored as `page-{n}.svgz`, or
+     * null to say the raster path should be taken — because `pdftocairo` failed,
+     * or because the gzipped SVGs come out no smaller than the page PNGs, which
+     * is what an image-only scan does.
+     *
+     * @param  list<string>  $pages
+     * @param  list<array{width: int, height: int, left: float, right: float, bands: list<array{top: float, bottom: float}>}>  $analyses
+     * @return list<array{page: int, index: int, width: float, height: float, rect: array{float, float, float, float}}>|null
+     */
+    private function vectorPages(
+        string $pdf,
+        array $pages,
+        array $analyses,
+        ScoreFileStorage $storage,
+        ScoreImageCompressor $compressor,
+        PdfPageVectorizer $vectorizer,
+    ): ?array {
+        try {
+            $svgz = [];
+            foreach (array_keys($pages) as $index) {
+                $svgz[$index] = gzencode($vectorizer->vectorizePage($pdf, $index + 1), 9);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Score file could not be vectorised, using the raster path', [
+                'score_file_id' => $this->scoreFile->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        $vectorBytes = array_sum(array_map('strlen', $svgz));
+        $rasterBytes = array_sum(array_map(
+            fn (string $page): int => strlen($compressor->compress($page)),
+            $pages,
+        ));
+
+        if ($vectorBytes >= $rasterBytes) {
+            return null;
+        }
+
+        $wanted = array_values(array_filter(
+            $analyses,
+            fn (array $analysis): bool => $analysis['bands'] !== []
+        ));
+
+        $window = [
+            'left' => min(array_column($wanted, 'left')),
+            'right' => max(array_column($wanted, 'right')),
+        ];
+
+        foreach (array_keys($pages) as $index) {
+            $storage->put($this->scoreFile->pageVectorPath($index + 1), $svgz[$index]);
+        }
+
+        $strips = [];
+
+        foreach ($analyses as $index => $analysis) {
+            if ($analysis['bands'] === []) {
+                continue;
+            }
+
+            $page = $index + 1;
+
+            // The bander measured fractions on the raster; poppler applies
+            // /CropBox and /Rotate identically in pdftoppm and pdftocairo, so
+            // they land on the same place in the SVG. Expressed in the page's
+            // own units (points) so a strip is a plain viewBox window.
+            $pageWidthPt = $analysis['width'] / PdfPageRasterizer::VIEW_DPI * 72;
+            $pageHeightPt = $analysis['height'] / PdfPageRasterizer::VIEW_DPI * 72;
+
+            $left = $window['left'] * $pageWidthPt;
+            $width = ($window['right'] - $window['left']) * $pageWidthPt;
+
+            foreach ($analysis['bands'] as $offset => $band) {
+                $top = $band['top'] * $pageHeightPt;
+                $height = ($band['bottom'] - $band['top']) * $pageHeightPt;
+
+                $strips[] = [
+                    'page' => $page,
+                    'index' => $offset + 1,
+                    'width' => round($width, 2),
+                    'height' => round($height, 2),
+                    'rect' => [
+                        round($left, 2),
+                        round($top, 2),
+                        round($width, 2),
+                        round($height, 2),
+                    ],
+                ];
+            }
+        }
+
+        return $strips;
+    }
+
+    /**
+     * Cut every banded page into its systems at printing resolution, and store
+     * them. The raster fallback, unchanged in what it produces.
+     *
+     * The horizontal window is unioned across the whole document before anything
+     * is cut, so every strip of a file comes out the same width and the systems
+     * still line up once the booklet has scaled them to its own page.
+     *
+     * @param  list<array{width: int, height: int, left: float, right: float, bands: list<array{top: float, bottom: float}>}>  $analyses
+     * @return list<array{page: int, index: int, width: int, height: int}>
+     */
+    private function cutRasterStrips(
+        string $pdf,
+        array $analyses,
+        ScoreFileStorage $storage,
+        PdfPageRasterizer $rasterizer,
+        ScoreStripCutter $cutter,
+        ScoreImageCompressor $compressor,
+    ): array {
+        try {
             $wanted = array_values(array_filter(
                 $analyses,
                 fn (array $analysis): bool => $analysis['bands'] !== []

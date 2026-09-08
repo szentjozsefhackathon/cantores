@@ -5,6 +5,7 @@
 
     $entries = $this->entries;
     $chosen = $this->chosenScoreIds;
+    $chosenFiles = $this->chosenFileIds;
 @endphp
 
 <div
@@ -145,6 +146,9 @@
                                         @else
                                             <span class="min-w-0 flex-1 truncate text-sm">
                                                 {{ $entry->score?->variationLabel() }}
+                                                @if($entry->scoreFile)
+                                                    <span class="text-xs text-zinc-400">· {{ $entry->scoreFile->displayName() }}</span>
+                                                @endif
                                                 @if($entry->assignment?->musicPlanSlot?->name)
                                                     <span class="text-xs text-zinc-400">· {{ $entry->assignment->musicPlanSlot->name }}</span>
                                                 @endif
@@ -343,21 +347,32 @@
                                     <div class="text-sm font-medium">{{ $assignment['music_title'] }}</div>
 
                                     @forelse($assignment['scores'] as $score)
-                                        @php $isChosen = in_array($score['id'], $chosen, true); @endphp
+                                        {{-- An uploaded score holding several files is not one thing
+                                             to take or leave: the projection slide and the
+                                             accompaniment are different music on the page. So where
+                                             there is a choice, the score only names itself and each
+                                             file is added on its own line. --}}
+                                        @php
+                                            $files = $score['files'] ?? [];
+                                            $perFile = count($files) > 1;
+                                            $isChosen = ! $perFile && in_array($score['id'], $chosen, true);
+                                        @endphp
                                         <div
                                             class="flex items-center gap-2 py-0.5 pl-2 text-sm"
                                             wire:key="score-{{ $assignment['id'] }}-{{ $score['id'] }}"
                                         >
-                                            <flux:tooltip :content="$isChosen ? __('In the booklet — click to take it out') : __('Add to the booklet')">
-                                                <flux:button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    :icon="$isChosen ? 'check-circle' : 'plus'"
-                                                    wire:click="toggleScore({{ $score['id'] }}, {{ $assignment['id'] }})"
-                                                    class="shrink-0 {{ $isChosen ? '!text-green-600 dark:!text-green-400' : '' }}"
-                                                    :disabled="! $score['in_booklets']"
-                                                />
-                                            </flux:tooltip>
+                                            @unless($perFile)
+                                                <flux:tooltip :content="$isChosen ? __('In the booklet — click to take it out') : __('Add to the booklet')">
+                                                    <flux:button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        :icon="$isChosen ? 'check-circle' : 'plus'"
+                                                        wire:click="toggleScore({{ $score['id'] }}, {{ $assignment['id'] }})"
+                                                        class="shrink-0 {{ $isChosen ? '!text-green-600 dark:!text-green-400' : '' }}"
+                                                        :disabled="! $score['in_booklets']"
+                                                    />
+                                                </flux:tooltip>
+                                            @endunless
                                             <div class="min-w-0 flex-1">
                                                 <span class="block {{ $isChosen ? 'text-zinc-500' : '' }}">{{ $score['title'] }}</span>
                                                 @if($score['incipit_url'])
@@ -376,6 +391,29 @@
                                                 </flux:tooltip>
                                             @endif
                                         </div>
+
+                                        @if($perFile)
+                                            @foreach($files as $file)
+                                                @php $isFileChosen = in_array($file['id'], $chosenFiles, true); @endphp
+                                                <div
+                                                    class="flex items-center gap-2 py-0.5 pl-4 text-sm"
+                                                    wire:key="score-file-{{ $assignment['id'] }}-{{ $file['id'] }}"
+                                                >
+                                                    <flux:tooltip :content="$isFileChosen ? __('In the booklet — click to take it out') : __('Add this file to the booklet')">
+                                                        <flux:button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            :icon="$isFileChosen ? 'check-circle' : 'plus'"
+                                                            wire:click="toggleScore({{ $score['id'] }}, {{ $assignment['id'] }}, {{ $file['id'] }})"
+                                                            class="shrink-0 {{ $isFileChosen ? '!text-green-600 dark:!text-green-400' : '' }}"
+                                                        />
+                                                    </flux:tooltip>
+                                                    <span class="min-w-0 flex-1 truncate text-zinc-600 dark:text-zinc-400">
+                                                        {{ $file['name'] }}
+                                                    </span>
+                                                </div>
+                                            @endforeach
+                                        @endif
                                     @empty
                                         <div class="pl-2 text-xs text-zinc-400">{{ __('No scores available') }}</div>
                                     @endforelse

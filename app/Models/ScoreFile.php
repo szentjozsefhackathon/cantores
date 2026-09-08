@@ -30,7 +30,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $render_error
  * @property bool $has_thumbnail
  * @property int|null $page_count
- * @property list<array{page: int, index: int, width: int, height: int}>|null $strips
+ * @property list<array{page: int, index: int, width: int, height: int, rect?: array{float, float, float, float}}>|null $strips
  * @property \Carbon\CarbonImmutable|null $rendered_at
  * @property \Carbon\CarbonImmutable|null $superseded_at
  * @property int|null $superseded_by_id
@@ -66,11 +66,13 @@ class ScoreFile extends Model
     public const PRERENDERED_EXTENSIONS = ['pdf'];
 
     /**
-     * The resolution the booklet strips are cut at.
+     * The resolution the booklet strips are cut at, on the raster fallback path.
      *
      * Denser than the reading view, because a strip is printed rather than
-     * looked at on a screen, and not denser still because a booklet is a service
-     * sheet for the pews and not a press proof.
+     * looked at on a screen. It only bites for scans and files rendered before
+     * vectorising existed: an engraved page is now kept as one vector SVG and a
+     * strip is a window onto it, printed at whatever size the booklet's sheet
+     * asks for.
      */
     public const STRIP_DPI = 300;
 
@@ -198,11 +200,21 @@ class ScoreFile extends Model
     }
 
     /**
-     * One system, cut out of a page for a booklet to flow.
+     * One system, cut out of a page for a booklet to flow. Raster fallback only.
      */
     public function stripPath(int $page, int $index): string
     {
         return $this->directory()."/strip-{$page}-{$index}.png";
+    }
+
+    /**
+     * One engraved page kept in vector form, gzip-compressed inside the
+     * encryption envelope. A booklet strip is a `viewBox` window onto this
+     * rather than a crop of a raster, and the reading view draws it directly.
+     */
+    public function pageVectorPath(int $page): string
+    {
+        return $this->directory()."/page-{$page}.svgz";
     }
 
     public function extension(): string
@@ -290,7 +302,13 @@ class ScoreFile extends Model
     /**
      * The systems this file offers a booklet, in reading order.
      *
-     * @return list<array{page: int, index: int, width: int, height: int}>
+     * Two shapes travel through here. A raster strip carries only its pixel
+     * `width`/`height`; a vector one adds `rect`, the window in the page's own
+     * units that a booklet clips its page SVG to. `width`/`height` are then the
+     * rectangle's size in points, and every consumer only ever uses their
+     * ratios, so nothing downstream has to tell the two apart.
+     *
+     * @return list<array{page: int, index: int, width: int, height: int, rect?: array{float, float, float, float}}>
      */
     public function stripList(): array
     {
@@ -314,5 +332,31 @@ class ScoreFile extends Model
         }
 
         return false;
+    }
+
+    /**
+     * Whether this file's pages are kept as vector SVGs rather than page PNGs.
+     *
+     * Decided by the render: a vector render stores one `page-{n}.svgz` for
+     * every page and marks each strip with `rect`. A file with no `rect` anywhere
+     * is on the raster path — a scan, or a render from before vectorising.
+     */
+    public function isVectorRendered(): bool
+    {
+        foreach ($this->stripList() as $strip) {
+            if (isset($strip['rect'])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether page N of this file is served as a vector SVG.
+     */
+    public function hasVectorPage(int $page): bool
+    {
+        return $this->isVectorRendered() && $this->hasPage($page);
     }
 }

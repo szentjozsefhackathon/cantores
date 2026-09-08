@@ -10,16 +10,15 @@ use Illuminate\Console\Command;
  * Puts the files that were rendered before banding existed back through the
  * renderer, so they can go into a booklet as systems rather than not at all.
  *
- * A re-render rather than a cut on its own, because the strips come off the
- * printing-resolution rasterisation of the PDF and nothing keeps that around —
- * only the reading-resolution pages are stored. The work goes onto the same
- * `musescore` queue as any other render and is therefore rate-limited by the
- * single worker that drains it.
+ * A re-render rather than a cut on its own, because a system is a window onto
+ * the page and the page has to be re-engraved to vector form (or, for a scan,
+ * re-rasterised at printing resolution) — nothing keeps either around. The work
+ * goes onto the same `musescore` queue as any other render and is therefore
+ * rate-limited by the single worker that drains it.
  *
- * `--all` is also how a library rendered before ScoreImageCompressor existed
- * gets its pages, incipits and strips rewritten at a byte a pixel: every
- * artifact is stored again, so the saving lands on files that already have
- * their systems.
+ * `--all` is also how the library is converted from stored strip PNGs to vector
+ * pages: every artifact is stored again, and an engraving's page PNGs and 300
+ * dpi strips are replaced by one gzipped SVG per page.
  */
 class CutScoreFileSystems extends Command
 {

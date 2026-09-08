@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $booklet_id
  * @property int|null $score_id
+ * @property int|null $score_file_id
  * @property int|null $music_plan_slot_assignment_id
  * @property string|null $text
  * @property int $sequence
@@ -32,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\Booklet $booklet
  * @property-read \App\Models\Score|null $score
+ * @property-read \App\Models\ScoreFile|null $scoreFile
  * @property-read \App\Models\MusicPlanSlotAssignment|null $assignment
  *
  * @method static \Database\Factories\BookletScoreFactory factory($count = null, $state = [])
@@ -52,6 +54,7 @@ class BookletScore extends Model
     protected $fillable = [
         'booklet_id',
         'score_id',
+        'score_file_id',
         'music_plan_slot_assignment_id',
         'text',
         'sequence',
@@ -90,6 +93,15 @@ class BookletScore extends Model
     public function score(): BelongsTo
     {
         return $this->belongsTo(Score::class);
+    }
+
+    /**
+     * Which of the score's uploaded files is printed here, when the row names
+     * one. Null means the score's own default — the oldest file it holds.
+     */
+    public function scoreFile(): BelongsTo
+    {
+        return $this->belongsTo(ScoreFile::class);
     }
 
     /**

@@ -102,6 +102,23 @@ class ScoreFileFactory extends Factory
         ]);
     }
 
+    /**
+     * A file whose pages are kept as vector SVGs: every system carries the
+     * `rect` window onto its page, in the page's own units.
+     */
+    public function vector(int $systems = 3): static
+    {
+        return $this->ready()->state([
+            'strips' => array_map(fn (int $index): array => [
+                'page' => 1,
+                'index' => $index,
+                'width' => 452.3,
+                'height' => 61.1,
+                'rect' => [40.0, 55.0 + $index * 75, 452.3, 61.1],
+            ], range(1, $systems)),
+        ]);
+    }
+
     public function failed(string $error = 'Score rendering failed.'): static
     {
         return $this->state([

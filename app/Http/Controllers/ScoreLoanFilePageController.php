@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Loan;
 use App\Models\Score;
 use App\Models\ScoreFile;
-use App\Models\Loan;
-use App\Services\ScoreFileResponder;
 use App\Services\LoanAccessService;
+use App\Services\ScoreFileResponder;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -29,6 +29,10 @@ class ScoreLoanFilePageController extends Controller
 
         abort_unless($scoreFile->score_id === $score->id, 404);
         abort_unless($scoreFile->hasPage($page), 404);
+
+        if ($scoreFile->hasVectorPage($page)) {
+            return $responder->pageVector($scoreFile, $page, public: false);
+        }
 
         return $responder->page($scoreFile, $page, public: false);
     }

@@ -56,6 +56,32 @@ class ScoreFileResponder
     }
 
     /**
+     * One engraved page in vector form, stored gzip-compressed and served as it
+     * is stored: the browser and rsvg-convert both want the compressed bytes.
+     *
+     * The body is derived from a user-supplied PDF, so it is served inert —
+     * `nosniff` and a locked-down CSP with `sandbox` — even though the reading
+     * view already draws it through a sandboxed `<img>`. The URL is reachable
+     * directly, and the route must not depend on cairo never emitting script.
+     */
+    public function pageVector(ScoreFile $scoreFile, int $page, bool $public): Response
+    {
+        $response = $this->respond(
+            $scoreFile,
+            $scoreFile->pageVectorPath($page),
+            "page-vector-{$page}",
+            'image/svg+xml',
+            $public,
+        );
+
+        $response->headers->set('Content-Encoding', 'gzip');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+
+        return $response;
+    }
+
+    /**
      * One system, cut out of a page for a booklet.
      */
     public function strip(ScoreFile $scoreFile, int $page, int $index, bool $public): Response

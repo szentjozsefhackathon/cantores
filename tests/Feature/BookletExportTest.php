@@ -1,8 +1,13 @@
 <?php
 
 use App\Models\Booklet;
+use App\Models\Score;
+use App\Models\ScoreFile;
+use App\Models\ScorePublication;
 use App\Models\User;
+use App\Services\ScoreFileStorage;
 use App\Services\SvgToPdfConverter;
+use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\postJson;
@@ -69,6 +74,132 @@ it('does not stamp one credit line across the whole booklet', function () {
         ->assertOk();
 
     expect($seen)->toBeNull();
+});
+
+/** A booklet page carrying one vector-file system as the placeholder the browser sends. */
+function pageWithPlaceholder(int $fileId, int $page = 1, string $rect = '40 55 452.3 61.1'): string
+{
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 559 793">'
+        ."<g transform=\"translate(20 20)\"><g data-score-page=\"{$fileId}\" data-page=\"{$page}\" data-rect=\"{$rect}\"></g></g>"
+        .'</svg>';
+}
+
+it('puts the stored page back behind a placeholder the viewer may see', function () {
+    Storage::fake('private');
+
+    $user = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $user->id]);
+    $file = ScoreFile::factory()->vector()->create(['score_id' => $score->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $user->id]);
+
+    app(ScoreFileStorage::class)->put(
+        $file->pageVectorPath(1),
+        gzencode('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 595 842"><circle id="ink" r="5"/></svg>'),
+    );
+
+    $seen = [];
+    fakeConverter(function (array $svgs) use (&$seen): void {
+        $seen = $svgs;
+    });
+
+    actingAs($user);
+
+    postJson(route('booklets.export-pdf', ['booklet' => $booklet]), [
+        'pages' => [pageWithPlaceholder($file->id)],
+    ])->assertOk();
+
+    expect($seen[0])->toContain('<circle')
+        ->and($seen[0])->toContain('viewBox="40 55 452.3 61.1"')
+        ->and($seen[0])->not->toContain('data-score-page');
+});
+
+it('substitutes a self-closed placeholder as the browser serializes it', function () {
+    Storage::fake('private');
+
+    $user = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $user->id]);
+    $file = ScoreFile::factory()->vector()->create(['score_id' => $score->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $user->id]);
+
+    app(ScoreFileStorage::class)->put(
+        $file->pageVectorPath(1),
+        gzencode('<svg xmlns="http://www.w3.org/2000/svg"><circle id="ink" r="5"/></svg>'),
+    );
+
+    $seen = [];
+    fakeConverter(function (array $svgs) use (&$seen): void {
+        $seen = $svgs;
+    });
+
+    actingAs($user);
+
+    $page = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 559 793">'
+        ."<g data-score-page=\"{$file->id}\" data-page=\"1\" data-rect=\"40 55 452.3 61.1\"/>"
+        .'</svg>';
+
+    postJson(route('booklets.export-pdf', ['booklet' => $booklet]), ['pages' => [$page]])
+        ->assertOk();
+
+    expect($seen[0])->toContain('<circle')
+        ->and($seen[0])->not->toContain('data-score-page');
+});
+
+it('drops a placeholder for a file the viewer may not see', function () {
+    Storage::fake('private');
+
+    $owner = User::factory()->create();
+    $reader = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $owner->id]);
+    $file = ScoreFile::factory()->vector()->create(['score_id' => $score->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $reader->id]);
+
+    app(ScoreFileStorage::class)->put(
+        $file->pageVectorPath(1),
+        gzencode('<svg xmlns="http://www.w3.org/2000/svg"><circle id="ink" r="5"/></svg>'),
+    );
+
+    $seen = [];
+    fakeConverter(function (array $svgs) use (&$seen): void {
+        $seen = $svgs;
+    });
+
+    actingAs($reader);
+
+    postJson(route('booklets.export-pdf', ['booklet' => $booklet]), [
+        'pages' => [pageWithPlaceholder($file->id)],
+    ])->assertOk();
+
+    expect($seen[0])->not->toContain('<circle')
+        ->and($seen[0])->not->toContain('data-score-page');
+});
+
+it('inlines a placeholder for a published file any booklet may reach', function () {
+    Storage::fake('private');
+
+    $owner = User::factory()->create();
+    $reader = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $owner->id]);
+    ScorePublication::factory()->approved()->create(['score_id' => $score->id]);
+    $file = ScoreFile::factory()->vector()->create(['score_id' => $score->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $reader->id]);
+
+    app(ScoreFileStorage::class)->put(
+        $file->pageVectorPath(1),
+        gzencode('<svg xmlns="http://www.w3.org/2000/svg"><circle id="ink" r="5"/></svg>'),
+    );
+
+    $seen = [];
+    fakeConverter(function (array $svgs) use (&$seen): void {
+        $seen = $svgs;
+    });
+
+    actingAs($reader);
+
+    postJson(route('booklets.export-pdf', ['booklet' => $booklet]), [
+        'pages' => [pageWithPlaceholder($file->id)],
+    ])->assertOk();
+
+    expect($seen[0])->toContain('<circle');
 });
 
 it('refuses to export someone elses booklet', function () {

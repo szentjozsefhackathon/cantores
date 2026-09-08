@@ -63,6 +63,11 @@ return [
         'timeout' => env('PDFTOPPM_TIMEOUT', 180),
     ],
 
+    'pdftocairo' => [
+        'bin' => env('PDFTOCAIRO_BIN', 'pdftocairo'),
+        'timeout' => env('PDFTOCAIRO_TIMEOUT', 180),
+    ],
+
     'szentiras' => [
         'base_url' => env('SZENTIRAS_EU_API_URL', 'https://szentiras.eu/api'),
         'key' => env('SZENTIRAS_EU_API_KEY'),

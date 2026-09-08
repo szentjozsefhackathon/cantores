@@ -1,5 +1,6 @@
 # Renderer image: converts MuseScore scores (.mscz, .musicxml) from a dedicated
-# queue, then rasterises the resulting PDF into page images with poppler.
+# queue, then turns the resulting PDF into page artifacts with poppler —
+# vector SVGs (pdftocairo) for engravings, page images (pdftoppm) for scans.
 # Derives from the application image, as Dockerfile.lilypond does — from the dev
 # one when BASE_IMAGE says so, so the same tooling is available locally.
 ARG BASE_IMAGE=creshu-app-prod

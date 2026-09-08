@@ -44,7 +44,9 @@ $pageUrls = array_values($pages);
         <div class="space-y-4">
             <flux:heading size="lg">{{ $heading ?? __('Sheet music') }}</flux:heading>
 
-            {{-- Pages are fetched only once the modal has been opened, and only the one on screen. --}}
+            {{-- Pages are fetched only once the modal has been opened, and only the
+                 one on screen. A page URL resolves to a PNG for a scan and to a
+                 gzipped SVG for an engraving; <img> draws either. --}}
             <div class="max-h-[70vh] overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700">
                 <template x-if="opened">
                     <img x-bind:src="pages[page - 1]" x-bind:alt="caption" class="w-full" />

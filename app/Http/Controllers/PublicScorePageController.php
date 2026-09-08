@@ -21,6 +21,10 @@ class PublicScorePageController extends Controller
 
         abort_unless($scoreFile->hasPage($page), 404);
 
+        if ($scoreFile->hasVectorPage($page)) {
+            return $responder->pageVector($scoreFile, $page, public: true);
+        }
+
         return $responder->page($scoreFile, $page, public: true);
     }
 }
