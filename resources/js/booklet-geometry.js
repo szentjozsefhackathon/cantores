@@ -34,6 +34,17 @@ export function ptToPx(pt) {
 export const DEFAULT_TEXT_FONT = 'Inter';
 
 /**
+ * How far apart ABC staves stand in a booklet.
+ *
+ * Tighter than the score's own, and deliberately so: a booklet is read at arm's
+ * length off a small page, where the space an engraver left for a projector is
+ * simply a hole. It is a booklet-wide setting rather than a constant because the
+ * right amount depends on the page, and it is per-format because ABC is the one
+ * engine that states this in units of its own.
+ */
+export const DEFAULT_ABC_STAFF_SEP = 25;
+
+/**
  * A family as an SVG font-family value.
  *
  * Quoted, because the names in play have spaces in them and a bare
@@ -66,6 +77,7 @@ export function pageGeometry(geometry) {
         staffHeightMm: geometry.staffHeightMm,
         textFont: quoteFontFamily(geometry.textFont),
         headingScale: Number(geometry.headingScale) > 0 ? Number(geometry.headingScale) : 1,
+        abcStaffSep: Number(geometry.abcStaffSep) >= 0 ? Number(geometry.abcStaffSep) : DEFAULT_ABC_STAFF_SEP,
         showTitles: geometry.showTitles !== false,
     };
 }

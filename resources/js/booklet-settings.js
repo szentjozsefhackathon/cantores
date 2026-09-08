@@ -22,8 +22,15 @@ import {
  *
  * Layer 3 is narrow on purpose. A booklet's job is to make a pile of scores the
  * same size, not to overrule the person who engraved them: it sets how wide the
- * page is and how big the type is, and leaves the note spacing, the staff
- * separation, the font and the transposition exactly as the author left them.
+ * page is, how big the type is and how tightly the systems are stacked, and
+ * leaves the note spacing, the font and the transposition exactly as the author
+ * left them.
+ *
+ * The stacking is in there because a booklet packs whole services onto small
+ * pages, and vertical air a score can afford on its own sheet is what costs the
+ * booklet a page. So the space between staves comes from the booklet rather than
+ * the score, and the space a score keeps between a staff and its lyrics is taken
+ * to nothing — abc2svg already sets the lyrics close enough to read.
  *
  * Layer 4 wins over all of it, including over the booklet's own width — which is
  * the point. Widening one score past the content box is how you get rid of a bad
@@ -46,6 +53,11 @@ export function unifiedSettings(format, geometry) {
             abcPageWidth: Math.floor(contentWidthPx),
             abcPageScale: round(abcPageScaleForStaffHeight(staffHeightMm), 4),
             abcLyricSize: round(abcLyricSizeForPt(lyricSizePt), 4),
+            // abc2svg reserves the staff separation above the first staff too,
+            // so this is also what stands between a heading and the music it
+            // names — which is why the booklet, not the score, gets to say it.
+            abcStaffSep: geometry.abcStaffSep,
+            abcVocalSpace: 0,
             abcZoom: 100,
         };
     }

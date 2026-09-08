@@ -476,6 +476,43 @@ it('saves the face and the heading size the booklet is set in', function () {
         ]);
 });
 
+// ABC reserves its staff separation above the first staff as well as between
+// two of them, so on a small page it is both how tightly the music stacks and
+// how far the heading stands off it — a booklet-wide call, not each score's.
+it('saves how tightly ABC stacks throughout the booklet', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->set('abcStaffSep', 18)
+        ->assertHasNoErrors();
+
+    $booklet->refresh();
+
+    expect($booklet->abc_staff_sep)->toBe(18.0)
+        ->and($booklet->geometry())->toMatchArray(['abcStaffSep' => 18.0]);
+});
+
+// A print of an A5 booklet is what set these: 10.5pt lyrics over a 5 mm staff
+// balance, and a heading at 0.9 stands over them without shouting.
+it('starts a booklet at the numbers a printed A5 booklet wanted', function () {
+    // Created past the factory, so the columns answer with what the schema says.
+    $booklet = Booklet::query()->create([
+        'user_id' => User::factory()->create()->id,
+        'title' => 'Booklet',
+    ])->fresh();
+
+    expect($booklet->geometry())->toMatchArray([
+        'lyricSizePt' => 10.5,
+        'staffHeightMm' => 5.0,
+        'headingScale' => 0.9,
+        'textFont' => 'Inter',
+        'abcStaffSep' => 25.0,
+    ]);
+});
+
 // rsvg-convert has no network: a face that cannot be embedded is a face that is
 // not printed, so it is not one a booklet may be set in.
 it('refuses a text font the exporter cannot embed', function () {

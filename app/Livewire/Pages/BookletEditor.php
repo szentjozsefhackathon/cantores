@@ -47,10 +47,10 @@ class BookletEditor extends Component
     public float $marginMm = 12;
 
     #[Validate('required|numeric|min:5|max:24')]
-    public float $lyricSizePt = 11;
+    public float $lyricSizePt = 10.5;
 
     #[Validate('required|numeric|min:2|max:20')]
-    public float $staffHeightMm = 7;
+    public float $staffHeightMm = 5;
 
     /**
      * The face everything the booklet writes rather than engraves is set in.
@@ -61,7 +61,19 @@ class BookletEditor extends Component
      * How big a heading is beside the lyrics it stands over.
      */
     #[Validate('required|numeric|min:0.5|max:2')]
-    public float $headingScale = 1;
+    public float $headingScale = 0.9;
+
+    /**
+     * How far apart ABC staves stand throughout the booklet.
+     *
+     * The one format-specific knob on an otherwise format-blind toolbar, and it
+     * earns its place: abc2svg reserves this space above the first staff as well
+     * as between two of them, so on a booklet page it is both how tightly the
+     * music stacks and how close a heading sits to it. A score that needs
+     * different can still say so on its own row.
+     */
+    #[Validate('required|numeric|min:0|max:120')]
+    public float $abcStaffSep = 25;
 
     public bool $showTitles = true;
 
@@ -91,6 +103,7 @@ class BookletEditor extends Component
         $this->staffHeightMm = $booklet->staff_height_mm;
         $this->textFont = $booklet->text_font;
         $this->headingScale = $booklet->heading_scale;
+        $this->abcStaffSep = $booklet->abc_staff_sep;
         $this->showTitles = $booklet->show_titles;
     }
 
@@ -433,7 +446,7 @@ class BookletEditor extends Component
             return;
         }
 
-        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'textFont', 'headingScale', 'showTitles'], true)) {
+        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'textFont', 'headingScale', 'abcStaffSep', 'showTitles'], true)) {
             return;
         }
 
@@ -454,6 +467,7 @@ class BookletEditor extends Component
             'staff_height_mm' => $this->staffHeightMm,
             'text_font' => $this->textFont,
             'heading_scale' => $this->headingScale,
+            'abc_staff_sep' => $this->abcStaffSep,
             'show_titles' => $this->showTitles,
         ]);
 

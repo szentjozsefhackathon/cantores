@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+    DEFAULT_ABC_STAFF_SEP,
     abcLyricSizeForPt,
     abcPageScaleForStaffHeight,
     aretinoLyricSizeForPt,
@@ -72,11 +73,25 @@ test('the typography a booklet chose travels with its geometry', () => {
         staffHeightMm: 7,
         textFont: 'Lora',
         headingScale: 0.8,
+        abcStaffSep: 32,
         showTitles: true,
     });
 
     assert.equal(geometry.textFont, "'Lora'");
     assert.equal(geometry.headingScale, 0.8);
+    assert.equal(geometry.abcStaffSep, 32);
+});
+
+// Nothing is not the same as zero here: a booklet asking for no separation at
+// all is asking for it, and must not be handed the default instead.
+test('an ABC separation of zero is a decision, not a missing one', () => {
+    const geometry = pageGeometry({
+        pageWidthMm: 148, pageHeightMm: 210, marginMm: 12,
+        contentWidthMm: 124, contentHeightMm: 186,
+        lyricSizePt: 11, staffHeightMm: 7, abcStaffSep: 0,
+    });
+
+    assert.equal(geometry.abcStaffSep, 0);
 });
 
 // An older booklet, or a payload written before these existed, must still draw.
@@ -89,6 +104,7 @@ test('a geometry that says nothing about type falls back to Inter at full size',
 
     assert.equal(geometry.textFont, "'Inter'");
     assert.equal(geometry.headingScale, 1);
+    assert.equal(geometry.abcStaffSep, DEFAULT_ABC_STAFF_SEP);
 });
 
 // Each conversion is the inverse of what the renderer does with the number, so

@@ -18,26 +18,28 @@ const geometry = pageGeometry({
     contentHeightMm: 186,
     lyricSizePt: 11,
     staffHeightMm: 7,
+    abcStaffSep: 25,
     showTitles: true,
 });
 
-test('unification owns the width and the sizes', () => {
+test('unification owns the width, the sizes and the stacking', () => {
     const unified = unifiedSettings('abc', geometry);
 
     assert.deepEqual(Object.keys(unified).sort(), [
-        'abcLyricSize', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcZoom',
+        'abcLyricSize', 'abcPageRatio', 'abcPageScale', 'abcPageWidth',
+        'abcStaffSep', 'abcVocalSpace', 'abcZoom',
     ]);
     assert.equal(unified.abcPageWidth, 468);
     assert.equal(unified.abcPageRatio, 'paper');
 });
 
 // The line that keeps a booklet from being a bulldozer: it decides how big
-// things are, and leaves every other decision with whoever engraved the score.
+// things are and how tightly they stack, and leaves every other decision with
+// whoever engraved the score.
 test('unification leaves the author\'s own choices alone', () => {
     const authored = {
         abcLyricFont: "'Lora'",
         abcNoteSpacing: 1.8,
-        abcStaffSep: 60,
         abcTranspose: 3,
         abcNoClef: true,
     };
@@ -46,9 +48,24 @@ test('unification leaves the author\'s own choices alone', () => {
 
     assert.equal(resolved.abcLyricFont, "'Lora'");
     assert.equal(resolved.abcNoteSpacing, 1.8);
-    assert.equal(resolved.abcStaffSep, 60);
     assert.equal(resolved.abcTranspose, 3);
     assert.equal(resolved.abcNoClef, true);
+});
+
+// Vertical air a score can afford on its own sheet is what costs a booklet a
+// page, and in ABC the space above the first staff is the same setting as the
+// space between two — so it is also the gap under a heading.
+test('the booklet says how tightly ABC stacks, whatever the score says', () => {
+    const authored = { abcStaffSep: 60, abcVocalSpace: 10 };
+
+    const resolved = resolveSettings('abc', {}, { abc: { paper: authored } }, geometry, null);
+
+    assert.equal(resolved.abcStaffSep, 25);
+    assert.equal(resolved.abcVocalSpace, 0);
+
+    // And it is the booklet's own number, not a constant.
+    const roomy = resolveSettings('abc', {}, {}, { ...geometry, abcStaffSep: 40 }, null);
+    assert.equal(roomy.abcStaffSep, 40);
 });
 
 test('unification overrules the score\'s own width and sizes', () => {

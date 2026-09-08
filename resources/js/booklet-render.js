@@ -37,7 +37,13 @@ const XLINK_NS = 'http://www.w3.org/1999/xlink';
 const SCORE_GAP_MM = 3;
 
 /**
- * Space between a score's title and its first staff.
+ * Space between a heading and the first system cut out of an uploaded page.
+ *
+ * Only an uploaded score needs this. The four engines all draw their first staff
+ * standing well off the top of their own fragment — abc2svg by a whole staff
+ * separation — and a gap laid on top of that is air a booklet page cannot spare.
+ * A cut system has no such air: ScorePageBander trims it to a third of a staff
+ * space, and a heading set straight onto that reads as a collision.
  *
  * Scaled with the booklet's heading size, like the air around a rubric's
  * headings: the gap is part of how loudly a heading speaks, and a heading taken
@@ -152,9 +158,10 @@ export async function buildScoreBlocks(entry, geometry, host) {
             height: block.height * blockScale,
             svg: block.svg,
             scale: blockScale,
+            // Nothing is added under a heading: see TITLE_GAP_MM, which an
+            // engraved score has no use for.
             spaceBefore: (block.spaceBefore ?? 0) * blockScale
-                + (i === 0 && blocks.length === 0 ? mmToPx(SCORE_GAP_MM) : 0)
-                + (i === 0 && blocks.length > 0 ? titleGapPx(geometry) : 0),
+                + (i === 0 && blocks.length === 0 ? mmToPx(SCORE_GAP_MM) : 0),
             keepWithNext: block.keepWithNext ?? false,
             startsScore: i === 0 && blocks.length === 0,
             breakBefore: i === 0 && blocks.length === 0 ? !!entry.startOnNewPage : false,
@@ -162,11 +169,6 @@ export async function buildScoreBlocks(entry, geometry, host) {
     });
 
     return { blocks, fonts };
-}
-
-/** The gap under a heading, which grows and shrinks with the heading itself. */
-function titleGapPx(geometry) {
-    return mmToPx(TITLE_GAP_MM) * (geometry.headingScale ?? 1);
 }
 
 /**
@@ -345,6 +347,11 @@ export function scopePageIds(markup, prefix) {
         .replace(/\bid="([^"]+)"/g, `id="${prefix}-$1"`)
         .replace(/href="#([^"]+)"/g, `href="#${prefix}-$1"`)
         .replace(/url\(#([^)]+)\)/g, `url(#${prefix}-$1)`);
+}
+
+/** The gap under a heading, which grows and shrinks with the heading itself. */
+function titleGapPx(geometry) {
+    return mmToPx(TITLE_GAP_MM) * (geometry.headingScale ?? 1);
 }
 
 /**

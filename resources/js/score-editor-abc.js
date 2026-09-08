@@ -141,7 +141,10 @@ export function abcMixin() {
         abcPageScale: 2.3,
         abcPageWidth: 1700,
         abcNoteSpacing: 1.4,
-        abcStaffSep: 46,
+        // abc2svg reserves this much above every staff, the first one included,
+        // so it is the air over the score as much as the air between its lines.
+        // 46 was enough for two of them; 36 is enough for either.
+        abcStaffSep: 36,
         abcVocalSpace: 10,
         abcNoClef: false,
         abcStemWidth: 0.7,

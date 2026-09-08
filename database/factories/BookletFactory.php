@@ -25,10 +25,11 @@ class BookletFactory extends Factory
             'page_size' => BookletPageSize::A5,
             'orientation' => BookletOrientation::Portrait,
             'margin_mm' => 12,
-            'lyric_size_pt' => 11,
-            'staff_height_mm' => 7,
+            'lyric_size_pt' => 10.5,
+            'staff_height_mm' => 5,
             'text_font' => 'Inter',
-            'heading_scale' => 1,
+            'heading_scale' => 0.9,
+            'abc_staff_sep' => 25,
             'show_titles' => true,
         ];
     }

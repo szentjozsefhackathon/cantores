@@ -98,6 +98,17 @@
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="staffHeightMm" :aria-label="__('Staff height (mm)')" min="2" max="20" step="0.5" class="w-16!" />
             </div>
 
+            {{-- Format-specific, on a bar that is otherwise not. ABC reserves
+                 this space above the first staff as well as between two of
+                 them, so it is what stands between a heading and its music —
+                 a booklet-wide decision rather than each score's. --}}
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('ABC staff separation')">
+                    <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcStaffSep" :aria-label="__('ABC staff separation')" min="0" max="120" step="1" class="w-16!" />
+            </div>
+
             <div class="flex items-center gap-1">
                 <flux:tooltip :content="__('Text font')">
                     <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />

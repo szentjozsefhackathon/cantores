@@ -32,6 +32,7 @@ use Illuminate\Support\Facades\Auth;
  * @property float $staff_height_mm
  * @property string $text_font
  * @property float $heading_scale
+ * @property float $abc_staff_sep
  * @property bool $show_titles
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
@@ -69,6 +70,7 @@ class Booklet extends Model
         'staff_height_mm',
         'text_font',
         'heading_scale',
+        'abc_staff_sep',
         'show_titles',
     ];
 
@@ -84,6 +86,7 @@ class Booklet extends Model
             'lyric_size_pt' => 'float',
             'staff_height_mm' => 'float',
             'heading_scale' => 'float',
+            'abc_staff_sep' => 'float',
             'show_titles' => 'boolean',
         ];
     }
@@ -162,6 +165,7 @@ class Booklet extends Model
             'staffHeightMm' => $this->staff_height_mm,
             'textFont' => $this->text_font,
             'headingScale' => $this->heading_scale,
+            'abcStaffSep' => $this->abc_staff_sep,
             'showTitles' => $this->show_titles,
         ];
     }

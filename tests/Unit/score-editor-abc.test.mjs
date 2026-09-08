@@ -45,6 +45,6 @@ test('the factory defaults describe an untransposed paper page', () => {
     assert.match(preamble, /%%pagewidth 1700px\n/);
     assert.match(preamble, /%%pagescale 2\.3\n/);
     assert.match(preamble, /%%vocalfont "EB Garamond" 15\.652\n/);
-    assert.match(preamble, /%%staffsep 46\n/);
+    assert.match(preamble, /%%staffsep 36\n/);
     assert.doesNotMatch(preamble, /%%transpose/);
 });

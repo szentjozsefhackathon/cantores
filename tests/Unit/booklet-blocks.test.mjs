@@ -92,14 +92,13 @@ test('headings are set in the booklet\'s own face at its own heading size', asyn
     assert.ok(!fonts.includes("'Lora'"), 'the heading face is not forced onto the engraving');
 });
 
-// The gap under a heading is part of the heading: a heading taken down to half
-// its size and left sitting in a full-sized gap reads as a mistake.
-test('the gap between a heading and its music shrinks with the heading', async () => {
-    const full = await buildScoreBlocks(entry(), geometry, null);
-    const small = await buildScoreBlocks(entry(), { ...geometry, headingScale: 0.6 }, null);
+// Every engine already draws its first staff standing off the top of its own
+// fragment, so a gap laid on top of that is air the page cannot spare and reads
+// as a heading come loose from the music it names.
+test('nothing is added between a heading and its music', async () => {
+    const { blocks } = await buildScoreBlocks(entry(), geometry, null);
 
-    assert.ok(full.blocks[1].spaceBefore > 0);
-    assert.ok(Math.abs(small.blocks[1].spaceBefore - full.blocks[1].spaceBefore * 0.6) < 1e-9);
+    assert.equal(blocks[1].spaceBefore, 0);
 });
 
 test('a heading the entry does not carry is not printed', async () => {
