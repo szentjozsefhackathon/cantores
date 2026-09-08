@@ -330,6 +330,20 @@ select:focus[data-flux-control] {
     .booklet-split { grid-template-columns: minmax(0, var(--booklet-split, 60%)) auto minmax(0, 1fr); }
 }
 
+/* Booklet plan — every row of the booklet answers for itself, and a row that has
+   been moved is not told about it, so where it stands in the list is said here
+   instead of by the server: its number, and the move it is at the end of and so
+   cannot make. The move is refused on the server as well; this is what it looks
+   like being refused. */
+.booklet-entries { counter-reset: booklet-entry; }
+.booklet-entries > li { counter-increment: booklet-entry; }
+.booklet-entries [data-entry-number]::before { content: counter(booklet-entry) "."; }
+.booklet-entries > li:first-child [data-entry-move="up"],
+.booklet-entries > li:last-child [data-entry-move="down"] {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
 /* Booklet preview — sheets of paper stacked down the pane */
 .booklet-pages { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
 .booklet-page {

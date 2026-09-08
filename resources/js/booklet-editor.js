@@ -52,8 +52,19 @@ document.addEventListener('alpine:init', () => {
         _busy: null,
         _lastRenderMs: 0,
         _drawnSignature: null,
+        _wire: null,
 
         init() {
+            // The booklet's own half of the server, kept rather than asked for.
+            //
+            // $wire is answered by whichever element a method was called from,
+            // not by the one this data belongs to, and a score's toolbar now
+            // stands inside a component of its own — so a knob turned there was
+            // sending the booklet's business to the row it was turned in, which
+            // knows nothing about saving overrides. Taken here, where the answer
+            // is the editor, it stays the editor wherever it is used from.
+            this._wire = this.$wire;
+
             this._busy = createBusyFlag({ onChange: (busy) => { this.busy = busy; } });
 
             this.$nextTick(() => this.scheduleRender());
@@ -262,7 +273,7 @@ document.addEventListener('alpine:init', () => {
             delete this._pendingOverrides[entryId];
 
             this.scheduleRender();
-            this.$wire.resetOverride(entryId);
+            this._wire.resetOverride(entryId);
         },
 
         /**
@@ -289,7 +300,7 @@ document.addEventListener('alpine:init', () => {
             if (!override) { return; }
 
             try {
-                this.$wire.saveOverride(Number(entryId), override);
+                this._wire.saveOverride(Number(entryId), override);
             } catch (e) {
                 // Reached from destroy() as well, where the component may
                 // already be half gone; a redraw is not worth a broken teardown.
@@ -306,6 +317,20 @@ document.addEventListener('alpine:init', () => {
             const entry = this.entries.find((candidate) => candidate.id === entryId);
 
             return !!entry && Object.prototype.hasOwnProperty.call(entry.override ?? {}, key);
+        },
+
+        /**
+         * Whether anything at all on this score has been moved.
+         *
+         * Asked here rather than of the server for the same reason each knob is:
+         * a row keeps itself now, and it hears nothing of a save the booklet
+         * made on its behalf — so a score marked as adjusted only once its row
+         * happened to be drawn again would be a score marked hours late.
+         */
+        hasOverride(entryId) {
+            const entry = this.entries.find((candidate) => candidate.id === entryId);
+
+            return !!entry && Object.keys(entry.override ?? {}).length > 0;
         },
 
         async exportPdf() {
@@ -335,7 +360,7 @@ document.addEventListener('alpine:init', () => {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = (this.$wire.get('title') || 'fuzet') + '.cantores.hu.pdf';
+                link.download = (this._wire.get('title') || 'fuzet') + '.cantores.hu.pdf';
                 link.click();
                 URL.revokeObjectURL(url);
             } catch (e) {

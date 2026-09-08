@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\RenderScoreFileJob;
+use App\Livewire\Booklet\EntryRow;
 use App\Livewire\Pages\BookletEditor;
 use App\Models\Booklet;
 use App\Models\Score;
@@ -695,8 +696,8 @@ it('opens the size panel on an uploaded score', function () {
 
     actingAs($user);
 
-    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->call('editSettings', $entry->id)
+    $html = Livewire::test(EntryRow::class, ['entry' => $entry])
+        ->call('adjust')
         ->html();
 
     expect($html)->toContain('data-booklet-panel="'.$entry->id.'"')

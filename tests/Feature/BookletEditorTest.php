@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Booklet\EntryRow;
 use App\Livewire\Pages\BookletEditor;
 use App\Livewire\Pages\Booklets;
 use App\Models\Booklet;
@@ -13,6 +14,8 @@ use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\User;
 use App\Support\BookletSettingFields;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -112,6 +115,31 @@ function bookletWithEntries(User $user, int $count): array
         ]));
 
     return [$booklet, $entries];
+}
+
+/**
+ * What the browser would be handed to draw the booklet as it now stands.
+ *
+ * Read afresh: a row changed by its own component is a change the page beside it
+ * knows nothing about until it is asked again.
+ *
+ * @return list<array<string, mixed>>
+ */
+function payloadOf(Booklet $booklet): array
+{
+    return Livewire::test(BookletEditor::class, ['booklet' => $booklet])->get('renderPayload');
+}
+
+/**
+ * Ask one row to do something to itself.
+ *
+ * A row of the booklet is a component of its own, so what it prints — whether it
+ * starts a page, whether it names its music — is asked of the row rather than of
+ * the booklet around it.
+ */
+function tellRow(BookletScore $entry, string $action): void
+{
+    Livewire::test(EntryRow::class, ['entry' => $entry])->call($action);
 }
 
 it('reorders scores and renumbers the whole list', function () {
@@ -266,6 +294,46 @@ it('keeps the export button spinning while the booklet is laid out again', funct
     expect($button[0] ?? '')->toContain('wire:ignore.self');
 });
 
+it('leaves the export button alone while the rest of the booklet talks to the server', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])->html();
+
+    preg_match('/<button\b[^>]*x-bind:data-loading[^>]*>/', $html, $button);
+
+    // Flux sets a button that can spin to spin whenever Livewire is busy, and one
+    // that names no action of its own answers every action there is — which had
+    // this one spinning while a score's toolbar was being opened. The export it
+    // is named for never goes to the server, so nothing there can claim it.
+    expect($button[0] ?? '')->toContain('wire:target="exportPdf"');
+});
+
+it('reads the booklet once to draw it, however many places ask what is in it', function () {
+    $user = User::factory()->create();
+    [$booklet, $entries] = bookletWithEntries($user, 5);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet]);
+
+    $reads = 0;
+    DB::listen(function (QueryExecuted $query) use (&$reads): void {
+        if (str_contains($query->sql, 'booklet_scores')) {
+            $reads++;
+        }
+    });
+
+    $component->call('$refresh');
+
+    // The plan, the payload the browser draws from, the headings and the ticks in
+    // the list are four questions about one and the same booklet. They are asked
+    // through a computed property so that it is fetched once — but the caching
+    // hangs off reading it as a property, and asking it as a method quietly went
+    // round the cache and put the whole booklet together again, every time.
+    expect($reads)->toBe(1);
+});
+
 it('keeps the preview references in the booklet renderer component', function () {
     $user = User::factory()->create();
     actingAs($user);
@@ -392,12 +460,14 @@ it('separates entry controls from icon-only score options and reflects their sel
     expect($headerButtons)->toHaveCount(3)
         ->and($optionButtons)->toHaveCount(4);
 
+    // Where a row stands in the list is the list's business, so those three are
+    // asked of the booklet; what the row prints is the row's own.
     foreach ($headerButtons as $button) {
-        expect($button->getAttribute('wire:click'))->toMatch('/^(move|removeEntry)\(/');
+        expect($button->getAttribute('wire:click'))->toMatch('/^\$parent\.(move|removeEntry)\(/');
     }
 
     foreach ($optionButtons as $button) {
-        expect($button->getAttribute('wire:click'))->not->toMatch('/^(move|removeEntry)\(/');
+        expect($button->getAttribute('wire:click'))->not->toContain('$parent.');
     }
 
     foreach ([...$headerButtons, ...$optionButtons] as $button) {
@@ -406,11 +476,61 @@ it('separates entry controls from icon-only score options and reflects their sel
     }
 
     foreach (['toggleStartOnNewPage', 'toggleShowMusicTitle', 'toggleShowVariation'] as $action) {
-        $component->call($action, $entries[0]->id);
-        $html = $component->html();
-        preg_match('/<button\b[^>]*wire:click="'.$action.'\('.$entries[0]->id.'\)"[^>]*>/', $html, $matches);
+        $html = Livewire::test(EntryRow::class, ['entry' => $entries[0]])
+            ->call($action)
+            ->html();
+
+        preg_match('/<button\b[^>]*wire:click="'.$action.'"[^>]*>/', $html, $matches);
         expect($matches[0] ?? '')->toContain('aria-pressed="true"');
     }
+});
+
+// The whole point of a row being a component of its own: the booklet around it can
+// be redrawn — a margin moved, a font changed, a score added — without every row of
+// a long list being built again on the server and sent over the wire.
+it('leaves the rows alone when the booklet around them is drawn again', function () {
+    $user = User::factory()->create();
+    [$booklet] = bookletWithEntries($user, 3);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet]);
+
+    expect(substr_count($component->html(), 'data-entry-options'))->toBe(3);
+
+    expect(substr_count($component->set('marginMm', 15)->html(), 'data-entry-options'))
+        ->toBe(0, 'the rows were built and sent all over again');
+});
+
+// A row keeps itself, but the pages are drawn from the whole booklet, which only
+// the editor around it can put together. So a row that changes what it prints says
+// so, and the editor hands the browser a fresh picture.
+it('tells the booklet when a row changes what it prints', function () {
+    $user = User::factory()->create();
+    [$booklet, $entries] = bookletWithEntries($user, 1);
+
+    actingAs($user);
+
+    Livewire::test(EntryRow::class, ['entry' => $entries[0]])
+        ->call('toggleStartOnNewPage')
+        ->assertDispatched('booklet-entry-changed');
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->dispatch('booklet-entry-changed')
+        ->assertDispatched('booklet-updated');
+});
+
+it('will not let a stranger change a row of someone elses booklet', function () {
+    $user = User::factory()->create();
+    [, $entries] = bookletWithEntries($user, 1);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(EntryRow::class, ['entry' => $entries[0]])
+        ->call('toggleStartOnNewPage')
+        ->assertForbidden();
+
+    expect($entries[0]->refresh()->start_on_new_page)->toBeFalse();
 });
 
 // A row in a booklet is a score of a music sung at a moment in the service, and it
@@ -704,16 +824,19 @@ it('opens a score’s settings inside the row they belong to', function () {
 
     actingAs($user);
 
-    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->call('editSettings', $abc->id)
-        ->html();
+    // The list hands each entry a row of its own, so a panel cannot open anywhere
+    // but in the row that asked for it — and it opens under that row's controls.
+    $list = Livewire::test(BookletEditor::class, ['booklet' => $booklet])->html();
 
-    $panel = strpos($html, 'data-booklet-panel="'.$abc->id.'"');
-    $nextEntry = strpos($html, 'wire:key="entry-'.$gabc->id.'"');
+    expect($list)->toContain('wire:key="entry-'.$abc->id.'"')
+        ->and($list)->toContain('wire:key="entry-'.$gabc->id.'"');
 
-    expect($panel)->not->toBeFalse()
-        ->and($nextEntry)->not->toBeFalse()
-        ->and($panel)->toBeLessThan($nextEntry);
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.Livewire::test(EntryRow::class, ['entry' => $abc])->call('adjust')->html());
+    $xpath = new DOMXPath($document);
+
+    expect($xpath->query('//li//*[@data-entry-options]/following-sibling::*[@data-booklet-panel="'.$abc->id.'"]')->length)
+        ->toBe(1);
 });
 
 // A score's panel is the score editor's toolbar for that format, so it is read the
@@ -725,8 +848,8 @@ it('gives a score’s settings the score editor’s icons and tooltips', functio
 
     actingAs($user);
 
-    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->call('editSettings', $gabc->id)
+    $html = Livewire::test(EntryRow::class, ['entry' => $gabc])
+        ->call('adjust')
         ->html();
 
     $document = new DOMDocument;
@@ -774,8 +897,8 @@ it('keeps a moved knob blue when the override is saved', function () {
     // Both kinds of marker: the icons most knobs wear, and the letter the one
     // named by a glyph wears instead.
     foreach ($booklet->entries()->orderBy('sequence')->get() as $entry) {
-        $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-            ->call('editSettings', $entry->id)
+        $html = Livewire::test(EntryRow::class, ['entry' => $entry])
+            ->call('adjust')
             ->html();
 
         $document = new DOMDocument;
@@ -791,6 +914,24 @@ it('keeps a moved knob blue when the override is saved', function () {
                 ->toBeTrue('a marker that a morph may repaint');
         }
     }
+});
+
+// The score's own button carries the same news as the knobs inside it: that this
+// score has been adjusted. Answered from the browser for the same two reasons — an
+// override may still be waiting to be sent, and it is the booklet rather than the
+// row that saves it, so the row is never told.
+it('marks an adjusted score from the browser', function () {
+    $user = User::factory()->create();
+    [, $entries] = bookletWithEntries($user, 1);
+
+    actingAs($user);
+
+    $html = Livewire::test(EntryRow::class, ['entry' => $entries[0]])->html();
+
+    preg_match('/<button\b[^>]*aria-expanded[^>]*>/', $html, $button);
+
+    expect($button[0] ?? '')->toContain('hasOverride('.$entries[0]->id.')')
+        ->and($button[0] ?? '')->toContain('wire:ignore.self');
 });
 
 // The one control the score editor names with a letter rather than a picture keeps
@@ -809,8 +950,8 @@ it('names the entry and the format in every control of a panel', function () {
 
     actingAs($user);
 
-    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->call('editSettings', $gabc->id)
+    $html = Livewire::test(EntryRow::class, ['entry' => $gabc])
+        ->call('adjust')
         ->html();
 
     expect($html)->toContain("settingsOf({$gabc->id})['staffSize']")
@@ -826,17 +967,18 @@ it('writes a paragraph of instructions inside the row it belongs to', function (
 
     actingAs($user);
 
-    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
         ->call('addText')
         ->call('toggleScore', $score->id);
 
     $text = $booklet->entries()->whereNull('score_id')->firstOrFail();
-    $music = $booklet->entries()->whereNotNull('score_id')->firstOrFail();
 
-    $html = $component->call('editText', $text->id)->html();
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.Livewire::test(EntryRow::class, ['entry' => $text])->call('write')->html());
+    $xpath = new DOMXPath($document);
 
-    expect(strpos($html, 'wire:model.live.debounce.600ms="editingText"'))
-        ->toBeLessThan(strpos($html, 'wire:key="entry-'.$music->id.'"'));
+    expect($xpath->query('//li//*[@data-entry-options]/following-sibling::*//textarea[@*[name()="wire:model.live.debounce.600ms" and .="text"]]')->length)
+        ->toBe(1);
 });
 
 it('only accepts a font the exporter can embed', function () {
@@ -924,12 +1066,12 @@ it('puts the music title on the slots own line when asked for it', function () {
 
     actingAs($user);
 
-    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
         ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
 
-    $component->call('toggleShowMusicTitle', $booklet->entries()->firstOrFail()->id);
+    tellRow($booklet->entries()->firstOrFail(), 'toggleShowMusicTitle');
 
-    $payload = $component->get('renderPayload');
+    $payload = payloadOf($booklet);
 
     expect($payload[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem')
         ->and($payload[0]['music'])->toBeNull();
@@ -949,15 +1091,15 @@ it('still names the music beside the slot when the slot holds two engravings of 
 
     actingAs($user);
 
-    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
         ->call('toggleScore', $scores[0]->id, $assignments[0]->id)
         ->call('toggleScore', $organ->id, $assignments[0]->id);
 
-    $component->call('toggleShowMusicTitle', $booklet->entries()->firstOrFail()->id);
+    tellRow($booklet->entries()->firstOrFail(), 'toggleShowMusicTitle');
 
     // Two engravings, one music: there is still nothing to tell apart, so the
     // slot's line carries the name.
-    expect($component->get('renderPayload')[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem');
+    expect(payloadOf($booklet)[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem');
 });
 
 it('keeps every music of a shared slot on a line of its own', function () {
@@ -968,15 +1110,15 @@ it('keeps every music of a shared slot on a line of its own', function () {
 
     actingAs($user);
 
-    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
         ->call('toggleScore', $scores[0]->id, $assignments[0]->id)
         ->call('toggleScore', $scores[1]->id, $assignments[1]->id);
 
     $booklet->entries()->get()->each(
-        fn (BookletScore $entry) => $component->call('toggleShowMusicTitle', $entry->id)
+        fn (BookletScore $entry) => tellRow($entry, 'toggleShowMusicTitle')
     );
 
-    $payload = $component->get('renderPayload');
+    $payload = payloadOf($booklet);
 
     // Two musics under one slot are a list: the first is not promoted into the
     // slot's line, or the second would read as something lesser.
@@ -994,14 +1136,12 @@ it('prints the variation name only for the score that asked for it', function ()
 
     actingAs($user);
 
-    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
         ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
 
-    $entryId = $booklet->entries()->firstOrFail()->id;
+    tellRow($booklet->entries()->firstOrFail(), 'toggleShowVariation');
 
-    $component->call('toggleShowVariation', $entryId);
-
-    expect($component->get('renderPayload')[0]['variation'])
+    expect(payloadOf($booklet)[0]['variation'])
         ->toBe('Áldjad, én lelkem – orgonakíséret');
 });
 
@@ -1028,16 +1168,34 @@ it('adds a paragraph of instructions and keeps its Markdown', function () {
 
     actingAs($user);
 
-    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->call('addText')
-        ->set('editingText', "**Álljunk fel.**\n\nA kántor énekli a verseket.");
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])->call('addText');
 
     $entry = $booklet->entries()->firstOrFail();
 
-    expect($entry->isText())->toBeTrue()
+    // The paragraph is written in the row it belongs to, and saved as it is typed.
+    Livewire::test(EntryRow::class, ['entry' => $entry])
+        ->set('text', "**Álljunk fel.**\n\nA kántor énekli a verseket.");
+
+    expect($entry->refresh()->isText())->toBeTrue()
         ->and($entry->text)->toContain('Álljunk fel')
-        ->and($component->get('renderPayload')[0])
+        ->and(payloadOf($booklet)[0])
         ->toMatchArray(['kind' => 'text', 'id' => $entry->id]);
+});
+
+// A paragraph is added in order to be written, so it opens with the cursor's place
+// ready. A row hears nothing after it is first drawn, so being new is something it
+// has to be told as it is drawn.
+it('opens a new paragraph ready to be written in', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('addText')
+        ->html();
+
+    expect($html)->toContain('wire:model.live.debounce.600ms="text"');
 });
 
 it('keeps the heading run across a paragraph of instructions', function () {
@@ -1048,14 +1206,14 @@ it('keeps the heading run across a paragraph of instructions', function () {
 
     actingAs($user);
 
-    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
         ->call('toggleScore', $scores[0]->id, $assignments[0]->id)
         ->call('addText')
         ->call('toggleScore', $scores[1]->id, $assignments[1]->id);
 
-    $component->call('toggleShowMusicTitle', $booklet->entries()->get()->last()->id);
+    tellRow($booklet->entries()->get()->last(), 'toggleShowMusicTitle');
 
-    $payload = $component->get('renderPayload');
+    $payload = payloadOf($booklet);
 
     expect($payload[1]['kind'])->toBe('text')
         ->and($payload[2]['slot'])->toBeNull()

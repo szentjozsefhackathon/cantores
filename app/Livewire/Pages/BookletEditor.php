@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
@@ -78,17 +79,13 @@ class BookletEditor extends Component
     public bool $showTitles = true;
 
     /**
-     * The entry whose settings the override panel is open on.
+     * The paragraph just added, so that it opens ready to be written in.
+     *
+     * Which panels a row has open is the row's own business, and a row is only
+     * told anything when it is first drawn — so this is how a brand new one is
+     * handed the news that it is new.
      */
-    public ?int $editingEntryId = null;
-
-    /**
-     * The text entry being written, and its Markdown while it is being written.
-     */
-    public ?int $editingTextId = null;
-
-    #[Validate('nullable|string|max:20000')]
-    public string $editingText = '';
+    public ?int $openedTextId = null;
 
     public function mount(Booklet $booklet): void
     {
@@ -193,9 +190,9 @@ class BookletEditor extends Component
     #[Computed]
     public function renderPayload(): array
     {
-        $entries = $this->entries();
-        $headings = $this->headings();
-        $sources = $this->entrySources();
+        $entries = $this->entries;
+        $headings = $this->headings;
+        $sources = $this->entrySources;
 
         return $entries
             ->map(function (BookletScore $entry) use ($sources, $headings): ?array {
@@ -305,7 +302,7 @@ class BookletEditor extends Component
     #[Computed]
     public function headings(): array
     {
-        $entries = $this->entries();
+        $entries = $this->entries;
         $assignments = $this->assignmentsFor($entries);
         $musicCounts = $this->musicCountsPerSlot($entries, $assignments);
 
@@ -372,7 +369,7 @@ class BookletEditor extends Component
     #[Computed]
     public function chosenScoreIds(): array
     {
-        return $this->entries()->whereNotNull('score_id')->pluck('score_id')->all();
+        return $this->entries->whereNotNull('score_id')->pluck('score_id')->all();
     }
 
     /**
@@ -385,7 +382,7 @@ class BookletEditor extends Component
     public function entrySources(): Collection
     {
         return app(MusicPlanScoreListService::class)->sourcesFor(
-            $this->entries()->whereNotNull('score_id')->pluck('score_id')->unique()->values()->all(),
+            $this->entries->whereNotNull('score_id')->pluck('score_id')->unique()->values()->all(),
             Auth::user(),
         );
     }
@@ -402,9 +399,9 @@ class BookletEditor extends Component
     #[Computed]
     public function chosenFileIds(): array
     {
-        $sources = $this->entrySources();
+        $sources = $this->entrySources;
 
-        return $this->entries()
+        return $this->entries
             ->whereNotNull('score_id')
             ->map(function (BookletScore $entry) use ($sources): ?int {
                 $source = $sources->get($entry->score_id);
@@ -440,12 +437,6 @@ class BookletEditor extends Component
 
     public function updated(string $property): void
     {
-        if ($property === 'editingText') {
-            $this->saveText();
-
-            return;
-        }
-
         if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'textFont', 'headingScale', 'abcStaffSep', 'showTitles'], true)) {
             return;
         }
@@ -555,44 +546,20 @@ class BookletEditor extends Component
             'sequence' => (int) $this->booklet->entries()->max('sequence') + 1,
         ]);
 
-        $this->editingTextId = $entry->id;
-        $this->editingText = '';
+        $this->openedTextId = $entry->id;
 
         $this->forgetEntries();
     }
 
-    public function editText(?int $entryId): void
+    /**
+     * A row changed something it prints.
+     *
+     * A row keeps itself; what the pages look like is put together from the
+     * whole booklet, which only this knows how to do.
+     */
+    #[On('booklet-entry-changed')]
+    public function entryChanged(): void
     {
-        $this->editingTextId = null;
-        $this->editingText = '';
-
-        if ($entryId === null) {
-            return;
-        }
-
-        $entry = $this->booklet->entries()->whereNull('score_id')->find($entryId);
-
-        if ($entry instanceof BookletScore) {
-            $this->editingTextId = $entry->id;
-            $this->editingText = $entry->text ?? '';
-        }
-    }
-
-    public function saveText(): void
-    {
-        $this->authorize('update', $this->booklet);
-        $this->validateOnly('editingText');
-
-        $entry = $this->editingTextId === null
-            ? null
-            : $this->booklet->entries()->whereNull('score_id')->find($this->editingTextId);
-
-        if (! $entry instanceof BookletScore) {
-            return;
-        }
-
-        $entry->update(['text' => $this->editingText]);
-
         $this->forgetEntries();
     }
 
@@ -607,14 +574,6 @@ class BookletEditor extends Component
         }
 
         $entry->delete();
-
-        if ($this->editingEntryId === $entryId) {
-            $this->editingEntryId = null;
-        }
-
-        if ($this->editingTextId === $entryId) {
-            $this->editText(null);
-        }
 
         $this->forgetEntries();
     }
@@ -658,26 +617,6 @@ class BookletEditor extends Component
         }
 
         $this->forgetEntries();
-    }
-
-    public function toggleStartOnNewPage(int $entryId): void
-    {
-        $this->flip($entryId, 'start_on_new_page');
-    }
-
-    public function toggleShowVariation(int $entryId): void
-    {
-        $this->flip($entryId, 'show_variation');
-    }
-
-    public function toggleShowMusicTitle(int $entryId): void
-    {
-        $this->flip($entryId, 'show_music_title');
-    }
-
-    public function editSettings(?int $entryId): void
-    {
-        $this->editingEntryId = $entryId;
     }
 
     /**
@@ -835,18 +774,6 @@ class BookletEditor extends Component
         array_splice($ids, $nextSlotStarts ?? count($ids), 0, [$entryId]);
 
         return $ids;
-    }
-
-    private function flip(int $entryId, string $column): void
-    {
-        $this->authorize('update', $this->booklet);
-
-        $entry = $this->booklet->entries()->find($entryId);
-
-        if ($entry instanceof BookletScore) {
-            $entry->update([$column => ! $entry->{$column}]);
-            $this->forgetEntries();
-        }
     }
 
     /**
