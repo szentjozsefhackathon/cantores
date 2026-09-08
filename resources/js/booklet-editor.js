@@ -1,5 +1,5 @@
 import { pageGeometry } from './booklet-geometry.js';
-import { createBusyFlag, renderDelayFor } from './booklet-pacing.js';
+import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
 import { fileSettings, resolveSettings } from './booklet-settings.js';
 import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
@@ -51,6 +51,7 @@ document.addEventListener('alpine:init', () => {
         _pendingOverrides: {},
         _busy: null,
         _lastRenderMs: 0,
+        _drawnSignature: null,
 
         init() {
             this._busy = createBusyFlag({ onChange: (busy) => { this.busy = busy; } });
@@ -87,6 +88,13 @@ document.addEventListener('alpine:init', () => {
          * was saved carries the older value, so anything still waiting to be
          * sent is put back on top of it — otherwise the preview would flick back
          * to where the score was a moment ago and then forward again.
+         *
+         * Usually what comes back is the booklet already on screen: a knob was
+         * turned, the preview redrew at once, and the save that followed a
+         * moment later is answered with the same booklet. Laying it out again
+         * would freeze the browser a second time to arrive at the pages it is
+         * already showing, so a payload that describes them is only adopted —
+         * and the flag comes down, since there is nothing left to wait for.
          */
         applyUpdate(detail = {}) {
             if (detail.payload) { this.entries = detail.payload; }
@@ -97,6 +105,12 @@ document.addEventListener('alpine:init', () => {
 
                 if (entry) { entry.override = override; }
             });
+
+            if (layoutSignature(this.entries, this.geometry) === this._drawnSignature) {
+                this._busy?.settle();
+
+                return;
+            }
 
             this.scheduleRender();
         },
@@ -143,11 +157,18 @@ document.addEventListener('alpine:init', () => {
             const token = ++this._renderToken;
             const startedAt = performance.now();
 
+            // Taken before the layout rather than after it, so that a knob
+            // turned while the booklet is being drawn is not written down as
+            // drawn — what is about to go on screen is the booklet as it stands
+            // now, and the change that came in the middle earns its own run.
+            const signature = layoutSignature(this.entries, this.geometry);
+
             try {
                 const { pages, fonts } = await renderBooklet(this.entries, this.geometry, this.$refs.measure);
 
                 if (token !== this._renderToken) { return; }
 
+                this._drawnSignature = signature;
                 this._fonts = fonts;
                 this.pages = pages;
                 this.pageCount = pages.length;

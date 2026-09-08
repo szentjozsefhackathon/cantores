@@ -234,6 +234,38 @@ it('divides the plan from the preview with a draggable handle', function () {
         ->toBeLessThan(strpos($html, 'data-booklet-pane="pages"'));
 });
 
+it('leaves the divider where it was dragged when the booklet is laid out again', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])
+        ->set('lyricSizePt', 11)
+        ->html();
+
+    preg_match('/<div\b[^>]*class="booklet-split[^>]*>/', $html, $row);
+    preg_match('/<div\b[^>]*data-booklet-handle[^>]*>/', $html, $handle);
+
+    // A morph strips every attribute the server did not send, and the split is
+    // written into the row's style attribute from the browser alone.
+    expect($row[0] ?? '')->toContain('wire:ignore.self')
+        ->and($handle[0] ?? '')->toContain('wire:ignore.self');
+});
+
+it('keeps the export button spinning while the booklet is laid out again', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])
+        ->set('lyricSizePt', 11)
+        ->html();
+
+    preg_match('/<button\b[^>]*x-bind:data-loading[^>]*>/', $html, $button);
+
+    // Neither the spinner nor the disabling is sent from the server, so a morph
+    // arriving mid-layout must not be allowed to take them off.
+    expect($button[0] ?? '')->toContain('wire:ignore.self');
+});
+
 it('keeps the preview references in the booklet renderer component', function () {
     $user = User::factory()->create();
     actingAs($user);
@@ -719,6 +751,46 @@ it('gives a score’s settings the score editor’s icons and tooltips', functio
 
     // The staff size wears the editor's own icon, path for path.
     expect($xpath->query('.//*[local-name()="path"][@d="m15 16 3 3 3-3"]', $panel)->length)->toBeGreaterThan(0);
+});
+
+// A knob turns blue the moment it is moved, and the override behind it may still be
+// waiting to be sent. The save that follows used to take the blue away again: the
+// server renders a class of its own here, and a morph writes it over Alpine's.
+it('keeps a moved knob blue when the override is saved', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    foreach ([Score::factory()->gabc(), Score::factory()->chordpro()] as $factory) {
+        $score = $factory->create(['user_id' => $user->id]);
+        BookletScore::factory()->create([
+            'booklet_id' => $booklet->id,
+            'score_id' => $score->id,
+            'sequence' => $booklet->entries()->count(),
+        ]);
+    }
+
+    actingAs($user);
+
+    // Both kinds of marker: the icons most knobs wear, and the letter the one
+    // named by a glyph wears instead.
+    foreach ($booklet->entries()->orderBy('sequence')->get() as $entry) {
+        $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+            ->call('editSettings', $entry->id)
+            ->html();
+
+        $document = new DOMDocument;
+        @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+        $xpath = new DOMXPath($document);
+        $panel = $xpath->query('//*[@data-booklet-panel]')->item(0);
+        $markers = $xpath->query('.//*[@*[name()="x-bind:class"]]', $panel);
+
+        expect($markers->length)->toBeGreaterThan(0);
+
+        foreach ($markers as $marker) {
+            expect($marker->hasAttribute('wire:ignore.self'))
+                ->toBeTrue('a marker that a morph may repaint');
+        }
+    }
 });
 
 // The one control the score editor names with a letter rather than a picture keeps

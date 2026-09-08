@@ -162,3 +162,38 @@ export function createBusyFlag(options = {}) {
         },
     };
 }
+
+/**
+ * The booklet the pages on screen were drawn from, boiled down to one string.
+ *
+ * Every change is saved, and the server hands the whole booklet back when it
+ * has been — but what comes back is usually the booklet the browser has already
+ * drawn, since it made the change itself and laid it out a moment ago. Doing the
+ * whole layout again to arrive at the same pages is a second freeze of the
+ * browser for nothing, once per knob. Held against the last one drawn, this is
+ * what tells a booklet that has moved on from one that has not.
+ *
+ * @param {Array<object>} entries what is in the booklet, in order
+ * @param {object} geometry the page it is being laid out onto
+ */
+export function layoutSignature(entries, geometry) {
+    return stableJson({ entries, geometry });
+}
+
+/**
+ * Written down in a settled order, so that two booklets are called different
+ * only for differing. Keys arrive in whatever order they were put in: the
+ * browser adds each knob to an override as it is touched, while the server
+ * lists them the way the panel does.
+ */
+function stableJson(value) {
+    if (Array.isArray(value)) {
+        return `[${value.map(stableJson).join(',')}]`;
+    }
+
+    if (value !== null && typeof value === 'object') {
+        return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+    }
+
+    return JSON.stringify(value) ?? 'null';
+}

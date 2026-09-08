@@ -5,6 +5,7 @@ import {
     BUSY_MIN_VISIBLE_MS,
     BUSY_WATCHDOG_MS,
     createBusyFlag,
+    layoutSignature,
     RENDER_DELAY_MAX_MS,
     RENDER_DELAY_MIN_MS,
     renderDelayFor,
@@ -200,4 +201,72 @@ test('an editor that goes away takes its timers with it', () => {
     assert.equal(flag.busy, false);
     assert.deepEqual(changes, [true, false]);
     assert.equal(clock.pending(), 0);
+});
+
+const GEOMETRY = { pageSize: 'a5', orientation: 'portrait', marginMm: 12, lyricSizePt: 11 };
+
+function booklet(overrides = {}) {
+    return [
+        { id: 1, kind: 'score', format: 'gabc', content: '(c4) Ky(f)ri(g)e(h)', settings: {}, override: {} },
+        { id: 2, kind: 'text', text: 'Kezdésre', startOnNewPage: false },
+        { id: 3, kind: 'score', format: 'chordpro', content: '[C]Áldjuk', settings: {}, override: { ...overrides } },
+    ];
+}
+
+/** What the server hands back: the same booklet, through JSON and home again. */
+function roundTrip(entries) {
+    return JSON.parse(JSON.stringify(entries));
+}
+
+test('a booklet handed back unchanged is the one already on screen', () => {
+    const entries = booklet({ staffHeight: 6 });
+
+    assert.equal(
+        layoutSignature(roundTrip(entries), { ...GEOMETRY }),
+        layoutSignature(entries, GEOMETRY),
+    );
+});
+
+test('an override written down in another order is still the same booklet', () => {
+    // The browser adds each knob as it is touched; the server lists them the
+    // way the panel does, and the two orders need not agree.
+    const turned = booklet({ staffHeight: 6, width: 120 });
+    const saved = booklet({ width: 120, staffHeight: 6 });
+
+    assert.equal(layoutSignature(saved, GEOMETRY), layoutSignature(turned, GEOMETRY));
+});
+
+test('a knob that actually moved makes a booklet that must be drawn again', () => {
+    assert.notEqual(
+        layoutSignature(booklet({ staffHeight: 7 }), GEOMETRY),
+        layoutSignature(booklet({ staffHeight: 6 }), GEOMETRY),
+    );
+});
+
+test('a knob put back to the booklet default is a change like any other', () => {
+    assert.notEqual(
+        layoutSignature(booklet(), GEOMETRY),
+        layoutSignature(booklet({ staffHeight: 6 }), GEOMETRY),
+    );
+});
+
+test('a page the booklet is laid out onto is part of what was drawn', () => {
+    assert.notEqual(
+        layoutSignature(booklet(), { ...GEOMETRY, lyricSizePt: 12 }),
+        layoutSignature(booklet(), GEOMETRY),
+    );
+});
+
+test('a score moved to another place in the booklet is drawn again', () => {
+    const entries = booklet();
+    const moved = [entries[1], entries[0], entries[2]];
+
+    assert.notEqual(layoutSignature(moved, GEOMETRY), layoutSignature(entries, GEOMETRY));
+});
+
+test('a score added or taken out is drawn again', () => {
+    assert.notEqual(
+        layoutSignature(booklet().slice(1), GEOMETRY),
+        layoutSignature(booklet(), GEOMETRY),
+    );
 });

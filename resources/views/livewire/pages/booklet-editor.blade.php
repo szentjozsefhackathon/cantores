@@ -152,12 +152,20 @@
                      that has to be out of use while it happens anyway. Flux draws
                      its spinner over the button's own contents rather than in
                      place of them, so nothing on the bar moves as it comes and
-                     goes; the label is left alone for the same reason. --}}
+                     goes; the label is left alone for the same reason.
+
+                     Whether it is spinning is decided here and nowhere else, so
+                     the morph is kept off its attributes as it is off the
+                     divider's: the server sends neither the spinner nor the
+                     disabling, and a morph landing mid-layout would take both
+                     away — leaving the button bright and clickable while the
+                     pages it would export are still being laid out. --}}
                 <flux:button
                     size="sm"
                     variant="primary"
                     icon="arrow-down-tray"
                     :loading="true"
+                    wire:ignore.self
                     x-on:click="exportPdf()"
                     x-bind:data-loading="busy || exporting ? '' : false"
                     x-bind:disabled="exporting || busy || pageCount === 0"
@@ -170,9 +178,18 @@
         <p class="mb-4 text-sm text-red-600 dark:text-red-400" x-show="message" x-cloak x-text="message"></p>
 
         {{-- items-start keeps the columns from stretching, which is what lets each
-             one stick and scroll inside its own box instead of dragging the page. --}}
+             one stick and scroll inside its own box instead of dragging the page.
+
+             Where the boundary stands is the browser's business alone, so the
+             server's idea of this element's attributes must not be allowed to
+             land on it: a morph strips every attribute the incoming HTML does
+             not carry, and the width Alpine wrote here is one of them. Without
+             this, changing a page size — anything at all that goes to the server
+             — put the divider back to the default while Alpine still believed it
+             had been left where it was dragged. --}}
         <div
             class="booklet-split grid items-start gap-4"
+            wire:ignore.self
             x-bind:style="`--booklet-split: ${splitPercent}%`"
             x-bind:class="splitDragging ? 'cursor-col-resize select-none' : ''"
         >
@@ -386,9 +403,16 @@
                                                 <div class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
                                                     @foreach(BookletSettingFields::panelFor($panelFormat) as $field)
                                                         <div class="flex items-center gap-1" wire:key="field-{{ $entry->id }}-{{ $field['key'] }}">
+                                                            {{-- Whether this knob has been moved is a question only the
+                                                                 browser can answer — the override may still be waiting to
+                                                                 be sent. The server does render a class here, so a morph
+                                                                 does not strip it but overwrites it, which cost the icon
+                                                                 its blue the moment the save landed; the morph is kept off
+                                                                 it as it is off the divider. --}}
                                                             <flux:tooltip :content="$field['label']">
                                                                 @if($field['glyph'] ?? null)
                                                                     <span
+                                                                        wire:ignore.self
                                                                         class="shrink-0 text-xs font-bold text-zinc-500 dark:text-zinc-400"
                                                                         x-bind:class="isOverridden({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
                                                                     >{{ $field['glyph'] }}</span>
@@ -396,6 +420,7 @@
                                                                     <flux:icon
                                                                         :name="$field['icon']"
                                                                         variant="micro"
+                                                                        wire:ignore.self
                                                                         class="shrink-0 text-zinc-500 dark:text-zinc-400"
                                                                         x-bind:class="isOverridden({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
                                                                     />
@@ -572,9 +597,12 @@
 
             {{-- The handle owns a grid column of its own, so dragging it moves
                  nothing but the boundary the two panes share. Keyboard users move
-                 it with the arrow keys; a double click puts it back. --}}
+                 it with the arrow keys; a double click puts it back. Where it
+                 stands is announced from the browser, so a morph is kept off its
+                 attributes for the same reason as the row's. --}}
             <div
                 data-booklet-handle
+                wire:ignore.self
                 role="separator"
                 aria-orientation="vertical"
                 aria-label="{{ __('Resize the preview') }}"
