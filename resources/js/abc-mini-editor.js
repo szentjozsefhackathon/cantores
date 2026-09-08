@@ -1,3 +1,5 @@
+import { ABC_GERMAN_CHORDNAMES } from './score-editor-abc.js';
+
 const ABC2SVG_SRC = '/js/abc2svg-1.js';
 const DEFAULT_PAGE_WIDTH = 760;
 
@@ -22,6 +24,7 @@ export function prepareAbcGuideSource(content, pageWidth = DEFAULT_PAGE_WIDTH) {
 
     return [
         '%%fullsvg 1',
+        ABC_GERMAN_CHORDNAMES,
         `%%pagewidth ${clampAbcGuidePageWidth(pageWidth)}px`,
         '%%leftmargin 12px',
         '%%rightmargin 12px',

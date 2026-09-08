@@ -7,7 +7,7 @@ import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
 import { markdownRows } from './booklet-markdown.js';
 import { fileSettings, layoutWidthFor, resolveSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
-import { abcMixin } from './score-editor-abc.js';
+import { ABC_GERMAN_CHORDNAMES, abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { gabcMixin } from './score-editor-gabc.js';
@@ -607,7 +607,8 @@ function abcBlocks(content, resolved, layoutWidthPx) {
         Number((lyricSize / pageScale * 3).toFixed(3))].filter(Boolean).join(' ');
     const transpose = Number(resolved.abcTranspose) || 0;
 
-    const preamble = `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
+    const preamble = `${ABC_GERMAN_CHORDNAMES}\n`
+        + `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
         + '%%leftmargin 0px\n%%rightmargin 0px\n'
         + `%%pagescale ${pageScale}\n${vocalfont}\n`
         + `%%notespacingfactor ${resolved.abcNoteSpacing}\n`

@@ -69,6 +69,12 @@ const ABC_RATIO_DEFAULTS = {
 export { ABC_RATIO_DEFAULTS };
 
 /**
+ * Chord symbols are read and printed with German note names: `B` is B flat,
+ * `H` is B natural, and a lowercase `b` after a note prints as a flat sign.
+ */
+export const ABC_GERMAN_CHORDNAMES = '%%chordnames Bb:B,B:H,b:s';
+
+/**
  * The abc2svg preamble a settings bucket describes.
  *
  * Shared by the preview and the incipit so that a render at the format's
@@ -86,7 +92,7 @@ export function buildAbcPreamble(settings, pageWidth) {
     const transposeSemitones = Number(settings.abcTranspose) || 0;
     const transposeLine = transposeSemitones !== 0 ? `%%transpose ${transposeSemitones}\n` : '';
 
-    return `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace ${settings.abcVocalSpace}\n${transposeLine}`;
+    return `%%fullsvg 1\n${ABC_GERMAN_CHORDNAMES}\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace ${settings.abcVocalSpace}\n${transposeLine}`;
 }
 
 /** Engraves an ABC source (preamble included) into SVG markup. */
