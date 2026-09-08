@@ -6,8 +6,9 @@ use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
 use App\Models\Booklet;
 use App\Models\BookletScore;
-use App\Models\MusicPlan;
 use App\Models\MusicPlanSlotAssignment;
+use App\Models\MusicPlanSlotPlan;
+use App\Services\BookletOutline;
 use App\Services\MusicPlanScoreListService;
 use App\Support\BookletSettingFields;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -21,13 +22,20 @@ use Livewire\Attributes\Validate;
 use Livewire\Component;
 
 /**
- * Choosing on the left, pages on the right.
+ * The plan on the left, the pages on the right.
  *
  * The component owns the choosing: which scores are in, in what order, what is
  * said above each of them, and what had to be nudged to make each one sit well.
  * It owns none of the drawing — every page is engraved in the browser from the
  * scores themselves, because that is where the four renderers live and because
  * nothing about a booklet is worth storing as a picture.
+ *
+ * The choosing is done on the plan itself rather than beside it: BookletOutline
+ * puts the two together, and the order it reads out of the plan is the order the
+ * pages are printed in. So a booklet's shape is the service's shape — a slot may
+ * be moved against the plan, a music only inside its slot, a score only inside
+ * its music — and the one flat list of sequences is written from the tree rather
+ * than kept in step with it by hand.
  */
 class BookletEditor extends Component
 {
@@ -102,6 +110,8 @@ class BookletEditor extends Component
         $this->headingScale = $booklet->heading_scale;
         $this->abcStaffSep = $booklet->abc_staff_sep;
         $this->showTitles = $booklet->show_titles;
+
+        $this->normalizeOrder();
     }
 
     /**
@@ -124,47 +134,24 @@ class BookletEditor extends Component
     }
 
     /**
-     * The plan's slots, in liturgical order, with every score the viewer may see
-     * for each music — the same list the service view shows, reused whole.
+     * The booklet as the plan it was made from: slots, their music, and what of
+     * it was taken.
+     *
+     * This is the whole left-hand pane, and it is also the order the booklet is
+     * printed in — walking it is what the sequences are written from, so the pane
+     * and the pages can never say different things.
      *
      * @return list<array<string, mixed>>
      */
     #[Computed]
-    public function planSlots(): array
+    public function outline(): array
     {
-        $plan = $this->booklet->musicPlan;
-
-        if (! $plan instanceof MusicPlan) {
-            return [];
-        }
-
-        $viewer = Auth::user();
-        $scoresByMusicId = app(MusicPlanScoreListService::class)->forViewer($plan, $viewer);
-
-        $assignments = $plan->musicAssignments()
-            ->with(['music'])
-            ->orderBy('music_plan_slot_plan_id')
-            ->orderBy('music_sequence')
-            ->get()
-            ->groupBy('music_plan_slot_plan_id');
-
-        return $plan->slots()
-            ->withPivot('id', 'sequence')
-            ->orderBy('music_plan_slot_plan.sequence')
-            ->get()
-            ->map(fn ($slot): array => [
-                'id' => $slot->id,
-                'name' => $slot->name,
-                'assignments' => $assignments->get($slot->pivot->id, collect())
-                    ->map(fn ($assignment): array => [
-                        'id' => $assignment->id,
-                        'music_id' => $assignment->music_id,
-                        'music_title' => $assignment->music?->title,
-                        'scores' => $scoresByMusicId->get($assignment->music_id, collect())->all(),
-                    ])
-                    ->all(),
-            ])
-            ->all();
+        return app(BookletOutline::class)->for(
+            $this->booklet,
+            $this->entries,
+            $this->chosenScoreIds,
+            $this->chosenFileIds,
+        );
     }
 
     /**
@@ -175,7 +162,9 @@ class BookletEditor extends Component
     #[Computed]
     public function entries(): Collection
     {
-        return $this->booklet->entries()->with(['score.music', 'scoreFile', 'assignment.music', 'assignment.musicPlanSlot'])->get();
+        return $this->booklet->entries()
+            ->with(['score.music', 'scoreFile', 'assignment.music', 'assignment.musicPlanSlot', 'slotPlan.musicPlanSlot'])
+            ->get();
     }
 
     /**
@@ -203,6 +192,11 @@ class BookletEditor extends Component
                         'id' => $entry->id,
                         'kind' => 'text',
                         'text' => $entry->text ?? '',
+                        // A paragraph that opens a slot — or one of its musics —
+                        // carries that name, so a rubric written under the
+                        // heading is printed under it rather than above it.
+                        'slot' => $heading['slot'],
+                        'music' => $heading['music'],
                         'startOnNewPage' => $entry->start_on_new_page,
                     ];
                 }
@@ -287,15 +281,22 @@ class BookletEditor extends Component
     /**
      * What is printed above each entry, resolved from the plan rather than stored.
      *
-     * A booklet names the moment in the service, not the engraving: the slot is
-     * the heading, and it is announced once, so a slot with three scores under it
-     * is not announced three times — a paragraph of instructions in between is
-     * not a score and does not start the naming over. The music's own name is
-     * off until someone asks for it on that row. It then joins the slot on its
-     * line only where the slot holds a single music and there is nothing to tell
-     * apart; where the slot holds several, every one of them takes a line of its
-     * own beneath the slot's, so they read as the list they are rather than the
-     * first being promoted into the heading.
+     * A booklet names the moment in the service and the music sung at it. Each is
+     * announced once, by whichever row opens it: a slot sung from three engravings
+     * is not named three times, and neither is the music. Rows that belong to no
+     * slot — a paragraph opening the booklet, a score chosen outside the plan —
+     * say nothing about it and start no naming over.
+     *
+     * A paragraph opens a slot or a music exactly as a score does, because it was
+     * written to introduce that moment, and a heading printed after the words
+     * introducing it reads backwards.
+     *
+     * The music's name joins the slot on its line where the slot holds a single
+     * music and there is nothing to tell apart; where the slot holds several,
+     * every one of them takes a line of its own beneath the slot's, so they read
+     * as the list they are rather than the first being promoted into the heading.
+     * A row can be told to keep its music's name off the page, which is how a
+     * music the slot already names is stopped from saying it twice.
      *
      * @return array<int, array{slot: ?string, music: ?string, variation: ?string}>
      */
@@ -308,30 +309,28 @@ class BookletEditor extends Component
 
         $lines = [];
         $lastSlotKey = null;
+        $lastMusicKey = null;
 
         foreach ($entries as $entry) {
-            if ($entry->isText()) {
-                $lines[$entry->id] = ['slot' => null, 'music' => null, 'variation' => null];
-
-                // Words between the music say nothing about the plan, so they
-                // neither carry a heading nor make the next score repeat one.
-                continue;
-            }
-
             $assignment = $assignments->get($entry->music_plan_slot_assignment_id);
-            $slotKey = $assignment?->music_plan_slot_plan_id;
-            $slotName = $assignment?->musicPlanSlot?->name;
-            $musicTitle = $entry->show_music_title ? $assignment?->music?->title : null;
+            $slotKey = $entry->isText()
+                ? $entry->music_plan_slot_plan_id
+                : $assignment?->music_plan_slot_plan_id;
+            $musicKey = $assignment?->id;
 
             $slotLine = null;
 
-            if ($assignment === null) {
+            if (! $entry->isText() && $assignment === null) {
                 // Chosen outside the plan, or from an assignment since removed:
                 // the score speaks for itself.
                 $slotLine = $entry->score?->title;
-            } elseif ($slotKey !== $lastSlotKey || $slotKey === null) {
-                $slotLine = $slotName;
+            } elseif ($slotKey !== null && $slotKey !== $lastSlotKey) {
+                $slotLine = $assignment?->musicPlanSlot?->name ?? $entry->slotPlan?->musicPlanSlot?->name;
             }
+
+            $musicTitle = $musicKey !== null && $musicKey !== $lastMusicKey && $entry->show_music_title
+                ? $assignment?->music?->title
+                : null;
 
             $alone = $slotKey !== null && ($musicCounts[$slotKey] ?? 0) <= 1;
 
@@ -343,10 +342,13 @@ class BookletEditor extends Component
             $lines[$entry->id] = [
                 'slot' => $slotLine,
                 'music' => $musicTitle,
-                'variation' => $entry->show_variation ? $entry->score?->variationLabel() : null,
+                'variation' => ! $entry->isText() && $entry->show_variation
+                    ? $entry->score?->variationLabel()
+                    : null,
             ];
 
-            $lastSlotKey = $slotKey;
+            $lastSlotKey = $slotKey ?? $lastSlotKey;
+            $lastMusicKey = $musicKey ?? $lastMusicKey;
         }
 
         return $lines;
@@ -473,9 +475,11 @@ class BookletEditor extends Component
      * Adding checks that the viewer may actually read it, so a score id typed
      * into a request cannot pull someone else's work into a booklet, and a file
      * id is honoured only where it is one of that score's own drawable files.
-     * The assignment it was chosen from rides along, because that — not the
-     * score — is what names it on the page, and it is also what says where the
-     * score lands: with its own slot, rather than at the end.
+     * The assignment it was chosen from rides along, and the slot with it,
+     * because that — not the score — is what names it on the page and what says
+     * where it lands: under its own music, in its own slot, rather than at the
+     * end. Nothing has to be moved into place afterwards, because the order is
+     * read back off the plan.
      *
      * A score holding several files may be in the booklet several times over,
      * once per file, so it is the file that is toggled rather than the score.
@@ -516,39 +520,61 @@ class BookletEditor extends Component
 
         $assignment = $this->assignmentInPlan($assignmentId);
 
+        $order = $this->outlineIds();
+        $at = app(BookletOutline::class)->appendIndex(
+            $this->outline,
+            $assignment?->music_plan_slot_plan_id,
+            $assignment?->id,
+        );
+
         $entry = $this->booklet->entries()->create([
             'score_id' => $scoreId,
             'score_file_id' => $fileId,
             'music_plan_slot_assignment_id' => $assignment?->id,
+            'music_plan_slot_plan_id' => $assignment?->music_plan_slot_plan_id,
             'sequence' => (int) $this->booklet->entries()->max('sequence') + 1,
         ]);
 
-        $order = $this->orderJoiningSlot($entry->id, $assignment?->music_plan_slot_plan_id);
+        array_splice($order, $at, 0, [$entry->id]);
 
-        if ($order !== null) {
-            $this->applyOrder($order);
-
-            return;
-        }
-
-        $this->forgetEntries();
+        $this->applyOrder($order);
     }
 
     /**
      * Add a paragraph of instructions — words the booklet says rather than sings.
+     *
+     * Words belong to the moment they introduce, so a paragraph is written into
+     * the plan like everything else: at the head of a slot, at the head of one of
+     * its musics, or straight after a row already standing there. Given none of
+     * those, it opens the booklet.
      */
-    public function addText(): void
+    public function addText(?int $slotPlanId = null, ?int $assignmentId = null, ?int $afterEntryId = null): void
     {
         $this->authorize('update', $this->booklet);
 
+        $assignment = $this->assignmentInPlan($assignmentId);
+        $slotPlanId = $assignment?->music_plan_slot_plan_id ?? $this->slotInPlan($slotPlanId);
+
+        $order = $this->outlineIds();
+        $at = app(BookletOutline::class)->insertIndex(
+            $this->outline,
+            $slotPlanId,
+            $assignment?->id,
+            in_array($afterEntryId, $order, true) ? $afterEntryId : null,
+        );
+
         $entry = $this->booklet->entries()->create([
             'text' => '',
+            'music_plan_slot_assignment_id' => $assignment?->id,
+            'music_plan_slot_plan_id' => $slotPlanId,
             'sequence' => (int) $this->booklet->entries()->max('sequence') + 1,
         ]);
 
+        array_splice($order, $at, 0, [$entry->id]);
+
         $this->openedTextId = $entry->id;
 
-        $this->forgetEntries();
+        $this->applyOrder($order);
     }
 
     /**
@@ -578,26 +604,87 @@ class BookletEditor extends Component
         $this->forgetEntries();
     }
 
+    /**
+     * Move one row past the one beside it, inside the music — or the slot, or
+     * the booklet itself — that it belongs to.
+     */
     public function move(int $entryId, int $direction): void
+    {
+        $this->moveNode('entry', $entryId, $direction);
+    }
+
+    /**
+     * Move a whole slot, and everything the booklet takes from it, past the slot
+     * beside it.
+     *
+     * This is the one place the booklet is allowed to disagree with the plan
+     * about order — the extra songs sung at the end of the plan, printed at the
+     * front of the booklet — and it is the only ordering that crosses a slot.
+     */
+    public function moveSlot(int $slotPlanId, int $direction): void
+    {
+        $this->moveNode('slot', $slotPlanId, $direction);
+    }
+
+    /**
+     * Move one music, and every score of it, past the music beside it — inside
+     * its own slot and no further.
+     */
+    public function moveMusic(int $assignmentId, int $direction): void
+    {
+        $this->moveNode('music', $assignmentId, $direction);
+    }
+
+    /**
+     * Nothing may leave the thing it belongs to, so a move is made on the tree
+     * and not on the list: the outline swaps two of one container's children and
+     * hands back the printed order that follows from it.
+     */
+    private function moveNode(string $kind, int $id, int $direction): void
     {
         $this->authorize('update', $this->booklet);
 
-        $ordered = $this->booklet->entries()->get()->pluck('id')->all();
-        $index = array_search($entryId, $ordered, true);
+        $outline = app(BookletOutline::class);
+        $moved = $outline->moved($this->outline, $kind, $id, $direction);
 
-        if ($index === false) {
+        if ($moved === null) {
             return;
         }
 
-        $target = $index + ($direction < 0 ? -1 : 1);
+        $this->applyOrder($outline->flatten($moved));
+    }
 
-        if ($target < 0 || $target >= count($ordered)) {
+    /**
+     * The printed order the tree now reads out.
+     *
+     * Every change is made against this rather than against the sequences, which
+     * is what keeps the printed order and the plan the pane draws in step.
+     *
+     * @return list<int>
+     */
+    private function outlineIds(): array
+    {
+        return app(BookletOutline::class)->flatten($this->outline);
+    }
+
+    /**
+     * Put the booklet back into the order the plan reads it in.
+     *
+     * A booklet made before the pane was the plan — or one whose plan has been
+     * rearranged since — can hold an order no tree could produce, and the pages
+     * are printed from the sequences rather than from the tree. So the two are
+     * squared up when the editor is opened, and only if they differ.
+     */
+    private function normalizeOrder(): void
+    {
+        $ordered = $this->outlineIds();
+
+        if ($ordered === $this->entries->pluck('id')->all()) {
             return;
         }
 
-        array_splice($ordered, $target, 0, array_splice($ordered, $index, 1));
-
-        $this->applyOrder($ordered);
+        $this->writeOrder($ordered);
+        $this->forget();
     }
 
     /**
@@ -610,13 +697,21 @@ class BookletEditor extends Component
      */
     private function applyOrder(array $entryIds): void
     {
+        $this->writeOrder($entryIds);
+
+        $this->forgetEntries();
+    }
+
+    /**
+     * @param  list<int>  $entryIds
+     */
+    private function writeOrder(array $entryIds): void
+    {
         $entries = $this->booklet->entries()->get()->keyBy('id');
 
         foreach ($entryIds as $position => $id) {
-            $entries[$id]->update(['sequence' => $position]);
+            $entries[$id]?->update(['sequence' => $position]);
         }
-
-        $this->forgetEntries();
     }
 
     /**
@@ -723,57 +818,29 @@ class BookletEditor extends Component
     }
 
     /**
-     * Where a newly chosen score belongs: with the slot it was chosen from.
-     *
-     * A booklet is read as a service, so a second score for a slot the booklet
-     * already says joins that slot rather than landing at the end: it is added
-     * last under the slot's first appearance — first, because the same slot may
-     * be sung at more than one point and the earliest is the one being filled
-     * out — and the slot ends where the next one begins. Everything already
-     * standing there stays where it was put, words included, so a paragraph
-     * written under the slot keeps whatever it was written beneath.
-     *
-     * @return list<int>|null the ids in their new order, or null to leave the entry at the end
+     * The slot, but only when it really belongs to this booklet's plan — for the
+     * same reason the assignment is checked, and against the same plan.
      */
-    private function orderJoiningSlot(int $entryId, ?int $slotPlanId): ?array
+    private function slotInPlan(?int $slotPlanId): ?int
     {
-        if ($slotPlanId === null) {
+        if ($slotPlanId === null || $this->booklet->music_plan_id === null) {
             return null;
         }
 
-        $others = $this->booklet->entries()
-            ->with('assignment')
-            ->get()
-            ->reject(fn (BookletScore $entry): bool => $entry->id === $entryId)
-            ->values();
+        return MusicPlanSlotPlan::query()
+            ->where('id', $slotPlanId)
+            ->where('music_plan_id', $this->booklet->music_plan_id)
+            ->value('id');
+    }
 
-        $joined = false;
-        $nextSlotStarts = null;
-
-        foreach ($others as $index => $entry) {
-            $entrySlotPlanId = $entry->assignment?->music_plan_slot_plan_id;
-
-            if ($entrySlotPlanId === $slotPlanId) {
-                $joined = true;
-
-                continue;
-            }
-
-            if ($joined && $entrySlotPlanId !== null) {
-                $nextSlotStarts = $index;
-
-                break;
-            }
-        }
-
-        if (! $joined) {
-            return null;
-        }
-
-        $ids = $others->pluck('id')->all();
-        array_splice($ids, $nextSlotStarts ?? count($ids), 0, [$entryId]);
-
-        return $ids;
+    /**
+     * Throw away everything read off the booklet, so the next question about it
+     * is asked of the database.
+     */
+    private function forget(): void
+    {
+        $this->booklet->unsetRelation('entries');
+        unset($this->entries, $this->entrySources, $this->renderPayload, $this->chosenScoreIds, $this->chosenFileIds, $this->headings, $this->outline);
     }
 
     /**
@@ -786,8 +853,7 @@ class BookletEditor extends Component
      */
     private function forgetEntries(): void
     {
-        $this->booklet->unsetRelation('entries');
-        unset($this->entries, $this->entrySources, $this->renderPayload, $this->chosenScoreIds, $this->chosenFileIds, $this->headings);
+        $this->forget();
 
         $this->dispatch(
             'booklet-updated',

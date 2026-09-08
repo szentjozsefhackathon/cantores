@@ -18,11 +18,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * A row may also carry no score at all: a paragraph of instructions, written in
  * Markdown, that is set between the music.
  *
+ * Every row also names the slot it stands in, whether or not it was chosen from
+ * a music: that is what lets the editor show the booklet as the plan itself.
+ *
  * @property int $id
  * @property int $booklet_id
  * @property int|null $score_id
  * @property int|null $score_file_id
  * @property int|null $music_plan_slot_assignment_id
+ * @property int|null $music_plan_slot_plan_id
  * @property string|null $text
  * @property int $sequence
  * @property array<string, mixed>|null $settings_override
@@ -35,6 +39,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read \App\Models\Score|null $score
  * @property-read \App\Models\ScoreFile|null $scoreFile
  * @property-read \App\Models\MusicPlanSlotAssignment|null $assignment
+ * @property-read \App\Models\MusicPlanSlotPlan|null $slotPlan
  *
  * @method static \Database\Factories\BookletScoreFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|BookletScore newModelQuery()
@@ -56,6 +61,7 @@ class BookletScore extends Model
         'score_id',
         'score_file_id',
         'music_plan_slot_assignment_id',
+        'music_plan_slot_plan_id',
         'text',
         'sequence',
         'settings_override',
@@ -111,5 +117,15 @@ class BookletScore extends Model
     public function assignment(): BelongsTo
     {
         return $this->belongsTo(MusicPlanSlotAssignment::class, 'music_plan_slot_assignment_id');
+    }
+
+    /**
+     * The slot occurrence this row stands in — the same one the assignment names,
+     * where there is an assignment, and the only answer there is where there is
+     * not.
+     */
+    public function slotPlan(): BelongsTo
+    {
+        return $this->belongsTo(MusicPlanSlotPlan::class, 'music_plan_slot_plan_id');
     }
 }

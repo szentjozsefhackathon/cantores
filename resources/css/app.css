@@ -335,11 +335,13 @@ select:focus[data-flux-control] {
    instead of by the server: its number, and the move it is at the end of and so
    cannot make. The move is refused on the server as well; this is what it looks
    like being refused. */
-.booklet-entries { counter-reset: booklet-entry; }
-.booklet-entries > li { counter-increment: booklet-entry; }
-.booklet-entries [data-entry-number]::before { content: counter(booklet-entry) "."; }
-.booklet-entries > li:first-child [data-entry-move="up"],
-.booklet-entries > li:last-child [data-entry-move="down"] {
+.booklet-plan { counter-reset: booklet-entry; }
+.booklet-plan li[data-entry] { counter-increment: booklet-entry; }
+.booklet-plan [data-entry-number]::before { content: counter(booklet-entry) "."; }
+/* A row moves inside the thing it belongs to and nowhere else, so the end it
+   cannot pass is the end of its own list rather than of the booklet. */
+.booklet-plan li[data-entry]:first-child [data-entry-move="up"],
+.booklet-plan li[data-entry]:last-child [data-entry-move="down"] {
     opacity: 0.5;
     pointer-events: none;
 }

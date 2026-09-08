@@ -1,85 +1,101 @@
 @php
     use App\Livewire\Pages\BookletEditor;
     use App\Support\BookletSettingFields;
+
+    // Where the row stands in the plan, for a paragraph written directly under
+    // it: the same slot and the same music, so words follow the thing they were
+    // written about wherever it is moved to.
+    $textArgs = implode(', ', [
+        $entry->music_plan_slot_plan_id ?? 'null',
+        $entry->music_plan_slot_assignment_id ?? 'null',
+        $entry->id,
+    ]);
 @endphp
 
-<li class="space-y-1">
-    {{-- Where in the service this stands: the slot it fills and the music sung
-         there. What is actually printed — the score — is the card beneath it. --}}
-    <div data-entry-header class="flex items-start gap-1.5">
-        {{-- Counted by the browser: a row moved renumbers every row after it,
-             and none of them is listening. --}}
-        <span data-entry-number class="w-5 shrink-0 pt-0.5 text-xs text-zinc-400"></span>
+{{-- What the booklet prints here.
 
-        @if($entry->isText())
-            <span class="min-w-0 flex-1 truncate text-sm italic text-zinc-600 dark:text-zinc-300">
-                {{ \Illuminate\Support\Str::limit(trim(strtok($entry->text ?? '', "\n")) ?: __('Empty text'), 40) }}
-            </span>
-            <flux:badge size="sm" color="zinc">{{ __('Text') }}</flux:badge>
-        @else
-            {{-- The music the plan asked for, or — for a score chosen outside the
-                 plan — the one the score is of. --}}
-            @php $music = $entry->assignment?->music ?? $entry->score?->music; @endphp
-            <div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-1.5">
-                @if($entry->assignment?->musicPlanSlot?->name)
-                    <span class="truncate text-sm font-medium">{{ $entry->assignment->musicPlanSlot->name }}</span>
-                @endif
+     The slot and the music are no longer said on the row: the plan around it
+     says both, one line above, and a row that repeated them said the same thing
+     three times over for a slot sung from three engravings. What is left is the
+     thing itself — its name, its opening notes, and everything that can be done
+     to it. The green edge is what marks it as being in the booklet, since in the
+     plan it stands among the scores that are not. --}}
+<li data-entry="{{ $entry->isText() ? 'text' : 'score' }}" class="border-s-2 border-green-500 ps-1.5">
+    <div data-entry-card class="rounded-md border border-zinc-200 px-2 py-1.5 dark:border-zinc-700">
+        <div data-entry-header class="flex items-center gap-1.5 text-sm">
+            {{-- Counted by the browser: a row moved renumbers every row after it,
+                 and none of them is listening. --}}
+            <span data-entry-number class="shrink-0 text-xs text-zinc-400"></span>
 
+            @if($entry->isText())
+                <flux:icon name="document-text" variant="micro" class="shrink-0 text-zinc-400" />
+                <span class="min-w-0 flex-1 truncate italic text-zinc-600 dark:text-zinc-300">
+                    {{ \Illuminate\Support\Str::limit(trim(strtok($entry->text ?? '', "\n")) ?: __('Empty text'), 40) }}
+                </span>
+                <flux:badge size="sm" color="zinc" class="shrink-0">{{ __('Text') }}</flux:badge>
+            @else
+                {{-- A score chosen outside the plan stands at the foot of the
+                     pane with nothing above it to say what it is, so it names its
+                     own music. One chosen from the plan has the music's name a
+                     line above it already. --}}
+                @php $music = $entry->assignment === null ? $entry->score?->music : null; @endphp
                 @if($music)
-                    <span class="inline-flex min-w-0 items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span class="inline-flex min-w-0 shrink items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
                         <flux:icon name="music" variant="micro" class="shrink-0 text-indigo-400" />
                         <a href="{{ route('music-view', $music) }}" target="_blank" class="min-w-0 truncate hover:underline">
                             {{ $music->title }}
                         </a>
                     </span>
                 @endif
-            </div>
-        @endif
 
-        {{-- Where a row stands is the list's business, so moving it and taking it
-             out are asked of the booklet rather than answered here. The ends of
-             the list are greyed by the stylesheet for the same reason a row is
-             numbered there: a row that has been moved does not hear about it. --}}
-        <div class="ml-auto flex shrink-0 items-center gap-0.5">
-            <flux:tooltip :content="__('Move up')">
-                <flux:button size="sm" variant="ghost" icon="chevron-up" data-entry-move="up" :aria-label="__('Move up')" wire:click="$parent.move({{ $entry->id }}, -1)" />
-            </flux:tooltip>
-            <flux:tooltip :content="__('Move down')">
-                <flux:button size="sm" variant="ghost" icon="chevron-down" data-entry-move="down" :aria-label="__('Move down')" wire:click="$parent.move({{ $entry->id }}, 1)" />
-            </flux:tooltip>
-            <flux:tooltip :content="__('Remove')">
-                <flux:button size="sm" variant="ghost" icon="x-mark" :aria-label="__('Remove')" wire:click="$parent.removeEntry({{ $entry->id }})" />
-            </flux:tooltip>
-        </div>
-    </div>
-
-    {{-- The score itself, in a card of its own: one music may be sung from any of
-         several engravings, and the card is the one that was chosen — its name,
-         its opening notes, and everything that can be done to it here. --}}
-    <div data-entry-card class="ms-6 rounded-md border border-zinc-200 px-2 py-1.5 dark:border-zinc-700">
-        @unless($entry->isText())
-            <div class="flex items-center gap-1.5 text-sm">
                 <flux:icon name="file-music" variant="micro" class="shrink-0 text-zinc-400" />
-                @if($scoreUrl)
-                    <a href="{{ $scoreUrl }}" target="_blank" class="min-w-0 truncate hover:underline">{{ $entry->score?->title }}</a>
-                @else
-                    <span class="min-w-0 truncate">{{ $entry->score?->title }}</span>
-                @endif
-                @if(trim((string) $entry->score?->variation_name) !== '')
-                    <span class="min-w-0 shrink truncate text-xs text-zinc-400">· {{ $entry->score->variation_name }}</span>
-                @endif
-                @if($entry->scoreFile)
-                    <span class="shrink-0 text-xs text-zinc-400">· {{ $entry->scoreFile->displayName() }}</span>
-                @endif
-                <flux:badge size="sm" color="zinc" class="ml-auto shrink-0">
+                <span class="min-w-0 flex-1 truncate">
+                    @if($scoreUrl)
+                        <a href="{{ $scoreUrl }}" target="_blank" class="hover:underline">{{ $entry->score?->title }}</a>
+                    @else
+                        {{ $entry->score?->title }}
+                    @endif
+                    @if(trim((string) $entry->score?->variation_name) !== '')
+                        <span class="text-xs text-zinc-400">· {{ $entry->score->variation_name }}</span>
+                    @endif
+                    @if($entry->scoreFile)
+                        <span class="text-xs text-zinc-400">· {{ $entry->scoreFile->displayName() }}</span>
+                    @endif
+                </span>
+                <flux:badge size="sm" color="zinc" class="shrink-0">
                     {{ $entry->score?->format?->label() ?? __('File') }}
                 </flux:badge>
-            </div>
-        @endunless
+            @endif
 
-        {{-- The same incipit the plan below shows, so a row in the booklet is
-             recognised by its opening notes rather than by a title that several
-             arrangements share. --}}
+            {{-- Where a row stands is the list's business, so moving it and taking
+                 it out are asked of the booklet rather than answered here. The
+                 ends of the list are greyed by the stylesheet for the same reason
+                 a row is numbered there: a row that has been moved does not hear
+                 about it. A move never leaves the music the row belongs to — the
+                 booklet refuses one that would. --}}
+            <div class="flex shrink-0 items-center gap-0.5">
+                {{-- Words written from here belong where this row belongs, and
+                     are set directly beneath it — which is the booklet's business
+                     rather than this row's, like everything else in this group. --}}
+                @php $addLabel = $entry->isText() ? __('Add text under these words') : __('Add text under this score'); @endphp
+                <flux:tooltip :content="$addLabel">
+                    <flux:button size="sm" variant="ghost" icon="message-square-plus" :aria-label="$addLabel" wire:click="$parent.addText({{ $textArgs }})" />
+                </flux:tooltip>
+                <flux:tooltip :content="__('Move up')">
+                    <flux:button size="sm" variant="ghost" icon="chevron-up" data-entry-move="up" :aria-label="__('Move up')" wire:click="$parent.move({{ $entry->id }}, -1)" />
+                </flux:tooltip>
+                <flux:tooltip :content="__('Move down')">
+                    <flux:button size="sm" variant="ghost" icon="chevron-down" data-entry-move="down" :aria-label="__('Move down')" wire:click="$parent.move({{ $entry->id }}, 1)" />
+                </flux:tooltip>
+                <flux:tooltip :content="__('Remove')">
+                    <flux:button size="sm" variant="ghost" icon="x-mark" :aria-label="__('Remove')" wire:click="$parent.removeEntry({{ $entry->id }})" />
+                </flux:tooltip>
+            </div>
+        </div>
+
+        {{-- The same incipit the scores beneath it show, so a row in the booklet
+             is recognised by its opening notes rather than by a title that
+             several arrangements share. --}}
         @if($incipitUrl)
             <x-incipit-image
                 data-entry-incipit
@@ -115,7 +131,13 @@
                         :aria-label="__('Edit this text')"
                     />
                 </flux:tooltip>
-            @else
+            @endif
+
+            {{-- Whichever row opens a music prints its name, words as much as
+                 music: the paragraph written under a music's name stands beneath
+                 it, so the switch that keeps that name off the page has to be
+                 within reach of the row carrying it. --}}
+            @if(! $entry->isText() || $entry->music_plan_slot_assignment_id !== null)
                 <flux:tooltip :content="__('Print the music title')">
                     <flux:button
                         size="sm"
@@ -127,7 +149,9 @@
                         :aria-label="__('Print the music title')"
                     />
                 </flux:tooltip>
+            @endif
 
+            @if(! $entry->isText())
                 <flux:tooltip :content="__('Print the variation name')">
                     <flux:button
                         size="sm"

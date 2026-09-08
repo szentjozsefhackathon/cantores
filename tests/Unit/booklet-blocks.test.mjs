@@ -198,6 +198,42 @@ test('a paragraph of instructions flows as blocks like everything else', () => {
     assert.equal(pages.length, 1);
 });
 
+// Words written at the head of a slot — or of one of its musics — introduce it,
+// so the name is set over them rather than over the score that follows: a heading
+// printed after the sentence introducing it reads backwards.
+test('a paragraph at the head of a slot carries the slot\'s name', () => {
+    const measure = (text, { fontSize = geometry.lyricSizePx } = {}) => text.length * fontSize * 0.5;
+    const paragraph = { id: 2, kind: 'text', text: 'Álljunk fel.', slot: 'Kezdőének', startOnNewPage: true };
+
+    const named = buildTextBlocks(
+        { ...paragraph, slot: 'Áldozás', music: 'Ének kettő' },
+        geometry,
+        measure,
+    );
+
+    assert.match(named.blocks[0].svg, /Áldozás/);
+    assert.match(named.blocks[1].svg, /Ének kettő/);
+    assert.match(named.blocks[2].svg, /Álljunk fel/);
+
+    const { blocks } = buildTextBlocks(paragraph, geometry, measure);
+
+    assert.match(blocks[0].svg, /Kezdőének/);
+    assert.match(blocks[0].svg, /font-weight="bold"/);
+    assert.equal(blocks[0].keepWithNext, true, 'the name must not end a page alone');
+    assert.equal(blocks[0].breakBefore, true, 'the page break belongs to the heading now');
+    assert.equal(blocks[1].breakBefore, false);
+    assert.match(blocks[1].svg, /Álljunk fel/);
+
+    // And a paragraph standing anywhere else says nothing about the plan.
+    const plain = buildTextBlocks({ ...paragraph, slot: null }, geometry, measure);
+
+    assert.doesNotMatch(plain.blocks[0].svg, /Kezdőének/);
+
+    const untitled = buildTextBlocks(paragraph, { ...geometry, showTitles: false }, measure);
+
+    assert.doesNotMatch(untitled.blocks[0].svg, /Kezdőének/);
+});
+
 // A rubric speaks at the same size as the lyrics beside it, in the face the
 // booklet was set in rather than the one an engraver happened to choose.
 test('a rubric is set at the lyric size, in the booklet\'s own face', () => {
