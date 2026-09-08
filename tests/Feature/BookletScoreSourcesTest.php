@@ -6,6 +6,7 @@ use App\Models\ScorePublication;
 use App\Models\User;
 use App\Services\LoanKeepingService;
 use App\Services\MusicPlanScoreListService;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * What a booklet is allowed to draw.
@@ -93,6 +94,42 @@ it('skips a links-only score, which has nothing to engrave', function () {
     $score = Score::factory()->create(['user_id' => $user->id, 'format' => null, 'content' => null]);
 
     expect(sources([$score->id], $user)->has($score->id))->toBeFalse();
+});
+
+// The booklet's own list of what is in it links each row back to the score, and a
+// link has to lead wherever the reader is actually entitled to read it.
+it('links each score where its reader may read it', function () {
+    $owner = User::factory()->create();
+    $borrower = User::factory()->create();
+
+    $own = Score::factory()->abc()->create(['user_id' => $borrower->id]);
+
+    $borrowed = Score::factory()->abc()->create(['user_id' => $owner->id]);
+    $loan = Loan::factory()->of($borrowed)->create();
+    app(LoanKeepingService::class)->keep($loan, $borrower);
+
+    $published = Score::factory()->abc()->create(['user_id' => $owner->id]);
+    ScorePublication::factory()->approved()->create(['score_id' => $published->id]);
+
+    $found = sources([$own->id, $borrowed->id, $published->id], $borrower);
+
+    expect($found->get($own->id)['url'])->toBe(route('scores.edit', ['score' => $own->id]))
+        ->and($found->get($borrowed->id)['url'])->toBe(route('loan.score', ['token' => $loan->token, 'score' => $borrowed->id]))
+        ->and($found->get($published->id)['url'])->toBe($published->publicUrl());
+});
+
+it('carries the incipit of a score it can draw, and nothing where there is none', function () {
+    Storage::fake();
+    $user = User::factory()->create();
+    $with = Score::factory()->abc()->create(['user_id' => $user->id]);
+    $without = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    Storage::put($with->incipit_path, 'image');
+
+    $found = sources([$with->id, $without->id], $user);
+
+    expect($found->get($with->id)['incipit_url'])->toBe($with->incipitUrl())
+        ->and($found->get($without->id)['incipit_url'])->toBeNull();
 });
 
 it('asks nothing of the database for an empty booklet', function () {

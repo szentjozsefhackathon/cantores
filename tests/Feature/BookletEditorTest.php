@@ -251,6 +251,40 @@ it('keeps the preview references in the booklet renderer component', function ()
     }
 });
 
+// The booklet's own geometry is read the way the score editor's toolbars are: a
+// knob is its icon, its name is the tooltip, and the whole row fits above the pages
+// instead of standing as a block of labelled fields as tall as the preview beside
+// it.
+it('names every booklet setting by its icon rather than a label', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+    $toolbar = $xpath->query('//*[@data-booklet-toolbar]')->item(0);
+
+    $settings = [
+        __('Title'), __('Page size'), __('Orientation'), __('Margin (mm)'),
+        __('Lyric size (pt)'), __('Staff height (mm)'), __('Text font'),
+        __('Heading size (×)'), __('Titles'),
+    ];
+
+    expect($toolbar)->not->toBeNull();
+
+    foreach ($settings as $setting) {
+        expect($xpath->query('.//*[@aria-label="'.$setting.'"]', $toolbar)->length)
+            ->toBeGreaterThan(0, $setting.' is not named for a screen reader');
+
+        expect($xpath->query('.//*[@data-flux-tooltip-content][contains(., "'.$setting.'")]', $toolbar)->length)
+            ->toBeGreaterThan(0, $setting.' has no tooltip');
+    }
+
+    expect($xpath->query('.//*[@data-flux-icon]', $toolbar)->length)->toBeGreaterThanOrEqual(count($settings));
+});
+
 it('separates entry controls from icon-only score options and reflects their selected state', function () {
     $user = User::factory()->create();
     [$booklet, $entries] = bookletWithEntries($user, 1);
@@ -291,6 +325,98 @@ it('separates entry controls from icon-only score options and reflects their sel
         preg_match('/<button\b[^>]*wire:click="'.$action.'\('.$entries[0]->id.'\)"[^>]*>/', $html, $matches);
         expect($matches[0] ?? '')->toContain('aria-pressed="true"');
     }
+});
+
+// A row in a booklet is a score of a music sung at a moment in the service, and it
+// is read in that order: the slot names the moment, the music beside it, and the
+// score — the one engraving out of several that was actually chosen — stands in a
+// card of its own beneath, with its opening notes. Both names are links, since both
+// are things the person assembling the booklet may want to open.
+it('reads slot, then music, then the score in a card of its own', function () {
+    \Illuminate\Support\Facades\Storage::fake();
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+    \Illuminate\Support\Facades\Storage::put($scores[0]->incipit_path, 'image');
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id)
+        ->html();
+
+    $musicHref = route('music-view', $assignments[0]->music_id);
+    $scoreHref = route('scores.edit', ['score' => $scores[0]->id]);
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+
+    // The Lucide paths are the icons' identity: music for the music, file-music
+    // for the score.
+    $musicIcon = '//*[@data-entry-header]//*[local-name()="path"][@d="M9 18V5l12-2v13"]';
+    $scoreIcon = '//*[@data-entry-card]//*[local-name()="path"][@d="M14 2v5a1 1 0 0 0 1 1h5"]';
+    $header = $xpath->query('//*[@data-entry-header]')->item(0);
+
+    expect($xpath->query('//a[@href="'.$musicHref.'"]'))->toHaveCount(2)
+        ->and($xpath->query('//a[@href="'.$scoreHref.'"]'))->toHaveCount(2)
+        ->and($xpath->query('//*[@data-entry-header]//a[@href="'.$musicHref.'"]'))->toHaveCount(1)
+        ->and($xpath->query('//*[@data-entry-card]//a[@href="'.$scoreHref.'"]'))->toHaveCount(1)
+        ->and($xpath->query($musicIcon)->length)->toBeGreaterThan(0)
+        ->and($xpath->query($scoreIcon)->length)->toBeGreaterThan(0)
+        ->and($xpath->query('//*[@data-entry-card]//*[@data-entry-incipit]//*[local-name()="img"][@src="'.$scores[0]->incipitUrl().'"]')->length)
+        ->toBeGreaterThan(0);
+
+    // The slot is read before the music, and the score does not appear in that
+    // line at all — naming it is the card's job.
+    expect($header->textContent)->toContain('Kezdőének')
+        ->and(strpos($header->textContent, 'Kezdőének'))->toBeLessThan(strpos($header->textContent, 'Áldjad, én lelkem'))
+        ->and($xpath->query('//*[@data-entry-header]//*[local-name()="path"][@d="M14 2v5a1 1 0 0 0 1 1h5"]'))->toHaveCount(0);
+
+    // The card is bordered, so a score reads as one thing among the several a
+    // music may be sung from.
+    expect($xpath->query('//*[@data-entry-card]')->item(0)->getAttribute('class'))->toContain('border');
+});
+
+// A score keeps both names where it has both: the engraving's own title, and the
+// variation that tells it from the other arrangements of the same music.
+it('names the score and its variation on the card', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'title' => 'Áldjad, én lelkem',
+        'variation_name' => 'orgonakíséret',
+    ]);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $score->id)
+        ->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+    $card = $xpath->query('//*[@data-entry-card]')->item(0);
+
+    expect($card->textContent)->toContain('Áldjad, én lelkem')
+        ->and($card->textContent)->toContain('orgonakíséret');
+});
+
+it('names the music of a score chosen outside the plan', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create(['user_id' => $user->id, 'title' => 'Ó jöjj, ó jöjj Emmánuel']);
+    $booklet = bookletFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id, 'music_id' => $music->id]);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $score->id)
+        ->assertSeeHtml('href="'.route('music-view', $music).'"')
+        ->assertSee($music->title);
 });
 
 it('shows available incipits in the music slot selector', function () {
@@ -465,6 +591,50 @@ it('opens a score’s settings inside the row they belong to', function () {
     expect($panel)->not->toBeFalse()
         ->and($nextEntry)->not->toBeFalse()
         ->and($panel)->toBeLessThan($nextEntry);
+});
+
+// A score's panel is the score editor's toolbar for that format, so it is read the
+// same way and by the same pictures: whoever set a staff size in the editor should
+// find the same control here without stopping to read a label.
+it('gives a score’s settings the score editor’s icons and tooltips', function () {
+    $user = User::factory()->create();
+    [$booklet, , $gabc] = bookletWithAbcAndGabc($user);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('editSettings', $gabc->id)
+        ->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+    $panel = $xpath->query('//*[@data-booklet-panel]')->item(0);
+    $fields = BookletSettingFields::panelFor('gabc');
+
+    expect($panel)->not->toBeNull()
+        ->and($fields)->not->toBeEmpty();
+
+    foreach ($fields as $field) {
+        expect($field['icon'] ?? $field['glyph'] ?? null)->not->toBeNull($field['key'].' is named by neither icon nor glyph')
+            ->and($xpath->query('.//*[@aria-label="'.$field['label'].'"]', $panel)->length)
+            ->toBeGreaterThan(0, $field['key'].' is not named for a screen reader')
+            ->and($xpath->query('.//*[@data-flux-tooltip-content][contains(., "'.$field['label'].'")]', $panel)->length)
+            ->toBeGreaterThan(0, $field['key'].' has no tooltip');
+    }
+
+    // One icon per knob, and one more on the button that puts them all back.
+    expect($xpath->query('.//*[@data-flux-icon]', $panel))->toHaveCount(count($fields) + 1);
+
+    // The staff size wears the editor's own icon, path for path.
+    expect($xpath->query('.//*[local-name()="path"][@d="m15 16 3 3 3-3"]', $panel)->length)->toBeGreaterThan(0);
+});
+
+// The one control the score editor names with a letter rather than a picture keeps
+// its letter here too.
+it('keeps the H of German notation', function () {
+    expect(collect(BookletSettingFields::panelFor('chordpro'))->firstWhere('key', 'chordproGermanNotation')['glyph'])
+        ->toBe('H');
 });
 
 // Every control names the entry it adjusts. A panel that only knew "the open

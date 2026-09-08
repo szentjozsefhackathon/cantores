@@ -7,6 +7,7 @@
     $entries = $this->entries;
     $chosen = $this->chosenScoreIds;
     $chosenFiles = $this->chosenFileIds;
+    $sources = $this->entrySources;
 @endphp
 
 <div
@@ -42,84 +43,104 @@
 
     <div class="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
 
-        {{-- Geometry bar --}}
-        <flux:card class="mb-4 p-4">
-            <div class="flex flex-wrap items-end gap-x-4 gap-y-3">
-                <flux:field class="min-w-56 flex-1">
-                    <flux:label>{{ __('Title') }}</flux:label>
-                    <flux:input wire:model.blur="title" />
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>{{ __('Page size') }}</flux:label>
-                    <flux:select wire:model.live="pageSize" class="w-24">
-                        @foreach(BookletPageSize::options() as $value => $label)
-                            <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>{{ __('Orientation') }}</flux:label>
-                    <flux:select wire:model.live="orientation" class="w-32">
-                        @foreach(BookletOrientation::options() as $value => $label)
-                            <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>{{ __('Margin (mm)') }}</flux:label>
-                    <flux:input type="number" wire:model.live.debounce.500ms="marginMm" min="0" max="60" step="1" class="w-20!" />
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>{{ __('Lyric size (pt)') }}</flux:label>
-                    <flux:input type="number" wire:model.live.debounce.500ms="lyricSizePt" min="5" max="24" step="0.5" class="w-20!" />
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>{{ __('Staff height (mm)') }}</flux:label>
-                    <flux:input type="number" wire:model.live.debounce.500ms="staffHeightMm" min="2" max="20" step="0.5" class="w-20!" />
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>{{ __('Text font') }}</flux:label>
-                    <flux:select wire:model.live="textFont" class="w-40">
-                        @foreach(BookletSettingFields::fontOptions() as $font)
-                            <flux:select.option value="{{ $font }}">{{ $font }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                </flux:field>
-
-                <flux:field>
-                    <flux:label>{{ __('Heading size (×)') }}</flux:label>
-                    <flux:input type="number" wire:model.live.debounce.500ms="headingScale" min="0.5" max="2" step="0.05" class="w-20!" />
-                </flux:field>
-
-                <flux:field variant="inline">
-                    <flux:switch wire:model.live="showTitles" />
-                    <flux:label>{{ __('Titles') }}</flux:label>
-                </flux:field>
-
-                <div class="ml-auto flex items-center gap-2">
-                    <span class="text-sm text-zinc-500 dark:text-zinc-400" x-show="pageCount > 0" x-cloak>
-                        <span x-text="pageCount"></span> {{ __('pages') }}
-                    </span>
-                    <flux:button
-                        variant="primary"
-                        icon="arrow-down-tray"
-                        x-on:click="exportPdf()"
-                        x-bind:disabled="exporting || rendering || pageCount === 0"
-                    >
-                        <span x-show="!exporting">{{ __('Download PDF') }}</span>
-                        <span x-show="exporting" x-cloak>{{ __('Generating…') }}</span>
-                    </flux:button>
-                </div>
+        {{-- Geometry bar. Laid out as the score editor's setting toolbars are:
+             every knob is its icon, and its name is in the tooltip, so a dozen
+             of them fit on one line above a booklet rather than in a block of
+             labelled fields as tall as the preview beside it. --}}
+        <div data-booklet-toolbar class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+            <div class="flex min-w-48 flex-1 items-center gap-1">
+                <flux:tooltip :content="__('Title')">
+                    <flux:icon name="book-open-text" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" wire:model.blur="title" :aria-label="__('Title')" :placeholder="__('Title')" class="min-w-0 flex-1" />
             </div>
 
-            <p class="mt-2 text-sm text-red-600 dark:text-red-400" x-show="message" x-cloak x-text="message"></p>
-        </flux:card>
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Page size')">
+                    <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:select size="sm" wire:model.live="pageSize" :aria-label="__('Page size')" class="w-24 text-xs">
+                    @foreach(BookletPageSize::options() as $value => $label)
+                        <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Orientation')">
+                    <flux:icon name="rotate-cw-square" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:select size="sm" wire:model.live="orientation" :aria-label="__('Orientation')" class="w-32 text-xs">
+                    @foreach(BookletOrientation::options() as $value => $label)
+                        <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Margin (mm)')">
+                    <flux:icon name="scan" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="marginMm" :aria-label="__('Margin (mm)')" min="0" max="60" step="1" class="w-16!" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Lyric size (pt)')">
+                    <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="lyricSizePt" :aria-label="__('Lyric size (pt)')" min="5" max="24" step="0.5" class="w-16!" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Staff height (mm)')">
+                    <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="staffHeightMm" :aria-label="__('Staff height (mm)')" min="2" max="20" step="0.5" class="w-16!" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Text font')">
+                    <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:select size="sm" wire:model.live="textFont" :aria-label="__('Text font')" class="w-36 text-xs">
+                    @foreach(BookletSettingFields::fontOptions() as $font)
+                        <flux:select.option value="{{ $font }}">{{ $font }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Heading size (×)')">
+                    <flux:icon name="heading" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="headingScale" :aria-label="__('Heading size (×)')" min="0.5" max="2" step="0.05" class="w-16!" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Titles')">
+                    <flux:icon name="eye" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:switch wire:model.live="showTitles" :aria-label="__('Titles')" />
+            </div>
+
+            <div class="ml-auto flex items-center gap-2">
+                <span class="text-sm text-zinc-500 dark:text-zinc-400" x-show="pageCount > 0" x-cloak>
+                    <span x-text="pageCount"></span> {{ __('pages') }}
+                </span>
+                <flux:button
+                    size="sm"
+                    variant="primary"
+                    icon="arrow-down-tray"
+                    x-on:click="exportPdf()"
+                    x-bind:disabled="exporting || rendering || pageCount === 0"
+                >
+                    <span x-show="!exporting">{{ __('Download PDF') }}</span>
+                    <span x-show="exporting" x-cloak>{{ __('Generating…') }}</span>
+                </flux:button>
+            </div>
+        </div>
+
+        <p class="mb-4 text-sm text-red-600 dark:text-red-400" x-show="message" x-cloak x-text="message"></p>
 
         {{-- items-start keeps the columns from stretching, which is what lets each
              one stick and scroll inside its own box instead of dragging the page. --}}
@@ -147,12 +168,14 @@
                     @else
                         <ul class="space-y-1.5">
                             @foreach($entries as $index => $entry)
-                                <li
-                                    wire:key="entry-{{ $entry->id }}"
-                                    class="rounded-md border border-zinc-200 px-2 py-1.5 dark:border-zinc-700"
-                                >
-                                    <div data-entry-header class="flex items-center gap-1.5">
-                                        <span class="w-5 shrink-0 text-xs text-zinc-400">{{ $index + 1 }}.</span>
+                                <li wire:key="entry-{{ $entry->id }}" class="space-y-1">
+                                    @php $source = $entry->isText() ? null : $sources->get($entry->score_id); @endphp
+
+                                    {{-- Where in the service this stands: the slot it fills and
+                                         the music sung there. What is actually printed — the
+                                         score — is the card beneath it. --}}
+                                    <div data-entry-header class="flex items-start gap-1.5">
+                                        <span class="w-5 shrink-0 pt-0.5 text-xs text-zinc-400">{{ $index + 1 }}.</span>
 
                                         @if($entry->isText())
                                             <span class="min-w-0 flex-1 truncate text-sm italic text-zinc-600 dark:text-zinc-300">
@@ -160,18 +183,23 @@
                                             </span>
                                             <flux:badge size="sm" color="zinc">{{ __('Text') }}</flux:badge>
                                         @else
-                                            <span class="min-w-0 flex-1 truncate text-sm">
-                                                {{ $entry->score?->variationLabel() }}
-                                                @if($entry->scoreFile)
-                                                    <span class="text-xs text-zinc-400">· {{ $entry->scoreFile->displayName() }}</span>
-                                                @endif
+                                            {{-- The music the plan asked for, or — for a score chosen
+                                                 outside the plan — the one the score is of. --}}
+                                            @php $music = $entry->assignment?->music ?? $entry->score?->music; @endphp
+                                            <div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-1.5">
                                                 @if($entry->assignment?->musicPlanSlot?->name)
-                                                    <span class="text-xs text-zinc-400">· {{ $entry->assignment->musicPlanSlot->name }}</span>
+                                                    <span class="truncate text-sm font-medium">{{ $entry->assignment->musicPlanSlot->name }}</span>
                                                 @endif
-                                            </span>
-                                            <flux:badge size="sm" color="zinc">
-                                                {{ $entry->score?->format?->label() ?? __('File') }}
-                                            </flux:badge>
+
+                                                @if($music)
+                                                    <span class="inline-flex min-w-0 items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                                        <flux:icon name="music" variant="micro" class="shrink-0 text-indigo-400" />
+                                                        <a href="{{ route('music-view', $music) }}" target="_blank" class="min-w-0 truncate hover:underline">
+                                                            {{ $music->title }}
+                                                        </a>
+                                                    </span>
+                                                @endif
+                                            </div>
                                         @endif
                                         <div class="ml-auto flex shrink-0 items-center gap-0.5">
                                             <flux:tooltip :content="__('Move up')">
@@ -186,100 +214,141 @@
                                         </div>
                                     </div>
 
-                                    <div data-entry-options class="mt-2 flex flex-wrap items-center gap-0.5 border-t border-zinc-100 pt-2 dark:border-zinc-800">
-                                        <flux:tooltip :content="__('Start on a new page')">
-                                            <flux:button
-                                                size="sm"
-                                                variant="ghost"
-                                                icon="scissors"
-                                                wire:click="toggleStartOnNewPage({{ $entry->id }})"
-                                                aria-pressed="{{ $entry->start_on_new_page ? 'true' : 'false' }}"
-                                                class="{{ $entry->start_on_new_page ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                                :aria-label="__('Start on a new page')"
+                                    {{-- The score itself, in a card of its own: one music may be
+                                         sung from any of several engravings, and the card is the
+                                         one that was chosen — its name, its opening notes, and
+                                         everything that can be done to it here. --}}
+                                    <div data-entry-card class="ms-6 rounded-md border border-zinc-200 px-2 py-1.5 dark:border-zinc-700">
+                                        @unless($entry->isText())
+                                            <div class="flex items-center gap-1.5 text-sm">
+                                                <flux:icon name="file-music" variant="micro" class="shrink-0 text-zinc-400" />
+                                                @if($source['url'] ?? null)
+                                                    <a href="{{ $source['url'] }}" target="_blank" class="min-w-0 truncate hover:underline">{{ $entry->score?->title }}</a>
+                                                @else
+                                                    <span class="min-w-0 truncate">{{ $entry->score?->title }}</span>
+                                                @endif
+                                                @if(trim((string) $entry->score?->variation_name) !== '')
+                                                    <span class="min-w-0 shrink truncate text-xs text-zinc-400">· {{ $entry->score->variation_name }}</span>
+                                                @endif
+                                                @if($entry->scoreFile)
+                                                    <span class="shrink-0 text-xs text-zinc-400">· {{ $entry->scoreFile->displayName() }}</span>
+                                                @endif
+                                                <flux:badge size="sm" color="zinc" class="ml-auto shrink-0">
+                                                    {{ $entry->score?->format?->label() ?? __('File') }}
+                                                </flux:badge>
+                                            </div>
+                                        @endunless
+
+                                        {{-- The same incipit the plan below shows, so a row in the
+                                             booklet is recognised by its opening notes rather than by
+                                             a title that several arrangements share. --}}
+                                        @if($source['incipit_url'] ?? null)
+                                            <x-incipit-image
+                                                data-entry-incipit
+                                                :src="$source['incipit_url']"
+                                                :alt="__('Incipit').' — '.$entry->score?->variationLabel()"
+                                                class="mt-1 ms-5 max-w-full"
+                                                imgClass="max-h-24 max-w-full rounded bg-white object-contain"
                                             />
-                                        </flux:tooltip>
-
-                                        @if($entry->isText())
-                                            <flux:tooltip :content="__('Edit this text')">
-                                                <flux:button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    icon="pencil-square"
-                                                    wire:click="editText({{ $this->editingTextId === $entry->id ? 'null' : $entry->id }})"
-                                                    class="{{ $this->editingTextId === $entry->id ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                                    aria-expanded="{{ $this->editingTextId === $entry->id ? 'true' : 'false' }}"
-                                                    :aria-label="__('Edit this text')"
-                                                />
-                                            </flux:tooltip>
-                                        @else
-                                            <flux:tooltip :content="__('Print the music title')">
-                                                <flux:button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    icon="musical-note"
-                                                    wire:click="toggleShowMusicTitle({{ $entry->id }})"
-                                                    aria-pressed="{{ $entry->show_music_title ? 'true' : 'false' }}"
-                                                    class="{{ $entry->show_music_title ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                                    :aria-label="__('Print the music title')"
-                                                />
-                                            </flux:tooltip>
-
-                                            <flux:tooltip :content="__('Print the variation name')">
-                                                <flux:button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    icon="tag"
-                                                    wire:click="toggleShowVariation({{ $entry->id }})"
-                                                    aria-pressed="{{ $entry->show_variation ? 'true' : 'false' }}"
-                                                    class="{{ $entry->show_variation ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                                    :aria-label="__('Print the variation name')"
-                                                />
-                                            </flux:tooltip>
-
-                                            {{-- An uploaded score is a picture by the time it reaches a
-                                                 booklet, so it gets a panel with the one knob a picture
-                                                 has; an engraved one gets its format's. --}}
-                                            <flux:tooltip :content="__('Adjust this score')">
-                                                <flux:button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    icon="adjustments-horizontal"
-                                                    wire:click="editSettings({{ $this->editingEntryId === $entry->id ? 'null' : $entry->id }})"
-                                                    class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                                    aria-expanded="{{ $this->editingEntryId === $entry->id ? 'true' : 'false' }}"
-                                                    :aria-label="__('Adjust this score')"
-                                                />
-                                            </flux:tooltip>
                                         @endif
 
-                                    </div>
+                                        <div data-entry-options class="mt-2 flex flex-wrap items-center gap-0.5 border-t border-zinc-100 pt-2 dark:border-zinc-800">
+                                            <flux:tooltip :content="__('Start on a new page')">
+                                                <flux:button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    icon="scissors"
+                                                    wire:click="toggleStartOnNewPage({{ $entry->id }})"
+                                                    aria-pressed="{{ $entry->start_on_new_page ? 'true' : 'false' }}"
+                                                    class="{{ $entry->start_on_new_page ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                    :aria-label="__('Start on a new page')"
+                                                />
+                                            </flux:tooltip>
 
-                                    {{-- Both panels open inside the row they belong to: what is
-                                         being adjusted is right above the controls adjusting it,
-                                         and a list of twenty scores does not have to be scrolled
-                                         to the end to find out which one is being talked about. --}}
-                                    @if($entry->isText() && $this->editingTextId === $entry->id)
-                                        <div class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700">
-                                            <flux:textarea
-                                                rows="6"
-                                                wire:model.live.debounce.600ms="editingText"
-                                                :placeholder="__('Stand. The cantor sings the verses, **all** repeat the antiphon.')"
-                                            />
+                                            @if($entry->isText())
+                                                <flux:tooltip :content="__('Edit this text')">
+                                                    <flux:button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        icon="pencil-square"
+                                                        wire:click="editText({{ $this->editingTextId === $entry->id ? 'null' : $entry->id }})"
+                                                        class="{{ $this->editingTextId === $entry->id ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                        aria-expanded="{{ $this->editingTextId === $entry->id ? 'true' : 'false' }}"
+                                                        :aria-label="__('Edit this text')"
+                                                    />
+                                                </flux:tooltip>
+                                            @else
+                                                <flux:tooltip :content="__('Print the music title')">
+                                                    <flux:button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        icon="musical-note"
+                                                        wire:click="toggleShowMusicTitle({{ $entry->id }})"
+                                                        aria-pressed="{{ $entry->show_music_title ? 'true' : 'false' }}"
+                                                        class="{{ $entry->show_music_title ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                        :aria-label="__('Print the music title')"
+                                                    />
+                                                </flux:tooltip>
 
-                                            <flux:text class="mt-2 text-xs text-zinc-500">
-                                                {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote.') }}
-                                            </flux:text>
+                                                <flux:tooltip :content="__('Print the variation name')">
+                                                    <flux:button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        icon="tag"
+                                                        wire:click="toggleShowVariation({{ $entry->id }})"
+                                                        aria-pressed="{{ $entry->show_variation ? 'true' : 'false' }}"
+                                                        class="{{ $entry->show_variation ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                        :aria-label="__('Print the variation name')"
+                                                    />
+                                                </flux:tooltip>
+
+                                                {{-- An uploaded score is a picture by the time it reaches a
+                                                     booklet, so it gets a panel with the one knob a picture
+                                                     has; an engraved one gets its format's. --}}
+                                                <flux:tooltip :content="__('Adjust this score')">
+                                                    <flux:button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        icon="adjustments-horizontal"
+                                                        wire:click="editSettings({{ $this->editingEntryId === $entry->id ? 'null' : $entry->id }})"
+                                                        class="{{ $entry->settings_override ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                        aria-expanded="{{ $this->editingEntryId === $entry->id ? 'true' : 'false' }}"
+                                                        :aria-label="__('Adjust this score')"
+                                                    />
+                                                </flux:tooltip>
+                                            @endif
+
                                         </div>
-                                    @endif
 
-                                    @if(! $entry->isText() && $this->editingEntryId === $entry->id)
-                                        @php $panelFormat = BookletEditor::overrideFormat($entry); @endphp
-                                        <div
-                                            class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700"
-                                            data-booklet-panel="{{ $entry->id }}"
-                                        >
-                                            <div class="mb-2 flex items-start justify-between gap-2">
-                                                <flux:text class="text-xs text-zinc-500">
+                                        {{-- Both panels open inside the row they belong to: what is
+                                             being adjusted is right above the controls adjusting it,
+                                             and a list of twenty scores does not have to be scrolled
+                                             to the end to find out which one is being talked about. --}}
+                                        @if($entry->isText() && $this->editingTextId === $entry->id)
+                                            <div class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700">
+                                                <flux:textarea
+                                                    rows="6"
+                                                    wire:model.live.debounce.600ms="editingText"
+                                                    :placeholder="__('Stand. The cantor sings the verses, **all** repeat the antiphon.')"
+                                                />
+
+                                                <flux:text class="mt-2 text-xs text-zinc-500">
+                                                    {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote.') }}
+                                                </flux:text>
+                                            </div>
+                                        @endif
+
+                                        {{-- Laid out as the score editor's toolbar for the same
+                                             format, control for control: a knob is its icon, its
+                                             name is the tooltip, and it turns blue once this
+                                             booklet has moved it away from the score's own value. --}}
+                                        @if(! $entry->isText() && $this->editingEntryId === $entry->id)
+                                            @php $panelFormat = BookletEditor::overrideFormat($entry); @endphp
+                                            <div
+                                                class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700"
+                                                data-booklet-panel="{{ $entry->id }}"
+                                            >
+                                                <flux:text class="mb-2 text-xs text-zinc-500">
                                                     @if($panelFormat === 'file')
                                                         {{ __('Changes here apply to this booklet only. An uploaded score is printed at the full width of the page; make it smaller where that is too big.') }}
                                                     @else
@@ -287,62 +356,73 @@
                                                     @endif
                                                 </flux:text>
 
-                                                <flux:tooltip :content="__('Back to the booklet defaults')">
-                                                    <flux:button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        icon="arrow-path"
-                                                        class="shrink-0"
-                                                        x-on:click="resetOverride({{ $entry->id }})"
-                                                    />
-                                                </flux:tooltip>
-                                            </div>
+                                                <div class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                                                    @foreach(BookletSettingFields::panelFor($panelFormat) as $field)
+                                                        <div class="flex items-center gap-1" wire:key="field-{{ $entry->id }}-{{ $field['key'] }}">
+                                                            <flux:tooltip :content="$field['label']">
+                                                                @if($field['glyph'] ?? null)
+                                                                    <span
+                                                                        class="shrink-0 text-xs font-bold text-zinc-500 dark:text-zinc-400"
+                                                                        x-bind:class="isOverridden({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
+                                                                    >{{ $field['glyph'] }}</span>
+                                                                @else
+                                                                    <flux:icon
+                                                                        :name="$field['icon']"
+                                                                        variant="micro"
+                                                                        class="shrink-0 text-zinc-500 dark:text-zinc-400"
+                                                                        x-bind:class="isOverridden({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
+                                                                    />
+                                                                @endif
+                                                            </flux:tooltip>
 
-                                            <div class="grid grid-cols-2 gap-x-3 gap-y-2">
-                                                @foreach(BookletSettingFields::panelFor($panelFormat) as $field)
-                                                    <div class="flex flex-col gap-0.5" wire:key="field-{{ $entry->id }}-{{ $field['key'] }}">
-                                                        <label class="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                                            {{ $field['label'] }}
-                                                            <span
-                                                                class="text-blue-600 dark:text-blue-400"
-                                                                x-show="isOverridden({{ $entry->id }}, '{{ $field['key'] }}')"
-                                                                x-cloak
-                                                                title="{{ __('Changed for this booklet') }}"
-                                                            >●</span>
-                                                        </label>
+                                                            @if($field['type'] === 'number')
+                                                                <flux:input
+                                                                    size="sm"
+                                                                    type="number"
+                                                                    :aria-label="$field['label']"
+                                                                    min="{{ $field['min'] }}"
+                                                                    max="{{ $field['max'] }}"
+                                                                    step="{{ $field['step'] }}"
+                                                                    class="w-16!"
+                                                                    x-bind:value="settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
+                                                                    x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', Number($event.target.value))"
+                                                                />
+                                                            @elseif($field['type'] === 'boolean')
+                                                                <flux:switch
+                                                                    :aria-label="$field['label']"
+                                                                    x-bind:checked="!!settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
+                                                                    x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', $event.target.checked)"
+                                                                />
+                                                            @else
+                                                                <flux:select
+                                                                    size="sm"
+                                                                    class="w-36 text-xs"
+                                                                    :aria-label="$field['label']"
+                                                                    x-bind:value="settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
+                                                                    x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', $event.target.value)"
+                                                                >
+                                                                    @foreach(BookletSettingFields::fontOptions() as $font)
+                                                                        <flux:select.option value="'{{ $font }}'">{{ $font }}</flux:select.option>
+                                                                    @endforeach
+                                                                </flux:select>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
 
-                                                        @if($field['type'] === 'number')
-                                                            <flux:input
-                                                                size="sm"
-                                                                type="number"
-                                                                min="{{ $field['min'] }}"
-                                                                max="{{ $field['max'] }}"
-                                                                step="{{ $field['step'] }}"
-                                                                x-bind:value="settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
-                                                                x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', Number($event.target.value))"
-                                                            />
-                                                        @elseif($field['type'] === 'boolean')
-                                                            <flux:switch
-                                                                x-bind:checked="!!settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
-                                                                x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', $event.target.checked)"
-                                                            />
-                                                        @else
-                                                            <flux:select
-                                                                size="sm"
-                                                                class="text-xs"
-                                                                x-bind:value="settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
-                                                                x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', $event.target.value)"
-                                                            >
-                                                                @foreach(BookletSettingFields::fontOptions() as $font)
-                                                                    <flux:select.option value="'{{ $font }}'">{{ $font }}</flux:select.option>
-                                                                @endforeach
-                                                            </flux:select>
-                                                        @endif
-                                                    </div>
-                                                @endforeach
+                                                    <flux:tooltip :content="__('Back to the booklet defaults')">
+                                                        <flux:button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            icon="arrow-path"
+                                                            class="shrink-0"
+                                                            :aria-label="__('Back to the booklet defaults')"
+                                                            x-on:click="resetOverride({{ $entry->id }})"
+                                                        />
+                                                    </flux:tooltip>
+                                                </div>
                                             </div>
-                                        </div>
-                                    @endif
+                                        @endif
+                                    </div>
                                 </li>
                             @endforeach
                         </ul>
@@ -363,7 +443,16 @@
 
                             @foreach($slot['assignments'] as $assignment)
                                 <div class="mb-1.5 pl-2" wire:key="assignment-{{ $assignment['id'] }}">
-                                    <div class="text-sm font-medium">{{ $assignment['music_title'] }}</div>
+                                    <div class="flex items-center gap-1.5 text-sm font-medium">
+                                        <flux:icon name="music" variant="micro" class="shrink-0 text-indigo-400" />
+                                        @if($assignment['music_id'])
+                                            <a href="{{ route('music-view', $assignment['music_id']) }}" target="_blank" class="min-w-0 truncate hover:underline">
+                                                {{ $assignment['music_title'] }}
+                                            </a>
+                                        @else
+                                            <span class="min-w-0 truncate">{{ $assignment['music_title'] }}</span>
+                                        @endif
+                                    </div>
 
                                     @forelse($assignment['scores'] as $score)
                                         {{-- An uploaded score holding several files is not one thing
@@ -393,7 +482,14 @@
                                                 </flux:tooltip>
                                             @endunless
                                             <div class="min-w-0 flex-1">
-                                                <span class="block {{ $isChosen ? 'text-zinc-500' : '' }}">{{ $score['title'] }}</span>
+                                                <span class="flex items-center gap-1.5 {{ $isChosen ? 'text-zinc-500' : '' }}">
+                                                    <flux:icon name="file-music" variant="micro" class="shrink-0 text-zinc-400" />
+                                                    @if($score['url'])
+                                                        <a href="{{ $score['url'] }}" target="_blank" class="min-w-0 truncate hover:underline">{{ $score['title'] }}</a>
+                                                    @else
+                                                        <span class="min-w-0 truncate">{{ $score['title'] }}</span>
+                                                    @endif
+                                                </span>
                                                 @if($score['incipit_url'])
                                                     <x-incipit-image
                                                         :src="$score['incipit_url']"

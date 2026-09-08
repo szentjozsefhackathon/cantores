@@ -119,6 +119,11 @@ class MusicPlanScoreListService
      * choose between, with `file_id` and `strips` naming the score's default —
      * the oldest, which is what a row that names no file gets.
      *
+     * The score's own page and incipit come along as well, resolved the same way
+     * forViewer() resolves them: the list of what is in a booklet is read the way
+     * the plan beside it is read, and a line naming a score should lead back to
+     * it.
+     *
      * @param  list<int>  $scoreIds
      * @return Collection<int, array<string, mixed>>
      */
@@ -131,16 +136,25 @@ class MusicPlanScoreListService
         $query = Score::query()->whereIn('id', $scoreIds);
         $this->scopeToViewer($query, $viewer);
 
-        return $query
-            ->with('files')
-            ->get()
-            ->mapWithKeys(function (Score $score): array {
+        $scores = $query->with(['files', 'publication'])->get();
+
+        // A loan only ever answers for a score that is not the viewer's own, and
+        // this is resolved afresh on every rendered page and every strip served,
+        // so a booklet built from one's own music asks nothing extra.
+        $loansByScoreId = $viewer instanceof User && $scores->contains(fn (Score $score): bool => $score->user_id !== $viewer->getKey())
+            ? $this->keptLoansByScoreId($viewer)
+            : collect();
+
+        return $scores
+            ->mapWithKeys(function (Score $score) use ($viewer, $loansByScoreId): array {
                 $files = $score->format === null ? $this->drawableFiles($score) : [];
                 $default = reset($files) ?: null;
 
                 if ($score->format === null && $default === null) {
                     return [];
                 }
+
+                $loan = $loansByScoreId->get($score->getKey());
 
                 return [$score->getKey() => [
                     'id' => $score->id,
@@ -151,6 +165,8 @@ class MusicPlanScoreListService
                     'file_id' => $default['file_id'] ?? null,
                     'strips' => $default['strips'] ?? [],
                     'files' => $files,
+                    'url' => $this->urlFor($score, $viewer, $loan),
+                    'incipit_url' => $this->incipitUrlFor($score, $viewer, $loan),
                 ]];
             });
     }

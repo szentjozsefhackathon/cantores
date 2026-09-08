@@ -23,41 +23,47 @@ namespace App\Support;
 class BookletSettingFields
 {
     /**
-     * Per format: key => [type, min, max, step, label].
+     * Per format: key => [type, min, max, step, label, icon or glyph].
      *
-     * @var array<string, array<string, array{type: string, min?: float, max?: float, step?: float, label: string}>>
+     * The icons are the score editor's own, key for key: someone who has set a
+     * score's staff size in its editor should recognise the same control here
+     * rather than read a label to find it again. Where that toolbar names a knob
+     * with a letter instead of a picture — German notation's H — the letter is
+     * carried across as a glyph.
+     *
+     * @var array<string, array<string, array{type: string, min?: float, max?: float, step?: float, label: string, icon?: string, glyph?: string}>>
      */
     private const FIELDS = [
         'gabc' => [
-            'gabcLayoutWidth' => ['type' => 'number', 'min' => 200, 'max' => 8000, 'step' => 5, 'label' => 'Layout width (px)'],
-            'lyricSize' => ['type' => 'number', 'min' => 4, 'max' => 60, 'step' => 0.5, 'label' => 'Lyric size'],
+            'gabcLayoutWidth' => ['type' => 'number', 'min' => 200, 'max' => 8000, 'step' => 5, 'label' => 'Layout width (px)', 'icon' => 'ruler'],
+            'lyricSize' => ['type' => 'number', 'min' => 4, 'max' => 60, 'step' => 0.5, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
             // Wider at the bottom than the score editor's own control: a chant
             // staff sized for a real A5 page lands near 21, below the 30 the
             // editor allows on its nominal 508 mm canvas.
-            'staffSize' => ['type' => 'number', 'min' => 10, 'max' => 300, 'step' => 1, 'label' => 'Staff size'],
-            'lyricFont' => ['type' => 'font', 'label' => 'Font'],
-            'dropCaps' => ['type' => 'boolean', 'label' => 'Drop caps'],
-            'spaceBetweenSystems' => ['type' => 'number', 'min' => -2, 'max' => 2, 'step' => 0.1, 'label' => 'Space between lines'],
-            'minSpaceBelowStaff' => ['type' => 'number', 'min' => -2, 'max' => 2, 'step' => 0.1, 'label' => 'Min. space below staff'],
-            'minLyricWordSpacing' => ['type' => 'number', 'min' => 0, 'max' => 40, 'step' => 1, 'label' => 'Word spacing (px)'],
-            'hyphenWidth' => ['type' => 'number', 'min' => 0, 'max' => 40, 'step' => 1, 'label' => 'Hyphen width (px)'],
-            'condensingTolerance' => ['type' => 'number', 'min' => 0, 'max' => 1, 'step' => 0.05, 'label' => 'Condensing tolerance'],
-            'zoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)'],
+            'staffSize' => ['type' => 'number', 'min' => 10, 'max' => 300, 'step' => 1, 'label' => 'Staff size', 'icon' => 'list-chevrons-up-down'],
+            'lyricFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
+            'dropCaps' => ['type' => 'boolean', 'label' => 'Drop caps', 'icon' => 'text-initial'],
+            'spaceBetweenSystems' => ['type' => 'number', 'min' => -2, 'max' => 2, 'step' => 0.1, 'label' => 'Space between lines', 'icon' => 'between-horizontal-start'],
+            'minSpaceBelowStaff' => ['type' => 'number', 'min' => -2, 'max' => 2, 'step' => 0.1, 'label' => 'Min. space below staff', 'icon' => 'align-vertical-space-around'],
+            'minLyricWordSpacing' => ['type' => 'number', 'min' => 0, 'max' => 40, 'step' => 1, 'label' => 'Word spacing (px)', 'icon' => 'space'],
+            'hyphenWidth' => ['type' => 'number', 'min' => 0, 'max' => 40, 'step' => 1, 'label' => 'Hyphen width (px)', 'icon' => 'minus'],
+            'condensingTolerance' => ['type' => 'number', 'min' => 0, 'max' => 1, 'step' => 0.05, 'label' => 'Condensing tolerance', 'icon' => 'ruler-dimension-line'],
+            'zoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)', 'icon' => 'zoom-in'],
         ],
         'abc' => [
-            'abcPageWidth' => ['type' => 'number', 'min' => 200, 'max' => 8000, 'step' => 5, 'label' => 'Layout width (px)'],
-            'abcLyricSize' => ['type' => 'number', 'min' => 2, 'max' => 60, 'step' => 0.1, 'label' => 'Lyric size'],
-            'abcPageScale' => ['type' => 'number', 'min' => 0.2, 'max' => 5, 'step' => 0.05, 'label' => 'Staff scale'],
-            'abcLyricFont' => ['type' => 'font', 'label' => 'Font'],
-            'abcLyricBold' => ['type' => 'boolean', 'label' => 'Bold lyrics'],
-            'abcNoteSpacing' => ['type' => 'number', 'min' => 1, 'max' => 3, 'step' => 0.1, 'label' => 'Note spacing'],
-            'abcStaffSep' => ['type' => 'number', 'min' => 0, 'max' => 120, 'step' => 1, 'label' => 'Staff separation'],
-            'abcVocalSpace' => ['type' => 'number', 'min' => 0, 'max' => 40, 'step' => 1, 'label' => 'Vocal space'],
-            'abcStemWidth' => ['type' => 'number', 'min' => 0.1, 'max' => 3, 'step' => 0.1, 'label' => 'Stem width'],
-            'abcStaffLineWidth' => ['type' => 'number', 'min' => 0.1, 'max' => 3, 'step' => 0.1, 'label' => 'Staff line width'],
-            'abcNoClef' => ['type' => 'boolean', 'label' => 'Hide clef'],
-            'abcTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose'],
-            'abcZoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)'],
+            'abcPageWidth' => ['type' => 'number', 'min' => 200, 'max' => 8000, 'step' => 5, 'label' => 'Layout width (px)', 'icon' => 'ruler'],
+            'abcLyricSize' => ['type' => 'number', 'min' => 2, 'max' => 60, 'step' => 0.1, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
+            'abcPageScale' => ['type' => 'number', 'min' => 0.2, 'max' => 5, 'step' => 0.05, 'label' => 'Staff scale', 'icon' => 'list-chevrons-up-down'],
+            'abcLyricFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
+            'abcLyricBold' => ['type' => 'boolean', 'label' => 'Bold lyrics', 'icon' => 'bold'],
+            'abcNoteSpacing' => ['type' => 'number', 'min' => 1, 'max' => 3, 'step' => 0.1, 'label' => 'Note spacing', 'icon' => 'space'],
+            'abcStaffSep' => ['type' => 'number', 'min' => 0, 'max' => 120, 'step' => 1, 'label' => 'Staff separation', 'icon' => 'between-horizontal-start'],
+            'abcVocalSpace' => ['type' => 'number', 'min' => 0, 'max' => 40, 'step' => 1, 'label' => 'Vocal space', 'icon' => 'align-vertical-space-around'],
+            'abcStemWidth' => ['type' => 'number', 'min' => 0.1, 'max' => 3, 'step' => 0.1, 'label' => 'Stem width', 'icon' => 'pencil-line'],
+            'abcStaffLineWidth' => ['type' => 'number', 'min' => 0.1, 'max' => 3, 'step' => 0.1, 'label' => 'Staff line width', 'icon' => 'bars-3'],
+            'abcNoClef' => ['type' => 'boolean', 'label' => 'Hide clef', 'icon' => 'clef-none'],
+            'abcTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],
+            'abcZoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)', 'icon' => 'zoom-in'],
         ],
         // An uploaded score is a picture by the time it reaches a booklet, so
         // the only thing that can be done to it is scale it. It already arrives
@@ -65,23 +71,23 @@ class BookletSettingFields
         // this is the way down from there, for the scan engraved so large that
         // filling the page makes it shout.
         'file' => [
-            'fileZoom' => ['type' => 'number', 'min' => 0.2, 'max' => 1, 'step' => 0.05, 'label' => 'Size (×)'],
+            'fileZoom' => ['type' => 'number', 'min' => 0.2, 'max' => 1, 'step' => 0.05, 'label' => 'Size (×)', 'icon' => 'zoom-in'],
         ],
         'chordpro' => [
-            'chordproFontSize' => ['type' => 'number', 'min' => 6, 'max' => 32, 'step' => 0.5, 'label' => 'Font size'],
-            'chordproFontFamily' => ['type' => 'font', 'label' => 'Font'],
-            'chordproColumns' => ['type' => 'number', 'min' => 1, 'max' => 4, 'step' => 1, 'label' => 'Columns'],
-            'chordproTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose'],
-            'chordproGermanNotation' => ['type' => 'boolean', 'label' => 'German notation'],
+            'chordproFontSize' => ['type' => 'number', 'min' => 6, 'max' => 32, 'step' => 0.5, 'label' => 'Font size', 'icon' => 'a-large-small'],
+            'chordproFontFamily' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
+            'chordproColumns' => ['type' => 'number', 'min' => 1, 'max' => 4, 'step' => 1, 'label' => 'Columns', 'icon' => 'view-columns'],
+            'chordproTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],
+            'chordproGermanNotation' => ['type' => 'boolean', 'label' => 'German notation (H = B, B = B♭)', 'glyph' => 'H'],
         ],
         'aretino' => [
-            'aretinoStaffWidth' => ['type' => 'number', 'min' => 30, 'max' => 800, 'step' => 1, 'label' => 'Layout width (mm)'],
-            'aretinoLyricSize' => ['type' => 'number', 'min' => 4, 'max' => 80, 'step' => 0.5, 'label' => 'Lyric size (pt)'],
-            'aretinoStaffSize' => ['type' => 'number', 'min' => 1, 'max' => 20, 'step' => 0.1, 'label' => 'Staff height (mm)'],
-            'aretinoTextFont' => ['type' => 'font', 'label' => 'Font'],
-            'aretinoStaffGap' => ['type' => 'number', 'min' => 0, 'max' => 10, 'step' => 0.5, 'label' => 'Staff gap'],
-            'aretinoHideRepeatClef' => ['type' => 'boolean', 'label' => 'Hide repeated clef'],
-            'aretinoZoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)'],
+            'aretinoStaffWidth' => ['type' => 'number', 'min' => 30, 'max' => 800, 'step' => 1, 'label' => 'Layout width (mm)', 'icon' => 'ruler'],
+            'aretinoLyricSize' => ['type' => 'number', 'min' => 4, 'max' => 80, 'step' => 0.5, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
+            'aretinoStaffSize' => ['type' => 'number', 'min' => 1, 'max' => 20, 'step' => 0.1, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
+            'aretinoTextFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
+            'aretinoStaffGap' => ['type' => 'number', 'min' => 0, 'max' => 10, 'step' => 0.5, 'label' => 'Staff gap', 'icon' => 'between-horizontal-start'],
+            'aretinoHideRepeatClef' => ['type' => 'boolean', 'label' => 'Hide repeated clef', 'icon' => 'clef-none'],
+            'aretinoZoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)', 'icon' => 'zoom-in'],
         ],
     ];
 
@@ -147,7 +153,10 @@ class BookletSettingFields
     /**
      * The controls to render for a format, labels translated.
      *
-     * @return list<array<string, mixed>>
+     * A control is named by its icon, or by its glyph where the score editor
+     * names it with one; the label becomes the tooltip.
+     *
+     * @return list<array{key: string, type: string, min?: float, max?: float, step?: float, label: string, icon?: string, glyph?: string}>
      */
     public static function panelFor(?string $format): array
     {

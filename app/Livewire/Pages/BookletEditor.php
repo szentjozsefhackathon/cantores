@@ -148,6 +148,7 @@ class BookletEditor extends Component
                 'assignments' => $assignments->get($slot->pivot->id, collect())
                     ->map(fn ($assignment): array => [
                         'id' => $assignment->id,
+                        'music_id' => $assignment->music_id,
                         'music_title' => $assignment->music?->title,
                         'scores' => $scoresByMusicId->get($assignment->music_id, collect())->all(),
                     ])
@@ -164,7 +165,7 @@ class BookletEditor extends Component
     #[Computed]
     public function entries(): Collection
     {
-        return $this->booklet->entries()->with(['score', 'scoreFile', 'assignment.music', 'assignment.musicPlanSlot'])->get();
+        return $this->booklet->entries()->with(['score.music', 'scoreFile', 'assignment.music', 'assignment.musicPlanSlot'])->get();
     }
 
     /**
