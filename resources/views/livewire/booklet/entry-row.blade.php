@@ -55,13 +55,33 @@
                     @else
                         {{ $entry->score?->title }}
                     @endif
-                    @if(trim((string) $entry->score?->variation_name) !== '')
-                        <span class="text-xs text-zinc-400">· {{ $entry->score->variation_name }}</span>
-                    @endif
                     @if($entry->scoreFile)
                         <span class="text-xs text-zinc-400">· {{ $entry->scoreFile->displayName() }}</span>
                     @endif
                 </span>
+
+                {{-- The variation is the one heading line said against the row
+                     rather than a slot or a music, so its switch rides here,
+                     right after the name it turns on and off. It starts off:
+                     several arrangements of one music are told apart by their
+                     opening notes more than by a name most booklets never show. --}}
+                @if(trim((string) $entry->score?->variation_name) !== '')
+                    <span class="inline-flex shrink-0 items-center gap-0.5 text-xs text-zinc-400">
+                        <span class="max-w-[10rem] truncate">· {{ $entry->score->variation_name }}</span>
+                        <flux:tooltip :content="__('Print the variation name')">
+                            <flux:button
+                                size="sm"
+                                variant="ghost"
+                                :icon="$entry->show_variation ? 'eye' : 'eye-slash'"
+                                wire:click="toggleShowVariation"
+                                aria-pressed="{{ $entry->show_variation ? 'true' : 'false' }}"
+                                class="{{ $entry->show_variation ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                :aria-label="__('Print the variation name')"
+                            />
+                        </flux:tooltip>
+                    </span>
+                @endif
+
                 <flux:badge size="sm" color="zinc" class="shrink-0">
                     {{ $entry->score?->format?->label() ?? __('File') }}
                 </flux:badge>
@@ -73,7 +93,7 @@
                  a row is numbered there: a row that has been moved does not hear
                  about it. A move never leaves the music the row belongs to — the
                  booklet refuses one that would. --}}
-            <div class="flex shrink-0 items-center gap-0.5">
+            <div data-entry-nav class="flex shrink-0 items-center gap-0.5">
                 {{-- Words written from here belong where this row belongs, and
                      are set directly beneath it — which is the booklet's business
                      rather than this row's, like everything else in this group. --}}
@@ -133,37 +153,11 @@
                 </flux:tooltip>
             @endif
 
-            {{-- Whichever row opens a music prints its name, words as much as
-                 music: the paragraph written under a music's name stands beneath
-                 it, so the switch that keeps that name off the page has to be
-                 within reach of the row carrying it. --}}
-            @if(! $entry->isText() || $entry->music_plan_slot_assignment_id !== null)
-                <flux:tooltip :content="__('Print the music title')">
-                    <flux:button
-                        size="sm"
-                        variant="ghost"
-                        icon="musical-note"
-                        wire:click="toggleShowMusicTitle"
-                        aria-pressed="{{ $entry->show_music_title ? 'true' : 'false' }}"
-                        class="{{ $entry->show_music_title ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                        :aria-label="__('Print the music title')"
-                    />
-                </flux:tooltip>
-            @endif
-
+            {{-- What is said above this score — the slot's name, the music's, the
+                 variation — is switched on and off beside those names themselves:
+                 the slot's and the music's in the plan around this row, the
+                 variation's on the row, next to the name it carries. --}}
             @if(! $entry->isText())
-                <flux:tooltip :content="__('Print the variation name')">
-                    <flux:button
-                        size="sm"
-                        variant="ghost"
-                        icon="tag"
-                        wire:click="toggleShowVariation"
-                        aria-pressed="{{ $entry->show_variation ? 'true' : 'false' }}"
-                        class="{{ $entry->show_variation ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                        :aria-label="__('Print the variation name')"
-                    />
-                </flux:tooltip>
-
                 {{-- An uploaded score is a picture by the time it reaches a
                      booklet, so it gets a panel with the one knob a picture has;
                      an engraved one gets its format's.
@@ -202,7 +196,7 @@
                 />
 
                 <flux:text class="mt-2 text-xs text-zinc-500">
-                    {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote.') }}
+                    {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote, <red>red</red>, <small>small</small>.') }}
                 </flux:text>
             </div>
         @endif

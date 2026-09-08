@@ -46,8 +46,26 @@
                          which part of the service can then be told apart at a
                          glance, without reading. --}}
                     <div class="flex items-center gap-1.5 rounded-md px-2 py-1 {{ $slotChosen ? 'bg-green-50 dark:bg-green-950/40' : 'bg-zinc-100 dark:bg-zinc-800' }}">
-                        <div class="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide {{ $slotChosen ? 'text-zinc-700 dark:text-zinc-200' : 'text-zinc-400 dark:text-zinc-500' }}">
-                            {{ $node['name'] }}
+                        <div class="flex min-w-0 flex-1 items-center gap-1 text-xs font-semibold uppercase tracking-wide {{ $slotChosen ? 'text-zinc-700 dark:text-zinc-200' : 'text-zinc-400 dark:text-zinc-500' }}">
+                            <span class="min-w-0 truncate">{{ $node['name'] }}</span>
+
+                            {{-- The switch for the slot's name sits beside the name
+                                 itself. The name is printed unless it is turned off
+                                 here, and it is spoken by one row — whichever opens
+                                 the slot — so that is the row the choice is kept on. --}}
+                            @if($slotChosen)
+                                <flux:tooltip :content="__('Print the slot name')">
+                                    <flux:button
+                                        size="sm"
+                                        variant="ghost"
+                                        :icon="$node['showsName'] ? 'eye' : 'eye-slash'"
+                                        wire:click="toggleSlotName({{ $node['headingEntryId'] }})"
+                                        aria-pressed="{{ $node['showsName'] ? 'true' : 'false' }}"
+                                        class="shrink-0 {{ $node['showsName'] ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                        :aria-label="__('Print the slot name')"
+                                    />
+                                </flux:tooltip>
+                            @endif
                         </div>
 
                         <div class="flex shrink-0 items-center gap-0.5">
@@ -78,11 +96,32 @@
                                     <div class="flex items-center gap-1.5 text-sm">
                                         <flux:icon name="music" variant="micro" class="shrink-0 {{ $musicChosen ? 'text-green-600 dark:text-green-400' : 'text-indigo-400' }}" />
 
-                                        <div class="min-w-0 flex-1 truncate {{ $musicChosen ? 'font-medium' : 'text-zinc-500 dark:text-zinc-400' }}">
-                                            @if($child['musicId'])
-                                                <a href="{{ route('music-view', $child['musicId']) }}" target="_blank" class="hover:underline">{{ $child['title'] }}</a>
-                                            @else
-                                                {{ $child['title'] }}
+                                        <div class="flex min-w-0 flex-1 items-center gap-1 {{ $musicChosen ? 'font-medium' : 'text-zinc-500 dark:text-zinc-400' }}">
+                                            <span class="min-w-0 truncate">
+                                                @if($child['musicId'])
+                                                    <a href="{{ route('music-view', $child['musicId']) }}" target="_blank" class="hover:underline">{{ $child['title'] }}</a>
+                                                @else
+                                                    {{ $child['title'] }}
+                                                @endif
+                                            </span>
+
+                                            {{-- The music's own name is printed above it
+                                                 where a slot holds several, beside the slot
+                                                 where it holds one. Either way this is the
+                                                 switch that keeps it off the page, next to
+                                                 the name it governs. --}}
+                                            @if($musicChosen)
+                                                <flux:tooltip :content="__('Print the music title')">
+                                                    <flux:button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        :icon="$child['showsName'] ? 'eye' : 'eye-slash'"
+                                                        wire:click="toggleMusicName({{ $child['headingEntryId'] }})"
+                                                        aria-pressed="{{ $child['showsName'] ? 'true' : 'false' }}"
+                                                        class="shrink-0 {{ $child['showsName'] ? '!text-blue-600 dark:!text-blue-400' : '' }}"
+                                                        :aria-label="__('Print the music title')"
+                                                    />
+                                                </flux:tooltip>
                                             @endif
                                         </div>
 

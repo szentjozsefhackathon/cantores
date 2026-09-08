@@ -19,7 +19,6 @@ const geometry = pageGeometry({
     lyricSizePt: 11,
     staffHeightMm: 7,
     abcStaffSep: 25,
-    showTitles: true,
 });
 
 test('unification owns the width, the sizes and the stacking', () => {

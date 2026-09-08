@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $sequence
  * @property array<string, mixed>|null $settings_override
  * @property bool $start_on_new_page
+ * @property bool $show_slot
  * @property bool $show_variation
  * @property bool $show_music_title
  * @property \Carbon\CarbonImmutable|null $created_at
@@ -66,6 +67,7 @@ class BookletScore extends Model
         'sequence',
         'settings_override',
         'start_on_new_page',
+        'show_slot',
         'show_variation',
         'show_music_title',
     ];
@@ -78,6 +80,7 @@ class BookletScore extends Model
         return [
             'settings_override' => 'array',
             'start_on_new_page' => 'boolean',
+            'show_slot' => 'boolean',
             'show_variation' => 'boolean',
             'show_music_title' => 'boolean',
         ];

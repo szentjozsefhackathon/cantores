@@ -128,13 +128,6 @@
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="headingScale" :aria-label="__('Heading size (×)')" min="0.5" max="2" step="0.05" class="w-16!" />
             </div>
 
-            <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Titles')">
-                    <flux:icon name="eye" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                </flux:tooltip>
-                <flux:switch wire:model.live="showTitles" :aria-label="__('Titles')" />
-            </div>
-
             <div class="ml-auto flex items-center gap-2">
                 <span class="text-sm text-zinc-500 dark:text-zinc-400" x-show="pageCount > 0" x-cloak>
                     <span x-text="pageCount"></span> {{ __('pages') }}

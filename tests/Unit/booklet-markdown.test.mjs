@@ -34,17 +34,17 @@ test('emphasis splits a line and nests', () => {
     assert.deepEqual(
         inlineSegments('álljunk **fel**, majd *üljünk* le'),
         [
-            { text: 'álljunk ', bold: false, italic: false },
-            { text: 'fel', bold: true, italic: false },
-            { text: ', majd ', bold: false, italic: false },
-            { text: 'üljünk', bold: false, italic: true },
-            { text: ' le', bold: false, italic: false },
+            { text: 'álljunk ', bold: false, italic: false, color: null, fontSize: 1 },
+            { text: 'fel', bold: true, italic: false, color: null, fontSize: 1 },
+            { text: ', majd ', bold: false, italic: false, color: null, fontSize: 1 },
+            { text: 'üljünk', bold: false, italic: true, color: null, fontSize: 1 },
+            { text: ' le', bold: false, italic: false, color: null, fontSize: 1 },
         ],
     );
 
     assert.deepEqual(
         inlineSegments('***mind a kettő***'),
-        [{ text: 'mind a kettő', bold: true, italic: true }],
+        [{ text: 'mind a kettő', bold: true, italic: true, color: null, fontSize: 1 }],
     );
 });
 
@@ -52,7 +52,7 @@ test('emphasis splits a line and nests', () => {
 test('a marker with no partner stays the character it was', () => {
     assert.deepEqual(
         inlineSegments('2 * 3'),
-        [{ text: '2 * 3', bold: false, italic: false }],
+        [{ text: '2 * 3', bold: false, italic: false, color: null, fontSize: 1 }],
     );
 });
 
@@ -60,9 +60,41 @@ test('a block carries its own emphasis into every segment', () => {
     assert.deepEqual(
         inlineSegments('idézet **benne**', { italic: true }),
         [
-            { text: 'idézet ', bold: false, italic: true },
-            { text: 'benne', bold: true, italic: true },
+            { text: 'idézet ', bold: false, italic: true, color: null, fontSize: 1 },
+            { text: 'benne', bold: true, italic: true, color: null, fontSize: 1 },
         ],
+    );
+});
+
+// A rubric printed in red is the church's oldest way of saying "this is an
+// instruction, not a word to sing"; <small> is for an aside that should not
+// crowd the line it sits on.
+test('a <red> tag colours the words it wraps and closes back to black', () => {
+    assert.deepEqual(
+        inlineSegments('most <red>térdelünk</red> tovább'),
+        [
+            { text: 'most ', bold: false, italic: false, color: null, fontSize: 1 },
+            { text: 'térdelünk', bold: false, italic: false, color: '#cc0000', fontSize: 1 },
+            { text: ' tovább', bold: false, italic: false, color: null, fontSize: 1 },
+        ],
+    );
+});
+
+test('a <small> tag shrinks the words it wraps and closes back to full size', () => {
+    assert.deepEqual(
+        inlineSegments('Kyrie <small>(görögül)</small> eleison'),
+        [
+            { text: 'Kyrie ', bold: false, italic: false, color: null, fontSize: 1 },
+            { text: '(görögül)', bold: false, italic: false, color: null, fontSize: 0.8 },
+            { text: ' eleison', bold: false, italic: false, color: null, fontSize: 1 },
+        ],
+    );
+});
+
+test('the tags nest inside emphasis and each other', () => {
+    assert.deepEqual(
+        inlineSegments('**<red><small>rúbrika</small></red>**'),
+        [{ text: 'rúbrika', bold: true, italic: false, color: '#cc0000', fontSize: 0.8 }],
     );
 });
 
@@ -168,6 +200,33 @@ test('a rule is drawn rather than written', () => {
 
     assert.match(row.svg, /<line /);
     assert.doesNotMatch(row.svg, /<text /);
+});
+
+test('a <red> run reaches the page with a red fill and a <small> run with a smaller size', () => {
+    const [red] = markdownRows('lásd <red>piros</red>', options);
+    assert.match(red.svg, /<text[^>]*fill="#cc0000"[^>]*>piros<\/text>/);
+
+    const [small] = markdownRows('lásd <small>kicsi</small>', options);
+    assert.match(small.svg, /<text[^>]*font-size="8"[^>]*>kicsi<\/text>/);
+});
+
+// The measure has to be told the run is small, or the words after it are placed
+// as though it were full size and drift right of where they are drawn.
+test('a <small> run is measured at its own size, so what follows it sits tight', () => {
+    // measure is length * fontSize * 0.5: 'ab' is 10 wide, the small 'cd' 8, a
+    // full space 5, a small space 4 — so 'ef' lands at 10 + 4 + 8 + 5 = 27.
+    const [row] = markdownRows('ab <small>cd</small> ef', options);
+
+    assert.match(row.svg, /<text x="27"[^>]*>ef<\/text>/);
+});
+
+test('the width of a run stays inside a tag that also carries colour', () => {
+    // 'piros' small-and-red is 5 * 8 * 0.5 = 20 wide; 'Valami' then sits at
+    // 20 + 5 (a full space) = 25.
+    const [row] = markdownRows('<red><small>piros</small></red> Valami', options);
+
+    assert.match(row.svg, /<text[^>]*font-size="8"[^>]*fill="#cc0000"[^>]*>piros<\/text>/);
+    assert.match(row.svg, /<text x="25"[^>]*>Valami<\/text>/);
 });
 
 test('markup characters reach the page escaped', () => {

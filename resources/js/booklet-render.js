@@ -141,9 +141,9 @@ export async function buildScoreBlocks(entry, geometry, host) {
     const fonts = [fontOf(format, resolved, geometry)];
     const blocks = [];
 
-    if (geometry.showTitles) {
-        headingBlocks(entry, geometry).forEach((block) => blocks.push(block));
-    }
+    // Every heading line the entry still carries — the row's switches decide
+    // which those are, and headingBlocks drops the ones that came through empty.
+    headingBlocks(entry, geometry).forEach((block) => blocks.push(block));
 
     const music = await musicBlocks(format, entry, resolved, layoutWidthPx, geometry, host);
 
@@ -180,7 +180,7 @@ export async function buildScoreBlocks(entry, geometry, host) {
 function headingBlocks(entry, geometry) {
     const heading = geometry.lyricSizePx * geometry.headingScale;
     const lines = [
-        { content: entry.slot, size: heading * TITLE_SIZE_FACTOR, bold: true },
+        { content: slotHeadingLine(entry.slot), size: heading * TITLE_SIZE_FACTOR, bold: true },
         { content: entry.music, size: heading * TITLE_SIZE_FACTOR, bold: true },
         {
             content: entry.variation,
@@ -214,6 +214,25 @@ function headingBlocks(entry, geometry) {
 }
 
 /**
+ * The slot's heading line, set in capitals.
+ *
+ * It names a moment of the service, not a title, and the plan pane already
+ * shows it that way. Where a slot holds a single music, its name is folded onto
+ * this line after " – "; that part is a title and keeps the case it was given.
+ */
+function slotHeadingLine(slot) {
+    if (!slot) {
+        return slot;
+    }
+
+    const cut = slot.indexOf(' – ');
+
+    return cut === -1
+        ? slot.toUpperCase()
+        : slot.slice(0, cut).toUpperCase() + slot.slice(cut);
+}
+
+/**
  * A paragraph of instructions, flowed like everything else.
  *
  * It is set in the interface font at the booklet's lyric size, so a rubric
@@ -233,7 +252,7 @@ export function buildTextBlocks(entry, geometry, measure = null) {
         measure: measure ?? canvasMeasurer(geometry.textFont, fontSize),
     });
 
-    const blocks = geometry.showTitles ? headingBlocks(entry, geometry) : [];
+    const blocks = headingBlocks(entry, geometry);
     const heading = blocks.length;
 
     rows.forEach((row, i) => {
@@ -268,9 +287,7 @@ export function buildTextBlocks(entry, geometry, measure = null) {
 export async function buildFileBlocks(entry, geometry) {
     const blocks = [];
 
-    if (geometry.showTitles) {
-        headingBlocks(entry, geometry).forEach((block) => blocks.push(block));
-    }
+    headingBlocks(entry, geometry).forEach((block) => blocks.push(block));
 
     // Fetched before anything is placed, and all at once, so the systems that
     // did arrive are laid out as though they were the whole score — a page break

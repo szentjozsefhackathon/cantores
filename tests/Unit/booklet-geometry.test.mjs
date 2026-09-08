@@ -42,7 +42,6 @@ test('A5 portrait with a 12mm margin becomes the expected pixel box', () => {
         contentHeightMm: 186,
         lyricSizePt: 11,
         staffHeightMm: 7,
-        showTitles: true,
     });
 
     close(geometry.pageWidthPx, 559.37, 0.01);
@@ -74,7 +73,6 @@ test('the typography a booklet chose travels with its geometry', () => {
         textFont: 'Lora',
         headingScale: 0.8,
         abcStaffSep: 32,
-        showTitles: true,
     });
 
     assert.equal(geometry.textFont, "'Lora'");

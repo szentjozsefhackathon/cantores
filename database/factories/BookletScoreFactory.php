@@ -22,6 +22,7 @@ class BookletScoreFactory extends Factory
             'sequence' => 0,
             'settings_override' => null,
             'start_on_new_page' => false,
+            'show_slot' => true,
             'show_variation' => false,
             'show_music_title' => true,
         ];

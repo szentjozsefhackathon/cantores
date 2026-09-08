@@ -30,7 +30,6 @@ class BookletFactory extends Factory
             'text_font' => 'Inter',
             'heading_scale' => 0.9,
             'abc_staff_sep' => 25,
-            'show_titles' => true,
         ];
     }
 

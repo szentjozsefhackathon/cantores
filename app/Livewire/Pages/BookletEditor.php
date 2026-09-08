@@ -84,8 +84,6 @@ class BookletEditor extends Component
     #[Validate('required|numeric|min:0|max:120')]
     public float $abcStaffSep = 25;
 
-    public bool $showTitles = true;
-
     /**
      * The paragraph just added, so that it opens ready to be written in.
      *
@@ -109,7 +107,6 @@ class BookletEditor extends Component
         $this->textFont = $booklet->text_font;
         $this->headingScale = $booklet->heading_scale;
         $this->abcStaffSep = $booklet->abc_staff_sep;
-        $this->showTitles = $booklet->show_titles;
 
         $this->normalizeOrder();
     }
@@ -320,7 +317,11 @@ class BookletEditor extends Component
 
             $slotLine = null;
 
-            if (! $entry->isText() && $assignment === null) {
+            if (! $entry->show_slot) {
+                // The row's own switch: the slot's name is printed unless it is
+                // told otherwise, the same way the music's name now is.
+                $slotLine = null;
+            } elseif (! $entry->isText() && $assignment === null) {
                 // Chosen outside the plan, or from an assignment since removed:
                 // the score speaks for itself.
                 $slotLine = $entry->score?->title;
@@ -439,7 +440,7 @@ class BookletEditor extends Component
 
     public function updated(string $property): void
     {
-        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'textFont', 'headingScale', 'abcStaffSep', 'showTitles'], true)) {
+        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'textFont', 'headingScale', 'abcStaffSep'], true)) {
             return;
         }
 
@@ -461,7 +462,6 @@ class BookletEditor extends Component
             'text_font' => $this->textFont,
             'heading_scale' => $this->headingScale,
             'abc_staff_sep' => $this->abcStaffSep,
-            'show_titles' => $this->showTitles,
         ]);
 
         unset($this->geometry);
@@ -547,6 +547,10 @@ class BookletEditor extends Component
      * the plan like everything else: at the head of a slot, at the head of one of
      * its musics, or straight after a row already standing there. Given none of
      * those, it opens the booklet.
+     *
+     * When adding text at the very top of the booklet (no slot, no music) and
+     * there is no text there yet, the text is filled with the booklet's title
+     * formatted as a heading.
      */
     public function addText(?int $slotPlanId = null, ?int $assignmentId = null, ?int $afterEntryId = null): void
     {
@@ -563,8 +567,23 @@ class BookletEditor extends Component
             in_array($afterEntryId, $order, true) ? $afterEntryId : null,
         );
 
+        // When adding text at the very top and there is no text there yet,
+        // fill it with the booklet's title formatted as a heading
+        $initialText = '';
+        if ($slotPlanId === null && $assignment === null) {
+            $hasTopLevelText = $this->entries
+                ->where('music_plan_slot_assignment_id', null)
+                ->where('music_plan_slot_plan_id', null)
+                ->where('score_id', null)
+                ->isNotEmpty();
+
+            if (! $hasTopLevelText) {
+                $initialText = '# '.ucfirst($this->booklet->title);
+            }
+        }
+
         $entry = $this->booklet->entries()->create([
-            'text' => '',
+            'text' => $initialText,
             'music_plan_slot_assignment_id' => $assignment?->id,
             'music_plan_slot_plan_id' => $slotPlanId,
             'sequence' => (int) $this->booklet->entries()->max('sequence') + 1,
@@ -586,6 +605,43 @@ class BookletEditor extends Component
     #[On('booklet-entry-changed')]
     public function entryChanged(): void
     {
+        $this->forgetEntries();
+    }
+
+    /**
+     * Turn the slot's name on or off in the printout.
+     *
+     * The switch sits in the plan beside the name it governs, but the name is
+     * spoken by one row — whichever opens the slot — so the choice is stored on
+     * that row. The plan hands its id in; this only has to be sure it is one of
+     * the booklet's own.
+     */
+    public function toggleSlotName(int $entryId): void
+    {
+        $this->toggleHeadingLine($entryId, 'show_slot');
+    }
+
+    /**
+     * Turn a music's own name on or off, the same way — stored on the row that
+     * opens the music, whether that row is a score or a paragraph.
+     */
+    public function toggleMusicName(int $entryId): void
+    {
+        $this->toggleHeadingLine($entryId, 'show_music_title');
+    }
+
+    private function toggleHeadingLine(int $entryId, string $column): void
+    {
+        $this->authorize('update', $this->booklet);
+
+        $entry = $this->booklet->entries()->find($entryId);
+
+        if (! $entry instanceof BookletScore) {
+            return;
+        }
+
+        $entry->update([$column => ! $entry->{$column}]);
+
         $this->forgetEntries();
     }
 

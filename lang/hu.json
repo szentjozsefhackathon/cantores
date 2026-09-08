@@ -1350,7 +1350,7 @@
     "Print the music title": "Ének címének kiírása",
     "Print the variation name": "Változat nevének kiírása",
     "Stand. The cantor sings the verses, **all** repeat the antiphon.": "Álljunk fel. A verseket az előénekes énekli, az antifónát **mindenki** ismétli.",
-    "Markdown: # heading, **bold**, *italic*, - list, > quote.": "Markdown: # cím, **félkövér**, *dőlt*, - lista, > idézet.",
+    "Markdown: # heading, **bold**, *italic*, - list, > quote, <red>red</red>, <small>small</small>.": "Markdown: # cím, **félkövér**, *dőlt*, - lista, > idézet, <red>piros</red>, <small>kicsi</small>.",
     "Add to the booklet": "Hozzáadás a füzethez",
     "In the booklet — click to take it out": "A füzetben van – kattints a kivételéhez",
     "Choose the music plan the booklet is for.": "Válaszd ki, melyik énekrendhez készül a füzet.",

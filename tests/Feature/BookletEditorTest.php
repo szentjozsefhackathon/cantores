@@ -369,7 +369,7 @@ it('names every booklet setting by its icon rather than a label', function () {
     $settings = [
         __('Title'), __('Page size'), __('Orientation'), __('Margin (mm)'),
         __('Lyric size (pt)'), __('Staff height (mm)'), __('Text font'),
-        __('Heading size (×)'), __('Titles'),
+        __('Heading size (×)'),
     ];
 
     expect($toolbar)->not->toBeNull();
@@ -439,31 +439,29 @@ it('says the booklet is being laid out again from the moment a knob is touched',
         ->and(trim($badge->textContent))->toContain(__('Laying out…'));
 });
 
-it('separates entry controls from icon-only score options and reflects their selected state', function () {
+it('separates the row ordering controls from the icon-only score options', function () {
     $user = User::factory()->create();
     [$booklet, $entries] = bookletWithEntries($user, 1);
     actingAs($user);
 
     $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
         ->assertSee(__('Start on a new page'))
-        ->assertSee(__('Print the music title'))
-        ->assertSee(__('Print the variation name'))
         ->assertSee(__('Adjust this score'))
         ->assertSee(__('Remove'));
 
     $document = new DOMDocument;
     @$document->loadHTML($component->html());
     $xpath = new DOMXPath($document);
-    $headerButtons = $xpath->query('//*[@data-entry-header]//button');
+    $navButtons = $xpath->query('//*[@data-entry-nav]//button');
     $optionButtons = $xpath->query('//*[@data-entry-options]//button');
 
-    expect($headerButtons)->toHaveCount(4)
-        ->and($optionButtons)->toHaveCount(4);
+    expect($navButtons)->toHaveCount(4)
+        ->and($optionButtons)->toHaveCount(2);
 
     // Where a row stands in the list is the list's business — moving it, taking
     // it out, and writing words under it all change the order — so those four are
     // asked of the booklet; what the row prints is the row's own.
-    foreach ($headerButtons as $button) {
+    foreach ($navButtons as $button) {
         expect($button->getAttribute('wire:click'))->toMatch('/^\$parent\.(move|removeEntry|addText)\(/');
     }
 
@@ -471,13 +469,13 @@ it('separates entry controls from icon-only score options and reflects their sel
         expect($button->getAttribute('wire:click'))->not->toContain('$parent.');
     }
 
-    foreach ([...$headerButtons, ...$optionButtons] as $button) {
+    foreach ([...$navButtons, ...$optionButtons] as $button) {
         expect(trim($button->textContent))->toBe('')
             ->and($button->getAttribute('aria-label'))->not->toBe('');
     }
 
     // A switch says which way it is set, and saying it wrong is worse than not
-    // saying it at all — so each is asked what it says, flipped, and asked again.
+    // saying it at all — so it is asked what it says, flipped, and asked again.
     $pressed = function (string $html, string $action): string {
         preg_match('/<button\b[^>]*wire:click="'.$action.'"[^>]*>/', $html, $matches);
 
@@ -486,15 +484,67 @@ it('separates entry controls from icon-only score options and reflects their sel
         return $state[1] ?? '';
     };
 
-    foreach (['toggleStartOnNewPage', 'toggleShowMusicTitle', 'toggleShowVariation'] as $action) {
-        $row = Livewire::test(EntryRow::class, ['entry' => $entries[0]->fresh()]);
+    $row = Livewire::test(EntryRow::class, ['entry' => $entries[0]->fresh()]);
+    $before = $pressed($row->html(), 'toggleStartOnNewPage');
 
-        $before = $pressed($row->html(), $action);
+    expect($before)->not->toBe('')
+        ->and($pressed($row->call('toggleStartOnNewPage')->html(), 'toggleStartOnNewPage'))
+        ->toBe($before === 'true' ? 'false' : 'true');
+});
 
-        expect($before)->not->toBe('')
-            ->and($pressed($row->call($action)->html(), $action))
-            ->toBe($before === 'true' ? 'false' : 'true');
-    }
+// The slot's name, the music's own name and the variation each get an eye
+// switch set beside the name it governs — the first two in the plan, the last
+// on the row — so what reaches the printed page is turned on and off where it
+// is read rather than from a row of unlabelled icons.
+it('puts an eye switch beside each heading name it governs', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
+
+    $entryId = $booklet->entries()->firstOrFail()->id;
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.Livewire::test(BookletEditor::class, ['booklet' => $booklet])->html());
+    $xpath = new DOMXPath($document);
+
+    // The switch's region, the click it fires, and the state it reports.
+    $switchIn = function (string $region, string $click) use ($xpath): ?DOMElement {
+        foreach ($xpath->query('//*[@'.$region.']//button') as $button) {
+            if ($button->getAttribute('wire:click') === $click) {
+                return $button;
+            }
+        }
+
+        return null;
+    };
+
+    $slotSwitch = $switchIn('data-plan-slot', 'toggleSlotName('.$entryId.')');
+    $musicSwitch = $switchIn('data-plan-music', 'toggleMusicName('.$entryId.')');
+    $variationSwitch = $switchIn('data-entry-card', 'toggleShowVariation');
+
+    expect($slotSwitch)->not->toBeNull()
+        ->and($musicSwitch)->not->toBeNull()
+        ->and($variationSwitch)->not->toBeNull();
+
+    // The slot and the music start shown, the variation hidden — and each says so.
+    expect($slotSwitch->getAttribute('aria-pressed'))->toBe('true')
+        ->and($musicSwitch->getAttribute('aria-pressed'))->toBe('true')
+        ->and($variationSwitch->getAttribute('aria-pressed'))->toBe('false');
+
+    // Flipping each one through its own component moves what the page prints.
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])->call('toggleSlotName', $entryId);
+    tellRow($booklet->entries()->firstOrFail(), 'toggleShowVariation');
+
+    $payload = payloadOf($booklet);
+
+    expect($payload[0]['slot'])->toBeNull()
+        ->and($payload[0]['variation'])->toBe('Áldjad, én lelkem – orgonakíséret');
 });
 
 // The whole point of a row being a component of its own: the booklet around it can
@@ -1109,9 +1159,10 @@ it('keeps the music title off the page for a row told to', function () {
     Livewire::test(BookletEditor::class, ['booklet' => $booklet])
         ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
 
-    // A slot whose name already says the music: the switch is how the name is
-    // stopped from being printed twice.
-    tellRow($booklet->entries()->firstOrFail(), 'toggleShowMusicTitle');
+    // A slot whose name already says the music: the switch — beside the music's
+    // name in the plan — is how that name is stopped from being printed twice.
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleMusicName', $booklet->entries()->firstOrFail()->id);
 
     $payload = payloadOf($booklet);
 
@@ -1196,6 +1247,31 @@ it('prints the variation name only for the score that asked for it', function ()
         ->toBe('Áldjad, én lelkem – orgonakíséret');
 });
 
+it('keeps the slot name off the page for a row told to', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleScore', $scores[0]->id, $assignments[0]->id);
+
+    // Printed unless the row says otherwise, the same way the music's name is.
+    expect(payloadOf($booklet)[0]['slot'])->toBe('Kezdőének – Áldjad, én lelkem');
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleSlotName', $booklet->entries()->firstOrFail()->id);
+
+    $payload = payloadOf($booklet);
+
+    // The slot's name is gone. The music's name, which had been folded into the
+    // slot's line, stands on its own now rather than being lost with it.
+    expect($payload[0]['slot'])->toBeNull()
+        ->and($payload[0]['music'])->toBe('Áldjad, én lelkem');
+});
+
 // A heading is read by whoever holds the booklet: it must come from that
 // booklet's own service, never from someone else's.
 it('ignores an assignment that is not in the booklets plan', function () {
@@ -1231,6 +1307,55 @@ it('adds a paragraph of instructions and keeps its Markdown', function () {
         ->and($entry->text)->toContain('Álljunk fel')
         ->and(payloadOf($booklet)[0])
         ->toMatchArray(['kind' => 'text', 'id' => $entry->id]);
+});
+
+it('fills new top-level text with the booklet title when there is no text yet', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $booklet->update(['title' => 'Advent Sunday']);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])->call('addText');
+
+    $entry = $booklet->entries()->firstOrFail();
+
+    // The new text entry is pre-filled with the booklet title formatted as a heading
+    expect($entry->isText())->toBeTrue()
+        ->and($entry->text)->toBe('# Advent Sunday');
+});
+
+it('does not fill text with title when text already exists at the top', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $booklet->update(['title' => 'Advent Sunday']);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet]);
+
+    // Add the first text - should be filled with title
+    $component->call('addText');
+
+    $firstEntry = $booklet->entries()->orderBy('sequence')->first();
+
+    expect($firstEntry->text)->toBe('# Advent Sunday');
+
+    // Add a second text - should be empty since text already exists at top
+    $component->call('addText');
+
+    $entries = $booklet->entries()->orderBy('sequence')->get();
+
+    expect($entries)->toHaveCount(2);
+
+    // Find which entry has the title and which is empty
+    $titleEntry = $entries->firstWhere('text', '# Advent Sunday');
+    $emptyEntry = $entries->firstWhere('text', '');
+
+    expect($titleEntry)->not->toBeNull()
+        ->and($titleEntry->text)->toBe('# Advent Sunday')
+        ->and($emptyEntry)->not->toBeNull()
+        ->and($emptyEntry->text)->toBe('');
 });
 
 // A paragraph is added in order to be written, so it opens with the cursor's place
@@ -1290,17 +1415,16 @@ it('lets the words carrying a music name keep it off the page', function () {
 
     $entries = $booklet->entries()->orderBy('sequence')->get();
 
-    // The switch is offered by whichever row would print the name — words as
-    // much as music — and by no row that would not.
-    $switch = fn (BookletScore $entry): bool => str_contains(
-        Livewire::test(EntryRow::class, ['entry' => $entry])->html(),
-        'wire:click="toggleShowMusicTitle"',
-    );
+    // The switch stands beside the music in the plan and points at the row that
+    // speaks its name — here the words at the head of the music, not the rubric
+    // that merely opens the slot.
+    $plan = Livewire::test(BookletEditor::class, ['booklet' => $booklet])->html();
 
-    expect($switch($entries[2]))->toBeTrue()
-        ->and($switch($entries[0]))->toBeFalse();
+    expect($plan)->toContain('wire:click="toggleMusicName('.$entries[2]->id.')"')
+        ->and($plan)->not->toContain('wire:click="toggleMusicName('.$entries[0]->id.')"');
 
-    tellRow($entries[2], 'toggleShowMusicTitle');
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('toggleMusicName', $entries[2]->id);
 
     $payload = payloadOf($booklet);
 

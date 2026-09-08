@@ -78,7 +78,6 @@ export function pageGeometry(geometry) {
         textFont: quoteFontFamily(geometry.textFont),
         headingScale: Number(geometry.headingScale) > 0 ? Number(geometry.headingScale) : 1,
         abcStaffSep: Number(geometry.abcStaffSep) >= 0 ? Number(geometry.abcStaffSep) : DEFAULT_ABC_STAFF_SEP,
-        showTitles: geometry.showTitles !== false,
     };
 }
 

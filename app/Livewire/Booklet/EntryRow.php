@@ -95,14 +95,15 @@ class EntryRow extends Component
         $this->flip('start_on_new_page');
     }
 
+    /**
+     * The variation name is the one heading line printed against the row itself
+     * rather than against a slot or a music, so its switch is the row's own. The
+     * slot's and the music's are asked of the booklet, beside those names in the
+     * plan.
+     */
     public function toggleShowVariation(): void
     {
         $this->flip('show_variation');
-    }
-
-    public function toggleShowMusicTitle(): void
-    {
-        $this->flip('show_music_title');
     }
 
     private function flip(string $column): void

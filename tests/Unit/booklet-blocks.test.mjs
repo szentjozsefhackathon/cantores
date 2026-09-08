@@ -24,7 +24,6 @@ const geometry = pageGeometry({
     contentHeightMm: 186,
     lyricSizePt: 11,
     staffHeightMm: 7,
-    showTitles: true,
 });
 
 const CHANT = 'c: f\nn: fg h g f g h\nw: Ky-ri-e e-lei-son Chri-ste e-lei-son\n';
@@ -51,7 +50,7 @@ test('a chant becomes a heading block and one block per staff row', async () => 
 
     assert.ok(blocks.length >= 2, 'expected a heading and at least one staff row');
     assert.equal(blocks[0].keepWithNext, true, 'the heading must not be orphaned');
-    assert.match(blocks[0].svg, /Kyrie/);
+    assert.match(blocks[0].svg, /KYRIE/);
 });
 
 // What is said above a score comes from the plan: the moment in the service,
@@ -63,7 +62,9 @@ test('every heading line the entry carries is set above the music', async () => 
         null,
     );
 
-    assert.match(blocks[0].svg, /Áldozás/);
+    // The slot's line is set in capitals; the music's own name and the
+    // variation keep the case they were given.
+    assert.match(blocks[0].svg, /ÁLDOZÁS/);
     assert.match(blocks[1].svg, /Ének egy/);
     assert.match(blocks[2].svg, /orgonakíséret/);
     assert.match(blocks[2].svg, /font-style="italic"/);
@@ -72,6 +73,19 @@ test('every heading line the entry carries is set above the music', async () => 
     assert.match(blocks[0].svg, new RegExp(`font-size="${geometry.lyricSizePx.toFixed(3).replace(/\.?0+$/, '')}`));
     assert.deepEqual(blocks.slice(0, 3).map(block => block.keepWithNext), [true, true, true]);
     assert.deepEqual(blocks.slice(1, 3).map(block => block.spaceBefore), [0, 0]);
+});
+
+// Where a slot holds a single music its name is folded onto the slot's line
+// after " – ": the slot half is set in capitals, the title half keeps its case.
+test('a music title folded onto the slot line keeps its own case', async () => {
+    const { blocks } = await buildScoreBlocks(
+        entry({ slot: 'Kezdőének – Áldjad, én lelkem', music: null, variation: null }),
+        geometry,
+        null,
+    );
+
+    assert.match(blocks[0].svg, /KEZDŐÉNEK – Áldjad, én lelkem/);
+    assert.doesNotMatch(blocks[0].svg, /ÁLDJAD/);
 });
 
 // A heading at the full lyric size shouts on a small page, and a booklet set in
@@ -170,13 +184,16 @@ test('an empty score contributes nothing', async () => {
     assert.equal(blocks.filter(block => !block.keepWithNext).length, 0);
 });
 
-test('titles can be turned off', async () => {
+// There is no booklet-wide title switch any more: a row that carries none of the
+// three heading lines — its switches all say no — simply has no heading at all.
+test('a row that carries no heading line at all contributes no heading block', async () => {
     const { blocks } = await buildScoreBlocks(
-        entry(),
-        { ...geometry, showTitles: false },
+        entry({ slot: null, music: null, variation: null }),
+        geometry,
         null,
     );
 
+    assert.equal(blocks[0].startsScore, true, 'the first block is the music itself');
     assert.doesNotMatch(blocks[0].svg, /Kyrie/);
 });
 
@@ -211,13 +228,13 @@ test('a paragraph at the head of a slot carries the slot\'s name', () => {
         measure,
     );
 
-    assert.match(named.blocks[0].svg, /Áldozás/);
+    assert.match(named.blocks[0].svg, /ÁLDOZÁS/);
     assert.match(named.blocks[1].svg, /Ének kettő/);
     assert.match(named.blocks[2].svg, /Álljunk fel/);
 
     const { blocks } = buildTextBlocks(paragraph, geometry, measure);
 
-    assert.match(blocks[0].svg, /Kezdőének/);
+    assert.match(blocks[0].svg, /KEZDŐÉNEK/);
     assert.match(blocks[0].svg, /font-weight="bold"/);
     assert.equal(blocks[0].keepWithNext, true, 'the name must not end a page alone');
     assert.equal(blocks[0].breakBefore, true, 'the page break belongs to the heading now');
@@ -228,10 +245,6 @@ test('a paragraph at the head of a slot carries the slot\'s name', () => {
     const plain = buildTextBlocks({ ...paragraph, slot: null }, geometry, measure);
 
     assert.doesNotMatch(plain.blocks[0].svg, /Kezdőének/);
-
-    const untitled = buildTextBlocks(paragraph, { ...geometry, showTitles: false }, measure);
-
-    assert.doesNotMatch(untitled.blocks[0].svg, /Kezdőének/);
 });
 
 // A rubric speaks at the same size as the lyrics beside it, in the face the

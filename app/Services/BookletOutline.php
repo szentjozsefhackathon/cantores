@@ -381,6 +381,7 @@ class BookletOutline
         usort($placed, fn (array $a, array $b): int => $a['sequence'] <=> $b['sequence']);
 
         $children = $this->anchor(array_column($placed, 'node'), $unplaced);
+        $headingEntry = $this->firstEntry($children);
 
         return [
             'kind' => 'slot',
@@ -390,6 +391,11 @@ class BookletOutline
             'children' => $this->withMoves($children),
             'weight' => $this->weigh($children),
             'sequence' => $placed === [] ? PHP_INT_MAX : $placed[0]['sequence'],
+            // The row that speaks this slot's name, and whether it is speaking
+            // it: the plan puts the switch beside the name, but the choice is
+            // the opening row's.
+            'headingEntryId' => $headingEntry?->id,
+            'showsName' => ! $headingEntry instanceof BookletScore || $headingEntry->show_slot,
         ];
     }
 
@@ -405,6 +411,7 @@ class BookletOutline
     private function musicNode(array $assignment, int $slotPlanId, int $planIndex, array $entries, array $chosenScoreIds, array $chosenFileIds): array
     {
         $children = array_map(fn (BookletScore $entry): array => $this->entryNode($entry), $entries);
+        $headingEntry = $entries[0] ?? null;
 
         return [
             'kind' => 'music',
@@ -417,6 +424,10 @@ class BookletOutline
             'offers' => $this->offers($assignment['scores'], $chosenScoreIds, $chosenFileIds),
             'weight' => count($children),
             'sequence' => $entries === [] ? PHP_INT_MAX : $entries[0]->sequence,
+            // The row that speaks this music's own name, and whether it is: the
+            // switch stands beside the name in the plan, the choice is the row's.
+            'headingEntryId' => $headingEntry?->id,
+            'showsName' => ! $headingEntry instanceof BookletScore || $headingEntry->show_music_title,
         ];
     }
 
@@ -472,6 +483,30 @@ class BookletOutline
     private function entryNode(BookletScore $entry): array
     {
         return ['kind' => 'entry', 'entry' => $entry, 'weight' => 1];
+    }
+
+    /**
+     * The first row printed under these nodes — the one that speaks the slot's
+     * name, or the music's, and so the one whose switch turns that name on and
+     * off. Null where nothing has been chosen yet.
+     *
+     * @param  list<array<string, mixed>>  $nodes
+     */
+    private function firstEntry(array $nodes): ?BookletScore
+    {
+        foreach ($nodes as $node) {
+            if ($node['kind'] === 'entry') {
+                return $node['entry'];
+            }
+
+            $found = $this->firstEntry($node['children']);
+
+            if ($found instanceof BookletScore) {
+                return $found;
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -12,7 +12,6 @@ const geometry = pageGeometry({
     contentHeightMm: 186,
     lyricSizePt: 11,
     staffHeightMm: 7,
-    showTitles: true,
 });
 
 /** Three systems cut from one page: same width, differing heights. */

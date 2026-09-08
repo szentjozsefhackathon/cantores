@@ -222,7 +222,7 @@ function renderBlock(block, options, size) {
     const measure = (text, opts = {}) => options.measure(text, {
         bold: opts.bold ?? style.bold,
         italic: opts.italic ?? style.italic,
-        fontSize: size,
+        fontSize: size * (opts.fontSize ?? 1),
     });
 
     const words = inlineWords(block.text, style);
@@ -243,10 +243,11 @@ function renderBlock(block, options, size) {
         runsOf(line, measure).forEach((run) => {
             parts.push(textElement(run.text, indent + run.x, lineHeight * 0.78, {
                 fontFamily,
-                fontSize: size,
+                fontSize: size * (run.fontSize ?? 1),
                 fill: style.fill,
                 bold: run.bold,
                 italic: run.italic,
+                color: run.color,
             }));
         });
 
@@ -260,7 +261,7 @@ function renderBlock(block, options, size) {
 /**
  * The words of one block, each carrying the emphasis it was written with.
  *
- * @returns {Array<{text: string, bold: boolean, italic: boolean}>}
+ * @returns {Array<{text: string, bold: boolean, italic: boolean, color?: string, fontSize?: number}>}
  */
 export function inlineWords(text, style = {}) {
     const words = [];
@@ -268,7 +269,13 @@ export function inlineWords(text, style = {}) {
     inlineSegments(text, style).forEach((segment) => {
         segment.text.split(/\s+/).forEach((word) => {
             if (word !== '') {
-                words.push({ text: word, bold: segment.bold, italic: segment.italic });
+                words.push({
+                    text: word,
+                    bold: segment.bold,
+                    italic: segment.italic,
+                    color: segment.color,
+                    fontSize: segment.fontSize,
+                });
             }
         });
     });
@@ -277,13 +284,14 @@ export function inlineWords(text, style = {}) {
 }
 
 /**
- * Split a line on its emphasis markers.
+ * Split a line on its emphasis markers and tags.
  *
+ * Supports **bold**, __bold__, *italic*, _italic_, <red>red text</red>, and <small>small text</small>.
  * A marker that never closes is left standing as the character someone typed,
  * because a lone asterisk in a rubric is far likelier to be an asterisk than a
  * mistake.
  *
- * @returns {Array<{text: string, bold: boolean, italic: boolean}>}
+ * @returns {Array<{text: string, bold: boolean, italic: boolean, color?: string, fontSize?: number}>}
  */
 export function inlineSegments(text, style = {}) {
     const baseBold = !!style.bold;
@@ -293,12 +301,20 @@ export function inlineSegments(text, style = {}) {
 
     let bold = false;
     let italic = false;
+    let color = null;
+    let fontSize = 1;
     let buffer = '';
     let i = 0;
 
     const push = () => {
         if (buffer !== '') {
-            segments.push({ text: buffer, bold: baseBold || bold, italic: baseItalic || italic });
+            segments.push({
+                text: buffer,
+                bold: baseBold || bold,
+                italic: baseItalic || italic,
+                color,
+                fontSize,
+            });
             buffer = '';
         }
     };
@@ -310,6 +326,41 @@ export function inlineSegments(text, style = {}) {
 
     while (i < source.length) {
         const rest = source.slice(i);
+
+        // Check for HTML-like tags
+        const redOpenTag = rest.match(/^<red>/);
+        if (redOpenTag) {
+            push();
+            color = '#cc0000';
+            i += 5;
+            continue;
+        }
+
+        const redCloseTag = rest.match(/^<\/red>/);
+        if (redCloseTag) {
+            push();
+            color = null;
+            i += 6;
+            continue;
+        }
+
+        const smallOpenTag = rest.match(/^<small>/);
+        if (smallOpenTag) {
+            push();
+            fontSize = 0.8;
+            i += 7;
+            continue;
+        }
+
+        const smallCloseTag = rest.match(/^<\/small>/);
+        if (smallCloseTag) {
+            push();
+            fontSize = 1;
+            i += 8;
+            continue;
+        }
+
+        // Check for asterisk/underscore markers
         const marker = rest.match(/^(\*\*\*|___|\*\*|__|\*|_)/);
 
         if (marker && (isOpen(marker[1]) || closes(source, i, marker[1]))) {
@@ -391,7 +442,11 @@ function runsOf(words, measure) {
         const previous = runs[runs.length - 1];
         const space = i === 0 ? '' : ' ';
 
-        if (previous && previous.bold === word.bold && previous.italic === word.italic) {
+        if (previous
+            && previous.bold === word.bold
+            && previous.italic === word.italic
+            && previous.color === word.color
+            && previous.fontSize === word.fontSize) {
             previous.text += space + word.text;
             x += measure(space + word.text, word);
 
@@ -399,19 +454,27 @@ function runsOf(words, measure) {
         }
 
         x += measure(space, word);
-        runs.push({ text: word.text, bold: word.bold, italic: word.italic, x });
+        runs.push({
+            text: word.text,
+            bold: word.bold,
+            italic: word.italic,
+            color: word.color,
+            fontSize: word.fontSize,
+            x,
+        });
         x += measure(word.text, word);
     });
 
     return runs;
 }
 
-function textElement(content, x, y, { fontFamily, fontSize, fill = '#000000', bold = false, italic = false }) {
+function textElement(content, x, y, { fontFamily, fontSize, fill = '#000000', bold = false, italic = false, color = null }) {
     const weight = bold ? ' font-weight="bold"' : '';
     const style = italic ? ' font-style="italic"' : '';
+    const fillColor = color || fill;
 
     return `<text x="${round(x)}" y="${round(y)}" font-family="${escapeXml(fontFamily)}" `
-        + `font-size="${round(fontSize)}" fill="${fill}"${weight}${style} `
+        + `font-size="${round(fontSize)}" fill="${fillColor}"${weight}${style} `
         + `xml:space="preserve">${escapeXml(content)}</text>`;
 }
 
