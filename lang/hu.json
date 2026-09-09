@@ -1360,5 +1360,15 @@
     "Search celebrations": "Ünnepek keresése",
     "No music plans found.": "Nincs találat az énekrendek között.",
     "Untitled plan": "Névtelen énekrend",
-    "Start without a plan": "Kezdés énekrend nélkül"
+    "Start without a plan": "Kezdés énekrend nélkül",
+    "Share with the band": "Megosztás az énekesekkel",
+    "Recall the link": "Link visszavonása",
+    "Recall this link? Anyone still holding it will lose the booklet.": "Visszavonod a linket? Aki még őrzi, elveszíti a füzetet.",
+    "Create the link": "Link létrehozása",
+    "Smaller": "Kisebb",
+    "Bigger": "Nagyobb",
+    "Refresh the booklet": "Füzet frissítése",
+    "Back to the booklet as it was made": "Vissza az eredeti füzethez",
+    "This booklet is empty.": "Ez a füzet üres.",
+    "Anyone holding this link opens the booklet on their own phone — the booklet itself, not a copy of it, engraved to the width of their screen. They can set their own size and font without changing anything here, and they cannot download or edit it. Whatever you change is theirs on the next refresh.": "Aki megkapja ezt a linket, a saját telefonján nyitja meg a füzetet – magát a füzetet, nem a másolatát, a képernyője szélességéhez igazítva. Mindenki a saját méretét és betűtípusát állíthatja be anélkül, hogy itt bármi megváltozna; letölteni és szerkeszteni nem tudják. Amit itt módosítasz, a következő frissítéskor náluk is megjelenik."
 }

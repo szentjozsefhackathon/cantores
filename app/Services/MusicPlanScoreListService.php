@@ -96,8 +96,12 @@ class MusicPlanScoreListService
      * content itself — because it re-engraves every score in the browser at the
      * booklet's page size. It is the same access axes and the same query, so
      * nothing is widened: a score reaches a booklet exactly when it would reach
-     * the service list. A booklet is built by its owner from their own plan, so
-     * there is no link to have arrived on and no loan to supply here.
+     * the service list.
+     *
+     * `$openLoan` is the lending link the reader arrived on, exactly as in
+     * forViewer(). The booklet's owner has none — they are reading their own
+     * editor — but a musician opening the shared handout has nothing else, and
+     * it is that link, not an account, that entitles them to the pages.
      *
      * Resolved per request, like everything else here, which is what makes a
      * recalled loan drop out of the booklet rather than leaving a copy behind.
@@ -127,14 +131,16 @@ class MusicPlanScoreListService
      * @param  list<int>  $scoreIds
      * @return Collection<int, array<string, mixed>>
      */
-    public function sourcesFor(array $scoreIds, ?User $viewer): Collection
+    public function sourcesFor(array $scoreIds, ?User $viewer, ?Loan $openLoan = null): Collection
     {
         if ($scoreIds === []) {
             return collect();
         }
 
+        $openLoanScoreIds = $openLoan instanceof Loan ? $this->loans->scoreIdsFor($openLoan) : [];
+
         $query = Score::query()->whereIn('id', $scoreIds);
-        $this->scopeToViewer($query, $viewer);
+        $this->scopeToViewer($query, $viewer, $openLoanScoreIds);
 
         $scores = $query->with(['files', 'publication'])->get();
 
@@ -144,6 +150,10 @@ class MusicPlanScoreListService
         $loansByScoreId = $viewer instanceof User && $scores->contains(fn (Score $score): bool => $score->user_id !== $viewer->getKey())
             ? $this->keptLoansByScoreId($viewer)
             : collect();
+
+        foreach ($openLoanScoreIds as $scoreId) {
+            $loansByScoreId->put($scoreId, $openLoan);
+        }
 
         return $scores
             ->mapWithKeys(function (Score $score) use ($viewer, $loansByScoreId): array {

@@ -6,10 +6,10 @@ use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
 use App\Models\Booklet;
 use App\Models\BookletScore;
-use App\Models\Music;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Services\BookletOutline;
+use App\Services\BookletRenderPayload;
 use App\Services\MusicPlanScoreListService;
 use App\Support\BookletSettingFields;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -95,6 +95,18 @@ class BookletEditor extends Component
      */
     public ?int $openedTextId = null;
 
+    /**
+     * The link the band reads this booklet on, when there is one.
+     *
+     * A booklet is made to be sung from, and the people singing from it are not
+     * at the printer. The link hands them the booklet itself rather than a copy
+     * of it — engraved afresh on each of their phones, at whatever size they can
+     * read — so a chord fixed here at the rehearsal is in their hands on the
+     * next refresh. It is read-only and it is recallable, like every other
+     * lending link on the site.
+     */
+    public ?string $shareUrl = null;
+
     public function mount(Booklet $booklet): void
     {
         $this->authorize('update', $booklet);
@@ -110,7 +122,37 @@ class BookletEditor extends Component
         $this->headingScale = $booklet->heading_scale;
         $this->abcStaffSep = $booklet->abc_staff_sep;
 
+        $this->shareUrl = $this->urlForToken($booklet->loanToken());
+
         $this->normalizeOrder();
+    }
+
+    /**
+     * Hand the booklet to the band.
+     *
+     * Nothing is copied and nothing is frozen: the link resolves to this booklet
+     * on every request, so what it opens is whatever the booklet says at the
+     * moment it is opened.
+     */
+    public function lendByLink(): void
+    {
+        $this->authorize('update', $this->booklet);
+
+        $this->shareUrl = $this->urlForToken($this->booklet->mintLoan()->token);
+    }
+
+    /**
+     * Take it back. The scores the booklet reaches were never minted onto
+     * anybody — they are derived from this loan on every request — so this closes
+     * the pages and the systems under them at once.
+     */
+    public function recallLoan(): void
+    {
+        $this->authorize('update', $this->booklet);
+
+        $this->booklet->revokeLoans();
+
+        $this->shareUrl = null;
     }
 
     /**
@@ -161,219 +203,40 @@ class BookletEditor extends Component
     #[Computed]
     public function entries(): Collection
     {
-        return $this->booklet->entries()
-            ->with(['score.music.collections', 'scoreFile', 'assignment.music.collections', 'assignment.musicPlanSlot', 'slotPlan.musicPlanSlot'])
-            ->get();
+        return app(BookletRenderPayload::class)->entriesOf($this->booklet);
     }
 
     /**
      * What the browser needs to draw the booklet.
      *
-     * The sources come from MusicPlanScoreListService, so a score reaches the
-     * page exactly when the viewer may read it — and stops reaching it the moment
-     * a loan is recalled, since this is resolved afresh on every render.
+     * Built by BookletRenderPayload rather than here, because the musicians
+     * reading the shared link draw the same pages from the same payload and the
+     * two must not be able to disagree.
      *
      * @return list<array<string, mixed>>
      */
     #[Computed]
     public function renderPayload(): array
     {
-        $entries = $this->entries;
-        $headings = $this->headings;
-        $sources = $this->entrySources;
-
-        return $entries
-            ->map(function (BookletScore $entry) use ($sources, $headings): ?array {
-                $heading = $headings[$entry->id] ?? ['slot' => null, 'music' => null, 'reference' => null, 'variation' => null];
-
-                if ($entry->isText()) {
-                    return [
-                        'id' => $entry->id,
-                        'kind' => 'text',
-                        'text' => $entry->text ?? '',
-                        // A paragraph that opens a slot — or one of its musics —
-                        // carries that name, so a rubric written under the
-                        // heading is printed under it rather than above it.
-                        'slot' => $heading['slot'],
-                        'music' => $heading['music'],
-                        'reference' => $heading['reference'],
-                        'startOnNewPage' => $entry->start_on_new_page,
-                    ];
-                }
-
-                $source = $sources->get($entry->score_id);
-
-                if ($source === null) {
-                    return null;
-                }
-
-                $common = [
-                    'id' => $entry->id,
-                    'scoreId' => $entry->score_id,
-                    'slot' => $heading['slot'],
-                    'music' => $heading['music'],
-                    'reference' => $heading['reference'],
-                    'variation' => $heading['variation'],
-                    'startOnNewPage' => $entry->start_on_new_page,
-                ];
-
-                // An uploaded score has no source to re-engrave, so it travels
-                // as the systems it was cut into — by URL rather than inline,
-                // because this payload crosses the wire on every change.
-                //
-                // A vector-rendered file names its page once and each system as
-                // a rectangle onto it; a raster one names each system's own
-                // image. The browser tells them apart by which URL is present.
-                if ($source['format'] === null) {
-                    $file = $this->fileOf($entry, $source);
-
-                    return [
-                        ...$common,
-                        'kind' => 'file',
-                        'fileId' => $file['file_id'],
-                        'override' => $entry->settings_override ?? [],
-                        'strips' => array_map(function (array $strip) use ($file): array {
-                            if (isset($strip['rect'])) {
-                                return [
-                                    'pageUrl' => route('booklets.score-page', [
-                                        'booklet' => $this->booklet->id,
-                                        'scoreFile' => $file['file_id'],
-                                        'page' => $strip['page'],
-                                    ]),
-                                    // Named as well as addressed: the browser
-                                    // scopes a page's cairo ids by it, and the
-                                    // export placeholder carries it back so the
-                                    // server knows which page to inline.
-                                    'page' => $strip['page'],
-                                    'rect' => implode(' ', $strip['rect']),
-                                    'width' => $strip['width'],
-                                    'height' => $strip['height'],
-                                ];
-                            }
-
-                            return [
-                                'url' => route('booklets.strip', [
-                                    'booklet' => $this->booklet->id,
-                                    'scoreFile' => $file['file_id'],
-                                    'page' => $strip['page'],
-                                    'index' => $strip['index'],
-                                ]),
-                                'width' => $strip['width'],
-                                'height' => $strip['height'],
-                            ];
-                        }, $file['strips']),
-                    ];
-                }
-
-                return [
-                    ...$common,
-                    'kind' => 'score',
-                    'format' => $source['format'],
-                    'content' => $source['content'],
-                    'settings' => $source['settings'],
-                    'override' => $entry->settings_override ?? [],
-                ];
-            })
-            ->filter()
-            ->values()
-            ->all();
+        return app(BookletRenderPayload::class)->entries(
+            $this->booklet,
+            $this->entries,
+            $this->entrySources,
+            $this->headings,
+        );
     }
 
     /**
-     * What is printed above each entry, resolved from the plan rather than stored.
-     *
-     * A booklet names the moment in the service and the music sung at it. Each is
-     * announced once, by whichever row opens it: a slot sung from three engravings
-     * is not named three times, and neither is the music. Rows that belong to no
-     * slot — a paragraph opening the booklet, a score chosen outside the plan —
-     * say nothing about it and start no naming over.
-     *
-     * A paragraph opens a slot or a music exactly as a score does, because it was
-     * written to introduce that moment, and a heading printed after the words
-     * introducing it reads backwards.
-     *
-     * The music's name joins the slot on its line where the slot holds a single
-     * music and there is nothing to tell apart; where the slot holds several,
-     * every one of them takes a line of its own beneath the slot's, so they read
-     * as the list they are rather than the first being promoted into the heading.
-     * A row can be told to keep its music's name off the page, which is how a
-     * music the slot already names is stopped from saying it twice.
+     * What is printed above each entry, resolved from the plan rather than
+     * stored. BookletRenderPayload owns the rules; the pane and the pages both
+     * read them from there.
      *
      * @return array<int, array{slot: ?string, music: ?string, reference: ?string, variation: ?string}>
      */
     #[Computed]
     public function headings(): array
     {
-        $entries = $this->entries;
-        $assignments = $this->assignmentsFor($entries);
-        $musicCounts = $this->musicCountsPerSlot($entries, $assignments);
-
-        $lines = [];
-        $lastSlotKey = null;
-        $lastMusicKey = null;
-
-        foreach ($entries as $entry) {
-            $assignment = $assignments->get($entry->music_plan_slot_assignment_id);
-            $slotKey = $entry->isText()
-                ? $entry->music_plan_slot_plan_id
-                : $assignment?->music_plan_slot_plan_id;
-            $musicKey = $assignment?->id;
-
-            $slotLine = null;
-
-            if (! $entry->show_slot) {
-                // The row's own switch: the slot's name is printed unless it is
-                // told otherwise, the same way the music's name now is.
-                $slotLine = null;
-            } elseif (! $entry->isText() && $assignment === null) {
-                // Chosen outside the plan, or from an assignment since removed:
-                // the score speaks for itself.
-                $slotLine = $entry->score?->title;
-            } elseif ($slotKey !== null && $slotKey !== $lastSlotKey) {
-                $slotLine = $assignment?->musicPlanSlot?->name ?? $entry->slotPlan?->musicPlanSlot?->name;
-            }
-
-            // The music is named once, by the row that opens it — and where the
-            // score was chosen from no plan at all, by every row of it, there
-            // being nothing that groups them.
-            $music = $assignment?->music ?? ($entry->isText() ? null : $entry->score?->music);
-            $namesMusic = $assignment instanceof MusicPlanSlotAssignment
-                ? $musicKey !== $lastMusicKey
-                : $music instanceof Music;
-
-            $musicTitle = $namesMusic && $musicKey !== null && $entry->show_music_title
-                ? $assignment?->music?->title
-                : null;
-
-            // Where it can be looked up follows the name it belongs to, and is
-            // asked for on its own: a booklet is printed because the books it
-            // would point at are not in every hand, so it says nothing about
-            // them until someone wants it to.
-            $reference = $namesMusic && $entry->show_collections
-                ? $music?->collectionReference(Auth::user())
-                : null;
-
-            $alone = $slotKey !== null && ($musicCounts[$slotKey] ?? 0) <= 1;
-
-            if ($slotLine !== null && $musicTitle !== null && $alone) {
-                $slotLine = implode(' – ', [$slotLine, $musicTitle]);
-                $musicTitle = null;
-            }
-
-            $lines[$entry->id] = [
-                'slot' => $slotLine,
-                'music' => $musicTitle,
-                'reference' => $reference,
-                'variation' => ! $entry->isText() && $entry->show_variation
-                    ? $entry->score?->variationLabel()
-                    : null,
-            ];
-
-            $lastSlotKey = $slotKey ?? $lastSlotKey;
-            $lastMusicKey = $musicKey ?? $lastMusicKey;
-        }
-
-        return $lines;
+        return app(BookletRenderPayload::class)->headingsFor($this->entries, Auth::user());
     }
 
     /**
@@ -405,10 +268,7 @@ class BookletEditor extends Component
     #[Computed]
     public function entrySources(): Collection
     {
-        return app(MusicPlanScoreListService::class)->sourcesFor(
-            $this->entries->whereNotNull('score_id')->pluck('score_id')->unique()->values()->all(),
-            Auth::user(),
-        );
+        return app(BookletRenderPayload::class)->sourcesFor($this->entries, Auth::user());
     }
 
     /**
@@ -430,33 +290,11 @@ class BookletEditor extends Component
             ->map(function (BookletScore $entry) use ($sources): ?int {
                 $source = $sources->get($entry->score_id);
 
-                return $source === null ? null : $this->fileOf($entry, $source)['file_id'];
+                return $source === null ? null : app(BookletRenderPayload::class)->fileOf($entry, $source)['file_id'];
             })
             ->filter()
             ->values()
             ->all();
-    }
-
-    /**
-     * Which of the score's files this row prints.
-     *
-     * A row names one where its owner chose between them. Where it does not — an
-     * older booklet, or a score holding a single file — it prints the score's
-     * default, and it falls back to that default if the file it named has since
-     * been deleted or superseded, since a booklet that quietly loses a piece is
-     * worse than one that shows the score's own first answer.
-     *
-     * @param  array<string, mixed>  $source
-     * @return array{file_id: int|null, strips: list<array<string, mixed>>}
-     */
-    private function fileOf(BookletScore $entry, array $source): array
-    {
-        $chosen = $entry->score_file_id === null ? null : ($source['files'][$entry->score_file_id] ?? null);
-
-        return [
-            'file_id' => $chosen['file_id'] ?? $source['file_id'],
-            'strips' => $chosen['strips'] ?? $source['strips'],
-        ];
     }
 
     public function updated(string $property): void
@@ -531,7 +369,7 @@ class BookletEditor extends Component
         $existing = $this->booklet->entries()
             ->where('score_id', $scoreId)
             ->get()
-            ->first(fn (BookletScore $entry): bool => $this->fileOf($entry, $source)['file_id'] === ($fileId ?? $source['file_id']));
+            ->first(fn (BookletScore $entry): bool => app(BookletRenderPayload::class)->fileOf($entry, $source)['file_id'] === ($fileId ?? $source['file_id']));
 
         if ($existing instanceof BookletScore) {
             $this->removeEntry($existing->id);
@@ -868,40 +706,9 @@ class BookletEditor extends Component
         return view('livewire.pages.booklet-editor');
     }
 
-    /**
-     * The assignments the chosen entries came from.
-     *
-     * @param  Collection<int, BookletScore>  $entries
-     * @return Collection<int, MusicPlanSlotAssignment>
-     */
-    private function assignmentsFor(Collection $entries): Collection
+    private function urlForToken(?string $token): ?string
     {
-        return $entries
-            ->pluck('assignment')
-            ->filter()
-            ->keyBy('id');
-    }
-
-    /**
-     * How many musics each slot holds in this booklet, which decides whether a
-     * slot heading may carry the music's name itself.
-     *
-     * Counted from what was chosen rather than from the plan: a slot the plan
-     * fills with three musics but the booklet takes one of is, on the page, a
-     * slot with one music, and reads better named on one line.
-     *
-     * @param  Collection<int, BookletScore>  $entries
-     * @param  Collection<int, MusicPlanSlotAssignment>  $assignments
-     * @return array<int, int>
-     */
-    private function musicCountsPerSlot(Collection $entries, Collection $assignments): array
-    {
-        return $entries
-            ->map(fn (BookletScore $entry): ?MusicPlanSlotAssignment => $assignments->get($entry->music_plan_slot_assignment_id))
-            ->filter()
-            ->groupBy('music_plan_slot_plan_id')
-            ->map(fn (Collection $group): int => $group->pluck('music_id')->unique()->count())
-            ->all();
+        return $token === null ? null : route('booklet.loan', ['token' => $token]);
     }
 
     /**

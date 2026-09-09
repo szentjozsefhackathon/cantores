@@ -170,6 +170,25 @@ Route::middleware('human')->group(function (): void {
     // Plan lending link — public, no authentication required
     Route::livewire('/p/{token}', \App\Livewire\Pages\MusicPlanLoanView::class)
         ->name('music-plan.loan');
+
+    // Booklet lending link — the handout as the band reads it, on their own
+    // phones. The same booklet the editor is showing, re-engraved to the width
+    // of whatever screen it lands on, so a chord changed at the rehearsal is
+    // there on the next refresh.
+    Route::livewire('/b/{token}', \App\Livewire\Pages\BookletLoanView::class)
+        ->name('booklet.loan');
+
+    // The uploaded systems and pages that booklet draws, addressed by the token
+    // rather than by the booklet: same two endpoints as the owner's, same check
+    // underneath, and the reader's entitlement derived from the link on every
+    // request. See BookletRenderPayload::drawsFile().
+    Route::get('/b/{token}/strip/{scoreFile}/{page}/{index}', \App\Http\Controllers\BookletLoanStripController::class)
+        ->whereNumber(['page', 'index'])
+        ->name('booklet.loan.strip');
+
+    Route::get('/b/{token}/score-page/{scoreFile}/{page}', \App\Http\Controllers\BookletLoanScorePageController::class)
+        ->whereNumber('page')
+        ->name('booklet.loan.score-page');
 });
 
 // The human check itself: guests only, rate limited because it is the one page a

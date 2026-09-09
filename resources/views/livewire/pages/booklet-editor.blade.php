@@ -133,6 +133,17 @@
                     <span x-text="pageCount"></span> {{ __('pages') }}
                 </span>
 
+                {{-- The other way out of a booklet, beside the PDF: the band
+                     reads it on their own phones, live, and each of them sets
+                     the size their own eyes want. It opens a dialog rather than
+                     carrying its own fields, so the bar keeps its one quiet
+                     field and opening it lays nothing out again. --}}
+                <flux:modal.trigger name="booklet-share">
+                    <flux:button size="sm" variant="ghost" icon="share">
+                        {{ __('Share') }}
+                    </flux:button>
+                </flux:modal.trigger>
+
                 {{-- The preview sits beside the bar on a wide screen and far
                      below it on a narrow one, so the news that the booklet is
                      being laid out again is carried here too — by the one control
@@ -173,6 +184,48 @@
         </div>
 
         <p class="mb-4 text-sm text-red-600 dark:text-red-400" x-show="message" x-cloak x-text="message"></p>
+
+        {{-- Outside the geometry bar on purpose: a field typed into inside it
+             would tell the preview it is being laid out again. --}}
+        <flux:modal name="booklet-share" class="max-w-xl">
+            <div x-data="{ copied: false }">
+                <flux:heading size="lg">{{ __('Share with the band') }}</flux:heading>
+
+                <flux:text class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                    {{ __('Anyone holding this link opens the booklet on their own phone — the booklet itself, not a copy of it, engraved to the width of their screen. They can set their own size and font without changing anything here, and they cannot download or edit it. Whatever you change is theirs on the next refresh.') }}
+                </flux:text>
+
+                <div class="mt-4" x-show="$wire.shareUrl" x-cloak>
+                    <div class="flex items-center gap-2">
+                        <flux:input readonly x-bind:value="$wire.shareUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
+                        <flux:tooltip :content="__('Copy link')">
+                            <flux:button
+                                icon="clipboard"
+                                variant="ghost"
+                                :aria-label="__('Copy link')"
+                                x-on:click="navigator.clipboard.writeText($wire.shareUrl).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
+                                x-bind:class="copied ? 'text-green-600' : ''"
+                            />
+                        </flux:tooltip>
+                        <flux:tooltip :content="__('Recall the link')">
+                            <flux:button
+                                icon="trash"
+                                variant="ghost"
+                                :aria-label="__('Recall the link')"
+                                wire:click="recallLoan"
+                                wire:confirm="{{ __('Recall this link? Anyone still holding it will lose the booklet.') }}"
+                            />
+                        </flux:tooltip>
+                    </div>
+                </div>
+
+                <div class="mt-4" x-show="!$wire.shareUrl">
+                    <flux:button variant="primary" icon="link" wire:click="lendByLink">
+                        {{ __('Create the link') }}
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
 
         {{-- items-start keeps the columns from stretching, which is what lets each
              one stick and scroll inside its own box instead of dragging the page.

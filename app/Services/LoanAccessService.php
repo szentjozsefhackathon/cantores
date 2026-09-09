@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Booklet;
 use App\Models\Folder;
 use App\Models\Loan;
 use App\Models\MusicPlan;
@@ -137,9 +138,10 @@ class LoanAccessService
     }
 
     /**
-     * Every live loan of the owner's that reaches a score — its own, plus any folder
-     * or plan loan that leads to it. This is what an owner needs to see before
-     * assuming a score is private: a folder or plan they lent once still opens it.
+     * Every live loan of the owner's that reaches a score — its own, plus any
+     * folder, plan or booklet loan that leads to it. This is what an owner needs
+     * to see before assuming a score is private: a folder, a plan or a handout
+     * they lent once still opens it.
      *
      * Loans other people made while passing the score on are deliberately not listed.
      * They are not the owner's to revoke, and revoking the owner's own loan closes
@@ -163,14 +165,20 @@ class LoanAccessService
             )
             ->pluck('id');
 
+        $bookletIds = Booklet::query()
+            ->where('user_id', $score->user_id)
+            ->whereHas('entries', fn (Builder $entries) => $entries->where('score_id', $score->getKey()))
+            ->pluck('id');
+
         /** @var Collection<int, Loan> $loans */
         $loans = Loan::query()
             ->live()
             ->with('lendable')
-            ->where(function (Builder $query) use ($score, $folderIds, $planIds): void {
+            ->where(function (Builder $query) use ($score, $folderIds, $planIds, $bookletIds): void {
                 $query->where(fn (Builder $q) => $q->where('lendable_type', Score::class)->where('lendable_id', $score->getKey()))
                     ->orWhere(fn (Builder $q) => $q->where('lendable_type', Folder::class)->whereIn('lendable_id', $folderIds))
-                    ->orWhere(fn (Builder $q) => $q->where('lendable_type', MusicPlan::class)->whereIn('lendable_id', $planIds));
+                    ->orWhere(fn (Builder $q) => $q->where('lendable_type', MusicPlan::class)->whereIn('lendable_id', $planIds))
+                    ->orWhere(fn (Builder $q) => $q->where('lendable_type', Booklet::class)->whereIn('lendable_id', $bookletIds));
             })
             ->latest('id')
             ->get();
@@ -200,6 +208,7 @@ class LoanAccessService
             $lendable instanceof Score => [$lendable->getKey()],
             $lendable instanceof Folder => $this->folderScoreIds($lendable, $seenLoanIds),
             $lendable instanceof MusicPlan => $this->planScoreIds($lendable, $seenLoanIds),
+            $lendable instanceof Booklet => $this->bookletScoreIds($lendable, $seenLoanIds),
             default => [],
         };
 
@@ -286,6 +295,50 @@ class LoanAccessService
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->all();
+    }
+
+    /**
+     * The scores a booklet reaches: exactly the ones it prints.
+     *
+     * Narrower than a folder or a plan on purpose. A plan lends everything its
+     * musics could be sung from; a booklet lends the pages that were actually
+     * laid out, because that is what the link promises — this handout, and
+     * nothing else the owner happens to own. A row the owner borrowed travels
+     * only while their own right to it holds, the same rule a folder follows.
+     *
+     * @param  list<int>  $seenLoanIds
+     * @return list<int>
+     */
+    private function bookletScoreIds(Booklet $booklet, array $seenLoanIds): array
+    {
+        $ids = $booklet->entries()
+            ->whereNotNull('score_id')
+            ->pluck('score_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $ownIds = Score::query()
+            ->whereIn('id', $ids)
+            ->where('user_id', $booklet->user_id)
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        $borrowed = array_diff($ids, $ownIds);
+
+        if ($borrowed === []) {
+            return $ownIds;
+        }
+
+        $stillHeld = array_intersect($borrowed, $this->keptScoreIdsFor($booklet->user_id, $seenLoanIds));
+
+        return array_values([...$ownIds, ...$stillHeld]);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Models\Booklet;
 use App\Models\Folder;
 use App\Models\Loan;
 use App\Models\MusicPlan;
@@ -310,6 +311,13 @@ class Loans extends Component
                 'url' => route('music-plan.loan', ['token' => $token]),
                 'changed_at' => $lendable->updated_at,
             ],
+            $lendable instanceof Booklet => [
+                'type' => __('Booklet'),
+                'title' => $lendable->title,
+                'owner' => $loan->user?->displayName ?? '',
+                'url' => route('booklet.loan', ['token' => $token]),
+                'changed_at' => $lendable->updated_at,
+            ],
             default => [
                 'type' => __('Unknown'),
                 'title' => __('Deleted'),
@@ -345,6 +353,11 @@ class Loans extends Component
                 'title' => $lendable->celebration_name ?? __('Music Plan'),
                 'url' => null,
             ],
+            $lendable instanceof Booklet => [
+                'type' => __('Booklet'),
+                'title' => $lendable->title,
+                'url' => route('booklets.edit', ['booklet' => $lendable->id]),
+            ],
             default => ['type' => __('Unknown'), 'title' => __('Deleted'), 'url' => null],
         };
     }
@@ -357,6 +370,7 @@ class Loans extends Component
         return match (true) {
             $loan->lendable instanceof Folder => route('folder.loan', ['token' => $loan->token]),
             $loan->lendable instanceof MusicPlan => route('music-plan.loan', ['token' => $loan->token]),
+            $loan->lendable instanceof Booklet => route('booklet.loan', ['token' => $loan->token]),
             default => route('score.loan', ['token' => $loan->token]),
         };
     }

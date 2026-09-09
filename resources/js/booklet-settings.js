@@ -109,6 +109,36 @@ export function fileSettings(override) {
 }
 
 /**
+ * The half of a booklet's per-score override that still means something on a
+ * phone.
+ *
+ * The cantor's overrides are two different kinds of thing wearing one coat.
+ * Some are decisions about the music — this hymn is sung a third lower, this one
+ * wants German chord names, this chant does without drop caps — and they are
+ * true wherever it is read. The rest are decisions about a sheet of A5: widen
+ * this score so the line stops breaking, take that staff down so the page holds,
+ * shrink this scan so it stops shouting. Those are answers to a page that the
+ * reader's screen is not, and carrying them across is how a booklet widened for
+ * paper arrives on a phone laid out for paper and then scaled to a smudge.
+ *
+ * The line between the two is already drawn: the keys the booklet's geometry
+ * computes for itself are exactly the page-fitting ones — see unifiedSettings —
+ * plus the one an uploaded picture has. So the reader inherits everything else,
+ * and the page-bound keys are decided afresh by the screen in their hand.
+ *
+ * @param {string} format
+ * @param {object|null} override booklet_scores.settings_override
+ * @param {object} geometry from pageGeometry()
+ */
+export function travellingOverride(format, override, geometry) {
+    const pageBound = new Set([...Object.keys(unifiedSettings(format, geometry)), 'fileZoom']);
+
+    return Object.fromEntries(
+        Object.entries(override ?? {}).filter(([key]) => !pageBound.has(key)),
+    );
+}
+
+/**
  * The width a score is laid out at, and what to do if that overflows the page.
  *
  * A width override above the content box is a request to lay the score out on a

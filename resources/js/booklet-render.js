@@ -113,14 +113,7 @@ export async function renderBooklet(entries, rawGeometry, host) {
     const fonts = new Set([geometry.textFont]);
 
     for (const entry of entries) {
-        let built;
-        if (entry.kind === 'text') {
-            built = buildTextBlocks(entry, geometry);
-        } else if (entry.kind === 'file') {
-            built = await buildFileBlocks(entry, geometry);
-        } else {
-            built = await buildScoreBlocks(entry, geometry, host);
-        }
+        const built = await buildEntryBlocks(entry, geometry, host);
 
         built.fonts.forEach((font) => fonts.add(font));
         built.blocks.forEach((block) => blocks.push(block));
@@ -130,6 +123,95 @@ export async function renderBooklet(entries, rawGeometry, host) {
         .map((page, index, all) => composePage(page, geometry, index + 1, all.length));
 
     return { pages, fonts: Array.from(fonts) };
+}
+
+/**
+ * Whatever one entry contributes, whichever of the three kinds it is.
+ */
+async function buildEntryBlocks(entry, geometry, host) {
+    if (entry.kind === 'text') {
+        return buildTextBlocks(entry, geometry);
+    }
+
+    if (entry.kind === 'file') {
+        return buildFileBlocks(entry, geometry);
+    }
+
+    return buildScoreBlocks(entry, geometry, host);
+}
+
+/**
+ * Render a booklet as a scroll rather than as pages: one drawing per entry, each
+ * exactly as tall as what it holds.
+ *
+ * This is the same booklet — the same engraving at the same unified sizes, from
+ * the same payload — with the one thing a phone has no use for taken away. A
+ * page break is an answer to a sheet of paper running out, and a screen does not
+ * run out; it scrolls. So nothing is packed and nothing is padded, and every
+ * entry comes back on its own so the reader can be given a handle on it: a
+ * toolbar of its own, and a full screen of its own.
+ *
+ * @param {BookletEntry[]} entries
+ * @param {object} rawGeometry the reader's own geometry, measured off the screen
+ * @param {HTMLElement} host an off-screen but laid-out element, for measuring
+ * @returns {Promise<{items: Array<{id: number, svg: SVGElement}>, fonts: string[]}>}
+ */
+export async function renderBookletFlow(entries, rawGeometry, host) {
+    const geometry = pageGeometry(rawGeometry);
+    const fonts = new Set([geometry.textFont]);
+    const items = [];
+
+    for (const entry of entries) {
+        const built = await buildEntryBlocks(entry, geometry, host);
+
+        built.fonts.forEach((font) => fonts.add(font));
+
+        items.push({ id: entry.id, svg: composeFlowItem(built.blocks, geometry) });
+    }
+
+    return { items, fonts: Array.from(fonts) };
+}
+
+/**
+ * One entry's blocks, stacked down a drawing of their own exact height.
+ *
+ * Packed with no height to run out of, so the blocks land in order with their
+ * own leading and nothing is broken across anything. An entry that asked to
+ * start a fresh page asks for nothing here: it is already on a surface of its
+ * own.
+ */
+function composeFlowItem(blocks, geometry) {
+    const packed = packPages(blocks, Number.POSITIVE_INFINITY);
+    const items = packed.flatMap((page) => page.items);
+    const height = packed.reduce((total, page) => total + page.height, 0);
+
+    const fragments = [];
+    const placements = [];
+
+    items.forEach(({ block, y }) => {
+        fragments.push(parseSvg(block.svg));
+        placements.push({ x: geometry.marginPx, y: geometry.marginPx + y, scale: block.scale ?? 1 });
+    });
+
+    const boxHeight = height + geometry.marginPx * 2;
+
+    const { svg } = stackSvgs(fragments, {
+        placements,
+        viewBox: { x: 0, y: 0, w: geometry.pageWidthPx, h: boxHeight },
+    });
+
+    svg.setAttribute('width', String(geometry.pageWidthPx));
+    svg.setAttribute('height', String(boxHeight));
+
+    const background = document.createElementNS(SVG_NS, 'rect');
+    background.setAttribute('x', '0');
+    background.setAttribute('y', '0');
+    background.setAttribute('width', String(geometry.pageWidthPx));
+    background.setAttribute('height', String(boxHeight));
+    background.setAttribute('fill', '#ffffff');
+    svg.insertBefore(background, svg.firstChild);
+
+    return svg;
 }
 
 /**

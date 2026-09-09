@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasLoans;
 use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
 use Illuminate\Database\Eloquent\Builder;
@@ -41,6 +42,8 @@ use Illuminate\Support\Facades\Auth;
  * @property-read int|null $entries_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Score> $scores
  * @property-read int|null $scores_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Loan> $loans
+ * @property-read int|null $loans_count
  *
  * @method static \Database\Factories\BookletFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Booklet mine(?\App\Models\User $user = null)
@@ -53,7 +56,7 @@ use Illuminate\Support\Facades\Auth;
 class Booklet extends Model
 {
     /** @use HasFactory<\Database\Factories\BookletFactory> */
-    use HasFactory;
+    use HasFactory, HasLoans;
 
     /**
      * @var list<string>
