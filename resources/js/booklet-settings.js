@@ -29,8 +29,9 @@ import {
  * The stacking is in there because a booklet packs whole services onto small
  * pages, and vertical air a score can afford on its own sheet is what costs the
  * booklet a page. So the space between staves comes from the booklet rather than
- * the score, and the space a score keeps between a staff and its lyrics is taken
- * to nothing — abc2svg already sets the lyrics close enough to read.
+ * the score. The gap between a staff and its lyrics is not in there: it is the
+ * author's `abcLyricFirstSkip`, which travels with the score and can be
+ * overridden per score in the booklet like any other authored setting.
  *
  * Layer 4 wins over all of it, including over the booklet's own width — which is
  * the point. Widening one score past the content box is how you get rid of a bad
@@ -57,7 +58,6 @@ export function unifiedSettings(format, geometry) {
             // so this is also what stands between a heading and the music it
             // names — which is why the booklet, not the score, gets to say it.
             abcStaffSep: geometry.abcStaffSep,
-            abcVocalSpace: 0,
             abcZoom: 100,
         };
     }

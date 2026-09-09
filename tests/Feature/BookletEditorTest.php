@@ -1047,6 +1047,26 @@ it('writes a paragraph of instructions inside the row it belongs to', function (
         ->toBe(1);
 });
 
+// Half a line height is where stacked stanzas start to collide, so a booklet
+// cannot override its way below it — an older score stored as 0 comes back up.
+it('holds the lyric line spacing at its floor', function () {
+    expect(BookletSettingFields::sanitize('abc', ['abcLyricSkip' => 0]))
+        ->toBe(['abcLyricSkip' => 0.5])
+        ->and(BookletSettingFields::sanitize('abc', ['abcLyricSkip' => 1.4]))
+        ->toBe(['abcLyricSkip' => 1.4]);
+});
+
+// The gap under the staff is the same kind of knob and gets the same floor:
+// below half a line height the lyrics are inside the music.
+it('holds the staff to lyrics gap at its floor', function () {
+    expect(BookletSettingFields::sanitize('abc', ['abcLyricFirstSkip' => 0]))
+        ->toBe(['abcLyricFirstSkip' => 0.5])
+        ->and(BookletSettingFields::sanitize('abc', ['abcLyricFirstSkip' => 0.7]))
+        ->toBe(['abcLyricFirstSkip' => 0.7])
+        ->and(BookletSettingFields::sanitize('abc', ['abcVocalSpace' => 20]))
+        ->toBe([]);
+});
+
 it('only accepts a font the exporter can embed', function () {
     expect(BookletSettingFields::sanitize('abc', ['abcLyricFont' => 'Lora']))
         ->toBe(['abcLyricFont' => "'Lora'"])

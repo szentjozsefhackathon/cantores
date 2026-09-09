@@ -20,7 +20,6 @@ test('turns a settings bucket into abc2svg directives', () => {
         abcPageScale: 3.1,
         abcNoteSpacing: 1.1,
         abcStaffSep: 15,
-        abcVocalSpace: 0,
         abcTranspose: -2,
     }, 1920);
 

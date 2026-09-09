@@ -97,15 +97,57 @@ Three edit sites, each tagged `/*VENDOR PATCH lyricskipfac*/`:
    top of the function and replaced both `a_h[j]*1.1` occurrences (the
    below-staff and above-staff loops) with `a_h[j]*lsf`.
 
-**Why:** `%%vocalspace` only sets the staff → first-lyric gap; `%%lineskipfac`
-applies only to `%%text`/`%%words`/history blocks, never to `w:` lyrics. Multi-
-stanza scores needed tighter/looser inter-line spacing without changing the
-vocal font size.
+**Why:** `%%lineskipfac` applies only to `%%text`/`%%words`/history blocks,
+never to `w:` lyrics, and `%%vocalspace` is a floor under the staff → first-lyric
+gap, not a setting for the stanzas. Multi-stanza scores needed tighter/looser
+inter-line spacing without changing the vocal font size.
 
 **Re-apply:** If upstream still hardcodes `1.1` in `draw_lyrics`, repeat the
 three edits above. If upstream has since added its own parameter for this, drop
 this patch and switch the preambles to the upstream name.
 
 **Consumers:** `%%lyricskipfac` is emitted in the ABC preambles built by
-`resources/js/score-editor-abc.js` and `resources/js/booklet-render.js`.
+`resources/js/score-editor-abc.js` and `resources/js/booklet-render.js`, from
+the `abcLyricSkip` setting (default `1.1`, floor `0.5`).
 Covered by `tests/Unit/abc-lyricskipfac.test.mjs`.
+
+### Patch: `lyricfirstskipfac` — configurable staff → first-lyric distance
+
+**What:** Adds a `%%lyricfirstskipfac <factor>` format parameter for the advance
+from the music down to the *first* `w:` line, as a multiple of that line's own
+height. It splits the below-staff loop of `draw_lyrics()` in two: the first line
+answers to this factor, every line after it to `%%lyricskipfac`.
+
+Four edit sites, each tagged `/*VENDOR PATCH lyricfirstskipfac*/`:
+
+1. **`cfmt` defaults object** (search `lyricskipfac:1.1,`) — added
+   `lyricfirstskipfac:1.1,` in front of it, so an unset factor is the same
+   `1.1` upstream used for every lyric line.
+2. **`Abc.prototype.set_format`**, numeric-parameter `switch` — added
+   `case"lyricfirstskipfac":` beside `case"lyricskipfac":`.
+3. **`draw_lyrics()`** — hoisted `var lff=tsfirst.fmt.lyricfirstskipfac||1.1`
+   next to `lsf`.
+4. **`draw_lyrics()`, below-staff loop** — `a_h[j]*lsf` became
+   `a_h[j]*(j?lsf:lff)`.
+
+The above-staff loop is untouched: there the line nearest the staff is drawn
+first, at `topbar + vocalspace`, with no advance in front of it, so nothing
+there depends on either factor.
+
+**Why:** the two distances were one knob. `%%lyricskipfac` moved the first line
+away from the staff as well as the stanzas apart, and the parameter that is
+supposed to own the staff gap, `%%vocalspace`, is only a floor
+(`if (y > -vocalspace) y = -vocalspace`) — it can push the lyrics further down
+but never pull them closer than the lowest stem hangs, which in practice made
+anything under ~15pt do nothing at all. This factor counts from that lowest ink
+instead, so a value under `1` is how you get the lyrics in tight.
+
+**Re-apply:** repeat the four edits above; site 4 is the one that carries the
+behaviour. If upstream has since split the first line off itself, drop this
+patch and switch the preambles to the upstream name.
+
+**Consumers:** `%%lyricfirstskipfac` is emitted in the ABC preambles built by
+`resources/js/score-editor-abc.js` and `resources/js/booklet-render.js`, from
+the `abcLyricFirstSkip` setting (default `1.1`, floor `0.5`), which replaced the
+`abcVocalSpace` knob — the preambles now pin `%%vocalspace 0` and leave the
+staff gap to this one. Covered by `tests/Unit/abc-lyricfirstskipfac.test.mjs`.

@@ -5,6 +5,22 @@ const ABC_PAGE_WIDTH_MIN = 400;
 const ABC_PAGE_WIDTH_MAX = 4000;
 const ABC_PAGE_WIDTH_DEFAULT = 1700;
 
+/**
+ * The tightest lyric-line advance that still reads: below half a line height
+ * the stanzas start to collide. Anything under it is treated as unset, which
+ * leaves abc2svg on its own 1.1.
+ */
+export const ABC_LYRIC_SKIP_MIN = 0.5;
+
+/**
+ * The tightest staff-to-first-lyric advance we let anyone ask for. The first
+ * line starts below the lowest ink of the music, so a factor under 1 already
+ * reaches back up into the stems — which is the whole point of the knob, but
+ * half a line height is as far as it stays music. Anything under it is treated
+ * as unset, which leaves abc2svg on its own 1.1.
+ */
+export const ABC_LYRIC_FIRST_SKIP_MIN = 0.5;
+
 export function normalizeAbcPageWidth(value) {
     if (value === null || value === undefined || String(value).trim() === '') {
         return ABC_PAGE_WIDTH_DEFAULT;
@@ -30,7 +46,6 @@ const ABC_RATIO_DEFAULTS = {
         abcPageWidth: 1920,
         abcNoteSpacing: 1.1,
         abcStaffSep: 15,
-        abcVocalSpace: 0,
         abcNoClef: true,
         abcStemWidth: 1.4,
         abcStaffLineWidth: 1,
@@ -44,7 +59,6 @@ const ABC_RATIO_DEFAULTS = {
         abcPageWidth: 1440,
         abcNoteSpacing: 1.1,
         abcStaffSep: 15,
-        abcVocalSpace: 0,
         abcNoClef: true,
         abcStemWidth: 1.4,
         abcStaffLineWidth: 1,
@@ -58,7 +72,6 @@ const ABC_RATIO_DEFAULTS = {
         abcPageWidth: 1080,
         abcNoteSpacing: 1.1,
         abcStaffSep: 15,
-        abcVocalSpace: 0,
         abcNoClef: true,
         abcStemWidth: 1.4,
         abcStaffLineWidth: 1,
@@ -141,6 +154,11 @@ function englishChordRoots(chord) {
  * Shared by the preview and the incipit so that a render at the format's
  * factory defaults differs from the on-screen one only in the settings handed
  * in, never in how they are turned into directives.
+ *
+ * `%%vocalspace` is pinned to 0 rather than exposed: it can only push the
+ * lyrics further from the staff, never closer, so it is left out of the way and
+ * `abcLyricFirstSkip` — counted from the music's own lowest ink — is the one
+ * knob for the staff-to-lyrics gap.
  */
 export function buildAbcPreamble(settings, pageWidth) {
     const rawFont = (settings.abcLyricFont || '').trim();
@@ -153,9 +171,11 @@ export function buildAbcPreamble(settings, pageWidth) {
     const transposeSemitones = Number(settings.abcTranspose) || 0;
     const transposeLine = transposeSemitones !== 0 ? `%%transpose ${transposeSemitones}\n` : '';
     const lyricSkip = Number(settings.abcLyricSkip) || 0;
-    const lyricSkipLine = lyricSkip > 0 ? `%%lyricskipfac ${lyricSkip}\n` : '';
+    const lyricSkipLine = lyricSkip >= ABC_LYRIC_SKIP_MIN ? `%%lyricskipfac ${lyricSkip}\n` : '';
+    const lyricFirstSkip = Number(settings.abcLyricFirstSkip) || 0;
+    const lyricFirstSkipLine = lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '';
 
-    return `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace ${settings.abcVocalSpace}\n${lyricSkipLine}${transposeLine}`;
+    return `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}`;
 }
 
 /** Engraves an ABC source (preamble included) into SVG markup. */
@@ -214,17 +234,23 @@ export function abcMixin() {
         // so it is the air over the score as much as the air between its lines.
         // 46 was enough for two of them; 36 is enough for either.
         abcStaffSep: 36,
-        abcVocalSpace: 10,
+        // How far the first lyric line sits under the music, as a multiple of
+        // the line's own height, counted from the lowest ink of the staff. It
+        // replaces %%vocalspace, which could only ever push the lyrics further
+        // down and so had no way of pulling them closer than the stems hang.
+        abcLyricFirstSkip: 1.1,
         // Vertical advance between stacked lyric lines, as a multiple of the
-        // line's own height. 0 keeps abc2svg's built-in 1.1 (see the
-        // `lyricskipfac` vendor patch in public/js/abc2svg-1.js).
-        abcLyricSkip: 0,
+        // line's own height. 1.1 is abc2svg's own advance (see the
+        // `lyricskipfac` vendor patch in public/js/abc2svg-1.js), so the
+        // default changes nothing; anything below ABC_LYRIC_SKIP_MIN is left
+        // to the engine.
+        abcLyricSkip: 1.1,
         abcNoClef: false,
         abcStemWidth: 0.7,
         abcStaffLineWidth: 0.7,
         abcZoom: 100,
         abcTranspose: 0,
-        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcLyricSkip', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose'],
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose'],
 
         normalizeAbcPageWidth,
 

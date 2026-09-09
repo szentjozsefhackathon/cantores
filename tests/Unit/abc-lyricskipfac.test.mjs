@@ -4,16 +4,16 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import vm from 'node:vm';
 
-import { abcMixin, buildAbcPreamble } from '../../resources/js/score-editor-abc.js';
+import { ABC_LYRIC_SKIP_MIN, abcMixin, buildAbcPreamble } from '../../resources/js/score-editor-abc.js';
 
 const abc2svgSource = readFileSync(
     fileURLToPath(new URL('../../public/js/abc2svg-1.js', import.meta.url)),
     'utf8',
 );
 
-test('the factory defaults leave lyric-line spacing to abc2svg', () => {
-    assert.equal(abcMixin().abcLyricSkip, 0);
-    assert.doesNotMatch(buildAbcPreamble(abcMixin(), 1700), /%%lyricskipfac/);
+test("the factory default is abc2svg's own advance, spelled out", () => {
+    assert.equal(abcMixin().abcLyricSkip, 1.1);
+    assert.match(buildAbcPreamble(abcMixin(), 1700), /%%lyricskipfac 1\.1\n/);
 });
 
 test('abcLyricSkip is a persisted per-score field', () => {
@@ -24,11 +24,13 @@ test('a positive abcLyricSkip becomes a %%lyricskipfac directive', () => {
     const preamble = buildAbcPreamble({ ...abcMixin(), abcLyricSkip: 1.4 }, 1700);
 
     assert.match(preamble, /%%lyricskipfac 1\.4\n/);
-    assert.match(preamble, /%%vocalspace .*\n%%lyricskipfac 1\.4\n/);
+    assert.match(preamble, /%%lyricfirstskipfac 1\.1\n%%lyricskipfac 1\.4\n/);
 });
 
-test('zero, blank and junk abcLyricSkip emit nothing', () => {
-    for (const abcLyricSkip of [0, '', '0', 'x', -1, null, undefined]) {
+test('a below-floor, blank or junk abcLyricSkip emits nothing', () => {
+    assert.equal(ABC_LYRIC_SKIP_MIN, 0.5);
+
+    for (const abcLyricSkip of [0, '', '0', 'x', -1, null, undefined, 0.4, 0.49]) {
         assert.doesNotMatch(
             buildAbcPreamble({ ...abcMixin(), abcLyricSkip }, 1700),
             /%%lyricskipfac/,
@@ -52,7 +54,12 @@ test('the abc2svg vendor patch for lyricskipfac is in place', () => {
         abc2svgSource.indexOf('function draw_all_lyrics('),
     );
     assert.doesNotMatch(drawLyrics, /a_h\[j\]\*1\.1/, 'the hardcoded 1.1 advance should be gone');
-    assert.equal((drawLyrics.match(/a_h\[j\]\*lsf/g) ?? []).length, 2);
+
+    // Once in the above-staff loop; the below-staff one advances by
+    // `(j?lsf:lff)` so that the first line answers to lyricfirstskipfac
+    // instead — see tests/Unit/abc-lyricfirstskipfac.test.mjs.
+    assert.equal((drawLyrics.match(/a_h\[j\]\*lsf/g) ?? []).length, 1);
+    assert.match(drawLyrics, /a_h\[j\]\*\(j\?lsf:lff\)/);
 });
 
 /**

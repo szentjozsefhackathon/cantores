@@ -288,7 +288,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcLyricBold', () => this.scheduleRender());
             this.$watch('abcNoteSpacing', () => this.scheduleRender());
             this.$watch('abcStaffSep', () => this.scheduleRender());
-            this.$watch('abcVocalSpace', () => this.scheduleRender());
+            this.$watch('abcLyricFirstSkip', () => this.scheduleRender());
             this.$watch('abcLyricSkip', () => this.scheduleRender());
             this.$watch('abcNoClef', () => this.scheduleRender());
             this.$watch('abcPageScale', () => this.scheduleRender());
@@ -417,7 +417,7 @@ document.addEventListener('alpine:init', () => {
                         abcPageWidth: normalizeAbcPageWidth(this.abcPageWidth),
                         abcNoteSpacing: Number(this.abcNoteSpacing),
                         abcStaffSep: Number(this.abcStaffSep),
-                        abcVocalSpace: Number(this.abcVocalSpace),
+                        abcLyricFirstSkip: Number(this.abcLyricFirstSkip),
                         abcLyricSkip: Number(this.abcLyricSkip),
                         abcNoClef: !!this.abcNoClef,
                         abcStemWidth: Number(this.abcStemWidth),

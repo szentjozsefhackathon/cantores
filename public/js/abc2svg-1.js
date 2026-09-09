@@ -3230,7 +3230,7 @@ S "Source: "\n\
 D "Discography: "\n\
 N "Notes: "\n\
 Z "Transcription: "\n\
-H "History: "',infospace:0,keywarn:true,leftmargin:1.4*CM,lineskipfac:1.1,lyricskipfac:1.1,/*VENDOR PATCH lyricskipfac*/linewarn:true,maxshrink:.65,maxstaffsep:2000,maxsysstaffsep:2000,measrepnb:1,measurefont:{name:txt_ff,style:"italic",size:10},measurenb:-1,musicfont:{name:"music",src:musicfont,size:24},musicspace:6,partsfont:{name:txt_ff,size:15},parskipfac:.4,partsspace:8,pagewidth:21*CM,"propagate-accidentals":"o",printmargin:0,rightmargin:1.4*CM,rbmax:4,rbmin:2,repeatfont:{name:txt_ff,size:9},scale:1,slurheight:1.0,spatab:new Float32Array([10.2,13.3,17.3,22.48,29.2,38,49.4,64.2,83.5,108.5]),staffsep:46,stemheight:21,stretchlast:.25,stretchstaff:true,subtitlefont:{name:txt_ff,size:16},subtitlespace:3,sysstaffsep:34,systnames:-1,systvoices:3,tempofont:{name:txt_ff,weight:"bold",size:12},textfont:{name:txt_ff,size:16},textspace:14,tieheight:1.0,titlefont:{name:txt_ff,size:20},titlespace:6,titletrim:true,topspace:22,tuplets:[0,0,0,0],tupletfont:{name:txt_ff,style:"italic",size:10},vocalfont:{name:txt_ff,weight:"bold",size:13},vocalspace:10,voicefont:{name:txt_ff,weight:"bold",size:13},writefields:"CMOPQsTWw",wordsfont:{name:txt_ff,size:16},wordsspace:5,"writeout-accidentals":"n"}
+H "History: "',infospace:0,keywarn:true,leftmargin:1.4*CM,lineskipfac:1.1,lyricfirstskipfac:1.1,/*VENDOR PATCH lyricfirstskipfac*/lyricskipfac:1.1,/*VENDOR PATCH lyricskipfac*/linewarn:true,maxshrink:.65,maxstaffsep:2000,maxsysstaffsep:2000,measrepnb:1,measurefont:{name:txt_ff,style:"italic",size:10},measurenb:-1,musicfont:{name:"music",src:musicfont,size:24},musicspace:6,partsfont:{name:txt_ff,size:15},parskipfac:.4,partsspace:8,pagewidth:21*CM,"propagate-accidentals":"o",printmargin:0,rightmargin:1.4*CM,rbmax:4,rbmin:2,repeatfont:{name:txt_ff,size:9},scale:1,slurheight:1.0,spatab:new Float32Array([10.2,13.3,17.3,22.48,29.2,38,49.4,64.2,83.5,108.5]),staffsep:46,stemheight:21,stretchlast:.25,stretchstaff:true,subtitlefont:{name:txt_ff,size:16},subtitlespace:3,sysstaffsep:34,systnames:-1,systvoices:3,tempofont:{name:txt_ff,weight:"bold",size:12},textfont:{name:txt_ff,size:16},textspace:14,tieheight:1.0,titlefont:{name:txt_ff,size:20},titlespace:6,titletrim:true,topspace:22,tuplets:[0,0,0,0],tupletfont:{name:txt_ff,style:"italic",size:10},vocalfont:{name:txt_ff,weight:"bold",size:13},vocalspace:10,voicefont:{name:txt_ff,weight:"bold",size:13},writefields:"CMOPQsTWw",wordsfont:{name:txt_ff,size:16},wordsspace:5,"writeout-accidentals":"n"}
 var sfmt={bardef:true,barsperstaff:true,beamslope:true,breaklimit:true,bstemdown:true,cancelkey:true,dynalign:true,flatbeams:true,gracespace:true,hyphencont:true,keywarn:true,maxshrink:true,maxstaffsep:true,measrepnb:true,rbmax:true,rbmin:true,shiftunison:true,slurheight:true,squarebreve:true,staffsep:true,systvoices:1,stemheight:true,stretchlast:true,stretchstaff:true,tieheight:true,timewarn:true,trimsvg:1,vocalspace:true}
 function get_bool(param){return!param||!/^(0|n|f)/i.test(param)}
 function get_font_scale(param){var i,font,a=info_split(param)
@@ -3393,7 +3393,7 @@ cfmt[cmd]=v
 break
 case"abc-version":case"bgcolor":case"fgcolor":case"propagate-accidentals":case"writeout-accidentals":cfmt[cmd]=param
 break
-case"beamslope":case"breaklimit":case"lineskipfac":case"lyricskipfac":/*VENDOR PATCH lyricskipfac*/case"maxshrink":case"pagescale":case"parskipfac":case"scale":case"slurheight":case"stemheight":case"tieheight":f=+param
+case"beamslope":case"breaklimit":case"lineskipfac":case"lyricfirstskipfac":/*VENDOR PATCH lyricfirstskipfac*/case"lyricskipfac":/*VENDOR PATCH lyricskipfac*/case"maxshrink":case"pagescale":case"parskipfac":case"scale":case"slurheight":case"stemheight":case"tieheight":f=+param
 if(isNaN(f)||!param||f<0){syntax(1,errs.bad_val,'%%'+cmd)
 break}
 switch(cmd){case"scale":f/=.75
@@ -9971,9 +9971,10 @@ break}}
 if(lflag){out_wln(lastx+3,y,x0-lastx+3);lflag=false}}
 function draw_lyrics(p_voice,nly,a_h,y,incr){var j,top,sc=staff_tb[p_voice.st].staffscale;set_font("vocal")
 var lsf=tsfirst.fmt.lyricskipfac||1.1/*VENDOR PATCH lyricskipfac: was the literal 1.1 below*/
+var lff=tsfirst.fmt.lyricfirstskipfac||1.1/*VENDOR PATCH lyricfirstskipfac: the staff to first line advance*/
 if(incr>0){if(y>-tsfirst.fmt.vocalspace)
 y=-tsfirst.fmt.vocalspace;y*=sc
-for(j=0;j<nly;j++){y-=a_h[j]*lsf;draw_lyric_line(p_voice,j,y+a_h[j]*.22)}
+for(j=0;j<nly;j++){y-=a_h[j]*(j?lsf:lff)/*VENDOR PATCH lyricfirstskipfac*/;draw_lyric_line(p_voice,j,y+a_h[j]*.22)}
 return y/sc}
 top=staff_tb[p_voice.st].topbar+tsfirst.fmt.vocalspace
 if(y<top)

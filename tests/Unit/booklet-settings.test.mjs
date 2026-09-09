@@ -26,7 +26,7 @@ test('unification owns the width, the sizes and the stacking', () => {
 
     assert.deepEqual(Object.keys(unified).sort(), [
         'abcLyricSize', 'abcPageRatio', 'abcPageScale', 'abcPageWidth',
-        'abcStaffSep', 'abcVocalSpace', 'abcZoom',
+        'abcStaffSep', 'abcZoom',
     ]);
     assert.equal(unified.abcPageWidth, 468);
     assert.equal(unified.abcPageRatio, 'paper');
@@ -53,14 +53,15 @@ test('unification leaves the author\'s own choices alone', () => {
 
 // Vertical air a score can afford on its own sheet is what costs a booklet a
 // page, and in ABC the space above the first staff is the same setting as the
-// space between two — so it is also the gap under a heading.
+// space between two — so it is also the gap under a heading. The staff-to-lyric
+// gap is not the booklet's to take: that one stays with whoever engraved it.
 test('the booklet says how tightly ABC stacks, whatever the score says', () => {
-    const authored = { abcStaffSep: 60, abcVocalSpace: 10 };
+    const authored = { abcStaffSep: 60, abcLyricFirstSkip: 1.6 };
 
     const resolved = resolveSettings('abc', {}, { abc: { paper: authored } }, geometry, null);
 
     assert.equal(resolved.abcStaffSep, 25);
-    assert.equal(resolved.abcVocalSpace, 0);
+    assert.equal(resolved.abcLyricFirstSkip, 1.6);
 
     // And it is the booklet's own number, not a constant.
     const roomy = resolveSettings('abc', {}, {}, { ...geometry, abcStaffSep: 40 }, null);

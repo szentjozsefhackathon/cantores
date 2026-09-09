@@ -49,18 +49,31 @@ These are set in the ABC preamble as `%%paramname value`.
 
 ### Staff → Lyrics Distance
 
-**Parameter:** `%%vocalspace <pt>`  
-**Default:** `10`  
-**Source:** line 9975–9979
+**Parameter:** `%%lyricfirstskipfac <factor>`
+**Default:** `1.1`
+**Source:** `draw_lyrics()` — **local vendor patch**, see `docs/vendor-patches.md`
 
-Controls the minimum vertical gap between the bottom of the staff and the
-first lyric baseline. The value is enforced as a floor (`if y > -vocalspace`),
-so `0` is the practical minimum. Negative values have no effect without a
-source patch.
+The advance from the music down to the first `w:` line, as a multiple of that
+line's own measured height, counted from the lowest ink of the staff (the
+stems, not the bottom staff line). Under `1` the lyrics come up into the music,
+which is the only way to get them really tight.
 
 ```
-%%vocalspace 0
+%%lyricfirstskipfac 0.8
 ```
+
+In the app this is the `abcLyricFirstSkip` setting: it defaults to `1.1` — the
+advance abc2svg used before the patch, so the default changes nothing — and
+stops at `0.5` (`ABC_LYRIC_FIRST_SKIP_MIN`), below which anything is treated as
+unset and the engine keeps its own `1.1`. Emitted by `buildAbcPreamble`
+(`resources/js/score-editor-abc.js`) and the booklet's `abcBlocks`
+(`resources/js/booklet-render.js`).
+
+> **Note:** the stock parameter for this gap, `%%vocalspace <pt>` (default
+> `10`), is only a floor (`if y > -vocalspace`): it can push the lyrics further
+> down, never closer than the lowest stem already reaches, so lowering it stops
+> having any effect well before `0`. Both preambles pin it to `0` and leave the
+> gap to `%%lyricfirstskipfac`.
 
 ### Distance Between Lyric Lines
 
@@ -70,16 +83,20 @@ source patch.
 
 The vertical advance from one `w:` lyric line to the next, as a multiple of the
 line's own measured height. Upstream abc2svg hardcodes this as `1.1`; the patch
-exposes it as a format parameter. `%%vocalspace` only sets the staff → first
-line gap, and `%%lineskipfac` does not apply to lyrics.
+exposes it as a format parameter. It leaves the first line where it is — that
+gap is `%%lyricfirstskipfac` — and `%%lineskipfac` does not apply to lyrics at
+all.
 
 ```
 %%lyricskipfac 1.4
 ```
 
-In the app this is the `abcLyricSkip` setting (`0` = leave the engine default),
-emitted by `buildAbcPreamble` (`resources/js/score-editor-abc.js`) and the
-booklet's `abcBlocks` (`resources/js/booklet-render.js`).
+In the app this is the `abcLyricSkip` setting: it defaults to `1.1` and stops
+at `0.5` (`ABC_LYRIC_SKIP_MIN`), below which the stanzas collide. Anything under
+that floor — an older score stored as `0`, a blank, junk — emits nothing and so
+leaves the engine on its own `1.1`. Emitted by `buildAbcPreamble`
+(`resources/js/score-editor-abc.js`) and the booklet's `abcBlocks`
+(`resources/js/booklet-render.js`).
 
 ### System Distance (gap between systems)
 
