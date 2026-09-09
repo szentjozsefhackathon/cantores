@@ -14,7 +14,36 @@ test('the editor talks to its own half of the server, not to whichever row calle
     const asked = source.match(/this\.\$wire/g) ?? [];
 
     assert.equal(asked.length, 1, 'a call went straight to $wire instead of the wire kept at init');
-    assert.match(source, /init\(\)\s*\{[\s\S]*?this\._wire = this\.\$wire;/);
-    assert.ok(/this\._wire\.saveOverride\(/.test(source));
-    assert.ok(/this\._wire\.resetOverride\(/.test(source));
+    assert.match(source, /init\(\)\s*\{\s*wire = this\.\$wire;/);
+    assert.ok(/\bwire\.saveOverride\(/.test(source));
+    assert.ok(/\bwire\.resetOverride\(/.test(source));
+});
+
+// And it is kept in a closure rather than on the component, because a wire put
+// into Alpine's state is not the wire that comes back out. See the test below
+// for what Alpine does to it.
+test('the wire is held outside the component, where Alpine cannot reach it', () => {
+    assert.match(source, /Alpine\.data\('bookletEditor', \(config = \{\}\) => \{[\s\S]*?let wire = null;[\s\S]*?return \{/);
+    assert.ok(! /this\._wire/.test(source), 'the wire was put back on the component');
+});
+
+// Why it cannot be kept on the component, in the words of the two libraries
+// themselves: Alpine's reactive setter runs toRaw() over everything assigned
+// into a component's state, and Livewire's wire answers every property it does
+// not recognise with a function that would call a method of that name on the
+// server. So toRaw() asks the wire for __v_raw, is handed a function, takes it
+// for the raw object behind the proxy, and stores that instead — leaving a stub
+// with no saveOverride on it. Every override was then lost on its way to the
+// database while the preview went on showing it.
+test('a wire assigned into reactive state is not the wire that comes back', () => {
+    // Alpine's toRaw, verbatim.
+    const toRaw = (observed) => observed && toRaw(observed['__v_raw']) || observed;
+
+    // Livewire's wire, as far as an unrecognised property is concerned.
+    const wire = new Proxy({}, {
+        get: (target, property) => (...params) => ({ called: property, params }),
+    });
+
+    assert.notEqual(toRaw(wire), wire);
+    assert.equal(typeof toRaw(wire).saveOverride, 'undefined');
 });
