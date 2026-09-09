@@ -65,6 +65,56 @@ export function parsePrimaryFontFamily(fontValue) {
     return (fontValue ?? '').split(',')[0].trim().replace(/['"]/g, '');
 }
 
+/**
+ * Faces already asked for, keyed by family and size, holding the load itself so
+ * that two renders started in the same breath wait on one request rather than
+ * racing each other.
+ *
+ * @type {Map<string, Promise<unknown>>}
+ */
+const fontLoads = new Map();
+
+/**
+ * Wait until the browser actually holds the faces a drawing is about to be
+ * measured against.
+ *
+ * A web font is fetched only when something on the page asks to be painted in
+ * it, so the first drawing made in a font the page has never used measures
+ * against the fallback face: `canvas.measureText`, abc2svg's hidden span and
+ * Aretino's own metrics all answer for whatever the browser has right now.
+ * Every one of those numbers is baked into an SVG that is never re-measured, so
+ * the mistake stays on screen until something else forces a re-render — which is
+ * why a font change used to come out right only on the second attempt.
+ *
+ * The four styles are loaded, not just the regular one: a heading is bold and a
+ * variation is italic, and each is a separate face with metrics of its own.
+ *
+ * @param {string[]} fontValues CSS font-family values; only the primary family counts
+ * @param {number} [sizePx] the size to ask for, which picks between size-specific faces
+ */
+export async function ensureFontsLoaded(fontValues, sizePx = 16) {
+    if (typeof document === 'undefined' || !document.fonts) { return; }
+
+    const waits = [];
+    for (const value of fontValues) {
+        const family = parsePrimaryFontFamily(value);
+        if (family === '') { continue; }
+        const key = `${sizePx}_${family}`;
+        if (!fontLoads.has(key)) {
+            const spec = `${sizePx}px "${family}"`;
+            fontLoads.set(key, Promise.allSettled([
+                document.fonts.load(spec),
+                document.fonts.load(`italic ${spec}`),
+                document.fonts.load(`bold ${spec}`),
+                document.fonts.load(`italic bold ${spec}`),
+            ]));
+        }
+        waits.push(fontLoads.get(key));
+    }
+
+    await Promise.all(waits);
+}
+
 export async function injectWebFontsIntoSvg(svgEl, fontValues) {
     const rules = [];
     const seenFamilies = new Set();

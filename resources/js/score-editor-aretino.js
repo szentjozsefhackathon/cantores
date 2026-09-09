@@ -2,6 +2,8 @@ import { renderAretino } from '@aretino-chant/core';
 import { gabcToAretino } from '@aretino-chant/gabc2aretino';
 import { guidoToAretino, guidoTextToAretino } from '@aretino-chant/guido2aretino';
 
+import { ensureFontsLoaded } from './svg-fonts.js';
+
 const ARETINO_STAFF_SIZE_CALIBRATION = 1.3;
 
 /**
@@ -44,7 +46,6 @@ export function aretinoMixin() {
         _aretinoResizeObserver: null,
         _aretinoResizeTimer: null,
         _aretinoPreviewDirty: false,
-        _aretinoFontsLoaded: {},
 
         convertGabcToAretino() {
             const aretino = gabcToAretino(this.gabcSource);
@@ -86,20 +87,7 @@ export function aretinoMixin() {
             const content = this.localContent;
             if (!content || !content.trim()) { this._aretinoPreviewDirty = false; return; }
 
-            if (document.fonts) {
-                const primaryFamily = this.aretinoTextFont.split(',')[0].trim().replace(/['"]/g, '');
-                const fontKey = `${this.aretinoLyricSize}_${primaryFamily}`;
-                if (!this._aretinoFontsLoaded[fontKey]) {
-                    const sz = `${this.aretinoLyricSize}px "${primaryFamily}"`;
-                    await Promise.allSettled([
-                        document.fonts.load(sz),
-                        document.fonts.load(`italic ${sz}`),
-                        document.fonts.load(`bold ${sz}`),
-                        document.fonts.load(`italic bold ${sz}`),
-                    ]);
-                    this._aretinoFontsLoaded[fontKey] = true;
-                }
-            }
+            await ensureFontsLoaded([this.aretinoTextFont], Number(this.aretinoLyricSize));
 
             const ratio = this.aretinoPageRatio;
             // 'auto' is a legacy alias for 'paper' from before the rename.

@@ -11,7 +11,7 @@ import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcMixin, hungarianChords
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { gabcMixin } from './score-editor-gabc.js';
-import { injectWebFontsIntoSvg } from './svg-fonts.js';
+import { ensureFontsLoaded, injectWebFontsIntoSvg } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
 
 /**
@@ -112,6 +112,8 @@ export async function renderBooklet(entries, rawGeometry, host) {
     const blocks = [];
     const fonts = new Set([geometry.textFont]);
 
+    await ensureFontsLoaded(bookletFonts(entries, geometry), geometry.lyricSizePx);
+
     for (const entry of entries) {
         const built = await buildEntryBlocks(entry, geometry, host);
 
@@ -160,6 +162,8 @@ export async function renderBookletFlow(entries, rawGeometry, host) {
     const geometry = pageGeometry(rawGeometry);
     const fonts = new Set([geometry.textFont]);
     const items = [];
+
+    await ensureFontsLoaded(bookletFonts(entries, geometry), geometry.lyricSizePx);
 
     for (const entry of entries) {
         const built = await buildEntryBlocks(entry, geometry, host);
@@ -1021,6 +1025,36 @@ function formatDefaults(format) {
     if (format === 'aretino') { return aretinoMixin(); }
 
     return {};
+}
+
+/**
+ * Every family the booklet is about to be measured in, worked out before a
+ * single block is built.
+ *
+ * The fonts a render reports are the ones it has already drawn with, which is
+ * too late to be of any use: the measuring happened inside the render. So the
+ * settings are resolved once up front, cheaply and without drawing anything,
+ * purely to learn which faces the browser has to be holding first. See
+ * ensureFontsLoaded() for what goes wrong when it is not.
+ *
+ * Exported for testing.
+ */
+export function bookletFonts(entries, geometry) {
+    const fonts = new Set([geometry.textFont]);
+
+    for (const entry of entries) {
+        if (entry.kind !== 'score') {
+            fonts.add(geometry.textFont);
+            continue;
+        }
+
+        const format = entry.format;
+        const resolved = resolveSettings(format, formatDefaults(format), entry.settings ?? {}, geometry, entry.override);
+
+        fonts.add(fontOf(format, resolved, geometry));
+    }
+
+    return Array.from(fonts);
 }
 
 function fontOf(format, resolved, geometry) {
