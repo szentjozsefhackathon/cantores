@@ -55,3 +55,17 @@ test('revokePublicPreview fails for score not linked to this music', function ()
         ->call('revokePublicPreview', $score->id)
         ->assertStatus(404);
 });
+
+test('editor sees the variation name beside a score title', function () {
+    Score::factory()->create([
+        'user_id' => $this->editor->id,
+        'music_id' => $this->music->id,
+        'title' => 'Ave Maria',
+        'variation_name' => 'Kórus',
+        'public_preview' => true,
+    ]);
+
+    Livewire::test('pages::editor.music-editor', ['music' => $this->music])
+        ->assertSee('Ave Maria')
+        ->assertSee('Kórus');
+});

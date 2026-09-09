@@ -67,6 +67,49 @@ it('ignores a malformed incipit data url', function () {
     Storage::assertMissing($score->incipit_path);
 });
 
+it('replaces the stored incipit when the score is redrawn after a format change', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->unattached()->create(['user_id' => $user->id]);
+    Storage::put($score->incipit_path, 'the-old-format');
+
+    $pngBytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->call('replaceIncipit', 'data:image/png;base64,'.base64_encode($pngBytes));
+
+    expect(Storage::get($score->incipit_path))->toBe($pngBytes);
+});
+
+it('drops the stored incipit when the new format draws nothing', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->unattached()->create(['user_id' => $user->id]);
+    Storage::put($score->incipit_path, 'the-old-format');
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->call('replaceIncipit', null);
+
+    Storage::assertMissing($score->incipit_path);
+});
+
+it('does not let another user redraw a score\'s incipit', function () {
+    $owner = User::factory()->create();
+    $score = Score::factory()->unattached()->create(['user_id' => $owner->id]);
+    Storage::put($score->incipit_path, 'the-owners-picture');
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(ScoreEditor::class)
+        ->set('score', $score)
+        ->call('replaceIncipit', null)
+        ->assertForbidden();
+
+    Storage::assertExists($score->incipit_path);
+});
+
 it('serves the incipit image to the score owner', function () {
     $user = User::factory()->create();
     $score = Score::factory()->unattached()->create(['user_id' => $user->id]);

@@ -253,10 +253,13 @@
                             @if($publicScore->hasIncipit())
                             <x-incipit-image :src="$publicScore->publicIncipitUrl()" :alt="$publicScore->title" imgClass="max-h-12 w-auto" />
                             @endif
-                            <a href="{{ route('public-scores.show', ['score' => $publicScore, 'slug' => \Illuminate\Support\Str::slug($publicScore->title)]) }}"
-                               class="flex-1 font-medium hover:underline">
-                                {{ $publicScore->title }}
-                            </a>
+                            <div class="flex-1">
+                                <a href="{{ route('public-scores.show', ['score' => $publicScore, 'slug' => \Illuminate\Support\Str::slug($publicScore->title)]) }}"
+                                   class="font-medium hover:underline">
+                                    {{ $publicScore->title }}
+                                </a>
+                                <x-score-variation-name :score="$publicScore" />
+                            </div>
                             <x-score-license-badge :publication="$publicScore->publication" />
                         </div>
                         @endforeach
@@ -298,6 +301,7 @@
                                             <a href="{{ route('scores.edit', $score) }}" wire:navigate class="hover:underline text-blue-600 dark:text-blue-400">
                                                 {{ $score->title }}
                                             </a>
+                                            <x-score-variation-name :score="$score" />
                                             <div class="mt-0.5 flex flex-wrap items-center gap-2">
                                                 <x-score-format-badge :format="$score->format" />
                                                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ $score->updated_at->translatedFormat('Y-m-d') }}</span>

@@ -117,6 +117,24 @@ it('shows only the current users attached scores on the music detail page', func
         ->assertDontSee('Other Private Score');
 });
 
+it('names the variation beside the score title in the music view', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+
+    Score::factory()->create([
+        'user_id' => $user->id,
+        'music_id' => $music->id,
+        'title' => 'Ave Maria',
+        'variation_name' => 'Fuvola',
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(MusicView::class, ['music' => $music])
+        ->assertSee('Ave Maria')
+        ->assertSee('Fuvola');
+});
+
 it('auto-populates title when music is selected via the music search modal', function () {
     $user = User::factory()->create();
     $music = Music::factory()->create(['title' => 'Ave Maria']);

@@ -1,7 +1,7 @@
 import { applyConditionalBlocks } from './score-editor-pages.js';
 import { abcMixin, ABC_RATIO_DEFAULTS, applyAbcSvgStyle, buildAbcPreamble, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
 import { gabcMixin, renderGabcToSvgMarkup } from './score-editor-gabc.js';
-import { chordproMixin } from './score-editor-chordpro.js';
+import { chordproMixin, renderChordproIncipitSvg } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { formatDefaults, incipitSettings } from './score-editor-settings.js';
 import { applyPhysicalSvgSize, removeEditorOnlySvgMarkup } from './score-editor-export.js';
@@ -266,6 +266,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 this.syncAretinoEditor();
                 this.scheduleRender();
+                this.refreshIncipit();
             });
             this.$watch('$wire.title', (val) => {
                 if (this.$wire.format === 'chordpro') {
@@ -656,6 +657,27 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /**
+         * Draws the incipit again straight away, and clears the stored one when
+         * the score can no longer produce one.
+         *
+         * The autosave redraws the thumbnail at most once a minute, which is
+         * right for typing and wrong for a change of format: the picture is of
+         * the old notation from the moment the format changes, and would stay
+         * that way until the throttle lets go — or for good, if the new format
+         * renders nothing from what is in the editor.
+         */
+        async refreshIncipit() {
+            if (!this.autosaveEnabled) { return; }
+            const incipit = await this.generateIncipit().catch(() => null);
+            this._autosaveIncipitAt = Date.now();
+            try {
+                await this.$wire.call('replaceIncipit', incipit);
+            } catch (e) {
+                console.warn('[score-editor] incipit refresh failed', e);
+            }
+        },
+
         // The incipit is drawn from a render of its own rather than from what is
         // on screen, at the format's factory defaults (see incipitSettings):
         // settings tuned for a purpose — projector-sized lyrics, a condensed
@@ -697,6 +719,13 @@ document.addEventListener('alpine:init', () => {
                     return copy;
                 });
                 if (!clone) { return null; }
+            } else if (format === 'chordpro') {
+                clone = await renderChordproIncipitSvg(this.localContent, {
+                    german: settings.chordproGermanNotation,
+                    transpose: settings.chordproTranspose,
+                    fontFamily: settings.chordproFontFamily,
+                });
+                if (!clone) { return null; }
             } else {
                 return null;
             }
@@ -712,9 +741,11 @@ document.addEventListener('alpine:init', () => {
             clone.setAttribute('width', String(targetWidth));
             clone.setAttribute('height', String(outputHeight));
 
-            const lyricFont = format === 'aretino'
-                ? 'EB Garamond'
-                : (format === 'abc' ? settings.abcLyricFont : settings.lyricFont);
+            const lyricFont = {
+                aretino: 'EB Garamond',
+                abc: settings.abcLyricFont,
+                chordpro: settings.chordproFontFamily,
+            }[format] ?? settings.lyricFont;
             await injectWebFontsIntoSvg(clone, [lyricFont]);
 
             const svgData = new XMLSerializer().serializeToString(clone);

@@ -386,6 +386,32 @@ class ScoreEditor extends Component
     }
 
     /**
+     * Put a freshly drawn incipit in place of the stored one, or drop the stored
+     * one when the browser had nothing to draw.
+     *
+     * Unlike an autosave, this replaces rather than tops up: it is called when
+     * the score changed format, and the old format's picture is wrong from that
+     * moment on — a ChordPro sheet must not keep the staff it used to be. The
+     * row is touched so the cache-busting stamp on the incipit URL moves; the
+     * image itself is served immutable for a year.
+     */
+    #[Renderless]
+    public function replaceIncipit(?string $incipitDataUrl = null): void
+    {
+        if (! $this->score instanceof Score) {
+            return;
+        }
+
+        $this->authorize('update', $this->score);
+
+        if (! $this->storeIncipit($this->score, $incipitDataUrl)) {
+            Storage::delete($this->score->incipit_path);
+        }
+
+        $this->score->touch();
+    }
+
+    /**
      * The public-preview box is the one editor control that changes the score
      * without touching the preview, so the browser-side timer never hears about
      * it; the tick is written back here instead.
@@ -1263,21 +1289,26 @@ class ScoreEditor extends Component
         $this->forgetFiles();
     }
 
-    private function storeIncipit(Score $score, ?string $incipitDataUrl): void
+    /**
+     * Write the browser's drawing to the score's incipit file.
+     *
+     * @return bool whether anything was written
+     */
+    private function storeIncipit(Score $score, ?string $incipitDataUrl): bool
     {
         $prefix = 'data:image/png;base64,';
 
         if (! is_string($incipitDataUrl) || ! str_starts_with($incipitDataUrl, $prefix)) {
-            return;
+            return false;
         }
 
         $bytes = base64_decode(substr($incipitDataUrl, strlen($prefix)), strict: true);
 
         if ($bytes === false || strlen($bytes) > 2_000_000) {
-            return;
+            return false;
         }
 
-        Storage::put($score->incipit_path, $bytes);
+        return Storage::put($score->incipit_path, $bytes) !== false;
     }
 
     private function loadFromSharedData(string $d): void

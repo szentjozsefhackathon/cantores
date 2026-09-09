@@ -1,4 +1,6 @@
-import { chordStringsOf, spellFlatBInHtml, spellFlatBInText } from './chordpro-notation.js';
+import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
+import { chordStringsOf, spellFlatB, spellFlatBInHtml, spellFlatBInText } from './chordpro-notation.js';
+import { stackSvgs } from './svg-stack.js';
 
 let chordSheetJsPromise = null;
 function loadChordSheetJS() {
@@ -52,6 +54,89 @@ export async function parseChordproSong(content, { german, transpose }) {
     const steps = Number(transpose) || 0;
 
     return steps === 0 ? song : song.transpose(steps);
+}
+
+/** How many lines of a sheet stand in for it as a thumbnail. */
+const INCIPIT_ROWS = 3;
+
+/** The size the incipit is engraved at, in the units of its own viewBox. */
+const INCIPIT_FONT_SIZE = 40;
+
+/**
+ * How wide the sheet is laid out, in those same units.
+ *
+ * The incipit pipeline keeps the left half of what it renders — for engraved
+ * formats that is the opening of the first staff — so the drawing is twice this
+ * wide and the right half is left empty on purpose: what survives the crop is
+ * then exactly the lines laid out here, at a size chosen for them rather than
+ * whatever width the longest line happened to have.
+ */
+const INCIPIT_LAYOUT_WIDTH = 900;
+
+/**
+ * The rows a chord sheet's incipit is drawn from: its opening lines, chords
+ * over the syllables they belong to.
+ *
+ * Section labels ("Verse 1") and `{comment}` lines are dropped rather than
+ * counted, because a thumbnail three lines tall cannot spend one of them on a
+ * heading — what tells two arrangements apart is the words and the chords.
+ *
+ * @param {Array<{lines: Array<{items: Array}>}>} paragraphs chordsheetjs Paragraphs
+ * @param {object} options as chordproRows takes them
+ * @returns {Array<{height: number, svg: string}>}
+ */
+export function chordproIncipitRows(paragraphs, options) {
+    const sung = (paragraphs ?? [])
+        .map((paragraph) => ({ lines: (paragraph.lines ?? []).filter(isSungLine) }))
+        .filter((paragraph) => paragraph.lines.length > 0);
+
+    return chordproRows(sung, options).slice(0, INCIPIT_ROWS);
+}
+
+/** Whether a line carries anything sung, as opposed to a directive alone. */
+function isSungLine(line) {
+    return (line.items ?? []).some((item) => (
+        (typeof item?.lyrics === 'string' && item.lyrics.trim() !== '')
+        || (typeof item?.chords === 'string' && item.chords.trim() !== '')
+    ));
+}
+
+/**
+ * The opening of a chord sheet, drawn as one SVG element for the incipit.
+ *
+ * Returns null when there is nothing sung to draw — an empty editor, or a file
+ * of directives — so the caller leaves the score without a thumbnail rather
+ * than storing a blank picture.
+ *
+ * @param {string} content raw ChordPro
+ * @param {{german: boolean, transpose: number|string, fontFamily: string}} options
+ * @returns {Promise<SVGElement|null>}
+ */
+export async function renderChordproIncipitSvg(content, { german, transpose, fontFamily }) {
+    if (!content || !content.trim()) { return null; }
+
+    const song = await parseChordproSong(content, { german, transpose });
+    const family = safeFontFamily(fontFamily);
+
+    const rows = chordproIncipitRows(song.bodyParagraphs ?? song.paragraphs ?? [], {
+        fontSize: INCIPIT_FONT_SIZE,
+        fontFamily: family,
+        layoutWidth: INCIPIT_LAYOUT_WIDTH,
+        measure: canvasMeasurer(family, INCIPIT_FONT_SIZE),
+        spell: german ? spellFlatB : undefined,
+    });
+
+    if (rows.length === 0) { return null; }
+
+    const height = rows.reduce((total, row) => total + row.height, 0);
+    const fragments = rows.map((row) => new DOMParser().parseFromString(row.svg, 'image/svg+xml').documentElement);
+
+    const { svg } = stackSvgs(fragments, {
+        intrinsicSize: true,
+        viewBox: { x: 0, y: 0, w: INCIPIT_LAYOUT_WIDTH * 2, h: height },
+    });
+
+    return svg;
 }
 
 export function chordproMixin() {

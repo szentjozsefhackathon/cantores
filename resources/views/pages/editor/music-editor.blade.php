@@ -1356,6 +1356,7 @@ new class extends Component
                                 <a href="{{ route('scores.edit', $myScore) }}" wire:navigate class="hover:underline text-blue-600 dark:text-blue-400">
                                     {{ $myScore->title }}
                                 </a>
+                                <x-score-variation-name :score="$myScore" />
                                 <div class="mt-0.5 flex flex-wrap items-center gap-2">
                                     <x-score-format-badge :format="$myScore->format" />
                                     <span class="text-xs text-gray-500 dark:text-gray-400">{{ $myScore->updated_at->translatedFormat('Y-m-d') }}</span>
@@ -1417,6 +1418,7 @@ new class extends Component
                                 <a href="{{ route('scores.edit', $previewScore) }}" wire:navigate class="hover:underline text-blue-600 dark:text-blue-400">
                                     {{ $previewScore->title }}
                                 </a>
+                                <x-score-variation-name :score="$previewScore" />
                                 <div class="mt-0.5">
                                     <x-score-format-badge :format="$previewScore->format" />
                                 </div>
