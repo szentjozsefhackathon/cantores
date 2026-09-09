@@ -27,7 +27,7 @@ class BookletFactory extends Factory
             'margin_mm' => 12,
             'lyric_size_pt' => 10.5,
             'staff_height_mm' => 5,
-            'text_font' => 'Inter',
+            'text_font' => 'EB Garamond',
             'heading_scale' => 0.9,
             'abc_staff_sep' => 25,
         ];

@@ -179,7 +179,7 @@
                                         // attribute but not a directive, and a knob whose
                                         // bounds arrive as the literal text "@js(...)" is a
                                         // button that throws.
-                                        $knob = Js::from(Arr::only($field, ['key', 'min', 'max', 'step']));
+                                        $knob = Js::from(Arr::only($field, ['key', 'role', 'min', 'max', 'step']));
                                     @endphp
 
                                     <div class="flex shrink-0 items-center gap-0.5 rounded-lg border border-zinc-200 px-1 dark:border-zinc-700">

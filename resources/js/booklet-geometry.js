@@ -34,8 +34,14 @@ export function pxToPt(px) {
     return px / PX_PER_PT;
 }
 
-/** The face the booklet speaks in when nothing else has been chosen. */
-export const DEFAULT_TEXT_FONT = 'Inter';
+/**
+ * The face the booklet speaks in when nothing else has been chosen.
+ *
+ * A book face rather than an interface one, because this is now the face of the
+ * whole booklet — the headings, the rubrics and the lyrics under every staff —
+ * and a booklet is read the way a book is.
+ */
+export const DEFAULT_TEXT_FONT = 'EB Garamond';
 
 /**
  * How far apart ABC staves stand in a booklet.

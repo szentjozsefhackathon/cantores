@@ -11,7 +11,7 @@ import {
     ZOOM_STEP,
 } from './booklet-reading.js';
 import { renderBookletFlow } from './booklet-render.js';
-import { fileSettings, movesSetting, resolveSettings, steppedValue, travellingOverride } from './booklet-settings.js';
+import { fileSettings, movesSetting, readerStep, resolveSettings, steppedValue, travellingOverride } from './booklet-settings.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
@@ -286,7 +286,9 @@ document.addEventListener('alpine:init', () => {
          * @param {number} direction -1 or 1
          */
         nudgeOverride(entryId, field, direction) {
-            this.setOverride(entryId, field.key, steppedValue(this.settingsOf(entryId)[field.key], field, direction));
+            const knob = { ...field, step: readerStep(field) };
+
+            this.setOverride(entryId, field.key, steppedValue(this.settingsOf(entryId)[field.key], knob, direction));
         },
 
         /** A knob at the end of its travel, so the button can say so. */

@@ -778,16 +778,16 @@ it('saves the face and the heading size the booklet is set in', function () {
     actingAs($user);
 
     Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->set('textFont', 'EB Garamond')
+        ->set('textFont', 'Lora')
         ->set('headingScale', 0.8)
         ->assertHasNoErrors();
 
     $booklet->refresh();
 
-    expect($booklet->text_font)->toBe('EB Garamond')
+    expect($booklet->text_font)->toBe('Lora')
         ->and($booklet->heading_scale)->toBe(0.8)
         ->and($booklet->geometry())->toMatchArray([
-            'textFont' => 'EB Garamond',
+            'textFont' => 'Lora',
             'headingScale' => 0.8,
         ]);
 });
@@ -824,7 +824,7 @@ it('starts a booklet at the numbers a printed A5 booklet wanted', function () {
         'lyricSizePt' => 10.5,
         'staffHeightMm' => 5.0,
         'headingScale' => 0.9,
-        'textFont' => 'Inter',
+        'textFont' => 'EB Garamond',
         'abcStaffSep' => 25.0,
     ]);
 });
@@ -841,7 +841,7 @@ it('refuses a text font the exporter cannot embed', function () {
         ->set('textFont', 'Comic Sans MS')
         ->assertHasErrors('textFont');
 
-    expect($booklet->fresh()->text_font)->toBe('Inter');
+    expect($booklet->fresh()->text_font)->toBe('EB Garamond');
 });
 
 // The whole point of holding overrides on the pivot: a booklet adjusts how a

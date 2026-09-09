@@ -54,7 +54,12 @@ class BookletSettingFields
     private const FIELDS = [
         'gabc' => [
             'gabcLayoutWidth' => ['type' => 'number', 'min' => 200, 'max' => 8000, 'step' => 5, 'label' => 'Layout width (px)', 'icon' => 'ruler'],
-            'lyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 4, 'max' => 60, 'step' => 0.5, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
+            // Wider at the bottom for the same reason as the staff below it: what
+            // exsurge calls a lyric size is three thirteenths of a pixel of type,
+            // so a booklet's ordinary 10.5pt lands at 3.2 — under a floor of 4 the
+            // knob starts pinned, and a reader pressing bigger is thrown to 13pt.
+            // 1.5 is about five points of type, the floor the other formats have.
+            'lyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 1.5, 'max' => 60, 'step' => 0.5, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
             // Wider at the bottom than the score editor's own control: a chant
             // staff sized for a real A5 page lands near 21, below the 30 the
             // editor allows on its nominal 508 mm canvas.
@@ -121,30 +126,39 @@ class BookletSettingFields
      *
      * What is left is the pair of things somebody actually reaches for while
      * singing: this one is set too small for my eyes, and this one is pitched
-     * too high for my voice. Both are offered as a step rather than as a number,
-     * in the field's own unit: a reader is nudging what they can see, not typing
-     * a value into a renderer.
+     * too high for my voice. Both are offered as a step rather than as a number:
+     * a reader is nudging what they can see, not typing a value into a renderer.
      *
-     * @var array<string, array<string, array{role: string, step: float}>>
+     * A `size` carries no step of its own. Each format stores its type size in
+     * whatever unit its engine takes — GABC in thirteenths of a pixel's worth of
+     * em, ABC in thirds of a pixel, ChordPro in pixels, Aretino in points — so
+     * one number here would be four different jumps on the screen, from a
+     * fifteenth of the type to a thirtieth of it. The step is therefore half a
+     * point of rendered type in every format, converted into the knob's own unit
+     * by readerStep() in resources/js/booklet-settings.js, next to the
+     * conversions that are traced out of the renderers themselves.
+     *
+     * @var array<string, array<string, array{role: string, step?: float}>>
      */
     private const READER_FIELDS = [
         'gabc' => [
-            'lyricSize' => ['role' => 'size', 'step' => 0.5],
+            'lyricSize' => ['role' => 'size'],
         ],
         'abc' => [
-            'abcLyricSize' => ['role' => 'size', 'step' => 0.5],
+            'abcLyricSize' => ['role' => 'size'],
             'abcTranspose' => ['role' => 'transpose', 'step' => 1],
         ],
         'aretino' => [
-            'aretinoLyricSize' => ['role' => 'size', 'step' => 0.5],
+            'aretinoLyricSize' => ['role' => 'size'],
         ],
         'chordpro' => [
-            'chordproFontSize' => ['role' => 'size', 'step' => 0.5],
+            'chordproFontSize' => ['role' => 'size'],
             'chordproTranspose' => ['role' => 'transpose', 'step' => 1],
         ],
         // A picture has no type in it to enlarge, only itself, so its size knob
-        // is the one it already has — at its own step, since half of a scale
-        // that runs from a fifth to whole is half the picture.
+        // is the one it already has, at a step of its own: half a point means
+        // nothing to a scan, and half of a scale that runs from a fifth to whole
+        // is half the picture.
         'file' => [
             'fileZoom' => ['role' => 'size', 'step' => 0.05],
         ],
@@ -231,9 +245,12 @@ class BookletSettingFields
     /**
      * The controls to render for a format in the reader's own panel.
      *
-     * Same shape as panelFor(), with the step the reader nudges by and the role
-     * that decides how it is drawn — a size is two bare buttons, a transposition
-     * shows how far it has been moved.
+     * Same shape as panelFor(), with the role that decides how the knob is drawn
+     * — a size is two bare buttons, a transposition shows how far it has been
+     * moved — and, where the reader nudges by something other than the editor's
+     * own step, that step. A `size` keeps the editor's step here and has it
+     * replaced client-side by half a point in the format's unit; see
+     * READER_FIELDS.
      *
      * @return list<array{key: string, role: string, type: string, min: float, max: float, step: float, label: string, icon: string}>
      */

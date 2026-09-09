@@ -82,36 +82,31 @@ const geometry = pageGeometry({
     contentHeightMm: 186,
     lyricSizePt: 11,
     staffHeightMm: 7,
-    textFont: 'Inter',
+    textFont: 'EB Garamond',
 });
 
 const entry = (over = {}) => ({
     id: 1, kind: 'score', format: 'aretino', content: '', settings: {}, override: null, ...over,
 });
 
-// The booklet leaves the font to whoever engraved the score, so the families to
-// wait for are the scores' own — the booklet's text font alone is not enough.
-test('the families waited for are the ones each score is actually set in', () => {
+// The booklet sets every score in its own face, so the family to wait for is
+// the booklet's — whatever the scores were engraved in.
+test('the booklet\'s own face is the one waited for, not each score\'s', () => {
     const fonts = bookletFonts([
         entry({ settings: { aretino: { paper: { aretinoTextFont: "'Lora'" } } } }),
         entry({ id: 2, format: 'chordpro', settings: { chordpro: { paper: { chordproFontFamily: "'Barlow Condensed', sans-serif" } } } }),
-        entry({ id: 3, format: 'abc', settings: { abc: { paper: { abcLyricFont: 'EB Garamond' } } } }),
+        entry({ id: 3, format: 'abc', settings: { abc: { paper: { abcLyricFont: 'Inter' } } } }),
         entry({ id: 4, kind: 'text', text: 'Rubrika' }),
     ], geometry);
 
-    assert.ok(fonts.includes("'Inter'"), 'the booklet\'s own text font is missing');
-    assert.ok(fonts.includes("'Lora'"));
-    assert.ok(fonts.includes("'Barlow Condensed', sans-serif"));
-    assert.ok(fonts.includes('EB Garamond'));
+    assert.deepEqual(fonts, ["'EB Garamond'"]);
 });
 
-// A per-score override is what someone changed by hand, and it wins over the
-// score's own settings here exactly as it does in the render.
 test('a font overridden for this booklet is the one waited for', () => {
     const fonts = bookletFonts([
-        entry({ settings: { aretino: { paper: { aretinoTextFont: "'Lora'" } } }, override: { aretinoTextFont: "'EB Garamond'" } }),
+        entry({ settings: { aretino: { paper: { aretinoTextFont: "'Inter'" } } }, override: { aretinoTextFont: "'Lora'" } }),
     ], geometry);
 
-    assert.ok(fonts.includes("'EB Garamond'"));
-    assert.ok(! fonts.includes("'Lora'"), 'the overridden font was waited for instead');
+    assert.ok(fonts.includes("'Lora'"));
+    assert.ok(! fonts.includes("'Inter'"), 'the score\'s own font was waited for instead');
 });

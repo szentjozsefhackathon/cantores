@@ -17,14 +17,23 @@ import {
  *
  *   1. the format's own defaults
  *   2. what the score's author chose — fonts, spacings, transposition
- *   3. the booklet's unification, which owns size and width and nothing else
+ *   3. the booklet's unification, which owns size, width and the face
  *   4. the per-score override, which is whatever a person changed by hand
  *
  * Layer 3 is narrow on purpose. A booklet's job is to make a pile of scores the
  * same size, not to overrule the person who engraved them: it sets how wide the
- * page is, how big the type is and how tightly the systems are stacked, and
- * leaves the note spacing, the font and the transposition exactly as the author
- * left them.
+ * page is, how big the type is, how tightly the systems are stacked and which
+ * face everything is set in, and leaves the note spacing and the transposition
+ * exactly as the author left them.
+ *
+ * The face is in there because a booklet is one printed object. Two faces have
+ * different widths and different weights, and the balance between a staff and
+ * the lyrics under it that looks right in one is wrong in the other — so a
+ * booklet in which each score keeps the face its author happened to pick cannot
+ * be balanced at all, however carefully its sizes are unified. The score's own
+ * `lyricFont` is therefore ignored here, exactly as its own lyric size is, and
+ * for the same reason. A cantor who does want one score in another face still
+ * has layer 4.
  *
  * The stacking is in there because a booklet packs whole services onto small
  * pages, and vertical air a score can afford on its own sheet is what costs the
@@ -40,7 +49,40 @@ import {
  */
 
 /**
- * The keys the booklet computes for itself. Everything else is inherited.
+ * Where each engine keeps the face it sets lyrics in.
+ *
+ * One key per format because no two of them agree on a name for it, and the
+ * booklet has to write the same face into all four.
+ */
+const FONT_KEY = {
+    gabc: 'lyricFont',
+    abc: 'abcLyricFont',
+    chordpro: 'chordproFontFamily',
+    aretino: 'aretinoTextFont',
+};
+
+/**
+ * The booklet's face, in the key the format's renderer reads.
+ *
+ * Kept apart from unifiedSettings() rather than folded into it because the two
+ * are unified for different reasons and travel differently. Everything in
+ * unifiedSettings is an answer to a sheet of paper and is thrown away when the
+ * booklet is read on a screen; a face is an answer to the booklet itself, and a
+ * per-score override of it means the same thing on a phone as on A5. See
+ * travellingOverride().
+ *
+ * @param {string} format
+ * @param {object} geometry from pageGeometry(), whose textFont is already quoted
+ */
+export function unifiedFont(format, geometry) {
+    const key = FONT_KEY[format];
+
+    return key ? { [key]: geometry.textFont } : {};
+}
+
+/**
+ * The keys the booklet computes from the page it is printed on. Everything else
+ * is inherited or, in the case of the face, unified separately above.
  *
  * @param {string} format
  * @param {object} geometry from pageGeometry()
@@ -182,6 +224,41 @@ export function layoutWidthFor(format, resolved, geometry) {
  * @param {{min: number, max: number, step: number}} field from a booklet setting panel
  * @param {number} direction -1 or 1
  */
+/** How much bigger or smaller one press of a reader's size knob is, in points. */
+export const READER_SIZE_STEP_PT = 0.5;
+
+/**
+ * Where a reader's size knob is stored, per key — the same conversions
+ * unifiedSettings() lays a booklet out with, reused for the step so that a press
+ * is worth the same rise in type whichever engine drew the score.
+ */
+const SIZE_KNOB_UNIT = {
+    lyricSize: gabcLyricSizeForPt,
+    abcLyricSize: abcLyricSizeForPt,
+    aretinoLyricSize: aretinoLyricSizeForPt,
+    chordproFontSize: chordproFontSizeForPt,
+};
+
+/**
+ * How far one press of a reader's knob moves it, in the knob's own unit.
+ *
+ * The panel's knobs are not in the same units and mostly not in points: what
+ * ChordPro calls a font size is pixels, ABC's is a third of them and GABC's is
+ * three thirteenths, so the one step the panel used to send moved ChordPro by a
+ * third of a point and GABC by a point and a half — the reader pressing bigger
+ * on a hymn and getting nothing, then pressing it on the chant next to it and
+ * overshooting. So a size is asked for in points and converted here, and every
+ * other knob keeps the step the panel gave it: a semitone is a semitone, and a
+ * picture is enlarged by a twentieth of itself.
+ *
+ * @param {{key: string, role?: string, step?: number}} field from a reader panel
+ */
+export function readerStep(field) {
+    const toKnobUnit = field.role === 'size' ? SIZE_KNOB_UNIT[field.key] : undefined;
+
+    return toKnobUnit ? round(toKnobUnit(READER_SIZE_STEP_PT), 4) : Number(field.step) || 1;
+}
+
 export function steppedValue(current, field, direction) {
     const step = Number(field.step) || 1;
     const from = Number.isFinite(Number(current)) ? Number(current) : 0;
@@ -247,6 +324,7 @@ export function resolveSettings(format, formatDefaults, scoreSettings, geometry,
         ...formatDefaults,
         ...paperBucket(scoreSettings, format),
         ...unifiedSettings(format, geometry),
+        ...unifiedFont(format, geometry),
         ...(override ?? {}),
     };
 }

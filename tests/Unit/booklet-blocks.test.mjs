@@ -102,8 +102,8 @@ test('headings are set in the booklet\'s own face at its own heading size', asyn
     assert.match(blocks[0].svg, /font-family="&apos;Lora&apos;"/);
     assert.ok(Math.abs(sizeOf(blocks[0].svg) - geometry.lyricSizePx * 0.6) < 0.01);
     assert.ok(Math.abs(sizeOf(blocks[1].svg) - geometry.lyricSizePx * 0.6 * 0.82) < 0.01);
-    // The music keeps the face its own author chose.
-    assert.ok(!fonts.includes("'Lora'"), 'the heading face is not forced onto the engraving');
+    // And the engraving under it is set in that same face: one booklet, one face.
+    assert.ok(fonts.includes("'Lora'"), 'the music was left in a face of its own');
 });
 
 // Every engine already draws its first staff standing off the top of its own

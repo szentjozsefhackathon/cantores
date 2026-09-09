@@ -63,8 +63,8 @@ test('A5 portrait with a 12mm margin becomes the expected pixel box', () => {
 test('the booklet\'s text font reaches the page quoted', () => {
     assert.equal(quoteFontFamily('EB Garamond'), "'EB Garamond'");
     assert.equal(quoteFontFamily("'Lora'"), "'Lora'");
-    assert.equal(quoteFontFamily(null), "'Inter'");
-    assert.equal(quoteFontFamily('  '), "'Inter'");
+    assert.equal(quoteFontFamily(null), "'EB Garamond'");
+    assert.equal(quoteFontFamily('  '), "'EB Garamond'");
 });
 
 test('the typography a booklet chose travels with its geometry', () => {
@@ -99,14 +99,14 @@ test('an ABC separation of zero is a decision, not a missing one', () => {
 });
 
 // An older booklet, or a payload written before these existed, must still draw.
-test('a geometry that says nothing about type falls back to Inter at full size', () => {
+test('a geometry that says nothing about type falls back to the default face at full size', () => {
     const geometry = pageGeometry({
         pageWidthMm: 148, pageHeightMm: 210, marginMm: 12,
         contentWidthMm: 124, contentHeightMm: 186,
         lyricSizePt: 11, staffHeightMm: 7,
     });
 
-    assert.equal(geometry.textFont, "'Inter'");
+    assert.equal(geometry.textFont, "'EB Garamond'");
     assert.equal(geometry.headingScale, 1);
     assert.equal(geometry.abcStaffSep, DEFAULT_ABC_STAFF_SEP);
 });

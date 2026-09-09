@@ -12,6 +12,7 @@ use App\Models\ScorePublication;
 use App\Models\User;
 use App\Services\LoanKeepingService;
 use App\Services\ScoreFileStorage;
+use App\Support\BookletSettingFields;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -324,10 +325,31 @@ it('offers the reader two knobs on a score rather than the cantors whole panel',
     expect($keys)->not->toContain('abcPageWidth', 'gabcLayoutWidth', 'aretinoStaffWidth')
         ->and($keys)->not->toContain('abcLyricFont', 'lyricFont', 'chordproFontFamily', 'aretinoTextFont');
 
-    // Half a unit a press, whatever step the same knob takes in the editor.
+    // A size is a size wherever it came from, and the step it moves by is not
+    // decided here: the four formats store type in four different units, so the
+    // reader's half point is converted into each knob's own unit client-side.
+    // What a semitone and a picture's scale are worth is not a matter of type,
+    // and those keep the step the panel names.
     expect(collect($panels['abc'])->firstWhere('key', 'abcLyricSize'))
-        ->step->toBe(0.5)
-        ->role->toBe('size');
+        ->role->toBe('size')
+        ->and(collect($panels['abc'])->firstWhere('key', 'abcTranspose'))
+        ->role->toBe('transpose')
+        ->step->toBe(1)
+        ->and(collect($panels['file'])->firstWhere('key', 'fileZoom'))
+        ->step->toBe(0.05);
+});
+
+// A booklet sets its scores in about ten and a half points, and exsurge counts a
+// lyric size in three thirteenths of a pixel — so a chant arrives at 3.2 with a
+// knob whose floor used to be 4, pinned at the bottom and jumping to thirteen
+// points on the first press of bigger.
+it('lets a reader take a chant below the size the booklet set it in', function () {
+    $panel = collect(BookletSettingFields::readerPanelFor('gabc'))->firstWhere('key', 'lyricSize');
+
+    // 10.5pt is 14px, and gabcLyricSizeForPt() takes three thirteenths of that.
+    $bookletSize = 10.5 * 96 / 72 * 3 / 13;
+
+    expect((float) $panel['min'])->toBeLessThan($bookletSize);
 });
 
 // One button, and it takes the whole scrolling booklet: what a phone on a music
