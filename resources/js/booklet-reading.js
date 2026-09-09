@@ -51,29 +51,6 @@ export function clampZoom(value) {
 }
 
 /**
- * One of the reader's per-score knobs, moved a step.
- *
- * Two things a plain `value + step` gets wrong on a music stand. It steps from
- * where the score is actually being drawn — the size a screen's geometry
- * computed, an arbitrary fraction — so pressing bigger four times leaves a
- * reader on 12.9067; snapping to the step's own grid keeps the numbers the
- * booklet is engraved at tidy. And it walks past the ends: a transposition is
- * eleven semitones each way and a picture cannot be enlarged past the page.
- *
- * @param {number} current what the score is drawn at now
- * @param {{min: number, max: number, step: number}} field from readerPanelFor()
- * @param {number} direction -1 or 1
- */
-export function steppedValue(current, field, direction) {
-    const step = Number(field.step) || 1;
-    const from = Number.isFinite(Number(current)) ? Number(current) : 0;
-    const stepped = Math.round((from + direction * step) / step) * step;
-    const clamped = Math.min(Number(field.max), Math.max(Number(field.min), stepped));
-
-    return Math.round(clamped * 1e4) / 1e4;
-}
-
-/**
  * A height no flowing booklet can reach.
  *
  * The reader's booklet does not paginate — see renderBookletFlow — but the

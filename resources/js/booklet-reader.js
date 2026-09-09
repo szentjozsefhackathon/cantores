@@ -4,7 +4,6 @@ import {
     clampZoom,
     readReaderSettings,
     readerGeometry,
-    steppedValue,
     writeReaderSettings,
     ZOOM_DEFAULT,
     ZOOM_MAX,
@@ -12,7 +11,7 @@ import {
     ZOOM_STEP,
 } from './booklet-reading.js';
 import { renderBookletFlow } from './booklet-render.js';
-import { fileSettings, resolveSettings, travellingOverride } from './booklet-settings.js';
+import { fileSettings, movesSetting, resolveSettings, steppedValue, travellingOverride } from './booklet-settings.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
@@ -234,11 +233,21 @@ document.addEventListener('alpine:init', () => {
 
             if (!entry || entry.kind === 'text') { return {}; }
 
+            return this.resolvedFor(entry, this.overrides[entryId] ?? {});
+        },
+
+        /**
+         * One score resolved with a given set of this reader's own nudges, so the
+         * same stack can be asked what it would show without one of them.
+         *
+         * @param {object} own the reader's overrides to lay on top of the booklet's
+         */
+        resolvedFor(entry, own) {
             const geometry = pageGeometry(this.geometry());
             const format = entry.kind === 'file' ? 'file' : entry.format;
             const override = {
                 ...travellingOverride(format, entry.override, geometry),
-                ...(this.overrides[entryId] ?? {}),
+                ...own,
             };
 
             if (entry.kind === 'file') { return fileSettings(override); }
@@ -246,8 +255,23 @@ document.addEventListener('alpine:init', () => {
             return resolveSettings(entry.format, formatDefaults(entry.format), entry.settings ?? {}, geometry, override);
         },
 
+        /**
+         * Whether this knob is showing something other than the booklet's own value.
+         *
+         * A transposition nudged up and back down leaves a 0 behind, and a 0 is
+         * where the booklet already was — so the mark asks what the score is drawn
+         * at, not what this reader happens to have pressed. See movesSetting().
+         */
         isOverridden(entryId, key) {
-            return Object.prototype.hasOwnProperty.call(this.overrides[entryId] ?? {}, key);
+            const entry = this.entries.find((candidate) => candidate.id === entryId);
+            const own = this.overrides[entryId] ?? {};
+
+            if (!entry || entry.kind === 'text' || ! Object.prototype.hasOwnProperty.call(own, key)) { return false; }
+
+            const inherited = { ...own };
+            delete inherited[key];
+
+            return movesSetting(own[key], this.resolvedFor(entry, inherited)[key]);
         },
 
         /**

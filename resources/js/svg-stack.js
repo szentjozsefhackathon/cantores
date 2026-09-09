@@ -88,6 +88,22 @@ export function placementTransform(box, placement) {
 }
 
 /**
+ * The fragments' stylesheets, each kept once.
+ *
+ * A renderer told to make every fragment self-contained — abc2svg under
+ * %%fullsvg, which is how two scores on one page are kept from sharing a glyph
+ * name — writes the same stylesheet into every music line it emits, and that
+ * sheet carries an embedded music font: thirty kilobytes, repeated per line. The
+ * fragments are all going into one document here, where one copy does for all of
+ * them, so identical sheets are dropped rather than concatenated.
+ *
+ * @param {string[]} texts
+ */
+export function uniqueStyles(texts) {
+    return [...new Set(texts)].map((text) => text + '\n').join('');
+}
+
+/**
  * Combine SVG elements into a single wrapper <svg>.
  *
  * @param {Array<SVGElement>} svgs
@@ -124,7 +140,7 @@ export function stackSvgs(svgs, options = {}) {
     wrapper.setAttribute('color', '#000');
     wrapper.setAttribute('fill', 'currentColor');
 
-    let combinedStyle = extraStyle;
+    const styleTexts = [];
     const mergedDefs = document.createElementNS(SVG_NS, 'defs');
     const seenIds = new Set();
 
@@ -140,7 +156,7 @@ export function stackSvgs(svgs, options = {}) {
         Array.from(clone.childNodes).forEach((child) => {
             const tag = child.nodeName.toLowerCase();
             if (tag === 'style') {
-                combinedStyle += child.textContent + '\n';
+                styleTexts.push(child.textContent);
             } else if (tag === 'defs') {
                 Array.from(child.childNodes).forEach((def) => {
                     if (def.nodeType !== 1) { return; }
@@ -160,7 +176,7 @@ export function stackSvgs(svgs, options = {}) {
     });
 
     const styleEl = document.createElementNS(SVG_NS, 'style');
-    styleEl.textContent = combinedStyle;
+    styleEl.textContent = extraStyle + uniqueStyles(styleTexts);
     wrapper.insertBefore(styleEl, wrapper.firstChild);
     if (mergedDefs.childNodes.length) {
         wrapper.insertBefore(mergedDefs, wrapper.firstChild);

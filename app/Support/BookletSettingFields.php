@@ -36,16 +36,29 @@ class BookletSettingFields
      * with a letter instead of a picture — German notation's H — the letter is
      * carried across as a glyph.
      *
-     * @var array<string, array<string, array{type: string, min?: float, max?: float, step?: float, label: string, icon?: string, glyph?: string}>>
+     * A number knob whose value the booklet computes for itself — every size and
+     * scale, each one derived from the page's own — is drawn as a pair of step
+     * buttons rather than as a field, marked here with `control => 'step'`. The
+     * number in such a field is arithmetic, not a choice: nobody types 4.6667, and
+     * reading it back only invites the question of what it is a size in. Bigger and
+     * smaller is the whole of what is wanted, which is how the reader's panel has
+     * always put it.
+     *
+     * The widths are the exception, and stay fields. A layout width is the one
+     * number here somebody means rather than nudges — the page is 420 wide and this
+     * score wants 480 so its line stops breaking — and it is computed as a whole
+     * number anyway, so there is no fraction to be rid of.
+     *
+     * @var array<string, array<string, array{type: string, control?: string, min?: float, max?: float, step?: float, label: string, icon?: string, glyph?: string}>>
      */
     private const FIELDS = [
         'gabc' => [
             'gabcLayoutWidth' => ['type' => 'number', 'min' => 200, 'max' => 8000, 'step' => 5, 'label' => 'Layout width (px)', 'icon' => 'ruler'],
-            'lyricSize' => ['type' => 'number', 'min' => 4, 'max' => 60, 'step' => 0.5, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
+            'lyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 4, 'max' => 60, 'step' => 0.5, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
             // Wider at the bottom than the score editor's own control: a chant
             // staff sized for a real A5 page lands near 21, below the 30 the
             // editor allows on its nominal 508 mm canvas.
-            'staffSize' => ['type' => 'number', 'min' => 10, 'max' => 300, 'step' => 1, 'label' => 'Staff size', 'icon' => 'list-chevrons-up-down'],
+            'staffSize' => ['type' => 'number', 'control' => 'step', 'min' => 10, 'max' => 300, 'step' => 1, 'label' => 'Staff size', 'icon' => 'list-chevrons-up-down'],
             'lyricFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
             'dropCaps' => ['type' => 'boolean', 'label' => 'Drop caps', 'icon' => 'text-initial'],
             'spaceBetweenSystems' => ['type' => 'number', 'min' => -2, 'max' => 2, 'step' => 0.1, 'label' => 'Space between lines', 'icon' => 'between-horizontal-start'],
@@ -56,8 +69,8 @@ class BookletSettingFields
         ],
         'abc' => [
             'abcPageWidth' => ['type' => 'number', 'min' => 200, 'max' => 8000, 'step' => 5, 'label' => 'Layout width (px)', 'icon' => 'ruler'],
-            'abcLyricSize' => ['type' => 'number', 'min' => 2, 'max' => 60, 'step' => 0.1, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
-            'abcPageScale' => ['type' => 'number', 'min' => 0.2, 'max' => 5, 'step' => 0.05, 'label' => 'Staff scale', 'icon' => 'list-chevrons-up-down'],
+            'abcLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 60, 'step' => 0.5, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
+            'abcPageScale' => ['type' => 'number', 'control' => 'step', 'min' => 0.2, 'max' => 5, 'step' => 0.05, 'label' => 'Staff scale', 'icon' => 'list-chevrons-up-down'],
             'abcLyricFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
             'abcLyricBold' => ['type' => 'boolean', 'label' => 'Bold lyrics', 'icon' => 'bold'],
             'abcNoteSpacing' => ['type' => 'number', 'min' => 1, 'max' => 3, 'step' => 0.1, 'label' => 'Note spacing', 'icon' => 'space'],
@@ -78,7 +91,7 @@ class BookletSettingFields
             'fileZoom' => ['type' => 'number', 'min' => 0.2, 'max' => 1, 'step' => 0.05, 'label' => 'Size (×)', 'icon' => 'zoom-in'],
         ],
         'chordpro' => [
-            'chordproFontSize' => ['type' => 'number', 'min' => 6, 'max' => 32, 'step' => 0.5, 'label' => 'Font size', 'icon' => 'a-large-small'],
+            'chordproFontSize' => ['type' => 'number', 'control' => 'step', 'min' => 6, 'max' => 32, 'step' => 0.5, 'label' => 'Font size', 'icon' => 'a-large-small'],
             'chordproFontFamily' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
             'chordproColumns' => ['type' => 'number', 'min' => 1, 'max' => 4, 'step' => 1, 'label' => 'Columns', 'icon' => 'view-columns'],
             'chordproTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],
@@ -86,8 +99,11 @@ class BookletSettingFields
         ],
         'aretino' => [
             'aretinoStaffWidth' => ['type' => 'number', 'min' => 30, 'max' => 800, 'step' => 1, 'label' => 'Layout width (mm)', 'icon' => 'ruler'],
-            'aretinoLyricSize' => ['type' => 'number', 'min' => 4, 'max' => 80, 'step' => 0.5, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
-            'aretinoStaffSize' => ['type' => 'number', 'min' => 1, 'max' => 20, 'step' => 0.1, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
+            'aretinoLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 4, 'max' => 80, 'step' => 0.5, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
+            // Half a millimetre, because that is the grid a staff height is
+            // chosen on: a tenth moves a chant staff by a hair and takes ten
+            // presses to show anything.
+            'aretinoStaffSize' => ['type' => 'number', 'control' => 'step', 'min' => 1, 'max' => 20, 'step' => 0.5, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
             'aretinoTextFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
             'aretinoStaffGap' => ['type' => 'number', 'min' => 0, 'max' => 10, 'step' => 0.5, 'label' => 'Staff gap', 'icon' => 'between-horizontal-start'],
             'aretinoHideRepeatClef' => ['type' => 'boolean', 'label' => 'Hide repeated clef', 'icon' => 'clef-none'],
@@ -201,7 +217,7 @@ class BookletSettingFields
      * A control is named by its icon, or by its glyph where the score editor
      * names it with one; the label becomes the tooltip.
      *
-     * @return list<array{key: string, type: string, min?: float, max?: float, step?: float, label: string, icon?: string, glyph?: string}>
+     * @return list<array{key: string, type: string, control?: string, min?: float, max?: float, step?: float, label: string, icon?: string, glyph?: string}>
      */
     public static function panelFor(?string $format): array
     {

@@ -5,6 +5,7 @@ import {
     placementTransform,
     stackPlacements,
     stackedExtent,
+    uniqueStyles,
     viewBoxOf,
 } from '../../resources/js/svg-stack.js';
 
@@ -79,4 +80,12 @@ test('placementTransform adds a scale only when the fragment is scaled', () => {
         placementTransform({ x: 6, y: 4, w: 800, h: 100 }, { x: 0, y: 0, scale: 0.5 }),
         'translate(-3 -2) scale(0.5)',
     );
+});
+
+// abc2svg writes its whole stylesheet — an embedded music font among it — into
+// every music line once each engraving names its glyphs for itself. They all land
+// in one document here, so one copy of each distinct sheet is what is kept.
+test('uniqueStyles keeps one copy of a repeated stylesheet', () => {
+    assert.equal(uniqueStyles(['.a{}', '.a{}', '.b{}']), '.a{}\n.b{}\n');
+    assert.equal(uniqueStyles([]), '');
 });

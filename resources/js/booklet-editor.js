@@ -1,7 +1,7 @@
 import { pageGeometry } from './booklet-geometry.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
-import { fileSettings, resolveSettings } from './booklet-settings.js';
+import { fileSettings, movesSetting, resolveSettings, steppedValue } from './booklet-settings.js';
 import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -275,6 +275,30 @@ document.addEventListener('alpine:init', () => {
                 this.scheduleSave(entryId, override);
             },
 
+            /**
+             * A knob offered as bigger and smaller, moved one step.
+             *
+             * Stepped from what the score is actually drawn at — the booklet's own
+             * computed size, unless this score has already been nudged — and onto
+             * the step's own grid, so a size the geometry left at 4.6667 becomes 5
+             * rather than 5.1667.
+             *
+             * @param {object} field one entry of BookletSettingFields::panelFor
+             * @param {number} direction -1 or 1
+             */
+            nudgeOverride(entryId, field, direction) {
+                this.setOverride(entryId, field.key, steppedValue(this.settingsOf(entryId)[field.key], field, direction));
+            },
+
+            /** A knob at the end of its travel, so the button can say so. */
+            atLimit(entryId, field, direction) {
+                const value = Number(this.settingsOf(entryId)[field.key]);
+
+                if (!Number.isFinite(value)) { return false; }
+
+                return direction < 0 ? value <= Number(field.min) : value >= Number(field.max);
+            },
+
             resetOverride(entryId) {
                 const entry = this.entries.find((candidate) => candidate.id === entryId);
 
@@ -327,10 +351,44 @@ document.addEventListener('alpine:init', () => {
                 Object.keys(this._pendingOverrides).forEach((entryId) => this.saveNow(entryId));
             },
 
+            /**
+             * What one knob would read if it had never been touched here.
+             *
+             * The score's own value, or the booklet's, whichever owns that key —
+             * the same stack settingsOf() resolves, with this one key's override
+             * lifted out of it.
+             */
+            inheritedSetting(entry, key) {
+                const override = { ...(entry.override ?? {}) };
+                delete override[key];
+
+                if (entry.kind === 'file') { return fileSettings(override)[key]; }
+
+                if (entry.kind !== 'score') { return undefined; }
+
+                return resolveSettings(
+                    entry.format,
+                    formatDefaults(entry.format),
+                    entry.settings ?? {},
+                    pageGeometry(this.geometry),
+                    override,
+                )[key];
+            },
+
+            /**
+             * Whether this knob is showing something other than what it inherited.
+             *
+             * Not "was it touched": a knob stepped away and back is a knob nobody
+             * has changed, and marking it as changed sends the cantor looking for
+             * a difference that is not on the page. See movesSetting().
+             */
             isOverridden(entryId, key) {
                 const entry = this.entries.find((candidate) => candidate.id === entryId);
+                const override = entry?.override ?? {};
 
-                return !!entry && Object.prototype.hasOwnProperty.call(entry.override ?? {}, key);
+                if (!entry || !Object.prototype.hasOwnProperty.call(override, key)) { return false; }
+
+                return movesSetting(override[key], this.inheritedSetting(entry, key));
             },
 
             /**
@@ -344,7 +402,8 @@ document.addEventListener('alpine:init', () => {
             hasOverride(entryId) {
                 const entry = this.entries.find((candidate) => candidate.id === entryId);
 
-                return !!entry && Object.keys(entry.override ?? {}).length > 0;
+                return !!entry && Object.keys(entry.override ?? {})
+                    .some((key) => this.isOverridden(entryId, key));
             },
 
             async exportPdf() {

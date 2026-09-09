@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Support\BookletSettingFields;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Js;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -928,15 +929,22 @@ it('gives a score’s settings the score editor’s icons and tooltips', functio
         ->and($fields)->not->toBeEmpty();
 
     foreach ($fields as $field) {
+        // A knob is named either on its own field or, where it is a pair of step
+        // buttons, on each of them: "Lyric size: Bigger".
+        $named = './/*[@aria-label="'.$field['label'].'"] | .//*[starts-with(@aria-label, "'.$field['label'].': ")]';
+
         expect($field['icon'] ?? $field['glyph'] ?? null)->not->toBeNull($field['key'].' is named by neither icon nor glyph')
-            ->and($xpath->query('.//*[@aria-label="'.$field['label'].'"]', $panel)->length)
+            ->and($xpath->query($named, $panel)->length)
             ->toBeGreaterThan(0, $field['key'].' is not named for a screen reader')
             ->and($xpath->query('.//*[@data-flux-tooltip-content][contains(., "'.$field['label'].'")]', $panel)->length)
             ->toBeGreaterThan(0, $field['key'].' has no tooltip');
     }
 
-    // One icon per knob, and one more on the button that puts them all back.
-    expect($xpath->query('.//*[@data-flux-icon]', $panel))->toHaveCount(count($fields) + 1);
+    $stepped = collect($fields)->where('control', 'step')->count();
+
+    // One icon per knob, two more for each pair of step buttons, and one on the
+    // button that puts them all back.
+    expect($xpath->query('.//*[@data-flux-icon]', $panel))->toHaveCount(count($fields) + 2 * $stepped + 1);
 
     // The staff size wears the editor's own icon, path for path.
     expect($xpath->query('.//*[local-name()="path"][@d="m15 16 3 3 3-3"]', $panel)->length)->toBeGreaterThan(0);
@@ -1000,6 +1008,41 @@ it('marks an adjusted score from the browser', function () {
         ->and($button[0] ?? '')->toContain('wire:ignore.self');
 });
 
+// A size the booklet computes for itself is a fraction of the page's own size, so
+// the field showing it read 4.6667 — a number nobody chose, in no unit anyone can
+// name. It is offered as the reader's toolbar offers it instead: bigger, smaller,
+// nothing to read.
+it('offers every computed size as step buttons rather than as a number', function () {
+    $user = User::factory()->create();
+    [, $abc] = bookletWithAbcAndGabc($user);
+
+    actingAs($user);
+
+    $html = Livewire::test(EntryRow::class, ['entry' => $abc])->call('adjust')->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+    $panel = $xpath->query('//*[@data-booklet-panel]')->item(0);
+
+    // Every size and scale the booklet works out for itself, and nothing else.
+    foreach (['abc' => ['abcLyricSize', 'abcPageScale'], 'gabc' => ['lyricSize', 'staffSize'], 'aretino' => ['aretinoLyricSize', 'aretinoStaffSize'], 'chordpro' => ['chordproFontSize']] as $format => $stepped) {
+        expect(collect(BookletSettingFields::panelFor($format))->where('control', 'step')->pluck('key')->all())
+            ->toBe($stepped, $format.' steps the wrong knobs');
+    }
+
+    foreach (collect(BookletSettingFields::panelFor('abc'))->where('control', 'step') as $field) {
+        expect($xpath->query('.//input[@aria-label="'.$field['label'].'"]', $panel)->length)
+            ->toBe(0, $field['key'].' is still a field to type a fraction into')
+            ->and($xpath->query('.//button[starts-with(@aria-label, "'.$field['label'].': ")]', $panel)->length)
+            ->toBe(2, $field['key'].' has no pair of step buttons');
+    }
+
+    // The width beside them is still typed: a layout width is a number somebody
+    // means, not one the page worked out.
+    expect($xpath->query('.//input[@aria-label="'.__('Layout width (px)').'"]', $panel)->length)->toBe(1);
+});
+
 // The one control the score editor names with a letter rather than a picture keeps
 // its letter here too.
 it('keeps the H of German notation', function () {
@@ -1020,8 +1063,12 @@ it('names the entry and the format in every control of a panel', function () {
         ->call('adjust')
         ->html();
 
-    expect($html)->toContain("settingsOf({$gabc->id})['staffSize']")
-        ->and($html)->toContain("setOverride({$gabc->id}, 'staffSize'")
+    // A typed knob and a stepped one, since the two are wired differently.
+    expect($html)->toContain("settingsOf({$gabc->id})['gabcLayoutWidth']")
+        ->and($html)->toContain("setOverride({$gabc->id}, 'gabcLayoutWidth'")
+        ->and($html)->toContain("isOverridden({$gabc->id}, 'gabcLayoutWidth')")
+        ->and($html)->toContain('nudgeOverride('.$gabc->id.', '.e(Js::from(['key' => 'staffSize', 'min' => 10.0, 'max' => 300.0, 'step' => 1.0])).', 1)')
+        ->and($html)->toContain('atLimit('.$gabc->id.', '.e(Js::from(['key' => 'staffSize', 'min' => 10.0, 'max' => 300.0, 'step' => 1.0])).', -1)')
         ->and($html)->toContain("isOverridden({$gabc->id}, 'staffSize')")
         ->and($html)->not->toContain('abcPageWidth');
 });

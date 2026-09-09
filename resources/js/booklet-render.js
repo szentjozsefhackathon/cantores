@@ -662,10 +662,26 @@ function aretinoBlocks(content, resolved, layoutWidthPx) {
     return rows.map((row) => ({ height: svgHeight(row), svg: row }));
 }
 
+/** Numbers the abc engravings on a page, so no two of them name a glyph alike. */
+let abcSerial = 0;
+
 /**
- * abc2svg emits one <svg> per music line unless told otherwise, so the booklet
- * simply does not ask for %%fullsvg — the fragments it produces by default are
- * exactly the blocks the page wants.
+ * abc2svg emits one <svg> per music line, which is exactly the block the page
+ * wants, and defines its shared drawings once under names of its own — `stdef`
+ * for the staff lines, `f2` and the like for the faces — on the assumption that
+ * every fragment it produces will end up in the same document as the defs it
+ * wrote. On a booklet page they do, but so do the fragments of every other score,
+ * each from an engraver of its own that wrote `stdef` too. stackSvgs keeps the
+ * first of any name, and the staff-line path carries the width it was drawn at:
+ * so a score laid out at a different staff scale — its width in its own units is
+ * the page's divided by that scale — silently borrowed the first score's staff
+ * lines and drew them short of the page, or past it.
+ *
+ * `%%fullsvg` is abc2svg's own answer: it appends the given suffix to every name
+ * it shares and makes each fragment carry its own definitions. One suffix per
+ * engraving is therefore enough to keep the scores apart, and within a score the
+ * repeated definitions are identical, which is the case the first-one-wins merge
+ * was written for.
  */
 function abcBlocks(content, resolved, layoutWidthPx) {
     if (typeof abc2svg === 'undefined' || !abc2svg.Abc) {
@@ -692,7 +708,8 @@ function abcBlocks(content, resolved, layoutWidthPx) {
     const lyricSkip = Number(resolved.abcLyricSkip) || 0;
     const lyricFirstSkip = Number(resolved.abcLyricFirstSkip) || 0;
 
-    const preamble = `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
+    const preamble = `%%fullsvg a${++abcSerial}\n`
+        + `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
         + '%%leftmargin 0px\n%%rightmargin 0px\n'
         + `%%pagescale ${pageScale}\n${vocalfont}\n`
         + `%%notespacingfactor ${resolved.abcNoteSpacing}\n`

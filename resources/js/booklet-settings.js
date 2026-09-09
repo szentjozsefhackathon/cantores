@@ -169,6 +169,71 @@ export function layoutWidthFor(format, resolved, geometry) {
 }
 
 /**
+ * One knob of a settings bucket, moved a step.
+ *
+ * Two things a plain `value + step` gets wrong on a music stand. It steps from
+ * where the score is actually being drawn — the size a screen's geometry
+ * computed, an arbitrary fraction — so pressing bigger four times leaves a
+ * reader on 12.9067; snapping to the step's own grid keeps the numbers the
+ * booklet is engraved at tidy. And it walks past the ends: a transposition is
+ * eleven semitones each way and a picture cannot be enlarged past the page.
+ *
+ * @param {number} current what the score is drawn at now
+ * @param {{min: number, max: number, step: number}} field from a booklet setting panel
+ * @param {number} direction -1 or 1
+ */
+export function steppedValue(current, field, direction) {
+    const step = Number(field.step) || 1;
+    const from = Number.isFinite(Number(current)) ? Number(current) : 0;
+    const stepped = Math.round((from + direction * step) / step) * step;
+    const clamped = Math.min(Number(field.max), Math.max(Number(field.min), stepped));
+
+    return Math.round(clamped * 1e4) / 1e4;
+}
+
+/**
+ * Whether an override on one key actually moves that knob.
+ *
+ * Storing a key is not the same as changing anything. A reader who transposes a
+ * hymn up and then back down again has an `abcTranspose: 0` in their bucket, and
+ * a cantor who steps a staff size to the value the booklet had already computed
+ * has one just like it — both of them, on the old test of "is this key present",
+ * lit the control blue and said the score had been adjusted when nothing about
+ * it had moved. The question the panel is really asking is whether what is drawn
+ * differs from what would be drawn without the override, so that is what is
+ * compared: the stored value against the layers underneath it.
+ *
+ * Numbers are compared as numbers, and loosely, because the layers below are
+ * computed from a page geometry and rounded to four places — an override that
+ * came from the same arithmetic must not count as a change for a difference in
+ * the twelfth digit. Faces are compared unquoted, since the score editor's
+ * selects emit `'Lora'` and a format's own defaults may not.
+ *
+ * @param {*} value the override's value for the key
+ * @param {*} inherited what the score would be drawn at without it
+ */
+export function movesSetting(value, inherited) {
+    if (value === undefined || value === null) { return false; }
+
+    if (typeof value === 'boolean' || typeof inherited === 'boolean') {
+        return Boolean(value) !== Boolean(inherited);
+    }
+
+    const moved = Number(value);
+    const base = Number(inherited);
+
+    if (Number.isFinite(moved) && Number.isFinite(base) && value !== '' && inherited !== '') {
+        return Math.abs(moved - base) > 1e-6;
+    }
+
+    return unquoted(value) !== unquoted(inherited);
+}
+
+function unquoted(value) {
+    return typeof value === 'string' ? value.trim().replace(/^['"]|['"]$/g, '') : value;
+}
+
+/**
  * Merge the four layers for one score.
  *
  * @param {string} format

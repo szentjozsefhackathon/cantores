@@ -1,6 +1,8 @@
 @php
     use App\Livewire\Pages\BookletEditor;
     use App\Support\BookletSettingFields;
+    use Illuminate\Support\Arr;
+    use Illuminate\Support\Js;
 
     // Where the row stands in the plan, for a paragraph written directly under
     // it: the same slot and the same music, so words follow the thing they were
@@ -245,7 +247,27 @@
                                 @endif
                             </flux:tooltip>
 
-                            @if($field['type'] === 'number')
+                            @if(($field['control'] ?? null) === 'step')
+                                {{-- A size the booklet computed is an arbitrary
+                                     fraction — 4.6667 of nothing anybody names — so
+                                     it is offered the way the reader's toolbar offers
+                                     it: bigger and smaller, and no number to read. --}}
+                                @php $knob = Js::from(Arr::only($field, ['key', 'min', 'max', 'step'])); @endphp
+
+                                <flux:tooltip :content="__('Smaller')">
+                                    <flux:button size="sm" variant="ghost" icon="minus"
+                                        aria-label="{{ $field['label'] }}: {{ __('Smaller') }}"
+                                        x-on:click="nudgeOverride({{ $entry->id }}, {{ $knob }}, -1)"
+                                        x-bind:disabled="atLimit({{ $entry->id }}, {{ $knob }}, -1)" />
+                                </flux:tooltip>
+
+                                <flux:tooltip :content="__('Bigger')">
+                                    <flux:button size="sm" variant="ghost" icon="plus"
+                                        aria-label="{{ $field['label'] }}: {{ __('Bigger') }}"
+                                        x-on:click="nudgeOverride({{ $entry->id }}, {{ $knob }}, 1)"
+                                        x-bind:disabled="atLimit({{ $entry->id }}, {{ $knob }}, 1)" />
+                                </flux:tooltip>
+                            @elseif($field['type'] === 'number')
                                 <flux:input
                                     size="sm"
                                     type="number"
