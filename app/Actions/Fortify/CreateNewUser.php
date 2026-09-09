@@ -26,6 +26,8 @@ class CreateNewUser implements CreatesNewUsers
             'city_id' => ['required', 'integer', 'exists:cities,id'],
             'first_name_id' => ['required', 'integer', 'exists:first_names,id'],
             'cf-turnstile-response' => ['required', new TurnstileWithDummy],
+        ], [
+            'cf-turnstile-response.required' => __('Please complete the check to show you are not a robot.'),
         ])->after(function ($validator) use ($input) {
             \Illuminate\Support\Facades\Log::debug('Checking duplicate city/first name combination', ['city_id' => $input['city_id'] ?? null, 'first_name_id' => $input['first_name_id'] ?? null]);
             if (isset($input['city_id'], $input['first_name_id'])) {

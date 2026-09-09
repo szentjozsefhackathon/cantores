@@ -51,6 +51,25 @@ test('new users can register', function () {
     expect($user->hasRole('contributor'))->toBeTrue();
 });
 
+test('a missing captcha answer is reported in plain language', function () {
+    $city = City::firstOrCreate(['name' => 'Milano']);
+    $firstName = FirstName::firstOrCreate(['name' => 'Giulia'], ['gender' => 'female']);
+
+    $response = $this->post(route('register.store'), [
+        'name' => 'John Doe',
+        'email' => 'no-captcha@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'city_id' => $city->id,
+        'first_name_id' => $firstName->id,
+        // no cf-turnstile-response: the widget never rendered for this visitor
+    ]);
+
+    $response->assertSessionHasErrors([
+        'cf-turnstile-response' => __('Please complete the check to show you are not a robot.'),
+    ]);
+});
+
 test('registration requires city and first name', function () {
     $response = $this->post(route('register.store'), [
         'name' => 'John Doe',
