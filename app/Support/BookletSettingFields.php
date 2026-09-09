@@ -18,7 +18,12 @@ namespace App\Support;
  * is.
  *
  * Deliberately not shared with the score editor's toolbars, which carry things a
- * booklet has no use for — projector aspect ratios, "save as my default".
+ * booklet has no use for — projector aspect ratios, "save as my default", and
+ * the zoom. Zoom is a screen magnification the booklet's renderer never reads:
+ * a score is laid out at the page's width and sized by its own staff and lyric
+ * knobs, so a zoom control here would be a knob that moves nothing. The one
+ * survivor is `fileZoom`, which is not a zoom but the only size an uploaded
+ * picture has.
  */
 class BookletSettingFields
 {
@@ -48,7 +53,6 @@ class BookletSettingFields
             'minLyricWordSpacing' => ['type' => 'number', 'min' => 0, 'max' => 40, 'step' => 1, 'label' => 'Word spacing (px)', 'icon' => 'space'],
             'hyphenWidth' => ['type' => 'number', 'min' => 0, 'max' => 40, 'step' => 1, 'label' => 'Hyphen width (px)', 'icon' => 'minus'],
             'condensingTolerance' => ['type' => 'number', 'min' => 0, 'max' => 1, 'step' => 0.05, 'label' => 'Condensing tolerance', 'icon' => 'ruler-dimension-line'],
-            'zoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)', 'icon' => 'zoom-in'],
         ],
         'abc' => [
             'abcPageWidth' => ['type' => 'number', 'min' => 200, 'max' => 8000, 'step' => 5, 'label' => 'Layout width (px)', 'icon' => 'ruler'],
@@ -64,7 +68,6 @@ class BookletSettingFields
             'abcStaffLineWidth' => ['type' => 'number', 'min' => 0.1, 'max' => 3, 'step' => 0.1, 'label' => 'Staff line width', 'icon' => 'bars-3'],
             'abcNoClef' => ['type' => 'boolean', 'label' => 'Hide clef', 'icon' => 'clef-none'],
             'abcTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],
-            'abcZoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)', 'icon' => 'zoom-in'],
         ],
         // An uploaded score is a picture by the time it reaches a booklet, so
         // the only thing that can be done to it is scale it. It already arrives
@@ -88,7 +91,6 @@ class BookletSettingFields
             'aretinoTextFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
             'aretinoStaffGap' => ['type' => 'number', 'min' => 0, 'max' => 10, 'step' => 0.5, 'label' => 'Staff gap', 'icon' => 'between-horizontal-start'],
             'aretinoHideRepeatClef' => ['type' => 'boolean', 'label' => 'Hide repeated clef', 'icon' => 'clef-none'],
-            'aretinoZoom' => ['type' => 'number', 'min' => 50, 'max' => 300, 'step' => 5, 'label' => 'Zoom (%)', 'icon' => 'zoom-in'],
         ],
     ];
 

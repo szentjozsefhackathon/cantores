@@ -1067,6 +1067,25 @@ it('holds the staff to lyrics gap at its floor', function () {
         ->toBe([]);
 });
 
+// The booklet's renderer lays a score out at the page's width and sizes it by
+// its staff and lyric knobs; nothing in it ever reads a zoom. So the zoom is not
+// offered, and a stale one arriving from an older client is dropped rather than
+// stored as a setting that moves nothing. A picture's own size knob stays: it is
+// the only thing an uploaded score has.
+it('offers no zoom on a score, and keeps the one an uploaded picture has', function () {
+    foreach (['gabc' => 'zoom', 'abc' => 'abcZoom', 'aretino' => 'aretinoZoom'] as $format => $key) {
+        expect(collect(BookletSettingFields::panelFor($format))->pluck('key'))
+            ->not->toContain($key)
+            ->and(BookletSettingFields::sanitize($format, [$key => 150]))
+            ->toBe([]);
+    }
+
+    expect(collect(BookletSettingFields::panelFor('file'))->pluck('key'))
+        ->toContain('fileZoom')
+        ->and(BookletSettingFields::sanitize('file', ['fileZoom' => 0.6]))
+        ->toBe(['fileZoom' => 0.6]);
+});
+
 it('only accepts a font the exporter can embed', function () {
     expect(BookletSettingFields::sanitize('abc', ['abcLyricFont' => 'Lora']))
         ->toBe(['abcLyricFont' => "'Lora'"])
