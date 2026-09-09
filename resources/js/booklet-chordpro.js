@@ -69,7 +69,7 @@ export function chordproRows(paragraphs, options) {
                 return;
             }
 
-            wrapColumns(columns, layoutWidth).forEach((rowColumns) => {
+            wrapColumns(columns, layoutWidth, options).forEach((rowColumns) => {
                 rows.push(chordLyricRow(rowColumns, options));
             });
         });
@@ -101,47 +101,138 @@ export function chordproRows(paragraphs, options) {
  * The renderable chord/lyric columns of one line.
  */
 function columnsOf(line, options) {
-    const { measure, fontSize, spell = (chord) => chord } = options;
+    const { spell = (chord) => chord } = options;
 
     return (line.items ?? [])
         .filter((item) => typeof item?.chords === 'string' || typeof item?.lyrics === 'string')
-        .map((item) => {
-            const chord = spell((item.chords ?? '').trim());
-            const lyric = item.lyrics ?? '';
-            const chordWidth = chord === '' ? 0 : measure(chord, { bold: true }) + fontSize * CHORD_GAP;
-
-            return { chord, lyric, width: Math.max(measure(lyric), chordWidth) };
-        })
+        .map((item) => sizedColumn(spell((item.chords ?? '').trim()), item.lyrics ?? '', options))
         .filter((column) => column.chord !== '' || column.lyric !== '');
+}
+
+/**
+ * One chord and the syllables under it, measured.
+ *
+ * The width is the wider of the two: a chord narrower than its word costs
+ * nothing, and one wider pushes the next column along so the two never touch.
+ */
+function sizedColumn(chord, lyric, { measure, fontSize }) {
+    const chordWidth = chord === '' ? 0 : measure(chord, { bold: true }) + fontSize * CHORD_GAP;
+
+    return { chord, lyric, width: Math.max(measure(lyric), chordWidth) };
 }
 
 /**
  * Break a line's columns into rows no wider than the page.
  *
- * A column is never split: it is one chord and the syllables sung under it, and
- * moving half of it to the next line would put the chord over the wrong word.
+ * A column is one chord and the syllables sung under it, so it is kept whole
+ * wherever it can be: moving half of it to the next line would put the chord
+ * over the wrong word. Where it cannot be — chordsheetjs hands the whole tail of
+ * a line back as one column when no further chord interrupts it, and that tail
+ * is routinely wider than a page — the column is split between its words. The
+ * chord stays with the first piece, which is where it was already standing.
+ *
+ * Without this a long chordless run left a row wider than the content box, and
+ * the renderer's fit-to-width then scaled that row — and only that row — down:
+ * a booklet set at 10.5 pt printed those lines a point or so smaller.
  */
-function wrapColumns(columns, layoutWidth) {
+function wrapColumns(columns, layoutWidth, options) {
     const rows = [];
     let row = [];
     let width = 0;
 
-    columns.forEach((column) => {
-        if (row.length > 0 && width + column.width > layoutWidth) {
+    const flush = () => {
+        if (row.length > 0) {
             rows.push(row);
             row = [];
             width = 0;
         }
+    };
 
+    const place = (column) => {
         row.push(column);
         width += column.width;
+    };
+
+    columns.forEach((column) => {
+        let rest = column;
+
+        while (rest !== null) {
+            if (rest.width <= layoutWidth - width) {
+                place(rest);
+                rest = null;
+
+                continue;
+            }
+
+            // It fits on a row of its own: start one rather than break it.
+            if (row.length > 0 && rest.width <= layoutWidth) {
+                flush();
+
+                continue;
+            }
+
+            const [head, tail] = splitColumn(rest, layoutWidth - width, options);
+
+            if (head === null) {
+                // Not one word of it fits in what is left. On a fresh row that
+                // means a single word wider than the page, which nothing here
+                // can help; otherwise the next row has more room to offer.
+                if (row.length === 0) {
+                    place(rest);
+                    rest = null;
+                } else {
+                    flush();
+                }
+
+                continue;
+            }
+
+            place(head);
+            flush();
+            rest = tail;
+        }
     });
 
-    if (row.length > 0) {
-        rows.push(row);
-    }
+    flush();
 
     return rows;
+}
+
+/**
+ * Cut a column after the last whole word that fits in `room`.
+ *
+ * The trailing space stays with the word before it, the way chordsheetjs hands
+ * lyrics over, so the pieces still join back into the line as sung.
+ *
+ * @returns {[object|null, object|null]} the piece that fits and what is left of
+ *          it; a null head means not even the first word did.
+ */
+function splitColumn(column, room, options) {
+    const words = column.lyric.match(/\S+\s*/g) ?? [];
+
+    if (words.length < 2) {
+        return [null, column];
+    }
+
+    const { measure } = options;
+    let taken = 0;
+
+    for (let i = 1; i <= words.length; i += 1) {
+        if (measure(words.slice(0, i).join('')) > room) {
+            break;
+        }
+
+        taken = i;
+    }
+
+    if (taken === 0 || taken === words.length) {
+        return taken === 0 ? [null, column] : [column, null];
+    }
+
+    return [
+        sizedColumn(column.chord, words.slice(0, taken).join(''), options),
+        sizedColumn('', words.slice(taken).join(''), options),
+    ];
 }
 
 function chordLyricRow(columns, options) {

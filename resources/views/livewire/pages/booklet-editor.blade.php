@@ -64,7 +64,7 @@
                 <flux:tooltip :content="__('Title')">
                     <flux:icon name="book-open-text" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
-                <flux:input size="sm" wire:model.blur="title" :aria-label="__('Title')" :placeholder="__('Title')" class="min-w-0 flex-1" />
+                <flux:input size="sm" wire:model.live.blur="title" :aria-label="__('Title')" :placeholder="__('Title')" class="min-w-0 flex-1" />
             </div>
 
             <div class="flex items-center gap-1">

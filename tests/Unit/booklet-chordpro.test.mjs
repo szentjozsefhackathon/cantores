@@ -71,6 +71,57 @@ test('a line wider than the page wraps, and never splits a column', () => {
     assert.equal((rows[1].svg.match(/<text/g) ?? []).length, 4);
 });
 
+test('a chordless run too wide for the page is broken between its words', () => {
+    // chordsheetjs hands a line back as one column per chord, so everything
+    // after the last chord arrives as a single item — here 40 characters, 200
+    // wide, on a 200 wide page it shares with the chord's own column.
+    const rows = chordproRows(
+        [{ lines: [{ items: [pair('C', 'Ave '), pair('', 'gratia plena dominus tecum benedicta')] }] }],
+        options,
+    );
+
+    const lyrics = rows.map((row) => (
+        [...row.svg.matchAll(/<text[^>]*>([^<]*)</g)].map(([, content]) => content)
+    ));
+
+    // Nothing is lost, and the line still reads as it is sung.
+    assert.equal(lyrics.flat().filter((text) => text !== 'C').join(''), 'Ave gratia plena dominus tecum benedicta');
+
+    // The chord stays over the syllable it was written above.
+    assert.deepEqual(lyrics[0].slice(0, 2), ['C', 'Ave ']);
+
+    // Every row now fits the page, which is the whole point: a row wider than
+    // the content box is scaled down by the renderer, and a booklet set at one
+    // size printed those lines at another.
+    rows.forEach((row) => {
+        assert.ok(Number(row.svg.match(/viewBox="0 0 ([\d.]+)/)[1]) <= options.layoutWidth);
+    });
+});
+
+test('a word wider than the page is left to overflow rather than cut', () => {
+    const rows = chordproRows(
+        [{ lines: [{ items: [pair('', 'Aaaaaabbbbbbccccccddddddeeeeeeffffff')] }] }],
+        options,
+    );
+
+    assert.equal(rows.length, 1);
+    assert.match(rows[0].svg, /Aaaaaabbbbbbccccccddddddeeeeeeffffff/);
+});
+
+test('a column that fits a row of its own is moved whole, not split', () => {
+    // 'sing ' columns are 25 wide; the last of nine has to move, and moving it
+    // whole keeps its chord over its own word.
+    const items = Array.from({ length: 9 }, () => pair('C', 'sing here '));
+    const rows = chordproRows([{ lines: [{ items }] }], options);
+
+    rows.forEach((row) => {
+        [...row.svg.matchAll(/<text[^>]*>([^<]*)</g)]
+            .map(([, content]) => content)
+            .filter((content) => content !== 'C')
+            .forEach((lyric) => assert.equal(lyric, 'sing here '));
+    });
+});
+
 test('paragraphs are separated, but not at the top of a page', () => {
     const rows = chordproRows(
         [

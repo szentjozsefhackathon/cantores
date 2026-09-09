@@ -393,6 +393,49 @@ it('names every booklet setting by its icon rather than a label', function () {
 // so from the moment the knob is touched: the trip to the server and the render
 // debounce that follow it are a second in which the preview would otherwise sit
 // there looking finished while showing the booklet as it was.
+// A retyped name is only worth typing if it is written down. It leaves the pages
+// exactly as they were, so nothing else on the bar moves to prove it landed —
+// which is why the field has to ask for the trip itself rather than wait to be
+// carried along by the next knob somebody happens to turn.
+it('writes the booklet down under its new name as soon as the field is left', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    $booklet = bookletFor($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->set('title', 'Advent első vasárnapja')
+        ->assertHasNoErrors();
+
+    expect($booklet->fresh()->title)->toBe('Advent első vasárnapja');
+});
+
+it('sends the retyped name to the server on its own', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+
+    $title = $xpath->query('//input[@aria-label="'.__('Title').'"]')->item(0);
+
+    expect($title)->not->toBeNull();
+
+    // Without `live` the binding is client-side only: the field would hold the
+    // new name and never post it, and the booklet would keep the old one until
+    // some other knob carried it over.
+    $model = collect($title->attributes)
+        ->first(fn (DOMAttr $attribute): bool => str_starts_with($attribute->name, 'wire:model'));
+
+    expect($model)->not->toBeNull()
+        ->and($model->name)->toContain('.live')
+        ->and($model->name)->toContain('.blur')
+        ->and($model->value)->toBe('title');
+});
+
 it('says the booklet is being laid out again from the moment a knob is touched', function () {
     $user = User::factory()->create();
     actingAs($user);
