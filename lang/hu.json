@@ -1,7 +1,6 @@
 {
     "Aretino (magyar gregorián)": "Aretino (magyar gregorián)",
     "Create an account": "Fiók létrehozása",
-    "Enter your details below to create your account": "Add meg az adataidat a fiók létrehozásához",
     "Name": "Név",
     "Full name": "Teljes név",
     "This name will not be shown on the site, unless you want to publish it for other registered users. You don't have to tell your real name.": "Ezt a nevet nem jelenítjük meg az oldalon, hacsak nem szeretnéd más regisztrált felhasználók számára láthatóvá tenni. Nem kötelező a valódi neved megadni.",
@@ -21,7 +20,6 @@
     "Log in": "Bejelentkezés",
     "Register": "Regisztráció",
     "Log in to your account": "Jelentkezz be a fiókodba",
-    "Enter your email and password below to log in": "Add meg az email címed és jelszavad a bejelentkezéshez",
     "Forgot your password?": "Elfelejtetted a jelszavad?",
     "Reset password": "Jelszó visszaállítása",
     "Send password reset link": "Jelszó visszaállító link küldése",
@@ -1375,5 +1373,7 @@
     "Refresh the booklet": "Füzet frissítése",
     "Back to the booklet as it was made": "Vissza az eredeti füzethez",
     "This booklet is empty.": "Ez a füzet üres.",
-    "Anyone holding this link opens the booklet on their own phone — the booklet itself, not a copy of it, engraved to the width of their screen. They can set their own size and font without changing anything here, and they cannot download or edit it. Whatever you change is theirs on the next refresh.": "Aki megkapja ezt a linket, a saját telefonján nyitja meg a füzetet – magát a füzetet, nem a másolatát, a képernyője szélességéhez igazítva. Mindenki a saját méretét és betűtípusát állíthatja be anélkül, hogy itt bármi megváltozna; letölteni és szerkeszteni nem tudják. Amit itt módosítasz, a következő frissítéskor náluk is megjelenik."
+    "Anyone holding this link opens the booklet on their own phone — the booklet itself, not a copy of it, engraved to the width of their screen. They can set their own size and font without changing anything here, and they cannot download or edit it. Whatever you change is theirs on the next refresh.": "Aki megkapja ezt a linket, a saját telefonján nyitja meg a füzetet – magát a füzetet, nem a másolatát, a képernyője szélességéhez igazítva. Mindenki a saját méretét és betűtípusát állíthatja be anélkül, hogy itt bármi megváltozna; letölteni és szerkeszteni nem tudják. Amit itt módosítasz, a következő frissítéskor náluk is megjelenik.",
+    "New here?": "Még nincs fiókod?",
+    "Create a free account to plan your liturgies, build booklets and keep your scores in one place.": "Hozz létre ingyenes fiókot: tervezd meg a liturgiák énekrendjét, készíts füzeteket, és tartsd egy helyen a kottáidat."
 }

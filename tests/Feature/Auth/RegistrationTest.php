@@ -17,6 +17,12 @@ test('registration screen can be rendered', function () {
     $response = $this->get(route('register'));
 
     $response->assertOk();
+    expect(substr_count($response->getContent(), 'viewBox="0 0 90 74"'))->toBe(1);
+
+    $content = $response->getContent();
+
+    expect($content)->toContain('action="'.route('register.store').'" class="flex flex-col gap-6"');
+    expect(substr_count($content, 'data-flux-description'))->toBeGreaterThanOrEqual(3);
     $response->assertSee(__('Nickname'));
     $response->assertSee(__('Random nickname'));
 });

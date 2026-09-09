@@ -1,9 +1,30 @@
-<x-layouts::auth>
+<x-layouts::auth :logo="false">
     <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Log in to your account')" :description="__('Enter your email and password below to log in')" />
+        <x-auth-header :title="__('Log in to your account')" inline />
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
+
+        @if (Route::has('register'))
+            <div class="relative overflow-hidden rounded-2xl bg-linear-to-br from-indigo-600 to-purple-700 p-6 shadow-sm dark:from-indigo-800 dark:to-purple-900">
+                <div class="absolute -right-6 -bottom-6 h-24 w-24 rounded-full bg-white/10 pointer-events-none"></div>
+                <div class="relative">
+                    <flux:heading size="lg" class="text-white!">{{ __('New here?') }}</flux:heading>
+                    <p class="mt-1 text-sm text-indigo-100">
+                        {{ __('Create a free account to plan your liturgies, build booklets and keep your scores in one place.') }}
+                    </p>
+                    <flux:button
+                        :href="route('register')"
+                        wire:navigate
+                        icon="user-plus"
+                        class="mt-4 w-full bg-white! text-indigo-700! hover:bg-indigo-50! font-semibold"
+                        data-test="register-link"
+                    >
+                        {{ __('Create an account') }}
+                    </flux:button>
+                </div>
+            </div>
+        @endif
 
         <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-6">
             @csrf
@@ -54,12 +75,5 @@
                 </flux:button>
             </div>
         </form>
-
-        @if (Route::has('register'))
-            <div class="space-x-1 text-sm text-center rtl:space-x-reverse text-zinc-600 dark:text-zinc-400">
-                <span>{{ __('Don\'t have an account?') }}</span>
-                <flux:link :href="route('register')" wire:navigate>{{ __('Sign up') }}</flux:link>
-            </div>
-        @endif
     </div>
 </x-layouts::auth>

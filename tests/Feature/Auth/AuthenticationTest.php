@@ -9,6 +9,33 @@ test('login screen can be rendered', function () {
     $response->assertOk();
 });
 
+test('login screen links to registration with a visible card above the login form', function () {
+    $response = $this->get(route('login'));
+
+    $response->assertOk();
+    $response->assertSee('data-test="register-link"', false);
+    $response->assertSee(__('Create an account'));
+    $response->assertSee(__('New here?'));
+
+    $content = $response->getContent();
+
+    expect(strpos($content, 'data-test="register-link"'))
+        ->toBeLessThan(strpos($content, 'data-test="login-button"'));
+});
+
+test('login screen shows a compact header with a single logo and no description', function () {
+    $response = $this->get(route('login'));
+
+    $response->assertOk();
+    $response->assertSee(__('Log in to your account'));
+    $response->assertDontSee(__('Enter your email and password below to log in'));
+
+    expect(substr_count($response->getContent(), 'viewBox="0 0 90 74"'))->toBe(1);
+
+    $response->assertSee('h-[1em] w-[1.22em]', false);
+    $response->assertDontSee('w-5 h-4', false);
+});
+
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 

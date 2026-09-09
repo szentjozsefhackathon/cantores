@@ -1,17 +1,17 @@
-<x-layouts::auth>
+<x-layouts::auth :logo="false">
     <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Create an account')" :description="__('Enter your details below to create your account')" />
+        <x-auth-header :title="__('Create an account')" inline />
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
-        <form method="POST" action="{{ route('register.store') }}" class="flex flex-col gap-2">
+        <form method="POST" action="{{ route('register.store') }}" class="flex flex-col gap-6">
             @csrf
 
             <!-- Name -->
             <flux:field>
                 <flux:label>{{ __('Full name') }}</flux:label>
-                <flux:text size="sm">{{__('This name will not be shown on the site, unless you want to publish it for other registered users. You don\'t have to tell your real name.') }}</flux:text>
+                <flux:description>{{ __('This name will not be shown on the site, unless you want to publish it for other registered users. You don\'t have to tell your real name.') }}</flux:description>
                 <flux:input
                     name="name"
                     :value="old('name')"
@@ -23,19 +23,19 @@
             </flux:field>
 
             <!-- Nickname Group: City + First Name -->
-            <div>
+            <flux:field>
                 <flux:label>{{ __('Nickname') }}</flux:label>
                 <livewire:auth.nickname-picker
                     :city-id="old('city_id', $selectedCityId)"
                     :first-name-id="old('first_name_id', $selectedFirstNameId)" />
-            </div>
+            </flux:field>
 
             <!-- Email Address -->
             <flux:field>
                 <flux:label>{{ __('Email address') }}</flux:label>
-                <flux:text size="sm">
+                <flux:description>
                     {{ __("Az email-címedet soha nem osztjuk meg másokkal, nem jelenítjük meg az oldalon. Csak te láthatod, és jelszóemlékeztető és egyéb biztonsági értesítésekhez használjuk.") }}
-                </flux:text>
+                </flux:description>
 
                 <flux:input
                     name="email"
@@ -48,15 +48,16 @@
 
             <!-- Password -->
             <flux:field>
+                <flux:label>{{ __('Password') }}</flux:label>
+                <flux:description>{{ __('Legalább 8 karakter hosszú jelszót adj meg.') }}</flux:description>
                 <flux:input
                     name="password"
-                    :label="__('Password')"
                     type="password"
                     required
                     autocomplete="new-password"
                     :placeholder="__('Password')"
                     viewable />
-                <flux:text size="sm">{{ __('Legalább 8 karakter hosszú jelszót adj meg.') }}</flux:text>
+                <flux:error name="password" />
             </flux:field>
 
             <!-- Confirm Password -->
@@ -89,7 +90,7 @@
             </div>
         </form>
 
-        <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-600 dark:text-zinc-400 mt-2">
+        <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-600 dark:text-zinc-400">
             <span>{{ __('Already have an account?') }}</span>
             <flux:link :href="route('login')" wire:navigate>{{ __('Log in') }}</flux:link>
         </div>
