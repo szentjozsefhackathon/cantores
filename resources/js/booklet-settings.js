@@ -252,6 +252,24 @@ export function resolveSettings(format, formatDefaults, scoreSettings, geometry,
 }
 
 /**
+ * The booklet's entries with every override held as a plain object.
+ *
+ * PHP writes an empty override as `[]` and a filled one as `{}`, while the
+ * browser writes `{}` either way — so a score whose override had just been
+ * emptied here was described one way by the pages already on screen and another
+ * way by the payload that came back from the server saving it. Two different
+ * strings to layoutSignature(), and the whole booklet was laid out a second time
+ * to arrive at the pages it was already showing.
+ *
+ * @param {Array<object>} entries one payload from BookletRenderPayload
+ */
+export function withPlainOverrides(entries) {
+    return (entries ?? []).map((entry) => (
+        entry?.override === undefined ? entry : { ...entry, override: { ...entry.override } }
+    ));
+}
+
+/**
  * The score's own paper-mode settings.
  *
  * Read from both 'paper' and the legacy 'auto' key, the way the score editor's

@@ -10,6 +10,7 @@ import {
     RENDER_DELAY_MIN_MS,
     renderDelayFor,
 } from '../../resources/js/booklet-pacing.js';
+import { withPlainOverrides } from '../../resources/js/booklet-settings.js';
 
 // A stepper arrow clicked deliberately, over and over, comes round about this
 // often. A layout run started inside that gap is a layout run started under the
@@ -217,6 +218,29 @@ function booklet(overrides = {}) {
 function roundTrip(entries) {
     return JSON.parse(JSON.stringify(entries));
 }
+
+// Reset emptied the override here and the server said so back, but PHP writes an
+// empty override as [] where the browser writes {} — two different strings for
+// the same booklet, so the pages just drawn were laid out all over again. The
+// payload is brought to the browser's own shape as it arrives.
+test('a score reset to the booklet default is not laid out twice', () => {
+    const reset = booklet();
+    reset[2].override = {};
+
+    // What Livewire hands back: settings_override is null, so json_encode writes
+    // the empty override as an array.
+    const fromServer = roundTrip(reset);
+    fromServer[2].override = [];
+
+    assert.notEqual(layoutSignature(fromServer, GEOMETRY), layoutSignature(reset, GEOMETRY));
+    assert.equal(layoutSignature(withPlainOverrides(fromServer), GEOMETRY), layoutSignature(reset, GEOMETRY));
+});
+
+test('an entry with no override of its own is left as it is', () => {
+    const entries = withPlainOverrides([{ id: 2, kind: 'text', text: 'Kezdésre' }]);
+
+    assert.deepEqual(entries, [{ id: 2, kind: 'text', text: 'Kezdésre' }]);
+});
 
 test('a booklet handed back unchanged is the one already on screen', () => {
     const entries = booklet({ staffHeight: 6 });

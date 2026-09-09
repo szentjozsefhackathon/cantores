@@ -1,7 +1,7 @@
 import { pageGeometry } from './booklet-geometry.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
-import { fileSettings, movesSetting, resolveSettings, steppedValue } from './booklet-settings.js';
+import { fileSettings, movesSetting, resolveSettings, steppedValue, withPlainOverrides } from './booklet-settings.js';
 import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -55,7 +55,7 @@ document.addEventListener('alpine:init', () => {
 
         return {
             geometry: config.geometry ?? {},
-            entries: config.entries ?? [],
+            entries: withPlainOverrides(config.entries),
             exportUrl: config.exportUrl ?? '',
             csrfToken: config.csrfToken ?? '',
             exportFailedText: config.exportFailedText ?? '',
@@ -122,7 +122,7 @@ document.addEventListener('alpine:init', () => {
              * and the flag comes down, since there is nothing left to wait for.
              */
             applyUpdate(detail = {}) {
-                if (detail.payload) { this.entries = detail.payload; }
+                if (detail.payload) { this.entries = withPlainOverrides(detail.payload); }
                 if (detail.geometry) { this.geometry = detail.geometry; }
 
                 Object.entries(this._pendingOverrides).forEach(([entryId, override]) => {
