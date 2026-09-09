@@ -62,6 +62,25 @@ source patch.
 %%vocalspace 0
 ```
 
+### Distance Between Lyric Lines
+
+**Parameter:** `%%lyricskipfac <factor>`
+**Default:** `1.1`
+**Source:** `draw_lyrics()` — **local vendor patch**, see `docs/vendor-patches.md`
+
+The vertical advance from one `w:` lyric line to the next, as a multiple of the
+line's own measured height. Upstream abc2svg hardcodes this as `1.1`; the patch
+exposes it as a format parameter. `%%vocalspace` only sets the staff → first
+line gap, and `%%lineskipfac` does not apply to lyrics.
+
+```
+%%lyricskipfac 1.4
+```
+
+In the app this is the `abcLyricSkip` setting (`0` = leave the engine default),
+emitted by `buildAbcPreamble` (`resources/js/score-editor-abc.js`) and the
+booklet's `abcBlocks` (`resources/js/booklet-render.js`).
+
 ### System Distance (gap between systems)
 
 **Parameters:** `%%staffsep <pt>` and `%%maxstaffsep <pt>`  

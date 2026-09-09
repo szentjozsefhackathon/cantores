@@ -29,7 +29,7 @@
             window.abc2svg.el = el;
         })();
     </script>
-    <script src="{{ asset('js/abc2svg-1.js') }}"></script>
+    <script src="{{ \App\Support\VendorAsset::url('js/abc2svg-1.js') }}"></script>
 
     {{-- Off-screen but laid out: exsurge's chant lines are measured here, and a
          display:none element has no measurable box. --}}

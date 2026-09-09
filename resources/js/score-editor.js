@@ -1,5 +1,5 @@
 import { applyConditionalBlocks } from './score-editor-pages.js';
-import { abcMixin, ABC_RATIO_DEFAULTS, applyAbcSvgStyle, buildAbcPreamble, ensureAbcSvgViewBox, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
+import { abcMixin, ABC_RATIO_DEFAULTS, applyAbcSvgStyle, buildAbcPreamble, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
 import { gabcMixin, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -289,6 +289,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcNoteSpacing', () => this.scheduleRender());
             this.$watch('abcStaffSep', () => this.scheduleRender());
             this.$watch('abcVocalSpace', () => this.scheduleRender());
+            this.$watch('abcLyricSkip', () => this.scheduleRender());
             this.$watch('abcNoClef', () => this.scheduleRender());
             this.$watch('abcPageScale', () => this.scheduleRender());
             this.$watch('abcPageWidth', () => this.scheduleRender());
@@ -417,6 +418,7 @@ document.addEventListener('alpine:init', () => {
                         abcNoteSpacing: Number(this.abcNoteSpacing),
                         abcStaffSep: Number(this.abcStaffSep),
                         abcVocalSpace: Number(this.abcVocalSpace),
+                        abcLyricSkip: Number(this.abcLyricSkip),
                         abcNoClef: !!this.abcNoClef,
                         abcStemWidth: Number(this.abcStemWidth),
                         abcStaffLineWidth: Number(this.abcStaffLineWidth),
@@ -768,6 +770,7 @@ document.addEventListener('alpine:init', () => {
             if (!/^X:/m.test(content)) {
                 content = 'X:1\n' + content;
             }
+            content = hungarianChordsToAbc(content);
 
             const pageWidth = normalizeAbcPageWidth(settings.abcPageWidth);
             const page = this.splitPages(content, 'abc', settings.abcPageRatio)[0] ?? content;

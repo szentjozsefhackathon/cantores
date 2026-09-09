@@ -7,7 +7,7 @@ import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
 import { markdownRows } from './booklet-markdown.js';
 import { fileSettings, layoutWidthFor, resolveSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
-import { ABC_GERMAN_CHORDNAMES, abcMixin } from './score-editor-abc.js';
+import { abcMixin, hungarianChordsToAbc } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { gabcMixin } from './score-editor-gabc.js';
@@ -681,6 +681,7 @@ function abcBlocks(content, resolved, layoutWidthPx) {
     if (resolved.abcNoClef) {
         source = source.replace(/\|[|:\]]?/, '$&[K:clef=none]');
     }
+    source = hungarianChordsToAbc(source);
 
     const pageScale = Number(resolved.abcPageScale) > 0 ? Number(resolved.abcPageScale) : 1;
     const lyricSize = Number(resolved.abcLyricSize) > 0 ? Number(resolved.abcLyricSize) : 12;
@@ -688,15 +689,16 @@ function abcBlocks(content, resolved, layoutWidthPx) {
     const vocalfont = ['%%vocalfont', font, resolved.abcLyricBold ? 'bold' : null,
         Number((lyricSize / pageScale * 3).toFixed(3))].filter(Boolean).join(' ');
     const transpose = Number(resolved.abcTranspose) || 0;
+    const lyricSkip = Number(resolved.abcLyricSkip) || 0;
 
-    const preamble = `${ABC_GERMAN_CHORDNAMES}\n`
-        + `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
+    const preamble = `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
         + '%%leftmargin 0px\n%%rightmargin 0px\n'
         + `%%pagescale ${pageScale}\n${vocalfont}\n`
         + `%%notespacingfactor ${resolved.abcNoteSpacing}\n`
         + '%%musicspace 0\n%%topspace 0\n'
         + `%%staffsep ${resolved.abcStaffSep}\n`
         + `%%vocalspace ${resolved.abcVocalSpace}\n`
+        + (lyricSkip > 0 ? `%%lyricskipfac ${lyricSkip}\n` : '')
         + (transpose !== 0 ? `%%transpose ${transpose}\n` : '');
 
     const chunks = [];

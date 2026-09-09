@@ -24,3 +24,9 @@ test('keeps an existing X field when preparing guide source', () => {
     assert.equal((source.match(/^X:/gm) || []).length, 1);
     assert.match(source, /^X:7$/m);
 });
+
+test('rewrites Hungarian chord roots in a guide example', () => {
+    const source = prepareAbcGuideSource('K:C\n"H"G "B"E |]', 600);
+
+    assert.match(source, /"B"G "Bb"E/);
+});

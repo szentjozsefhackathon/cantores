@@ -59,6 +59,7 @@ class BookletSettingFields
             'abcNoteSpacing' => ['type' => 'number', 'min' => 1, 'max' => 3, 'step' => 0.1, 'label' => 'Note spacing', 'icon' => 'space'],
             'abcStaffSep' => ['type' => 'number', 'min' => 0, 'max' => 120, 'step' => 1, 'label' => 'Staff separation', 'icon' => 'between-horizontal-start'],
             'abcVocalSpace' => ['type' => 'number', 'min' => 0, 'max' => 40, 'step' => 1, 'label' => 'Vocal space', 'icon' => 'align-vertical-space-around'],
+            'abcLyricSkip' => ['type' => 'number', 'min' => 0, 'max' => 3, 'step' => 0.1, 'label' => 'Lyric line spacing', 'icon' => 'align-vertical-space-between'],
             'abcStemWidth' => ['type' => 'number', 'min' => 0.1, 'max' => 3, 'step' => 0.1, 'label' => 'Stem width', 'icon' => 'pencil-line'],
             'abcStaffLineWidth' => ['type' => 'number', 'min' => 0.1, 'max' => 3, 'step' => 0.1, 'label' => 'Staff line width', 'icon' => 'bars-3'],
             'abcNoClef' => ['type' => 'boolean', 'label' => 'Hide clef', 'icon' => 'clef-none'],

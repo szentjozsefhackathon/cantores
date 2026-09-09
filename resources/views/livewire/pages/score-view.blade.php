@@ -11,7 +11,7 @@
             </div>
 
 <script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
-<script src="{{ asset('js/abc2svg-1.js') }}"></script>
+<script src="{{ \App\Support\VendorAsset::url('js/abc2svg-1.js') }}"></script>
 
             @if($this->score->urls->isNotEmpty())
             <div class="mb-6 flex flex-wrap gap-2">
@@ -294,6 +294,13 @@
                             <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>
                         <flux:input size="sm" type="number" x-model="abcVocalSpace" min="0" max="40" step="1" class="w-16" />
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <flux:tooltip :content="__('Lyric line spacing')">
+                            <flux:icon name="align-vertical-space-between" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                        </flux:tooltip>
+                        <flux:input size="sm" type="number" x-model="abcLyricSkip" min="0" max="3" step="0.1" placeholder="1.1" class="w-16" />
                     </div>
 
                     <div class="flex items-center gap-1">

@@ -3230,7 +3230,7 @@ S "Source: "\n\
 D "Discography: "\n\
 N "Notes: "\n\
 Z "Transcription: "\n\
-H "History: "',infospace:0,keywarn:true,leftmargin:1.4*CM,lineskipfac:1.1,linewarn:true,maxshrink:.65,maxstaffsep:2000,maxsysstaffsep:2000,measrepnb:1,measurefont:{name:txt_ff,style:"italic",size:10},measurenb:-1,musicfont:{name:"music",src:musicfont,size:24},musicspace:6,partsfont:{name:txt_ff,size:15},parskipfac:.4,partsspace:8,pagewidth:21*CM,"propagate-accidentals":"o",printmargin:0,rightmargin:1.4*CM,rbmax:4,rbmin:2,repeatfont:{name:txt_ff,size:9},scale:1,slurheight:1.0,spatab:new Float32Array([10.2,13.3,17.3,22.48,29.2,38,49.4,64.2,83.5,108.5]),staffsep:46,stemheight:21,stretchlast:.25,stretchstaff:true,subtitlefont:{name:txt_ff,size:16},subtitlespace:3,sysstaffsep:34,systnames:-1,systvoices:3,tempofont:{name:txt_ff,weight:"bold",size:12},textfont:{name:txt_ff,size:16},textspace:14,tieheight:1.0,titlefont:{name:txt_ff,size:20},titlespace:6,titletrim:true,topspace:22,tuplets:[0,0,0,0],tupletfont:{name:txt_ff,style:"italic",size:10},vocalfont:{name:txt_ff,weight:"bold",size:13},vocalspace:10,voicefont:{name:txt_ff,weight:"bold",size:13},writefields:"CMOPQsTWw",wordsfont:{name:txt_ff,size:16},wordsspace:5,"writeout-accidentals":"n"}
+H "History: "',infospace:0,keywarn:true,leftmargin:1.4*CM,lineskipfac:1.1,lyricskipfac:1.1,/*VENDOR PATCH lyricskipfac*/linewarn:true,maxshrink:.65,maxstaffsep:2000,maxsysstaffsep:2000,measrepnb:1,measurefont:{name:txt_ff,style:"italic",size:10},measurenb:-1,musicfont:{name:"music",src:musicfont,size:24},musicspace:6,partsfont:{name:txt_ff,size:15},parskipfac:.4,partsspace:8,pagewidth:21*CM,"propagate-accidentals":"o",printmargin:0,rightmargin:1.4*CM,rbmax:4,rbmin:2,repeatfont:{name:txt_ff,size:9},scale:1,slurheight:1.0,spatab:new Float32Array([10.2,13.3,17.3,22.48,29.2,38,49.4,64.2,83.5,108.5]),staffsep:46,stemheight:21,stretchlast:.25,stretchstaff:true,subtitlefont:{name:txt_ff,size:16},subtitlespace:3,sysstaffsep:34,systnames:-1,systvoices:3,tempofont:{name:txt_ff,weight:"bold",size:12},textfont:{name:txt_ff,size:16},textspace:14,tieheight:1.0,titlefont:{name:txt_ff,size:20},titlespace:6,titletrim:true,topspace:22,tuplets:[0,0,0,0],tupletfont:{name:txt_ff,style:"italic",size:10},vocalfont:{name:txt_ff,weight:"bold",size:13},vocalspace:10,voicefont:{name:txt_ff,weight:"bold",size:13},writefields:"CMOPQsTWw",wordsfont:{name:txt_ff,size:16},wordsspace:5,"writeout-accidentals":"n"}
 var sfmt={bardef:true,barsperstaff:true,beamslope:true,breaklimit:true,bstemdown:true,cancelkey:true,dynalign:true,flatbeams:true,gracespace:true,hyphencont:true,keywarn:true,maxshrink:true,maxstaffsep:true,measrepnb:true,rbmax:true,rbmin:true,shiftunison:true,slurheight:true,squarebreve:true,staffsep:true,systvoices:1,stemheight:true,stretchlast:true,stretchstaff:true,tieheight:true,timewarn:true,trimsvg:1,vocalspace:true}
 function get_bool(param){return!param||!/^(0|n|f)/i.test(param)}
 function get_font_scale(param){var i,font,a=info_split(param)
@@ -3393,7 +3393,7 @@ cfmt[cmd]=v
 break
 case"abc-version":case"bgcolor":case"fgcolor":case"propagate-accidentals":case"writeout-accidentals":cfmt[cmd]=param
 break
-case"beamslope":case"breaklimit":case"lineskipfac":case"maxshrink":case"pagescale":case"parskipfac":case"scale":case"slurheight":case"stemheight":case"tieheight":f=+param
+case"beamslope":case"breaklimit":case"lineskipfac":case"lyricskipfac":/*VENDOR PATCH lyricskipfac*/case"maxshrink":case"pagescale":case"parskipfac":case"scale":case"slurheight":case"stemheight":case"tieheight":f=+param
 if(isNaN(f)||!param||f<0){syntax(1,errs.bad_val,'%%'+cmd)
 break}
 switch(cmd){case"scale":f/=.75
@@ -9970,15 +9970,16 @@ x0=lastx+12}
 break}}
 if(lflag){out_wln(lastx+3,y,x0-lastx+3);lflag=false}}
 function draw_lyrics(p_voice,nly,a_h,y,incr){var j,top,sc=staff_tb[p_voice.st].staffscale;set_font("vocal")
+var lsf=tsfirst.fmt.lyricskipfac||1.1/*VENDOR PATCH lyricskipfac: was the literal 1.1 below*/
 if(incr>0){if(y>-tsfirst.fmt.vocalspace)
 y=-tsfirst.fmt.vocalspace;y*=sc
-for(j=0;j<nly;j++){y-=a_h[j]*1.1;draw_lyric_line(p_voice,j,y+a_h[j]*.22)}
+for(j=0;j<nly;j++){y-=a_h[j]*lsf;draw_lyric_line(p_voice,j,y+a_h[j]*.22)}
 return y/sc}
 top=staff_tb[p_voice.st].topbar+tsfirst.fmt.vocalspace
 if(y<top)
 y=top;y*=sc
 for(j=nly;--j>=0;){draw_lyric_line(p_voice,j,y+a_h[j]*.22)
-y+=a_h[j]*1.1}
+y+=a_h[j]*lsf}
 return y/sc}
 function draw_all_lyrics(){var p_voice,s,v,nly,i,x,y,w,a_ly,ly,lyst_tb=new Array(nstaff+1),nv=voice_tb.length,h_tb=new Array(nv),nly_tb=new Array(nv),above_tb=new Array(nv),rv_tb=new Array(nv),top=0,bot=0,st=-1
 for(v=0;v<nv;v++){p_voice=voice_tb[v]
@@ -10330,3 +10331,52 @@ abc2svg.loadjs(fn+"-1.js",load_end,function(){abc2svg.modules.errmsg('Error load
 load_end()})}
 return this.nreq==nreq_i}}
 abc2svg.version="v1.23.1-14-f6aabdbce0";abc2svg.vdate="2026-05-13"
+
+// --- VENDOR PATCH huchords: Hungarian chord-symbol spelling ---
+// See docs/vendor-patches.md. The app writes chord symbols in Hungarian (H = B
+// natural, B = B flat) and the score editor transposes with %%transpose. abc2svg
+// parses and transposes chord roots as English and spells the result relative to
+// the destination key, so a semitone up can come out `B#` or `Cb` -- not how a
+// chord chart reads. This hook runs after abc2svg's own chord transposition and
+// rewrites every root and slashed bass onto the fixed palette
+// C Db D Eb E F Gb G Ab A Bb H by pitch class. The `H` <-> English `B` rewrite
+// on the way in is resources/js/score-editor-abc.js hungarianChordsToAbc().
+abc2svg.huchords = {
+	pc: {C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11},
+	names: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'H'],
+	name1: function(letter, acc) {
+		var i, n = abc2svg.huchords.pc[letter]
+		for (i = 0; i < acc.length; i++) {
+			if (acc[i] == '#' || acc[i] == '♯') { n++ }
+			else if (acc[i] == 'b' || acc[i] == '♭') { n-- }
+		}
+		return abc2svg.huchords.names[((n % 12) + 12) % 12]
+	},
+	respell: function(text) {
+		var hc = abc2svg.huchords
+		return text
+			.replace(/^([A-G])(##|#|bb|b|♯|♭)?/,
+				function(m, l, a) { return hc.name1(l, a || '') })
+			.replace(/\/([A-G])(##|#|bb|b|♯|♭)?/,
+				function(m, l, a) { return '/' + hc.name1(l, a || '') })
+	},
+	gch_build: function(of, s) {
+		var i, gch
+		if (s.a_gch) {
+			for (i = 0; i < s.a_gch.length; i++) {
+				gch = s.a_gch[i]
+				if (gch.type == 'g' && gch.text) {
+					gch.text = abc2svg.huchords.respell(gch.text)
+				}
+			}
+		}
+		of(s)
+	},
+	set_hooks: function(abc) {
+		abc.gch_build = abc2svg.huchords.gch_build.bind(abc, abc.gch_build)
+	}
+}
+if (!abc2svg.mhooks)
+	abc2svg.mhooks = {}
+abc2svg.mhooks.huchords = abc2svg.huchords.set_hooks
+// --- end VENDOR PATCH huchords ---

@@ -69,10 +69,71 @@ const ABC_RATIO_DEFAULTS = {
 export { ABC_RATIO_DEFAULTS };
 
 /**
- * Chord symbols are read and printed with German note names: `B` is B flat,
- * `H` is B natural, and a lowercase `b` after a note prints as a flat sign.
+ * Chord symbols are written in Hungarian: `H` is B natural, `B` is B flat.
+ *
+ * abc2svg parses and transposes chord roots as English note names (A–G), so a
+ * Hungarian `"H"` would be left untransposed and a `"B"` parsed a semitone high.
+ * This rewrites the roots — and the bass note after a slash — to English before
+ * the engraver sees them: `H` → `B`, and a bare `B` → `Bb`.
+ *
+ * The way back — every English root, including whatever abc2svg's transposition
+ * spelled it as, mapped onto the fixed palette `C D♭ D E♭ E F G♭ G A♭ A B♭ H` —
+ * is the `huchords` hook appended to `public/js/abc2svg-1.js` (see
+ * docs/vendor-patches.md).
+ *
+ * Only real chord symbols in the tune body are touched: information fields and
+ * `%%` lines are skipped, and so are annotations (`"^text"`, `"_text"`, `"<"`,
+ * `">"`, `"@"`).
+ *
+ * @param {string} source
+ * @returns {string}
  */
-export const ABC_GERMAN_CHORDNAMES = '%%chordnames Bb:B,B:H,b:s';
+export function hungarianChordsToAbc(source) {
+    return source
+        .split('\n')
+        .map((line) => {
+            if (line.startsWith('%') || /^[A-Za-z][:+]/.test(line)) {
+                return line;
+            }
+
+            return line.replace(/"([^"]*)"/g, (whole, inner) => {
+                if (!inner || /^[_^<>@]/.test(inner)) {
+                    return whole;
+                }
+
+                const converted = inner
+                    .split(/(;)/)
+                    .map((part) => (part === ';' ? part : englishChordRoots(part)))
+                    .join('');
+
+                return `"${converted}"`;
+            });
+        })
+        .join('\n');
+}
+
+/** Rewrites the root and the slashed bass note of one chord symbol to English. */
+function englishChordRoots(chord) {
+    return chord
+        .split('/')
+        .map((segment) => {
+            const match = /^([A-H])(.*)$/.exec(segment);
+            if (!match) {
+                return segment;
+            }
+
+            const [, letter, rest] = match;
+            if (letter === 'H') {
+                return `B${rest}`;
+            }
+            if (letter === 'B' && !/^[b#♭♯]/.test(rest)) {
+                return `Bb${rest}`;
+            }
+
+            return segment;
+        })
+        .join('/');
+}
 
 /**
  * The abc2svg preamble a settings bucket describes.
@@ -91,8 +152,10 @@ export function buildAbcPreamble(settings, pageWidth) {
     const vocalfontLine = ['%%vocalfont', fontName, settings.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
     const transposeSemitones = Number(settings.abcTranspose) || 0;
     const transposeLine = transposeSemitones !== 0 ? `%%transpose ${transposeSemitones}\n` : '';
+    const lyricSkip = Number(settings.abcLyricSkip) || 0;
+    const lyricSkipLine = lyricSkip > 0 ? `%%lyricskipfac ${lyricSkip}\n` : '';
 
-    return `%%fullsvg 1\n${ABC_GERMAN_CHORDNAMES}\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace ${settings.abcVocalSpace}\n${transposeLine}`;
+    return `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace ${settings.abcVocalSpace}\n${lyricSkipLine}${transposeLine}`;
 }
 
 /** Engraves an ABC source (preamble included) into SVG markup. */
@@ -152,12 +215,16 @@ export function abcMixin() {
         // 46 was enough for two of them; 36 is enough for either.
         abcStaffSep: 36,
         abcVocalSpace: 10,
+        // Vertical advance between stacked lyric lines, as a multiple of the
+        // line's own height. 0 keeps abc2svg's built-in 1.1 (see the
+        // `lyricskipfac` vendor patch in public/js/abc2svg-1.js).
+        abcLyricSkip: 0,
         abcNoClef: false,
         abcStemWidth: 0.7,
         abcStaffLineWidth: 0.7,
         abcZoom: 100,
         abcTranspose: 0,
-        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose'],
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcVocalSpace', 'abcLyricSkip', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose'],
 
         normalizeAbcPageWidth,
 
@@ -190,6 +257,7 @@ export function abcMixin() {
             if (this.abcNoClef) {
                 content = content.replace(/\|[|:\]]?/, '$&[K:clef=none]');
             }
+            content = hungarianChordsToAbc(content);
             const ratio = this.abcPageRatio;
             const isFixed = this.isFixedRatio(ratio);
             const isResponsive = this.isResponsiveRatio(ratio);
