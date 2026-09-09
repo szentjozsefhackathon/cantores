@@ -2261,3 +2261,17 @@ function referenceButton(string $html): ?DOMElement
 
     return $element instanceof DOMElement ? $element : null;
 }
+
+// Stem and staff-line widths are the projector's knobs: a beamer eats a
+// hairline, paper does not. A booklet is always paper, and abc2svg restates its
+// own `.sW`/`.slW` inside every SVG it emits — and an inline SVG's <style> is
+// global to the page — so the last score rendered would set the weight for all
+// of them anyway. The booklet therefore follows the engine's own widths, and a
+// stale override from an older client is dropped.
+it('leaves the abc stroke widths to the engine', function () {
+    expect(collect(BookletSettingFields::panelFor('abc'))->pluck('key')->all())
+        ->not->toContain('abcStemWidth')
+        ->not->toContain('abcStaffLineWidth')
+        ->and(BookletSettingFields::sanitize('abc', ['abcStemWidth' => 2, 'abcStaffLineWidth' => 2]))
+        ->toBe([]);
+});

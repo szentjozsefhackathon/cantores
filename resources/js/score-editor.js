@@ -1,5 +1,5 @@
 import { applyConditionalBlocks } from './score-editor-pages.js';
-import { abcMixin, ABC_RATIO_DEFAULTS, applyAbcSvgStyle, buildAbcPreamble, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
+import { abcMixin, ABC_RATIO_DEFAULTS, applyAbcSvgStyle, abcStrokeWidths, buildAbcPreamble, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
 import { gabcMixin, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin, renderChordproIncipitSvg } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -1609,7 +1609,9 @@ document.addEventListener('alpine:init', () => {
         // The abc stroke widths, which live on the score rather than in the
         // fragments, and so have to be restated over the merged document.
         abcStackStyle() {
-            return `.sW{stroke-width:${this.abcStemWidth}!important}.slW{stroke-width:${this.abcStaffLineWidth}!important}\n`;
+            const { stem, staffLine } = abcStrokeWidths(this);
+
+            return `.sW{stroke-width:${stem}!important}.slW{stroke-width:${staffLine}!important}\n`;
         },
 
         // One font-embedded SVG document for export. Intrinsic width/height are

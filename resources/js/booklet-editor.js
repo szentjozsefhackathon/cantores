@@ -77,6 +77,8 @@ document.addEventListener('alpine:init', () => {
             _drawnSignature: null,
 
             init() {
+                console.log('[booklet debug] INIT — the component was created', Math.round(performance.now()));
+
                 wire = this.$wire;
 
                 this._busy = createBusyFlag({ onChange: (busy) => { this.busy = busy; } });
@@ -101,6 +103,8 @@ document.addEventListener('alpine:init', () => {
              */
             markBusy(event = null) {
                 if (event?.target?.closest?.('[data-booklet-quiet]')) { return; }
+
+                console.log('[booklet debug] busy raised at', Math.round(performance.now()), new Error().stack);
 
                 this._busy?.start();
             },
@@ -131,11 +135,24 @@ document.addEventListener('alpine:init', () => {
                     if (entry) { entry.override = override; }
                 });
 
-                if (layoutSignature(this.entries, this.geometry) === this._drawnSignature) {
+                const arrived = layoutSignature(this.entries, this.geometry);
+
+                if (arrived === this._drawnSignature) {
+                    console.log('[booklet debug] payload matches what was drawn', Math.round(performance.now()));
+
                     this._busy?.settle();
 
                     return;
                 }
+
+                const at = [...arrived].findIndex((c, i) => c !== (this._drawnSignature ?? '')[i]);
+
+                console.log(
+                    '[booklet debug] payload differs from what was drawn', Math.round(performance.now()),
+                    '\n  at character', at,
+                    '\n  DRAWN:   ...' + (this._drawnSignature ?? '(nothing drawn yet)').slice(Math.max(0, at - 200), at + 200),
+                    '\n  ARRIVED: ...' + arrived.slice(Math.max(0, at - 200), at + 200),
+                );
 
                 this.scheduleRender();
             },
@@ -193,6 +210,7 @@ document.addEventListener('alpine:init', () => {
 
                     if (token !== this._renderToken) { return; }
 
+                    console.log('[booklet debug] laid out', Math.round(performance.now()));
                     this._drawnSignature = signature;
                     this._fonts = fonts;
                     this.pages = pages;

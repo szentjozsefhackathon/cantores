@@ -728,13 +728,15 @@ function abcBlocks(content, resolved, layoutWidthPx) {
     });
     abc.tosvg('booklet', preamble + source);
 
-    const strokes = `<style>.sW{stroke-width:${resolved.abcStemWidth}}.slW{stroke-width:${resolved.abcStaffLineWidth}}</style>`;
-
+    // Stem and staff-line widths are abc2svg's own: every chunk carries a copy
+    // of the engine's stylesheet, and an inline SVG's <style> is global to the
+    // page, so a per-score override here is overruled by the next score's copy
+    // of `.sW`/`.slW` anyway.
     return chunks
         .filter((chunk) => chunk.trim().startsWith('<svg'))
         .map((chunk) => ({
             height: svgHeight(chunk),
-            svg: chunk.replace(/^(<svg[^>]*>)/, `$1${strokes}`),
+            svg: chunk,
         }));
 }
 

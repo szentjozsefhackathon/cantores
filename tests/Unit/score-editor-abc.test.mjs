@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { abcMixin, buildAbcPreamble, hungarianChordsToAbc, normalizeAbcPageWidth } from '../../resources/js/score-editor-abc.js';
+import { abcMixin, abcStrokeWidths, buildAbcPreamble, hungarianChordsToAbc, normalizeAbcPageWidth } from '../../resources/js/score-editor-abc.js';
 
 test('normalizes ABC page width to the renderer-safe range', () => {
     assert.equal(normalizeAbcPageWidth(130), 400);
@@ -60,4 +60,14 @@ test('leaves an already English B flat, information fields and annotations alone
     assert.equal(hungarianChordsToAbc('"Bb"C "Bbm"D\n'), '"Bb"C "Bbm"D\n');
     assert.equal(hungarianChordsToAbc('T:Best of B\nw: hall-B-ha\n'), 'T:Best of B\nw: hall-B-ha\n');
     assert.equal(hungarianChordsToAbc('"^Bridge"C "_Boo"D\n'), '"^Bridge"C "_Boo"D\n');
+});
+
+test('keeps stem and staff-line widths on the projector ratios only', () => {
+    const settings = { abcStemWidth: 1.4, abcStaffLineWidth: 1 };
+
+    assert.deepEqual(abcStrokeWidths({ ...settings, abcPageRatio: '16/9' }), { stem: 1.4, staffLine: 1 });
+    assert.deepEqual(abcStrokeWidths({ ...settings, abcPageRatio: '4/3' }), { stem: 1.4, staffLine: 1 });
+    assert.deepEqual(abcStrokeWidths({ ...settings, abcPageRatio: '1/1' }), { stem: 1.4, staffLine: 1 });
+    assert.deepEqual(abcStrokeWidths({ ...settings, abcPageRatio: 'paper' }), { stem: 0.7, staffLine: 0.7 });
+    assert.deepEqual(abcStrokeWidths({ ...settings, abcPageRatio: 'responsive' }), { stem: 0.7, staffLine: 0.7 });
 });

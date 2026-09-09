@@ -338,16 +338,16 @@
                         <flux:input size="sm" type="number" x-model="abcTranspose" min="-11" max="11" step="1" class="w-16" />
                     </div>
 
-                    <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
+                    <div x-show="['16/9', '4/3', '1/1'].includes(abcPageRatio)" class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
 
-                    <div class="flex items-center gap-1">
+                    <div x-show="['16/9', '4/3', '1/1'].includes(abcPageRatio)" class="flex items-center gap-1">
                         <flux:tooltip :content="__('Stem width')">
                             <flux:icon name="pencil-line" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>
                         <flux:input size="sm" type="number" x-model="abcStemWidth" min="0.1" max="3" step="0.1" class="w-16" />
                     </div>
 
-                    <div class="flex items-center gap-1">
+                    <div x-show="['16/9', '4/3', '1/1'].includes(abcPageRatio)" class="flex items-center gap-1">
                         <flux:tooltip :content="__('Staff line width')">
                             <flux:icon name="bars-3" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>

@@ -378,3 +378,26 @@ it('does not allow attaching a score to a private music piece the user cannot vi
         'title' => 'Blocked Attachment',
     ]);
 });
+
+// A hairline staff line survives paper but dies on a beamer, so the two stroke
+// widths belong to the projector ratios and nowhere else. On paper and in the
+// responsive preview they follow abc2svg's own weights, and the knobs are gone
+// rather than sitting there as a third way to say "leave it alone".
+it('offers the abc stroke widths on the projector ratios only', function () {
+    $views = [
+        'livewire/pages/score-editor.blade.php',
+        'livewire/pages/score-view.blade.php',
+        'livewire/pages/public-score-view.blade.php',
+    ];
+
+    foreach ($views as $view) {
+        $source = file_get_contents(resource_path('views/'.$view));
+
+        foreach (['abcStemWidth', 'abcStaffLineWidth'] as $field) {
+            expect($source)->toMatch(
+                '/x-show="\[\x2716\/9\x27, \x274\/3\x27, \x271\/1\x27\]\.includes\(abcPageRatio\)"[^>]*>(?:(?!<\/div>).)*?x-model="'.$field.'"/s',
+                "{$view} should gate {$field} on the projector ratios"
+            );
+        }
+    }
+});

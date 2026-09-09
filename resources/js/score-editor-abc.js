@@ -212,11 +212,30 @@ export function ensureAbcSvgViewBox(svg, fallbackWidth) {
     }
 }
 
+/** abc2svg's own weight for a stem and for a staff line. */
+const ABC_ENGINE_STROKE_WIDTH = 0.7;
+
+/**
+ * Stems and staff lines are only worth thickening for the projector ratios,
+ * where a hairline dies on the beamer. On paper and in the responsive preview
+ * they follow abc2svg, so a value saved before the knobs were taken off those
+ * ratios cannot outlive the control that set it.
+ */
+export function abcStrokeWidths(settings) {
+    const isFixed = Object.prototype.hasOwnProperty.call(ABC_RATIO_DEFAULTS, settings.abcPageRatio);
+
+    return {
+        stem: isFixed ? settings.abcStemWidth : ABC_ENGINE_STROKE_WIDTH,
+        staffLine: isFixed ? settings.abcStaffLineWidth : ABC_ENGINE_STROKE_WIDTH,
+    };
+}
+
 /** Ink colour and the stroke widths of stems and staff lines, scoped by id. */
 export function applyAbcSvgStyle(svg, svgId, settings) {
     svg.id = svgId;
+    const { stem, staffLine } = abcStrokeWidths(settings);
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${settings.abcStemWidth}!important}#${svgId} .slW{stroke-width:${settings.abcStaffLineWidth}!important}`;
+    style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${stem}!important}#${svgId} .slW{stroke-width:${staffLine}!important}`;
     svg.appendChild(style);
 }
 
