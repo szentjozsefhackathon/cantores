@@ -30,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property-read string|null $celebration_name
  * @property-read string $day_name
  * @property-read string|null $setting
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Booklet> $booklets
+ * @property-read int|null $booklets_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicAssignments
  * @property-read int|null $music_assignments_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlot> $slots
@@ -120,6 +122,18 @@ class MusicPlan extends Model
         return $this->belongsToMany(MusicPlanSlot::class, 'music_plan_slot_plan')
             ->withPivot('sequence')
             ->orderByPivot('sequence');
+    }
+
+    /**
+     * The booklets made from this plan.
+     *
+     * A plan may be printed more than once — a cantor's copy and the
+     * congregation's, say — so this is a list, and the caller decides which of
+     * them it means.
+     */
+    public function booklets(): HasMany
+    {
+        return $this->hasMany(Booklet::class);
     }
 
     /**

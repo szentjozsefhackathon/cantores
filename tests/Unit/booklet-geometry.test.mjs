@@ -14,6 +14,7 @@ import {
     pageGeometry,
     ptToPx,
     pxToMm,
+    pxToPt,
     quoteFontFamily,
 } from '../../resources/js/booklet-geometry.js';
 
@@ -26,6 +27,11 @@ test('millimetres and pixels convert at 96 dpi', () => {
     close(mmToPx(25.4), 96);
     close(pxToMm(96), 25.4);
     close(pxToMm(mmToPx(148)), 148);
+});
+
+test('points convert back from pixels at the same rate', () => {
+    close(pxToPt(96), 72);
+    close(pxToPt(ptToPx(12)), 12);
 });
 
 test('points convert at 72 to the inch', () => {

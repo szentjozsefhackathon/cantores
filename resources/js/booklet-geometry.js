@@ -30,6 +30,10 @@ export function ptToPx(pt) {
     return pt * PX_PER_PT;
 }
 
+export function pxToPt(px) {
+    return px / PX_PER_PT;
+}
+
 /** The face the booklet speaks in when nothing else has been chosen. */
 export const DEFAULT_TEXT_FONT = 'Inter';
 

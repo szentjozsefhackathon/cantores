@@ -258,6 +258,7 @@
                             Másolat készítése
                         </flux:button>
                     </form>
+                    <x-music-plan-booklet-actions :plan="$musicPlan" />
                     <flux:button
                         variant="danger"
                         icon="trash"

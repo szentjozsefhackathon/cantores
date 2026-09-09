@@ -672,7 +672,11 @@
                                 <flux:tooltip :content="__('Font size (pt)')">
                                     <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="chordproFontSize" min="10" max="32" step="1" class="w-16!" />
+                                {{-- Points, not pixels: a chord sheet is printed
+                                     and sung from, and 12 pt is what that means
+                                     to whoever sets it. The setting underneath
+                                     is still px — see chordproFontSizePt. --}}
+                                <flux:input size="sm" type="number" x-model="chordproFontSizePt" min="6" max="24" step="0.5" class="w-16!" />
                             </div>
 
                             <div class="flex items-center gap-1">

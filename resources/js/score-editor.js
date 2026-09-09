@@ -7,6 +7,7 @@ import { formatDefaults, incipitSettings } from './score-editor-settings.js';
 import { applyPhysicalSvgSize, removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
+import { ptToPx, pxToPt } from './booklet-geometry.js';
 import { injectWebFontsIntoSvg } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
 import { renderAretino, renderFirstRow } from '@aretino-chant/core';
@@ -161,11 +162,31 @@ document.addEventListener('alpine:init', () => {
         ...chordproMixin(),
         ...aretinoMixin(),
 
+        /**
+         * The ChordPro size as the toolbar states it: points, the unit a sheet
+         * is printed and sung from. The setting underneath stays the container's
+         * font-size in px, because that is what every renderer of a chord sheet
+         * — this preview, the score views, the HTML export — is handed, so only
+         * the number in the spinner changes hands here.
+         *
+         * Declared on the component itself rather than in the mixin: spreading
+         * an object copies what a getter returned, not the getter.
+         */
+        get chordproFontSizePt() {
+            return Math.round(pxToPt(Number(this.chordproFontSize) || 0) * 100) / 100;
+        },
+
+        set chordproFontSizePt(value) {
+            const pt = Number(value);
+            if (!Number.isFinite(pt) || pt <= 0) { return; }
+            this.chordproFontSize = Math.round(ptToPx(pt) * 10000) / 10000;
+        },
+
         minimalExamples: {
             abc: 'K:C\nL:1/4\nC D E|]\nw: Glo-ri-a',
             gabc: '(c3) Glo(f)ri(g)a.(h.) (::)\n',
             aretino: '(g2) g a b ||\nw: Glo-ri-a\n',
-            chordpro: '{title: }\n[C]Glo-ri-[G]a [C]Deo\n',
+            chordpro: '[C]Glo-ri-[G]a [C]Deo\n',
         },
 
         _wireContentDirty: false,
@@ -261,17 +282,9 @@ document.addEventListener('alpine:init', () => {
                 if (!this.isContentUserModified) {
                     this.fillMinimalExample();
                 }
-                if (val === 'chordpro') {
-                    this.syncChordproTitle(this.$wire.title);
-                }
                 this.syncAretinoEditor();
                 this.scheduleRender();
                 this.refreshIncipit();
-            });
-            this.$watch('$wire.title', (val) => {
-                if (this.$wire.format === 'chordpro') {
-                    this.syncChordproTitle(val);
-                }
             });
             this.$watch('lyricSize', () => this.scheduleRender());
             this.$watch('staffSize', () => this.scheduleRender());

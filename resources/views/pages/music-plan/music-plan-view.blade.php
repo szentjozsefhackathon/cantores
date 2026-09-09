@@ -296,15 +296,7 @@ new class extends Component
                             Másolat készítése
                         </flux:button>
                     </form>
-                    @auth
-                    <form method="POST" action="{{ route('booklets.store') }}" class="inline">
-                        @csrf
-                        <input type="hidden" name="music_plan_id" value="{{ $musicPlan->id }}">
-                        <flux:button type="submit" variant="outline" color="blue" icon="book-open">
-                            Füzet készítése
-                        </flux:button>
-                    </form>
-                    @endauth
+                    <x-music-plan-booklet-actions :plan="$musicPlan" />
                 </div>
             </div>
         </flux:card>

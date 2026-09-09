@@ -12,14 +12,37 @@
             {{ $booklet->musicPlan ? __('The plan') : __('In this booklet') }}
         </flux:heading>
 
-        {{-- Words before the first slot: what the booklet says before the service
-             begins. Everything else is written into the plan itself, from the
-             slot, the music or the score it belongs under. --}}
-        <flux:tooltip :content="__('Add text at the very top of the booklet')">
-            <flux:button size="sm" variant="ghost" icon="message-square-plus" wire:click="addText">
-                {{ __('Add text') }}
-            </flux:button>
-        </flux:tooltip>
+        <div class="flex shrink-0 items-center gap-1">
+            {{-- The way back to the service itself. What the booklet can do to the
+                 plan is reorder it; adding a music to a slot, or changing which one
+                 is sung, is the plan's own business, so it is one click away and
+                 opens in a tab of its own — the booklet is left standing where it
+                 was, with everything already laid out. --}}
+            @if($booklet->musicPlan)
+                <flux:tooltip :content="__('Open the music plan in a new tab')">
+                    <flux:button
+                        size="sm"
+                        variant="ghost"
+                        icon="arrow-top-right-on-square"
+                        href="{{ auth()->user()?->can('update', $booklet->musicPlan)
+                            ? route('music-plan-editor', $booklet->musicPlan)
+                            : route('music-plan-view', $booklet->musicPlan) }}"
+                        target="_blank"
+                    >
+                        {{ __('Open the plan') }}
+                    </flux:button>
+                </flux:tooltip>
+            @endif
+
+            {{-- Words before the first slot: what the booklet says before the service
+                 begins. Everything else is written into the plan itself, from the
+                 slot, the music or the score it belongs under. --}}
+            <flux:tooltip :content="__('Add text at the very top of the booklet')">
+                <flux:button size="sm" variant="ghost" icon="message-square-plus" wire:click="addText">
+                    {{ __('Add text') }}
+                </flux:button>
+            </flux:tooltip>
+        </div>
     </div>
 
     @if($this->outline === [])

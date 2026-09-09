@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { chordproIncipitRows, parseChordproSong } from '../../resources/js/score-editor-chordpro.js';
+import { ptToPx, pxToPt } from '../../resources/js/booklet-geometry.js';
+import { chordproIncipitRows, chordproMixin, parseChordproSong } from '../../resources/js/score-editor-chordpro.js';
 
 // Half the font size per character, as in booklet-chordpro's own tests: real
 // font metrics would make the arithmetic unreadable without testing anything
@@ -79,4 +81,39 @@ test('reads the paragraphs a parsed sheet actually hands over', async () => {
     // which is the page's heading rather than part of the music. The other
     // formats crop their headings off the incipit too.
     assert.deepEqual(texts, ['C', 'Ave ', 'Ma', 'G', 'ria']);
+});
+
+test('the editor never writes a title directive into the sheet', () => {
+    // A score's title is the row's, not the sheet's: syncing it into the
+    // ChordPro overwrote whatever the sheet already said it was called — the
+    // worked example among them, which came out titled "Untitled score".
+    const editor = readFileSync(new URL('../../resources/js/score-editor.js', import.meta.url), 'utf8');
+    const chordpro = readFileSync(new URL('../../resources/js/score-editor-chordpro.js', import.meta.url), 'utf8');
+
+    assert.ok(!/syncChordproTitle/.test(editor + chordpro), 'nothing may sync the title into the content');
+    assert.ok(!/chordpro: '\{title/.test(editor), 'the starting sheet must carry no title directive');
+});
+
+test('a chord sheet starts at 12 pt, in the px its container is styled with', () => {
+    assert.equal(chordproMixin().chordproFontSize, ptToPx(12));
+});
+
+test('every chord sheet toolbar sets the size in points over a setting kept in px', () => {
+    const editor = readFileSync(new URL('../../resources/js/score-editor.js', import.meta.url), 'utf8');
+
+    // Every toolbar that sets a chord sheet's size speaks points; everything
+    // downstream — the preview, the score views, the HTML export — is still
+    // handed px, so the pair of accessors is the only place the two units meet.
+    for (const page of ['score-editor', 'score-view', 'public-score-view']) {
+        const toolbar = readFileSync(new URL(`../../resources/views/livewire/pages/${page}.blade.php`, import.meta.url), 'utf8');
+
+        assert.match(toolbar, /x-model="chordproFontSizePt"/, `${page} should set the size in points`);
+        assert.ok(!/x-model="chordproFontSize"/.test(toolbar), `${page} should not set the size in px`);
+    }
+
+    assert.match(editor, /get chordproFontSizePt\(\)/);
+    assert.match(editor, /set chordproFontSizePt\(value\)/);
+
+    // And the factory default reads back as the round number it was chosen as.
+    assert.equal(pxToPt(chordproMixin().chordproFontSize), 12);
 });

@@ -1,4 +1,5 @@
 import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
+import { ptToPx } from './booklet-geometry.js';
 import { chordStringsOf, spellFlatB, spellFlatBInHtml, spellFlatBInText } from './chordpro-notation.js';
 import { stackSvgs } from './svg-stack.js';
 
@@ -141,7 +142,13 @@ export async function renderChordproIncipitSvg(content, { german, transpose, fon
 
 export function chordproMixin() {
     return {
-        chordproFontSize: 14,
+        /**
+         * A chord sheet is read off a music stand, so it starts at the size a
+         * hymnal is printed in — 12 pt, in the px the container is styled with.
+         * A booklet says nothing about this: there the size comes from the
+         * booklet's own lyric size, in points, per page.
+         */
+        chordproFontSize: ptToPx(12),
         chordproFontFamily: "'Lora'",
         chordproColumns: 1,
         chordproTranspose: 0,
@@ -185,22 +192,6 @@ export function chordproMixin() {
                 this.hasPages = true;
             } catch (e) {
                 console.error('[score-editor] chordsheetjs error:', e);
-            }
-        },
-
-        syncChordproTitle(title) {
-            const directive = `{title: ${title}}`;
-            const titleRe = /^\{title:[^}]*\}/m;
-            let content = this.localContent;
-            if (titleRe.test(content)) {
-                content = content.replace(titleRe, directive);
-            } else if (title) {
-                content = content ? directive + '\n' + content : directive;
-            }
-            if (content !== this.localContent) {
-                this.localContent = content;
-                this.$wire.content = content;
-                this.scheduleRender();
             }
         },
 

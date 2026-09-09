@@ -368,20 +368,27 @@ select:focus[data-flux-control] {
     box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.10), 0 8px 32px rgba(0,0,0,0.05);
 }
 
-/* ChordPro preview styles */
+/* ChordPro preview styles.
+
+   The leading is the booklet's, not the browser's: a sheet is edited here and
+   printed there, and a preview that spaces its lines differently from the page
+   makes the editor lie about how much of the song fits. The numbers are the
+   ones booklet-chordpro.js engraves with — LYRIC_LINE, CHORD_LINE, LABEL_LINE
+   and PARAGRAPH_GAP — expressed in em so they follow the preview's own font
+   size, exactly as the SVG rows follow theirs. Change one, change both. */
 .chordpro-preview h1.title { font-size: 1.6em; font-weight: bold; margin: 0 0 0.2em; }
 .chordpro-preview h2.subtitle { font-size: 1.1em; font-weight: normal; margin: 0 0 0.2em; }
 .chordpro-preview p.artist { margin: 0 0 1.5em; color: #555; }
-.chordpro-preview .paragraph { margin-bottom: 1.5rem; }
-.chordpro-preview .paragraph-header { font-weight: bold; font-style: italic; color: #666; margin-bottom: 0.4rem; }
-.chordpro-preview .row { display: flex; flex-wrap: wrap; margin-bottom: 0.25rem; align-items: flex-end; }
+.chordpro-preview .paragraph { margin-bottom: 0.9em; }
+.chordpro-preview .paragraph-header { font-weight: bold; font-style: italic; color: #666; line-height: 1.5; margin-bottom: 0; }
+.chordpro-preview .row { display: flex; flex-wrap: wrap; align-items: flex-end; }
 .chordpro-preview .column { display: flex; flex-direction: column; margin-right: 0.1em; }
-.chordpro-preview .chord { font-weight: bold; color: #1d4ed8; white-space: nowrap; }
+.chordpro-preview .chord { font-weight: bold; color: #1d4ed8; white-space: nowrap; line-height: 1.25; }
 /* Only a row that carries a chord reserves the line above the lyrics; chordsheetjs
    emits an empty chord div for every syllable, so an unconditional min-height puts a
    blank line over every line of a lyrics-only sheet. */
-.chordpro-preview .row:has(.chord:not(:empty)) .chord { min-height: 1.4em; }
-.chordpro-preview .lyrics { white-space: pre; }
+.chordpro-preview .row:has(.chord:not(:empty)) .chord { min-height: 1.25em; }
+.chordpro-preview .lyrics { white-space: pre; line-height: 1.35; }
 .dark .chordpro-preview p.artist { color: #9ca3af; }
 .dark .chordpro-preview .paragraph-header { color: #9ca3af; }
 .dark .chordpro-preview .chord { color: #60a5fa; }
