@@ -92,6 +92,48 @@ class BookletSettingFields
     ];
 
     /**
+     * The knobs a reader of a shared booklet is offered, per format.
+     *
+     * Deliberately a fraction of the table above, because the two panels answer
+     * two different questions. The cantor is fitting a pile of scores onto a
+     * sheet of A5 at a desk; the musician is holding a phone at a music stand
+     * with one hand, mid-piece. Everything about fitting a page is therefore
+     * gone — the width belongs to the screen, and the size of the whole booklet
+     * is one control in the top bar — and so is the face, which is chosen once
+     * for the booklet rather than score by score.
+     *
+     * What is left is the pair of things somebody actually reaches for while
+     * singing: this one is set too small for my eyes, and this one is pitched
+     * too high for my voice. Both are offered as a step rather than as a number,
+     * in the field's own unit: a reader is nudging what they can see, not typing
+     * a value into a renderer.
+     *
+     * @var array<string, array<string, array{role: string, step: float}>>
+     */
+    private const READER_FIELDS = [
+        'gabc' => [
+            'lyricSize' => ['role' => 'size', 'step' => 0.5],
+        ],
+        'abc' => [
+            'abcLyricSize' => ['role' => 'size', 'step' => 0.5],
+            'abcTranspose' => ['role' => 'transpose', 'step' => 1],
+        ],
+        'aretino' => [
+            'aretinoLyricSize' => ['role' => 'size', 'step' => 0.5],
+        ],
+        'chordpro' => [
+            'chordproFontSize' => ['role' => 'size', 'step' => 0.5],
+            'chordproTranspose' => ['role' => 'transpose', 'step' => 1],
+        ],
+        // A picture has no type in it to enlarge, only itself, so its size knob
+        // is the one it already has — at its own step, since half of a scale
+        // that runs from a fifth to whole is half the picture.
+        'file' => [
+            'fileZoom' => ['role' => 'size', 'step' => 0.05],
+        ],
+    ];
+
+    /**
      * The faces the exporter can embed. A font that is not in
      * resources/js/svg-fonts.js is a font that will not survive the trip to PDF.
      *
@@ -164,6 +206,28 @@ class BookletSettingFields
 
         foreach (self::FIELDS[$format] ?? [] as $key => $field) {
             $panel[] = array_merge(['key' => $key], $field, ['label' => __($field['label'])]);
+        }
+
+        return $panel;
+    }
+
+    /**
+     * The controls to render for a format in the reader's own panel.
+     *
+     * Same shape as panelFor(), with the step the reader nudges by and the role
+     * that decides how it is drawn — a size is two bare buttons, a transposition
+     * shows how far it has been moved.
+     *
+     * @return list<array{key: string, role: string, type: string, min: float, max: float, step: float, label: string, icon: string}>
+     */
+    public static function readerPanelFor(?string $format): array
+    {
+        $panel = [];
+
+        foreach (self::READER_FIELDS[$format] ?? [] as $key => $reader) {
+            $field = self::FIELDS[$format][$key];
+
+            $panel[] = array_merge(['key' => $key], $field, $reader, ['label' => __($field['label'])]);
         }
 
         return $panel;

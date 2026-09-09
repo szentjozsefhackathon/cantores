@@ -93,8 +93,10 @@ class BookletLoanView extends Component
     /**
      * The knobs a reader is offered for one score, by format.
      *
-     * The same table the editor's per-score panel is drawn from, so a musician
-     * who has met these controls on the site meets the same icons here.
+     * A short list on purpose — see BookletSettingFields::READER_FIELDS. The
+     * editor's full panel belongs to someone laying out a page; the person
+     * singing from it gets the two things that are about them rather than about
+     * the paper: bigger, and lower.
      *
      * @return array<string, list<array<string, mixed>>>
      */
@@ -103,7 +105,7 @@ class BookletLoanView extends Component
         $panels = [];
 
         foreach (['abc', 'gabc', 'aretino', 'chordpro', 'file'] as $format) {
-            $panels[$format] = BookletSettingFields::panelFor($format);
+            $panels[$format] = BookletSettingFields::readerPanelFor($format);
         }
 
         return $panels;

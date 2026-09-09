@@ -1,5 +1,7 @@
 @php
     use App\Support\BookletSettingFields;
+    use Illuminate\Support\Arr;
+    use Illuminate\Support\Js;
 
     $panels = $this->panels();
 @endphp
@@ -87,9 +89,20 @@
                 <flux:button size="sm" variant="ghost" icon="arrow-path" :aria-label="__('Refresh the booklet')" wire:click="reload" />
             </flux:tooltip>
 
+            {{-- The one full screen on the page, and it takes the whole reader:
+                 the browser's bars and the site's own menu go, the booklet and
+                 its bar stay, and the whole thing still scrolls. Two buttons
+                 rather than one label, because a phone has no escape key and an
+                 "expand" icon on an already expanded screen tells nobody how to
+                 get out. --}}
             <flux:tooltip :content="__('Full screen')">
                 <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" :aria-label="__('Full screen')"
-                    x-on:click="toggleFullscreen(null)" />
+                    x-show="!isFullscreen" x-on:click="toggleFullscreen()" />
+            </flux:tooltip>
+
+            <flux:tooltip :content="__('Leave full screen')">
+                <flux:button size="sm" variant="ghost" icon="arrows-pointing-in" :aria-label="__('Leave full screen')"
+                    x-show="isFullscreen" x-cloak x-on:click="toggleFullscreen()" />
             </flux:tooltip>
 
             <flux:tooltip :content="__('Back to the booklet as it was made')">
@@ -123,20 +136,14 @@
                 {{-- One article per entry, which is what makes a toolbar per score
                      possible at all: the booklet is drawn as one engraving per row
                      rather than as pages, so each of them has an element of its own
-                     to be adjusted and to be thrown full screen. --}}
+                     to carry its controls. --}}
                 <article
-                    data-reader-entry="{{ $entry['id'] }}"
                     wire:key="reader-entry-{{ $entry['id'] }}"
                     class="mb-4 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
                     x-data="{ open: false }"
                 >
                     <div class="flex items-center gap-1 border-b border-zinc-100 bg-zinc-50 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800">
                         <span class="min-w-0 flex-1 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ $name }}</span>
-
-                        <flux:tooltip :content="__('Full screen')">
-                            <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" :aria-label="__('Full screen')"
-                                x-on:click="toggleFullscreen({{ $entry['id'] }})" />
-                        </flux:tooltip>
 
                         @if($panel !== [])
                             <flux:tooltip :content="__('Adjust this score')">
@@ -147,62 +154,60 @@
                     </div>
 
                     @if($panel !== [])
-                        {{-- The editor's own per-score panel, control for control, so
-                             a musician who has met these icons on the site meets the
-                             same ones here. It scrolls sideways rather than wrapping
-                             into a wall: on a phone this bar is a dozen knobs wide
-                             and the music underneath it is what the screen is for. --}}
+                        {{-- Two knobs at most, and both of them are steps rather
+                             than numbers: a musician mid-piece presses "bigger"
+                             until it is big enough, and never wants to know that
+                             the lyric size behind it now reads 12.5. Width is the
+                             screen's to decide, the face is chosen once in the bar
+                             above, and everything else in the editor's panel is
+                             about a sheet of paper this reader is not holding. --}}
                         <div class="border-b border-zinc-100 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800" x-show="open" x-cloak>
-                            <div class="flex items-center gap-x-3 gap-y-2 overflow-x-auto px-2 py-2">
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-1">
                                 @foreach($panel as $field)
-                                    <div class="flex shrink-0 items-center gap-1">
+                                    @php
+                                        $down = $field['role'] === 'transpose' ? __('Down a semitone') : __('Smaller');
+                                        $up = $field['role'] === 'transpose' ? __('Up a semitone') : __('Bigger');
+
+                                        // Encoded here rather than with @js() inside the
+                                        // attribute: Blade compiles an echo in a component's
+                                        // attribute but not a directive, and a knob whose
+                                        // bounds arrive as the literal text "@js(...)" is a
+                                        // button that throws.
+                                        $knob = Js::from(Arr::only($field, ['key', 'min', 'max', 'step']));
+                                    @endphp
+
+                                    <div class="flex shrink-0 items-center gap-0.5 rounded-lg border border-zinc-200 px-1 dark:border-zinc-700">
                                         <flux:tooltip :content="$field['label']">
-                                            @if($field['glyph'] ?? null)
-                                                <span
-                                                    class="shrink-0 text-xs font-bold text-zinc-500 dark:text-zinc-400"
-                                                    x-bind:class="isOverridden({{ $entry['id'] }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
-                                                >{{ $field['glyph'] }}</span>
-                                            @else
-                                                <flux:icon
-                                                    :name="$field['icon']"
-                                                    variant="micro"
-                                                    class="shrink-0 text-zinc-500 dark:text-zinc-400"
-                                                    x-bind:class="isOverridden({{ $entry['id'] }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
-                                                />
-                                            @endif
+                                            <flux:icon
+                                                :name="$field['icon']"
+                                                variant="micro"
+                                                class="mr-1 shrink-0 text-zinc-500 dark:text-zinc-400"
+                                                x-bind:class="isOverridden({{ $entry['id'] }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
+                                            />
                                         </flux:tooltip>
 
-                                        @if($field['type'] === 'number')
-                                            <flux:input
-                                                size="sm"
-                                                type="number"
-                                                :aria-label="$field['label']"
-                                                min="{{ $field['min'] }}"
-                                                max="{{ $field['max'] }}"
-                                                step="{{ $field['step'] }}"
-                                                class="w-16!"
-                                                x-bind:value="settingsOf({{ $entry['id'] }})['{{ $field['key'] }}']"
-                                                x-on:change="setOverride({{ $entry['id'] }}, '{{ $field['key'] }}', Number($event.target.value))"
-                                            />
-                                        @elseif($field['type'] === 'boolean')
-                                            <flux:switch
-                                                :aria-label="$field['label']"
-                                                x-bind:checked="!!settingsOf({{ $entry['id'] }})['{{ $field['key'] }}']"
-                                                x-on:change="setOverride({{ $entry['id'] }}, '{{ $field['key'] }}', $event.target.checked)"
-                                            />
-                                        @else
-                                            <flux:select
-                                                size="sm"
-                                                class="w-36 text-xs"
-                                                :aria-label="$field['label']"
-                                                x-bind:value="settingsOf({{ $entry['id'] }})['{{ $field['key'] }}']"
-                                                x-on:change="setOverride({{ $entry['id'] }}, '{{ $field['key'] }}', $event.target.value)"
-                                            >
-                                                @foreach(BookletSettingFields::fontOptions() as $font)
-                                                    <flux:select.option value="'{{ $font }}'">{{ $font }}</flux:select.option>
-                                                @endforeach
-                                            </flux:select>
+                                        <flux:tooltip :content="$down">
+                                            <flux:button size="sm" variant="ghost" icon="minus"
+                                                aria-label="{{ $field['label'] }}: {{ $down }}"
+                                                x-on:click="nudgeOverride({{ $entry['id'] }}, {{ $knob }}, -1)"
+                                                x-bind:disabled="atLimit({{ $entry['id'] }}, {{ $knob }}, -1)" />
+                                        </flux:tooltip>
+
+                                        @if($field['role'] === 'transpose')
+                                            {{-- The one value worth reading back: how far
+                                                 from the written key this is now being sung. --}}
+                                            <span
+                                                class="w-6 text-center text-xs tabular-nums text-zinc-500 dark:text-zinc-400"
+                                                x-text="signed(settingsOf({{ $entry['id'] }})['{{ $field['key'] }}'])"
+                                            ></span>
                                         @endif
+
+                                        <flux:tooltip :content="$up">
+                                            <flux:button size="sm" variant="ghost" icon="plus"
+                                                aria-label="{{ $field['label'] }}: {{ $up }}"
+                                                x-on:click="nudgeOverride({{ $entry['id'] }}, {{ $knob }}, 1)"
+                                                x-bind:disabled="atLimit({{ $entry['id'] }}, {{ $knob }}, 1)" />
+                                        </flux:tooltip>
                                     </div>
                                 @endforeach
 

@@ -351,16 +351,13 @@ select:focus[data-flux-control] {
 
    A full-screen element is painted over a black backdrop and is not scrolled by
    the page behind it, so both have to be said here: paper under the music, and a
-   scroll of its own — a score thrown full screen on a phone is taller than the
+   scroll of its own — a booklet thrown full screen on a phone is taller than the
    phone, and being unable to reach the second half of it is the one thing a
    music stand cannot forgive. */
-[data-booklet-reader]:fullscreen,
-[data-reader-entry]:fullscreen {
+[data-booklet-reader]:fullscreen {
     overflow-y: auto;
     background: #ffffff;
 }
-
-[data-reader-entry]:fullscreen { border-radius: 0; }
 
 .booklet-pages { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
 .booklet-page {

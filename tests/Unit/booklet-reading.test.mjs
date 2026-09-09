@@ -8,6 +8,7 @@ import {
     READER_MARGIN_MM,
     readerGeometry,
     readReaderSettings,
+    steppedValue,
     writeReaderSettings,
     ZOOM_MAX,
     ZOOM_MIN,
@@ -179,4 +180,25 @@ test('what a reader sets is remembered per link, and a broken store is simply fo
     const dead = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); } };
     assert.deepEqual(readReaderSettings(dead, 'abc123'), { zoom: 1, textFont: null, overrides: {} });
     assert.doesNotThrow(() => writeReaderSettings(dead, 'abc123', { zoom: 1, textFont: null, overrides: {} }));
+});
+
+test('a knob a reader steps lands on the step\'s own grid, and stops at its ends', () => {
+    const lyricSize = { min: 2, max: 60, step: 0.5 };
+
+    // The size a screen's geometry computed is an arbitrary fraction; pressing
+    // bigger tidies it up rather than carrying the fraction along.
+    assert.equal(steppedValue(11.9067, lyricSize, 1), 12.5);
+    assert.equal(steppedValue(11.9067, lyricSize, -1), 11.5);
+    assert.equal(steppedValue(12.5, lyricSize, 1), 13);
+
+    // Nothing to step from — a picture with no size of its own yet — still moves.
+    assert.equal(steppedValue(undefined, { min: -11, max: 11, step: 1 }, 1), 1);
+
+    const transpose = { min: -11, max: 11, step: 1 };
+    assert.equal(steppedValue(11, transpose, 1), 11);
+    assert.equal(steppedValue(-11, transpose, -1), -11);
+
+    // A scan is drawn at the full width of the page and cannot be pushed past it.
+    assert.equal(steppedValue(1, { min: 0.2, max: 1, step: 0.05 }, 1), 1);
+    assert.equal(steppedValue(1, { min: 0.2, max: 1, step: 0.05 }, -1), 0.95);
 });

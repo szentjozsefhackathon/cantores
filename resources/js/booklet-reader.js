@@ -4,6 +4,7 @@ import {
     clampZoom,
     readReaderSettings,
     readerGeometry,
+    steppedValue,
     writeReaderSettings,
     ZOOM_DEFAULT,
     ZOOM_MAX,
@@ -47,7 +48,7 @@ document.addEventListener('alpine:init', () => {
 
         busy: false,
         ready: false,
-        fullscreenId: null,
+        isFullscreen: false,
 
         _renderTimer: null,
         _resizeTimer: null,
@@ -70,7 +71,7 @@ document.addEventListener('alpine:init', () => {
             // Left by the escape key as often as by the button, and the button
             // has to know.
             this._onFullscreen = () => {
-                if (!document.fullscreenElement) { this.fullscreenId = null; }
+                this.isFullscreen = !!document.fullscreenElement;
             };
             document.addEventListener('fullscreenchange', this._onFullscreen);
 
@@ -249,6 +250,37 @@ document.addEventListener('alpine:init', () => {
             return Object.prototype.hasOwnProperty.call(this.overrides[entryId] ?? {}, key);
         },
 
+        /**
+         * One knob on one score, a step at a time.
+         *
+         * It steps from whatever the score is actually being drawn at — which
+         * may be the booklet's value, the score author's, or this reader's own
+         * from a minute ago — so a press means "a bit more than this", never "a
+         * bit more than some default nobody is looking at".
+         *
+         * @param {object} field one entry of BookletSettingFields::readerPanelFor
+         * @param {number} direction -1 or 1
+         */
+        nudgeOverride(entryId, field, direction) {
+            this.setOverride(entryId, field.key, steppedValue(this.settingsOf(entryId)[field.key], field, direction));
+        },
+
+        /** A knob at the end of its travel, so the button can say so. */
+        atLimit(entryId, field, direction) {
+            const value = Number(this.settingsOf(entryId)[field.key]);
+
+            if (!Number.isFinite(value)) { return false; }
+
+            return direction < 0 ? value <= Number(field.min) : value >= Number(field.max);
+        },
+
+        /** A transposition the way a musician says it: three up, not three. */
+        signed(value) {
+            const semitones = Number(value) || 0;
+
+            return semitones > 0 ? `+${semitones}` : String(semitones);
+        },
+
         setOverride(entryId, key, value) {
             this.overrides = {
                 ...this.overrides,
@@ -313,45 +345,28 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * One score, or the whole booklet, taking the whole screen.
+         * The booklet taking the whole screen.
          *
-         * A phone on a music stand is mostly browser chrome, and the thing being
-         * sung from is the part that matters. Asked of an element rather than of
-         * the document so that a musician can put one score full screen and
-         * scroll it, which is what a page turn during a piece actually looks
-         * like.
+         * A phone on a music stand is mostly chrome — the browser's bars, the
+         * site's own menu — and none of it is being sung from. So the reader
+         * itself goes full screen, toolbar and all, and keeps scrolling: a page
+         * turn during a piece is a scroll, and one that cannot reach the second
+         * half of a score is the one thing a music stand cannot forgive.
+         *
+         * One button for the whole page, rather than one per score. A musician
+         * mid-piece is not choosing which score to expand; they have already
+         * expanded the booklet and are scrolling through it.
          */
-        toggleFullscreen(entryId = null) {
-            const target = entryId === null
-                ? this.$refs.reader
-                : this.$refs.pages?.querySelector(`[data-reader-entry="${entryId}"]`);
-
-            if (!target) { return; }
-
-            // The same button pressed twice leaves; a different one moves — and
-            // moving has to wait for the leaving, because a browser will refuse
-            // a second full screen while it is still in the first.
+        toggleFullscreen() {
             if (document.fullscreenElement) {
-                const leaving = this.fullscreenId;
-
-                Promise.resolve(document.exitFullscreen?.())
-                    .catch(() => {})
-                    .then(() => {
-                        this.fullscreenId = null;
-
-                        if (leaving !== entryId) { this.enterFullscreen(target, entryId); }
-                    });
+                Promise.resolve(document.exitFullscreen?.()).catch(() => {});
 
                 return;
             }
 
-            this.enterFullscreen(target, entryId);
-        },
-
-        enterFullscreen(target, entryId) {
-            Promise.resolve(target.requestFullscreen?.())
-                .then(() => { this.fullscreenId = entryId; })
-                .catch(() => { this.fullscreenId = null; });
+            // The state itself is left to fullscreenchange, which fires however
+            // the screen was left — the button, or the escape key.
+            Promise.resolve(this.$refs.reader?.requestFullscreen?.()).catch(() => {});
         },
 
         remember() {

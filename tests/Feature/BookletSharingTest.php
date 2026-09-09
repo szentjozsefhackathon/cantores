@@ -275,6 +275,60 @@ it('offers no way to download the booklet it is reading', function () {
         ->assertDontSee(__('Download PDF'));
 });
 
+// The reader's toolbar is not the editor's. A cantor at a desk is fitting a pile
+// of scores onto A5; a musician is holding a phone at a music stand with one
+// hand, and everything about the page — its width, the face, the numbers behind
+// the knobs — is either the screen's business or settled once at the top.
+it('offers the reader two knobs on a score rather than the cantors whole panel', function () {
+    $owner = User::factory()->create();
+    $score = Score::factory()->abc()->create(['user_id' => $owner->id]);
+    [, $loan] = sharedBooklet($owner, $score);
+
+    $panels = Livewire::test(BookletLoanView::class, ['token' => $loan->token])->instance()->panels();
+
+    expect(array_column($panels['abc'], 'key'))->toBe(['abcLyricSize', 'abcTranspose'])
+        ->and(array_column($panels['gabc'], 'key'))->toBe(['lyricSize'])
+        ->and(array_column($panels['chordpro'], 'key'))->toBe(['chordproFontSize', 'chordproTranspose'])
+        ->and(array_column($panels['aretino'], 'key'))->toBe(['aretinoLyricSize'])
+        ->and(array_column($panels['file'], 'key'))->toBe(['fileZoom']);
+
+    $keys = collect($panels)->flatten(1)->pluck('key')->all();
+
+    expect($keys)->not->toContain('abcPageWidth', 'gabcLayoutWidth', 'aretinoStaffWidth')
+        ->and($keys)->not->toContain('abcLyricFont', 'lyricFont', 'chordproFontFamily', 'aretinoTextFont');
+
+    // Half a unit a press, whatever step the same knob takes in the editor.
+    expect(collect($panels['abc'])->firstWhere('key', 'abcLyricSize'))
+        ->step->toBe(0.5)
+        ->role->toBe('size');
+});
+
+// One button, and it takes the whole scrolling booklet: what a phone on a music
+// stand is short of is the browser's bars and the site's own menu, not a way to
+// blow up one engraving at a time.
+it('offers one full screen for the whole booklet', function () {
+    $owner = User::factory()->create();
+    $booklet = Booklet::factory()->create(['user_id' => $owner->id]);
+
+    foreach ([1, 2] as $sequence) {
+        BookletScore::factory()->create([
+            'booklet_id' => $booklet->id,
+            'score_id' => Score::factory()->abc()->create(['user_id' => $owner->id])->id,
+            'sequence' => $sequence,
+        ]);
+    }
+
+    $loan = Loan::factory()->of($booklet)->create();
+
+    $html = get(route('booklet.loan', ['token' => $loan->token]))->assertOk()->getContent();
+
+    expect(substr_count($html, 'aria-label="'.__('Full screen').'"'))->toBe(1)
+        ->and(substr_count($html, 'aria-label="'.__('Leave full screen').'"'))->toBe(1)
+        // The two scores are each still adjustable, so the count above is about
+        // the full screen alone.
+        ->and(substr_count($html, 'aria-label="'.__('Adjust this score').'"'))->toBe(2);
+});
+
 it('takes its lending links with it when the booklet is deleted', function () {
     $owner = User::factory()->create();
     [$booklet, $loan] = sharedBooklet($owner);
