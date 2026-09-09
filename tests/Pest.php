@@ -56,3 +56,21 @@ function passHumanCheck(): void
 {
     app(\App\Services\HumanVerificationService::class)->markVerified();
 }
+
+/**
+ * The Alpine directives on an element, by name.
+ *
+ * What Alpine watches for changes: it re-runs any directive whose attribute it
+ * sees change, so a directive that carries something changeable is a component
+ * that rebuilds itself.
+ *
+ * @return array<string, string>
+ */
+function alpineDirectivesOf(string $html): array
+{
+    preg_match('/<div[^>]*>/', $html, $root);
+
+    preg_match_all('/(x-[a-z-]+(?::[a-z._-]+)?)="([^"]*)"/', $root[0] ?? '', $found, PREG_SET_ORDER);
+
+    return collect($found)->mapWithKeys(fn (array $one): array => [$one[1] => $one[2]])->all();
+}

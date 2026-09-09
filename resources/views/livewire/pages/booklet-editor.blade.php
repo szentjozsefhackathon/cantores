@@ -4,15 +4,26 @@
     use App\Support\BookletSettingFields;
 @endphp
 
+{{-- The booklet is handed over in an attribute of its own rather than inside
+     x-data, and x-data is left with nothing in it that ever changes.
+
+     Alpine watches the DOM and re-runs any directive whose attribute it sees
+     change, and Livewire rewrites this element on every round trip — so with the
+     payload written into x-data, saving one knob changed that attribute and
+     built the editor again from scratch: a third layout of the booklet on top of
+     the two already being run, and the split, the pages and the measured render
+     time all back to where they started. A data attribute is not a directive, so
+     a morph may rewrite this one as often as it likes. --}}
 <div
     class="py-6"
-    x-data="bookletEditor({
-        geometry: @js($this->geometry),
-        entries: @js($this->renderPayload),
-        exportUrl: @js(route('booklets.export-pdf', ['booklet' => $booklet->id])),
-        csrfToken: @js(csrf_token()),
-        exportFailedText: @js(__('Could not generate the PDF.')),
-    })"
+    data-booklet-config="{{ json_encode([
+        'geometry' => $this->geometry,
+        'entries' => $this->renderPayload,
+        'exportUrl' => route('booklets.export-pdf', ['booklet' => $booklet->id]),
+        'csrfToken' => csrf_token(),
+        'exportFailedText' => __('Could not generate the PDF.'),
+    ]) }}"
+    x-data="bookletEditor(JSON.parse($el.dataset.bookletConfig))"
     x-on:booklet-updated.window="applyUpdate($event.detail)"
 >
     {{-- abc2svg and exsurge draw two of the four formats, and both are globals

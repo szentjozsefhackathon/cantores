@@ -16,11 +16,17 @@
     x-ref="reader"
     data-booklet-reader
     class="pb-16"
-    x-data="bookletReader({
-        token: @js($loanToken),
-        geometry: @js($geometry),
-        entries: @js($entries),
-    })"
+    {{-- Handed over in an attribute of its own, for the reason the editor's is:
+         Alpine re-runs a directive whose attribute it sees change, and reading
+         the booklet again rewrites this element — so a payload written into
+         x-data built the whole reader again, laying every score out a second
+         time on a phone in the middle of a rehearsal. --}}
+    data-booklet-config="{{ json_encode([
+        'token' => $loanToken,
+        'geometry' => $geometry,
+        'entries' => $entries,
+    ]) }}"
+    x-data="bookletReader(JSON.parse($el.dataset.bookletConfig))"
     x-on:booklet-updated.window="applyUpdate($event.detail)"
 >
     {{-- abc2svg and exsurge draw two of the four formats, and both are globals

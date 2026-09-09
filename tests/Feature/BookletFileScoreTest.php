@@ -672,6 +672,29 @@ it('lets an uploaded score be taken down from the width of the page', function (
     expect($component->instance()->renderPayload()[0]['override'])->toEqual(['fileZoom' => 0.6]);
 });
 
+// Both views draw from the one payload, so a reader must never be sent an
+// override the editor's own save would throw away — see the editor's test of the
+// same rule for what a stale key costs the preview.
+it('draws an uploaded score with the override the server would keep', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->linksOnly()->create(['user_id' => $user->id]);
+    ScoreFile::factory()->banded()->create(['score_id' => $score->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $user->id]);
+    $booklet->entries()->create([
+        'score_id' => $score->id,
+        'sequence' => 1,
+        // The one knob a picture has, and a key left behind from when the score
+        // was engraved rather than uploaded.
+        'settings_override' => ['fileZoom' => 0.5, 'abcPageWidth' => 700],
+    ]);
+
+    actingAs($user);
+
+    $payload = Livewire::test(BookletEditor::class, ['booklet' => $booklet])->instance()->renderPayload();
+
+    expect($payload[0]['override'])->toEqual(['fileZoom' => 0.5]);
+});
+
 it('holds an uploaded score to the one knob a picture has', function () {
     $user = User::factory()->create();
     $score = Score::factory()->linksOnly()->create(['user_id' => $user->id]);

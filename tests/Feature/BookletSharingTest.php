@@ -132,6 +132,33 @@ it('shows the booklet as it stands now, not as it stood when the link was made',
         ->and($view->get('entries')[0]['kind'])->toBe('score');
 });
 
+// The reader has the editor's problem in a worse place: Alpine rebuilds any
+// component whose x-data attribute it sees change, and reading the booklet again
+// rewrote it — so the button that fetches the second verse laid every score out
+// twice on a phone in the middle of a rehearsal. See the editor's own test.
+it('keeps the booklet out of the attributes Alpine watches, so a reload cannot rebuild the reader', function () {
+    $owner = User::factory()->create();
+    $score = Score::factory()->abc()->create(['user_id' => $owner->id]);
+    [$booklet, $loan] = sharedBooklet($owner);
+
+    $view = Livewire::test(BookletLoanView::class, ['token' => $loan->token]);
+
+    $before = alpineDirectivesOf($view->html());
+
+    expect($before)->toHaveKey('x-data');
+
+    BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => $score->id,
+        'sequence' => 1,
+    ]);
+
+    $view->call('reload');
+
+    expect(alpineDirectivesOf($view->html()))->toBe($before)
+        ->and($view->html())->toContain('data-booklet-config');
+});
+
 // The reader is entitled by the link, not by an account: a guest gets the private
 // score in the booklet, because that is what the cantor lent them.
 it('draws a private score to a guest on the link, and stops when it is recalled', function () {

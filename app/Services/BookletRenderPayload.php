@@ -9,6 +9,7 @@ use App\Models\Music;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\ScoreFile;
 use App\Models\User;
+use App\Support\BookletSettingFields;
 use Illuminate\Support\Collection;
 
 /**
@@ -136,7 +137,7 @@ class BookletRenderPayload
                         ...$common,
                         'kind' => 'file',
                         'fileId' => $file['file_id'],
-                        'override' => $entry->settings_override ?? [],
+                        'override' => self::overrideOf($entry, 'file'),
                         'strips' => array_map(function (array $strip) use ($booklet, $file, $loan): array {
                             if (isset($strip['rect'])) {
                                 return [
@@ -167,7 +168,7 @@ class BookletRenderPayload
                     'format' => $source['format'],
                     'content' => $source['content'],
                     'settings' => $source['settings'],
-                    'override' => $entry->settings_override ?? [],
+                    'override' => self::overrideOf($entry, $source['format']),
                 ];
             })
             ->filter()
@@ -341,6 +342,30 @@ class BookletRenderPayload
             ->groupBy('music_plan_slot_plan_id')
             ->map(fn (Collection $group): int => $group->pluck('music_id')->unique()->count())
             ->all();
+    }
+
+    /**
+     * What this booklet has been told to do differently to one score — as the
+     * server would keep it, not as it happens to sit in the column.
+     *
+     * The same sanitising a save goes through, applied on the way out as well.
+     * A stored override outlives the table it was written against: a score
+     * re-entered in another format leaves its old format's keys behind, and a
+     * knob taken off the panel leaves every override that named it. The server
+     * drops all of that the moment anything on that row is saved — so a browser
+     * handed the column raw draws a booklet the next save will contradict, and
+     * then has to lay the whole thing out again to agree with it. That second
+     * layout is where the "laying out" badge came from *after* the preview had
+     * already settled.
+     *
+     * Nothing is written here. The stale keys stay in the column until that row
+     * is next saved; they simply stop being drawn with.
+     *
+     * @return array<string, mixed>
+     */
+    private static function overrideOf(BookletScore $entry, ?string $format): array
+    {
+        return BookletSettingFields::sanitize($format ?? 'file', $entry->settings_override ?? []);
     }
 
     /**

@@ -841,6 +841,79 @@ it('clamps an out-of-range override and drops keys the format does not have', fu
     expect($booklet->entries()->first()->settings_override)->toEqual(['abcPageWidth' => 8000]);
 });
 
+// A stored override outlives the table it was written against — a score
+// re-entered in another format, a knob taken off the panel — and the server drops
+// what it no longer knows the moment that row is saved. Handing the browser the
+// column raw meant it drew a booklet the next save contradicted, and then laid the
+// whole thing out a second time to agree with it: the "laying out" badge appearing
+// after the preview had already settled.
+it('hands the browser the override the server would keep, not the column as it stands', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => $score->id,
+        'settings_override' => [
+            'abcPageWidth' => 700,
+            // Left behind by the same score in another format.
+            'chordproFontSize' => 16.5,
+            // Left behind by a knob that is no longer on the panel.
+            'nonsense' => 'x',
+            // Written when the field allowed it, out of range now.
+            'abcTranspose' => 400,
+        ],
+    ]);
+
+    actingAs($user);
+
+    expect(payloadOf($booklet)[0]['override'])->toEqual(['abcPageWidth' => 700.0, 'abcTranspose' => 11.0]);
+});
+
+// Alpine re-runs a directive whose attribute it sees change, and Livewire
+// rewrites this element on every round trip. With the booklet written into
+// x-data, saving one knob changed that attribute and Alpine built the editor
+// again from nothing: a third layout of the booklet on top of the two already
+// running, and the split, the pages and the measured render time all back to
+// their defaults. The payload travels in a plain data attribute, which is not a
+// directive, so the morph may rewrite it as often as it likes.
+it('keeps the booklet out of the attributes Alpine watches, so a save cannot rebuild the editor', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+    $entry = BookletScore::factory()->create(['booklet_id' => $booklet->id, 'score_id' => $score->id]);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet]);
+
+    $before = alpineDirectivesOf($component->html());
+
+    expect($before)->toHaveKey('x-data')
+        ->and($before['x-data'])->not->toContain($score->content);
+
+    $component->call('saveOverride', $entry->id, ['abcPageWidth' => 700])
+        ->call('addText');
+
+    expect(alpineDirectivesOf($component->html()))->toBe($before);
+
+    // And the booklet still reaches the browser, by the door beside it — as
+    // JSON the attribute survives being escaped into, since this is now the only
+    // way the editor is given anything to draw.
+    preg_match('/data-booklet-config="([^"]*)"/', $component->html(), $carried);
+
+    $config = json_decode(html_entity_decode($carried[1] ?? '', ENT_QUOTES), true);
+
+    $engraved = collect($config['entries'])->firstWhere('kind', 'score');
+
+    expect($config)->toBeArray()
+        ->and($engraved['content'])->toBe($score->content)
+        ->and($engraved['override'])->toEqual(['abcPageWidth' => 700.0])
+        ->and($config['geometry'])->toHaveKey('pageWidthMm')
+        ->and($config['exportUrl'])->toBe(route('booklets.export-pdf', ['booklet' => $booklet->id]));
+});
+
 it('forgets an override when it is reset', function () {
     $user = User::factory()->create();
     $booklet = bookletFor($user);
