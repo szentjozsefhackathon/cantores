@@ -22,7 +22,7 @@ it('opens the plan for editing from the booklet made of it', function () {
     Livewire::actingAs($user)
         ->test(BookletEditor::class, ['booklet' => $booklet])
         ->assertSeeHtml('href="'.route('music-plan-editor', $plan).'"')
-        ->assertSee('Open the plan');
+        ->assertSee('Énekrend megnyitása');
 });
 
 it('offers only the read-only plan when the booklet is made of someone elses', function () {
@@ -43,7 +43,7 @@ it('says nothing about a plan in a booklet that has none', function () {
 
     Livewire::actingAs($user)
         ->test(BookletEditor::class, ['booklet' => $booklet])
-        ->assertDontSee('Open the plan');
+        ->assertDontSee('Énekrend megnyitása');
 });
 
 it('offers to start a booklet from a plan that has none yet', function () {
