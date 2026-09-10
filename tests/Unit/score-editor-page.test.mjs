@@ -106,3 +106,32 @@ test('every paper preview opens at the same magnification', () => {
     assert.equal(abcMixin().abcZoom, 120);
     assert.equal(aretinoMixin().aretinoZoom, 120);
 });
+
+/*
+ * That optical size is 8.9 pt, a number the toolbar's half-point spinner cannot
+ * express: its arrows step 6, 6.5, 7 and never land on it, so the box showed a
+ * size nobody could type back. The spinner is fed the snapped size instead, and
+ * setting it stores the snapped size rather than the raw one, so what the box
+ * reads is always a size the arrows can reach.
+ */
+test('the ChordPro size knob reads in half points', () => {
+    const editor = readFileSync(new URL('../../resources/js/score-editor.js', import.meta.url), 'utf8');
+
+    assert.match(editor, /function snapToHalfPt\(value\) \{\s*return Math\.round\(Number\(value\) \* 2\) \/ 2;/);
+    assert.match(editor, /get chordproFontSizePt\(\) \{\s*return snapToHalfPt\(pxToPt\(/);
+    assert.match(editor, /set chordproFontSizePt\(value\) \{\s*const pt = snapToHalfPt\(value\);/);
+
+    const snapToHalfPt = value => Math.round(Number(value) * 2) / 2;
+    const displayed = snapToHalfPt(ptForChordproFontSize(chordproMixin().chordproFontSize));
+
+    assert.equal(displayed, 9);
+    assert.equal(displayed * 2 % 1, 0);
+
+    for (const blade of ['score-editor', 'score-view', 'public-score-view']) {
+        const toolbar = readFileSync(
+            new URL(`../../resources/views/livewire/pages/${blade}.blade.php`, import.meta.url),
+            'utf8',
+        );
+        assert.match(toolbar, /x-model="chordproFontSizePt"[^>]*step="0\.5"/, blade);
+    }
+});

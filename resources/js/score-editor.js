@@ -92,6 +92,17 @@ function displaySize(value) {
     return Math.round(Number(value) * 100) / 100;
 }
 
+/**
+ * A point size on its way to the ChordPro spinner, snapped to the half point
+ * its step is in. The stored size is a px font-size derived from the family's
+ * optical x-height, so it lands on values like 8.9 pt that the spinner cannot
+ * express; snapping both ways keeps the number in the box one the arrows can
+ * reach, and setting it writes the snapped size back rather than the raw one.
+ */
+function snapToHalfPt(value) {
+    return Math.round(Number(value) * 2) / 2;
+}
+
 /** The same trip back: a typed size, converted into the engine's own unit. */
 function setDisplaySize(component, key, value, toEngineUnit) {
     const size = Number(value);
@@ -216,11 +227,11 @@ document.addEventListener('alpine:init', () => {
          * an object copies what a getter returned, not the getter.
          */
         get chordproFontSizePt() {
-            return Math.round(pxToPt(Number(this.chordproFontSize) || 0) * 100) / 100;
+            return snapToHalfPt(pxToPt(Number(this.chordproFontSize) || 0));
         },
 
         set chordproFontSizePt(value) {
-            const pt = Number(value);
+            const pt = snapToHalfPt(value);
             if (!Number.isFinite(pt) || pt <= 0) { return; }
             this.chordproFontSize = Math.round(ptToPx(pt) * 10000) / 10000;
         },
