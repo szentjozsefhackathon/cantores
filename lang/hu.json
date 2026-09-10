@@ -1375,5 +1375,9 @@
     "This booklet is empty.": "Ez a füzet üres.",
     "Anyone holding this link opens the booklet on their own phone — the booklet itself, not a copy of it, engraved to the width of their screen. They can set their own size and font without changing anything here, and they cannot download or edit it. Whatever you change is theirs on the next refresh.": "Aki megkapja ezt a linket, a saját telefonján nyitja meg a füzetet – magát a füzetet, nem a másolatát, a képernyője szélességéhez igazítva. Mindenki a saját méretét és betűtípusát állíthatja be anélkül, hogy itt bármi megváltozna; letölteni és szerkeszteni nem tudják. Amit itt módosítasz, a következő frissítéskor náluk is megjelenik.",
     "New here?": "Még nincs fiókod?",
-    "Create a free account to plan your liturgies, build booklets and keep your scores in one place.": "Hozz létre ingyenes fiókot: tervezd meg a liturgiák énekrendjét, készíts füzeteket, és tartsd egy helyen a kottáidat."
+    "Create a free account to plan your liturgies, build booklets and keep your scores in one place.": "Hozz létre ingyenes fiókot: tervezd meg a liturgiák énekrendjét, készíts füzeteket, és tartsd egy helyen a kottáidat.",
+    "Export 2-up on A4": "Két oldal egy A4-re",
+    "Export booklet on A4": "Füzetrendben A4-re",
+    "A4 pages are already the size of the paper. Choose A5 or A6 to print several to a sheet.": "Az A4-es oldalak már a papír méretűek. Válassz A5-öt vagy A6-ot, ha egy lapra több oldal kerüljön.",
+    "These pages are already the size of the paper, so there is nothing to impose.": "Ezek az oldalak már a papír méretűek, nincs mit egy lapra rendezni."
 }

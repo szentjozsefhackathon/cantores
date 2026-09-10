@@ -1,4 +1,5 @@
 @php
+    use App\Enums\BookletImposition;
     use App\Enums\BookletOrientation;
     use App\Enums\BookletPageSize;
     use App\Support\BookletSettingFields;
@@ -20,6 +21,8 @@
         'geometry' => $this->geometry,
         'entries' => $this->renderPayload,
         'exportUrl' => route('booklets.export-pdf', ['booklet' => $booklet->id]),
+        'impositions' => $this->impositions,
+        'pageSize' => $this->pageSize,
         'csrfToken' => csrf_token(),
         'exportFailedText' => __('Could not generate the PDF.'),
     ]) }}"
@@ -178,19 +181,67 @@
                      a PDF were being made. Naming the export as its errand ends
                      that: the export never goes to the server, so nothing the
                      server does can claim this button again. --}}
-                <flux:button
-                    size="sm"
-                    variant="primary"
-                    icon="arrow-down-tray"
-                    :loading="true"
-                    wire:target="exportPdf"
-                    wire:ignore.self
-                    x-on:click="exportPdf()"
-                    x-bind:data-loading="busy || exporting ? '' : false"
-                    x-bind:disabled="exporting || busy || pageCount === 0"
-                >
-                    {{ __('Download PDF') }}
-                </flux:button>
+                {{-- Three ways out, one button. What differs between them is not
+                     the booklet but the paper it is printed on, which is the
+                     printer's business rather than the editor's — so the sizes
+                     live behind the button that starts the download instead of
+                     as a fourth knob on the bar beside the page size, where they
+                     would read as something the pages themselves depend on.
+
+                     A booklet already laid out on A4 can only be printed one
+                     page to the sheet, and those two items are disabled rather
+                     than hidden: a menu that changes shape with the page size
+                     hides the fact that the feature exists at all. --}}
+                <flux:dropdown position="bottom" align="end">
+                    <flux:button
+                        size="sm"
+                        variant="primary"
+                        icon="arrow-down-tray"
+                        icon-trailing="chevron-down"
+                        :loading="true"
+                        wire:target="exportPdf"
+                        wire:ignore.self
+                        x-bind:data-loading="busy || exporting ? '' : false"
+                        x-bind:disabled="exporting || busy || pageCount === 0"
+                    >
+                        {{ __('Download PDF') }}
+                    </flux:button>
+
+                    <flux:menu>
+                        <flux:menu.item
+                            icon="document"
+                            x-on:click="exportPdf('{{ BookletImposition::Full->value }}')"
+                        >
+                            {{ BookletImposition::Full->label() }}
+                        </flux:menu.item>
+
+                        <flux:menu.item
+                            icon="view-columns"
+                            x-on:click="exportPdf('{{ BookletImposition::TwoUp->value }}')"
+                            x-bind:disabled="!imposes('{{ BookletImposition::TwoUp->value }}')"
+                        >
+                            {{ BookletImposition::TwoUp->label() }}
+                        </flux:menu.item>
+
+                        <flux:menu.item
+                            icon="book-open"
+                            x-on:click="exportPdf('{{ BookletImposition::Booklet->value }}')"
+                            x-bind:disabled="!imposes('{{ BookletImposition::Booklet->value }}')"
+                        >
+                            {{ BookletImposition::Booklet->label() }}
+                        </flux:menu.item>
+
+                        <flux:menu.separator x-show="!imposes('{{ BookletImposition::Booklet->value }}')" x-cloak />
+
+                        <p
+                            class="px-2 py-1.5 text-xs text-zinc-500 dark:text-zinc-400"
+                            x-show="!imposes('{{ BookletImposition::Booklet->value }}')"
+                            x-cloak
+                        >
+                            {{ __('A4 pages are already the size of the paper. Choose A5 or A6 to print several to a sheet.') }}
+                        </p>
+                    </flux:menu>
+                </flux:dropdown>
             </div>
         </div>
 

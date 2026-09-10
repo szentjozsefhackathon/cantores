@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\SvgToPdfConverter;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -73,4 +75,55 @@ function alpineDirectivesOf(string $html): array
     preg_match_all('/(x-[a-z-]+(?::[a-z._-]+)?)="([^"]*)"/', $root[0] ?? '', $found, PREG_SET_ORDER);
 
     return collect($found)->mapWithKeys(fn (array $one): array => [$one[1] => $one[2]])->all();
+}
+
+/**
+ * Stand in for rsvg-convert, and see what it was handed.
+ *
+ * The conversion itself is a subprocess and a binary that may not be installed;
+ * what a test of the export usually wants is the stack of SVG documents the
+ * browser's pages became on the way to it.
+ */
+function fakeConverter(?callable $onConvert = null): void
+{
+    $fake = new class($onConvert) extends SvgToPdfConverter
+    {
+        public function __construct(private $onConvert)
+        {
+            parent::__construct('rsvg-convert', 30);
+        }
+
+        public function convert(array $svgs, ?string $credit = null): string
+        {
+            if ($this->onConvert !== null) {
+                ($this->onConvert)($svgs, $credit);
+            }
+
+            return '%PDF-1.4 fake';
+        }
+    };
+
+    app()->instance(SvgToPdfConverter::class, $fake);
+}
+
+/**
+ * A PDF page's declared size, in points. Cairo writes the page dictionary into a
+ * compressed object stream, so it has to be inflated before /MediaBox is there
+ * to read.
+ *
+ * @return array{0: float, 1: float}|null
+ */
+function pdfPageSize(string $pdf): ?array
+{
+    preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $pdf, $streams);
+
+    foreach ($streams[1] as $stream) {
+        $inflated = @gzuncompress($stream);
+
+        if ($inflated !== false && preg_match('/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/', $inflated, $box)) {
+            return [(float) $box[1], (float) $box[2]];
+        }
+    }
+
+    return null;
 }

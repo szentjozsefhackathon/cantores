@@ -46,5 +46,9 @@
     "Scripture reference deleted.": "Scripture reference deleted.",
     "Invalid scripture reference, no text was found.": "Invalid scripture reference, no text was found.",
     "This scripture reference has already been added.": "This scripture reference has already been added.",
-    "Are you sure you want to delete this scripture reference?": "Are you sure you want to delete this scripture reference?"
+    "Are you sure you want to delete this scripture reference?": "Are you sure you want to delete this scripture reference?",
+    "Export 2-up on A4": "Export 2-up on A4",
+    "Export booklet on A4": "Export booklet on A4",
+    "A4 pages are already the size of the paper. Choose A5 or A6 to print several to a sheet.": "A4 pages are already the size of the paper. Choose A5 or A6 to print several to a sheet.",
+    "These pages are already the size of the paper, so there is nothing to impose.": "These pages are already the size of the paper, so there is nothing to impose."
 }

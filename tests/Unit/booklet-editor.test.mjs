@@ -47,3 +47,35 @@ test('a wire assigned into reactive state is not the wire that comes back', () =
     assert.notEqual(toRaw(wire), wire);
     assert.equal(typeof toRaw(wire).saveOverride, 'undefined');
 });
+
+// The imposition is named in the request rather than performed in the browser:
+// the pages go up in reading order at their own size whichever item of the menu
+// was chosen, and the server nests them onto sheets, where the paper sizes
+// already live. So the booklet is engraved once however it is to be printed.
+test('the chosen imposition is sent with the pages, not applied to them', () => {
+    assert.match(source, /async exportPdf\(imposition = 'full'\)/);
+    assert.match(source, /body: JSON\.stringify\(\{ pages: svgs, imposition \}\)/);
+});
+
+// What the paper allows is the server's answer, pushed on every change, so that
+// choosing A4 greys the two imposed items out and choosing A5 brings them back
+// without the browser keeping an idea of paper sizes of its own.
+test('what can be imposed is taken from the server, not worked out here', () => {
+    assert.match(source, /impositions: config\.impositions \?\? \['full'\]/);
+    assert.match(source, /if \(detail\.impositions\) \{ this\.impositions = detail\.impositions; \}/);
+    assert.match(source, /imposes\(imposition\) \{\s*return this\.impositions\.includes\(imposition\);/);
+
+    // And an item that is greyed out downloads nothing if it is clicked anyway.
+    assert.match(source, /if \(!this\.imposes\(imposition\)\) \{ return; \}/);
+
+    assert.ok(! /\b(148|210|297|105)\b/.test(source), 'a paper size was written into the editor');
+});
+
+// The paper travels the same way, for the name of the file that lands in the
+// downloads folder: an A5 booklet and the A6 version of it are otherwise two
+// files called the same thing.
+test('the downloaded file is named for the paper it was engraved for', () => {
+    assert.match(source, /pageSize: config\.pageSize \?\? ''/);
+    assert.match(source, /if \(detail\.pageSize\) \{ this\.pageSize = detail\.pageSize; \}/);
+    assert.match(source, /\+ \(this\.pageSize === '' \? '' : '\.' \+ this\.pageSize\)/);
+});

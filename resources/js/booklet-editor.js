@@ -57,6 +57,8 @@ document.addEventListener('alpine:init', () => {
             geometry: config.geometry ?? {},
             entries: withPlainOverrides(config.entries),
             exportUrl: config.exportUrl ?? '',
+            impositions: config.impositions ?? ['full'],
+            pageSize: config.pageSize ?? '',
             csrfToken: config.csrfToken ?? '',
             exportFailedText: config.exportFailedText ?? '',
 
@@ -124,6 +126,8 @@ document.addEventListener('alpine:init', () => {
             applyUpdate(detail = {}) {
                 if (detail.payload) { this.entries = withPlainOverrides(detail.payload); }
                 if (detail.geometry) { this.geometry = detail.geometry; }
+                if (detail.impositions) { this.impositions = detail.impositions; }
+                if (detail.pageSize) { this.pageSize = detail.pageSize; }
 
                 Object.entries(this._pendingOverrides).forEach(([entryId, override]) => {
                     const entry = this.entries.find((candidate) => String(candidate.id) === entryId);
@@ -406,8 +410,27 @@ document.addEventListener('alpine:init', () => {
                     .some((key) => this.isOverridden(entryId, key));
             },
 
-            async exportPdf() {
+            /**
+             * Whether the pages as they stand can be arranged on the paper this
+             * way. Answered from what the server last said, so the menu greys its
+             * two imposed items the moment the page size becomes A4.
+             */
+            imposes(imposition) {
+                return this.impositions.includes(imposition);
+            },
+
+            /**
+             * The pages the browser engraved, on their way to the printer.
+             *
+             * The imposition is named rather than performed here: the pages go up
+             * in reading order at their own size whichever item was chosen, and
+             * the server nests them onto sheets, where the paper sizes already
+             * live. So the three downloads differ by one word in the request
+             * body, and the booklet is engraved once however it is printed.
+             */
+            async exportPdf(imposition = 'full') {
                 if (this.exporting || this.pages.length === 0) { return; }
+                if (!this.imposes(imposition)) { return; }
 
                 this.exporting = true;
                 this.message = '';
@@ -422,7 +445,7 @@ document.addEventListener('alpine:init', () => {
                             'X-CSRF-TOKEN': this.csrfToken,
                             Accept: 'application/pdf',
                         },
-                        body: JSON.stringify({ pages: svgs }),
+                        body: JSON.stringify({ pages: svgs, imposition }),
                     });
 
                     if (!response.ok) {
@@ -433,7 +456,10 @@ document.addEventListener('alpine:init', () => {
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
-                    link.download = (wire.get('title') || 'fuzet') + '.cantores.hu.pdf';
+                    link.download = (wire.get('title') || 'fuzet')
+                        + (this.pageSize === '' ? '' : '.' + this.pageSize)
+                        + (imposition === 'full' ? '' : '.' + imposition.replace('_', '-'))
+                        + '.cantores.hu.pdf';
                     link.click();
                     URL.revokeObjectURL(url);
                 } catch (e) {

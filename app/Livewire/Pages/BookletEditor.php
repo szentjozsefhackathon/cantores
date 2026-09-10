@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Enums\BookletImposition;
 use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
 use App\Models\Booklet;
@@ -12,6 +13,7 @@ use App\Services\BookletOutline;
 use App\Services\BookletRenderPayload;
 use App\Services\MusicPlanScoreListService;
 use App\Support\BookletSettingFields;
+use App\Support\ImpositionLayout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -249,6 +251,30 @@ class BookletEditor extends Component
     }
 
     /**
+     * The ways this booklet's pages can be arranged on the paper.
+     *
+     * Decided here rather than in the browser so that the paper sizes are known
+     * in one place, and pushed to the browser on every change: choosing A4 greys
+     * the imposed exports out, and choosing A5 again brings them back, without
+     * the export button hearing it from anywhere else.
+     *
+     * @return list<string>
+     */
+    #[Computed]
+    public function impositions(): array
+    {
+        $imposable = ImpositionLayout::for($this->booklet) instanceof ImpositionLayout;
+
+        return array_values(array_map(
+            fn (BookletImposition $case): string => $case->value,
+            array_filter(
+                BookletImposition::cases(),
+                fn (BookletImposition $case): bool => $imposable || ! $case->imposes(),
+            ),
+        ));
+    }
+
+    /**
      * The score ids already in the booklet, for ticking the list.
      *
      * @return list<int>
@@ -323,7 +349,7 @@ class BookletEditor extends Component
             'abc_staff_sep' => $this->abcStaffSep,
         ]);
 
-        unset($this->geometry);
+        unset($this->geometry, $this->impositions);
 
         $this->forgetEntries();
     }
@@ -770,6 +796,8 @@ class BookletEditor extends Component
             'booklet-updated',
             payload: $this->renderPayload,
             geometry: $this->geometry,
+            impositions: $this->impositions,
+            pageSize: $this->pageSize,
         );
     }
 }

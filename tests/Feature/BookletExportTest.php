@@ -16,28 +16,6 @@ use function Pest\Laravel\postJson;
 const A5_PAGE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 559.3700787401574 793.7007874015748">'
     .'<rect width="559.3700787401574" height="793.7007874015748" fill="#fff"/></svg>';
 
-function fakeConverter(?callable $onConvert = null): void
-{
-    $fake = new class($onConvert) extends SvgToPdfConverter
-    {
-        public function __construct(private $onConvert)
-        {
-            parent::__construct('rsvg-convert', 30);
-        }
-
-        public function convert(array $svgs, ?string $credit = null): string
-        {
-            if ($this->onConvert !== null) {
-                ($this->onConvert)($svgs, $credit);
-            }
-
-            return '%PDF-1.4 fake';
-        }
-    };
-
-    app()->instance(SvgToPdfConverter::class, $fake);
-}
-
 it('turns the pages the browser engraved into one pdf', function () {
     $user = User::factory()->create();
     $booklet = Booklet::factory()->create(['user_id' => $user->id, 'title' => 'Adventi füzet']);
@@ -51,7 +29,7 @@ it('turns the pages the browser engraved into one pdf', function () {
 
     $response->assertOk()
         ->assertHeader('Content-Type', 'application/pdf')
-        ->assertHeader('Content-Disposition', 'attachment; filename="adventi-fuzet.cantores.hu.pdf"');
+        ->assertHeader('Content-Disposition', 'attachment; filename="adventi-fuzet.a5.cantores.hu.pdf"');
 
     expect($response->getContent())->toStartWith('%PDF');
 });
@@ -268,28 +246,6 @@ it('states an A5 page in millimetres for the printer', function () {
     expect($normalized)->toContain('width="148')
         ->and($normalized)->toContain('height="210');
 });
-
-/**
- * A PDF page's declared size, in points. Cairo writes the page dictionary into a
- * compressed object stream, so it has to be inflated before /MediaBox is there
- * to read.
- *
- * @return array{0: float, 1: float}|null
- */
-function pdfPageSize(string $pdf): ?array
-{
-    preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $pdf, $streams);
-
-    foreach ($streams[1] as $stream) {
-        $inflated = @gzuncompress($stream);
-
-        if ($inflated !== false && preg_match('/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/', $inflated, $box)) {
-            return [(float) $box[1], (float) $box[2]];
-        }
-    }
-
-    return null;
-}
 
 // The claim the whole export rests on, checked against the real converter rather
 // than a stand-in: a composed page really does come out as an A5 sheet, so what
