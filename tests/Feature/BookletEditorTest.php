@@ -778,16 +778,16 @@ it('saves the face and the heading size the booklet is set in', function () {
     actingAs($user);
 
     Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->set('textFont', 'Lora')
+        ->set('textFont', 'Merriweather')
         ->set('headingScale', 0.8)
         ->assertHasNoErrors();
 
     $booklet->refresh();
 
-    expect($booklet->text_font)->toBe('Lora')
+    expect($booklet->text_font)->toBe('Merriweather')
         ->and($booklet->heading_scale)->toBe(0.8)
         ->and($booklet->geometry())->toMatchArray([
-            'textFont' => 'Lora',
+            'textFont' => 'Merriweather',
             'headingScale' => 0.8,
         ]);
 });
@@ -1252,8 +1252,8 @@ it('offers no zoom on a score, and keeps the one an uploaded picture has', funct
 });
 
 it('only accepts a font the exporter can embed', function () {
-    expect(BookletSettingFields::sanitize('abc', ['abcLyricFont' => 'Lora']))
-        ->toBe(['abcLyricFont' => "'Lora'"])
+    expect(BookletSettingFields::sanitize('abc', ['abcLyricFont' => 'Merriweather']))
+        ->toBe(['abcLyricFont' => "'Merriweather'"])
         ->and(BookletSettingFields::sanitize('abc', ['abcLyricFont' => 'Comic Sans MS']))
         ->toBe([]);
 });

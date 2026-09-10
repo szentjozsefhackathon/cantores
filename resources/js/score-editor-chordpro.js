@@ -12,7 +12,7 @@ function loadChordSheetJS() {
     return chordSheetJsPromise;
 }
 
-const DEFAULT_FONT_FAMILY = "'Lora'";
+const DEFAULT_FONT_FAMILY = "'Merriweather'";
 
 function safeFontFamily(value) {
     return /^[a-zA-Z0-9 ',\-]+$/.test(value) ? value : DEFAULT_FONT_FAMILY;

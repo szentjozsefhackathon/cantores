@@ -10,7 +10,7 @@ const measure = (text) => (text ?? '').length * 5;
 
 const options = {
     fontSize: 10,
-    fontFamily: "'Lora'",
+    fontFamily: "'Merriweather'",
     layoutWidth: 200,
     measure,
 };

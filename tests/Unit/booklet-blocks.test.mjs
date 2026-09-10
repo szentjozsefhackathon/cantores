@@ -93,17 +93,17 @@ test('a music title folded onto the slot line keeps its own case', async () => {
 test('headings are set in the booklet\'s own face at its own heading size', async () => {
     const { blocks, fonts } = await buildScoreBlocks(
         entry({ variation: 'orgonakíséret' }),
-        { ...geometry, textFont: "'Lora'", headingScale: 0.6 },
+        { ...geometry, textFont: "'Merriweather'", headingScale: 0.6 },
         null,
     );
 
     const sizeOf = (svg) => parseFloat(svg.match(/font-size="([\d.]+)"/)[1]);
 
-    assert.match(blocks[0].svg, /font-family="&apos;Lora&apos;"/);
+    assert.match(blocks[0].svg, /font-family="&apos;Merriweather&apos;"/);
     assert.ok(Math.abs(sizeOf(blocks[0].svg) - geometry.lyricSizePx * 0.6) < 0.01);
     assert.ok(Math.abs(sizeOf(blocks[1].svg) - geometry.lyricSizePx * 0.6 * 0.82) < 0.01);
     // And the engraving under it is set in that same face: one booklet, one face.
-    assert.ok(fonts.includes("'Lora'"), 'the music was left in a face of its own');
+    assert.ok(fonts.includes("'Merriweather'"), 'the music was left in a face of its own');
 });
 
 // Every engine already draws its first staff standing off the top of its own
@@ -337,7 +337,7 @@ test('a heading and a rubric take the same depth of page whichever face they are
     const reference = depthIn('Alegreya');
 
     assert.ok(reference > 0);
-    ['Merriweather', 'EB Garamond', 'Lora', 'Barlow Condensed'].forEach((font) => {
+    ['Merriweather', 'EB Garamond', 'Inter', 'Barlow Condensed'].forEach((font) => {
         assert.ok(
             Math.abs(depthIn(font) - reference) < 1e-9,
             `the booklet reflowed when it was set in ${font}`,

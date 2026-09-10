@@ -48,18 +48,19 @@ it('offers the two serif faces added for booklets', function () {
 });
 
 /**
- * A face that has been taken out of the picker is still set on the scores and
- * booklets that chose it while it was there. Dropping it from the validator as
- * well would cost those their font on the next save, so the two lists are
- * deliberately different lengths.
+ * The two lists answer different questions — what may be stored against what may
+ * be picked — and nothing is retired at the moment, so they hold the same faces.
+ * What is worth pinning is the order the picker offers them in, and that a face
+ * outside the list is refused rather than stored: Lora was retired here, and a
+ * stale client still sending it must not put it back on a score.
  */
-it('still accepts a retired face, and offers the current ones in order', function () {
+it('offers the faces in order and stores nothing outside them', function () {
     expect(BookletSettingFields::selectableFonts())
         ->toBe(['Alegreya', 'Merriweather', 'EB Garamond', 'Inter', 'Barlow Condensed'])
         ->and(BookletSettingFields::fontOptions())
-        ->toContain('Lora')
+        ->toBe(BookletSettingFields::selectableFonts())
         ->and(BookletSettingFields::sanitize('chordpro', ['chordproFontFamily' => 'Lora']))
-        ->toBe(['chordproFontFamily' => "'Lora'"]);
+        ->toBe([]);
 });
 
 /**
@@ -91,7 +92,7 @@ it('renders the shared select with the current faces, in order', function () {
     $markup = html_entity_decode(Blade::render('<x-lyric-font-select model="lyricFont" />'));
 
     expect($markup)->toContain("value=\"'Alegreya'\"")
-        ->and($markup)->not->toContain('>Lora</option>');
+        ->and($markup)->not->toContain('>Lora</option>');   // retired, and gone from the app
 
     $positions = array_map(function (string $family) use ($markup): int {
         $at = strpos($markup, '>'.$family.'</option>');

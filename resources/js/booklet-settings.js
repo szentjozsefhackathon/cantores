@@ -284,7 +284,7 @@ export function steppedValue(current, field, direction) {
  * computed from a page geometry and rounded to four places — an override that
  * came from the same arithmetic must not count as a change for a difference in
  * the twelfth digit. Faces are compared unquoted, since the score editor's
- * selects emit `'Lora'` and a format's own defaults may not.
+ * selects emit `'Merriweather'` and a format's own defaults may not.
  *
  * @param {*} value the override's value for the key
  * @param {*} inherited what the score would be drawn at without it

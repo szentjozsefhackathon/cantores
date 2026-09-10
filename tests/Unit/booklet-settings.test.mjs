@@ -18,7 +18,7 @@ const geometry = pageGeometry({
     contentHeightMm: 186,
     lyricSizePt: 10.5,
     staffHeightMm: 5,
-    textFont: 'Lora',
+    textFont: 'Merriweather',
 });
 
 /** Where each engine keeps the face it sets lyrics in. */
@@ -39,7 +39,7 @@ test('every format is set in the booklet\'s face, whatever its author chose', ()
             null,
         );
 
-        assert.equal(resolved[key], "'Lora'", `${format} kept a face of its own`);
+        assert.equal(resolved[key], "'Merriweather'", `${format} kept a face of its own`);
     }
 });
 
@@ -85,9 +85,9 @@ test('booleans are compared as booleans', () => {
 });
 
 test('faces are compared unquoted', () => {
-    assert.equal(movesSetting("'Lora'", 'Lora'), false);
-    assert.equal(movesSetting("'Lora'", "'Inter'"), true);
-    assert.equal(movesSetting("'Lora'", undefined), true);
+    assert.equal(movesSetting("'Merriweather'", 'Merriweather'), false);
+    assert.equal(movesSetting("'Merriweather'", "'Inter'"), true);
+    assert.equal(movesSetting("'Merriweather'", undefined), true);
 });
 
 test('a missing value moves nothing', () => {

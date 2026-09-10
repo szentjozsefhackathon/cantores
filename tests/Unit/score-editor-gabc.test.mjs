@@ -21,7 +21,7 @@ function fakeChantContext() {
 
 test('sizes an exsurge context from a settings bucket', () => {
     const ctxt = configureChantContext(fakeChantContext(), {
-        lyricFont: "'Lora'",
+        lyricFont: "'Merriweather'",
         lyricSize: 30,
         staffSize: 160,
         minLyricWordSpacing: 3,
@@ -31,7 +31,7 @@ test('sizes an exsurge context from a settings bucket', () => {
         minSpaceBelowStaff: 1,
     });
 
-    assert.equal(ctxt.font, "'Lora'");
+    assert.equal(ctxt.font, "'Merriweather'");
     assert.equal(ctxt.fontSize, 30 * (100 / 30) * 1.3);
     assert.equal(ctxt.glyphScaling, (160 / 100) * (100 / 30) / 16);
     assert.equal(ctxt.minLyricWordSpacing, 3 * (100 / 30));

@@ -97,7 +97,7 @@ test('plain text with German notation off is untouched by the caller', async () 
 test('the booklet draws the respelled chord, at its respelled width', () => {
     const measure = (text) => (text ?? '').length * 5;
     const paragraphs = [{ lines: [{ items: [{ chords: 'B', lyrics: 'a' }] }] }];
-    const options = { fontSize: 10, fontFamily: "'Lora'", layoutWidth: 200, measure };
+    const options = { fontSize: 10, fontFamily: "'Merriweather'", layoutWidth: 200, measure };
 
     const plain = chordproRows(paragraphs, options);
     const spelled = chordproRows(paragraphs, { ...options, spell: spellFlatB });
@@ -115,7 +115,7 @@ test('the booklet draws the respelled chord, at its respelled width', () => {
 test('the booklet leaves chords alone when no speller is given', () => {
     const rows = chordproRows(
         [{ lines: [{ items: [{ chords: 'B', lyrics: 'Ave' }] }] }],
-        { fontSize: 10, fontFamily: "'Lora'", layoutWidth: 200, measure: (t) => (t ?? '').length * 5 },
+        { fontSize: 10, fontFamily: "'Merriweather'", layoutWidth: 200, measure: (t) => (t ?? '').length * 5 },
     );
 
     assert.match(rows[0].svg, />B<\/text>/);
@@ -128,7 +128,7 @@ test('end to end: a sheet transposed into B flat reads Bb everywhere', async () 
     const text = spellFlatBInText(new ChordSheetJS.TextFormatter().format(song), chordStringsOf(song));
     const svg = chordproRows(
         song.bodyParagraphs,
-        { fontSize: 10, fontFamily: "'Lora'", layoutWidth: 400, measure: (t) => (t ?? '').length * 5, spell: spellFlatB },
+        { fontSize: 10, fontFamily: "'Merriweather'", layoutWidth: 400, measure: (t) => (t ?? '').length * 5, spell: spellFlatB },
     ).map((row) => row.svg).join('');
 
     assert.match(html, /<div class="chord">Bb<\/div>/);

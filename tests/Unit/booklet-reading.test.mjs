@@ -92,13 +92,13 @@ test('the cantor\'s musical decisions travel to the phone', () => {
     const travelling = travellingOverride('abc', {
         abcTranspose: -2,
         abcNoClef: true,
-        abcLyricFont: "'Lora'",
+        abcLyricFont: "'Merriweather'",
     }, geometry);
 
     assert.deepEqual(travelling, {
         abcTranspose: -2,
         abcNoClef: true,
-        abcLyricFont: "'Lora'",
+        abcLyricFont: "'Merriweather'",
     });
 });
 

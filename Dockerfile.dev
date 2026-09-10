@@ -14,8 +14,8 @@ RUN apt-get update && \
 # rsvg-convert + fonts for server-side SVG -> PDF export. Fonts are committed in
 # the repo so builds are reproducible offline. rsvg-convert (librsvg) ignores
 # @font-face fonts embedded in the SVG and resolves all text through fontconfig,
-# so both the lyric text fonts (EB Garamond, Lora, Alegreya, Merriweather,
-# Inter, Barlow Condensed) and the abc2svg music notation font must be
+# so both the lyric text fonts (EB Garamond, Alegreya, Merriweather, Inter,
+# Barlow Condensed) and the abc2svg music notation font must be
 # installed system-wide. The music font is referenced as family "music" in
 # abc2svg output; a fontconfig alias maps that onto the installed abc2svg.ttf
 # (internal family "abc2svg").

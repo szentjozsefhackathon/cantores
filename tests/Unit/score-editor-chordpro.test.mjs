@@ -14,7 +14,7 @@ const measure = (text) => (text ?? '').length * 20;
 
 const options = {
     fontSize: 40,
-    fontFamily: "'Lora'",
+    fontFamily: "'Merriweather'",
     layoutWidth: 900,
     measure,
 };

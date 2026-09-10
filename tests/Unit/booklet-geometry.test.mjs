@@ -66,7 +66,7 @@ test('A5 portrait with a 12mm margin becomes the expected pixel box', () => {
 // one every heading and every rubric is set in.
 test('the booklet\'s text font reaches the page quoted', () => {
     assert.equal(quoteFontFamily('EB Garamond'), "'EB Garamond'");
-    assert.equal(quoteFontFamily("'Lora'"), "'Lora'");
+    assert.equal(quoteFontFamily("'Merriweather'"), "'Merriweather'");
     assert.equal(quoteFontFamily(null), "'Alegreya'");
     assert.equal(quoteFontFamily('  '), "'Alegreya'");
 });
@@ -80,12 +80,12 @@ test('the typography a booklet chose travels with its geometry', () => {
         contentHeightMm: 186,
         lyricSizePt: 11,
         staffHeightMm: 7,
-        textFont: 'Lora',
+        textFont: 'Merriweather',
         headingScale: 0.8,
         abcStaffSep: 32,
     });
 
-    assert.equal(geometry.textFont, "'Lora'");
+    assert.equal(geometry.textFont, "'Merriweather'");
     assert.equal(geometry.headingScale, 0.8);
     assert.equal(geometry.abcStaffSep, 32);
 });
@@ -163,9 +163,9 @@ test('a size quoted in the reference face is restated in the face it is set in',
     // The pairings judged by eye against 11 pt of Alegreya.
     close(opticalLyricSizePt(11, 'Merriweather'), 9, 0.05);
     close(opticalLyricSizePt(11, "'EB Garamond'"), 11.5, 0.05);
-    // And Merriweather against the face it replaces: 11 pt of the one for 12 of
-    // the other.
-    close(opticalLyricSizePt(11, 'Lora') / opticalLyricSizePt(11, 'Merriweather'), 12 / 11, 0.02);
+    // And the two sans faces, which are set beside the serifs on a slide.
+    close(opticalLyricSizePt(11, 'Inter'), 9.1, 0.05);
+    close(opticalLyricSizePt(11, "'Barlow Condensed'"), 9.8, 0.05);
 });
 
 // A fallback stack, or a face nobody has measured, is likelier to be deliberate
@@ -204,7 +204,7 @@ test('the leading is measured in the size the booklet quoted, not the size it is
         lyricSizePt: 11, staffHeightMm: 6, textFont,
     });
 
-    ['Alegreya', 'Merriweather', 'EB Garamond', 'Lora', 'Inter', 'Barlow Condensed'].forEach((font) => {
+    ['Alegreya', 'Merriweather', 'EB Garamond', 'Inter', 'Barlow Condensed'].forEach((font) => {
         close(geometry(font).lyricSizePx * geometry(font).leadingScale, ptToPx(11), 1e-9);
     });
 });

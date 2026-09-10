@@ -83,7 +83,6 @@ const OPTICAL_X_HEIGHT = {
     'Alegreya': 0.452,
     'Merriweather': 0.555,
     'EB Garamond': 0.432,
-    'Lora': 0.500,
     'Inter': 0.546,
     'Barlow Condensed': 0.509,
 };

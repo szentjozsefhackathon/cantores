@@ -26,16 +26,6 @@ export const WEB_FONTS = {
         { style: 'italic', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/eb-garamond-latin-ext-700i.woff2' },
         { style: 'italic', weight: '700', unicodeRange: LATIN,     url: '/fonts/eb-garamond-latin-700i.woff2' },
     ],
-    'Lora': [
-        { style: 'normal', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-400.woff2' },
-        { style: 'normal', weight: '400', unicodeRange: LATIN,     url: '/fonts/lora-latin-400.woff2' },
-        { style: 'italic', weight: '400', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-400i.woff2' },
-        { style: 'italic', weight: '400', unicodeRange: LATIN,     url: '/fonts/lora-latin-400i.woff2' },
-        { style: 'normal', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-700.woff2' },
-        { style: 'normal', weight: '700', unicodeRange: LATIN,     url: '/fonts/lora-latin-700.woff2' },
-        { style: 'italic', weight: '700', unicodeRange: LATIN_EXT, url: '/fonts/lora-latin-ext-700i.woff2' },
-        { style: 'italic', weight: '700', unicodeRange: LATIN,     url: '/fonts/lora-latin-700i.woff2' },
-    ],
     'Alegreya': [
         { style: 'normal', weight: '400 900', unicodeRange: LATIN_EXT, url: '/fonts/alegreya-latin-ext.woff2' },
         { style: 'normal', weight: '400 900', unicodeRange: LATIN,     url: '/fonts/alegreya-latin.woff2' },

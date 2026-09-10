@@ -168,14 +168,16 @@ class BookletSettingFields
      * The faces the exporter can embed. A font that is not in
      * resources/js/svg-fonts.js is a font that will not survive the trip to PDF.
      *
-     * Wider than the list anybody is offered, because a face that has been
-     * retired from the picker is still set on the scores and booklets that chose
-     * it while it was there, and those have to keep validating and keep
-     * printing.
+     * Kept apart from the list anybody is offered because the two answer
+     * different questions — what may be stored against what may be picked — and
+     * a face retired from the picker has to go on validating and go on printing
+     * for the scores that chose it while it was there. Nothing is retired at the
+     * moment, so the two lists are the same length; the day one is, this is the
+     * one that keeps it.
      *
      * @var list<string>
      */
-    private const EMBEDDABLE_FONTS = ['Alegreya', 'Merriweather', 'EB Garamond', 'Inter', 'Barlow Condensed', 'Lora'];
+    private const EMBEDDABLE_FONTS = ['Alegreya', 'Merriweather', 'EB Garamond', 'Inter', 'Barlow Condensed'];
 
     /**
      * The faces a person may pick, in the order they are offered.
@@ -184,9 +186,6 @@ class BookletSettingFields
      * Merriweather, which was drawn for screens — then the Garamond for
      * anything meant to look like a chant book, and last the two sans faces,
      * which exist for projector slides rather than for pages.
-     *
-     * Lora is deliberately absent: Merriweather replaced it as the modern serif,
-     * and offering both only asks a question nobody profits from answering.
      *
      * @var list<string>
      */

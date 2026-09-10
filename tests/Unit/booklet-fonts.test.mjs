@@ -28,13 +28,13 @@ const { ensureFontsLoaded } = await import('../../resources/js/svg-fonts.js');
 test('every style of a family is loaded before anything is measured in it', async () => {
     loaded.length = 0;
 
-    await ensureFontsLoaded(["'Lora', serif"], 22);
+    await ensureFontsLoaded(["'Merriweather', serif"], 22);
 
     assert.deepEqual(loaded, [
-        '22px "Lora"',
-        'italic 22px "Lora"',
-        'bold 22px "Lora"',
-        'italic bold 22px "Lora"',
+        '22px "Merriweather"',
+        'italic 22px "Merriweather"',
+        'bold 22px "Merriweather"',
+        'italic bold 22px "Merriweather"',
     ]);
 });
 
@@ -93,7 +93,7 @@ const entry = (over = {}) => ({
 // the booklet's — whatever the scores were engraved in.
 test('the booklet\'s own face is the one waited for, not each score\'s', () => {
     const fonts = bookletFonts([
-        entry({ settings: { aretino: { paper: { aretinoTextFont: "'Lora'" } } } }),
+        entry({ settings: { aretino: { paper: { aretinoTextFont: "'Merriweather'" } } } }),
         entry({ id: 2, format: 'chordpro', settings: { chordpro: { paper: { chordproFontFamily: "'Barlow Condensed', sans-serif" } } } }),
         entry({ id: 3, format: 'abc', settings: { abc: { paper: { abcLyricFont: 'Inter' } } } }),
         entry({ id: 4, kind: 'text', text: 'Rubrika' }),
@@ -104,9 +104,9 @@ test('the booklet\'s own face is the one waited for, not each score\'s', () => {
 
 test('a font overridden for this booklet is the one waited for', () => {
     const fonts = bookletFonts([
-        entry({ settings: { aretino: { paper: { aretinoTextFont: "'Inter'" } } }, override: { aretinoTextFont: "'Lora'" } }),
+        entry({ settings: { aretino: { paper: { aretinoTextFont: "'Inter'" } } }, override: { aretinoTextFont: "'Merriweather'" } }),
     ], geometry);
 
-    assert.ok(fonts.includes("'Lora'"));
+    assert.ok(fonts.includes("'Merriweather'"));
     assert.ok(! fonts.includes("'Inter'"), 'the score\'s own font was waited for instead');
 });
