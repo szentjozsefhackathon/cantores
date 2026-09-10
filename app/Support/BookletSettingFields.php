@@ -170,7 +170,7 @@ class BookletSettingFields
      *
      * @var list<string>
      */
-    private const EMBEDDABLE_FONTS = ['EB Garamond', 'Lora', 'Inter', 'Barlow Condensed'];
+    private const EMBEDDABLE_FONTS = ['EB Garamond', 'Lora', 'Alegreya', 'Merriweather', 'Inter', 'Barlow Condensed'];
 
     /**
      * Keep only the keys this format allows, clamped into range.

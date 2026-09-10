@@ -4,6 +4,10 @@ SIL Open Font License, Version 1.1.
 The full license text is reproduced below. It applies to each of the
 following font families, with their respective copyright notices:
 
+  Alegreya
+    Copyright (c) 2011 The Alegreya Project Authors
+    (https://github.com/huertatipografica/Alegreya)
+
   Barlow Condensed
     Copyright (c) The Barlow Project Authors (https://github.com/jpt/barlow)
 
@@ -17,6 +21,11 @@ following font families, with their respective copyright notices:
   Lora
     Copyright (c) 2011 The Lora Project Authors
     (https://github.com/cyrealtype/Lora-Cyrillic)
+
+  Merriweather
+    Copyright (c) 2020 The Merriweather Project Authors
+    (https://github.com/EbenSorkin/Merriweather4), with Reserved Font Name
+    "Merriweather".
 
 This license is copied below for your convenience, but you can also see
 the original at: https://openfontlicense.org

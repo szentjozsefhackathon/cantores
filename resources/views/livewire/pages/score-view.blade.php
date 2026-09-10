@@ -121,6 +121,8 @@
                         <flux:select size="sm" x-model="lyricFont" class="w-40 text-xs">
                             <flux:select.option value="'EB Garamond'">EB Garamond</flux:select.option>
                             <flux:select.option value="'Lora'">Lora</flux:select.option>
+                            <flux:select.option value="'Alegreya'">Alegreya</flux:select.option>
+                            <flux:select.option value="'Merriweather'">Merriweather</flux:select.option>
                             <flux:select.option value="'Inter'">Inter</flux:select.option>
                             <flux:select.option value="'Barlow Condensed'">Barlow Condensed</flux:select.option>
                         </flux:select>
@@ -263,6 +265,8 @@
                         <flux:select size="sm" x-model="abcLyricFont" class="w-40 text-xs">
                             <flux:select.option value="EB Garamond">EB Garamond</flux:select.option>
                             <flux:select.option value="Lora">Lora</flux:select.option>
+                            <flux:select.option value="Alegreya">Alegreya</flux:select.option>
+                            <flux:select.option value="Merriweather">Merriweather</flux:select.option>
                             <flux:select.option value="Inter">Inter</flux:select.option>
                             <flux:select.option value="Barlow Condensed">Barlow Condensed</flux:select.option>
                         </flux:select>
@@ -394,6 +398,8 @@
                         <flux:select size="sm" x-model="aretinoTextFont" class="w-40 text-xs">
                             <flux:select.option value="'EB Garamond'">EB Garamond</flux:select.option>
                             <flux:select.option value="'Lora'">Lora</flux:select.option>
+                            <flux:select.option value="'Alegreya'">Alegreya</flux:select.option>
+                            <flux:select.option value="'Merriweather'">Merriweather</flux:select.option>
                             <flux:select.option value="'Inter'">Inter</flux:select.option>
                             <flux:select.option value="'Barlow Condensed'">Barlow Condensed</flux:select.option>
                         </flux:select>
