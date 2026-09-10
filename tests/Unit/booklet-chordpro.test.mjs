@@ -286,3 +286,52 @@ test('each row is a standalone SVG sized to its own content', () => {
     assert.match(rows[0].svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 15 26"/);
     assert.match(rows[0].svg, /<\/svg>$/);
 });
+
+test('a superscript is drawn smaller and above the baseline of its line', () => {
+    const rows = chordproRows(
+        [{ lines: [{ items: [{ chords: '', lyrics: 'a<sup>b</sup>c' }] }] }],
+        options,
+    );
+
+    const runs = [...rows[0].svg.matchAll(/<text[^>]*y="([\d.]+)"[^>]*font-size="([\d.]+)"[^>]*>([^<]*)</g)]
+        .map(([, y, size, content]) => ({ y: Number(y), size: Number(size), content }));
+
+    assert.deepEqual(runs.map((run) => run.content), ['a', 'b', 'c']);
+    // Seven tenths of the 10 px the line is set in.
+    assert.deepEqual(runs.map((run) => run.size), [10, 7, 10]);
+    // Raised off the baseline the rest of the line sits on, and back down after.
+    assert.ok(runs[1].y < runs[0].y);
+    assert.equal(runs[2].y, runs[0].y);
+});
+
+test('a subscript is drawn below the baseline instead', () => {
+    const rows = chordproRows(
+        [{ lines: [{ items: [{ chords: '', lyrics: 'H<sub>2</sub>O' }] }] }],
+        options,
+    );
+
+    const ys = [...rows[0].svg.matchAll(/<text[^>]*y="([\d.]+)"/g)].map((m) => Number(m[1]));
+
+    assert.ok(ys[1] > ys[0]);
+    assert.equal(ys[2], ys[0]);
+});
+
+test('a superscript keeps the row the height it always had', () => {
+    const withScript = chordproRows([{ lines: [{ items: [{ chords: '', lyrics: 'a<sup>b</sup>' }] }] }], options);
+    const without = chordproRows([{ lines: [{ items: [{ chords: '', lyrics: 'ab' }] }] }], options);
+
+    assert.equal(withScript[0].height, without[0].height);
+});
+
+test('markup in a label may be a script too', () => {
+    const rows = chordproRows(
+        [{ label: 'Verse 1<sup>a</sup>', lines: [{ items: [{ chords: 'C', lyrics: 'Ave' }] }] }],
+        options,
+    );
+
+    const runs = [...rows[0].svg.matchAll(/<text[^>]*font-size="([\d.]+)"[^>]*>([^<]*)</g)]
+        .map(([, size, content]) => ({ size: Number(size), content }));
+
+    assert.deepEqual(runs.map((run) => run.content), ['Verse 1', 'a']);
+    assert.equal(runs[1].size, 7);
+});

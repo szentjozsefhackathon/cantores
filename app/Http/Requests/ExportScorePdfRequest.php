@@ -36,7 +36,7 @@ class ExportScorePdfRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'format' => ['required', 'string', 'in:abc,gabc,aretino'],
+            'format' => ['required', 'string', 'in:abc,gabc,aretino,chordpro'],
             'title' => ['nullable', 'string', 'max:255'],
             // Which score this came from, so a published one can be stamped
             // with its credit. Optional: the editor exports without a score.
@@ -54,7 +54,7 @@ class ExportScorePdfRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'format.in' => __('PDF export is only available for ABC, GABC and Aretino scores.'),
+            'format.in' => __('PDF export is only available for ABC, GABC, Aretino and ChordPro scores.'),
             'pages.required' => __('There is nothing to export.'),
             'pages.max' => __('Too many pages to export at once.'),
             'pages.*.regex' => __('Each page must be a valid SVG document.'),

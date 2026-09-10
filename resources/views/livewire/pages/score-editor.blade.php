@@ -1002,6 +1002,19 @@
                                         <flux:menu.item icon="arrow-down-tray" x-on:click="exportChordproHtml()">
                                             {{ __('Export HTML') }}
                                         </flux:menu.item>
+                                        <flux:menu.separator />
+                                        <flux:menu.item icon="photo" x-on:click="copyChordproImage()">
+                                            {{ __('Copy as Image') }}
+                                        </flux:menu.item>
+                                        <flux:menu.item icon="photo" x-on:click="exportChordproPng()">
+                                            {{ __('Export PNG') }}
+                                        </flux:menu.item>
+                                        <flux:menu.item icon="document" x-on:click="exportChordproSvg()">
+                                            {{ __('Export SVG') }}
+                                        </flux:menu.item>
+                                        <flux:menu.item icon="document" x-on:click="exportChordproPdf()">
+                                            {{ __('Export PDF') }}
+                                        </flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
                             </div>

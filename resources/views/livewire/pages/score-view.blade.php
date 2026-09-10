@@ -436,15 +436,35 @@
 
                     <div class="mt-2 flex flex-wrap items-center justify-end gap-2" x-show="hasPages">
                         <span x-show="copyFeedback" x-text="copyFeedback" x-transition class="text-sm text-zinc-600 dark:text-zinc-300"></span>
-                        <flux:button icon="clipboard-document-list" variant="ghost" x-on:click="copyChordproPlainText()">
-                            {{ __('Copy as Text') }}
-                        </flux:button>
-                        <flux:button icon="clipboard" variant="ghost" x-on:click="copyChordproHtml()">
-                            {{ __('Copy HTML') }}
-                        </flux:button>
-                        <flux:button icon="arrow-down-tray" variant="ghost" x-on:click="exportChordproHtml()">
-                            {{ __('Export HTML') }}
-                        </flux:button>
+                        <flux:dropdown align="end">
+                            <flux:button icon="arrow-down-tray" icon:trailing="chevron-down" variant="ghost">
+                                {{ __('Export') }}
+                            </flux:button>
+                            <flux:menu>
+                                <flux:menu.item icon="clipboard-document-list" x-on:click="copyChordproPlainText()">
+                                    {{ __('Copy as Text') }}
+                                </flux:menu.item>
+                                <flux:menu.item icon="clipboard" x-on:click="copyChordproHtml()">
+                                    {{ __('Copy HTML') }}
+                                </flux:menu.item>
+                                <flux:menu.item icon="arrow-down-tray" x-on:click="exportChordproHtml()">
+                                    {{ __('Export HTML') }}
+                                </flux:menu.item>
+                                <flux:menu.separator />
+                                <flux:menu.item icon="photo" x-on:click="copyChordproImage()">
+                                    {{ __('Copy as Image') }}
+                                </flux:menu.item>
+                                <flux:menu.item icon="photo" x-on:click="exportChordproPng()">
+                                    {{ __('Export PNG') }}
+                                </flux:menu.item>
+                                <flux:menu.item icon="document" x-on:click="exportChordproSvg()">
+                                    {{ __('Export SVG') }}
+                                </flux:menu.item>
+                                <flux:menu.item icon="document" x-on:click="exportChordproPdf()">
+                                    {{ __('Export PDF') }}
+                                </flux:menu.item>
+                            </flux:menu>
+                        </flux:dropdown>
                     </div>
                 </div>
             </div>

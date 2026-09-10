@@ -17,7 +17,7 @@
      time all back to where they started. A data attribute is not a directive, so
      a morph may rewrite this one as often as it likes. --}}
 <div
-    class="py-6"
+    class="py-6 lg:flex lg:h-[calc(100vh-2rem)] lg:flex-col lg:py-0"
     data-booklet-config="{{ json_encode([
         'geometry' => $this->geometry,
         'entries' => $this->renderPayload,
@@ -50,7 +50,7 @@
          display:none element has no measurable box. --}}
     <div x-ref="measure" aria-hidden="true" class="pointer-events-none absolute -left-[10000px] top-0 w-[2400px] opacity-0"></div>
 
-    <div class="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
+    <div class="mx-auto flex w-full max-w-[1600px] flex-col px-4 sm:px-6 lg:min-h-0 lg:flex-1 lg:px-8">
 
         {{-- Geometry bar. Laid out as the score editor's setting toolbars are:
              every knob is its icon, and its name is in the tooltip, so a dozen
@@ -315,8 +315,10 @@
             </div>
         </flux:modal>
 
-        {{-- items-start keeps the columns from stretching, which is what lets each
-             one stick and scroll inside its own box instead of dragging the page.
+        {{-- The editor fills the viewport on desktop and the page itself does
+             not scroll, so the split takes what the toolbar leaves and its
+             columns are stretched to exactly that: each pane scrolls inside its
+             own box, and the bottom of the split is the bottom of the screen.
 
              Where the boundary stands is the browser's business alone, so the
              server's idea of this element's attributes must not be allowed to
@@ -326,7 +328,7 @@
              — put the divider back to the default while Alpine still believed it
              had been left where it was dragged. --}}
         <div
-            class="booklet-split grid items-start gap-4"
+            class="booklet-split grid gap-4 lg:min-h-0 lg:flex-1"
             wire:ignore.self
             x-bind:style="`--booklet-split: ${splitPercent}%`"
             x-bind:class="splitDragging ? 'cursor-col-resize select-none' : ''"
@@ -335,7 +337,7 @@
             {{-- Choosing --}}
             <div
                 data-booklet-pane="plan"
-                class="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain lg:pe-1"
+                class="space-y-4 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pe-1"
             >
                 @include('livewire.pages.booklet-editor.plan')
             </div>
@@ -355,7 +357,7 @@
                 aria-valuemax="80"
                 x-bind:aria-valuenow="Math.round(splitPercent)"
                 tabindex="0"
-                class="group hidden touch-none select-none lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:w-2 lg:cursor-col-resize lg:items-center lg:justify-center"
+                class="group hidden touch-none select-none lg:flex lg:h-full lg:w-2 lg:cursor-col-resize lg:items-center lg:justify-center"
                 x-on:pointerdown="startSplitDrag($event)"
                 x-on:dblclick="resetSplit()"
                 x-on:keydown.arrow-left.prevent="nudgeSplit(-2)"
@@ -366,7 +368,7 @@
             </div>
 
             {{-- The pages --}}
-            <flux:card class="relative flex flex-col p-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)]">
+            <flux:card class="relative flex flex-col p-4 lg:h-full lg:min-h-0">
                 {{-- The badge sits in the heading row rather than above the
                      sheets, so it stays put while the pages are scrolled. --}}
                 <div class="mb-3 flex items-center justify-between gap-2">

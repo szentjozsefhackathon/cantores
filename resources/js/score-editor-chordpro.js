@@ -1,7 +1,9 @@
 import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
-import { DEFAULT_LYRIC_SIZE_PT, opticalLyricSizePt, ptToPx } from './booklet-geometry.js';
+import { packColumns } from './booklet-flow.js';
+import { DEFAULT_LYRIC_SIZE_PT, DEFAULT_PAGE_WIDTH_MM, mmToPx, opticalLyricSizePt, ptToPx } from './booklet-geometry.js';
 import { markupRuns, runsText } from './chordpro-markup.js';
 import { chordStringsOf, spellFlatB, spellFlatBInHtml, spellFlatBInText } from './chordpro-notation.js';
+import { ensureFontsLoaded } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
 
 let chordSheetJsPromise = null;
@@ -28,7 +30,10 @@ function escapeHtml(str) {
 }
 
 /**
- * The three tags a lyric may carry, and the element each of them becomes.
+ * The styles a lyric may carry, and the element each of them becomes.
+ *
+ * A run's `script` is already named for its own element, so it needs no entry
+ * here — see markupElement below.
  *
  * @see chordpro-markup.js, which is where a lyric is cut into styled runs, and
  *      which the booklet's SVG renderer draws from the same way.
@@ -97,13 +102,17 @@ function markupElement(run) {
         .filter(([style]) => run[style])
         .map(([, tag]) => tag);
 
+    if (run.script) {
+        tags.push(run.script);
+    }
+
     return tags.map((tag) => `<${tag}>`).join('')
         + run.text
         + [...tags].reverse().map((tag) => `</${tag}>`).join('');
 }
 
 function sanitizeChordproContent(content) {
-    return content.replace(/<\/?(i|b|u)>|[<>]/gi, (match) => {
+    return content.replace(/<\/?(sup|sub|i|b|u)>|[<>]/gi, (match) => {
         if (match.length > 1) { return match; }
         return match === '<' ? '&lt;' : '&gt;';
     });
@@ -223,6 +232,124 @@ export async function renderChordproIncipitSvg(content, { german, transpose, fon
 export { balanceMarkup, stripMarkup };
 
 /**
+ * How wide a chord sheet is engraved for export.
+ *
+ * The same text width every other format here is drawn to — A4 with the margins
+ * a binder needs — so a chord sheet placed beside an engraved score in a layout
+ * measures the same across.
+ */
+export const CHORDPRO_PAGE_WIDTH_PX = mmToPx(DEFAULT_PAGE_WIDTH_MM);
+
+/** The gutter between two columns, as a multiple of the lyric size. */
+const COLUMN_GAP = 2;
+
+/** As many columns as the toolbar can ask for, and never fewer than one. */
+function columnCount(columns) {
+    const count = Math.round(Number(columns) || 1);
+
+    return Math.min(Math.max(count, 1), 4);
+}
+
+/**
+ * The measurements a chord sheet's page is built from.
+ *
+ * Wanted twice, and in this order: the column width decides how the rows wrap,
+ * and the rows cannot be dealt into columns until they have been laid out.
+ *
+ * @param {{columns: number|string, fontSize: number, pageWidth?: number}} options
+ * @returns {{count: number, gap: number, columnWidth: number, pageWidth: number}}
+ */
+export function chordproPageMetrics({ columns, fontSize, pageWidth = CHORDPRO_PAGE_WIDTH_PX }) {
+    const count = columnCount(columns);
+    const gap = fontSize * COLUMN_GAP;
+
+    return { count, gap, pageWidth, columnWidth: (pageWidth - gap * (count - 1)) / count };
+}
+
+/**
+ * Where each row of a laid-out chord sheet goes on the page.
+ *
+ * One page, as tall as the song needs, rather than a run of A4s: a sheet
+ * exported into a layout is placed by hand, and a page break the exporter chose
+ * would only be in the way. Columns are the sheet's own business, though — a
+ * hymn set in two on screen is set in two here — so the rows are dealt into
+ * that many, balanced by height.
+ *
+ * @param {Array<{height: number, spaceBefore?: number, keepWithNext?: boolean, svg: string}>} rows
+ * @param {{count: number, gap: number, columnWidth: number, pageWidth: number}} metrics
+ * @returns {{placements: Array<{row: object, x: number, y: number, scale: number}>, width: number, height: number}}
+ */
+export function chordproPageLayout(rows, metrics) {
+    const { count, gap, columnWidth, pageWidth } = metrics;
+    const placements = [];
+    let height = 0;
+
+    packColumns(rows, count).forEach((column, index) => {
+        column.items.forEach(({ block, y }) => {
+            placements.push({ row: block, x: index * (columnWidth + gap), y, scale: 1 });
+        });
+
+        height = Math.max(height, column.height);
+    });
+
+    return { placements, width: pageWidth, height };
+}
+
+/**
+ * A whole chord sheet, drawn as one SVG page.
+ *
+ * The same engraver the booklet and the incipit already use, which is the
+ * point: the picture that comes out is the sheet the reader was looking at,
+ * with its markup, its transposition and its note names applied — and, being
+ * vector text at a stated physical size, it opens in a layout program as type
+ * rather than as a screenshot.
+ *
+ * The preview's zoom is deliberately not consulted. It magnifies the screen;
+ * the page is life size.
+ *
+ * Returns null when there is nothing sung to draw.
+ *
+ * @param {string} content raw ChordPro
+ * @param {{german: boolean, transpose: number|string, fontFamily: string, fontSize: number, columns?: number|string}} options
+ * @returns {Promise<SVGElement|null>}
+ */
+export async function renderChordproPageSvg(content, { german, transpose, fontFamily, fontSize, columns = 1 }) {
+    if (!content || !content.trim()) { return null; }
+
+    const song = await parseChordproSong(content, { german, transpose, sanitize: false });
+    const family = safeFontFamily(fontFamily);
+    const metrics = chordproPageMetrics({ columns, fontSize });
+
+    // Every column is placed at a measured width, and a face the browser has
+    // not loaded yet measures as whatever it falls back to: the words would be
+    // engraved at one set of widths and drawn at another.
+    await ensureFontsLoaded([family], fontSize);
+
+    const rows = chordproRows(song.bodyParagraphs ?? song.paragraphs ?? [], {
+        fontSize,
+        fontFamily: family,
+        layoutWidth: metrics.columnWidth,
+        measure: canvasMeasurer(family, fontSize),
+        spell: german ? spellFlatB : undefined,
+    });
+
+    if (rows.length === 0) { return null; }
+
+    const { placements, width, height } = chordproPageLayout(rows, metrics);
+    const fragments = placements.map(
+        ({ row }) => new DOMParser().parseFromString(row.svg, 'image/svg+xml').documentElement,
+    );
+
+    const { svg } = stackSvgs(fragments, {
+        placements: placements.map(({ x, y, scale }) => ({ x, y, scale })),
+        intrinsicSize: true,
+        viewBox: { x: 0, y: 0, w: width, h: height },
+    });
+
+    return svg;
+}
+
+/**
  * The face a chord sheet is set in unless someone says otherwise.
  *
  * The screen-first serif of the set rather than the book faces the engraved
@@ -305,6 +432,66 @@ export function chordproMixin() {
             }
         },
 
+        /**
+         * The sheet engraved, in a detached element the export helpers can read.
+         *
+         * Every one of them takes a page the same way — an element with an
+         * `<svg>` in it — so producing one is all a chord sheet needs to reach
+         * the exports the engraved formats have always had.
+         */
+        async chordproPageElement() {
+            const svg = await renderChordproPageSvg(this.localContent, {
+                german: this.chordproGermanNotation,
+                transpose: this.chordproTranspose,
+                fontFamily: this.chordproFontFamily,
+                fontSize: Number(this.chordproFontSize),
+                columns: this.chordproColumns,
+            });
+
+            if (!svg) { return null; }
+
+            const page = document.createElement('div');
+            page.appendChild(svg);
+
+            return page;
+        },
+
+        async copyChordproImage() {
+            try {
+                const page = await this.chordproPageElement();
+                if (page) {
+                    await this.copyPageImage(page, 'chordpro', (message) => this.showCopyFeedback(message));
+                }
+            } catch (e) {
+                console.error('[score-editor] chordpro copy image error:', e);
+                this.showCopyFeedback(this.failedToCopy);
+            }
+        },
+
+        async exportChordproPng() {
+            const page = await this.chordproPageElement();
+
+            if (page) {
+                this.exportPagePng(page, 1, 1, 'chordpro', this.$wire.title);
+            }
+        },
+
+        async exportChordproSvg() {
+            const page = await this.chordproPageElement();
+
+            if (page) {
+                await this.exportPageSvg(page, 1, 1, 'chordpro', this.$wire.title);
+            }
+        },
+
+        async exportChordproPdf() {
+            const page = await this.chordproPageElement();
+
+            if (page) {
+                await this.exportDocumentPdf('chordpro', this.$wire.title, [page]);
+            }
+        },
+
         async copyChordproPlainText() {
             if (!navigator.clipboard) {
                 this.showCopyFeedback(this.clipboardNotSupported);
@@ -356,6 +543,7 @@ table{border-collapse:collapse;margin-bottom:0.25rem;}
 td.column{vertical-align:bottom;padding-right:0.1em;}
 .chord{font-weight:bold;color:#1d4ed8;min-height:1.3em;white-space:nowrap;}
 .lyrics{white-space:pre;}
+sup,sub{font-size:0.7em;line-height:0;}
 </style></head><body>${body}</body></html>`;
                 const blob = new Blob([html], { type: 'text/html' });
                 navigator.clipboard.write([new ClipboardItem({ 'text/html': blob })])
@@ -397,6 +585,7 @@ p.artist{color:#555;margin:0 0 1.5em;}
 .chord{font-weight:bold;color:#1d4ed8;white-space:nowrap;}
 .row:has(.chord:not(:empty)) .chord{min-height:1.3em;}
 .lyrics{white-space:pre;}
+sup,sub{font-size:0.7em;line-height:0;}
 </style>
 </head>
 <body>

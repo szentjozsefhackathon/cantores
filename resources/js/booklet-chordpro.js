@@ -11,16 +11,16 @@
  * of chords over lyrics is a block with a height, so a short hymn shares a page
  * with a Gregorian antiphon without either knowing about the other.
  *
- * Inline markup — `<i>`, `<b>`, `<u>` — is honoured wherever ChordPro allows
- * it, by cutting a lyric into styled runs and drawing each one at its own
- * measured position; see chordpro-markup.js.
+ * Inline markup — `<i>`, `<b>`, `<u>`, `<sup>`, `<sub>` — is honoured wherever
+ * ChordPro allows it, by cutting a lyric into styled runs and drawing each one
+ * at its own measured position and size; see chordpro-markup.js.
  *
  * Nothing here touches the DOM. Widths arrive through an injected `measure`, so
  * the layout can be tested against a known metric instead of a real font.
  */
 
 import { escapeXml, round } from './booklet-text.js';
-import { markupRuns, measureRuns, runsText, sliceRuns } from './chordpro-markup.js';
+import { markupRuns, measureRuns, runBaselineShift, runFont, runsText, sliceRuns } from './chordpro-markup.js';
 
 const CHORD_COLOR = '#1d4ed8';
 const LABEL_COLOR = '#555555';
@@ -140,7 +140,7 @@ function sizedColumn(chord, runs, { measure, fontSize }) {
         chord,
         runs,
         lyric: runsText(runs),
-        width: Math.max(measureRuns(runs, measure), chordWidth),
+        width: Math.max(measureRuns(runs, measure, fontSize), chordWidth),
     };
 }
 
@@ -283,21 +283,24 @@ function chordLyricRow(columns, options) {
         }
 
         let lyricX = x;
+        const baseline = chordHeight + lyricHeight * 0.78;
 
         column.runs.forEach((run) => {
             if (run.text === '') {
                 return;
             }
 
-            parts.push(text(run.text, lyricX, chordHeight + lyricHeight * 0.78, {
+            const font = runFont(run, fontSize);
+
+            parts.push(text(run.text, lyricX, baseline + runBaselineShift(run, fontSize), {
                 fontFamily,
-                fontSize,
+                fontSize: font.fontSize,
                 bold: run.bold,
                 italic: run.italic,
                 underline: run.underline,
             }));
 
-            lyricX += options.measure(run.text, { bold: run.bold, italic: run.italic });
+            lyricX += options.measure(run.text, font);
         });
 
         x += column.width;
@@ -326,16 +329,18 @@ function labelRow(label, options) {
             return;
         }
 
-        parts.push(text(run.text, x, height * 0.75, {
+        const font = runFont(run, fontSize);
+
+        parts.push(text(run.text, x, height * 0.75 + runBaselineShift(run, fontSize), {
             fontFamily,
-            fontSize,
+            fontSize: font.fontSize,
             fill: LABEL_COLOR,
             bold: run.bold,
             italic: run.italic,
             underline: run.underline,
         }));
 
-        x += measure(run.text, { bold: run.bold, italic: run.italic });
+        x += measure(run.text, font);
     });
 
     return { height, svg: svgDocument(parts.join(''), Math.max(layoutWidth, 1), height) };

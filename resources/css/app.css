@@ -390,6 +390,11 @@ select:focus[data-flux-control] {
    blank line over every line of a lyrics-only sheet. */
 .chordpro-preview .row:has(.chord:not(:empty)) .chord { min-height: 1.25em; }
 .chordpro-preview .lyrics { white-space: pre; line-height: 1.35; }
+/* A super- or subscript is set at the same proportion the engraved sheet uses, and
+   given no line height of its own: left with one, a single raised syllable would
+   push the whole line of lyrics apart. */
+.chordpro-preview sup,
+.chordpro-preview sub { font-size: 0.7em; line-height: 0; }
 .dark .chordpro-preview p.artist { color: #9ca3af; }
 .dark .chordpro-preview .paragraph-header { color: #9ca3af; }
 .dark .chordpro-preview .chord { color: #60a5fa; }

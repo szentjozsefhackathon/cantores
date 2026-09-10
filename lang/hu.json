@@ -1010,7 +1010,7 @@
     "Upheld": "Helytálló",
     "Dismissed": "Elutasítva",
     "Could not generate the PDF.": "Nem sikerült létrehozni a PDF-et.",
-    "PDF export is only available for ABC, GABC and Aretino scores.": "A PDF exportálás csak ABC, GABC és Aretino kották esetén érhető el.",
+    "PDF export is only available for ABC, GABC, Aretino and ChordPro scores.": "A PDF exportálás csak ABC, GABC, Aretino és ChordPro kották esetén érhető el.",
     "There is nothing to export.": "Nincs mit exportálni.",
     "Too many pages to export at once.": "Túl sok oldal egyszerre exportáláshoz.",
     "Each page must be a valid SVG document.": "Minden oldalnak érvényes SVG dokumentumnak kell lennie.",

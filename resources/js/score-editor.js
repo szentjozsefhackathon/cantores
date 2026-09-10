@@ -1605,8 +1605,7 @@ document.addEventListener('alpine:init', () => {
             if (paddedViewBox) {
                 clonedSvg.setAttribute('viewBox', paddedViewBox);
             }
-            const lyricFont = this.$wire.format === 'aretino' ? this.aretinoTextFont : this.lyricFont;
-            await injectWebFontsIntoSvg(clonedSvg, [lyricFont]);
+            await injectWebFontsIntoSvg(clonedSvg, [this.exportLyricFont(this.$wire.format)]);
             const svgData = new XMLSerializer().serializeToString(clonedSvg);
             const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
             const url = URL.createObjectURL(svgBlob);
@@ -1646,6 +1645,19 @@ document.addEventListener('alpine:init', () => {
             return (title ? title.trim().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '') : '') || 'score';
         },
 
+        /**
+         * The face an exported page's words are set in, so the export can carry
+         * it with them: an SVG that names a font nobody has opens in a layout
+         * program as whatever that program falls back to.
+         */
+        exportLyricFont(format) {
+            if (format === 'aretino') { return this.aretinoTextFont; }
+            if (format === 'abc') { return this.abcLyricFont; }
+            if (format === 'chordpro') { return this.chordproFontFamily; }
+
+            return this.lyricFont;
+        },
+
         // Build a standalone, font-embedded SVG string for a single rendered
         // page element. Returns null when the page has no music SVG.
         async buildPageSvgString(pageEl, format) {
@@ -1656,16 +1668,13 @@ document.addEventListener('alpine:init', () => {
             }
             const clone = svgs[0].cloneNode(true);
             removeEditorOnlySvgMarkup(clone);
-            let lyricFont;
-            if (format === 'aretino') {
-                lyricFont = this.aretinoTextFont;
-                // Aretino engraves at a physical scale, so an exported page
-                // carries its size in millimetres, not in zoomed screen pixels.
+            // Aretino and ChordPro both engrave at a physical scale, so an
+            // exported page carries its size in millimetres rather than in
+            // zoomed screen pixels.
+            if (format === 'aretino' || format === 'chordpro') {
                 applyPhysicalSvgSize(clone);
             }
-            else if (format === 'abc') { lyricFont = this.abcLyricFont; }
-            else { lyricFont = this.lyricFont; }
-            await injectWebFontsIntoSvg(clone, [lyricFont]);
+            await injectWebFontsIntoSvg(clone, [this.exportLyricFont(format)]);
             return new XMLSerializer().serializeToString(clone);
         },
 
@@ -1689,14 +1698,20 @@ document.addEventListener('alpine:init', () => {
 
         // Collect every rendered page in the active preview, build a font-embedded
         // SVG per page, and POST them to the server for vector PDF conversion.
-        async exportDocumentPdf(format, title) {
+        async exportDocumentPdf(format, title, explicitPageEls = null) {
             if (this.exportingPdf) { return; }
-            const refName = format === 'abc' ? 'abcPreview' : format === 'aretino' ? 'aretinoPreview' : 'preview';
-            const container = this.$refs[refName];
-            if (!container) { return; }
-            const pageEls = Array.from(container.querySelectorAll(':scope > .overflow-x-auto'))
-                .map(wrap => wrap.firstElementChild)
-                .filter(Boolean);
+            // A chord sheet is engraved for the export rather than shown on the
+            // page, so its caller hands the pages over instead of the preview
+            // being read for them.
+            let pageEls = explicitPageEls;
+            if (!pageEls) {
+                const refName = format === 'abc' ? 'abcPreview' : format === 'aretino' ? 'aretinoPreview' : 'preview';
+                const container = this.$refs[refName];
+                if (!container) { return; }
+                pageEls = Array.from(container.querySelectorAll(':scope > .overflow-x-auto'))
+                    .map(wrap => wrap.firstElementChild)
+                    .filter(Boolean);
+            }
             this.exportingPdf = true;
             try {
                 const pages = [];

@@ -246,6 +246,31 @@ it('gives the plan and the pages a scroll box each', function () {
         ->and($panes['pages'])->toContain('lg:overflow-y-auto');
 });
 
+// The editor is as tall as the screen and no taller: the panes are given the
+// height the toolbar leaves rather than a whole screenful of their own, so the
+// bottom of the split is the bottom of the window and the page behind it does
+// not scroll at all.
+it('ends the split at the bottom of the screen', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])->html();
+
+    preg_match('/<div\b[^>]*class="booklet-split[^>]*>/', $html, $row);
+    preg_match('/<div\b[^>]*data-booklet-handle[^>]*>/', $html, $handle);
+    preg_match('/<div\b[^>]*data-booklet-pane="plan"[^>]*>/', $html, $plan);
+    preg_match('/<div\b[^>]*data-booklet-pane="pages"[^>]*>/', $html, $pages);
+
+    expect($html)->toContain('lg:h-[calc(100vh-2rem)]')
+        ->and($row[0] ?? '')->toContain('lg:flex-1')
+        ->and($row[0] ?? '')->toContain('lg:min-h-0')
+        ->and($handle[0] ?? '')->toContain('lg:h-full')
+        ->and($plan[0] ?? '')->toContain('lg:h-full')
+        ->and($pages[0] ?? '')->toContain('lg:min-h-0')
+        ->and($html)->not->toContain('lg:sticky');
+});
+
 it('divides the plan from the preview with a draggable handle', function () {
     $user = User::factory()->create();
     actingAs($user);

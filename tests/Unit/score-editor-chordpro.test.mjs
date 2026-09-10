@@ -5,7 +5,16 @@ import test from 'node:test';
 import { DEFAULT_LYRIC_SIZE_PT, opticalLyricSizePt, ptToPx, pxToPt } from '../../resources/js/booklet-geometry.js';
 import ChordSheetJS from 'chordsheetjs';
 
-import { balanceMarkup, chordproIncipitRows, chordproMixin, parseChordproSong, stripMarkup } from '../../resources/js/score-editor-chordpro.js';
+import {
+    CHORDPRO_PAGE_WIDTH_PX,
+    balanceMarkup,
+    chordproIncipitRows,
+    chordproMixin,
+    chordproPageLayout,
+    chordproPageMetrics,
+    parseChordproSong,
+    stripMarkup,
+} from '../../resources/js/score-editor-chordpro.js';
 
 // Half the font size per character, as in booklet-chordpro's own tests: real
 // font metrics would make the arithmetic unreadable without testing anything
@@ -183,7 +192,23 @@ test('a lyric with no markup is left exactly as it was', async () => {
     assert.deepEqual(lyricsOf(html), ['Ave ', 'Ma', 'ria']);
 });
 
-test('everything but the three drawable tags stops being markup', async () => {
+test('a script survives the sanitiser and becomes its own element', async () => {
+    const html = new ChordSheetJS.HtmlDivFormatter().format(
+        balanceMarkup(await parse('[C]H<sub>2</sub>O, 1<sup>st</sup>')),
+    );
+
+    assert.equal(lyricsOf(html).join(''), 'H<sub>2</sub>O, 1<sup>st</sup>');
+});
+
+test('a script written across a chord is reopened like any other markup', async () => {
+    const html = new ChordSheetJS.HtmlDivFormatter().format(
+        balanceMarkup(await parse('x<sup>a[C]b</sup>')),
+    );
+
+    assert.deepEqual(lyricsOf(html), ['x<sup>a</sup>', '<sup>b</sup>']);
+});
+
+test('everything but the drawable tags stops being markup', async () => {
     // The sanitizing happens on the way into the parser, so a `<span>` reaches
     // the browser as text and only ChordPro's own three tags stay live.
     const html = new ChordSheetJS.HtmlDivFormatter().format(
@@ -198,4 +223,75 @@ test('plain text keeps the words and drops the markup', async () => {
 
     assert.match(text, /Ave Maria/);
     assert.doesNotMatch(text, /<i>|<\/i>/);
+});
+
+const row = (height, extra = {}) => ({ height, svg: '<svg/>', ...extra });
+
+test('a single column is the full text width of the page', () => {
+    const metrics = chordproPageMetrics({ columns: 1, fontSize: 12 });
+
+    assert.equal(metrics.count, 1);
+    assert.equal(metrics.columnWidth, CHORDPRO_PAGE_WIDTH_PX);
+    // 170 mm of A4, the width every other format here is engraved to.
+    assert.equal(Math.round(CHORDPRO_PAGE_WIDTH_PX), 643);
+});
+
+test('two columns share the width, less the gutter between them', () => {
+    const metrics = chordproPageMetrics({ columns: 2, fontSize: 10 });
+
+    assert.equal(metrics.gap, 20);
+    assert.equal(metrics.columnWidth * 2 + metrics.gap, CHORDPRO_PAGE_WIDTH_PX);
+});
+
+test('a column count that means nothing falls back to one', () => {
+    assert.equal(chordproPageMetrics({ columns: '', fontSize: 10 }).count, 1);
+    assert.equal(chordproPageMetrics({ columns: 0, fontSize: 10 }).count, 1);
+    assert.equal(chordproPageMetrics({ columns: 99, fontSize: 10 }).count, 4);
+});
+
+test('rows run down the page, and the page is as tall as they are', () => {
+    const metrics = chordproPageMetrics({ columns: 1, fontSize: 10, pageWidth: 100 });
+    const { placements, width, height } = chordproPageLayout([row(20), row(30)], metrics);
+
+    assert.equal(width, 100);
+    assert.equal(height, 50);
+    assert.deepEqual(placements.map(({ x, y }) => ({ x, y })), [{ x: 0, y: 0 }, { x: 0, y: 20 }]);
+});
+
+test('a second column starts a gutter beyond the first', () => {
+    const metrics = chordproPageMetrics({ columns: 2, fontSize: 10, pageWidth: 220 });
+    const { placements, height } = chordproPageLayout([row(20), row(20)], metrics);
+
+    // 100 wide each with a 20 gutter, so the right column begins at 120.
+    assert.deepEqual(placements.map(({ x, y }) => ({ x, y })), [{ x: 0, y: 0 }, { x: 120, y: 0 }]);
+    // The page is as tall as its tallest column, not as tall as the song.
+    assert.equal(height, 20);
+});
+
+test('every row keeps its own drawing', () => {
+    const rows = [row(10, { svg: '<svg id="a"/>' }), row(10, { svg: '<svg id="b"/>' })];
+    const { placements } = chordproPageLayout(rows, chordproPageMetrics({ columns: 1, fontSize: 10 }));
+
+    assert.deepEqual(placements.map(({ row: placed }) => placed.svg), ['<svg id="a"/>', '<svg id="b"/>']);
+});
+
+test('every chord sheet toolbar offers the picture exports, not only the text ones', () => {
+    // A chord sheet is engraved to SVG like the other three formats now, so the
+    // editor and both score views hand it to the same export routes.
+    const actions = ['copyChordproImage()', 'exportChordproPng()', 'exportChordproSvg()', 'exportChordproPdf()'];
+
+    for (const page of ['score-editor', 'score-view', 'public-score-view']) {
+        const view = readFileSync(new URL(`../../resources/views/livewire/pages/${page}.blade.php`, import.meta.url), 'utf8');
+
+        actions.forEach((action) => {
+            assert.ok(view.includes(action), `${page} should offer ${action}`);
+        });
+    }
+});
+
+test('the mixin carries every export action the toolbars call', () => {
+    const mixin = chordproMixin();
+
+    ['chordproPageElement', 'copyChordproImage', 'exportChordproPng', 'exportChordproSvg', 'exportChordproPdf']
+        .forEach((action) => assert.equal(typeof mixin[action], 'function', `${action} is missing`));
 });

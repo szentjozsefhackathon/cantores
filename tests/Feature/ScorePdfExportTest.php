@@ -41,9 +41,22 @@ it('rejects a request with no pages', function () {
 });
 
 it('rejects an unsupported format', function () {
-    postJson(route('score.export-pdf'), ['format' => 'chordpro', 'pages' => [SAMPLE_SVG]])
+    postJson(route('score.export-pdf'), ['format' => 'musicxml', 'pages' => [SAMPLE_SVG]])
         ->assertStatus(422)
         ->assertJsonValidationErrors('format');
+});
+
+it('accepts a chord sheet, which is engraved to svg like every other format', function () {
+    $this->mock(SvgToPdfConverter::class)
+        ->shouldReceive('convert')
+        ->once()
+        ->andReturn('%PDF-1.7 fake');
+
+    postJson(route('score.export-pdf'), [
+        'format' => 'chordpro',
+        'title' => 'Glória Patri',
+        'pages' => [SAMPLE_SVG],
+    ])->assertOk()->assertDownload('gloria-patri.cantores.hu.pdf');
 });
 
 it('rejects a page that is not an svg document', function () {

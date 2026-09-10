@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { packPages } from '../../resources/js/booklet-flow.js';
+import { packColumns, packPages } from '../../resources/js/booklet-flow.js';
 
 const block = (height, extra = {}) => ({ height, ...extra });
 
@@ -94,4 +94,45 @@ test('a block taller than the page is placed rather than dropped', () => {
 
 test('no blocks makes no pages', () => {
     assert.deepEqual(packPages([], 400), []);
+});
+
+test('columns are filled to roughly equal height', () => {
+    const columns = packColumns([block(10), block(10), block(10), block(10)], 2);
+
+    assert.deepEqual(pageHeights(columns), [[10, 10], [10, 10]]);
+});
+
+test('a column is let out until the blocks fit in the number asked for', () => {
+    // Split evenly the four would need 30 per column, which the 40 cannot go
+    // into; the columns grow until they can hold it.
+    const columns = packColumns([block(40), block(10), block(10)], 2);
+
+    assert.equal(columns.length, 2);
+    assert.deepEqual(pageHeights(columns), [[40], [10, 10]]);
+});
+
+test('a verse held together is not split between two columns', () => {
+    const columns = packColumns(
+        [block(10, { keepWithNext: true }), block(10), block(10, { keepWithNext: true }), block(10)],
+        2,
+    );
+
+    assert.deepEqual(pageHeights(columns), [[10, 10], [10, 10]]);
+});
+
+test('one column is the whole song, however tall', () => {
+    const columns = packColumns([block(100), block(100)], 1);
+
+    assert.equal(columns.length, 1);
+    assert.equal(columns[0].height, 200);
+});
+
+test('blocks are read down one column and then down the next', () => {
+    const columns = packColumns([block(1), block(2), block(3), block(4)], 2);
+
+    assert.deepEqual(columns.flatMap(column => column.items.map(item => item.block.height)), [1, 2, 3, 4]);
+});
+
+test('no blocks makes no columns', () => {
+    assert.deepEqual(packColumns([], 3), []);
 });

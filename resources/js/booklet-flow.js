@@ -64,6 +64,49 @@ export function packPages(blocks, contentHeight) {
 }
 
 /**
+ * Pack blocks into a fixed number of columns of roughly equal height.
+ *
+ * A page's height is given; a column's has to be found. The shortest columns
+ * possible are the total height divided between them, so that is where the
+ * search starts, and it is let out a little at a time until the blocks fit in
+ * the number of columns asked for — which they may not at the first try, since
+ * a block cannot be cut and a verse held together by keepWithNext moves whole.
+ *
+ * Columns come back in reading order: a chord sheet set in two is read down the
+ * left and then down the right, the way a hymnal is.
+ *
+ * @param {Block[]} blocks
+ * @param {number} count how many columns
+ * @returns {Array<{items: Array<{block: Block, y: number}>, height: number}>}
+ */
+export function packColumns(blocks, count) {
+    if (count <= 1 || blocks.length === 0) {
+        return packPages(blocks, Infinity);
+    }
+
+    const total = blocks.reduce((sum, block) => sum + block.height + (block.spaceBefore ?? 0), 0);
+    let height = total / count;
+
+    // Each pass allows a column a little more, so the loop ends: at the total
+    // height everything is in one column, which is fewer than `count` and
+    // therefore always accepted.
+    while (height < total) {
+        const packed = packPages(blocks, height);
+
+        if (packed.length <= count) {
+            return packed;
+        }
+
+        height *= COLUMN_SLACK;
+    }
+
+    return packPages(blocks, Infinity);
+}
+
+/** How much taller each pass lets a column be, hunting for a fit. */
+const COLUMN_SLACK = 1.04;
+
+/**
  * A block plus everything glued to it by keepWithNext.
  *
  * A group that is taller than any page still has to go somewhere, so nothing
