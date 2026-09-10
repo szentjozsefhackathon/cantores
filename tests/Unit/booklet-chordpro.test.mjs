@@ -170,11 +170,109 @@ test('a comment directive becomes its own row', () => {
     assert.match(rows[0].svg, /lassan/);
 });
 
-test('markup in the lyrics is escaped rather than emitted', () => {
-    const rows = chordproRows([{ lines: [{ items: [pair('', '<b>& "x"')] }] }], options);
+test('markup ChordPro does not define is escaped rather than emitted', () => {
+    const rows = chordproRows([{ lines: [{ items: [pair('', '<q>& "x"')] }] }], options);
 
-    assert.match(rows[0].svg, /&lt;b&gt;&amp; &quot;x&quot;/);
-    assert.doesNotMatch(rows[0].svg, /<b>/);
+    assert.match(rows[0].svg, /&lt;q&gt;&amp; &quot;x&quot;/);
+    assert.doesNotMatch(rows[0].svg, /<q>/);
+});
+
+test('italic, bold and underline markup is drawn, not printed', () => {
+    const rows = chordproRows(
+        [{ lines: [{ items: [pair('', 'plain <i>so</i> <b>very</b> <u>true</u>')] }] }],
+        options,
+    );
+
+    const runs = [...rows[0].svg.matchAll(/<text([^>]*)>([^<]*)</g)]
+        .map(([, attrs, content]) => ({ attrs, content }));
+
+    // The tags themselves are gone, and the words read on unbroken.
+    assert.equal(runs.map((run) => run.content).join(''), 'plain so very true');
+
+    assert.doesNotMatch(runs[0].attrs, /font-style|font-weight|text-decoration/);
+    assert.match(runs.find((run) => run.content === 'so').attrs, /font-style="italic"/);
+    assert.match(runs.find((run) => run.content === 'very').attrs, /font-weight="bold"/);
+    assert.match(runs.find((run) => run.content === 'true').attrs, /text-decoration="underline"/);
+});
+
+test('a styled run is placed after the one before it, in its own metric', () => {
+    // A bold measurer, so a run set in it is demonstrably measured as bold: the
+    // five characters of 'plain' are 5 wide each, and the italic 'so' 20 each.
+    const styled = (text, { italic = false } = {}) => (text ?? '').length * (italic ? 20 : 5);
+
+    const rows = chordproRows(
+        [{ lines: [{ items: [pair('C', 'plain <i>so</i>!')] }] }],
+        { ...options, measure: styled, layoutWidth: 1000 },
+    );
+
+    const xs = [...rows[0].svg.matchAll(/<text[^>]*x="([\d.]+)"/g)].map((m) => Number(m[1]));
+
+    // The chord, then 'plain ' at 0, 'so' after its 30, and '!' after 40 more.
+    assert.deepEqual(xs, [0, 0, 30, 70]);
+});
+
+test('markup written across a chord carries on into the next column', () => {
+    const rows = chordproRows(
+        [{ lines: [{ items: [pair('C', '<i>Ave '), pair('G', 'Maria</i> now')] }] }],
+        options,
+    );
+
+    const runs = [...rows[0].svg.matchAll(/<text([^>]*)>([^<]*)</g)]
+        .map(([, attrs, content]) => ({ italic: /font-style="italic"/.test(attrs), content }));
+
+    assert.deepEqual(
+        runs.filter((run) => run.italic).map((run) => run.content),
+        ['Ave ', 'Maria'],
+    );
+    assert.deepEqual(
+        runs.filter((run) => !run.italic).map((run) => run.content),
+        ['C', 'G', ' now'],
+    );
+});
+
+test('a styled run survives being broken between two rows', () => {
+    const rows = chordproRows(
+        [{ lines: [{ items: [pair('C', 'Ave '), pair('', '<i>gratia plena dominus tecum benedicta in mulieribus</i>')] }] }],
+        options,
+    );
+
+    const runs = rows.flatMap((row) => (
+        [...row.svg.matchAll(/<text([^>]*)>([^<]*)</g)]
+            .map(([, attrs, content]) => ({ italic: /font-style="italic"/.test(attrs), content }))
+    ));
+
+    assert.equal(
+        runs.map((run) => run.content).join(''),
+        'CAve gratia plena dominus tecum benedicta in mulieribus',
+    );
+    assert.ok(rows.length > 1);
+    runs.filter((run) => run.content !== 'C' && run.content !== 'Ave ')
+        .forEach((run) => assert.ok(run.italic, `${run.content} lost its italic`));
+});
+
+test('markup in a section label and a comment is honoured too', () => {
+    const rows = chordproRows(
+        [
+            { label: 'Refrén <u>2x</u>', lines: [{ items: [pair('C', 'Ave')] }] },
+            { lines: [{ items: [{ name: 'comment', value: 'lassan <u>és</u> halkan' }] }] },
+        ],
+        options,
+    );
+
+    const label = [...rows[0].svg.matchAll(/<text([^>]*)>([^<]*)</g)]
+        .map(([, attrs, content]) => ({ attrs, content }));
+
+    assert.deepEqual(label.map((run) => run.content), ['Refrén ', '2x']);
+    // The label is bold italic throughout; only the underline is the markup's.
+    label.forEach((run) => assert.match(run.attrs, /font-style="italic"/));
+    assert.doesNotMatch(label[0].attrs, /text-decoration/);
+    assert.match(label[1].attrs, /text-decoration="underline"/);
+
+    const comment = [...rows[2].svg.matchAll(/<text([^>]*)>([^<]*)</g)]
+        .map(([, attrs, content]) => ({ attrs, content }));
+
+    assert.deepEqual(comment.map((run) => run.content), ['lassan ', 'és', ' halkan']);
+    assert.match(comment[1].attrs, /text-decoration="underline"/);
 });
 
 test('empty lines and empty paragraphs produce nothing', () => {

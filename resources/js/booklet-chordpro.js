@@ -11,13 +11,19 @@
  * of chords over lyrics is a block with a height, so a short hymn shares a page
  * with a Gregorian antiphon without either knowing about the other.
  *
+ * Inline markup — `<i>`, `<b>`, `<u>` — is honoured wherever ChordPro allows
+ * it, by cutting a lyric into styled runs and drawing each one at its own
+ * measured position; see chordpro-markup.js.
+ *
  * Nothing here touches the DOM. Widths arrive through an injected `measure`, so
  * the layout can be tested against a known metric instead of a real font.
  */
 
-import { escapeXml, round, textRowSvg } from './booklet-text.js';
+import { escapeXml, round } from './booklet-text.js';
+import { markupRuns, measureRuns, runsText, sliceRuns } from './chordpro-markup.js';
 
 const CHORD_COLOR = '#1d4ed8';
+const LABEL_COLOR = '#555555';
 
 /** Multiples of the font size. Chords sit tighter than lyrics by convention. */
 const LYRIC_LINE = 1.35;
@@ -103,9 +109,19 @@ export function chordproRows(paragraphs, options) {
 function columnsOf(line, options) {
     const { spell = (chord) => chord } = options;
 
+    // An open `<i>` runs on into the columns that follow it: chordsheetjs cuts
+    // the line at every chord, and formatting written across a chord arrives
+    // split in two.
+    let style;
+
     return (line.items ?? [])
         .filter((item) => typeof item?.chords === 'string' || typeof item?.lyrics === 'string')
-        .map((item) => sizedColumn(spell((item.chords ?? '').trim()), item.lyrics ?? '', options))
+        .map((item) => {
+            const marked = markupRuns(item.lyrics ?? '', style);
+            style = marked.open;
+
+            return sizedColumn(spell((item.chords ?? '').trim()), marked.runs, options);
+        })
         .filter((column) => column.chord !== '' || column.lyric !== '');
 }
 
@@ -114,11 +130,18 @@ function columnsOf(line, options) {
  *
  * The width is the wider of the two: a chord narrower than its word costs
  * nothing, and one wider pushes the next column along so the two never touch.
+ * The syllables arrive as styled runs, each measured in the face it will be
+ * drawn in, so an italic word takes the room italics actually need.
  */
-function sizedColumn(chord, lyric, { measure, fontSize }) {
+function sizedColumn(chord, runs, { measure, fontSize }) {
     const chordWidth = chord === '' ? 0 : measure(chord, { bold: true }) + fontSize * CHORD_GAP;
 
-    return { chord, lyric, width: Math.max(measure(lyric), chordWidth) };
+    return {
+        chord,
+        runs,
+        lyric: runsText(runs),
+        width: Math.max(measureRuns(runs, measure), chordWidth),
+    };
 }
 
 /**
@@ -229,9 +252,11 @@ function splitColumn(column, room, options) {
         return taken === 0 ? [null, column] : [column, null];
     }
 
+    const cut = words.slice(0, taken).join('').length;
+
     return [
-        sizedColumn(column.chord, words.slice(0, taken).join(''), options),
-        sizedColumn('', words.slice(taken).join(''), options),
+        sizedColumn(column.chord, sliceRuns(column.runs, 0, cut), options),
+        sizedColumn('', sliceRuns(column.runs, cut), options),
     ];
 }
 
@@ -257,12 +282,23 @@ function chordLyricRow(columns, options) {
             }));
         }
 
-        if (column.lyric !== '') {
-            parts.push(text(column.lyric, x, chordHeight + lyricHeight * 0.78, {
+        let lyricX = x;
+
+        column.runs.forEach((run) => {
+            if (run.text === '') {
+                return;
+            }
+
+            parts.push(text(run.text, lyricX, chordHeight + lyricHeight * 0.78, {
                 fontFamily,
                 fontSize,
+                bold: run.bold,
+                italic: run.italic,
+                underline: run.underline,
             }));
-        }
+
+            lyricX += options.measure(run.text, { bold: run.bold, italic: run.italic });
+        });
 
         x += column.width;
     });
@@ -270,17 +306,39 @@ function chordLyricRow(columns, options) {
     return { height, svg: svgDocument(parts.join(''), Math.max(width, 1), height) };
 }
 
+/**
+ * A section label or a `{comment}`, set apart from the words that are sung.
+ *
+ * Bold italic to begin with, which is also the style the label's own markup
+ * starts from: a `</i>` inside one takes the italic away again, and an `<i>`
+ * inside one changes nothing, both of which read the way they are written.
+ */
 function labelRow(label, options) {
-    return textRowSvg({
-        content: label,
-        fontSize: options.fontSize,
-        fontFamily: options.fontFamily,
-        width: options.layoutWidth,
-        bold: true,
-        italic: true,
-        fill: '#555555',
-        lineHeight: LABEL_LINE,
+    const { fontSize, fontFamily, layoutWidth, measure } = options;
+    const height = fontSize * LABEL_LINE;
+    const { runs } = markupRuns(label, { bold: true, italic: true });
+
+    const parts = [];
+    let x = 0;
+
+    runs.forEach((run) => {
+        if (run.text === '') {
+            return;
+        }
+
+        parts.push(text(run.text, x, height * 0.75, {
+            fontFamily,
+            fontSize,
+            fill: LABEL_COLOR,
+            bold: run.bold,
+            italic: run.italic,
+            underline: run.underline,
+        }));
+
+        x += measure(run.text, { bold: run.bold, italic: run.italic });
     });
+
+    return { height, svg: svgDocument(parts.join(''), Math.max(layoutWidth, 1), height) };
 }
 
 /**
@@ -292,12 +350,13 @@ function commentOf(line) {
     return tag ? String(tag.value) : null;
 }
 
-function text(content, x, y, { fontFamily, fontSize, fill = '#000000', bold = false, italic = false }) {
+function text(content, x, y, { fontFamily, fontSize, fill = '#000000', bold = false, italic = false, underline = false }) {
     const weight = bold ? ' font-weight="bold"' : '';
     const style = italic ? ' font-style="italic"' : '';
+    const rule = underline ? ' text-decoration="underline"' : '';
 
     return `<text x="${round(x)}" y="${round(y)}" font-family="${escapeXml(fontFamily)}" `
-        + `font-size="${round(fontSize)}" fill="${fill}"${weight}${style} `
+        + `font-size="${round(fontSize)}" fill="${fill}"${weight}${style}${rule} `
         + `xml:space="preserve">${escapeXml(content)}</text>`;
 }
 
