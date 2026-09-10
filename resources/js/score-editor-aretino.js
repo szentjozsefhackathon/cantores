@@ -3,6 +3,7 @@ import { gabcToAretino } from '@aretino-chant/gabc2aretino';
 import { guidoToAretino, guidoTextToAretino } from '@aretino-chant/guido2aretino';
 
 import { ensureFontsLoaded } from './svg-fonts.js';
+import { DEFAULT_LYRIC_SIZE_PT, DEFAULT_PAGE_WIDTH_MM, DEFAULT_STAFF_HEIGHT_MM, DEFAULT_TEXT_FONT } from './booklet-geometry.js';
 
 const ARETINO_STAFF_SIZE_CALIBRATION = 1.3;
 
@@ -31,12 +32,15 @@ const ARETINO_SCREEN_CANVAS = {
 
 export function aretinoMixin() {
     return {
-        aretinoTextFont: "'EB Garamond'",
-        aretinoLyricSize: 10,
-        aretinoStaffSize: 7,
+        aretinoTextFont: `'${DEFAULT_TEXT_FONT}'`,
+        aretinoLyricSize: DEFAULT_LYRIC_SIZE_PT,
+        aretinoStaffSize: DEFAULT_STAFF_HEIGHT_MM,
+        // The preview is the printed size, so this is a magnifying glass over
+        // it rather than the size the score is engraved at — and life size on a
+        // monitor at arm's length is smaller than anyone wants to work in.
         aretinoZoom: 120,
         aretinoPageRatio: 'paper',
-        aretinoStaffWidth: 170,
+        aretinoStaffWidth: DEFAULT_PAGE_WIDTH_MM,
         aretinoStaffGap: 2.5,
         aretinoHideRepeatClef: false,
         aretinoFields: ['aretinoTextFont', 'aretinoLyricSize', 'aretinoStaffSize', 'aretinoZoom', 'aretinoPageRatio', 'aretinoStaffWidth', 'aretinoStaffGap', 'aretinoHideRepeatClef'],

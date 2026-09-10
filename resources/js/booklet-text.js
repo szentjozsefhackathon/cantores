@@ -33,6 +33,8 @@ export function round(value) {
  * @param {boolean} [options.italic]
  * @param {string} [options.fill]
  * @param {number} [options.lineHeight] multiple of the font size
+ * @param {number} [options.leadingScale] the font size restated as the size the
+ *   leading is measured in; see leadingScale() in booklet-geometry.js
  * @param {string} [options.suffix] set smaller on the same line, after a space
  * @param {number} [options.suffixSize] in px; defaults to three quarters of the text's
  * @returns {{height: number, svg: string}}
@@ -46,10 +48,11 @@ export function textRowSvg({
     italic = false,
     fill = '#000000',
     lineHeight = LINE,
+    leadingScale = 1,
     suffix = null,
     suffixSize = null,
 }) {
-    const height = fontSize * lineHeight;
+    const height = fontSize * lineHeight * leadingScale;
     const weight = bold ? ' font-weight="bold"' : '';
     const style = italic ? ' font-style="italic"' : '';
 

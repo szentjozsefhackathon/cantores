@@ -14,8 +14,7 @@ namespace App\Support;
  * Keys and units match `scores.settings` exactly, so an override is written in
  * the same vocabulary the score's own settings use. The one addition is
  * `gabcLayoutWidth`: GABC stores no width, because its editor always lays out on
- * a fixed nominal canvas, and a booklet has to be able to say how wide the page
- * is.
+ * one fixed page, and a booklet has to be able to say how wide its own is.
  *
  * Deliberately not shared with the score editor's toolbars, which carry things a
  * booklet has no use for — projector aspect ratios, "save as my default", and
@@ -60,9 +59,10 @@ class BookletSettingFields
             // knob starts pinned, and a reader pressing bigger is thrown to 13pt.
             // 1.5 is about five points of type, the floor the other formats have.
             'lyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 1.5, 'max' => 60, 'step' => 0.5, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
-            // Wider at the bottom than the score editor's own control: a chant
-            // staff sized for a real A5 page lands near 21, below the 30 the
-            // editor allows on its nominal 508 mm canvas.
+            // Stated in exsurge's units rather than the millimetres the score
+            // editor's own control shows, because a booklet computes this number
+            // rather than asking for it; the range is three to a hundred
+            // millimetres of staff.
             'staffSize' => ['type' => 'number', 'control' => 'step', 'min' => 10, 'max' => 300, 'step' => 1, 'label' => 'Staff size', 'icon' => 'list-chevrons-up-down'],
             'lyricFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
             'dropCaps' => ['type' => 'boolean', 'label' => 'Drop caps', 'icon' => 'text-initial'],
@@ -168,9 +168,29 @@ class BookletSettingFields
      * The faces the exporter can embed. A font that is not in
      * resources/js/svg-fonts.js is a font that will not survive the trip to PDF.
      *
+     * Wider than the list anybody is offered, because a face that has been
+     * retired from the picker is still set on the scores and booklets that chose
+     * it while it was there, and those have to keep validating and keep
+     * printing.
+     *
      * @var list<string>
      */
-    private const EMBEDDABLE_FONTS = ['EB Garamond', 'Lora', 'Alegreya', 'Merriweather', 'Inter', 'Barlow Condensed'];
+    private const EMBEDDABLE_FONTS = ['Alegreya', 'Merriweather', 'EB Garamond', 'Inter', 'Barlow Condensed', 'Lora'];
+
+    /**
+     * The faces a person may pick, in the order they are offered.
+     *
+     * Two book faces first — Alegreya, which everything defaults to, and
+     * Merriweather, which was drawn for screens — then the Garamond for
+     * anything meant to look like a chant book, and last the two sans faces,
+     * which exist for projector slides rather than for pages.
+     *
+     * Lora is deliberately absent: Merriweather replaced it as the modern serif,
+     * and offering both only asks a question nobody profits from answering.
+     *
+     * @var list<string>
+     */
+    private const SELECTABLE_FONTS = ['Alegreya', 'Merriweather', 'EB Garamond', 'Inter', 'Barlow Condensed'];
 
     /**
      * Keep only the keys this format allows, clamped into range.
@@ -276,10 +296,23 @@ class BookletSettingFields
     }
 
     /**
+     * Every face that survives an export — what a stored value is validated
+     * against, retired faces included.
+     *
      * @return list<string>
      */
     public static function fontOptions(): array
     {
         return self::EMBEDDABLE_FONTS;
+    }
+
+    /**
+     * The faces to put in a select, in the order they belong in.
+     *
+     * @return list<string>
+     */
+    public static function selectableFonts(): array
+    {
+        return self::SELECTABLE_FONTS;
     }
 }

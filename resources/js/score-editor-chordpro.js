@@ -1,5 +1,6 @@
 import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
-import { ptToPx } from './booklet-geometry.js';
+import { DEFAULT_LYRIC_SIZE_PT, opticalLyricSizePt, ptToPx } from './booklet-geometry.js';
+import { markupRuns, runsText } from './chordpro-markup.js';
 import { chordStringsOf, spellFlatB, spellFlatBInHtml, spellFlatBInText } from './chordpro-notation.js';
 import { stackSvgs } from './svg-stack.js';
 
@@ -26,6 +27,81 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+/**
+ * The three tags a lyric may carry, and the element each of them becomes.
+ *
+ * @see chordpro-markup.js, which is where a lyric is cut into styled runs, and
+ *      which the booklet's SVG renderer draws from the same way.
+ */
+const MARKUP_ELEMENT = { bold: 'b', italic: 'i', underline: 'u' };
+
+/**
+ * Close and reopen a lyric's inline markup at every chord.
+ *
+ * chordsheetjs cuts a line into one fragment per chord and formats each into a
+ * `<div>` of its own, so `<i>Ave [G]Maria</i>` reaches the browser as an `<i>`
+ * that opens in one div and a `</i>` that closes in another. HTML has no such
+ * thing: the browser shuts the tag at the end of the first div and throws the
+ * stray close away, and only the first half of the phrase comes out italic.
+ *
+ * Rewriting each fragment so it opens and closes its own tags says the same
+ * thing in a form HTML can carry, and leaves the formatters untouched.
+ */
+function balanceMarkup(song) {
+    return rewriteLyrics(song, (lyrics, style) => {
+        const { runs, open } = markupRuns(lyrics, style);
+
+        return { lyrics: runs.map(markupElement).join(''), open };
+    });
+}
+
+/**
+ * Drop the markup, leaving the words as they are sung.
+ *
+ * Plain text has nowhere to put an italic, and `<i>` printed in the middle of a
+ * lyric is worse than the formatting being lost.
+ */
+function stripMarkup(song) {
+    return rewriteLyrics(song, (lyrics) => ({ lyrics: runsText(markupRuns(lyrics).runs) }));
+}
+
+/**
+ * Rewrite every lyric fragment of a parsed song in place.
+ *
+ * The style a fragment leaves open is handed to the next one on its line, so a
+ * rewrite can see markup that runs across a chord; a new line starts afresh.
+ *
+ * @param {object} song a freshly parsed song, which this mutates
+ * @param {(lyrics: string, open: object|undefined) => {lyrics: string, open?: object}} rewrite
+ */
+function rewriteLyrics(song, rewrite) {
+    (song.lines ?? []).forEach((line) => {
+        let style;
+
+        (line.items ?? []).forEach((item) => {
+            if (typeof item?.lyrics !== 'string' || item.lyrics === '') {
+                return;
+            }
+
+            const rewritten = rewrite(item.lyrics, style);
+            item.lyrics = rewritten.lyrics;
+            style = rewritten.open;
+        });
+    });
+
+    return song;
+}
+
+function markupElement(run) {
+    const tags = Object.entries(MARKUP_ELEMENT)
+        .filter(([style]) => run[style])
+        .map(([, tag]) => tag);
+
+    return tags.map((tag) => `<${tag}>`).join('')
+        + run.text
+        + [...tags].reverse().map((tag) => `</${tag}>`).join('');
+}
+
 function sanitizeChordproContent(content) {
     return content.replace(/<\/?(i|b|u)>|[<>]/gi, (match) => {
         if (match.length > 1) { return match; }
@@ -43,12 +119,16 @@ function sanitizeChordproContent(content) {
  * could never get right, since it never knew that A + 1 is B and not A#.
  *
  * @param {string} content raw ChordPro
- * @param {{german: boolean, transpose: number|string}} options
+ * @param {{german: boolean, transpose: number|string, sanitize?: boolean}} options
+ *        `sanitize` guards the HTML paths, where everything but ChordPro's own
+ *        `<i>`, `<b>` and `<u>` has to stop being markup before it reaches a
+ *        browser. A caller that escapes what it draws — anything engraving to
+ *        SVG — wants the text as written instead.
  */
-export async function parseChordproSong(content, { german, transpose }) {
+export async function parseChordproSong(content, { german, transpose, sanitize = true }) {
     const ChordSheetJS = await loadChordSheetJS();
     const song = new ChordSheetJS.ChordProParser().parse(
-        sanitizeChordproContent(content),
+        sanitize ? sanitizeChordproContent(content) : content,
         german ? { notation: 'german' } : {},
     );
 
@@ -116,7 +196,7 @@ function isSungLine(line) {
 export async function renderChordproIncipitSvg(content, { german, transpose, fontFamily }) {
     if (!content || !content.trim()) { return null; }
 
-    const song = await parseChordproSong(content, { german, transpose });
+    const song = await parseChordproSong(content, { german, transpose, sanitize: false });
     const family = safeFontFamily(fontFamily);
 
     const rows = chordproIncipitRows(song.bodyParagraphs ?? song.paragraphs ?? [], {
@@ -140,20 +220,47 @@ export async function renderChordproIncipitSvg(content, { german, transpose, fon
     return svg;
 }
 
+export { balanceMarkup, stripMarkup };
+
+/**
+ * The face a chord sheet is set in unless someone says otherwise.
+ *
+ * The screen-first serif of the set rather than the book faces the engraved
+ * formats use: a chord sheet is read off a phone or a tablet propped on a stand
+ * as often as off paper, and Merriweather was drawn for exactly that.
+ */
+const CHORDPRO_DEFAULT_FONT = 'Merriweather';
+
+function round(value, places) {
+    const factor = 10 ** places;
+
+    return Math.round(value * factor) / factor;
+}
+
 export function chordproMixin() {
     return {
         /**
          * A chord sheet is read off a music stand, so it starts at the size a
-         * hymnal is printed in — 12 pt, in the px the container is styled with.
-         * A booklet says nothing about this: there the size comes from the
-         * booklet's own lyric size, in points, per page.
+         * hymnal is printed in — 9 pt of Merriweather, which is the same height
+         * of letter as the 11 pt of Alegreya every other editor opens at, in the
+         * px the container is styled with. A booklet says nothing about this:
+         * there the size comes from the booklet's own lyric size, in points, per
+         * page.
          */
-        chordproFontSize: ptToPx(12),
-        chordproFontFamily: "'Lora'",
+        chordproFontSize: round(ptToPx(opticalLyricSizePt(DEFAULT_LYRIC_SIZE_PT, CHORDPRO_DEFAULT_FONT)), 4),
+        chordproFontFamily: `'${CHORDPRO_DEFAULT_FONT}'`,
         chordproColumns: 1,
         chordproTranspose: 0,
         chordproGermanNotation: true,
-        chordproFields: ['chordproFontSize', 'chordproFontFamily', 'chordproColumns', 'chordproTranspose', 'chordproGermanNotation'],
+        /**
+         * The preview is text in a box rather than an engraving on a page, so
+         * nothing about it is life size to begin with — and 9 pt of it on a
+         * screen read at arm's length is too small to work in. The zoom is a
+         * magnifying glass over the preview alone: it never reaches the export,
+         * the score views or a booklet page.
+         */
+        chordproZoom: 120,
+        chordproFields: ['chordproFontSize', 'chordproFontFamily', 'chordproColumns', 'chordproTranspose', 'chordproGermanNotation', 'chordproZoom'],
 
         parseChordpro(content) {
             return parseChordproSong(content, {
@@ -176,12 +283,15 @@ export function chordproMixin() {
             if (!content || !content.trim()) { return; }
             try {
                 const ChordSheetJS = await loadChordSheetJS();
-                const song = await this.parseChordpro(content);
+                const song = balanceMarkup(await this.parseChordpro(content));
                 const html = this.spellChordsInHtml(new ChordSheetJS.HtmlDivFormatter().format(song));
                 const pageEl = document.createElement('div');
                 pageEl.className = 'chordpro-preview overflow-auto rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900';
                 pageEl.style.fontFamily = this.chordproFontFamily;
-                pageEl.style.fontSize = Number(this.chordproFontSize) + 'px';
+                // Everything inside is sized in em, so magnifying the root size
+                // magnifies the whole sheet.
+                const zoom = (Number(this.chordproZoom) || 100) / 100;
+                pageEl.style.fontSize = Number(this.chordproFontSize) * zoom + 'px';
                 const cols = Number(this.chordproColumns);
                 if (cols > 1) {
                     pageEl.style.columnCount = cols;
@@ -204,7 +314,7 @@ export function chordproMixin() {
             if (!content || !content.trim()) { return; }
             try {
                 const ChordSheetJS = await loadChordSheetJS();
-                const song = await this.parseChordpro(content);
+                const song = stripMarkup(await this.parseChordpro(content));
                 const rendered = new ChordSheetJS.TextFormatter().format(song);
                 const text = this.chordproGermanNotation
                     ? spellFlatBInText(rendered, chordStringsOf(song))
@@ -227,7 +337,7 @@ export function chordproMixin() {
             if (!content || !content.trim()) { return; }
             try {
                 const ChordSheetJS = await loadChordSheetJS();
-                const song = await this.parseChordpro(content);
+                const song = balanceMarkup(await this.parseChordpro(content));
                 const body = this.spellChordsInHtml(new ChordSheetJS.HtmlTableFormatter().format(song));
                 const fontFamily = safeFontFamily(this.chordproFontFamily);
                 const fontSize = Number(this.chordproFontSize);
@@ -262,7 +372,7 @@ td.column{vertical-align:bottom;padding-right:0.1em;}
             if (!content || !content.trim()) { return; }
             try {
                 const ChordSheetJS = await loadChordSheetJS();
-                const song = await this.parseChordpro(content);
+                const song = balanceMarkup(await this.parseChordpro(content));
                 const body = this.spellChordsInHtml(new ChordSheetJS.HtmlDivFormatter().format(song));
                 const title = this.$wire.title || 'score';
                 const fontFamily = safeFontFamily(this.chordproFontFamily);

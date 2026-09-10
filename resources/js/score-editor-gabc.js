@@ -1,3 +1,42 @@
+import {
+    DEFAULT_LYRIC_SIZE_PT,
+    DEFAULT_PAGE_WIDTH_MM,
+    DEFAULT_STAFF_HEIGHT_MM,
+    DEFAULT_TEXT_FONT,
+    gabcLyricSizeForPt,
+    gabcStaffSizeForStaffHeight,
+    mmToPx,
+} from './booklet-geometry.js';
+
+/**
+ * The page a GABC score is laid out on, in the user units exsurge counts in —
+ * CSS pixels at 96 dpi, so this is a real 170 mm sheet.
+ *
+ * The editor used to lay out on one fixed page and keep no width of its own,
+ * which left the only way to rebreak a chant's lines being to change its staff
+ * size. Two decimals of a unit, so a width typed in whole millimetres comes
+ * back out of the toolbar whole; see the same in score-editor-abc.js.
+ */
+export const GABC_LAYOUT_WIDTH_DEFAULT = Math.round(mmToPx(DEFAULT_PAGE_WIDTH_MM) * 100) / 100;
+
+/** Down to a business card and up to a poster, as in the ABC editor. */
+const GABC_LAYOUT_WIDTH_MIN = 100;
+
+const GABC_LAYOUT_WIDTH_MAX = 3000;
+
+export function normalizeGabcLayoutWidth(value) {
+    if (value === null || value === undefined || String(value).trim() === '') {
+        return GABC_LAYOUT_WIDTH_DEFAULT;
+    }
+
+    const width = Number(value);
+    if (!Number.isFinite(width)) {
+        return GABC_LAYOUT_WIDTH_DEFAULT;
+    }
+
+    return Math.min(GABC_LAYOUT_WIDTH_MAX, Math.max(GABC_LAYOUT_WIDTH_MIN, Math.round(width * 100) / 100));
+}
+
 /** exsurge sizes everything off a 30-unit em; this is the conversion factor. */
 const GABC_SIZE_UNIT = 100 / 30;
 
@@ -48,20 +87,37 @@ export function renderGabcToSvgMarkup(source, settings, layoutWidth) {
     });
 }
 
+function round(value, places) {
+    const factor = 10 ** places;
+
+    return Math.round(value * factor) / factor;
+}
+
 export function gabcMixin() {
     return {
-        zoom: 90,
-        lyricSize: 12,
-        staffSize: 80,
+        // The preview is the printed page at 96 dpi, so 100 is life size and a
+        // zoom is what it says it is. The default sits above it because life
+        // size on a monitor at arm's length is smaller than anyone wants to
+        // work in; it magnifies the preview and nothing else.
+        zoom: 120,
+        // Stored in exsurge's own units, set from the millimetres and points the
+        // toolbar states: see lyricSizePt and staffSizeMm on the component.
+        lyricSize: round(gabcLyricSizeForPt(DEFAULT_LYRIC_SIZE_PT), 4),
+        staffSize: round(gabcStaffSizeForStaffHeight(DEFAULT_STAFF_HEIGHT_MM), 4),
         minLyricWordSpacing: 0,
         hyphenWidth: 0,
         condensingTolerance: 0.9,
         spaceBetweenSystems: 0,
         minSpaceBelowStaff: 0,
         pageRatio: 'paper',
+        // The width the chant's lines are broken at, in exsurge's user units;
+        // the toolbar states it in millimetres. See gabcLayoutWidthMm.
+        gabcLayoutWidth: GABC_LAYOUT_WIDTH_DEFAULT,
         dropCaps: false,
-        lyricFont: "'EB Garamond'",
-        gabcFields: ['zoom', 'lyricSize', 'staffSize', 'dropCaps', 'lyricFont', 'minLyricWordSpacing', 'hyphenWidth', 'condensingTolerance', 'spaceBetweenSystems', 'minSpaceBelowStaff'],
+        lyricFont: `'${DEFAULT_TEXT_FONT}'`,
+        gabcFields: ['zoom', 'lyricSize', 'staffSize', 'gabcLayoutWidth', 'dropCaps', 'lyricFont', 'minLyricWordSpacing', 'hyphenWidth', 'condensingTolerance', 'spaceBetweenSystems', 'minSpaceBelowStaff'],
+
+        normalizeGabcLayoutWidth,
 
         renderGabcPreview() {
             const container = this.$refs.preview;
@@ -76,8 +132,11 @@ export function gabcMixin() {
             const isResponsive = this.isResponsiveRatio(ratio);
             const canvas = this.getVirtualCanvasSize('gabc');
             const zoom = Number(this.zoom || 100) / 100;
-            const paperWidth = canvas.width / 2;
-            const zoomedPaperWidth = Math.round(paperWidth * zoom);
+            // The canvas is the printed page in CSS pixels, so at 100 % the
+            // preview is life size on a 96 dpi display; it used to be drawn at
+            // half of a canvas twice as wide, which came to the same picture on
+            // screen but hid what the numbers meant.
+            const zoomedPaperWidth = Math.round(canvas.width * zoom);
             const availableWidth = Math.max(200, Math.round((container.clientWidth || zoomedPaperWidth) - 4));
             const renderWidth = isResponsive
                 ? Math.min(zoomedPaperWidth, availableWidth)

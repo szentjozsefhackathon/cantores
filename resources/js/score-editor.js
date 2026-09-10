@@ -1,13 +1,28 @@
 import { applyConditionalBlocks } from './score-editor-pages.js';
 import { abcMixin, ABC_RATIO_DEFAULTS, applyAbcSvgStyle, abcStrokeWidths, buildAbcPreamble, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
-import { gabcMixin, renderGabcToSvgMarkup } from './score-editor-gabc.js';
+import { gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin, renderChordproIncipitSvg } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { formatDefaults, incipitSettings } from './score-editor-settings.js';
 import { applyPhysicalSvgSize, removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
-import { ptToPx, pxToPt } from './booklet-geometry.js';
+import {
+    DEFAULT_PAGE_WIDTH_MM,
+    pxToMm,
+    DEFAULT_TEXT_FONT,
+    mmToPx,
+    ptForAbcLyricSize,
+    ptForGabcLyricSize,
+    ptToPx,
+    pxToPt,
+    abcLyricSizeForPt,
+    abcPageScaleForStaffHeight,
+    gabcLyricSizeForPt,
+    gabcStaffSizeForStaffHeight,
+    staffHeightMmForAbcPageScale,
+    staffHeightMmForGabcStaffSize,
+} from './booklet-geometry.js';
 import { injectWebFontsIntoSvg } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
 import { renderAretino, renderFirstRow } from '@aretino-chant/core';
@@ -55,6 +70,34 @@ const ARETINO_CODEMIRROR_FONT_STYLE_ID = 'score-editor-aretino-codemirror-font-s
 const ARETINO_CODEMIRROR_FONT_SIZE = '14px';
 
 const ARETINO_VERSE_INCIPIT_LINES = 7;
+
+/**
+ * The paper preview's page, in the user units every engine lays out in.
+ *
+ * A score editor's page used to be a nominal canvas — 1920 units for GABC, 1700
+ * for ABC — which is 450 to 500 mm of real paper once the export restates the
+ * viewBox in millimetres, and meant that a staff size or a lyric size in one
+ * editor was no particular height in another. It is now the same 170 mm page the
+ * Aretino editor always used, so 100 % zoom is life size and six millimetres of
+ * staff is six millimetres in all four formats.
+ */
+const SCORE_PAGE_WIDTH_PX = Math.round(mmToPx(DEFAULT_PAGE_WIDTH_MM));
+
+/**
+ * A size on its way into a spinner: two decimals, and no trailing zeroes, so a
+ * knob that holds an engine's fraction still reads as the round 6 mm or 11 pt
+ * somebody set.
+ */
+function displaySize(value) {
+    return Math.round(Number(value) * 100) / 100;
+}
+
+/** The same trip back: a typed size, converted into the engine's own unit. */
+function setDisplaySize(component, key, value, toEngineUnit) {
+    const size = Number(value);
+    if (!Number.isFinite(size) || size <= 0) { return; }
+    component[key] = Math.round(toEngineUnit(size) * 10000) / 10000;
+}
 
 /**
  * Crops a verse-only Aretino SVG (one with no staff rows, just <text> lines)
@@ -182,6 +225,72 @@ document.addEventListener('alpine:init', () => {
             this.chordproFontSize = Math.round(ptToPx(pt) * 10000) / 10000;
         },
 
+        /*
+         * The GABC and ABC sizes as their toolbars state them: points of type
+         * and millimetres of staff, the units the score is actually printed in
+         * and the only ones in which two formats can be compared. Underneath,
+         * each setting stays in whatever its engine takes — exsurge's
+         * thirteen-thirds of a pixel, abc2svg's page scale — because that is
+         * what every renderer of a score is handed, here, in the score views and
+         * on a booklet page.
+         *
+         * Declared on the component rather than in the mixins for the reason
+         * given above chordproFontSizePt: spreading an object copies what a
+         * getter returned, not the getter.
+         */
+
+        get lyricSizePt() {
+            return displaySize(ptForGabcLyricSize(this.lyricSize));
+        },
+
+        set lyricSizePt(value) {
+            setDisplaySize(this, 'lyricSize', value, gabcLyricSizeForPt);
+        },
+
+        get staffSizeMm() {
+            return displaySize(staffHeightMmForGabcStaffSize(this.staffSize));
+        },
+
+        set staffSizeMm(value) {
+            setDisplaySize(this, 'staffSize', value, gabcStaffSizeForStaffHeight);
+        },
+
+        get gabcLayoutWidthMm() {
+            return displaySize(pxToMm(normalizeGabcLayoutWidth(this.gabcLayoutWidth)));
+        },
+
+        set gabcLayoutWidthMm(value) {
+            const mm = Number(value);
+            if (!Number.isFinite(mm) || mm <= 0) { return; }
+            this.gabcLayoutWidth = normalizeGabcLayoutWidth(mmToPx(mm));
+        },
+
+        get abcLyricSizePt() {
+            return displaySize(ptForAbcLyricSize(this.abcLyricSize));
+        },
+
+        set abcLyricSizePt(value) {
+            setDisplaySize(this, 'abcLyricSize', value, abcLyricSizeForPt);
+        },
+
+        get abcStaffHeightMm() {
+            return displaySize(staffHeightMmForAbcPageScale(this.abcPageScale));
+        },
+
+        set abcStaffHeightMm(value) {
+            setDisplaySize(this, 'abcPageScale', value, abcPageScaleForStaffHeight);
+        },
+
+        get abcPageWidthMm() {
+            return displaySize(pxToMm(normalizeAbcPageWidth(this.abcPageWidth)));
+        },
+
+        set abcPageWidthMm(value) {
+            const mm = Number(value);
+            if (!Number.isFinite(mm) || mm <= 0) { return; }
+            this.abcPageWidth = normalizeAbcPageWidth(mmToPx(mm));
+        },
+
         minimalExamples: {
             abc: 'K:C\nL:1/4\nC D E|]\nw: Glo-ri-a',
             gabc: '(c3) Glo(f)ri(g)a.(h.) (::)\n',
@@ -290,6 +399,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('staffSize', () => this.scheduleRender());
             this.$watch('lyricFont', () => this.scheduleRender());
             this.$watch('pageRatio', (val, old) => { this.captureCurrentSettings('gabc', old); this.applyRatioSettings('gabc', val); this.$nextTick(() => this.scheduleRender()); });
+            this.$watch('gabcLayoutWidth', () => this.scheduleRender());
             this.$watch('dropCaps', () => this.scheduleRender());
             this.$watch('minLyricWordSpacing', () => this.scheduleRender());
             this.$watch('hyphenWidth', () => this.scheduleRender());
@@ -313,6 +423,7 @@ document.addEventListener('alpine:init', () => {
             this.$watch('abcTranspose', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val, old) => { this.captureCurrentSettings('abc', old); this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('chordproFontSize', () => this.scheduleRender());
+            this.$watch('chordproZoom', () => this.scheduleRender());
             this.$watch('chordproFontFamily', () => this.scheduleRender());
             this.$watch('chordproColumns', () => this.scheduleRender());
             this.$watch('chordproTranspose', () => this.scheduleRender());
@@ -410,6 +521,7 @@ document.addEventListener('alpine:init', () => {
                         zoom: Number(this.zoom),
                         lyricSize: Number(this.lyricSize),
                         staffSize: Number(this.staffSize),
+                        gabcLayoutWidth: normalizeGabcLayoutWidth(this.gabcLayoutWidth),
                         dropCaps: !!this.dropCaps,
                         lyricFont: this.lyricFont,
                         minLyricWordSpacing: Number(this.minLyricWordSpacing),
@@ -449,6 +561,7 @@ document.addEventListener('alpine:init', () => {
                         chordproColumns: Number(this.chordproColumns),
                         chordproTranspose: Number(this.chordproTranspose),
                         chordproGermanNotation: !!this.chordproGermanNotation,
+                        chordproZoom: Number(this.chordproZoom),
                     },
                     ratio: 'auto',
                 };
@@ -504,14 +617,22 @@ document.addEventListener('alpine:init', () => {
                     '4/3': { width: 1440, height: 1080 },
                     '1/1': { width: 1080, height: 1080 },
                 };
-                return screens[ratio] ?? { width: 1920, height: null };
+                return screens[ratio] ?? { width: SCORE_PAGE_WIDTH_PX, height: null };
 
             }
 
-            // GABC: constant width, height varies by ratio.
-            const width = 1920;
+            // GABC: the projector ratios keep a constant width and vary the
+            // height; on paper the page is the width the score asks for.
             const heights = { '16/9': 1080, '4/3': 1440, '1/1': 1920 };
-            return { width, height: heights[ratio] ?? null };
+            if (heights[ratio]) {
+                return { width: 1920, height: heights[ratio] };
+            }
+
+            if (format === 'gabc') {
+                return { width: normalizeGabcLayoutWidth(this.gabcLayoutWidth), height: null };
+            }
+
+            return { width: SCORE_PAGE_WIDTH_PX, height: null };
         },
 
         getRenderWidth() {
@@ -704,7 +825,7 @@ document.addEventListener('alpine:init', () => {
             if (format === 'aretino') {
                 const source = this.splitPages(this.localContent, 'aretino', settings.aretinoPageRatio)[0] ?? this.localContent;
                 if (!source?.trim()) { return null; }
-                const firstRowSvg = renderFirstRow(source, { width: targetWidth, textFont: 'EB Garamond' });
+                const firstRowSvg = renderFirstRow(source, { width: targetWidth, textFont: DEFAULT_TEXT_FONT });
                 if (firstRowSvg) {
                     clone = new DOMParser().parseFromString(firstRowSvg, 'image/svg+xml').documentElement;
                 } else {
@@ -713,7 +834,7 @@ document.addEventListener('alpine:init', () => {
                     // incipit shows the verse text instead of coming out empty, then
                     // crop it to the first few text lines so a long verse stays
                     // readable rather than being shrunk to fit its full height.
-                    const verseSvg = renderAretino(source, { width: targetWidth, textFont: 'EB Garamond', noHeader: true });
+                    const verseSvg = renderAretino(source, { width: targetWidth, textFont: DEFAULT_TEXT_FONT, noHeader: true });
                     if (!verseSvg) { return null; }
                     clone = new DOMParser().parseFromString(verseSvg, 'image/svg+xml').documentElement;
                     cropAretinoVerseToFirstLines(clone);
@@ -755,7 +876,7 @@ document.addEventListener('alpine:init', () => {
             clone.setAttribute('height', String(outputHeight));
 
             const lyricFont = {
-                aretino: 'EB Garamond',
+                aretino: DEFAULT_TEXT_FONT,
                 abc: settings.abcLyricFont,
                 chordpro: settings.chordproFontFamily,
             }[format] ?? settings.lyricFont;
@@ -837,7 +958,10 @@ document.addEventListener('alpine:init', () => {
             if (!content || !content.trim() || !window.exsurge) { return null; }
 
             const page = this.splitPages(content, 'gabc', settings.pageRatio)[0] ?? content;
-            const layoutWidth = this.getVirtualCanvasSize('gabc').width;
+            // The incipit is the score at the format's plainest, so the page it
+            // is broken at comes from the settings handed in rather than from
+            // whatever width the editor is set to.
+            const layoutWidth = normalizeGabcLayoutWidth(settings.gabcLayoutWidth);
             // A layout that never calls back would leave the save waiting on it.
             const markup = await Promise.race([
                 renderGabcToSvgMarkup(page, settings, layoutWidth),

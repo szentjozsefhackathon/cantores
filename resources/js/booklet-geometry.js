@@ -1,10 +1,15 @@
 /**
- * The booklet's unit system.
+ * The unit system, shared by the booklet and the score editors.
  *
  * Everything here is physical. A booklet exists because scores engraved on
  * different nominal pages have to sit on one real sheet, and that is only
  * possible if the page, the staves and the lyrics are all measured in
  * millimetres rather than in whatever canvas each renderer grew up with.
+ *
+ * The score editors now engrave on a real page too, so they read the same
+ * conversions rather than a second set of their own: a staff is six millimetres
+ * tall in the Aretino editor, in the ABC editor and on a booklet page alike, and
+ * one editor's export is the same physical size as another's.
  *
  * The bridge between the two is the convention the rest of the codebase already
  * uses (SvgToPdfConverter, score-editor-export.js): scores are laid out in user
@@ -35,13 +40,99 @@ export function pxToPt(px) {
 }
 
 /**
- * The face the booklet speaks in when nothing else has been chosen.
+ * The face everything speaks in when nothing else has been chosen.
  *
- * A book face rather than an interface one, because this is now the face of the
- * whole booklet — the headings, the rubrics and the lyrics under every staff —
- * and a booklet is read the way a book is.
+ * A book face rather than an interface one, because this is the face of a whole
+ * printed object — the headings, the rubrics and the lyrics under every staff —
+ * and a booklet is read the way a book is. It is also the face the sizes below
+ * are calibrated against; see OPTICAL_X_HEIGHT.
  */
-export const DEFAULT_TEXT_FONT = 'EB Garamond';
+export const DEFAULT_TEXT_FONT = 'Alegreya';
+
+/**
+ * The page a score is engraved for when nobody has said otherwise: A4 with the
+ * 20 mm margins a binder needs, which is also what the Aretino editor has always
+ * defaulted its staff width to.
+ */
+export const DEFAULT_PAGE_WIDTH_MM = 170;
+
+/** A chant staff that reads at arm's length off that page. */
+export const DEFAULT_STAFF_HEIGHT_MM = 6;
+
+/** The lyric size that balances it, in points of the reference face. */
+export const DEFAULT_LYRIC_SIZE_PT = 11;
+
+/**
+ * How large a face looks at a given point size, as x-height per em.
+ *
+ * A point is a measure of the em square, not of anything the eye can see, so two
+ * faces set at the same size do not read as the same size: 11 pt of Alegreya and
+ * 11 pt of Merriweather differ by a fifth. What the eye actually compares is the
+ * height of a lower-case letter, so sizes are converted between faces by holding
+ * that constant — which is what makes a booklet's one lyric size mean the same
+ * thing whichever face it is set in.
+ *
+ * Every value below is measured from the woff2 file in public/fonts (OS/2
+ * sxHeight over unitsPerEm), except EB Garamond. Its x-height is unusually small
+ * against unusually tall capitals and ascenders, and holding the x-height alone
+ * constant sizes it visibly too large; the value here is instead calibrated from
+ * the pairing that was actually judged by eye — 11.5 pt of EB Garamond against
+ * 11 pt of Alegreya — which is its measured 0.400 raised by eight per cent.
+ */
+const OPTICAL_X_HEIGHT = {
+    'Alegreya': 0.452,
+    'Merriweather': 0.555,
+    'EB Garamond': 0.432,
+    'Lora': 0.500,
+    'Inter': 0.546,
+    'Barlow Condensed': 0.509,
+};
+
+/** The face every size in this application is quoted in. */
+export const REFERENCE_TEXT_FONT = 'Alegreya';
+
+/**
+ * How many points of `family` read as one point of the reference face.
+ *
+ * Unknown families are left alone rather than guessed at: a face nobody has
+ * measured is likelier to be a fallback stack than a mistake.
+ */
+export function opticalSizeFactor(family) {
+    const bare = String(family ?? '').trim().replace(/['"]/g, '');
+    const xHeight = OPTICAL_X_HEIGHT[bare];
+
+    if (!(xHeight > 0)) {
+        return 1;
+    }
+
+    return OPTICAL_X_HEIGHT[REFERENCE_TEXT_FONT] / xHeight;
+}
+
+/**
+ * A size quoted in the reference face, restated in the face it will be set in.
+ *
+ * @param {number} pt points of the reference face
+ * @param {string} family the face actually being set
+ */
+export function opticalLyricSizePt(pt, family) {
+    return Number(pt) * opticalSizeFactor(family);
+}
+
+/**
+ * What a set size has to be multiplied by to get back the size the leading is
+ * measured in.
+ *
+ * Holding the x-height constant makes every face read at the same size, but it
+ * does so by giving each one a different em — and leading measured in that em
+ * follows the face rather than the eye: Alegreya's lines stand a fifth further
+ * apart than Merriweather's for letters of the same apparent height, so choosing
+ * a face silently reflows the booklet. So the em is what the letters are drawn
+ * from and the nominal size is what the space between the lines is measured in,
+ * and a booklet keeps its vertical rhythm whichever face it is set in.
+ */
+export function leadingScale(family) {
+    return 1 / opticalSizeFactor(family);
+}
 
 /**
  * How far apart ABC staves stand in a booklet.
@@ -74,6 +165,11 @@ export function quoteFontFamily(family) {
  */
 export function pageGeometry(geometry) {
     const marginPx = mmToPx(geometry.marginMm);
+    const textFont = quoteFontFamily(geometry.textFont);
+    // The size the cantor set is quoted in the reference face; every renderer
+    // downstream is handed the size that reads as that in the face actually
+    // chosen, so changing the booklet's face does not change how big it looks.
+    const lyricSizePt = opticalLyricSizePt(geometry.lyricSizePt, textFont);
 
     return {
         pageWidthPx: mmToPx(geometry.pageWidthMm),
@@ -82,10 +178,12 @@ export function pageGeometry(geometry) {
         contentHeightPx: mmToPx(geometry.contentHeightMm),
         contentWidthMm: geometry.contentWidthMm,
         marginPx,
-        lyricSizePt: geometry.lyricSizePt,
-        lyricSizePx: ptToPx(geometry.lyricSizePt),
+        nominalLyricSizePt: Number(geometry.lyricSizePt),
+        lyricSizePt,
+        lyricSizePx: ptToPx(lyricSizePt),
+        leadingScale: leadingScale(textFont),
         staffHeightMm: geometry.staffHeightMm,
-        textFont: quoteFontFamily(geometry.textFont),
+        textFont,
         headingScale: Number(geometry.headingScale) > 0 ? Number(geometry.headingScale) : 1,
         abcStaffSep: Number(geometry.abcStaffSep) >= 0 ? Number(geometry.abcStaffSep) : DEFAULT_ABC_STAFF_SEP,
     };
@@ -120,6 +218,23 @@ export function chordproFontSizeForPt(pt) {
 
 export function aretinoLyricSizeForPt(pt) {
     return pt;
+}
+
+/*
+ * The same conversions read backwards, so an editor can label a knob with the
+ * point size it really sets while still storing what its engine takes.
+ */
+
+export function ptForAbcLyricSize(size) {
+    return pxToPt(Number(size) * 3);
+}
+
+export function ptForGabcLyricSize(size) {
+    return pxToPt(Number(size) * 13 / 3);
+}
+
+export function ptForChordproFontSize(size) {
+    return pxToPt(Number(size));
 }
 
 /*
@@ -158,4 +273,12 @@ export function gabcStaffSizeForStaffHeight(mm) {
 
 export function aretinoStaffSizeForStaffHeight(mm) {
     return mm;
+}
+
+export function staffHeightMmForAbcPageScale(scale) {
+    return Number(scale) * ABC_STAFF_UNITS * MM_PER_PX;
+}
+
+export function staffHeightMmForGabcStaffSize(size) {
+    return Number(size) * GABC_UNITS_PER_STAFF_SIZE * MM_PER_PX;
 }

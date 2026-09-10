@@ -129,7 +129,7 @@
                     <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
                 <flux:select size="sm" wire:model.live="textFont" :aria-label="__('Text font')" class="w-36 text-xs">
-                    @foreach(BookletSettingFields::fontOptions() as $font)
+                    @foreach(BookletSettingFields::selectableFonts() as $font)
                         <flux:select.option value="{{ $font }}">{{ $font }}</flux:select.option>
                     @endforeach
                 </flux:select>

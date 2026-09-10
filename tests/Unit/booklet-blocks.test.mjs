@@ -297,3 +297,54 @@ test('two chants on one page keep their own glyphs', () => {
     assert.match(second, /id="exs-2-PunctumQuadratum"/);
     assert.doesNotMatch(second, /"#exs-1-/, 'the second chant must not draw with the first one\'s scaling');
 });
+
+// The x-height compensation gives each face an em of its own, so a booklet in
+// Merriweather is set at nine points where one in Alegreya is set at eleven. If
+// the leading were measured in that em too, choosing a face would silently
+// reflow the whole booklet — a rubric in Alegreya standing a fifth deeper than
+// the same rubric in Merriweather, for letters of the same apparent size.
+test('a heading and a rubric take the same depth of page whichever face they are set in', () => {
+    const inFace = (textFont) => pageGeometry({
+        pageWidthMm: 148,
+        pageHeightMm: 210,
+        marginMm: 12,
+        contentWidthMm: 124,
+        contentHeightMm: 186,
+        lyricSizePt: 11,
+        staffHeightMm: 7,
+        textFont,
+    });
+
+    const paragraph = {
+        id: 2,
+        kind: 'text',
+        text: '# Rubrika\n\nÁlljunk fel.',
+        slot: 'Kezdőének',
+        startOnNewPage: false,
+    };
+
+    const depthIn = (textFont) => {
+        const faced = inFace(textFont);
+        const { blocks } = buildTextBlocks(
+            paragraph,
+            faced,
+            (text, { fontSize = faced.lyricSizePx } = {}) => text.length * fontSize * 0.5,
+        );
+
+        return blocks.reduce((total, block) => total + block.height + (block.spaceBefore ?? 0), 0);
+    };
+
+    const reference = depthIn('Alegreya');
+
+    assert.ok(reference > 0);
+    ['Merriweather', 'EB Garamond', 'Lora', 'Barlow Condensed'].forEach((font) => {
+        assert.ok(
+            Math.abs(depthIn(font) - reference) < 1e-9,
+            `the booklet reflowed when it was set in ${font}`,
+        );
+    });
+
+    // The letters themselves still differ, which is the whole point of the
+    // compensation: only the space they stand in was held.
+    assert.ok(inFace('Merriweather').lyricSizePx < inFace('Alegreya').lyricSizePx);
+});

@@ -1,9 +1,27 @@
 import { diatarToAbc } from './diatar-to-abc.js';
+import {
+    DEFAULT_LYRIC_SIZE_PT,
+    DEFAULT_PAGE_WIDTH_MM,
+    DEFAULT_STAFF_HEIGHT_MM,
+    DEFAULT_TEXT_FONT,
+    abcLyricSizeForPt,
+    abcPageScaleForStaffHeight,
+    mmToPx,
+} from './booklet-geometry.js';
 
-const DEFAULT_ABC_FONT = 'EB Garamond';
-const ABC_PAGE_WIDTH_MIN = 400;
-const ABC_PAGE_WIDTH_MAX = 4000;
-const ABC_PAGE_WIDTH_DEFAULT = 1700;
+const DEFAULT_ABC_FONT = DEFAULT_TEXT_FONT;
+
+/**
+ * The page an ABC score is laid out on, in the user units abc2svg counts in —
+ * which are CSS pixels at 96 dpi, so the page is a real 170 mm rather than the
+ * 450 mm this nominally was before the editors were put on one scale.
+ */
+export const ABC_PAGE_WIDTH_DEFAULT = roundWidth(mmToPx(DEFAULT_PAGE_WIDTH_MM));
+
+// Down to a business card and up to a poster; the floor used to sit at 400,
+// which is wider than A4 now that the number means millimetres of real paper.
+const ABC_PAGE_WIDTH_MIN = 100;
+const ABC_PAGE_WIDTH_MAX = 3000;
 
 /**
  * The tightest lyric-line advance that still reads: below half a line height
@@ -13,13 +31,23 @@ const ABC_PAGE_WIDTH_DEFAULT = 1700;
 export const ABC_LYRIC_SKIP_MIN = 0.5;
 
 /**
- * The tightest staff-to-first-lyric advance we let anyone ask for. The first
- * line starts below the lowest ink of the music, so a factor under 1 already
- * reaches back up into the stems — which is the whole point of the knob, but
- * half a line height is as far as it stays music. Anything under it is treated
- * as unset, which leaves abc2svg on its own 1.1.
+ * The tightest staff-to-first-lyric advance we let anyone ask for. The factor
+ * is the lyric baseline's distance below the bottom staff line, counted in the
+ * lyric face's own ascent, so 1 puts the ascender line on the staff line and
+ * anything under it reaches up into the staff — which is the point of the knob,
+ * but half an ascent is as far as it stays music. Anything under the floor is
+ * treated as unset, which leaves abc2svg on its own 1.1.
  */
 export const ABC_LYRIC_FIRST_SKIP_MIN = 0.5;
+
+/**
+ * Two decimals of a pixel, so a width stated in whole millimetres survives the
+ * trip through the engine's unit and back: 170 mm is 642.52 units, and rounding
+ * that to a whole one would hand the toolbar 170.13 mm back.
+ */
+function roundWidth(px) {
+    return Math.round(px * 100) / 100;
+}
 
 export function normalizeAbcPageWidth(value) {
     if (value === null || value === undefined || String(value).trim() === '') {
@@ -31,7 +59,7 @@ export function normalizeAbcPageWidth(value) {
         return ABC_PAGE_WIDTH_DEFAULT;
     }
 
-    return Math.min(ABC_PAGE_WIDTH_MAX, Math.max(ABC_PAGE_WIDTH_MIN, Math.round(width)));
+    return Math.min(ABC_PAGE_WIDTH_MAX, Math.max(ABC_PAGE_WIDTH_MIN, roundWidth(width)));
 }
 
 // Per-ratio factory defaults for ABC. Keys match effectiveRatioKey() output.
@@ -157,8 +185,8 @@ function englishChordRoots(chord) {
  *
  * `%%vocalspace` is pinned to 0 rather than exposed: it can only push the
  * lyrics further from the staff, never closer, so it is left out of the way and
- * `abcLyricFirstSkip` — counted from the music's own lowest ink — is the one
- * knob for the staff-to-lyrics gap.
+ * `abcLyricFirstSkip` — counted from the bottom staff line — is the one knob
+ * for the staff-to-lyrics gap.
  */
 export function buildAbcPreamble(settings, pageWidth) {
     const rawFont = (settings.abcLyricFont || '').trim();
@@ -239,35 +267,51 @@ export function applyAbcSvgStyle(svg, svgId, settings) {
     svg.appendChild(style);
 }
 
+function round(value, places) {
+    const factor = 10 ** places;
+
+    return Math.round(value * factor) / factor;
+}
+
 export function abcMixin() {
     return {
         diatarSource: '',
-        abcLyricFont: 'EB Garamond',
-        abcLyricSize: 12,
+        abcLyricFont: DEFAULT_ABC_FONT,
+        // Both stored in abc2svg's own units, set from the points and
+        // millimetres the toolbar states: see abcLyricSizePt and
+        // abcStaffHeightMm on the component.
+        abcLyricSize: round(abcLyricSizeForPt(DEFAULT_LYRIC_SIZE_PT), 4),
         abcLyricBold: false,
         abcPageRatio: 'paper',
-        abcPageScale: 2.3,
-        abcPageWidth: 1700,
+        abcPageScale: round(abcPageScaleForStaffHeight(DEFAULT_STAFF_HEIGHT_MM), 4),
+        abcPageWidth: ABC_PAGE_WIDTH_DEFAULT,
         abcNoteSpacing: 1.4,
         // abc2svg reserves this much above every staff, the first one included,
         // so it is the air over the score as much as the air between its lines.
-        // 46 was enough for two of them; 36 is enough for either.
+        // 46 was enough for two of them; 36 is enough for either. It is
+        // multiplied by the page scale, so it shrank with the rest of the
+        // drawing when the page became a real 170 mm.
         abcStaffSep: 36,
-        // How far the first lyric line sits under the music, as a multiple of
-        // the line's own height, counted from the lowest ink of the staff. It
-        // replaces %%vocalspace, which could only ever push the lyrics further
-        // down and so had no way of pulling them closer than the stems hang.
-        abcLyricFirstSkip: 1.1,
+        // How far the first lyric baseline sits under the bottom staff line, as
+        // a multiple of the lyric face's own ascent — so 1 sets the ascender
+        // line on the staff line, in any face and at any size. Music that hangs
+        // far enough below the staff still pushes it down. It replaces
+        // %%vocalspace, which could only ever push the lyrics further down and
+        // so had no way of pulling them closer than the stems hang.
+        abcLyricFirstSkip: 1,
         // Vertical advance between stacked lyric lines, as a multiple of the
-        // line's own height. 1.1 is abc2svg's own advance (see the
-        // `lyricskipfac` vendor patch in public/js/abc2svg-1.js), so the
-        // default changes nothing; anything below ABC_LYRIC_SKIP_MIN is left
-        // to the engine.
-        abcLyricSkip: 1.1,
+        // line's own height. abc2svg's own advance is 1.1 (see the
+        // `lyricskipfac` vendor patch in public/js/abc2svg-1.js); a plain 1 sets
+        // the stanzas one line height apart, which is what a hymnal does.
+        // Anything below ABC_LYRIC_SKIP_MIN is left to the engine.
+        abcLyricSkip: 1,
         abcNoClef: false,
         abcStemWidth: 0.7,
         abcStaffLineWidth: 0.7,
-        abcZoom: 100,
+        // The preview is the printed page at 96 dpi, so 100 % is life size —
+        // which is smaller than anyone wants to read off a monitor at arm's
+        // length. The default magnifies it; the paper underneath is unchanged.
+        abcZoom: 120,
         abcTranspose: 0,
         abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose'],
 
@@ -309,8 +353,11 @@ export function abcMixin() {
             const isPaper = this.isPaperRatio(ratio);
             const canvas = this.getVirtualCanvasSize('abc');
             const zoom = Number(this.abcZoom || 100) / 100;
-            const paperWidth = canvas.width / 2;
-            const zoomedPaperWidth = Math.round(paperWidth * zoom);
+            // The canvas is the printed page in CSS pixels, so at 100 % the
+            // preview is life size on a 96 dpi display; it used to be drawn at
+            // half of a canvas twice as wide, which came to the same picture on
+            // screen but hid what the numbers meant.
+            const zoomedPaperWidth = Math.round(canvas.width * zoom);
             const availableWidth = Math.max(200, Math.round((container.clientWidth || zoomedPaperWidth) - 4));
             const paperPageWidth = normalizeAbcPageWidth(this.abcPageWidth);
             const renderWidth = isResponsive

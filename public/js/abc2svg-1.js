@@ -9969,12 +9969,30 @@ if(x0<lastx+12)
 x0=lastx+12}
 break}}
 if(lflag){out_wln(lastx+3,y,x0-lastx+3);lflag=false}}
-function draw_lyrics(p_voice,nly,a_h,y,incr){var j,top,sc=staff_tb[p_voice.st].staffscale;set_font("vocal")
+var lyric_asc_tb={}/*VENDOR PATCH lyricfirstskipfac*/
+function lyric_ascent(font,a_h){/*VENDOR PATCH lyricfirstskipfac*/
+var c,m,f=st_font(font),r=lyric_asc_tb[f]
+if(r!=undefined)
+return r
+r=a_h*.78
+if(typeof document!="undefined"&&document.createElement){try{c=document.createElement("canvas").getContext("2d")
+c.font=f;m=c.measureText("\u00c1y")
+if(m.fontBoundingBoxAscent)
+r=m.fontBoundingBoxAscent
+else if(m.actualBoundingBoxAscent)
+r=m.actualBoundingBoxAscent
+if(document.fonts&&document.fonts.check(f))
+lyric_asc_tb[f]=r}catch(e){}}
+return r}
+function draw_lyrics(p_voice,nly,a_h,y,incr,std){var j,top,asc,yg,yl,sc=staff_tb[p_voice.st].staffscale;set_font("vocal")
 var lsf=tsfirst.fmt.lyricskipfac||1.1/*VENDOR PATCH lyricskipfac: was the literal 1.1 below*/
 var lff=tsfirst.fmt.lyricfirstskipfac||1.1/*VENDOR PATCH lyricfirstskipfac: the staff to first line advance*/
-if(incr>0){if(y>-tsfirst.fmt.vocalspace)
-y=-tsfirst.fmt.vocalspace;y*=sc
-for(j=0;j<nly;j++){y-=a_h[j]*(j?lsf:lff)/*VENDOR PATCH lyricfirstskipfac*/;draw_lyric_line(p_voice,j,y+a_h[j]*.22)}
+if(incr>0){if(std){/*VENDOR PATCH lyricfirstskipfac: another voice's lyrics already hang there, so stack under them*/
+y*=sc;y-=a_h[0]*lff}else{asc=lyric_ascent(gene.curfont,a_h[0])
+yg=y*sc-asc*.35;yl=-tsfirst.fmt.vocalspace*sc-asc*lff
+y=(yl<yg?yl:yg)-a_h[0]*.22}
+for(j=0;j<nly;j++){if(j)
+y-=a_h[j]*lsf;draw_lyric_line(p_voice,j,y+a_h[j]*.22)}
 return y/sc}
 top=staff_tb[p_voice.st].topbar+tsfirst.fmt.vocalspace
 if(y<top)
@@ -10037,8 +10055,8 @@ continue
 if(above_tb[v]){rv_tb[i++]=v
 continue}
 st=p_voice.st;set_dscale(st,true)
-if(nly_tb[v]>0)
-lyst_tb[st].bot=draw_lyrics(p_voice,nly_tb[v],h_tb[v],lyst_tb[st].bot,1)}
+if(nly_tb[v]>0){lyst_tb[st].bot=draw_lyrics(p_voice,nly_tb[v],h_tb[v],lyst_tb[st].bot,1,lyst_tb[st].lyd)/*VENDOR PATCH lyricfirstskipfac*/
+lyst_tb[st].lyd=1}}
 while(--i>=0){v=rv_tb[i];p_voice=voice_tb[v];st=p_voice.st;set_dscale(st,true);lyst_tb[st].top=draw_lyrics(p_voice,nly_tb[v],h_tb[v],lyst_tb[st].top,-1)}
 for(v=0;v<nv;v++){p_voice=voice_tb[v]
 if(!p_voice.sym)

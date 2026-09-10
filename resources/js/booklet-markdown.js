@@ -62,6 +62,8 @@ const RULE_COLOR = '#999999';
  * @param {string} options.fontFamily
  * @param {number} options.layoutWidth in px
  * @param {number} [options.headingScale] the booklet's own heading factor
+ * @param {number} [options.leadingScale] every size restated as the one the
+ *   leading is measured in; see leadingScale() in booklet-geometry.js
  * @param {(text: string, opts?: {bold?: boolean, italic?: boolean}) => number} options.measure
  * @returns {MarkdownRow[]}
  */
@@ -90,6 +92,17 @@ export function markdownRows(source, options) {
 }
 
 /**
+ * The em the vertical measures are taken in, as a multiple of the em the letters
+ * are drawn from. One where the two are the same face; see leadingScale() in
+ * booklet-geometry.js for why they are not always.
+ */
+function leadingOf(options) {
+    const scale = Number(options.leadingScale);
+
+    return scale > 0 ? scale : 1;
+}
+
+/**
  * The size one block is set at: the body size, or the heading level's share of
  * it times whatever the booklet's own heading scale says.
  */
@@ -113,15 +126,17 @@ function gapBefore(blocks, sizes, index, options) {
         return 0;
     }
 
+    const leading = leadingOf(options);
+
     if (blocks[index].type === 'heading') {
-        return sizes[index] * HEADING_GAP_ABOVE;
+        return sizes[index] * HEADING_GAP_ABOVE * leading;
     }
 
     if (blocks[index - 1].type === 'heading') {
-        return sizes[index - 1] * HEADING_GAP_BELOW;
+        return sizes[index - 1] * HEADING_GAP_BELOW * leading;
     }
 
-    return options.fontSize * BLOCK_GAP;
+    return options.fontSize * BLOCK_GAP * leading;
 }
 
 /**
@@ -199,9 +214,10 @@ export function parseBlocks(source) {
 
 function renderBlock(block, options, size) {
     const { fontSize, fontFamily, layoutWidth } = options;
+    const leading = leadingOf(options);
 
     if (block.type === 'rule') {
-        const height = fontSize * RULE_HEIGHT;
+        const height = fontSize * RULE_HEIGHT * leading;
         const y = round(height / 2);
         const body = `<line x1="0" y1="${y}" x2="${round(layoutWidth)}" y2="${y}" `
             + `stroke="${RULE_COLOR}" stroke-width="${round(Math.max(fontSize / 14, 0.5))}"/>`;
@@ -227,7 +243,7 @@ function renderBlock(block, options, size) {
 
     const words = inlineWords(block.text, style);
     const lines = wrapWords(words, Math.max(layoutWidth - indent, size), measure);
-    const lineHeight = size * LINE;
+    const lineHeight = size * LINE * leading;
 
     return lines.map((line, i) => {
         const parts = [];

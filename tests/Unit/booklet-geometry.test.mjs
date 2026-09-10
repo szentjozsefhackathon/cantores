@@ -11,6 +11,10 @@ import {
     gabcLyricSizeForPt,
     gabcStaffSizeForStaffHeight,
     mmToPx,
+    leadingScale,
+    opticalLyricSizePt,
+    opticalSizeFactor,
+    REFERENCE_TEXT_FONT,
     pageGeometry,
     ptToPx,
     pxToMm,
@@ -63,8 +67,8 @@ test('A5 portrait with a 12mm margin becomes the expected pixel box', () => {
 test('the booklet\'s text font reaches the page quoted', () => {
     assert.equal(quoteFontFamily('EB Garamond'), "'EB Garamond'");
     assert.equal(quoteFontFamily("'Lora'"), "'Lora'");
-    assert.equal(quoteFontFamily(null), "'EB Garamond'");
-    assert.equal(quoteFontFamily('  '), "'EB Garamond'");
+    assert.equal(quoteFontFamily(null), "'Alegreya'");
+    assert.equal(quoteFontFamily('  '), "'Alegreya'");
 });
 
 test('the typography a booklet chose travels with its geometry', () => {
@@ -106,7 +110,7 @@ test('a geometry that says nothing about type falls back to the default face at 
         lyricSizePt: 11, staffHeightMm: 7,
     });
 
-    assert.equal(geometry.textFont, "'EB Garamond'");
+    assert.equal(geometry.textFont, "'Alegreya'");
     assert.equal(geometry.headingScale, 1);
     assert.equal(geometry.abcStaffSep, DEFAULT_ABC_STAFF_SEP);
 });
@@ -147,4 +151,60 @@ test('the calibration lands near the values the editor defaults imply', () => {
     // as a 10.94mm staff once scaled onto A4. A booklet lays out at true size
     // with no such shrink, so the same staff needs 80 * 210/508 = 33.07.
     close(gabcStaffSizeForStaffHeight(10.94), 80 * 210 / 508, 0.05);
+});
+
+// A point measures the em square, which is not what anybody looks at. Two faces
+// set at one size read as two sizes, so a booklet quoting one lyric size for a
+// pile of scores has to restate it in whichever face the booklet is set in.
+test('a size quoted in the reference face is restated in the face it is set in', () => {
+    assert.equal(opticalSizeFactor(REFERENCE_TEXT_FONT), 1);
+    assert.equal(opticalSizeFactor("'Alegreya'"), 1);
+
+    // The pairings judged by eye against 11 pt of Alegreya.
+    close(opticalLyricSizePt(11, 'Merriweather'), 9, 0.05);
+    close(opticalLyricSizePt(11, "'EB Garamond'"), 11.5, 0.05);
+    // And Merriweather against the face it replaces: 11 pt of the one for 12 of
+    // the other.
+    close(opticalLyricSizePt(11, 'Lora') / opticalLyricSizePt(11, 'Merriweather'), 12 / 11, 0.02);
+});
+
+// A fallback stack, or a face nobody has measured, is likelier to be deliberate
+// than a mistake, and guessing at a factor for it would be the wrong kind of
+// helpful.
+test('an unmeasured face is left at the size it was asked for', () => {
+    assert.equal(opticalSizeFactor('Comic Sans MS, cursive'), 1);
+    assert.equal(opticalLyricSizePt(11, undefined), 11);
+});
+
+test('the booklet hands its renderers the compensated size, and remembers the one it was given', () => {
+    const geometry = (textFont) => pageGeometry({
+        pageWidthMm: 148, pageHeightMm: 210, marginMm: 12,
+        contentWidthMm: 124, contentHeightMm: 186,
+        lyricSizePt: 11, staffHeightMm: 6, textFont,
+    });
+
+    close(geometry('Alegreya').lyricSizePt, 11);
+    close(geometry('Merriweather').lyricSizePt, 9, 0.05);
+    assert.equal(geometry('Merriweather').nominalLyricSizePt, 11);
+    close(geometry('Merriweather').lyricSizePx, ptToPx(geometry('Merriweather').lyricSizePt));
+});
+
+// Holding the x-height constant hands each face a different em, and leading
+// measured in that em follows the face instead of the eye: Alegreya's lines
+// would stand a fifth further apart than Merriweather's for letters of the same
+// apparent height. So the leading is measured in the nominal size, and a face
+// set small gets the space a face set large would have taken.
+test('the leading is measured in the size the booklet quoted, not the size it is set at', () => {
+    assert.equal(leadingScale(REFERENCE_TEXT_FONT), 1);
+    assert.equal(leadingScale('Comic Sans MS, cursive'), 1);
+
+    const geometry = (textFont) => pageGeometry({
+        pageWidthMm: 148, pageHeightMm: 210, marginMm: 12,
+        contentWidthMm: 124, contentHeightMm: 186,
+        lyricSizePt: 11, staffHeightMm: 6, textFont,
+    });
+
+    ['Alegreya', 'Merriweather', 'EB Garamond', 'Lora', 'Inter', 'Barlow Condensed'].forEach((font) => {
+        close(geometry(font).lyricSizePx * geometry(font).leadingScale, ptToPx(11), 1e-9);
+    });
 });

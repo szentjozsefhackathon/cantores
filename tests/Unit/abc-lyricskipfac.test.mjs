@@ -11,9 +11,9 @@ const abc2svgSource = readFileSync(
     'utf8',
 );
 
-test("the factory default is abc2svg's own advance, spelled out", () => {
-    assert.equal(abcMixin().abcLyricSkip, 1.1);
-    assert.match(buildAbcPreamble(abcMixin(), 1700), /%%lyricskipfac 1\.1\n/);
+test('the factory default sets the stanzas one line height apart', () => {
+    assert.equal(abcMixin().abcLyricSkip, 1);
+    assert.match(buildAbcPreamble(abcMixin(), 1700), /%%lyricskipfac 1\n/);
 });
 
 test('abcLyricSkip is a persisted per-score field', () => {
@@ -24,7 +24,7 @@ test('a positive abcLyricSkip becomes a %%lyricskipfac directive', () => {
     const preamble = buildAbcPreamble({ ...abcMixin(), abcLyricSkip: 1.4 }, 1700);
 
     assert.match(preamble, /%%lyricskipfac 1\.4\n/);
-    assert.match(preamble, /%%lyricfirstskipfac 1\.1\n%%lyricskipfac 1\.4\n/);
+    assert.match(preamble, /%%lyricfirstskipfac 1\n%%lyricskipfac 1\.4\n/);
 });
 
 test('a below-floor, blank or junk abcLyricSkip emits nothing', () => {
@@ -55,11 +55,11 @@ test('the abc2svg vendor patch for lyricskipfac is in place', () => {
     );
     assert.doesNotMatch(drawLyrics, /a_h\[j\]\*1\.1/, 'the hardcoded 1.1 advance should be gone');
 
-    // Once in the above-staff loop; the below-staff one advances by
-    // `(j?lsf:lff)` so that the first line answers to lyricfirstskipfac
+    // Once in each loop, and in the below-staff one only from the second line
+    // on: there the first line is placed against the staff by lyricfirstskipfac
     // instead — see tests/Unit/abc-lyricfirstskipfac.test.mjs.
-    assert.equal((drawLyrics.match(/a_h\[j\]\*lsf/g) ?? []).length, 1);
-    assert.match(drawLyrics, /a_h\[j\]\*\(j\?lsf:lff\)/);
+    assert.equal((drawLyrics.match(/a_h\[j\]\*lsf/g) ?? []).length, 2);
+    assert.match(drawLyrics, /for\(j=0;j<nly;j\+\+\)\{if\(j\)\ny-=a_h\[j\]\*lsf/);
 });
 
 /**

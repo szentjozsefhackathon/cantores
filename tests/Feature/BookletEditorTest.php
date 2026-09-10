@@ -824,7 +824,9 @@ it('starts a booklet at the numbers a printed A5 booklet wanted', function () {
         'lyricSizePt' => 10.5,
         'staffHeightMm' => 5.0,
         'headingScale' => 0.9,
-        'textFont' => 'EB Garamond',
+        // The face every size in the application is quoted in; see
+        // OPTICAL_X_HEIGHT in resources/js/booklet-geometry.js.
+        'textFont' => 'Alegreya',
         'abcStaffSep' => 25.0,
     ]);
 });
@@ -841,7 +843,7 @@ it('refuses a text font the exporter cannot embed', function () {
         ->set('textFont', 'Comic Sans MS')
         ->assertHasErrors('textFont');
 
-    expect($booklet->fresh()->text_font)->toBe('EB Garamond');
+    expect($booklet->fresh()->text_font)->toBe('Alegreya');
 });
 
 // The whole point of holding overrides on the pivot: a booklet adjusts how a

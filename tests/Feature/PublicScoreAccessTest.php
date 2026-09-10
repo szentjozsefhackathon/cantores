@@ -324,5 +324,5 @@ it('keeps the display controls collapsed so the score leads the page', function 
     expect($html)->toContain('x-data="{ showSettings: false }"')
         ->and($html)->toContain(__('Display settings'))
         // The toolbars sit inside the disclosure, above every preview.
-        ->and(strpos($html, 'x-model="abcLyricSize"'))->toBeLessThan(strpos($html, 'x-ref="abcPreview"'));
+        ->and(strpos($html, 'x-model="abcLyricSizePt"'))->toBeLessThan(strpos($html, 'x-ref="abcPreview"'));
 });

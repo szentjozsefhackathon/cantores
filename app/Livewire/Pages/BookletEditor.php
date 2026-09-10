@@ -68,7 +68,7 @@ class BookletEditor extends Component
     /**
      * The face everything the booklet writes rather than engraves is set in.
      */
-    public string $textFont = 'EB Garamond';
+    public string $textFont = 'Alegreya';
 
     /**
      * How big a heading is beside the lyrics it stands over.

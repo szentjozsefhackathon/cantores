@@ -234,3 +234,22 @@ test('markup characters reach the page escaped', () => {
 
     assert.match(row.svg, /a &lt; b &amp; c/);
 });
+
+// A rubric set in a face with a large x-height is set at a smaller em, and every
+// vertical measure taken in that em would pull the rubric up with it. The
+// leading is taken in the nominal em instead, so a paragraph occupies the same
+// depth of page whichever face the booklet is set in.
+test('the leading follows the size the booklet quoted, not the em it is set at', () => {
+    const source = '# Rubrika\n\nÁlljunk fel.\n\n---\n\nÜljünk le.';
+
+    const depth = (rows) => rows.reduce((total, row) => total + row.height + (row.spaceBefore ?? 0), 0);
+
+    const reference = markdownRows(source, options);
+    // A face set at four fifths of the em, given back the leading of the whole.
+    const compensated = markdownRows(source, { ...options, fontSize: 8, leadingScale: 10 / 8 });
+
+    assert.ok(depth(reference) > 0);
+    assert.ok(Math.abs(depth(compensated) - depth(reference)) < 1e-9, 'the rubric changed depth with the face');
+    // Only the leading was restated: the letters are still set at the em asked for.
+    assert.match(compensated[0].svg, /font-size="9.6"/);
+});

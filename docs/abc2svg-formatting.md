@@ -53,19 +53,24 @@ These are set in the ABC preamble as `%%paramname value`.
 **Default:** `1.1`
 **Source:** `draw_lyrics()` — **local vendor patch**, see `docs/vendor-patches.md`
 
-The advance from the music down to the first `w:` line, as a multiple of that
-line's own measured height, counted from the lowest ink of the staff (the
-stems, not the bottom staff line). Under `1` the lyrics come up into the music,
-which is the only way to get them really tight.
+Where the first `w:` line's baseline sits under the **bottom staff line**, as a
+multiple of the lyric face's own ascent — measured from the face in a browser,
+approximated as `.78` of the line height elsewhere. At `1` the ascender line
+lands on the staff line; under `1` the lyrics come up into the staff, which is
+the only way to get them really tight.
+
+Anchoring on the staff line rather than on the music means one setting reads the
+same on every system of a piece and in every face. The music is still a floor
+under it: when the ink hangs low enough that the lyrics would be written over,
+the baseline is pushed down to clear the lowest ink by `.35` of an ascent.
 
 ```
 %%lyricfirstskipfac 0.8
 ```
 
-In the app this is the `abcLyricFirstSkip` setting: it defaults to `1.1` — the
-advance abc2svg used before the patch, so the default changes nothing — and
-stops at `0.5` (`ABC_LYRIC_FIRST_SKIP_MIN`), below which anything is treated as
-unset and the engine keeps its own `1.1`. Emitted by `buildAbcPreamble`
+In the app this is the `abcLyricFirstSkip` setting: it defaults to `1` and stops
+at `0.5` (`ABC_LYRIC_FIRST_SKIP_MIN`), below which anything is treated as unset
+and the engine keeps its own `1.1`. Emitted by `buildAbcPreamble`
 (`resources/js/score-editor-abc.js`) and the booklet's `abcBlocks`
 (`resources/js/booklet-render.js`).
 

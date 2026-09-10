@@ -1,15 +1,24 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { abcMixin, abcStrokeWidths, buildAbcPreamble, hungarianChordsToAbc, normalizeAbcPageWidth } from '../../resources/js/score-editor-abc.js';
+import { ABC_PAGE_WIDTH_DEFAULT, abcMixin, abcStrokeWidths, buildAbcPreamble, hungarianChordsToAbc, normalizeAbcPageWidth } from '../../resources/js/score-editor-abc.js';
+import { DEFAULT_PAGE_WIDTH_MM, mmToPx, pxToMm, staffHeightMmForAbcPageScale } from '../../resources/js/booklet-geometry.js';
 
 test('normalizes ABC page width to the renderer-safe range', () => {
-    assert.equal(normalizeAbcPageWidth(130), 400);
-    assert.equal(normalizeAbcPageWidth('130'), 400);
+    assert.equal(normalizeAbcPageWidth(30), 100);
+    assert.equal(normalizeAbcPageWidth('30'), 100);
     assert.equal(normalizeAbcPageWidth(1800), 1800);
-    assert.equal(normalizeAbcPageWidth(5000), 4000);
-    assert.equal(normalizeAbcPageWidth(''), 1700);
-    assert.equal(normalizeAbcPageWidth('not-a-number'), 1700);
+    assert.equal(normalizeAbcPageWidth(5000), 3000);
+    assert.equal(normalizeAbcPageWidth(''), ABC_PAGE_WIDTH_DEFAULT);
+    assert.equal(normalizeAbcPageWidth('not-a-number'), ABC_PAGE_WIDTH_DEFAULT);
+});
+
+test('the ABC page is the same sheet of paper the Aretino editor engraves on', () => {
+    assert.equal(ABC_PAGE_WIDTH_DEFAULT, 642.52);
+    // Exactly the page it says it is: the toolbar states this width in
+    // millimetres, and a whole 170 has to come back out of it as a whole 170.
+    assert.equal(Math.round(pxToMm(ABC_PAGE_WIDTH_DEFAULT) * 100) / 100, DEFAULT_PAGE_WIDTH_MM);
+    assert.equal(normalizeAbcPageWidth(mmToPx(DEFAULT_PAGE_WIDTH_MM)), ABC_PAGE_WIDTH_DEFAULT);
 });
 
 test('turns a settings bucket into abc2svg directives', () => {
@@ -33,19 +42,26 @@ test('turns a settings bucket into abc2svg directives', () => {
 test('falls back to a safe font and scale for unusable settings', () => {
     const preamble = buildAbcPreamble({ abcLyricFont: 'Comic Sans; }', abcLyricSize: 0, abcPageScale: 0 }, 1700);
 
-    assert.match(preamble, /%%vocalfont "EB Garamond" 36\n/);
+    assert.match(preamble, /%%vocalfont Alegreya 36\n/);
     assert.match(preamble, /%%pagescale 1\n/);
     assert.doesNotMatch(preamble, /%%transpose/);
 });
 
 test('the factory defaults describe an untransposed paper page', () => {
-    const preamble = buildAbcPreamble(abcMixin(), normalizeAbcPageWidth(abcMixin().abcPageWidth));
+    const defaults = abcMixin();
+    const preamble = buildAbcPreamble(defaults, normalizeAbcPageWidth(defaults.abcPageWidth));
 
-    assert.match(preamble, /%%pagewidth 1700px\n/);
-    assert.match(preamble, /%%pagescale 2\.3\n/);
-    assert.match(preamble, /%%vocalfont "EB Garamond" 15\.652\n/);
+    assert.match(preamble, /%%pagewidth 642\.52px\n/);
+    assert.match(preamble, /%%pagescale 0\.9449\n/);
+    // The rendered lyric size is the directive times the page scale, which comes
+    // to 11 pt whatever the scale; see abcLyricSizeForPt.
+    assert.match(preamble, /%%vocalfont Alegreya 15\.522\n/);
     assert.match(preamble, /%%staffsep 36\n/);
     assert.doesNotMatch(preamble, /%%transpose/);
+});
+
+test('the factory staff is six millimetres tall', () => {
+    assert.ok(Math.abs(staffHeightMmForAbcPageScale(abcMixin().abcPageScale) - 6) < 0.005);
 });
 
 test('rewrites Hungarian chord roots to the English spelling abc2svg parses', () => {

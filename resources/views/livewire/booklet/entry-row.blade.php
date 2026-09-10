@@ -293,7 +293,7 @@
                                     x-bind:value="settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
                                     x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', $event.target.value)"
                                 >
-                                    @foreach(BookletSettingFields::fontOptions() as $font)
+                                    @foreach(BookletSettingFields::selectableFonts() as $font)
                                         <flux:select.option value="'{{ $font }}'">{{ $font }}</flux:select.option>
                                     @endforeach
                                 </flux:select>

@@ -113,22 +113,42 @@ Covered by `tests/Unit/abc-lyricskipfac.test.mjs`.
 
 ### Patch: `lyricfirstskipfac` — configurable staff → first-lyric distance
 
-**What:** Adds a `%%lyricfirstskipfac <factor>` format parameter for the advance
-from the music down to the *first* `w:` line, as a multiple of that line's own
-height. It splits the below-staff loop of `draw_lyrics()` in two: the first line
-answers to this factor, every line after it to `%%lyricskipfac`.
+**What:** Adds a `%%lyricfirstskipfac <factor>` format parameter that says where
+the *first* `w:` line's baseline sits below the **bottom staff line**, counted
+in the lyric face's own ascent. Every line after it still answers to
+`%%lyricskipfac`. The music is kept as a floor under the anchor: ink that hangs
+lower than the lyrics would allow pushes the baseline down to clear it by `.35`
+of an ascent.
 
-Four edit sites, each tagged `/*VENDOR PATCH lyricfirstskipfac*/`:
+Six edit sites, each tagged `/*VENDOR PATCH lyricfirstskipfac*/`:
 
 1. **`cfmt` defaults object** (search `lyricskipfac:1.1,`) — added
    `lyricfirstskipfac:1.1,` in front of it, so an unset factor is the same
    `1.1` upstream used for every lyric line.
 2. **`Abc.prototype.set_format`**, numeric-parameter `switch` — added
    `case"lyricfirstskipfac":` beside `case"lyricskipfac":`.
-3. **`draw_lyrics()`** — hoisted `var lff=tsfirst.fmt.lyricfirstskipfac||1.1`
+3. **`lyric_ascent()`** — a new function in front of `draw_lyrics()`, with its
+   `lyric_asc_tb` cache. It measures the baseline-to-ascender height of a font
+   with a canvas `measureText("Áy")` — `fontBoundingBoxAscent`, falling back to
+   `actualBoundingBoxAscent` — and outside a browser, or when the measurement
+   throws, returns `.78` of the line height, which is the ascent abc2svg itself
+   assumes in its `a_h * .22` baseline offset. A measurement is only cached once
+   `document.fonts.check()` says the face is really loaded, so a render made
+   while a webfont is still in flight cannot pin the fallback metrics.
+4. **`draw_lyrics()`** — hoisted `var lff=tsfirst.fmt.lyricfirstskipfac||1.1`
    next to `lsf`.
-4. **`draw_lyrics()`, below-staff loop** — `a_h[j]*lsf` became
-   `a_h[j]*(j?lsf:lff)`.
+5. **`draw_lyrics()`, below-staff branch** — the head of the branch was
+   rewritten. Upstream clamps the incoming lowest-ink `y` at `-vocalspace` and
+   advances from there; it now computes both candidates and takes the lower:
+   `yl = -vocalspace*sc - asc*lff` (the anchor) against
+   `yg = y*sc - asc*.35` (the ink floor), then backs off `a_h[0]*.22` so `y`
+   goes on meaning the line box bottom for the loop that follows. The loop lost
+   its `j ? lsf : lff` and simply skips the advance for `j == 0`.
+6. **`draw_all_lyrics()`** — passes a sixth argument, `lyst_tb[st].lyd`, and
+   sets that flag afterwards. It marks a staff that already carries a lyric
+   voice, and makes `draw_lyrics()` take the upstream path for the next one:
+   there the incoming `y` is the previous voice's lyrics, not the music, and
+   those must be stacked under with a full advance rather than anchored.
 
 The above-staff loop is untouched: there the line nearest the staff is drawn
 first, at `topbar + vocalspace`, with no advance in front of it, so nothing
@@ -139,15 +159,26 @@ away from the staff as well as the stanzas apart, and the parameter that is
 supposed to own the staff gap, `%%vocalspace`, is only a floor
 (`if (y > -vocalspace) y = -vocalspace`) — it can push the lyrics further down
 but never pull them closer than the lowest stem hangs, which in practice made
-anything under ~15pt do nothing at all. This factor counts from that lowest ink
-instead, so a value under `1` is how you get the lyrics in tight.
+anything under ~15pt do nothing at all.
 
-**Re-apply:** repeat the four edits above; site 4 is the one that carries the
-behaviour. If upstream has since split the first line off itself, drop this
-patch and switch the preambles to the upstream name.
+The patch first counted from that lowest ink, which inherited abc2svg's own
+rule. That rule is a collision rule, not a placement rule, and it showed: one
+setting drew the lyrics 32.1, 36.1 and 39.1 units below the staff on the three
+systems of a single hymn, purely because a low note here and a hanging stem
+there moved the ink. Measuring in the line *box* added a second drift, since a
+box is between 1.26 em (Merriweather) and 1.36 em (Alegreya) tall for the same
+nominal size. Anchoring the baseline on the staff line and counting in the
+ascent takes both out: a system now reads the same as its neighbour, and a face
+the same as the next face. Under `1` the lyrics reach up into the staff, which
+is how you get them really tight.
+
+**Re-apply:** repeat the six edits above; sites 3, 5 and 6 carry the behaviour.
+If upstream has since split the first line off itself, keep sites 3, 5 and 6
+over it — the upstream parameter, whatever it is called, will still be an
+advance from the ink.
 
 **Consumers:** `%%lyricfirstskipfac` is emitted in the ABC preambles built by
 `resources/js/score-editor-abc.js` and `resources/js/booklet-render.js`, from
-the `abcLyricFirstSkip` setting (default `1.1`, floor `0.5`), which replaced the
+the `abcLyricFirstSkip` setting (default `1`, floor `0.5`), which replaced the
 `abcVocalSpace` knob — the preambles now pin `%%vocalspace 0` and leave the
 staff gap to this one. Covered by `tests/Unit/abc-lyricfirstskipfac.test.mjs`.

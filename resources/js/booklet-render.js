@@ -317,6 +317,7 @@ function headingBlocks(entry, geometry) {
             bold: !!line.bold,
             italic: !!line.italic,
             fill: line.fill ?? '#000000',
+            leadingScale: geometry.leadingScale ?? 1,
             suffix: line.suffix ?? null,
             suffixSize: referenceSize,
         });
@@ -368,6 +369,7 @@ export function buildTextBlocks(entry, geometry, measure = null) {
         fontSize,
         fontFamily: geometry.textFont,
         headingScale: geometry.headingScale,
+        leadingScale: geometry.leadingScale ?? 1,
         layoutWidth: geometry.contentWidthPx,
         measure: measure ?? canvasMeasurer(geometry.textFont, fontSize),
     });
@@ -956,6 +958,7 @@ function composePage(page, geometry, pageNumber, pageCount) {
             fontFamily: geometry.textFont,
             width: geometry.contentWidthPx,
             fill: '#666666',
+            leadingScale: geometry.leadingScale ?? 1,
         });
 
         fragments.push(parseSvg(number.svg));

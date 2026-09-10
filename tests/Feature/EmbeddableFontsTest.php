@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\BookletSettingFields;
+use Illuminate\Support\Facades\Blade;
 
 /**
  * A selectable face lives in four places at once — the stylesheet the browser
@@ -47,13 +48,27 @@ it('offers the two serif faces added for booklets', function () {
 });
 
 /**
- * The score editor's toolbars spell their font lists out by hand, once per
- * format and once per view, so the only thing keeping them level with the
- * booklet's own list is a test. Lora is the yardstick: it appears in the
- * web-font selects and nowhere else, unlike Garamond, which the ChordPro
- * toolbar also names as a system face.
+ * A face that has been taken out of the picker is still set on the scores and
+ * booklets that chose it while it was there. Dropping it from the validator as
+ * well would cost those their font on the next save, so the two lists are
+ * deliberately different lengths.
  */
-it('offers the same faces in every score toolbar', function () {
+it('still accepts a retired face, and offers the current ones in order', function () {
+    expect(BookletSettingFields::selectableFonts())
+        ->toBe(['Alegreya', 'Merriweather', 'EB Garamond', 'Inter', 'Barlow Condensed'])
+        ->and(BookletSettingFields::fontOptions())
+        ->toContain('Lora')
+        ->and(BookletSettingFields::sanitize('chordpro', ['chordproFontFamily' => 'Lora']))
+        ->toBe(['chordproFontFamily' => "'Lora'"]);
+});
+
+/**
+ * The toolbars used to spell their font lists out by hand, once per format and
+ * once per view — twelve copies of one list, kept level only by a test. They now
+ * share a component, so what is worth checking is that none of them has grown a
+ * hand-written list again.
+ */
+it('picks every score toolbar font from the one shared list', function () {
     $views = [
         'livewire/pages/score-editor.blade.php',
         'livewire/pages/score-view.blade.php',
@@ -62,13 +77,37 @@ it('offers the same faces in every score toolbar', function () {
 
     foreach ($views as $view) {
         $markup = file_get_contents(resource_path('views/'.$view));
-        $selects = substr_count($markup, '>Lora</flux:select.option>');
 
-        expect($selects)->toBeGreaterThan(0);
+        expect(substr_count($markup, '<x-lyric-font-select'))
+            ->toBe(4, "{$view} should choose a face for each of the four formats");
 
         foreach (BookletSettingFields::fontOptions() as $family) {
-            expect(substr_count($markup, '>'.$family.'</flux:select.option>'))
-                ->toBe($selects, "{$family} is missing from a font select in {$view}");
+            expect($markup)->not->toContain('>'.$family.'</flux:select.option>');
         }
     }
+});
+
+it('renders the shared select with the current faces, in order', function () {
+    $markup = html_entity_decode(Blade::render('<x-lyric-font-select model="lyricFont" />'));
+
+    expect($markup)->toContain("value=\"'Alegreya'\"")
+        ->and($markup)->not->toContain('>Lora</option>');
+
+    $positions = array_map(function (string $family) use ($markup): int {
+        $at = strpos($markup, '>'.$family.'</option>');
+
+        expect($at)->not->toBeFalse("{$family} is missing from the select");
+
+        return (int) $at;
+    }, BookletSettingFields::selectableFonts());
+
+    $sorted = $positions;
+    sort($sorted);
+
+    expect($positions)->toBe($sorted);
+});
+
+it('writes the ABC face unquoted, because abc2svg quotes it itself', function () {
+    expect(html_entity_decode(Blade::render('<x-lyric-font-select model="abcLyricFont" :quoted="false" />')))
+        ->toContain('value="Alegreya"');
 });

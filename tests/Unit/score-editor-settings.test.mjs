@@ -2,16 +2,25 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { abcMixin } from '../../resources/js/score-editor-abc.js';
+import {
+    DEFAULT_LYRIC_SIZE_PT,
+    DEFAULT_STAFF_HEIGHT_MM,
+    abcLyricSizeForPt,
+    gabcStaffSizeForStaffHeight,
+} from '../../resources/js/booklet-geometry.js';
 import { gabcMixin } from '../../resources/js/score-editor-gabc.js';
 import { formatDefaults, incipitSettings } from '../../resources/js/score-editor-settings.js';
 
 test('reports the fields and factory defaults of every format', () => {
-    assert.equal(formatDefaults('gabc').defaults.staffSize, 80);
+    assert.equal(
+        formatDefaults('gabc').defaults.staffSize,
+        Number(gabcStaffSizeForStaffHeight(DEFAULT_STAFF_HEIGHT_MM).toFixed(4)),
+    );
     assert.ok(formatDefaults('gabc').fields.includes('lyricSize'));
-    assert.equal(formatDefaults('abc').defaults.abcPageWidth, 1700);
+    assert.equal(formatDefaults('abc').defaults.abcPageWidth, 642.52);
     assert.ok(formatDefaults('abc').fields.includes('abcLyricSize'));
     assert.equal(formatDefaults('chordpro').defaults.chordproColumns, 1);
-    assert.equal(formatDefaults('aretino').defaults.aretinoStaffSize, 7);
+    assert.equal(formatDefaults('aretino').defaults.aretinoStaffSize, DEFAULT_STAFF_HEIGHT_MM);
     assert.deepEqual(formatDefaults('links-only'), { fields: [], defaults: {} });
 });
 
@@ -22,7 +31,7 @@ test('renders an incipit at the factory defaults, whatever the score is set to',
     abcMixin().abcFields.forEach(field => {
         assert.equal(abc[field], abcMixin()[field], `abc.${field} is not the factory default`);
     });
-    assert.equal(abc.abcLyricSize, 12);
+    assert.equal(abc.abcLyricSize, Number(abcLyricSizeForPt(DEFAULT_LYRIC_SIZE_PT).toFixed(4)));
     assert.equal(abc.abcNoClef, false);
     assert.equal(abc.abcTranspose, 0);
     assert.equal(abc.abcPageRatio, 'paper');
@@ -35,8 +44,9 @@ test('renders an incipit at the factory defaults, whatever the score is set to',
 });
 
 test('hands out a fresh settings object each time', () => {
+    const untouched = incipitSettings('gabc').lyricSize;
     const first = incipitSettings('gabc');
     first.lyricSize = 40;
 
-    assert.equal(incipitSettings('gabc').lyricSize, 12);
+    assert.equal(incipitSettings('gabc').lyricSize, untouched);
 });

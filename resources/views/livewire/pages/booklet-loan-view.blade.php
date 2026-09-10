@@ -82,7 +82,7 @@
                     x-bind:value="textFont ?? booklet.textFont"
                     x-on:change="setFont($event.target.value)"
                 >
-                    @foreach(BookletSettingFields::fontOptions() as $font)
+                    @foreach(BookletSettingFields::selectableFonts() as $font)
                         <flux:select.option value="{{ $font }}">{{ $font }}</flux:select.option>
                     @endforeach
                 </flux:select>

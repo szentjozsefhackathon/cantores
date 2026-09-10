@@ -1,4 +1,5 @@
 import { hungarianChordsToAbc } from './score-editor-abc.js';
+import { DEFAULT_TEXT_FONT } from './booklet-geometry.js';
 
 const ABC2SVG_SRC = '/js/abc2svg-1.js';
 const DEFAULT_PAGE_WIDTH = 760;
@@ -33,7 +34,7 @@ export function prepareAbcGuideSource(content, pageWidth = DEFAULT_PAGE_WIDTH) {
         '%%musicspace 4',
         '%%staffsep 42',
         '%%vocalspace 8',
-        '%%vocalfont "EB Garamond" 15',
+        `%%vocalfont ${DEFAULT_TEXT_FONT} 15`,
         source,
     ].join('\n');
 }

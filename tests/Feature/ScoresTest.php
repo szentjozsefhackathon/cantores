@@ -303,7 +303,7 @@ it('uses important width utilities for score editor numeric toolbar inputs', fun
     expect($importantWidthInputs[0])->not->toBeEmpty();
     expect($plainWidthInputs[0])->toBeEmpty();
     expect($source)
-        ->toContain('x-model="lyricSize" min="8" max="60" step="1" class="w-16!"')
+        ->toContain('x-model="lyricSizePt" min="4" max="40" step="0.5" class="w-16!"')
         ->toContain('x-model="abcStemWidth" min="0.1" max="3" step="0.1" class="w-16!"')
         ->toContain('x-model="aretinoZoom" min="50" max="300" step="5" class="w-16!"');
 });

@@ -139,21 +139,14 @@
                                 <flux:tooltip :content="__('Lyric size (pt)')">
                                     <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="lyricSize" min="8" max="60" step="1" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="lyricSizePt" min="4" max="40" step="0.5" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1">
                                 <flux:tooltip :content="__('Font')">
                                     <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:select size="sm" x-model="lyricFont" class="w-40 text-xs">
-                                    <flux:select.option value="'EB Garamond'">EB Garamond</flux:select.option>
-                                    <flux:select.option value="'Lora'">Lora</flux:select.option>
-                                    <flux:select.option value="'Alegreya'">Alegreya</flux:select.option>
-                                    <flux:select.option value="'Merriweather'">Merriweather</flux:select.option>
-                                    <flux:select.option value="'Inter'">Inter</flux:select.option>
-                                    <flux:select.option value="'Barlow Condensed'">Barlow Condensed</flux:select.option>
-                                </flux:select>
+                                <x-lyric-font-select model="lyricFont" />
                             </div>
 
                             <div class="flex items-center gap-1">
@@ -164,10 +157,10 @@
                             </div>
 
                             <div class="flex items-center gap-1">
-                                <flux:tooltip :content="__('Staff size (mm)')">
+                                <flux:tooltip :content="__('Staff height (mm)')">
                                     <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="staffSize" min="30" max="300" step="5" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="staffSizeMm" min="1" max="40" step="0.5" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1">
@@ -182,6 +175,16 @@
                                     <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
                                 <flux:input size="sm" type="number" x-model="minSpaceBelowStaff" min="-2" max="2" step="0.1" class="w-16" />
+                            </div>
+
+                            <div class="flex items-center gap-1" x-show="pageRatio === 'paper'">
+                                <flux:tooltip :content="__('Page width (mm)')">
+                                    <flux:icon name="ruler" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                </flux:tooltip>
+                                {{-- The width the chant's lines are broken at, stated on the
+                                     same sheet of paper the other editors use; see
+                                     gabcLayoutWidthMm. --}}
+                                <flux:input size="sm" type="number" x-model="gabcLayoutWidthMm" min="30" max="800" step="1" class="w-20" />
                             </div>
 
                             <div class="flex items-center gap-1" x-show="!['16/9', '4/3', '1/1'].includes(pageRatio)">
@@ -227,12 +230,7 @@
                             <flux:tooltip :content="__('Font')">
                                 <div class="flex items-center gap-1">
                                     <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                                    <flux:select size="sm" x-model="chordproFontFamily" class="w-32 text-xs">
-                                        <flux:select.option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</flux:select.option>
-                                        <flux:select.option value="Garamond, 'EB Garamond', serif">Garamond</flux:select.option>
-                                        <flux:select.option value="'Times New Roman', Times, serif">Times New Roman</flux:select.option>
-                                        <flux:select.option value="Arial, Helvetica, sans-serif">Arial</flux:select.option>
-                                    </flux:select>
+                                    <x-lyric-font-select model="chordproFontFamily" width="w-32" />
                                 </div>
                             </flux:tooltip>
 
@@ -283,21 +281,14 @@
                                 <flux:tooltip :content="__('Lyric size (pt)')">
                                     <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="abcLyricSize" min="8" max="60" step="1" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="abcLyricSizePt" min="4" max="40" step="0.5" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1">
                                 <flux:tooltip :content="__('Font')">
                                     <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:select size="sm" x-model="abcLyricFont" class="w-40 text-xs">
-                                    <flux:select.option value="EB Garamond">EB Garamond</flux:select.option>
-                                    <flux:select.option value="Lora">Lora</flux:select.option>
-                                    <flux:select.option value="Alegreya">Alegreya</flux:select.option>
-                                    <flux:select.option value="Merriweather">Merriweather</flux:select.option>
-                                    <flux:select.option value="Inter">Inter</flux:select.option>
-                                    <flux:select.option value="Barlow Condensed">Barlow Condensed</flux:select.option>
-                                </flux:select>
+                                <x-lyric-font-select model="abcLyricFont" :quoted="false" />
                             </div>
 
                             <div class="flex items-center gap-1">
@@ -336,17 +327,17 @@
                             </div>
 
                             <div class="flex items-center gap-1">
-                                <flux:tooltip :content="__('Staff size')">
+                                <flux:tooltip :content="__('Staff height (mm)')">
                                     <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="abcPageScale" min="1" max="5" step="0.1" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="abcStaffHeightMm" min="1" max="40" step="0.5" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1" x-show="abcPageRatio === 'paper'">
-                                <flux:tooltip :content="__('Page width (px)')">
+                                <flux:tooltip :content="__('Page width (mm)')">
                                     <flux:icon name="ruler" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="abcPageWidth" x-on:change="abcPageWidth = normalizeAbcPageWidth(abcPageWidth)" min="400" max="4000" step="10" class="w-20" />
+                                <flux:input size="sm" type="number" x-model="abcPageWidthMm" min="30" max="800" step="1" class="w-20" />
                             </div>
 
                             <div class="flex items-center gap-1" x-show="!['16/9', '4/3', '1/1'].includes(abcPageRatio)">
@@ -406,28 +397,21 @@
                                 <flux:tooltip :content="__('Lyric size (pt)')">
                                     <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="aretinoLyricSize" min="6" max="40" step="1" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="aretinoLyricSize" min="4" max="40" step="0.5" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1">
                                 <flux:tooltip :content="__('Font')">
                                     <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:select size="sm" x-model="aretinoTextFont" class="w-40 text-xs">
-                                    <flux:select.option value="'EB Garamond'">EB Garamond</flux:select.option>
-                                    <flux:select.option value="'Lora'">Lora</flux:select.option>
-                                    <flux:select.option value="'Alegreya'">Alegreya</flux:select.option>
-                                    <flux:select.option value="'Merriweather'">Merriweather</flux:select.option>
-                                    <flux:select.option value="'Inter'">Inter</flux:select.option>
-                                    <flux:select.option value="'Barlow Condensed'">Barlow Condensed</flux:select.option>
-                                </flux:select>
+                                <x-lyric-font-select model="aretinoTextFont" />
                             </div>
 
                             <div class="flex items-center gap-1">
-                                <flux:tooltip :content="__('Staff size (mm)')">
+                                <flux:tooltip :content="__('Staff height (mm)')">
                                     <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="aretinoStaffSize" min="4" max="14" step="0.1" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="aretinoStaffSize" min="1" max="40" step="0.5" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1">
