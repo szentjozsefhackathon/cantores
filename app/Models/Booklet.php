@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\HasLoans;
 use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
+use App\Support\BookletStyles;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +35,8 @@ use Illuminate\Support\Facades\Auth;
  * @property string $text_font
  * @property float $heading_scale
  * @property float $abc_staff_sep
+ * @property float $abc_lyric_first_skip
+ * @property float $abc_lyric_skip
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\User $user
@@ -73,6 +76,8 @@ class Booklet extends Model
         'text_font',
         'heading_scale',
         'abc_staff_sep',
+        'abc_lyric_first_skip',
+        'abc_lyric_skip',
     ];
 
     /**
@@ -88,6 +93,8 @@ class Booklet extends Model
             'staff_height_mm' => 'float',
             'heading_scale' => 'float',
             'abc_staff_sep' => 'float',
+            'abc_lyric_first_skip' => 'float',
+            'abc_lyric_skip' => 'float',
         ];
     }
 
@@ -166,7 +173,22 @@ class Booklet extends Model
             'textFont' => $this->text_font,
             'headingScale' => $this->heading_scale,
             'abcStaffSep' => $this->abc_staff_sep,
+            'abcLyricFirstSkip' => $this->abc_lyric_first_skip,
+            'abcLyricSkip' => $this->abc_lyric_skip,
+            ...BookletStyles::engineSpacing($this->style()),
         ];
+    }
+
+    /**
+     * Which of the three typographies this booklet is set in.
+     *
+     * Read back off the face rather than stored: each style names a face of its
+     * own, so the face is the style, and there is no column to go stale against
+     * it. See App\Support\BookletStyles.
+     */
+    public function style(): string
+    {
+        return BookletStyles::forFont($this->text_font);
     }
 
     /**

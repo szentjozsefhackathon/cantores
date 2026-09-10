@@ -4,6 +4,7 @@ import {
     clampZoom,
     readReaderSettings,
     readerGeometry,
+    styleForFont,
     writeReaderSettings,
     ZOOM_DEFAULT,
     ZOOM_MAX,
@@ -41,8 +42,10 @@ document.addEventListener('alpine:init', () => {
         entries: config.entries ?? [],
         booklet: config.geometry ?? {},
 
+        styles: config.styles ?? {},
+
         zoom: 1,
-        textFont: null,
+        style: null,
         overrides: {},
 
         busy: false,
@@ -59,10 +62,10 @@ document.addEventListener('alpine:init', () => {
         _onFullscreen: null,
 
         init() {
-            const saved = readReaderSettings(window.localStorage, this.token);
+            const saved = readReaderSettings(window.localStorage, this.token, this.styles);
 
             this.zoom = saved.zoom;
-            this.textFont = saved.textFont;
+            this.style = saved.style;
             this.overrides = saved.overrides;
 
             this._busy = createBusyFlag({ onChange: (busy) => { this.busy = busy; } });
@@ -138,8 +141,8 @@ document.addEventListener('alpine:init', () => {
         geometry() {
             return readerGeometry(this.booklet, this._width || this.measuredWidth(), {
                 zoom: this.zoom,
-                textFont: this.textFont,
-            });
+                style: this.style,
+            }, this.styles);
         },
 
         scheduleRender() {
@@ -337,8 +340,16 @@ document.addEventListener('alpine:init', () => {
             this.setZoom(this.zoom + delta);
         },
 
-        setFont(family) {
-            this.textFont = family || null;
+        /**
+         * The whole typography at once, never a face on its own.
+         *
+         * A face and the gaps that face needs are one decision — see
+         * App\Support\BookletStyles — so a reader picking Graduále gets EB
+         * Garamond's lyrics over EB Garamond's gaps, rather than a new face
+         * over the last one's spacing.
+         */
+        setStyle(style) {
+            this.style = this.styles[style] ? style : null;
 
             this.remember();
             this.scheduleRender();
@@ -347,11 +358,20 @@ document.addEventListener('alpine:init', () => {
         /** Everything back to the booklet as its cantor set it. */
         resetAll() {
             this.zoom = ZOOM_DEFAULT;
-            this.textFont = null;
+            this.style = null;
             this.overrides = {};
 
             this.remember();
             this.scheduleRender();
+        },
+
+        /**
+         * The style the cantor set the booklet in, so the select shows where a
+         * reader who has chosen nothing actually is. Read off the face, exactly
+         * as the server reads it: see BookletStyles::forFont().
+         */
+        get bookletStyle() {
+            return styleForFont(this.styles, this.booklet.textFont) ?? '';
         },
 
         get zoomPercent() {
@@ -398,7 +418,7 @@ document.addEventListener('alpine:init', () => {
         remember() {
             writeReaderSettings(window.localStorage, this.token, {
                 zoom: this.zoom,
-                textFont: this.textFont,
+                style: this.style,
                 overrides: this.overrides,
             });
         },

@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\LoanKeepingService;
 use App\Services\ScoreFileStorage;
 use App\Support\BookletSettingFields;
+use App\Support\BookletStyles;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -404,4 +405,33 @@ it('lists the booklet link in the lending centre, under its own name', function 
         ->call('selectTab', 'lent')
         ->assertSee('Pünkösdi füzet')
         ->assertSee(route('booklet.loan', ['token' => $loan->token]));
+});
+
+// A reader who could pick only a face would get that face's lyrics over the gaps
+// the cantor's face wanted — the very fault a booklet's styles exist to prevent,
+// put back on the reader's own screen. So the phone is handed whole styles.
+it('offers the reader the three styles rather than a list of faces', function () {
+    $owner = User::factory()->create();
+    [$booklet, $loan] = sharedBooklet($owner);
+
+    $booklet->update(BookletStyles::defaults('graduale'));
+
+    $html = Livewire::test(BookletLoanView::class, ['token' => $loan->token])->html();
+
+    // The table itself rides in the reader's config, so the phone can swap a
+    // whole style without asking the server.
+    expect($html)->toContain(e(json_encode(BookletStyles::typographies())))
+        ->and($html)->toContain(__('Graduale'));
+
+    foreach (BookletStyles::keys() as $style) {
+        expect($html)->toContain('value="'.$style.'"');
+    }
+
+    // The gaps the style owns reach the phone with it, so the face and the
+    // spacing that face needs can never come apart.
+    expect($booklet->fresh()->geometry())->toMatchArray([
+        'textFont' => 'EB Garamond',
+        'abcLyricFirstSkip' => 1.4,
+        'abcLyricSkip' => 0.8,
+    ]);
 });

@@ -8,7 +8,7 @@ import {
     gabcLyricSizeForPt,
     pageGeometry,
 } from '../../resources/js/booklet-geometry.js';
-import { movesSetting, READER_SIZE_STEP_PT, readerStep, resolveSettings, steppedValue } from '../../resources/js/booklet-settings.js';
+import { movesSetting, READER_SIZE_STEP_PT, readerStep, resolveSettings, steppedValue, travellingOverride, unifiedSettings } from '../../resources/js/booklet-settings.js';
 
 const geometry = pageGeometry({
     pageWidthMm: 148,
@@ -19,6 +19,8 @@ const geometry = pageGeometry({
     lyricSizePt: 10.5,
     staffHeightMm: 5,
     textFont: 'Merriweather',
+    abcLyricFirstSkip: 1.5,
+    abcLyricSkip: 1,
 });
 
 /** Where each engine keeps the face it sets lyrics in. */
@@ -155,4 +157,42 @@ test('a chant and a hymn move by the same amount of type', () => {
 
     assert.ok(Math.abs(chantGrew - hymnGrew) < 0.2, `${chantGrew} vs ${hymnGrew}`);
     assert.ok(Math.abs(chantGrew - READER_SIZE_STEP_PT) < 0.2, `${chantGrew}`);
+});
+
+// The gap between a staff and its lyrics, and the gap between two lyric lines,
+// are the two numbers a face makes right or wrong — so the booklet's style owns
+// them, exactly as it owns the face, and the author's own numbers are not
+// consulted. See App\Support\BookletStyles.
+test('the booklet\'s style says how far the lyrics stand off the staff', () => {
+    const resolved = resolveSettings(
+        'abc',
+        { abcLyricFirstSkip: 1, abcLyricSkip: 1 },
+        { abc: { paper: { abcLyricFirstSkip: 0.8, abcLyricSkip: 1.3 } } },
+        geometry,
+        null,
+    );
+
+    assert.equal(resolved.abcLyricFirstSkip, 1.5);
+    assert.equal(resolved.abcLyricSkip, 1);
+});
+
+test('the same gap reaches the two engines that keep no setting for it', () => {
+    assert.equal(unifiedSettings('gabc', geometry).minSpaceBelowStaff, geometry.minSpaceBelowStaff);
+    assert.equal(unifiedSettings('aretino', geometry).aretinoLyricDistance, geometry.aretinoLyricDistance);
+    assert.equal(unifiedSettings('aretino', geometry).aretinoLyricMinStaffDistance, geometry.aretinoLyricMinStaffDistance);
+});
+
+// Not an accident of travellingOverride's derivation, which is why it is pinned
+// here: an override means different things depending on which layer it
+// overrules. Now that the style owns the gap and has already got the face right,
+// the only reason left to depart from it is the page — this hymn runs two lines
+// over, tighten it — and a screen is not that page.
+test('a spacing override is a page-fitting nudge, and a screen is not that page', () => {
+    const travelling = travellingOverride('abc', {
+        abcLyricFirstSkip: 1.1,
+        abcLyricSkip: 0.7,
+        abcTranspose: -2,
+    }, geometry);
+
+    assert.deepEqual(travelling, { abcTranspose: -2 });
 });

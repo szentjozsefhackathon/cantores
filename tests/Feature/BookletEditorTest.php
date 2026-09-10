@@ -15,6 +15,7 @@ use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\User;
 use App\Support\BookletSettingFields;
+use App\Support\BookletStyles;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Js;
@@ -370,8 +371,8 @@ it('names every booklet setting by its icon rather than a label', function () {
 
     $settings = [
         __('Title'), __('Page size'), __('Orientation'), __('Margin (mm)'),
-        __('Lyric size (pt)'), __('Staff height (mm)'), __('Text font'),
-        __('Heading size (×)'),
+        __('Lyric size (pt)'), __('Staff height (mm)'), __('Style'),
+        __('Staff to lyrics'), __('Lyric line spacing'), __('Heading size (×)'),
     ];
 
     expect($toolbar)->not->toBeNull();
@@ -768,28 +769,121 @@ it('saves geometry changes as they are made', function () {
         ->and($booklet->contentMm()['width'])->toBe(210.0 - 24);
 });
 
-// Everything the booklet writes rather than engraves — the headings, the
-// rubrics, the page numbers — is set in one face at one size, and both are the
-// booklet's to choose.
-it('saves the face and the heading size the booklet is set in', function () {
+// A style is the booklet's whole typography in one press: the face, the sizes,
+// and the two gaps that face makes right or wrong. Everything the booklet writes
+// rather than engraves is set in it, and so is every staff it prints.
+it('writes the whole typography when the booklet is put into a style', function () {
     $user = User::factory()->create();
     $booklet = bookletFor($user);
 
     actingAs($user);
 
     Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->set('textFont', 'Merriweather')
+        ->set('style', 'graduale')
+        ->assertHasNoErrors();
+
+    $booklet->refresh();
+
+    expect($booklet->only(array_keys(BookletStyles::defaults('graduale'))))
+        ->toBe(BookletStyles::defaults('graduale'))
+        ->and($booklet->style())->toBe('graduale')
+        ->and($booklet->geometry())->toMatchArray([
+            'textFont' => 'EB Garamond',
+            'abcLyricFirstSkip' => 1.4,
+            'abcLyricSkip' => 0.8,
+        ]);
+});
+
+// The reason a cantor can try all three styles on a service they have already
+// spent ten minutes fitting onto four sides. A style is typography and nothing
+// else: not the paper, and not one per-score nudge.
+it('leaves the paper and every per-score override where they were', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user);
+    $booklet->update(['page_size' => 'a4', 'orientation' => 'landscape', 'margin_mm' => 7]);
+
+    $entry = BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => $score->id,
+        'settings_override' => ['abcPageWidth' => 1700, 'abcTranspose' => -2, 'abcLyricSkip' => 1.2],
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->set('style', 'modern')
+        ->assertHasNoErrors();
+
+    $booklet->refresh();
+
+    expect($booklet->page_size->value)->toBe('a4')
+        ->and($booklet->orientation->value)->toBe('landscape')
+        ->and($booklet->margin_mm)->toBe(7.0)
+        ->and($entry->fresh()->settings_override)
+        ->toBe(['abcPageWidth' => 1700, 'abcTranspose' => -2, 'abcLyricSkip' => 1.2]);
+});
+
+// Inter and Barlow Condensed were drawn for projector slides, and a booklet made
+// before it had styles may be set in one. It keeps that face until somebody
+// picks a style — the picker shows it the nearest one — rather than losing it to
+// an unrelated nudge of the margin.
+it('keeps a face no style claims until a style is actually chosen', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $booklet->update(['text_font' => 'Inter']);
+
+    actingAs($user);
+
+    $editor = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->assertSet('style', BookletStyles::DEFAULT)
+        ->set('marginMm', 9)
+        ->assertHasNoErrors();
+
+    expect($booklet->fresh()->text_font)->toBe('Inter');
+
+    $editor->set('style', 'modern')->assertHasNoErrors();
+
+    expect($booklet->fresh()->text_font)->toBe('Merriweather');
+});
+
+// The style is meant to have got both gaps right; these are the way back out of
+// it for the one booklet whose chant wants its stanzas a hair tighter.
+it('saves the two lyric gaps the booklet is engraved with', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->set('abcLyricFirstSkip', 1.2)
+        ->set('abcLyricSkip', 0.7)
+        ->assertHasNoErrors();
+
+    $booklet->refresh();
+
+    expect($booklet->abc_lyric_first_skip)->toBe(1.2)
+        ->and($booklet->abc_lyric_skip)->toBe(0.7)
+        ->and($booklet->geometry())->toMatchArray([
+            'abcLyricFirstSkip' => 1.2,
+            'abcLyricSkip' => 0.7,
+        ]);
+});
+
+it('saves the heading size the booklet is set in', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
         ->set('headingScale', 0.8)
         ->assertHasNoErrors();
 
     $booklet->refresh();
 
-    expect($booklet->text_font)->toBe('Merriweather')
-        ->and($booklet->heading_scale)->toBe(0.8)
-        ->and($booklet->geometry())->toMatchArray([
-            'textFont' => 'Merriweather',
-            'headingScale' => 0.8,
-        ]);
+    expect($booklet->heading_scale)->toBe(0.8)
+        ->and($booklet->geometry())->toMatchArray(['headingScale' => 0.8]);
 });
 
 // ABC reserves its staff separation above the first staff as well as between
@@ -828,20 +922,23 @@ it('starts a booklet at the numbers a printed A5 booklet wanted', function () {
         // OPTICAL_X_HEIGHT in resources/js/booklet-geometry.js.
         'textFont' => 'Alegreya',
         'abcStaffSep' => 25.0,
+        'abcLyricFirstSkip' => 1.4,
+        'abcLyricSkip' => 0.9,
     ]);
 });
 
-// rsvg-convert has no network: a face that cannot be embedded is a face that is
-// not printed, so it is not one a booklet may be set in.
-it('refuses a text font the exporter cannot embed', function () {
+// A booklet is set in one of three named styles and in nothing else — which is
+// also what keeps the projector faces out of it: Inter and Barlow Condensed
+// exist for slides, and a booklet is paper.
+it('refuses a style there is no such thing as', function () {
     $user = User::factory()->create();
     $booklet = bookletFor($user);
 
     actingAs($user);
 
     Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->set('textFont', 'Comic Sans MS')
-        ->assertHasErrors('textFont');
+        ->set('style', 'projector')
+        ->assertHasErrors('style');
 
     expect($booklet->fresh()->text_font)->toBe('Alegreya');
 });

@@ -8,6 +8,7 @@ import {
     READER_MARGIN_MM,
     readerGeometry,
     readReaderSettings,
+    styleForFont,
     writeReaderSettings,
     ZOOM_MAX,
     ZOOM_MIN,
@@ -26,6 +27,15 @@ const booklet = {
     textFont: 'EB Garamond',
     headingScale: 0.9,
     abcStaffSep: 25,
+    abcLyricFirstSkip: 1.4,
+    abcLyricSkip: 0.8,
+};
+
+/** BookletStyles::typographies(), as the server sends it to the reader. */
+const styles = {
+    hymnal: { textFont: 'Alegreya', abcLyricFirstSkip: 1.4, abcLyricSkip: 0.9 },
+    modern: { textFont: 'Merriweather', abcLyricFirstSkip: 1.5, abcLyricSkip: 1 },
+    graduale: { textFont: 'EB Garamond', abcLyricFirstSkip: 1.4, abcLyricSkip: 0.8 },
 };
 
 /** A phone in portrait: 390 CSS px of column. */
@@ -67,14 +77,31 @@ test('the reader\'s size moves the type and the staves together', () => {
     assert.equal(bigger.pageWidthMm, plain.pageWidthMm);
 });
 
-test('the cantor\'s typography is inherited, and only the face is the reader\'s', () => {
-    const inherited = readerGeometry(booklet, PHONE_PX);
+// A face and the gaps that face needs are one decision, so the reader is
+// offered the style rather than the face. Anything else puts Merriweather's
+// lyrics over Alegreya's gaps on the phone — the fault styles exist to prevent.
+test('the cantor\'s typography is inherited, and only the style is the reader\'s', () => {
+    const inherited = readerGeometry(booklet, PHONE_PX, {}, styles);
 
     assert.equal(inherited.textFont, 'EB Garamond');
+    assert.equal(inherited.abcLyricFirstSkip, 1.4);
+    assert.equal(inherited.abcLyricSkip, 0.8);
     assert.equal(inherited.headingScale, booklet.headingScale);
     assert.equal(inherited.abcStaffSep, booklet.abcStaffSep);
+});
 
-    assert.equal(readerGeometry(booklet, PHONE_PX, { textFont: 'Inter' }).textFont, 'Inter');
+test('a reader\'s style swaps the face and both spacings together', () => {
+    const modern = readerGeometry(booklet, PHONE_PX, { style: 'modern' }, styles);
+
+    assert.equal(modern.textFont, 'Merriweather');
+    assert.equal(modern.abcLyricFirstSkip, 1.5);
+    assert.equal(modern.abcLyricSkip, 1);
+
+    // A style nobody has heard of leaves the booklet's own typography standing.
+    const unknown = readerGeometry(booklet, PHONE_PX, { style: 'gothic' }, styles);
+
+    assert.equal(unknown.textFont, 'EB Garamond');
+    assert.equal(unknown.abcLyricSkip, 0.8);
 });
 
 test('a size out of range, or no size at all, still yields a booklet', () => {
@@ -161,22 +188,47 @@ test('what a reader sets is remembered per link, and a broken store is simply fo
         setItem: (key, value) => store.set(key, value),
     };
 
-    writeReaderSettings(storage, 'abc123', { zoom: 1.5, textFont: 'Inter', overrides: { 7: { abcTranspose: 2 } } });
+    writeReaderSettings(storage, 'abc123', { zoom: 1.5, style: 'modern', overrides: { 7: { abcTranspose: 2 } } });
 
-    assert.deepEqual(readReaderSettings(storage, 'abc123'), {
+    assert.deepEqual(readReaderSettings(storage, 'abc123', styles), {
         zoom: 1.5,
-        textFont: 'Inter',
+        style: 'modern',
         overrides: { 7: { abcTranspose: 2 } },
     });
 
     // Another link is another booklet, and knows nothing of this one.
-    assert.deepEqual(readReaderSettings(storage, 'other'), { zoom: 1, textFont: null, overrides: {} });
+    assert.deepEqual(readReaderSettings(storage, 'other', styles), { zoom: 1, style: null, overrides: {} });
 
     store.set('booklet-reader:abc123', 'not json at all');
-    assert.deepEqual(readReaderSettings(storage, 'abc123'), { zoom: 1, textFont: null, overrides: {} });
+    assert.deepEqual(readReaderSettings(storage, 'abc123', styles), { zoom: 1, style: null, overrides: {} });
 
     // A phone with storage switched off still reads the booklet.
     const dead = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); } };
-    assert.deepEqual(readReaderSettings(dead, 'abc123'), { zoom: 1, textFont: null, overrides: {} });
-    assert.doesNotThrow(() => writeReaderSettings(dead, 'abc123', { zoom: 1, textFont: null, overrides: {} }));
+    assert.deepEqual(readReaderSettings(dead, 'abc123', styles), { zoom: 1, style: null, overrides: {} });
+    assert.doesNotThrow(() => writeReaderSettings(dead, 'abc123', { zoom: 1, style: null, overrides: {} }));
+});
+
+// The control was a face and is now a style, and a phone that remembers a face
+// must not forget what its reader set because of that.
+test('a face remembered from before the styles is read back as its style', () => {
+    const store = new Map();
+    const storage = {
+        getItem: (key) => (store.has(key) ? store.get(key) : null),
+        setItem: (key, value) => store.set(key, value),
+    };
+
+    store.set('booklet-reader:abc123', JSON.stringify({ zoom: 1.2, textFont: 'EB Garamond', overrides: {} }));
+
+    assert.deepEqual(readReaderSettings(storage, 'abc123', styles), {
+        zoom: 1.2,
+        style: 'graduale',
+        overrides: {},
+    });
+
+    // A projector face no style claims is forgotten rather than half-honoured:
+    // that reader is put back on the booklet's own style.
+    store.set('booklet-reader:abc123', JSON.stringify({ zoom: 1, textFont: 'Inter', overrides: {} }));
+
+    assert.equal(readReaderSettings(storage, 'abc123', styles).style, null);
+    assert.equal(styleForFont(styles, "'Merriweather'"), 'modern');
 });

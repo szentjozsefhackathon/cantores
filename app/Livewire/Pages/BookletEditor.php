@@ -13,6 +13,7 @@ use App\Services\BookletOutline;
 use App\Services\BookletRenderPayload;
 use App\Services\MusicPlanScoreListService;
 use App\Support\BookletSettingFields;
+use App\Support\BookletStyles;
 use App\Support\ImpositionLayout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
@@ -66,9 +67,15 @@ class BookletEditor extends Component
     public float $staffHeightMm = 5;
 
     /**
-     * The face everything the booklet writes rather than engraves is set in.
+     * The typography the whole booklet is set in.
+     *
+     * One press rather than a face and the numbers that have to agree with it:
+     * choosing a style writes the face, the sizes and both lyric gaps at once,
+     * and touches neither the paper nor one per-score override. See
+     * BookletStyles — and note that it is read back off the face rather than
+     * stored, so the two can never disagree.
      */
-    public string $textFont = 'Alegreya';
+    public string $style = BookletStyles::DEFAULT;
 
     /**
      * How big a heading is beside the lyrics it stands over.
@@ -87,6 +94,21 @@ class BookletEditor extends Component
      */
     #[Validate('required|numeric|min:0|max:120')]
     public float $abcStaffSep = 25;
+
+    /**
+     * How far the first line of lyrics stands below the staff, as a factor of
+     * the face's own ascent, and how far two lyric lines stand apart.
+     *
+     * The style is meant to have got both of these right, so they sit here as
+     * the way out of a style rather than as the way into one: a booklet whose
+     * chant needs its stanzas a hair tighter than the Graduále draws them says
+     * so without leaving the style.
+     */
+    #[Validate('required|numeric|min:0.5|max:3')]
+    public float $abcLyricFirstSkip = 1.4;
+
+    #[Validate('required|numeric|min:0.5|max:3')]
+    public float $abcLyricSkip = 0.9;
 
     /**
      * The paragraph just added, so that it opens ready to be written in.
@@ -120,9 +142,11 @@ class BookletEditor extends Component
         $this->marginMm = $booklet->margin_mm;
         $this->lyricSizePt = $booklet->lyric_size_pt;
         $this->staffHeightMm = $booklet->staff_height_mm;
-        $this->textFont = $booklet->text_font;
         $this->headingScale = $booklet->heading_scale;
         $this->abcStaffSep = $booklet->abc_staff_sep;
+        $this->abcLyricFirstSkip = $booklet->abc_lyric_first_skip;
+        $this->abcLyricSkip = $booklet->abc_lyric_skip;
+        $this->style = $booklet->style();
 
         $this->shareUrl = $this->urlForToken($booklet->loanToken());
 
@@ -158,17 +182,45 @@ class BookletEditor extends Component
     }
 
     /**
-     * The one rule that cannot be stated as an attribute: the faces a booklet
-     * may be set in are the ones the exporter can embed, and that list lives
-     * with the rest of the font handling in BookletSettingFields.
+     * The one rule that cannot be stated as an attribute: a booklet is set in
+     * one of the three named styles, and that list lives in BookletStyles.
      *
      * @return array<string, mixed>
      */
     public function rules(): array
     {
         return [
-            'textFont' => ['required', 'string', Rule::in(BookletSettingFields::fontOptions())],
+            'style' => ['required', 'string', Rule::in(BookletStyles::keys())],
         ];
+    }
+
+    /**
+     * Put the whole booklet into one style.
+     *
+     * Everything typographic is written at once and saved once, so one press is
+     * one render. Nothing physical moves — a cantor picks A5 because that is the
+     * paper in the printer, and then tries all three styles on it — and no
+     * per-score override is touched, which is what makes it safe to try them on
+     * a service already fitted onto four sides.
+     */
+    public function updatedStyle(): void
+    {
+        $this->authorize('update', $this->booklet);
+        $this->validateOnly('style');
+
+        $columns = BookletStyles::defaults($this->style);
+
+        // The face goes in with them, in the same one write — which is what
+        // makes one press one render, and what keeps the face and the spacing
+        // that face needs from ever coming apart.
+        $this->lyricSizePt = $columns['lyric_size_pt'];
+        $this->staffHeightMm = $columns['staff_height_mm'];
+        $this->headingScale = $columns['heading_scale'];
+        $this->abcStaffSep = $columns['abc_staff_sep'];
+        $this->abcLyricFirstSkip = $columns['abc_lyric_first_skip'];
+        $this->abcLyricSkip = $columns['abc_lyric_skip'];
+
+        $this->writeGeometry($columns['text_font']);
     }
 
     public function rendering(IlluminateView $view): void
@@ -325,7 +377,7 @@ class BookletEditor extends Component
 
     public function updated(string $property): void
     {
-        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'textFont', 'headingScale', 'abcStaffSep'], true)) {
+        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'headingScale', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip'], true)) {
             return;
         }
 
@@ -333,6 +385,15 @@ class BookletEditor extends Component
     }
 
     public function saveGeometry(): void
+    {
+        // The face moves only when a style is chosen. A booklet set in a face
+        // no style claims — Inter or Barlow Condensed, from before styles
+        // existed — keeps it until somebody picks one, rather than losing it to
+        // an unrelated nudge of the margin.
+        $this->writeGeometry($this->booklet->text_font);
+    }
+
+    private function writeGeometry(string $textFont): void
     {
         $this->authorize('update', $this->booklet);
         $this->validate();
@@ -344,9 +405,11 @@ class BookletEditor extends Component
             'margin_mm' => $this->marginMm,
             'lyric_size_pt' => $this->lyricSizePt,
             'staff_height_mm' => $this->staffHeightMm,
-            'text_font' => $this->textFont,
+            'text_font' => $textFont,
             'heading_scale' => $this->headingScale,
             'abc_staff_sep' => $this->abcStaffSep,
+            'abc_lyric_first_skip' => $this->abcLyricFirstSkip,
+            'abc_lyric_skip' => $this->abcLyricSkip,
         ]);
 
         unset($this->geometry, $this->impositions);

@@ -30,6 +30,8 @@ class BookletFactory extends Factory
             'text_font' => 'Alegreya',
             'heading_scale' => 0.9,
             'abc_staff_sep' => 25,
+            'abc_lyric_first_skip' => 1.4,
+            'abc_lyric_skip' => 0.9,
         ];
     }
 

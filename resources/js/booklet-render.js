@@ -659,6 +659,15 @@ function aretinoBlocks(content, resolved, layoutWidthPx) {
         lyricSize: Number(resolved.aretinoLyricSize),
         textFont: resolved.aretinoTextFont,
         staffGap: Number(resolved.aretinoStaffGap),
+        // The booklet's style says how far the lyrics stand off the music, in
+        // Aretino's two names for it — without these the renderer falls through
+        // to METRICS in @aretino-chant/core, and the number is a dependency's
+        // rather than the table's. Worth knowing before anyone tunes them:
+        // Aretino anchors on the lowest note with a staff-line floor, the mirror
+        // of what ABC now does, so a chant with a low note in one line and not
+        // the next wobbles between systems the way ABC used to.
+        lyricDistance: Number(resolved.aretinoLyricDistance),
+        lyricMinStaffDistance: Number(resolved.aretinoLyricMinStaffDistance),
         hideRepeatClef: !!resolved.aretinoHideRepeatClef,
         sourceMap: false,
     });

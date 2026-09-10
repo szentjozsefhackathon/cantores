@@ -38,9 +38,17 @@ import {
  * The stacking is in there because a booklet packs whole services onto small
  * pages, and vertical air a score can afford on its own sheet is what costs the
  * booklet a page. So the space between staves comes from the booklet rather than
- * the score. The gap between a staff and its lyrics is not in there: it is the
- * author's `abcLyricFirstSkip`, which travels with the score and can be
- * overridden per score in the booklet like any other authored setting.
+ * the score.
+ *
+ * The gap between a staff and its lyrics, and the gap between two lyric lines,
+ * are in there for the same reason the face is — they are the two numbers a face
+ * makes right or wrong, and a booklet that imposed the face while leaving each
+ * score the spacing that face needs would be imposing half a decision. Three
+ * faces genuinely want three different balances, judged by eye rather than
+ * derived, so the numbers are held per style beside the face: see
+ * App\Support\BookletStyles. The author's own numbers are not consulted, for the
+ * same reason their face is not — they were judged against the face they
+ * engraved in, and the booklet is not in that face.
  *
  * Layer 4 wins over all of it, including over the booklet's own width — which is
  * the point. Widening one score past the content box is how you get rid of a bad
@@ -100,6 +108,8 @@ export function unifiedSettings(format, geometry) {
             // so this is also what stands between a heading and the music it
             // names — which is why the booklet, not the score, gets to say it.
             abcStaffSep: geometry.abcStaffSep,
+            abcLyricFirstSkip: geometry.abcLyricFirstSkip,
+            abcLyricSkip: geometry.abcLyricSkip,
             abcZoom: 100,
         };
     }
@@ -110,6 +120,8 @@ export function unifiedSettings(format, geometry) {
             gabcLayoutWidth: Math.floor(contentWidthPx),
             staffSize: round(gabcStaffSizeForStaffHeight(staffHeightMm), 4),
             lyricSize: round(gabcLyricSizeForPt(lyricSizePt), 4),
+            // ABC's staff-to-lyrics gap under exsurge's name for it.
+            minSpaceBelowStaff: geometry.minSpaceBelowStaff,
             zoom: 100,
         };
     }
@@ -122,6 +134,11 @@ export function unifiedSettings(format, geometry) {
             aretinoStaffWidth: floor(contentWidthMm, 4),
             aretinoStaffSize: round(aretinoStaffSizeForStaffHeight(staffHeightMm), 4),
             aretinoLyricSize: round(aretinoLyricSizeForPt(lyricSizePt), 4),
+            // And under Aretino's, which states it twice: lyrics sit this far
+            // below the lowest note, but never closer than the floor to the
+            // bottom staff line.
+            aretinoLyricDistance: geometry.aretinoLyricDistance,
+            aretinoLyricMinStaffDistance: geometry.aretinoLyricMinStaffDistance,
             aretinoZoom: 100,
         };
     }
@@ -167,6 +184,17 @@ export function fileSettings(override) {
  * computes for itself are exactly the page-fitting ones — see unifiedSettings —
  * plus the one an uploaded picture has. So the reader inherits everything else,
  * and the page-bound keys are decided afresh by the screen in their hand.
+ *
+ * That derivation is self-maintaining rather than coincidental, which is worth
+ * saying because the spacings look at first like an accident of it. An override
+ * means different things depending on which layer it overrules. While the
+ * staff-to-lyrics gap was the author's, overriding it in a booklet said "this
+ * author's gap is wrong under the face my booklet imposes" — a statement about
+ * the music, which would deserve to travel. Now that the style owns the gap, the
+ * style has already got the face right, and the only reason left to depart from
+ * it is the page: this hymn runs two lines over, tighten it. So whatever the
+ * booklet computes for itself, an override of it is by definition a departure
+ * made for the booklet's own page, and stops at the paper.
  *
  * @param {string} format
  * @param {object|null} override booklet_scores.settings_override

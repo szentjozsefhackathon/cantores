@@ -11,8 +11,9 @@ import { pxToMm } from './booklet-geometry.js';
  *
  * So the reader keeps a geometry of their own, derived here. Two things go into
  * it: the screen, which decides the width and therefore where every line breaks,
- * and the reader, who decides how big it all is. Everything else — the face, the
- * heading proportions, the stacking — is the cantor's and is inherited.
+ * and the reader, who decides how big it all is and, if they want, which of the
+ * three styles it is set in. Everything else — the heading proportions, the
+ * stacking — is the cantor's and is inherited.
  *
  * Nothing here touches the booklet. These values live on the device that
  * computed them; the handout the cantor made is untouched by anyone reading it.
@@ -65,9 +66,10 @@ const UNBOUNDED_MM = 100000;
  *
  * @param {object} booklet Booklet::geometry() as the server sent it
  * @param {number} widthPx how wide the column holding the pages actually is
- * @param {{zoom?: number, textFont?: string|null}} settings the reader's own
+ * @param {{zoom?: number, style?: string|null}} settings the reader's own
+ * @param {object} styles BookletStyles::typographies() as the server sent it
  */
-export function readerGeometry(booklet, widthPx, settings = {}) {
+export function readerGeometry(booklet, widthPx, settings = {}, styles = {}) {
     const pageWidthMm = Math.max(20, pxToMm(Number(widthPx) || 0));
     const contentWidthMm = Math.max(10, pageWidthMm - 2 * READER_MARGIN_MM);
 
@@ -85,13 +87,25 @@ export function readerGeometry(booklet, widthPx, settings = {}) {
         contentHeightMm: UNBOUNDED_MM,
         lyricSizePt: (Number(booklet.lyricSizePt) || 10.5) * scale,
         staffHeightMm: (Number(booklet.staffHeightMm) || 5) * scale,
-        // Inherited, all three. A face, a heading's proportion to its lyrics and
-        // the air abc2svg leaves between staves are the cantor's typography, and
-        // they read the same at any width — only the face is offered to the
-        // reader, because that one is about eyes rather than about the page.
-        textFont: settings.textFont || booklet.textFont,
+        // Inherited: a heading's proportion to its lyrics and the air abc2svg
+        // leaves between staves are the cantor's typography, and they read the
+        // same at any width.
         headingScale: booklet.headingScale,
         abcStaffSep: booklet.abcStaffSep,
+        minSpaceBelowStaff: booklet.minSpaceBelowStaff,
+        aretinoLyricDistance: booklet.aretinoLyricDistance,
+        aretinoLyricMinStaffDistance: booklet.aretinoLyricMinStaffDistance,
+        // The one thing offered to the reader, because it is about eyes rather
+        // than about the page — and offered as a whole style rather than as a
+        // face. A face and the gaps that face needs are one decision: picking
+        // Merriweather's lyrics and keeping Alegreya's gaps is the fault the
+        // booklet's own styles exist to prevent, and a phone is not exempt from
+        // it. So the three move together or not at all.
+        ...(styles[settings.style] ?? {
+            textFont: booklet.textFont,
+            abcLyricFirstSkip: booklet.abcLyricFirstSkip,
+            abcLyricSkip: booklet.abcLyricSkip,
+        }),
     };
 }
 
@@ -107,6 +121,20 @@ export function readerStorageKey(token) {
 }
 
 /**
+ * Which style a face belongs to — the inverse of the table, mirroring
+ * BookletStyles::forFont().
+ *
+ * Only reached for a phone that remembers a face from before the reader was
+ * offered styles. A face no style claims is simply forgotten, which puts that
+ * reader back on the booklet's own style rather than on half of one.
+ */
+export function styleForFont(styles, font) {
+    const bare = String(font ?? '').trim().replace(/['"]/g, '');
+
+    return Object.keys(styles ?? {}).find((style) => styles[style]?.textFont === bare) ?? null;
+}
+
+/**
  * Read what this device remembers, defensively.
  *
  * Storage can be off, full, or hold something a previous version wrote. A
@@ -114,10 +142,14 @@ export function readerStorageKey(token) {
  * booklet that fails at exactly the moment it is needed, so anything unreadable
  * is simply forgotten.
  *
- * @returns {{zoom: number, textFont: string|null, overrides: object}}
+ * A phone that stored a face rather than a style is one of those previous
+ * versions, and is read through the table instead of dropped: nobody's phone
+ * forgets what they set because the control above it was renamed.
+ *
+ * @returns {{zoom: number, style: string|null, overrides: object}}
  */
-export function readReaderSettings(storage, token) {
-    const empty = { zoom: ZOOM_DEFAULT, textFont: null, overrides: {} };
+export function readReaderSettings(storage, token, styles = {}) {
+    const empty = { zoom: ZOOM_DEFAULT, style: null, overrides: {} };
 
     try {
         const raw = storage?.getItem(readerStorageKey(token));
@@ -125,10 +157,13 @@ export function readReaderSettings(storage, token) {
         if (!raw) { return empty; }
 
         const saved = JSON.parse(raw);
+        const style = typeof saved?.style === 'string' && styles[saved.style]
+            ? saved.style
+            : styleForFont(styles, saved?.textFont);
 
         return {
             zoom: clampZoom(saved?.zoom ?? ZOOM_DEFAULT),
-            textFont: typeof saved?.textFont === 'string' && saved.textFont !== '' ? saved.textFont : null,
+            style,
             overrides: saved?.overrides && typeof saved.overrides === 'object' ? saved.overrides : {},
         };
     } catch {
@@ -140,7 +175,7 @@ export function writeReaderSettings(storage, token, settings) {
     try {
         storage?.setItem(readerStorageKey(token), JSON.stringify({
             zoom: clampZoom(settings.zoom),
-            textFont: settings.textFont ?? null,
+            style: settings.style ?? null,
             overrides: settings.overrides ?? {},
         }));
     } catch {

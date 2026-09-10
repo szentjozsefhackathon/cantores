@@ -145,6 +145,22 @@ export function leadingScale(family) {
 export const DEFAULT_ABC_STAFF_SEP = 25;
 
 /**
+ * The spacings a booklet's style owns, at the default style's numbers.
+ *
+ * Only ever reached by a payload written before booklets had styles. The values
+ * themselves live in App\Support\BookletStyles, which is what the server sends;
+ * these are the floor under a geometry that predates it.
+ */
+export const DEFAULT_ABC_LYRIC_FIRST_SKIP = 1.4;
+export const DEFAULT_ABC_LYRIC_SKIP = 0.9;
+export const DEFAULT_ARETINO_LYRIC_DISTANCE = 0.2;
+export const DEFAULT_ARETINO_LYRIC_MIN_STAFF_DISTANCE = 0.75;
+
+function positiveOr(value, fallback) {
+    return Number(value) > 0 ? Number(value) : fallback;
+}
+
+/**
  * A family as an SVG font-family value.
  *
  * Quoted, because the names in play have spaces in them and a bare
@@ -185,6 +201,18 @@ export function pageGeometry(geometry) {
         textFont,
         headingScale: Number(geometry.headingScale) > 0 ? Number(geometry.headingScale) : 1,
         abcStaffSep: Number(geometry.abcStaffSep) >= 0 ? Number(geometry.abcStaffSep) : DEFAULT_ABC_STAFF_SEP,
+        // The booklet's style, not the page's: the gap between a staff and the
+        // lyrics under it, and the gap between two lyric lines, are what a face
+        // makes right or wrong — so they are carried through untouched rather
+        // than computed from the millimetres, and only defaulted when an older
+        // payload does not carry them at all.
+        abcLyricFirstSkip: positiveOr(geometry.abcLyricFirstSkip, DEFAULT_ABC_LYRIC_FIRST_SKIP),
+        abcLyricSkip: positiveOr(geometry.abcLyricSkip, DEFAULT_ABC_LYRIC_SKIP),
+        // The same gap in the two engines that keep no setting for it. Both are
+        // at the number their engine already draws at; see BookletStyles.
+        minSpaceBelowStaff: Number.isFinite(Number(geometry.minSpaceBelowStaff)) ? Number(geometry.minSpaceBelowStaff) : 0,
+        aretinoLyricDistance: positiveOr(geometry.aretinoLyricDistance, DEFAULT_ARETINO_LYRIC_DISTANCE),
+        aretinoLyricMinStaffDistance: positiveOr(geometry.aretinoLyricMinStaffDistance, DEFAULT_ARETINO_LYRIC_MIN_STAFF_DISTANCE),
     };
 }
 

@@ -1,5 +1,5 @@
 @php
-    use App\Support\BookletSettingFields;
+    use App\Support\BookletStyles;
     use Illuminate\Support\Arr;
     use Illuminate\Support\Js;
 
@@ -25,6 +25,7 @@
         'token' => $loanToken,
         'geometry' => $geometry,
         'entries' => $entries,
+        'styles' => BookletStyles::typographies(),
     ]) }}"
     x-data="bookletReader(JSON.parse($el.dataset.bookletConfig))"
     x-on:booklet-updated.window="applyUpdate($event.detail)"
@@ -77,13 +78,17 @@
                 </flux:tooltip>
             </div>
 
-            <flux:tooltip :content="__('Text font')">
-                <flux:select size="sm" class="w-32 shrink-0 text-xs" :aria-label="__('Text font')"
-                    x-bind:value="textFont ?? booklet.textFont"
-                    x-on:change="setFont($event.target.value)"
+            {{-- The booklet's typography, not its face. A reader who could pick
+                 only a face would get that face's lyrics over the gaps the
+                 cantor's face wanted — the fault styles exist to prevent, put
+                 back on the reader's own screen. So the whole style moves. --}}
+            <flux:tooltip :content="__('Style')">
+                <flux:select size="sm" class="w-32 shrink-0 text-xs" :aria-label="__('Style')"
+                    x-bind:value="style ?? bookletStyle"
+                    x-on:change="setStyle($event.target.value)"
                 >
-                    @foreach(BookletSettingFields::selectableFonts() as $font)
-                        <flux:select.option value="{{ $font }}">{{ $font }}</flux:select.option>
+                    @foreach(BookletStyles::all() as $option)
+                        <flux:select.option value="{{ $option['value'] }}">{{ $option['label'] }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </flux:tooltip>

@@ -3,6 +3,7 @@
     use App\Enums\BookletOrientation;
     use App\Enums\BookletPageSize;
     use App\Support\BookletSettingFields;
+    use App\Support\BookletStyles;
 @endphp
 
 {{-- The booklet is handed over in an attribute of its own rather than inside
@@ -124,13 +125,38 @@
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcStaffSep" :aria-label="__('ABC staff separation')" min="0" max="120" step="1" class="w-16!" />
             </div>
 
+            {{-- The two knobs the style is meant to have got right, kept on the
+                 bar beside the staff separation as the way back out of it: how
+                 far the first lyric line stands below the staff, and how far
+                 two lyric lines stand apart. Both are counted in the face's own
+                 ascent, which is why they belong to the face and therefore to
+                 the style. --}}
             <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Text font')">
+                <flux:tooltip :content="__('Staff to lyrics')">
+                    <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricFirstSkip" :aria-label="__('Staff to lyrics')" min="0.5" max="3" step="0.1" class="w-16!" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Lyric line spacing')">
+                    <flux:icon name="align-vertical-space-between" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricSkip" :aria-label="__('Lyric line spacing')" min="0.5" max="3" step="0.1" class="w-16!" />
+            </div>
+
+            {{-- One press for the whole typography. A booklet is set in one of
+                 three named styles, and the names are the books they are —
+                 someone choosing between Énekeskönyv and Graduále is choosing
+                 what the booklet should feel like, rather than answering a
+                 question about typefaces they did not come here to answer. --}}
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Style')">
                     <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
-                <flux:select size="sm" wire:model.live="textFont" :aria-label="__('Text font')" class="w-36 text-xs">
-                    @foreach(BookletSettingFields::selectableFonts() as $font)
-                        <flux:select.option value="{{ $font }}">{{ $font }}</flux:select.option>
+                <flux:select size="sm" wire:model.live="style" :aria-label="__('Style')" class="w-36 text-xs">
+                    @foreach(BookletStyles::all() as $option)
+                        <flux:select.option value="{{ $option['value'] }}">{{ $option['label'] }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </div>
