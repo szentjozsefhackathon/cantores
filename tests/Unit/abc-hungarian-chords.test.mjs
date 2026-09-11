@@ -9,14 +9,14 @@ import { hungarianChordsToAbc } from '../../resources/js/score-editor-abc.js';
  * End-to-end cover for Hungarian ABC chord symbols.
  *
  * `hungarianChordsToAbc()` rewrites the roots to English so abc2svg can parse and
- * transpose them; the `huchords` hook appended to `public/js/abc2svg-1.js` (see
- * docs/vendor-patches.md) then rewrites every root and slashed bass onto the
+ * transpose them; the packaged fork's `huchords` hook then rewrites every root
+ * and slashed bass onto the
  * fixed palette `C Db D Eb E F Gb G Ab A Bb H` after abc2svg has transposed.
  * The engraver is run for real, headless.
  */
 
 const FLAT = '♭';
-const ABC2SVG_SRC = readFileSync(new URL('../../public/js/abc2svg-1.js', import.meta.url), 'utf8');
+const ABC2SVG_SRC = readFileSync(new URL('../../node_modules/@cantoreshu/abc2svg/abc2svg-1.js', import.meta.url), 'utf8');
 
 function loadAbc2svg() {
     const sandbox = { abc2svg: {} };

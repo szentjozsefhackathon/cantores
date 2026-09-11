@@ -7,7 +7,7 @@ import vm from 'node:vm';
 import { ABC_LYRIC_SKIP_MIN, abcMixin, buildAbcPreamble } from '../../resources/js/score-editor-abc.js';
 
 const abc2svgSource = readFileSync(
-    fileURLToPath(new URL('../../public/js/abc2svg-1.js', import.meta.url)),
+    fileURLToPath(new URL('../../node_modules/@cantoreshu/abc2svg/abc2svg-1.js', import.meta.url)),
     'utf8',
 );
 
@@ -37,29 +37,6 @@ test('a below-floor, blank or junk abcLyricSkip emits nothing', () => {
             `abcLyricSkip=${JSON.stringify(abcLyricSkip)}`,
         );
     }
-});
-
-// Guards the vendor patch against a silent loss on the next abc2svg upgrade.
-// See docs/vendor-patches.md — patch "lyricskipfac".
-test('the abc2svg vendor patch for lyricskipfac is in place', () => {
-    const markers = abc2svgSource.match(/VENDOR PATCH lyricskipfac/g) ?? [];
-    assert.equal(markers.length, 3, 'expected all three patch sites to be tagged');
-
-    assert.match(abc2svgSource, /lyricskipfac:1\.1,\/\*VENDOR PATCH lyricskipfac\*\//);
-    assert.match(abc2svgSource, /case"lyricskipfac":\/\*VENDOR PATCH lyricskipfac\*\/case"maxshrink":/);
-    assert.match(abc2svgSource, /var lsf=tsfirst\.fmt\.lyricskipfac\|\|1\.1/);
-
-    const drawLyrics = abc2svgSource.slice(
-        abc2svgSource.indexOf('function draw_lyrics('),
-        abc2svgSource.indexOf('function draw_all_lyrics('),
-    );
-    assert.doesNotMatch(drawLyrics, /a_h\[j\]\*1\.1/, 'the hardcoded 1.1 advance should be gone');
-
-    // Once in each loop, and in the below-staff one only from the second line
-    // on: there the first line is placed against the staff by lyricfirstskipfac
-    // instead — see tests/Unit/abc-lyricfirstskipfac.test.mjs.
-    assert.equal((drawLyrics.match(/a_h\[j\]\*lsf/g) ?? []).length, 2);
-    assert.match(drawLyrics, /for\(j=0;j<nly;j\+\+\)\{if\(j\)\ny-=a_h\[j\]\*lsf/);
 });
 
 /**

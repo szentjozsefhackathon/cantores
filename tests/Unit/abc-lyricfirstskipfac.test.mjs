@@ -7,7 +7,7 @@ import vm from 'node:vm';
 import { ABC_LYRIC_FIRST_SKIP_MIN, abcMixin, buildAbcPreamble } from '../../resources/js/score-editor-abc.js';
 
 const abc2svgSource = readFileSync(
-    fileURLToPath(new URL('../../public/js/abc2svg-1.js', import.meta.url)),
+    fileURLToPath(new URL('../../node_modules/@cantoreshu/abc2svg/abc2svg-1.js', import.meta.url)),
     'utf8',
 );
 
@@ -53,23 +53,6 @@ test('a below-floor, blank or junk abcLyricFirstSkip emits nothing', () => {
 // from the bottom staff line — is left as the only staff-to-lyrics control.
 test('%%vocalspace is pinned to nothing, whatever the score once stored', () => {
     assert.match(buildAbcPreamble({ ...abcMixin(), abcVocalSpace: 30 }, 1700), /%%vocalspace 0\n/);
-});
-
-// Guards the vendor patch against a silent loss on the next abc2svg upgrade.
-// See docs/vendor-patches.md — patch "lyricfirstskipfac".
-test('the abc2svg vendor patch for lyricfirstskipfac is in place', () => {
-    const markers = abc2svgSource.match(/VENDOR PATCH lyricfirstskipfac/g) ?? [];
-    assert.equal(markers.length, 7, 'expected all seven patch sites to be tagged');
-
-    assert.match(abc2svgSource, /lyricfirstskipfac:1\.1,\/\*VENDOR PATCH lyricfirstskipfac\*\//);
-    assert.match(abc2svgSource, /case"lyricfirstskipfac":\/\*VENDOR PATCH lyricfirstskipfac\*\/case"lyricskipfac":/);
-    assert.match(abc2svgSource, /function lyric_ascent\(font,a_h\)/);
-    assert.match(abc2svgSource, /var lff=tsfirst\.fmt\.lyricfirstskipfac\|\|1\.1/);
-
-    // The anchor is the bottom staff line, and the lowest ink of the music is
-    // only a floor under it — the inverse of what abc2svg does on its own.
-    assert.match(abc2svgSource, /yg=y\*sc-asc\*\.35;yl=-tsfirst\.fmt\.vocalspace\*sc-asc\*lff/);
-    assert.match(abc2svgSource, /y=\(yl<yg\?yl:yg\)-a_h\[0\]\*\.22/);
 });
 
 /**

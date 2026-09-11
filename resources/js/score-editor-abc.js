@@ -119,8 +119,7 @@ export { ABC_RATIO_DEFAULTS };
  *
  * The way back — every English root, including whatever abc2svg's transposition
  * spelled it as, mapped onto the fixed palette `C D♭ D E♭ E F G♭ G A♭ A B♭ H` —
- * is the `huchords` hook appended to `public/js/abc2svg-1.js` (see
- * docs/vendor-patches.md).
+ * is the `huchords` hook in the `@cantoreshu/abc2svg` package.
  *
  * Only real chord symbols in the tune body are touched: information fields and
  * `%%` lines are skipped, and so are annotations (`"^text"`, `"_text"`, `"<"`,
@@ -301,7 +300,7 @@ export function abcMixin() {
         abcLyricFirstSkip: 1,
         // Vertical advance between stacked lyric lines, as a multiple of the
         // line's own height. abc2svg's own advance is 1.1 (see the
-        // `lyricskipfac` vendor patch in public/js/abc2svg-1.js); a plain 1 sets
+        // `lyricskipfac` support in @cantoreshu/abc2svg); a plain 1 sets
         // the stanzas one line height apart, which is what a hymnal does.
         // Anything below ABC_LYRIC_SKIP_MIN is left to the engine.
         abcLyricSkip: 1,

@@ -1,6 +1,6 @@
 # abc2svg Formatting Reference
 
-Source: `public/js/abc2svg-1.js`
+Source: `@cantoreshu/abc2svg/abc2svg-1.js`
 
 ## Line Thickness
 

@@ -3,7 +3,7 @@
 use App\Support\VendorAsset;
 
 /**
- * The vendored abc2svg lives at one stable URL and is served without a
+ * abc2svg lives at one stable URL and is served without a
  * `Cache-Control` header, so a browser is free to reuse its copy on heuristic
  * freshness alone. A patch applied to it (see `docs/vendor-patches.md`) then
  * stays invisible — silently, because abc2svg ignores a directive it does not
@@ -14,6 +14,14 @@ it('versions a public asset by its mtime', function () {
 
     expect($url)->toStartWith(asset('js/abc2svg-1.js').'?v=')
         ->and($url)->toEndWith((string) filemtime(public_path('js/abc2svg-1.js')));
+});
+
+it('serves abc2svg from the installed package', function () {
+    $asset = public_path('js/abc2svg-1.js');
+    $packageAsset = base_path('node_modules/@cantoreshu/abc2svg/abc2svg-1.js');
+
+    expect(is_link($asset))->toBeTrue()
+        ->and(realpath($asset))->toBe(realpath($packageAsset));
 });
 
 it('changes the URL when the file changes', function () {

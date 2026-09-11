@@ -3,7 +3,7 @@
 namespace App\Support;
 
 /**
- * A cache-busting URL for a hand-maintained asset under `public/`.
+ * A cache-busting URL for a plain-script package asset under `public/`.
  *
  * Vite's own output is content-hashed, so a rebuilt bundle always arrives at a
  * new URL. The vendored scripts in `public/js` are not: they keep one stable
@@ -11,7 +11,7 @@ namespace App\Support;
  * all. A browser therefore falls back to heuristic freshness and will reuse its
  * copy without revalidating — so a vendor patch applied here (see
  * `docs/vendor-patches.md`) can stay invisible in a browser that already holds
- * the pre-patch file, with no error to show for it.
+ * an outdated file, with no error to show for it.
  *
  * Appending the file's mtime gives each edit a URL of its own, which is what
  * makes a patch take effect the moment it lands.

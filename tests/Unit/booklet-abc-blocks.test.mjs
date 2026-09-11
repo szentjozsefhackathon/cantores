@@ -16,7 +16,7 @@ import { buildScoreBlocks } from '../../resources/js/booklet-render.js';
 const sandbox = { abc2svg: {}, console };
 vm.createContext(sandbox);
 vm.runInContext(
-    readFileSync(fileURLToPath(new URL('../../public/js/abc2svg-1.js', import.meta.url)), 'utf8'),
+    readFileSync(fileURLToPath(new URL('../../node_modules/@cantoreshu/abc2svg/abc2svg-1.js', import.meta.url)), 'utf8'),
     sandbox,
 );
 globalThis.abc2svg = sandbox.abc2svg;
