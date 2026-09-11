@@ -1,5 +1,5 @@
 <div class="py-8">
-    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <div class="mx-auto w-full lg:max-w-4xl sm:px-6 lg:px-8">
 
         <flux:card class="p-5">
             <div class="flex items-center gap-4 mb-6">
@@ -50,7 +50,7 @@
                     </div>
                     
                     @if($musics->isNotEmpty())
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                             @foreach($musics as $music)
                                 <x-music.card :music="$music" wire:key="music-card-{{ $music->id }}" />
                             @endforeach

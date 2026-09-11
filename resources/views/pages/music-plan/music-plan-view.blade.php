@@ -131,7 +131,7 @@ new class extends Component
 ?>
 
 <div class="py-8">
-    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <div class="mx-auto w-full lg:max-w-4xl sm:px-6 lg:px-8">
 
         <flux:card class="p-5">
             <div class="flex flex-wrap items-center gap-4 mb-4">
