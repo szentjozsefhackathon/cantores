@@ -2,6 +2,7 @@ import { renderAretino, splitRowSVGs } from '@aretino-chant/core';
 
 import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
 import { spellFlatB } from './chordpro-notation.js';
+import { appendEntryRegions } from './booklet-hover.js';
 import { packPages } from './booklet-flow.js';
 import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
 import { markdownRows } from './booklet-markdown.js';
@@ -118,7 +119,7 @@ export async function renderBooklet(entries, rawGeometry, host) {
         const built = await buildEntryBlocks(entry, geometry, host);
 
         built.fonts.forEach((font) => fonts.add(font));
-        built.blocks.forEach((block) => blocks.push(block));
+        built.blocks.forEach((block) => blocks.push({ ...block, entryId: entry.id }));
     }
 
     const pages = packPages(blocks, geometry.contentHeightPx)
@@ -994,6 +995,7 @@ function composePage(page, geometry, pageNumber, pageCount) {
     background.setAttribute('height', String(geometry.pageHeightPx));
     background.setAttribute('fill', '#ffffff');
     svg.insertBefore(background, svg.firstChild);
+    appendEntryRegions(svg, page, geometry);
 
     return svg;
 }

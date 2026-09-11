@@ -476,3 +476,8 @@ aretino-editor.split-screen::part(toolbar) {
 [data-src-start] {
     cursor: pointer;
 }
+
+.booklet-entry-hovered > [data-entry-card] {
+    outline: 2px solid var(--color-blue-500);
+    outline-offset: -1px;
+}

@@ -22,7 +22,11 @@
      thing itself — its name, its opening notes, and everything that can be done
      to it. The green edge is what marks it as being in the booklet, since in the
      plan it stands among the scores that are not. --}}
-<li data-entry="{{ $entry->isText() ? 'text' : 'score' }}" class="border-s-2 border-green-500 ps-1.5">
+<li
+    x-on:mouseenter="hoverEntry({{ $entry->id }})"
+    x-on:mouseleave="hoverEntry(null)"
+    x-bind:class="{ 'booklet-entry-hovered': hoveredEntryId === {{ $entry->id }} }"
+    data-entry="{{ $entry->isText() ? 'text' : 'score' }}" class="border-s-2 border-green-500 ps-1.5">
     <div data-entry-card class="rounded-md border border-zinc-200 px-2 py-1.5 dark:border-zinc-700">
         <div data-entry-header class="flex items-center gap-1.5 text-sm">
             {{-- Counted by the browser: a row moved renumbers every row after it,

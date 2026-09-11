@@ -1,3 +1,4 @@
+import { highlightEntry } from './booklet-hover.js';
 import { pageGeometry } from './booklet-geometry.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
@@ -62,6 +63,7 @@ document.addEventListener('alpine:init', () => {
             csrfToken: config.csrfToken ?? '',
             exportFailedText: config.exportFailedText ?? '',
 
+            hoveredEntryId: null,
             pages: [],
             pageCount: 0,
             splitPercent: SPLIT_DEFAULT,
@@ -212,6 +214,13 @@ document.addEventListener('alpine:init', () => {
                 }
             },
 
+            hoverEntry(entryId) {
+                if (this.hoveredEntryId === entryId) { return; }
+
+                this.hoveredEntryId = entryId;
+                highlightEntry(this.$refs.pages, entryId, true);
+            },
+
             paint() {
                 const container = this.$refs.pages;
                 if (!container) { return; }
@@ -230,6 +239,8 @@ document.addEventListener('alpine:init', () => {
                     sheet.appendChild(svg);
                     container.appendChild(sheet);
                 });
+
+                highlightEntry(container, this.hoveredEntryId);
             },
 
             /**
