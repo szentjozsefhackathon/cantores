@@ -244,7 +244,7 @@
 
 
                 <!-- Actions -->
-                <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 pt-4">
                     <flux:button variant="outline" color="zinc" icon="arrow-left" href="{{ route('dashboard') }}">
                         Vissza az irányítópultra
                     </flux:button>
