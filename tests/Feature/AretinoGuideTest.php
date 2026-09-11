@@ -65,3 +65,34 @@ it('documents plica and liquescentia correctly in the Aretino cheatsheet', funct
         ->toContain('| `dw`, `ds` | quilisma, kiskotta (liquescens átírásához) |')
         ->not->toContain('ictus, liquescens');
 });
+
+it('documents octave-shift markers, text block styles and lyric-aware justification', function () {
+    $markdown = (string) file_get_contents(base_path('docs/aretino-felhasznaloi-utmutato.md'));
+
+    expect($markdown)
+        ->toContain('### Oktávjelek — `^` és `v`')
+        ->toContain('### Kiegyenlítés énekelt szöveg nélkül')
+        ->toContain('`%option: justifyWithoutLyrics=true`')
+        ->toContain('### Szövegblokk-stílusok — `W(...):`')
+        ->toContain('### Jelölők a szövegblokkban (`~~`)')
+        ->toContain('### Kézi sortörés a szövegblokkban (`|`)')
+        ->toContain('`%option: textMarkerAlign=right`');
+});
+
+it('documents the new features in the Aretino cheatsheet', function () {
+    $markdown = (string) file_get_contents(base_path('docs/aretino-cheatsheet.md'));
+
+    expect($markdown)
+        ->toContain('oktávjel')
+        ->toContain('`W(prose):` `W(stanza):` `W(rubric):`')
+        ->toContain('justifyWithoutLyrics')
+        ->toContain('textMarkerAlign');
+});
+
+it('requires quotes around a brace label', function () {
+    $markdown = (string) file_get_contents(base_path('docs/aretino-felhasznaloi-utmutato.md'));
+
+    expect($markdown)
+        ->toContain('Az idézőjel kötelező')
+        ->not->toContain('idézőjel nélkül (`}Szó`)');
+});

@@ -344,7 +344,8 @@ A számok JavaScript-számként, a logikai értékek `true`/`false`, `1`/`0`,
 `yes`/`no`, `on`/`off` alakban adhatók meg. Ugyanaz a beállítás többször
 megadva mindig az utolsó érvényes. Az elérhető beállításnevek: `dpi`,
 `staffSpaceMm`, `lyricSize`, `textFont`, `noteSpacing`, `lyricDistance`,
-`hideRepeatClef`, `canvasHeight`, `staffGap`.
+`hideRepeatClef`, `canvasHeight`, `staffGap`, `justifyWithoutLyrics`,
+`textStyle`, `textMarkerAlign`, `textMaxIndent`.
 
 ---
 
@@ -381,6 +382,35 @@ w: A B c d e f g a b C D E F G
 Tehát G-kulcsban `c` az 1. vonalon C-hang, `g` a 3. vonalon B-hang stb.
 F-kulcsban ugyanaz a `c` az 1. vonalon E-hang lesz (mert a kulcs változik,
 de a vonal-pozíció nem).
+
+### Oktávjelek — `^` és `v`
+
+A 14 betű a legmélyebb `A`-nál és a legmagasabb `G`-nél elfogy. Az ezeken
+túlnyúló, ritka hangokhoz a hangbetű **elé** írt oktávjel való: a `^` egy
+oktávval (7 vonalpozícióval) feljebb, a `v` egy oktávval lejjebb tolja a
+hangot. A jelek halmozhatók — `^^c` két oktávval magasabb —, a pótvonalakat
+a megjelenítő magától kirajzolja.
+
+A skála mindkét végén egyszerűen folytatódik, így a természetes írásmód:
+
+| Tartomány | Írásmód | Megjegyzés |
+|---|---|---|
+| `G` fölött | `^a ^b ^C ^D ^E ^F ^G` | a `G` utáni lépés `^a`, majd `^b`, aztán a nagybetűs hangok egy oktávval feljebb |
+| `A` alatt | `vg vf ve vd vc vB vA` | az `A` alatti lépés `vg` (a `g` alatti oktávban), majd `vf` és így tovább |
+
+```aretino
+(g2) g a b C D E F G ^a ^b ^C
+w:   fel a te-te-jé-ig
+```
+
+```aretino
+(g2) A vg vf ve vd
+w:   le az al-já-ig
+```
+
+Az oktávjel csak akkor számít jelnek, ha közvetlenül hangbetű követi —
+ligatúrán belül is működik (`g^a^bg`) —, a magában álló `^` vagy `v` jel
+figyelmen kívül marad.
 
 ---
 
@@ -565,6 +595,36 @@ sortörést.
 (g2) g a b C (z) g a b C (Z) g a b C ||
 ```
 
+### Kiegyenlítés énekelt szöveg nélkül
+
+A neumaközök egyenletessé tétele — és a sor margóig feszítése — csak ott
+történik meg, ahol a rés valamelyik oldalán **valódi énekelt szöveg** áll:
+a szótag az, ami a közt egyenetlenné teszi. Két szövegtelen neuma közt marad
+az alapértelmezett távolság, így a puszta zsoltárdallam egyenletes marad,
+`(z)` törés után is:
+
+```aretino
+(g2) g g g g a g. g f g g. (z) g g g g a g. g f g g. ||
+```
+
+A tagolójelek ilyen szempontból nem számítanak szövegnek: a csak `*`, `+`,
+`++`, `\R`, `\V`, `~` vagy írásjel szótag helyet foglal magának, de a
+neumáját nem teszi „énekeltté” — ez a sor tehát szoros marad:
+
+```aretino
+(g2) g g g g a g. (z) g f g g. ||
+w: * + * \V ~ .
+```
+
+Ha valódi szótagokat írunk alá, ugyanaz a sor kiegyenlítődik:
+
+```aretino
+(g2) g g g g a g. (z) g f g g. ||
+w: Di-cső-ség az A-tyá-nak
+```
+
+A `%option: justifyWithoutLyrics=true` beállítással minden neumaköz
+kiegyenlítődik, szövegtől függetlenül (ez volt a korábbi viselkedés).
 
 ---
 
@@ -713,8 +773,96 @@ W: Arról ismerje meg mindenki, hogy az én tanítványa[im] vagytok: *
 hogy sze[re]titek egymást!
 ```
 
-Ha egy `W:` sort egy prefix nélküli sor követ, az ugyanannak a versszaknak
-új sora lesz.
+Ha egy `W:` sort egy prefix nélküli sor követ, az ugyanannak a szövegblokknak
+a folytatása lesz. Az egymást követő blokkok összetartoznak, a szakaszt üres
+sor zárja.
+
+### Szövegblokk-stílusok — `W(...):`
+
+A `W:` sor **szövegblokkot** nyit, amelynek tipográfiáját a kettőspont elé,
+zárójelbe írt stílusnév választja ki. A sima `W:` a `psalm` stílust jelenti,
+így a régebbi kották változatlanul jelennek meg. Ismeretlen név esetén az
+alapértelmezett stílus lép életbe.
+
+| Stílus | Forrás-sortörés | Behúzás töréskor | Behúzás tördeléskor | Jellemző |
+|---|---|---|---|---|
+| `psalm` | megmarad | 2 em | 2 em | alapértelmezett — a verskezdetek láthatók maradnak |
+| `prose` | újratördelődik | 0 | 0 | rubrika, útmutatás folyószövegként |
+| `stanza` | megmarad | 0 | 1,5 em | himnuszversszak; csak a túlcsorduló sor húzódik be |
+| `rubric` | újratördelődik | 0 | 0 | 85%-os méret, piros |
+
+```aretino
+W(prose): Az áldozás alatt a nép énekelhet, vagy a kántor
+zsoltárt énekelhet — ez a sor folyószövegként tördelődik.
+
+W(stanza): Ó jöjj, ó jöjj, Emmánuel,
+csak téged áhít Izrael,
+
+W(rubric): Az ünnep vigíliáján elmarad.
+
+W: Dicsőség az Atyának és Fiúnak *
+és Szentlélek Istennek.
+```
+
+A `prose` és a `rubric` stílusban a forrásbeli sortörés csak szerkesztési
+kényelem: a blokk a hasáb szélességéhez igazodva újratördelődik. A `psalm`
+és a `stanza` stílusban viszont megmarad törésnek.
+
+Minden stílusnak saját sormagassága és saját blokk-térköze van. Ahol két
+stílus találkozik, a nagyobb igény érvényesül — így például egy rubrika
+levegőt nyit maga körül anélkül, hogy a többi stílusnak tudnia kellene róla.
+
+A dokumentum alapértelmezett stílusa a `%option: textStyle=prose` sorral
+állítható; a blokkra írt `W(stílus):` mindig erősebb ennél.
+
+### Jelölők a szövegblokkban (`~~`)
+
+A `~~` a blokk **jelölőjét** — versszakszámot, `℟` jelet, szerepmegjelölést —
+választja el a törzsszövegtől. A jelölő a bal margón lóg, a törzsszöveg pedig
+egy közös szövegoszlopban kezdődik, amelyen az azonos stílusú, egymást követő
+blokkok osztoznak:
+
+```aretino
+W(stanza): 1.~~Ó jöjj, ó jöjj, Emmánuel,
+W(stanza): 10.~~Ó jöjj, ó jöjj, Adonáj,
+W: \R.~~Dicsőség az Atyának és Fiúnak
+W(prose): Előénekes~és~nép:~~Az áldozás alatt a nép énekelhet…
+```
+
+Mivel az oszlop közös, az `1.` és a `10.` egy vonalban áll a versszakok közt.
+Ez az osztozás csak az azonos stílusú blokkok során belül érvényes, így egy
+szomszédos blokk hosszú szerepmegjelölése nem rántja el a himnusz számait.
+A `~` egyetlen egységbe köti a többszavas jelölőt: az `1.~Első` közönséges
+nem törhető szópár, az `1.~~Első` viszont jelölő + törzsszöveg.
+
+A `textMaxIndent`-nél (alapból 8 em, de legfeljebb a rendelkezésre álló
+szélesség 30%-a) szélesebb jelölő túlnyúlik az oszlopon; ha mellé egy szó
+sem fér ki, a törzsszöveg a következő sorban, az oszlopnál kezdődik.
+
+A jelölők alapból balra zártak. A `%option: textMarkerAlign=right`
+beállítással a szövegoszlophoz igazodnak, tehát a rövid `1.` ott ér véget,
+ahol a hosszú `Refrén.`:
+
+```aretino
+%option: textMarkerAlign=right
+%%
+W(stanza): 1.~~Első versszak | Második sor
+W(stanza): Refrén.~~Második versszak
+```
+
+A sor legszélesebb jelölője ilyenkor is a bal margón kezdődik, és az is, amely
+túlnyúlik a korlátozott oszlopon.
+
+### Kézi sortörés a szövegblokkban (`|`)
+
+A `|` ugyanúgy sort tör a blokkon belül, mint a forrásbeli sortörés — így a
+`prose` és a `rubric` stílusban, ahol a forrás sortörései újratördelődnek, ez
+az a törés, amely megmarad. A körülötte lévő szóközöket levágjuk, a formázás
+átnyúlhat rajta. A `\|` szó szerinti függőleges vonalat jelent.
+
+```aretino
+W(prose): <Az áldozás alatt | a nép énekelhet>
+```
 
 ### Több szó ugyanarra a hangra (`~`)
 
@@ -820,10 +968,13 @@ választhatunk:
 | `\arc{ … }` | sima ív |
 | `\line{ … }` | egyenes vonal |
 
-A záró `}` után feliratot is megadhatunk: idézőjelben (`}"Szöveg"`) tetszőleges
-— akár formázott — szöveget, idézőjel nélkül (`}Szó`) egyetlen szót a következő
-szóközig. Az összefogó jel sortörésen át is folytatódik, a megjelenítő a
-következő sorban automatikusan folytatja.
+A záró `}` után feliratot is megadhatunk, **idézőjelben** (`}"Szöveg"`):
+tetszőleges, akár formázott szöveget. Az idézőjel kötelező — a `}melizma`
+alakot a megjelenítő nem feliratnak olvassa, hanem lezárja a jelet, és a
+betűket hangként értelmezi (így az `e` és az `a` kottafejként jelenne meg).
+Feliratot a `{`, az `\arc{` és a `\line{` jelhez rajzolunk; a kötőívre írt
+felirat értelmezhető, de nem jelenik meg. Az összefogó jel sortörésen át is
+folytatódik, a megjelenítő a következő sorban automatikusan folytatja.
 
 ```aretino
 (g2) { g a b C } { a b C D }"melizma"

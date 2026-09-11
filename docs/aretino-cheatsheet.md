@@ -5,6 +5,7 @@
 |Hangmagasság||
 |---|---|
 | `A B c d e f g a b C D E F G` | 14 pozíció alulról felfelé |
+| `^a ^b ^C` / `vg vf ve` | oktávjel: `G` fölötti / `A` alatti hangok (halmozható) |
 
 |Kottafej||
 |---|---|
@@ -41,6 +42,7 @@
 | `(z)` `(Z)` | sortörés, sorkizárt/balra zárt |
 | `= (sp) (sp2)` | fix rés (szorzóval skálázható) |
 | `*` | rugalmas rés (sorkizáráshoz) |
+| `%option: justifyWithoutLyrics=true` | szövegtelen neumaközök kiegyenlítése is |
 
 | Módosítójelek és előjegyzés | |
 |---|---|
@@ -55,12 +57,16 @@
 | `w: Ky-ri-e` | szövegsor (kötőjel = szótaghatár) |
 | több `w:` sor | több versszak |
 | `W: Dicsőség...` | folyó zsoltárvers / responzórium szövegsor |
+| `W(prose):` `W(stanza):` `W(rubric):` | szövegblokk stílusa (`W:` = `psalm`) |
+| `\|` a `W:` blokkban | kézi sortörés a blokkon belül (`\\|` = szó szerinti `\|`) |
+| `%option: textStyle=prose` | a dokumentum alapértelmezett szövegblokk-stílusa |
+| `%option: textMarkerAlign=right` | a jelölők a szövegoszlophoz igazodnak |
 | `n: ...` | előző dallamsor folytatása (a `w:` sorok igazítása megmarad) |
 | `ro_` `ro__` | szótag-elnyújtó vonal (minden további `_` egy újabb neumára nyújt) |
 | `=` | mindig látszó (kötelező) szótaghatár |
 | `\-` `\_` | szó szerinti kötőjel / aláhúzás egy szótagon belül |
 | `~` | Több szó összekötése egy hanghoz |
-| `~~` | Verszakszám kötése (pl. `1.~~Ky-ri-e`) |
+| `~~` | jelölő (verszakszám, `\R.`, szerep) kötése — `w:` és `W:` sorban is |
 | `\R` `\V` `+` `++` | ℟, ℣, kereszt, kettős kereszt jel |
 | `{}` `<>` `[]` | félkövér, dőlt, aláhúzott formázás |
 | `\red{...}` `\color:green{...}` | színezett szöveg |
