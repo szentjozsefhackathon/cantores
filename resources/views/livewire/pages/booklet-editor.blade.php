@@ -71,6 +71,43 @@
                 <flux:input size="sm" wire:model.live.blur="title" :aria-label="__('Title')" :placeholder="__('Title')" class="min-w-0 flex-1" />
             </div>
 
+            {{-- One press for the whole typography. A booklet is set in one of
+                 three named styles, and the names are the books they are —
+                 someone choosing between Énekeskönyv and Graduále is choosing
+                 what the booklet should feel like, rather than answering a
+                 question about typefaces they did not come here to answer. --}}
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Style')">
+                    <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:select size="sm" wire:model.live="style" :aria-label="__('Style')" class="w-36 text-xs">
+                    @foreach(BookletStyles::all() as $option)
+                        <flux:select.option value="{{ $option['value'] }}">{{ $option['label'] }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Lyric size (pt)')">
+                    <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="lyricSizePt" :aria-label="__('Lyric size (pt)')" min="5" max="24" step="0.5" class="w-20! shrink-0" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Staff height (mm)')">
+                    <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="staffHeightMm" :aria-label="__('Staff height (mm)')" min="2" max="20" step="0.5" class="w-16!" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Heading size (×)')">
+                    <flux:icon name="heading" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="headingScale" :aria-label="__('Heading size (×)')" min="0.5" max="2" step="0.05" class="w-16!" />
+            </div>
+
             <div class="flex items-center gap-1">
                 <flux:tooltip :content="__('Page size')">
                     <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
@@ -100,72 +137,31 @@
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="marginMm" :aria-label="__('Margin (mm)')" min="0" max="60" step="1" class="w-16!" />
             </div>
 
-            <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Lyric size (pt)')">
-                    <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                </flux:tooltip>
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="lyricSizePt" :aria-label="__('Lyric size (pt)')" min="5" max="24" step="0.5" class="w-16!" />
-            </div>
+            <div role="group" aria-labelledby="booklet-abc-settings" class="flex max-w-full items-center gap-3">
+                <flux:separator vertical class="h-8" />
+                <span id="booklet-abc-settings" class="text-xs font-medium text-zinc-500 dark:text-zinc-400">ABC</span>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <div class="flex items-center gap-1">
+                        <flux:tooltip :content="__('ABC staff separation')">
+                            <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                        </flux:tooltip>
+                        <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcStaffSep" :aria-label="__('ABC staff separation')" min="0" max="120" step="1" class="w-16!" />
+                    </div>
 
-            <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Staff height (mm)')">
-                    <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                </flux:tooltip>
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="staffHeightMm" :aria-label="__('Staff height (mm)')" min="2" max="20" step="0.5" class="w-16!" />
-            </div>
+                    <div class="flex items-center gap-1">
+                        <flux:tooltip :content="__('Staff to lyrics')">
+                            <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                        </flux:tooltip>
+                        <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricFirstSkip" :aria-label="__('Staff to lyrics')" min="0.5" max="3" step="0.1" class="w-16!" />
+                    </div>
 
-            {{-- Format-specific, on a bar that is otherwise not. ABC reserves
-                 this space above the first staff as well as between two of
-                 them, so it is what stands between a heading and its music —
-                 a booklet-wide decision rather than each score's. --}}
-            <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('ABC staff separation')">
-                    <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                </flux:tooltip>
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcStaffSep" :aria-label="__('ABC staff separation')" min="0" max="120" step="1" class="w-16!" />
-            </div>
-
-            {{-- The two knobs the style is meant to have got right, kept on the
-                 bar beside the staff separation as the way back out of it: how
-                 far the first lyric line stands below the staff, and how far
-                 two lyric lines stand apart. Both are counted in the face's own
-                 ascent, which is why they belong to the face and therefore to
-                 the style. --}}
-            <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Staff to lyrics')">
-                    <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                </flux:tooltip>
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricFirstSkip" :aria-label="__('Staff to lyrics')" min="0.5" max="3" step="0.1" class="w-16!" />
-            </div>
-
-            <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Lyric line spacing')">
-                    <flux:icon name="align-vertical-space-between" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                </flux:tooltip>
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricSkip" :aria-label="__('Lyric line spacing')" min="0.5" max="3" step="0.1" class="w-16!" />
-            </div>
-
-            {{-- One press for the whole typography. A booklet is set in one of
-                 three named styles, and the names are the books they are —
-                 someone choosing between Énekeskönyv and Graduále is choosing
-                 what the booklet should feel like, rather than answering a
-                 question about typefaces they did not come here to answer. --}}
-            <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Style')">
-                    <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                </flux:tooltip>
-                <flux:select size="sm" wire:model.live="style" :aria-label="__('Style')" class="w-36 text-xs">
-                    @foreach(BookletStyles::all() as $option)
-                        <flux:select.option value="{{ $option['value'] }}">{{ $option['label'] }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-            </div>
-
-            <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Heading size (×)')">
-                    <flux:icon name="heading" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                </flux:tooltip>
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="headingScale" :aria-label="__('Heading size (×)')" min="0.5" max="2" step="0.05" class="w-16!" />
+                    <div class="flex items-center gap-1">
+                        <flux:tooltip :content="__('Lyric line spacing')">
+                            <flux:icon name="align-vertical-space-between" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                        </flux:tooltip>
+                        <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricSkip" :aria-label="__('Lyric line spacing')" min="0.5" max="3" step="0.1" class="w-16!" />
+                    </div>
+                </div>
             </div>
 
             <div class="ml-auto flex items-center gap-2">
@@ -372,7 +368,6 @@
                 {{-- The badge sits in the heading row rather than above the
                      sheets, so it stays put while the pages are scrolled. --}}
                 <div class="mb-3 flex items-center justify-between gap-2">
-                    <flux:heading>{{ __('Preview') }}</flux:heading>
                     <span
                         class="flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                         role="status"

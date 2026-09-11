@@ -397,7 +397,7 @@ it('names every booklet setting by its icon rather than a label', function () {
     $settings = [
         __('Title'), __('Page size'), __('Orientation'), __('Margin (mm)'),
         __('Lyric size (pt)'), __('Staff height (mm)'), __('Style'),
-        __('Staff to lyrics'), __('Lyric line spacing'), __('Heading size (×)'),
+        __('ABC staff separation'), __('Staff to lyrics'), __('Lyric line spacing'), __('Heading size (×)'),
     ];
 
     expect($toolbar)->not->toBeNull();
