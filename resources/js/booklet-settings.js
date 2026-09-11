@@ -146,8 +146,7 @@ export function unifiedSettings(format, geometry) {
     if (format === 'chordpro') {
         return {
             chordproFontSize: round(chordproFontSizeForPt(lyricSizePt), 4),
-            // The booklet's own flow does the packing; a second column inside one
-            // score would fight it for the same vertical space.
+            // Scores default to one column; per-entry overrides can request more.
             chordproColumns: 1,
         };
     }

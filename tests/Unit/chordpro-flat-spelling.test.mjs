@@ -148,9 +148,11 @@ for (const [source, expected] of [
         const { displayChord, displayChordsInHtml, displayChordsInText } = await import('../../resources/js/chordpro-notation.js');
 
         assert.equal(displayChord(source), expected);
+        const expectedHtml = expected.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (digits) =>
+            `<sup style="font-size:70%;line-height:0;vertical-align:baseline;position:relative;top:-0.5em">${[...digits].map((digit) => '⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(digit)).join('')}</sup>`);
         for (const tag of ['div', 'td']) {
             assert.equal(displayChordsInHtml(`<${tag} class="chord">${source}</${tag}><div class="lyrics">Dm7</div>`),
-                `<${tag} class="chord">${expected}</${tag}><div class="lyrics">Dm7</div>`);
+                `<${tag} class="chord">${expectedHtml}</${tag}><div class="lyrics">Dm7</div>`);
         }
         assert.equal(displayChordsInText(`${source}\nVerse 7`, [source]), `${expected}\nVerse 7`);
     });

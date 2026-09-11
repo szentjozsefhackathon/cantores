@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { chordproRows } from '../../resources/js/booklet-chordpro.js';
+import { chordproBookletBlocks, chordproRows } from '../../resources/js/booklet-chordpro.js';
 
 // A predictable metric: every character is half the font size wide, and bold
 // costs nothing. Real font metrics would make the arithmetic unreadable without
@@ -334,4 +334,54 @@ test('markup in a label may be a script too', () => {
 
     assert.deepEqual(runs.map((run) => run.content), ['Verse 1', 'a']);
     assert.equal(runs[1].size, 7);
+});
+
+const verses = (count) => Array.from({ length: count }, (_, i) => ({
+    lines: [{ items: [pair('C', `Verse${i}`)] }],
+}));
+
+test('booklet columns are placed side by side in reading order', () => {
+    const single = chordproBookletBlocks(verses(4), { ...options, columns: 1 });
+    const double = chordproBookletBlocks(verses(4), { ...options, columns: 2, contentHeight: 200 });
+
+    assert.equal(single.length, 4);
+    assert.equal(double.length, 1);
+    assert.match(double[0].svg, /translate\(110 0\)/);
+    assert.ok(double[0].height < single.reduce((sum, row) => sum + row.height, 0));
+    assert.deepEqual([...double[0].svg.matchAll(/Verse\d/g)].map(([verse]) => verse),
+        ['Verse0', 'Verse1', 'Verse2', 'Verse3']);
+});
+
+test('long multicolumn booklets continue on bounded pages without losing verses', () => {
+    const blocks = chordproBookletBlocks(verses(12), { ...options, columns: 2, contentHeight: 100 });
+
+    assert.equal(blocks.length, 2);
+    assert.ok(blocks.every((block) => block.height <= 100));
+    assert.equal([...blocks.map((block) => block.svg).join('').matchAll(/Verse\d+/g)].length, 12);
+});
+
+test('column width controls lyric wrapping', () => {
+    const paragraphs = [{ lines: [{ items: [pair('', 'one two three four five six')] }] }];
+    const blocks = chordproBookletBlocks(paragraphs, { ...options, columns: 2, contentHeight: 30 });
+
+    assert.match(blocks[0].svg, />one two three <\/text>/);
+    assert.match(blocks[0].svg, />four five six<\/text>/);
+    assert.equal(blocks[0].height, 27);
+});
+
+test('empty multicolumn songs emit no blocks', () => {
+    assert.deepEqual(chordproBookletBlocks([], { ...options, columns: 2 }), []);
+});
+
+
+test('chord superscripts use normal digits at 70 percent and reserve their measured width', () => {
+    const rows = chordproRows([{ lines: [{ items: [pair('Dm¹³/G', ''), pair('C', '')] }] }], {
+        ...options,
+        measure: (text, font) => text.length * (font.fontSize ?? 10) / 2,
+    });
+
+    assert.match(rows[0].svg, /y="6.5"[^>]*font-size="7"[^>]*>13<\/text>/);
+    assert.match(rows[0].svg, /x="17"[^>]*font-size="10"[^>]*>\/G<\/text>/);
+    assert.match(rows[0].svg, /x="31"[^>]*>C<\/text>/);
+    assert.doesNotMatch(rows[0].svg, /[¹³]/);
 });

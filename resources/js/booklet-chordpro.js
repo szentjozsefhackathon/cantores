@@ -19,6 +19,8 @@
  * the layout can be tested against a known metric instead of a real font.
  */
 
+import { packColumns, packPages } from './booklet-flow.js';
+import { chordDisplayRuns } from './chordpro-notation.js';
 import { escapeXml, round } from './booklet-text.js';
 import { markupRuns, measureRuns, runBaselineShift, runFont, runsText, sliceRuns } from './chordpro-markup.js';
 
@@ -33,6 +35,41 @@ const PARAGRAPH_GAP = 0.9;
 
 /** Breathing room after a chord, so neighbouring chords never touch. */
 const CHORD_GAP = 0.4;
+
+/** Lay out booklet columns as page-sized SVG blocks in reading order. */
+export function chordproBookletBlocks(paragraphs, options) {
+    const count = Math.min(4, Math.max(1, Math.round(Number(options.columns) || 1)));
+    if (count === 1) {
+        return chordproRows(paragraphs, options);
+    }
+
+    const gap = options.fontSize * 2;
+    const columnWidth = (options.layoutWidth - gap * (count - 1)) / count;
+    const contentHeight = options.contentHeight ?? Infinity;
+    const rows = chordproRows(paragraphs, { ...options, layoutWidth: columnWidth });
+    const columns = packPages(rows, contentHeight);
+    const blocks = [];
+
+    for (let start = 0; start < columns.length; start += count) {
+        const pageColumns = columns.slice(start, start + count);
+        const pageRows = pageColumns.flatMap((column) => column.items.map(({ block }) => block));
+        const balanced = packColumns(pageRows, count);
+        const placed = balanced.every((column) => column.height <= contentHeight) ? balanced : pageColumns;
+        const height = Math.max(...placed.map((column) => column.height));
+        const body = placed.map((column, index) => column.items.map(({ block, y }) =>
+            `<g transform="translate(${round(index * (columnWidth + gap))} ${round(y)})">${block.svg}</g>`,
+        ).join('')).join('');
+
+        blocks.push({
+            height,
+            spaceBefore: pageRows[0]?.spaceBefore ?? 0,
+            keepWithNext: false,
+            svg: svgDocument(body, options.layoutWidth, height),
+        });
+    }
+
+    return blocks;
+}
 
 /**
  * Lay a parsed ChordPro song out into flowable rows.
@@ -134,7 +171,7 @@ function columnsOf(line, options) {
  * drawn in, so an italic word takes the room italics actually need.
  */
 function sizedColumn(chord, runs, { measure, fontSize }) {
-    const chordWidth = chord === '' ? 0 : measure(chord, { bold: true }) + fontSize * CHORD_GAP;
+    const chordWidth = chord === '' ? 0 : measureRuns(chordDisplayRuns(chord), measure, fontSize) + fontSize * CHORD_GAP;
 
     return {
         chord,
@@ -274,12 +311,17 @@ function chordLyricRow(columns, options) {
 
     columns.forEach((column) => {
         if (column.chord !== '') {
-            parts.push(text(column.chord, x, chordHeight * 0.8, {
-                fontFamily,
-                fontSize,
-                fill: CHORD_COLOR,
-                bold: true,
-            }));
+            let chordX = x;
+            chordDisplayRuns(column.chord).forEach((run) => {
+                const font = runFont(run, fontSize);
+                parts.push(text(run.text, chordX, chordHeight * 0.8 + runBaselineShift(run, fontSize), {
+                    fontFamily,
+                    fontSize: font.fontSize,
+                    fill: CHORD_COLOR,
+                    bold: true,
+                }));
+                chordX += options.measure(run.text, font);
+            });
         }
 
         let lyricX = x;

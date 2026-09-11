@@ -95,10 +95,24 @@ export function displayChord(chord, german = false) {
         });
 }
 
+/** Measurable superscripts for HTML/SVG; plain-text copies retain Unicode. */
+export function chordDisplayRuns(chord) {
+    return (chord.match(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+|[^⁰¹²³⁴⁵⁶⁷⁸⁹]+/g) ?? []).map((text) => ({
+        text: text.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (digit) => String('⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(digit))),
+        bold: true,
+        italic: false,
+        underline: false,
+        script: /^[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(text) ? 'sup' : null,
+    }));
+}
+
 export function displayChordsInHtml(html, german = false) {
     return html.replace(
         /(<(?:div|td) class="chord">)([^<]*)(<\/(?:div|td)>)/g,
-        (_, open, chord, close) => open + displayChord(chord, german) + close,
+        (_, open, chord, close) => open + chordDisplayRuns(displayChord(chord, german))
+            .map((run) => run.script
+                ? `<sup style="font-size:70%;line-height:0;vertical-align:baseline;position:relative;top:-0.5em">${run.text}</sup>`
+                : run.text).join('') + close,
     );
 }
 

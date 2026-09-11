@@ -1,6 +1,6 @@
 import { renderAretino, splitRowSVGs } from '@aretino-chant/core';
 
-import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
+import { canvasMeasurer, chordproBookletBlocks } from './booklet-chordpro.js';
 import { displayChord } from './chordpro-notation.js';
 import { appendEntryRegions } from './booklet-hover.js';
 import { packPages } from './booklet-flow.js';
@@ -817,7 +817,8 @@ async function chordproBlocks(content, resolved, layoutWidthPx, geometry) {
     const fontSize = Number(resolved.chordproFontSize);
     const paragraphs = song.bodyParagraphs ?? song.paragraphs ?? [];
 
-    return chordproRows(paragraphs, {
+    return chordproBookletBlocks(paragraphs, {
+        columns: resolved.chordproColumns,
         fontSize,
         fontFamily,
         layoutWidth: layoutWidthPx,
