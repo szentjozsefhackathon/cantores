@@ -292,6 +292,29 @@ select:focus[data-flux-control] {
 /* maryUI */
 @source "../../vendor/robsontenorio/mary/src/View/Components/**/*.php";
 
+/* Mary UI controls panel visibility with Alpine, outside daisyUI's .tabs markup. */
+.tab-content[role="tabpanel"][x-show] {
+    display: block;
+}
+
+/* Restore Mary UI labels that are not direct children of daisyUI's .tabs. */
+@layer components {
+    .tab[role="tab"][x-html] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding-inline: 0.75rem;
+        font-size: 0.875rem;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .tab[role="tab"][x-html]:not(.tab-active):not(:hover) {
+        color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+    }
+}
+
 /* Theme toggle */
 @custom-variant dark (&:where(.dark, .dark *));
 
