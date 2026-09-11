@@ -80,7 +80,7 @@ class BookletSettingFields
             'abcLyricBold' => ['type' => 'boolean', 'label' => 'Bold lyrics', 'icon' => 'bold'],
             'abcNoteSpacing' => ['type' => 'number', 'min' => 1, 'max' => 3, 'step' => 0.1, 'label' => 'Note spacing', 'icon' => 'space'],
             'abcStaffSep' => ['type' => 'number', 'min' => 0, 'max' => 120, 'step' => 1, 'label' => 'Staff separation', 'icon' => 'between-horizontal-start'],
-            'abcLyricFirstSkip' => ['type' => 'number', 'min' => 0.5, 'max' => 3, 'step' => 0.1, 'label' => 'Staff to lyrics', 'icon' => 'align-vertical-space-around'],
+            'abcLyricFirstSkip' => ['type' => 'number', 'min' => 0, 'max' => 3, 'step' => 0.1, 'label' => 'Staff to lyrics', 'icon' => 'align-vertical-space-around'],
             'abcLyricSkip' => ['type' => 'number', 'min' => 0.5, 'max' => 3, 'step' => 0.1, 'label' => 'Lyric line spacing', 'icon' => 'align-vertical-space-between'],
             'abcNoClef' => ['type' => 'boolean', 'label' => 'Hide clef', 'icon' => 'clef-none'],
             'abcTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],

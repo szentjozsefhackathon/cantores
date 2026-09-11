@@ -303,7 +303,7 @@ it('uses important width utilities for score editor numeric toolbar inputs', fun
     expect($importantWidthInputs[0])->not->toBeEmpty();
     expect($plainWidthInputs[0])->toBeEmpty();
     expect($source)
-        ->toContain('x-model="lyricSizePt" min="4" max="40" step="0.5" class="w-16!"')
+        ->toContain('x-model="lyricSizePt" min="4" step="0.5" class="w-16!"')
         ->toContain('x-model="abcStemWidth" min="0.1" max="3" step="0.1" class="w-16!"')
         ->toContain('x-model="aretinoZoom" min="50" max="300" step="5" class="w-16!"');
 });
@@ -400,4 +400,47 @@ it('offers the abc stroke widths on the projector ratios only', function () {
             );
         }
     }
+});
+
+it('copies personal defaults into new scores only', function () {
+    $original = ['abc' => ['16/9' => ['abcLyricFont' => 'Barlow Condensed', 'abcLyricSize' => 31]]];
+    $user = User::factory()->create(['score_settings' => $original]);
+    actingAs($user);
+
+    $editor = Livewire::test(ScoreEditor::class)
+        ->assertSet('settings', $original)
+        ->set('title', 'Default snapshot')
+        ->set('content', "K:C\nC D E F |")
+        ->call('save');
+
+    $score = Score::query()->where('title', 'Default snapshot')->sole();
+    $editor->call('saveAsDefault', ['abcLyricSize' => 5], '16/9', 'abc');
+
+    expect($score->fresh()->settings)->toBe($original);
+    Livewire::test(ScoreEditor::class, ['score' => $score])->assertSet('settings', $original);
+    Livewire::test(ScoreEditor::class)->assertSet('settings.abc.16/9.abcLyricSize', 5);
+});
+
+it('keeps existing scores without settings independent of personal defaults', function () {
+    $user = User::factory()->create(['score_settings' => ['abc' => ['16/9' => ['abcLyricSize' => 5]]]]);
+    $score = Score::factory()->create(['user_id' => $user->id, 'settings' => null]);
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])->assertSet('settings', []);
+});
+
+it('stores personal defaults on draft creation and preserves them when reopening', function () {
+    $original = ['aretino' => ['4/3' => ['aretinoLyricSize' => 24]]];
+    $user = User::factory()->create(['score_settings' => $original]);
+    actingAs($user);
+
+    get(route('scores.create'));
+    $draft = Score::query()->sole();
+    expect($draft->settings)->toBe($original);
+
+    $user->update(['score_settings' => ['aretino' => ['4/3' => ['aretinoLyricSize' => 12]]]]);
+    get(route('scores.create'))->assertRedirect(route('scores.edit', $draft));
+
+    expect($draft->fresh()->settings)->toBe($original);
+    Livewire::test(ScoreEditor::class, ['score' => $draft])->assertSet('settings', $original);
 });

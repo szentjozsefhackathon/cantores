@@ -206,7 +206,9 @@ export function pageGeometry(geometry) {
         // makes right or wrong — so they are carried through untouched rather
         // than computed from the millimetres, and only defaulted when an older
         // payload does not carry them at all.
-        abcLyricFirstSkip: positiveOr(geometry.abcLyricFirstSkip, DEFAULT_ABC_LYRIC_FIRST_SKIP),
+        abcLyricFirstSkip: Number.isFinite(Number(geometry.abcLyricFirstSkip)) && geometry.abcLyricFirstSkip != null && Number(geometry.abcLyricFirstSkip) >= 0
+            ? Number(geometry.abcLyricFirstSkip)
+            : DEFAULT_ABC_LYRIC_FIRST_SKIP,
         abcLyricSkip: positiveOr(geometry.abcLyricSkip, DEFAULT_ABC_LYRIC_SKIP),
         // The same gap in the two engines that keep no setting for it. Both are
         // at the number their engine already draws at; see BookletStyles.

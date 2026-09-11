@@ -89,7 +89,6 @@
             <div
                 x-data="scoreEditor({
                     scoreSettings: @js($this->settings ?: (object) []),
-                    userDefaults: @js((object) []),
                     clippedWarningText: @js(__('Content does not fit on page')),
                     clipboardNotSupported: @js(__('Clipboard not supported in this browser')),
                     firstPageCopied: @js(__('First page copied to clipboard')),
@@ -139,7 +138,7 @@
                                 <flux:tooltip :content="__('Lyric size (pt)')">
                                     <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="lyricSizePt" min="4" max="40" step="0.5" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="lyricSizePt" min="4" step="0.5" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1">
@@ -281,7 +280,7 @@
                                 <flux:tooltip :content="__('Lyric size (pt)')">
                                     <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="abcLyricSizePt" min="4" max="40" step="0.5" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="abcLyricSizePt" min="4" step="0.5" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1">
@@ -316,7 +315,7 @@
                                 <flux:tooltip :content="__('Staff to lyrics')">
                                     <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="abcLyricFirstSkip" min="0.5" max="3" step="0.1" placeholder="1.1" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="abcLyricFirstSkip" min="0" max="3" step="0.1" placeholder="1.1" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1">
@@ -397,7 +396,7 @@
                                 <flux:tooltip :content="__('Lyric size (pt)')">
                                     <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="aretinoLyricSize" min="4" max="40" step="0.5" class="w-16" />
+                                <flux:input size="sm" type="number" x-model="aretinoLyricSize" min="4" step="0.5" class="w-16" />
                             </div>
 
                             <div class="flex items-center gap-1">

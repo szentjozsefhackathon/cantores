@@ -30,6 +30,24 @@ const ARETINO_SCREEN_CANVAS = {
     '1/1':  { width: 540, height: 540 },
 };
 
+/** The same readable type, staff size and spacing on every projector ratio. */
+export const ARETINO_RATIO_DEFAULTS = Object.fromEntries(
+    Object.keys(ARETINO_SCREEN_CANVAS).map(ratio => [ratio, {
+        aretinoTextFont: "'Barlow Condensed'",
+        aretinoLyricSize: 45,
+        aretinoStaffSize: 13,
+        aretinoStaffGap: 1,
+        aretinoZoom: 100,
+        aretinoHideRepeatClef: true,
+    }]),
+);
+
+export function aretinoProjectorOptions(ratio) {
+    const canvas = ARETINO_SCREEN_CANVAS[ratio];
+
+    return { width: canvas.width, canvasHeight: canvas.height, dpi: 96 };
+}
+
 export function aretinoMixin() {
     return {
         aretinoTextFont: `'${DEFAULT_TEXT_FONT}'`,
@@ -130,8 +148,7 @@ export function aretinoMixin() {
                 } else {
                     // Fixed ratio: render at a predefined px width so all ratios share
                     // the same 540 px height; CSS scaling handles smaller containers.
-                    const sc = ARETINO_SCREEN_CANVAS[ratio] || { width: 960, height: 540 };
-                    renderOpts = { width: sc.width };
+                    renderOpts = aretinoProjectorOptions(ratio);
                 }
 
                 try {

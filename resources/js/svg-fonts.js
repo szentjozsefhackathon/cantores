@@ -76,6 +76,9 @@ export function parsePrimaryFontFamily(fontValue) {
  */
 const fontLoads = new Map();
 
+/** Request both Latin and Latin Extended faces, including Hungarian double accents. */
+const FONT_LOAD_SAMPLE = 'Árvíztűrő tükörfúrógép';
+
 /**
  * Wait until the browser actually holds the faces a drawing is about to be
  * measured against.
@@ -105,11 +108,15 @@ export async function ensureFontsLoaded(fontValues, sizePx = 16) {
         if (!fontLoads.has(key)) {
             const spec = `${sizePx}px "${family}"`;
             fontLoads.set(key, Promise.allSettled([
-                document.fonts.load(spec),
-                document.fonts.load(`italic ${spec}`),
-                document.fonts.load(`bold ${spec}`),
-                document.fonts.load(`italic bold ${spec}`),
-            ]));
+                document.fonts.load(spec, FONT_LOAD_SAMPLE),
+                document.fonts.load(`italic ${spec}`, FONT_LOAD_SAMPLE),
+                document.fonts.load(`bold ${spec}`, FONT_LOAD_SAMPLE),
+                document.fonts.load(`italic bold ${spec}`, FONT_LOAD_SAMPLE),
+            ]).then(results => {
+                if (results.some(result => result.status === 'rejected')) {
+                    fontLoads.delete(key);
+                }
+            }));
         }
         waits.push(fontLoads.get(key));
     }

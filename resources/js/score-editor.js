@@ -1,9 +1,9 @@
 import { applyConditionalBlocks } from './score-editor-pages.js';
-import { abcMixin, ABC_RATIO_DEFAULTS, applyAbcSvgStyle, abcStrokeWidths, buildAbcPreamble, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
+import { abcMixin, applyAbcSvgStyle, abcStrokeWidths, buildAbcPreamble, ensureAbcFontsLoaded, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
 import { gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin, renderChordproIncipitSvg } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
-import { formatDefaults, incipitSettings } from './score-editor-settings.js';
+import { formatDefaults, incipitSettings, resetFormatSettings } from './score-editor-settings.js';
 import { applyPhysicalSvgSize, removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
@@ -181,7 +181,6 @@ document.addEventListener('alpine:init', () => {
         fullscreenText: config.fullscreenText ?? '',
         renderTimer: null,
         scoreSettings: config.scoreSettings ?? {},
-        userDefaults: config.userDefaults ?? {},
         tempSettings: {},
         copyFeedback: '',
         copyFeedbackTimer: null,
@@ -496,6 +495,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         destroy() {
+            this._abcRenderVersion++;
+            clearTimeout(this.renderTimer);
             clearTimeout(this._autosaveTimer);
             clearInterval(this._autosaveInterval);
             if (this._autosaveFlush) {
@@ -661,8 +662,8 @@ document.addEventListener('alpine:init', () => {
             pageEl.style.boxShadow = '0 8px 32px rgba(0,0,0,0.45)';
         },
 
-        getFormatDefaults(format) {
-            return formatDefaults(format);
+        getFormatDefaults(format, ratio) {
+            return formatDefaults(format, ratio);
         },
 
         captureCurrentSettings(format, ratio) {
@@ -691,16 +692,11 @@ document.addEventListener('alpine:init', () => {
         applyRatioSettings(format, ratio) {
             const effectiveRatio = this.effectiveRatioKey(ratio);
             const score = this.readRatioBucket(this.scoreSettings, format, effectiveRatio);
-            const user = this.readRatioBucket(this.userDefaults, format, effectiveRatio);
             const temp = this.readRatioBucket(this.tempSettings, format, effectiveRatio);
             const ratioFields = new Set(['pageRatio', 'abcPageRatio', 'aretinoPageRatio']);
-            const { fields, defaults } = this.getFormatDefaults(format);
+            const { fields, defaults } = this.getFormatDefaults(format, effectiveRatio);
             const merged = {};
             fields.forEach(f => { if (f in defaults && !ratioFields.has(f)) { merged[f] = defaults[f]; } });
-            if (format === 'abc' && ABC_RATIO_DEFAULTS[effectiveRatio]) {
-                Object.assign(merged, ABC_RATIO_DEFAULTS[effectiveRatio]);
-            }
-            Object.assign(merged, user || {});
             Object.assign(merged, score || {});
             Object.assign(merged, temp || {});
             Object.keys(merged).forEach(k => { if (k in this) { this[k] = merged[k]; } });
@@ -853,7 +849,7 @@ document.addEventListener('alpine:init', () => {
             } else if (format === 'abc' || format === 'gabc') {
                 clone = await this.withOffscreenRender(async (holder) => {
                     const svg = format === 'abc'
-                        ? this.renderAbcIncipitSvg(holder, settings)
+                        ? await this.renderAbcIncipitSvg(holder, settings)
                         : await this.renderGabcIncipitSvg(holder, settings);
                     if (!svg) { return null; }
 
@@ -940,7 +936,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         /** Engraves the ABC source into `holder` and returns its first staff SVG. */
-        renderAbcIncipitSvg(holder, settings) {
+        async renderAbcIncipitSvg(holder, settings) {
             let content = this.localContent;
             if (!content || !content.trim()) { return null; }
             if (!/^X:/m.test(content)) {
@@ -950,6 +946,7 @@ document.addEventListener('alpine:init', () => {
 
             const pageWidth = normalizeAbcPageWidth(settings.abcPageWidth);
             const page = this.splitPages(content, 'abc', settings.abcPageRatio)[0] ?? content;
+            await ensureAbcFontsLoaded(settings);
             holder.innerHTML = renderAbcToSvgMarkup(buildAbcPreamble(settings, pageWidth) + page);
 
             const svgs = Array.from(holder.querySelectorAll('svg'));
@@ -1126,26 +1123,9 @@ document.addEventListener('alpine:init', () => {
 
         resetToDefaults() {
             const format = this.$wire.format;
-            const { fields, defaults } = formatDefaults(format);
-
-            const applyDefaults = () => {
-                fields.forEach(field => {
-                    if (field in defaults) { this[field] = defaults[field]; }
-                });
-                if (format === 'abc') {
-                    const effectiveRatio = this.effectiveRatioKey(this.abcPageRatio);
-                    const ratioOverrides = ABC_RATIO_DEFAULTS[effectiveRatio];
-                    if (ratioOverrides) {
-                        Object.keys(ratioOverrides).forEach(k => { if (k in this) { this[k] = ratioOverrides[k]; } });
-                    }
-                }
-            };
-
-            applyDefaults();
-            this.$nextTick(() => {
-                applyDefaults();
-                this.scheduleRender();
-            });
+            resetFormatSettings(this, format);
+            this.captureCurrentSettings(format, this.ratioForFormat(format));
+            this.$nextTick(() => this.scheduleRender());
         },
 
         splitPages(content, format, ratio) {
@@ -1562,6 +1542,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         scheduleRender() {
+            this._abcRenderVersion++;
             this.markDirty();
             clearTimeout(this.renderTimer);
             const format = this.$wire?.format;

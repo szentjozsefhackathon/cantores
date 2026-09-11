@@ -208,3 +208,9 @@ test('the leading is measured in the size the booklet quoted, not the size it is
         close(geometry(font).lyricSizePx * geometry(font).leadingScale, ptToPx(11), 1e-9);
     });
 });
+
+test('preserves zero and sub-half staff to lyric clearance in booklet geometry', () => {
+    for (const value of [0, '0', 0.1, 0.4]) {
+        assert.equal(pageGeometry({ abcLyricFirstSkip: value }).abcLyricFirstSkip, Number(value));
+    }
+});

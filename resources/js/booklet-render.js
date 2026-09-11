@@ -722,7 +722,7 @@ function abcBlocks(content, resolved, layoutWidthPx) {
         Number((lyricSize / pageScale * 3).toFixed(3))].filter(Boolean).join(' ');
     const transpose = Number(resolved.abcTranspose) || 0;
     const lyricSkip = Number(resolved.abcLyricSkip) || 0;
-    const lyricFirstSkip = Number(resolved.abcLyricFirstSkip) || 0;
+    const lyricFirstSkip = Number(resolved.abcLyricFirstSkip ?? NaN);
 
     const preamble = `%%fullsvg a${++abcSerial}\n`
         + `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
@@ -732,7 +732,7 @@ function abcBlocks(content, resolved, layoutWidthPx) {
         + '%%musicspace 0\n%%topspace 0\n'
         + `%%staffsep ${resolved.abcStaffSep}\n`
         + '%%vocalspace 0\n'
-        + (lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '')
+        + (Number.isFinite(lyricFirstSkip) && lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '')
         + (lyricSkip >= ABC_LYRIC_SKIP_MIN ? `%%lyricskipfac ${lyricSkip}\n` : '')
         + (transpose !== 0 ? `%%transpose ${transpose}\n` : '');
 

@@ -1,3 +1,4 @@
+import { ensureFontsLoaded } from './svg-fonts.js';
 import { diatarToAbc } from './diatar-to-abc.js';
 import {
     DEFAULT_LYRIC_SIZE_PT,
@@ -31,14 +32,10 @@ const ABC_PAGE_WIDTH_MAX = 3000;
 export const ABC_LYRIC_SKIP_MIN = 0.5;
 
 /**
- * The tightest staff-to-first-lyric advance we let anyone ask for. The factor
- * is the lyric baseline's distance below the bottom staff line, counted in the
- * lyric face's own ascent, so 1 puts the ascender line on the staff line and
- * anything under it reaches up into the staff — which is the point of the knob,
- * but half an ascent is as far as it stays music. Anything under the floor is
- * treated as unset, which leaves abc2svg on its own 1.1.
+ * Allow the staff-to-first-lyric clearance to reach zero.
+ * Negative values leave the renderer's default in place.
  */
-export const ABC_LYRIC_FIRST_SKIP_MIN = 0.5;
+export const ABC_LYRIC_FIRST_SKIP_MIN = 0;
 
 /**
  * Two decimals of a pixel, so a width stated in whole millimetres survives the
@@ -68,9 +65,9 @@ export function normalizeAbcPageWidth(value) {
 const ABC_RATIO_DEFAULTS = {
     '16/9': {
         abcLyricFont: 'Barlow Condensed',
-        abcLyricSize: 31,
+        abcLyricSize: abcLyricSizeForPt(70),
         abcLyricBold: false,
-        abcPageScale: 3.1,
+        abcPageScale: abcPageScaleForStaffHeight(19.5),
         abcPageWidth: 1920,
         abcNoteSpacing: 1.1,
         abcStaffSep: 15,
@@ -81,9 +78,9 @@ const ABC_RATIO_DEFAULTS = {
     },
     '4/3': {
         abcLyricFont: 'Barlow Condensed',
-        abcLyricSize: 26,
+        abcLyricSize: abcLyricSizeForPt(58.5),
         abcLyricBold: false,
-        abcPageScale: 2.3,
+        abcPageScale: abcPageScaleForStaffHeight(14.5),
         abcPageWidth: 1440,
         abcNoteSpacing: 1.1,
         abcStaffSep: 15,
@@ -94,9 +91,9 @@ const ABC_RATIO_DEFAULTS = {
     },
     '1/1': {
         abcLyricFont: 'Barlow Condensed',
-        abcLyricSize: 23,
+        abcLyricSize: abcLyricSizeForPt(52),
         abcLyricBold: false,
-        abcPageScale: 2.1,  
+        abcPageScale: abcPageScaleForStaffHeight(13.5),
         abcPageWidth: 1080,
         abcNoteSpacing: 1.1,
         abcStaffSep: 15,
@@ -175,6 +172,22 @@ function englishChordRoots(chord) {
         .join('/');
 }
 
+function abcVocalFont(settings) {
+    const rawFont = (settings.abcLyricFont || '').trim();
+    const family = /^[a-zA-Z0-9 .\-'&]+$/.test(rawFont) ? rawFont : DEFAULT_ABC_FONT;
+    const pageScale = Number(settings.abcPageScale) > 0 ? Number(settings.abcPageScale) : 1;
+    const rawLyricSize = Number(settings.abcLyricSize) > 0 ? Number(settings.abcLyricSize) : 12;
+    const size = Number((rawLyricSize / pageScale * 3).toFixed(3));
+
+    return { family, size, pageScale };
+}
+
+export async function ensureAbcFontsLoaded(settings) {
+    const { family, size } = abcVocalFont(settings);
+
+    await ensureFontsLoaded([family], size);
+}
+
 /**
  * The abc2svg preamble a settings bucket describes.
  *
@@ -188,19 +201,15 @@ function englishChordRoots(chord) {
  * for the staff-to-lyrics gap.
  */
 export function buildAbcPreamble(settings, pageWidth) {
-    const rawFont = (settings.abcLyricFont || '').trim();
-    const safeFont = /^[a-zA-Z0-9 .\-'&]+$/.test(rawFont) ? rawFont : DEFAULT_ABC_FONT;
-    const fontName = /[ .\-'&]/.test(safeFont) ? `"${safeFont}"` : safeFont;
-    const pageScale = Number(settings.abcPageScale) > 0 ? Number(settings.abcPageScale) : 1;
-    const rawLyricSize = Number(settings.abcLyricSize) > 0 ? Number(settings.abcLyricSize) : 12;
-    const lyricSize = Number((rawLyricSize / pageScale * 3).toFixed(3));
+    const { family, size: lyricSize, pageScale } = abcVocalFont(settings);
+    const fontName = /[ .\-'&]/.test(family) ? `"${family}"` : family;
     const vocalfontLine = ['%%vocalfont', fontName, settings.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
     const transposeSemitones = Number(settings.abcTranspose) || 0;
     const transposeLine = transposeSemitones !== 0 ? `%%transpose ${transposeSemitones}\n` : '';
     const lyricSkip = Number(settings.abcLyricSkip) || 0;
     const lyricSkipLine = lyricSkip >= ABC_LYRIC_SKIP_MIN ? `%%lyricskipfac ${lyricSkip}\n` : '';
-    const lyricFirstSkip = Number(settings.abcLyricFirstSkip) || 0;
-    const lyricFirstSkipLine = lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '';
+    const lyricFirstSkip = Number(settings.abcLyricFirstSkip ?? NaN);
+    const lyricFirstSkipLine = Number.isFinite(lyricFirstSkip) && lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '';
 
     return `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}`;
 }
@@ -328,13 +337,26 @@ export function abcMixin() {
             this.$nextTick(() => this.scheduleRender());
         },
 
-        renderAbcPreview() {
+        _abcRenderVersion: 0,
+
+        async renderAbcPreview() {
+            const version = ++this._abcRenderVersion;
             const container = this.$refs.abcPreview;
             if (!container) { return; }
+            let content = this.localContent;
+            if (!content || !content.trim()) {
+                container.innerHTML = '';
+                this.hasPages = false;
+                return;
+            }
+            const settings = Object.fromEntries(this.abcFields.map(field => [field, this[field]]));
+            await ensureAbcFontsLoaded(settings);
+            if (version !== this._abcRenderVersion || this.$refs.abcPreview !== container
+                || this.$wire?.format !== 'abc' || this.localContent !== content
+                || this.abcFields.some(field => this[field] !== settings[field])) { return; }
+
             container.innerHTML = '';
             this.hasPages = false;
-            let content = this.localContent;
-            if (!content || !content.trim()) { return; }
             if (typeof abc2svg === 'undefined' || !abc2svg.Abc) {
                 console.error('[score-editor] abc2svg not loaded');
                 return;

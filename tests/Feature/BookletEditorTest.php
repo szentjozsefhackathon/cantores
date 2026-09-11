@@ -1343,11 +1343,11 @@ it('holds the lyric line spacing at its floor', function () {
         ->toBe(['abcLyricSkip' => 1.4]);
 });
 
-// The gap under the staff is the same kind of knob and gets the same floor:
-// below half a line height the lyrics are inside the music.
-it('holds the staff to lyrics gap at its floor', function () {
+it('allows the staff to lyrics gap to reach zero', function () {
     expect(BookletSettingFields::sanitize('abc', ['abcLyricFirstSkip' => 0]))
-        ->toBe(['abcLyricFirstSkip' => 0.5])
+        ->toBe(['abcLyricFirstSkip' => 0])
+        ->and(BookletSettingFields::sanitize('abc', ['abcLyricFirstSkip' => -1]))
+        ->toBe(['abcLyricFirstSkip' => 0])
         ->and(BookletSettingFields::sanitize('abc', ['abcLyricFirstSkip' => 0.7]))
         ->toBe(['abcLyricFirstSkip' => 0.7])
         ->and(BookletSettingFields::sanitize('abc', ['abcVocalSpace' => 20]))

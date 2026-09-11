@@ -110,3 +110,24 @@ test('a font overridden for this booklet is the one waited for', () => {
     assert.ok(fonts.includes("'Merriweather'"));
     assert.ok(! fonts.includes("'Inter'"), 'the score\'s own font was waited for instead');
 });
+
+test('failed font requests can be retried by a later render', async () => {
+    const previousLoad = document.fonts.load;
+    let requests = 0;
+    document.fonts.load = () => {
+        requests++;
+        return Promise.reject(new Error('temporary font failure'));
+    };
+    try {
+        await ensureFontsLoaded(['Retry Font'], 20);
+        assert.equal(requests, 4);
+        document.fonts.load = () => {
+            requests++;
+            return Promise.resolve([]);
+        };
+        await ensureFontsLoaded(['Retry Font'], 20);
+        assert.equal(requests, 8);
+    } finally {
+        document.fonts.load = previousLoad;
+    }
+});

@@ -93,6 +93,13 @@ function round(value, places) {
     return Math.round(value * factor) / factor;
 }
 
+/** Projector sizes retained for the unchanged 1920-pixel canvas. */
+export const GABC_SCREEN_DEFAULTS = {
+    lyricSize: 12,
+    staffSize: 80,
+    zoom: 90,
+};
+
 export function gabcMixin() {
     return {
         // The preview is the printed page at 96 dpi, so 100 is life size and a

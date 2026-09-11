@@ -152,7 +152,7 @@
                         <flux:tooltip :content="__('Staff to lyrics')">
                             <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>
-                        <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricFirstSkip" :aria-label="__('Staff to lyrics')" min="0.5" max="3" step="0.1" class="w-16!" />
+                        <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricFirstSkip" :aria-label="__('Staff to lyrics')" min="0" max="3" step="0.1" class="w-16!" />
                     </div>
 
                     <div class="flex items-center gap-1">

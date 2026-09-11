@@ -11,7 +11,7 @@
         "@aretino-chant/editor": "^0.8.0",
         "@aretino-chant/gabc2aretino": "^0.3.0",
         "@aretino-chant/guido2aretino": "^0.3.0",
-        "@cantoreshu/abc2svg": "^1.2.1",
+        "@cantoreshu/abc2svg": "^1.2.2",
         "autoprefixer": "^10.4.20",
         "axios": "^1.7.4",
         "chordsheetjs": "^16.2.2",

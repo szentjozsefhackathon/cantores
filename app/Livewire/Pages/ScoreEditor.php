@@ -174,6 +174,7 @@ class ScoreEditor extends Component
         }
 
         $this->authorize('create', Score::class);
+        $this->settings = Auth::user()->score_settings ?? [];
 
         if (is_numeric($music)) {
             $music = Music::query()->find((int) $music);
@@ -206,6 +207,7 @@ class ScoreEditor extends Component
             'title' => $title,
             'format' => $this->format,
             'content' => null,
+            'settings' => $this->settings,
         ]);
 
         $this->redirectRoute('scores.edit', ['score' => $draft->id], navigate: true);
@@ -1256,8 +1258,6 @@ class ScoreEditor extends Component
 
     public function render()
     {
-        $user = Auth::user();
-
         return view('livewire.pages.score-editor', [
             'formats' => ScoreFormat::cases(),
             'urlLabels' => MusicUrlLabel::cases(),
@@ -1265,7 +1265,6 @@ class ScoreEditor extends Component
             'licenseOptions' => ScoreLicense::cases(),
             'outboundLicenseOptions' => ScoreLicense::redistributableCases(),
             'editionFreeBefore' => ScorePublicationRules::editionFreeBefore(),
-            'userDefaults' => $user instanceof \App\Models\User ? ($user->score_settings ?? []) : [],
             'isSharedLink' => $this->isSharedLink,
             'isGuest' => ! Auth::check(),
         ]);
