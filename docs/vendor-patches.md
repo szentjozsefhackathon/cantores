@@ -67,7 +67,6 @@ with `s.a_gch[i].text`.
 
 **Consumers:** `resources/js/score-editor-abc.js` (`hungarianChordsToAbc`),
 `resources/js/booklet-render.js`, `resources/js/abc-mini-editor.js`.
-Covered by `tests/Unit/abc-hungarian-chords.test.mjs`.
 
 ### Fork change: `lyricskipfac` — configurable distance between lyric lines
 
@@ -99,7 +98,6 @@ changes unless upstream supplies an equivalent parameter.
 **Consumers:** `%%lyricskipfac` is emitted in the ABC preambles built by
 `resources/js/score-editor-abc.js` and `resources/js/booklet-render.js`, from
 the `abcLyricSkip` setting (default `1.1`, floor `0.5`).
-Covered by `tests/Unit/abc-lyricskipfac.test.mjs`.
 
 ### Fork change: `lyricfirstskipfac` — configurable staff → first-lyric distance
 
@@ -170,4 +168,4 @@ behaviour from sites 3, 5 and 6 over its equivalent implementation.
 `resources/js/score-editor-abc.js` and `resources/js/booklet-render.js`, from
 the `abcLyricFirstSkip` setting (default `1`, floor `0.5`), which replaced the
 `abcVocalSpace` knob — the preambles now pin `%%vocalspace 0` and leave the
-staff gap to this one. Covered by `tests/Unit/abc-lyricfirstskipfac.test.mjs`.
+staff gap to this one.
