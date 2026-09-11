@@ -28,10 +28,10 @@ test('music view displays URLs when present', function () {
         ->assertSee(__('Sheet Music'));
 });
 
-test('music view shows no URLs placeholder when empty', function () {
+test('music view omits external links when empty', function () {
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
-        ->assertSee(__('External Links'))
-        ->assertSee(__('No external links available for this music piece.'));
+        ->assertDontSee(__('External Links'))
+        ->assertDontSee(__('No external links available for this music piece.'));
 });
 
 test('URLs are displayed as clickable links', function () {
@@ -125,11 +125,11 @@ test('URLs display with correct colors based on label', function (MusicUrlLabel 
         ->assertSeeHtml($label->color());
 })->with(MusicUrlLabel::cases());
 
-test('multiple URLs are displayed in grid layout', function () {
-    MusicUrl::factory()->count(5)->create(['music_id' => $this->music->id]);
+test('all external links remain available when there are several', function () {
+    $urls = MusicUrl::factory()->count(5)->create(['music_id' => $this->music->id]);
 
     Livewire::test(\App\Livewire\Pages\MusicView::class, ['music' => $this->music])
-        ->assertSeeHtml('grid-cols-1 md:grid-cols-2 lg:grid-cols-3');
+        ->assertSee($urls->pluck('url')->all());
 });
 
 test('guest can view URLs on public music', function () {

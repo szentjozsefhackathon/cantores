@@ -1,4 +1,4 @@
-<div class="mx-auto w-full px-1 sm:px-6 lg:px-8">
+<div class="mx-auto min-w-0 max-w-full w-full px-1 sm:px-6 lg:px-8">
 
     <div class="space-y-6">
         <livewire:pages.editor.musics-table />
@@ -48,7 +48,4 @@
         </div>
     </flux:modal>
 
-    <livewire:pages.editor.music-card-modal />
-    <livewire:pages.editor.music-audit-modal />
-    <livewire:error-report />
 </div>

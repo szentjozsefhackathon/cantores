@@ -1,4 +1,4 @@
-<div class="mx-auto w-full p-2 sm:p-6">
+<div class="mx-auto min-w-0 max-w-full w-full p-2 sm:p-6">
     <!-- Filters card -->
     <div wire:ignore class="rounded-2xl border p-3 shadow-sm sm:p-5">
         <div class="flex items-center justify-between">
@@ -52,7 +52,7 @@
         </div>
         @endcan
 
-        <div class="overflow-x-auto p-2 sm:p-4 transition-opacity duration-200" wire:loading.class="opacity-50 pointer-events-none">
+        <div class="min-w-0 max-w-full p-2 sm:p-4 transition-opacity duration-200" wire:loading.class="opacity-50 pointer-events-none">
             @include('partials.music-browser-table', ['mode' => 'manage'])
         </div>
 

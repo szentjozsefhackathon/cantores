@@ -3,20 +3,20 @@
        $musics – paginated Music collection
        $mode   – 'manage' | 'select'
      In 'manage' mode the including component must expose: selectedMusicIds, toggleSelection(),
-       showAuditLog(), delete().
+       delete().
      In 'select' mode the including component must expose: selectable, selectMusic(). --}}
-<flux:table :paginate="$musics" :class="$mode === 'select' ? 'w-full [&_td]:whitespace-normal [&_td]:wrap-anywhere' : ''">
+<flux:table :paginate="$musics" class="w-full [&_td]:whitespace-normal [&_td]:wrap-anywhere">
     <flux:table.columns>
         @if ($mode === 'manage')
             @can('mergeAny', \App\Models\Music::class)
-                <flux:table.column class="hidden sm:table-cell"></flux:table.column>
+                <flux:table.column class="hidden sm:table-cell w-8"></flux:table.column>
             @endcan
         @endif
         <flux:table.column>{{ __('Title') }}</flux:table.column>
-        <flux:table.column :class="$mode === 'select' ? 'hidden sm:table-cell sm:w-1/5' : ''">{{ __('Collection') }}</flux:table.column>
+        <flux:table.column class="hidden sm:table-cell sm:w-1/5">{{ __('Collection') }}</flux:table.column>
         <flux:table.column class="hidden sm:table-cell w-12"><span class="sr-only">{{ __('Genre') }}</span></flux:table.column>
-        <flux:table.column :class="$mode === 'select' ? 'hidden sm:table-cell w-1/5' : 'hidden sm:table-cell'">{{ __('Tags') }}</flux:table.column>
-        <flux:table.column :class="$mode === 'select' ? ($this->selectable ? 'w-14' : 'w-0 p-0!') : ''"></flux:table.column>
+        <flux:table.column class="hidden sm:table-cell w-1/5">{{ __('Tags') }}</flux:table.column>
+        <flux:table.column :class="$mode === 'select' ? ($this->selectable ? 'w-14' : 'w-0 p-0!') : 'w-14 sm:w-28'"></flux:table.column>
     </flux:table.columns>
 
     <flux:table.rows>
@@ -25,7 +25,7 @@
                 {{-- Checkbox (manage + can merge only) --}}
                 @if ($mode === 'manage')
                     @can('mergeAny', \App\Models\Music::class)
-                        <flux:table.cell class="hidden sm:table-cell">
+                        <flux:table.cell class="hidden sm:table-cell w-8">
                             <flux:checkbox
                                 wire:click="toggleSelection({{ $music->id }})"
                                 :checked="in_array($music->id, $this->selectedMusicIds)" />
@@ -106,11 +106,9 @@
                             @endforeach
                         </div>
 
-                        @if ($mode === 'select')
-                            <div class="mt-2 sm:hidden">
-                                @include('partials.music-browser-collections')
-                            </div>
-                        @endif
+                        <div class="mt-2 sm:hidden">
+                            @include('partials.music-browser-collections')
+                        </div>
 
                         @php $incipitScore = $music->visibleIncipitScores(auth()->user())->first(); @endphp
                         @if ($incipitScore)
@@ -124,7 +122,7 @@
                 </flux:table.cell>
 
                 {{-- Collections --}}
-                <flux:table.cell :class="$mode === 'select' ? 'hidden sm:table-cell' : ''">
+                <flux:table.cell class="hidden sm:table-cell">
                     @include('partials.music-browser-collections')
                 </flux:table.cell>
 
@@ -157,13 +155,7 @@
                 {{-- Actions column --}}
                 <flux:table.cell :class="$mode === 'select' && ! $this->selectable ? 'p-0!' : ''">
                     @if ($mode === 'manage')
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                            <flux:button
-                                variant="ghost"
-                                size="sm"
-                                icon="music-card-icon"
-                                x-on:click="$dispatch('show-music-card-modal', { musicId: {{ $music->id }} })"
-                                :title="__('Quick View')" />
+                        <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2">
                             @auth
                                 @can('content.edit.own')
                                     <flux:button
@@ -175,14 +167,6 @@
                                         :title="__('Edit')" />
                                 @endcan
                             @endauth
-                            <div class="hidden sm:block">
-                                <flux:button
-                                    variant="ghost"
-                                    size="sm"
-                                    icon="history"
-                                    x-on:click="$dispatch('show-music-audit-log', { musicId: {{ $music->id }} })"
-                                    :title="__('View Audit Log')" />
-                            </div>
                             @can('content.edit.published')
                                 <flux:button
                                     variant="ghost"
@@ -192,14 +176,6 @@
                                     wire:confirm="{{ __('Are you sure you want to delete this music piece? This will remove it from all collections and music plans.') }}"
                                     :title="__('Delete')" />
                             @endcan
-                            @auth
-                            <flux:button
-                                variant="ghost"
-                                size="sm"
-                                icon="flag"
-                                wire:click="dispatch('openErrorReportModal', { resourceId: {{ $music->id }}, resourceType: 'music' })"
-                                :title="__('Report Error')" />
-                            @endauth
                         </div>
                     @elseif ($mode === 'select' && $this->selectable)
                         <flux:button
