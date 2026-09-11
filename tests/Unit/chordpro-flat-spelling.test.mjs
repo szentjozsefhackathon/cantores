@@ -135,3 +135,23 @@ test('end to end: a sheet transposed into B flat reads Bb everywhere', async () 
     assert.match(text, /^Bb\b/);
     assert.match(svg, />Bb<\/text>/);
 });
+
+for (const [source, expected] of [
+    ['Fmaj7', 'F△'],
+    ['Fma7/A', 'F△/A'],
+    ['Dm7', 'Dm⁷'],
+    ['G13', 'G¹³'],
+    ['Dm7/G', 'Dm⁷/G'],
+    ['Fmaj9', 'Fmaj⁹'],
+]) {
+    test(`displays ${source} as ${expected}`, async () => {
+        const { displayChord, displayChordsInHtml, displayChordsInText } = await import('../../resources/js/chordpro-notation.js');
+
+        assert.equal(displayChord(source), expected);
+        for (const tag of ['div', 'td']) {
+            assert.equal(displayChordsInHtml(`<${tag} class="chord">${source}</${tag}><div class="lyrics">Dm7</div>`),
+                `<${tag} class="chord">${expected}</${tag}><div class="lyrics">Dm7</div>`);
+        }
+        assert.equal(displayChordsInText(`${source}\nVerse 7`, [source]), `${expected}\nVerse 7`);
+    });
+}

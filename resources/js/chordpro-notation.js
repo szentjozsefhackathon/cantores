@@ -80,3 +80,36 @@ export function chordStringsOf(song) {
         .map((item) => item.chords)
         .filter((chords) => typeof chords === 'string' && chords !== '');
 }
+
+/** Display chord extensions without changing the editable ChordPro source. */
+export function displayChord(chord, german = false) {
+    const spelled = german ? spellFlatB(chord) : chord;
+
+    return spelled.replace(/(^|[\s(])([A-H](?:bb|##|[b#♭♯])?)([^/\s]*)(\/[^\s]*)?/g,
+        (_, prefix, root, suffix, bass = '') => {
+            const extension = suffix
+                .replace(/^(?:maj7|ma7|Maj7|M7|Δ7)(?!\d)/, '△')
+                .replace(/\d/g, (digit) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[Number(digit)]);
+
+            return prefix + root + extension + bass;
+        });
+}
+
+export function displayChordsInHtml(html, german = false) {
+    return html.replace(
+        /(<(?:div|td) class="chord">)([^<]*)(<\/(?:div|td)>)/g,
+        (_, open, chord, close) => open + displayChord(chord, german) + close,
+    );
+}
+
+export function displayChordsInText(text, chords, german = false) {
+    const known = new Set(chords);
+
+    return text.split('\n').map((line) => {
+        const tokens = line.trim().split(/\s+/).filter(Boolean);
+
+        return tokens.length > 0 && tokens.every((token) => known.has(token))
+            ? displayChord(line, german)
+            : line;
+    }).join('\n');
+}

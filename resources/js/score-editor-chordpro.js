@@ -2,7 +2,7 @@ import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
 import { packColumns } from './booklet-flow.js';
 import { DEFAULT_LYRIC_SIZE_PT, DEFAULT_PAGE_WIDTH_MM, mmToPx, opticalLyricSizePt, ptToPx } from './booklet-geometry.js';
 import { markupRuns, runsText } from './chordpro-markup.js';
-import { chordStringsOf, spellFlatB, spellFlatBInHtml, spellFlatBInText } from './chordpro-notation.js';
+import { chordStringsOf, displayChord, displayChordsInHtml, displayChordsInText } from './chordpro-notation.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
 
@@ -213,7 +213,7 @@ export async function renderChordproIncipitSvg(content, { german, transpose, fon
         fontFamily: family,
         layoutWidth: INCIPIT_LAYOUT_WIDTH,
         measure: canvasMeasurer(family, INCIPIT_FONT_SIZE),
-        spell: german ? spellFlatB : undefined,
+        spell: (chord) => displayChord(chord, german),
     });
 
     if (rows.length === 0) { return null; }
@@ -330,7 +330,7 @@ export async function renderChordproPageSvg(content, { german, transpose, fontFa
         fontFamily: family,
         layoutWidth: metrics.columnWidth,
         measure: canvasMeasurer(family, fontSize),
-        spell: german ? spellFlatB : undefined,
+        spell: (chord) => displayChord(chord, german),
     });
 
     if (rows.length === 0) { return null; }
@@ -398,7 +398,7 @@ export function chordproMixin() {
 
         /** German renders B flat as `B`; this app spells it `Bb`. */
         spellChordsInHtml(html) {
-            return this.chordproGermanNotation ? spellFlatBInHtml(html) : html;
+            return displayChordsInHtml(html, this.chordproGermanNotation);
         },
 
         async renderChordproPreview() {
@@ -411,7 +411,7 @@ export function chordproMixin() {
             try {
                 const ChordSheetJS = await loadChordSheetJS();
                 const song = balanceMarkup(await this.parseChordpro(content));
-                const html = this.spellChordsInHtml(new ChordSheetJS.HtmlDivFormatter().format(song));
+                const html = this.spellChordsInHtml(new ChordSheetJS.HtmlDivFormatter({ normalizeChordSuffix: false }).format(song));
                 const pageEl = document.createElement('div');
                 pageEl.className = 'chordpro-preview overflow-auto rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900';
                 pageEl.style.fontFamily = this.chordproFontFamily;
@@ -502,10 +502,8 @@ export function chordproMixin() {
             try {
                 const ChordSheetJS = await loadChordSheetJS();
                 const song = stripMarkup(await this.parseChordpro(content));
-                const rendered = new ChordSheetJS.TextFormatter().format(song);
-                const text = this.chordproGermanNotation
-                    ? spellFlatBInText(rendered, chordStringsOf(song))
-                    : rendered;
+                const rendered = new ChordSheetJS.TextFormatter({ normalizeChordSuffix: false }).format(song);
+                const text = displayChordsInText(rendered, chordStringsOf(song), this.chordproGermanNotation);
                 navigator.clipboard.writeText(text)
                     .then(() => this.showCopyFeedback(this.plainTextCopied))
                     .catch(() => this.showCopyFeedback(this.failedToCopy));
@@ -525,7 +523,7 @@ export function chordproMixin() {
             try {
                 const ChordSheetJS = await loadChordSheetJS();
                 const song = balanceMarkup(await this.parseChordpro(content));
-                const body = this.spellChordsInHtml(new ChordSheetJS.HtmlTableFormatter().format(song));
+                const body = this.spellChordsInHtml(new ChordSheetJS.HtmlTableFormatter({ normalizeChordSuffix: false }).format(song));
                 const fontFamily = safeFontFamily(this.chordproFontFamily);
                 const fontSize = Number(this.chordproFontSize);
                 const cols = Number(this.chordproColumns);
@@ -561,7 +559,7 @@ sup,sub{font-size:0.7em;line-height:0;}
             try {
                 const ChordSheetJS = await loadChordSheetJS();
                 const song = balanceMarkup(await this.parseChordpro(content));
-                const body = this.spellChordsInHtml(new ChordSheetJS.HtmlDivFormatter().format(song));
+                const body = this.spellChordsInHtml(new ChordSheetJS.HtmlDivFormatter({ normalizeChordSuffix: false }).format(song));
                 const title = this.$wire.title || 'score';
                 const fontFamily = safeFontFamily(this.chordproFontFamily);
                 const fontSize = Number(this.chordproFontSize);

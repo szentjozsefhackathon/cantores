@@ -1,7 +1,7 @@
 import { renderAretino, splitRowSVGs } from '@aretino-chant/core';
 
 import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
-import { spellFlatB } from './chordpro-notation.js';
+import { displayChord } from './chordpro-notation.js';
 import { appendEntryRegions } from './booklet-hover.js';
 import { packPages } from './booklet-flow.js';
 import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
@@ -823,7 +823,7 @@ async function chordproBlocks(content, resolved, layoutWidthPx, geometry) {
         layoutWidth: layoutWidthPx,
         contentHeight: geometry.contentHeightPx,
         measure: canvasMeasurer(fontFamily, fontSize),
-        spell: resolved.chordproGermanNotation ? spellFlatB : undefined,
+        spell: (chord) => displayChord(chord, resolved.chordproGermanNotation),
     });
 }
 

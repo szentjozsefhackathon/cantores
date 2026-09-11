@@ -295,3 +295,37 @@ test('the mixin carries every export action the toolbars call', () => {
     ['chordproPageElement', 'copyChordproImage', 'exportChordproPng', 'exportChordproSvg', 'exportChordproPdf']
         .forEach((action) => assert.equal(typeof mixin[action], 'function', `${action} is missing`));
 });
+
+for (const german of [false, true]) {
+    for (const transpose of [0, 2]) {
+        test(`clipboard displays major seventh triangles (German: ${german}, transpose: ${transpose})`, async () => {
+            const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+            let copied;
+            Object.defineProperty(globalThis, 'navigator', {
+                configurable: true,
+                value: { clipboard: { writeText: async (text) => { copied = text; } } },
+            });
+
+            try {
+                const editor = {
+                    ...chordproMixin(),
+                    localContent: '[Fmaj7]Alleluia',
+                    chordproGermanNotation: german,
+                    chordproTranspose: transpose,
+                    showCopyFeedback() {},
+                };
+
+                await editor.copyChordproPlainText();
+
+                assert.match(copied, new RegExp(transpose === 0 ? 'F△' : 'G△'));
+                assert.doesNotMatch(copied, /[FG]ma7/);
+            } finally {
+                if (originalNavigator) {
+                    Object.defineProperty(globalThis, 'navigator', originalNavigator);
+                } else {
+                    delete globalThis.navigator;
+                }
+            }
+        });
+    }
+}
