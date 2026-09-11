@@ -2515,3 +2515,143 @@ it('leaves the abc stroke widths to the engine', function () {
         ->and(BookletSettingFields::sanitize('abc', ['abcStemWidth' => 2, 'abcStaffLineWidth' => 2]))
         ->toBe([]);
 });
+
+it('gives a planless booklet an existing music plan from the editor', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user);
+    $booklet->update(['title' => __('Booklet')]);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->assertSet('planSearch', '')
+        ->call('attachPlan', $plan->id)
+        ->assertHasNoErrors();
+
+    $booklet->refresh();
+
+    expect($booklet->music_plan_id)->toBe($plan->id)
+        ->and($booklet->title)->toBe(Booklet::titleFor($plan));
+});
+
+it('keeps a booklet that was already named when a plan is attached', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user);
+    $booklet->update(['title' => 'Karácsonyi füzet']);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('attachPlan', $plan->id);
+
+    expect($booklet->refresh()->title)->toBe('Karácsonyi füzet');
+});
+
+it('leaves the texts already written where they were when a plan arrives', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('addText');
+
+    $text = $booklet->entries()->firstOrFail();
+
+    $component->call('attachPlan', $plan->id);
+
+    expect($booklet->entries()->count())->toBe(1)
+        ->and($booklet->entries()->firstOrFail()->id)->toBe($text->id)
+        ->and($text->refresh()->music_plan_slot_plan_id)->toBeNull();
+});
+
+it('starts a new music plan from the editor of a planless booklet', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('createPlan')
+        ->assertDispatched('toast');
+
+    $booklet->refresh();
+
+    expect($booklet->music_plan_id)->not->toBeNull()
+        ->and($booklet->musicPlan->user_id)->toBe($user->id)
+        ->and($booklet->musicPlan->celebration_name)->toBe('Egyedi ünnep');
+});
+
+it('refuses to attach someone elses private plan to a booklet', function () {
+    $user = User::factory()->create();
+    $stranger = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $stranger->id, 'is_private' => true]);
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('attachPlan', $plan->id)
+        ->assertForbidden();
+
+    expect($booklet->refresh()->music_plan_id)->toBeNull();
+});
+
+it('refuses to swap the plan of a booklet that already has one', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $other = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('attachPlan', $other->id)
+        ->assertForbidden();
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('createPlan')
+        ->assertForbidden();
+
+    expect($booklet->refresh()->music_plan_id)->toBe($plan->id);
+});
+
+it('offers the plan picker only while the booklet has no plan', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)])
+        ->assertSee(__('Add a music plan'))
+        ->assertDontSee(__('Open the plan'));
+
+    Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user, $plan)])
+        ->assertDontSee(__('Add a music plan'))
+        ->assertSee(__('Open the plan'));
+});
+
+it('lists the viewers own plans in the picker and searches them by celebration', function () {
+    $user = User::factory()->create();
+    $stranger = User::factory()->create();
+
+    $mine = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $mine->createCustomCelebration('Húsvét vasárnap');
+    $other = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $other->createCustomCelebration('Pünkösd');
+    MusicPlan::factory()->create(['user_id' => $stranger->id]);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user)]);
+
+    expect($component->instance()->selectablePlans->pluck('id')->all())
+        ->toEqualCanonicalizing([$mine->id, $other->id]);
+
+    $component->set('planSearch', 'Húsvét');
+
+    expect($component->instance()->selectablePlans->pluck('id')->all())->toBe([$mine->id]);
+});

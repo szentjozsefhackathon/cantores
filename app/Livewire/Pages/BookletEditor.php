@@ -5,8 +5,10 @@ namespace App\Livewire\Pages;
 use App\Enums\BookletImposition;
 use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
+use App\Facades\GenreContext;
 use App\Models\Booklet;
 use App\Models\BookletScore;
+use App\Models\MusicPlan;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Services\BookletOutline;
@@ -15,9 +17,11 @@ use App\Services\MusicPlanScoreListService;
 use App\Support\BookletSettingFields;
 use App\Support\BookletStyles;
 use App\Support\ImpositionLayout;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View as IlluminateView;
@@ -118,6 +122,15 @@ class BookletEditor extends Component
      * handed the news that it is new.
      */
     public ?int $openedTextId = null;
+
+    /**
+     * The celebration being looked for in the plan picker.
+     *
+     * Only ever shown to a booklet started without a plan: one that has a
+     * service behind it is choosing from that service, not from a list of
+     * them.
+     */
+    public string $planSearch = '';
 
     /**
      * The link the band reads this booklet on, when there is one.
@@ -373,6 +386,113 @@ class BookletEditor extends Component
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * The plans this booklet could be given, when it was started without one —
+     * the viewer's own, newest first, because a booklet is nearly always for
+     * the service being prepared.
+     *
+     * @return Collection<int, MusicPlan>
+     */
+    #[Computed]
+    public function selectablePlans(): Collection
+    {
+        $search = trim($this->planSearch);
+
+        return MusicPlan::query()
+            ->where('user_id', Auth::id())
+            ->with('celebration')
+            ->when($search !== '', fn (Builder $query) => $query->whereHas(
+                'celebration',
+                fn (Builder $celebration) => $celebration->where('name', 'ilike', "%{$search}%")
+            ))
+            ->latest('created_at')
+            ->limit(25)
+            ->get();
+    }
+
+    /**
+     * Give a booklet that was started from nothing the service it is for.
+     *
+     * A booklet without a plan can hold words and nothing else, so this is the
+     * way out of that: the pane fills with the plan's slots and their music,
+     * and everything already written stays where it was written — the
+     * paragraphs belong to no slot, and a plan arriving underneath them does
+     * not move them.
+     */
+    public function attachPlan(int $planId): void
+    {
+        $this->authorize('update', $this->booklet);
+        $this->ensureNoPlanYet();
+
+        $plan = MusicPlan::query()->findOrFail($planId);
+        abort_unless(Gate::allows('view', $plan), 403);
+
+        $this->writePlan($plan);
+
+        $this->modal('booklet-plan')->close();
+    }
+
+    /**
+     * Start the service itself from here.
+     *
+     * Someone who began with the booklet has the words but not yet the plan,
+     * and sending them away to make one loses the booklet they are standing in.
+     * So the plan is made here and hung on the booklet; what is sung where is
+     * still the plan editor's business, one click away in the pane.
+     */
+    public function createPlan(): void
+    {
+        $this->authorize('update', $this->booklet);
+        $this->authorize('create', MusicPlan::class);
+        $this->ensureNoPlanYet();
+
+        $plan = MusicPlan::create([
+            'user_id' => Auth::id(),
+            'is_private' => true,
+            'genre_id' => GenreContext::getId(),
+        ]);
+
+        $plan->createCustomCelebration('Egyedi ünnep');
+
+        $this->writePlan($plan);
+
+        $this->modal('booklet-plan')->close();
+
+        $this->dispatch('toast', message: __('Music plan created. Open it to say what is sung where.'), type: 'success');
+    }
+
+    /**
+     * A booklet is given its plan once and keeps it.
+     *
+     * The rows already chosen name the slots and the music of the plan they
+     * were taken from, so a plan swapped under them would leave the pane
+     * describing a service the booklet is not.
+     */
+    private function ensureNoPlanYet(): void
+    {
+        abort_unless($this->booklet->music_plan_id === null, 403);
+    }
+
+    private function writePlan(MusicPlan $plan): void
+    {
+        $this->booklet->music_plan_id = $plan->getKey();
+
+        // A booklet started from nothing is called nothing in particular, so it
+        // takes the name the plan would have given it had it been started
+        // there. One the cantor has already named keeps that name.
+        if ($this->title === __('Booklet')) {
+            $this->title = Booklet::titleFor($plan);
+            $this->booklet->title = $this->title;
+        }
+
+        $this->booklet->save();
+        $this->booklet->setRelation('musicPlan', $plan);
+
+        $this->planSearch = '';
+
+        $this->forgetEntries();
     }
 
     public function updated(string $property): void

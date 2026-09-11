@@ -32,6 +32,19 @@
                         {{ __('Open the plan') }}
                     </flux:button>
                 </flux:tooltip>
+            @else
+                {{-- A booklet may well be started before the service is planned
+                     — the words come first, and the music is chosen later. So
+                     the way to a plan is offered here rather than only on the
+                     booklet list: either the plan already exists, or it is made
+                     from this button and filled in afterwards. --}}
+                <flux:modal.trigger name="booklet-plan">
+                    <flux:tooltip :content="__('Build this booklet from a music plan')">
+                        <flux:button size="sm" variant="ghost" icon="list-music">
+                            {{ __('Add a music plan') }}
+                        </flux:button>
+                    </flux:tooltip>
+                </flux:modal.trigger>
             @endif
 
             {{-- Words before the first slot: what the booklet says before the service
@@ -49,9 +62,65 @@
         <flux:text class="text-sm text-zinc-500">
             {{ $booklet->musicPlan
                 ? __('This plan has no slots yet.')
-                : __('This booklet is not linked to a music plan.') }}
+                : __('This booklet has no music plan yet, so it can hold words but no music. Add a plan to choose what is sung.') }}
         </flux:text>
     @endif
+
+    @unless($booklet->musicPlan)
+        {{-- The picker is the booklet list's, moved here: the same plans, the
+             same search, and the same way of starting one that does not exist
+             yet — except that the booklet is already open, so nothing is left
+             behind by choosing. --}}
+        <flux:modal name="booklet-plan" class="w-full max-w-lg">
+            <div class="space-y-4">
+                <div>
+                    <flux:heading size="lg">{{ __('Add a music plan') }}</flux:heading>
+                    <flux:subheading>{{ __('Choose the music plan this booklet is for.') }}</flux:subheading>
+                </div>
+
+                <flux:input
+                    type="search"
+                    wire:model.live.debounce.400ms="planSearch"
+                    icon="magnifying-glass"
+                    :placeholder="__('Search celebrations')"
+                />
+
+                <div class="max-h-96 space-y-1 overflow-y-auto">
+                    @forelse($this->selectablePlans as $plan)
+                        <button
+                            type="button"
+                            wire:key="booklet-plan-{{ $plan->id }}"
+                            wire:click="attachPlan({{ $plan->id }})"
+                            class="flex w-full items-center justify-between gap-3 rounded-md border border-zinc-200 px-3 py-2 text-left hover:border-blue-500 dark:border-zinc-700"
+                        >
+                            <span class="min-w-0">
+                                <span class="block truncate text-sm font-medium">
+                                    {{ $plan->celebration_name ?: __('Untitled plan') }}
+                                </span>
+                                @if($plan->actual_date)
+                                    <span class="block text-xs text-zinc-500">
+                                        {{ $plan->actual_date->translatedFormat('Y. F j.') }}
+                                    </span>
+                                @endif
+                            </span>
+                            <flux:icon name="chevron-right" variant="micro" class="shrink-0 text-zinc-400" />
+                        </button>
+                    @empty
+                        <flux:text class="text-sm text-zinc-500">{{ __('No music plans found.') }}</flux:text>
+                    @endforelse
+                </div>
+
+                <div class="flex items-center justify-between gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-700">
+                    <flux:button size="sm" variant="ghost" icon="plus" wire:click="createPlan">
+                        {{ __('Start a new plan') }}
+                    </flux:button>
+                    <flux:modal.close>
+                        <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                    </flux:modal.close>
+                </div>
+            </div>
+        </flux:modal>
+    @endunless
 
     <ul class="booklet-plan space-y-1.5">
         @foreach($this->outline as $node)
