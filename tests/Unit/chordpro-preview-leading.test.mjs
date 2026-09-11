@@ -40,9 +40,12 @@ test('the chord line is set to the height the booklet gives it', () => {
 
     assert.match(ruleFor('.chordpro-preview .chord'), new RegExp(`line-height:\\s*${chordLine}\\b`));
     assert.match(
-        ruleFor('.chordpro-preview .row:has(.chord:not(:empty)) .chord'),
+        ruleFor('.chordpro-preview .row:has(.chord:not(:empty), .annotation) .chord'),
         new RegExp(`min-height:\\s*${chordLine}em`),
     );
+
+    // An annotation shares that line, so it shares its leading.
+    assert.match(ruleFor('.chordpro-preview .annotation'), new RegExp(`line-height:\\s*${chordLine}\\b`));
 });
 
 test('a section label stands as tall as the booklet draws it, and no taller', () => {

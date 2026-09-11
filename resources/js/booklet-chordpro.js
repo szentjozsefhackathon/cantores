@@ -142,6 +142,13 @@ export function chordproRows(paragraphs, options) {
 
 /**
  * The renderable chord/lyric columns of one line.
+ *
+ * An annotation — ChordPro's `[*text]` — takes the chord's place in its column
+ * rather than standing beside it, which is both what chordsheetjs parses (a pair
+ * with an annotation carries no chord) and what the reference implementation
+ * draws. It is the only way to write `||: Cm :|| (2x)` as one line: the repeat
+ * marks and the count are not sung, so they cannot be lyrics, and they are not
+ * chords either.
  */
 function columnsOf(line, options) {
     const { spell = (chord) => chord } = options;
@@ -156,10 +163,16 @@ function columnsOf(line, options) {
         .map((item) => {
             const marked = markupRuns(item.lyrics ?? '', style);
             style = marked.open;
+            const annotation = (item.annotation ?? '').trim();
 
-            return sizedColumn(spell((item.chords ?? '').trim()), marked.runs, options);
+            return sizedColumn(
+                annotation === '' ? spell((item.chords ?? '').trim()) : '',
+                marked.runs,
+                options,
+                annotation,
+            );
         })
-        .filter((column) => column.chord !== '' || column.lyric !== '');
+        .filter((column) => column.chord !== '' || column.lyric !== '' || column.annotation !== '');
 }
 
 /**
@@ -170,14 +183,18 @@ function columnsOf(line, options) {
  * The syllables arrive as styled runs, each measured in the face it will be
  * drawn in, so an italic word takes the room italics actually need.
  */
-function sizedColumn(chord, runs, { measure, fontSize }) {
+function sizedColumn(chord, runs, { measure, fontSize }, annotation = '') {
     const chordWidth = chord === '' ? 0 : measureRuns(chordDisplayRuns(chord), measure, fontSize) + fontSize * CHORD_GAP;
+    // An annotation stands where a chord would and is measured like one, gap
+    // included, so `[*||:][Cm]` spaces the same as `[Am][Cm]`.
+    const annotationWidth = annotation === '' ? 0 : measure(annotation, { bold: true }) + fontSize * CHORD_GAP;
 
     return {
         chord,
+        annotation,
         runs,
         lyric: runsText(runs),
-        width: Math.max(measureRuns(runs, measure, fontSize), chordWidth),
+        width: Math.max(measureRuns(runs, measure, fontSize), chordWidth, annotationWidth),
     };
 }
 
@@ -292,7 +309,7 @@ function splitColumn(column, room, options) {
     const cut = words.slice(0, taken).join('').length;
 
     return [
-        sizedColumn(column.chord, sliceRuns(column.runs, 0, cut), options),
+        sizedColumn(column.chord, sliceRuns(column.runs, 0, cut), options, column.annotation),
         sizedColumn('', sliceRuns(column.runs, cut), options),
     ];
 }
@@ -300,9 +317,16 @@ function splitColumn(column, room, options) {
 function chordLyricRow(columns, options) {
     const { fontSize, fontFamily } = options;
 
-    const hasChords = columns.some((column) => column.chord !== '');
+    // An annotation occupies the chord line, so a row of nothing but annotations
+    // still has one.
+    const hasChords = columns.some((column) => column.chord !== '' || column.annotation !== '');
+    const hasLyrics = columns.some((column) => column.lyric.trim() !== '');
     const chordHeight = hasChords ? fontSize * CHORD_LINE : 0;
-    const lyricHeight = fontSize * LYRIC_LINE;
+    // A line of chords alone — `||: [Am] [C] [G] :||` stripped of its bar lines,
+    // an instrumental break — is a line of chords, not a line of silence with
+    // chords over it. The empty lyric line below it is dropped, the way both the
+    // reference implementation and the HTML preview drop it.
+    const lyricHeight = hasChords && !hasLyrics ? 0 : fontSize * LYRIC_LINE;
     const height = chordHeight + lyricHeight;
     const width = columns.reduce((total, column) => total + column.width, 0);
 
@@ -310,6 +334,15 @@ function chordLyricRow(columns, options) {
     let x = 0;
 
     columns.forEach((column) => {
+        if (column.annotation !== '') {
+            parts.push(text(column.annotation, x, chordHeight * 0.8, {
+                fontFamily,
+                fontSize,
+                fill: LABEL_COLOR,
+                bold: true,
+            }));
+        }
+
         if (column.chord !== '') {
             let chordX = x;
             chordDisplayRuns(column.chord).forEach((run) => {
@@ -327,7 +360,7 @@ function chordLyricRow(columns, options) {
         let lyricX = x;
         const baseline = chordHeight + lyricHeight * 0.78;
 
-        column.runs.forEach((run) => {
+        (lyricHeight === 0 ? [] : column.runs).forEach((run) => {
             if (run.text === '') {
                 return;
             }

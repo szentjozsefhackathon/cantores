@@ -406,12 +406,24 @@ select:focus[data-flux-control] {
 .chordpro-preview .paragraph { margin-bottom: 0.9em; }
 .chordpro-preview .paragraph-header { font-weight: bold; font-style: italic; color: #666; line-height: 1.5; margin-bottom: 0; }
 .chordpro-preview .row { display: flex; flex-wrap: wrap; align-items: flex-end; }
-.chordpro-preview .column { display: flex; flex-direction: column; margin-right: 0.1em; }
+.chordpro-preview .column { display: flex; flex-direction: column; }
 .chordpro-preview .chord { font-weight: bold; color: #1d4ed8; white-space: nowrap; line-height: 1.25; }
+/* An annotation — ChordPro's `[*text]` — stands where a chord would, and is what
+   writes `||: Cm :|| (2x)` on a single line. Set in the colour the section labels and
+   `{comment}` lines use, because like them it is an instruction rather than a note. */
+.chordpro-preview .annotation { font-weight: bold; color: #555; white-space: nowrap; line-height: 1.25; }
+/* The gap that keeps two chords from touching, and the only thing holding a line of
+   chords without lyrics — `||: [Am] [C] [G] :||` — apart: chordsheetjs blanks a
+   lyric that is nothing but a space, so the column beneath such a chord is empty and
+   the chord itself has to carry the spacing. It is CHORD_GAP from
+   booklet-chordpro.js, so the preview spaces those chords as the SVG engraves them. */
+.chordpro-preview .chord:not(:empty),
+.chordpro-preview .annotation { padding-right: 0.4em; }
 /* Only a row that carries a chord reserves the line above the lyrics; chordsheetjs
    emits an empty chord div for every syllable, so an unconditional min-height puts a
-   blank line over every line of a lyrics-only sheet. */
-.chordpro-preview .row:has(.chord:not(:empty)) .chord { min-height: 1.25em; }
+   blank line over every line of a lyrics-only sheet. An annotation is on that line
+   too, so it reserves it the same way. */
+.chordpro-preview .row:has(.chord:not(:empty), .annotation) .chord { min-height: 1.25em; }
 .chordpro-preview .lyrics { white-space: pre; line-height: 1.35; }
 /* A super- or subscript is set at the same proportion the engraved sheet uses, and
    given no line height of its own: left with one, a single raised syllable would
@@ -421,6 +433,7 @@ select:focus[data-flux-control] {
 .dark .chordpro-preview p.artist { color: #9ca3af; }
 .dark .chordpro-preview .paragraph-header { color: #9ca3af; }
 .dark .chordpro-preview .chord { color: #60a5fa; }
+.dark .chordpro-preview .annotation { color: #9ca3af; }
 
 /* Markdown prose styles */
 .prose {

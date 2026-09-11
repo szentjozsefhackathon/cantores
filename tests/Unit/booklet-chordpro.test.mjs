@@ -48,6 +48,87 @@ test('a row with no chords is only as tall as its lyrics', () => {
     assert.ok(withChords[0].height > without[0].height);
 });
 
+test('a row of chords with no lyrics is only as tall as its chords', () => {
+    // `||: [Am] [C] [G] :||` without its bar lines: chordsheetjs hands every
+    // chord a lyric of one space, and a line of chords is a line of chords, not
+    // a line of silence with chords over it. The reference implementation drops
+    // the lyric line here too, and so does the HTML preview.
+    const rows = chordproRows(
+        [{ lines: [{ items: [pair('Am', ' '), pair('C', ' '), pair('G', '')] }] }],
+        options,
+    );
+
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].height, 12.5);
+
+    // Nothing is drawn on the line that is no longer there.
+    const texts = [...rows[0].svg.matchAll(/<text[^>]*>([^<]*)</g)].map(([, content]) => content);
+    assert.deepEqual(texts, ['Am', 'C', 'G']);
+});
+
+test('a chord line keeps its lyrics line as soon as one syllable is sung', () => {
+    const rows = chordproRows(
+        [{ lines: [{ items: [pair('', '||: '), pair('Am', ' '), pair('C', ' :||')] }] }],
+        options,
+    );
+
+    assert.equal(rows[0].height, 12.5 + 13.5);
+});
+
+test('an annotation is drawn on the chord line, and needs no lyrics', () => {
+    // `[*||:][Cm][*:||][* (2x)]` — the one line the reference implementation
+    // draws for `||: Cm :|| (2x)`, since none of the marks are sung.
+    const rows = chordproRows(
+        [{ lines: [{ items: [
+            { chords: '', lyrics: '', annotation: '||:' },
+            { chords: 'Cm', lyrics: '' },
+            { chords: '', lyrics: '', annotation: ':||' },
+            { chords: '', lyrics: '', annotation: '(2x)' },
+        ] }] }],
+        options,
+    );
+
+    assert.equal(rows.length, 1);
+    // The chord line alone: nothing here is sung.
+    assert.equal(rows[0].height, 12.5);
+
+    const texts = [...rows[0].svg.matchAll(/<text[^>]*x="([\d.]+)"[^>]*fill="([^"]*)"[^>]*>([^<]*)</g)]
+        .map(([, x, fill, content]) => ({ x: Number(x), fill, content }));
+
+    assert.deepEqual(texts.map((t) => t.content), ['||:', 'Cm', ':||', '(2x)']);
+
+    // Marks are set apart from the chord, in the colour the labels use.
+    assert.deepEqual(texts.map((t) => t.fill), ['#555555', '#1d4ed8', '#555555', '#555555']);
+
+    // Each is measured like a chord, gap included: '||:' is 15 wide plus 4, 'Cm'
+    // 10 plus 4.
+    assert.deepEqual(texts.map((t) => t.x), [0, 19, 33, 52]);
+});
+
+test('a line of annotations alone still gets its chord line', () => {
+    const rows = chordproRows(
+        [{ lines: [{ items: [{ chords: '', lyrics: '', annotation: 'Intro' }] }] }],
+        options,
+    );
+
+    assert.equal(rows[0].height, 12.5);
+    assert.match(rows[0].svg, /Intro/);
+});
+
+test('every chord is followed by the same gap, lyrics or not', () => {
+    // The gap is what holds a chordless line apart, and the preview stylesheet
+    // spells the same number as padding on `.chord`.
+    const rows = chordproRows(
+        [{ lines: [{ items: [pair('Am', ' '), pair('C', ' ')] }] }],
+        options,
+    );
+
+    const xs = [...rows[0].svg.matchAll(/<text[^>]*x="([\d.]+)"/g)].map((m) => Number(m[1]));
+
+    // 'Am' is 10 wide, plus 0.4 of the 10px font size.
+    assert.deepEqual(xs, [0, 14]);
+});
+
 test('a column is as wide as the wider of its chord and its lyric', () => {
     // 'Gmaj7' is 25 wide plus a 4px gap; the lyric 'ah' is only 10, so the chord
     // decides — otherwise the next chord would collide with this one.

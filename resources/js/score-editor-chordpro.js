@@ -538,8 +538,10 @@ p.artist{color:#555;margin:0 0 1.5em;}
 .paragraph{margin-bottom:1.5rem;break-inside:avoid;}
 .paragraph-header{font-weight:bold;font-style:italic;color:#555;margin-bottom:0.4rem;}
 table{border-collapse:collapse;margin-bottom:0.25rem;}
-td.column{vertical-align:bottom;padding-right:0.1em;}
+td{vertical-align:bottom;padding:0;}
 .chord{font-weight:bold;color:#1d4ed8;min-height:1.3em;white-space:nowrap;}
+.annotation{font-weight:bold;color:#555;white-space:nowrap;}
+.chord:not(:empty),.annotation{padding-right:0.4em;}
 .lyrics{white-space:pre;}
 sup,sub{font-size:0.7em;line-height:0;}
 </style></head><body>${body}</body></html>`;
@@ -579,9 +581,11 @@ p.artist{color:#555;margin:0 0 1.5em;}
 .paragraph{margin-bottom:1.5rem;break-inside:avoid;}
 .paragraph-header{font-weight:bold;font-style:italic;color:#555;margin-bottom:0.4rem;}
 .row{display:flex;flex-wrap:wrap;margin-bottom:0.25rem;align-items:flex-end;}
-.column{display:flex;flex-direction:column;margin-right:0.1em;}
+.column{display:flex;flex-direction:column;}
 .chord{font-weight:bold;color:#1d4ed8;white-space:nowrap;}
-.row:has(.chord:not(:empty)) .chord{min-height:1.3em;}
+.annotation{font-weight:bold;color:#555;white-space:nowrap;}
+.chord:not(:empty),.annotation{padding-right:0.4em;}
+.row:has(.chord:not(:empty), .annotation) .chord{min-height:1.3em;}
 .lyrics{white-space:pre;}
 sup,sub{font-size:0.7em;line-height:0;}
 </style>

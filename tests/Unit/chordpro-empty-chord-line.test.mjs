@@ -40,7 +40,7 @@ test('the preview reserves the chord line only for rows that carry a chord', () 
 
     assert.match(
         css,
-        /\.chordpro-preview \.row:has\(\.chord:not\(:empty\)\) \.chord \{[^}]*min-height/,
+        /\.chordpro-preview \.row:has\(\.chord:not\(:empty\)[^)]*\) \.chord \{[^}]*min-height/,
     );
 
     // The unscoped rule is what put a blank line over every lyric.
@@ -59,9 +59,63 @@ test('the HTML export reserves the chord line only for rows that carry a chord',
         .find((block) => block.includes('.column{display:flex'));
 
     assert.ok(divStyles, 'the div-formatter stylesheet should be findable');
-    assert.match(divStyles, /\.row:has\(\.chord:not\(:empty\)\) \.chord\{[^}]*min-height/);
+    assert.match(divStyles, /\.row:has\(\.chord:not\(:empty\)[^)]*\) \.chord\{[^}]*min-height/);
     assert.ok(
         !/\n\.chord\{[^}]*min-height/.test(divStyles),
         'the div-formatter stylesheet must not set min-height on every .chord',
     );
+});
+
+test('chordsheetjs blanks a lyric that is nothing but a space', () => {
+    // Which is why a line of chords alone needs the gap below: the columns
+    // under `[Am] [C]` come out empty, so nothing but the chords themselves can
+    // hold them apart. Pin the assumption rather than the workaround.
+    const html = format('||: [Am] [C] :||\n');
+
+    assert.match(html, /<div class="chord">Am<\/div><div class="lyrics"><\/div>/);
+});
+
+test('the preview and both exports give a chord the gap the SVG engraves', () => {
+    // CHORD_GAP in booklet-chordpro.js, in em so it follows the font size — the
+    // same number, or a line of chords without lyrics reads as one long word in
+    // HTML and as spaced chords on the page.
+    const sources = [
+        readSource('../../resources/css/app.css'),
+        readSource('../../resources/js/score-editor-chordpro.js'),
+    ];
+
+    assert.match(sources[0], /\.chordpro-preview \.chord:not\(:empty\),\n\.chordpro-preview \.annotation \{[^}]*padding-right: 0\.4em/);
+
+    const gapRules = sources[1].match(/\.chord:not\(:empty\),\.annotation\{padding-right:0\.4em;\}/g) ?? [];
+    assert.equal(gapRules.length, 2, 'both the clipboard copy and the HTML export need the gap');
+
+    // The 0.1em fudge it replaces spaced every column, which the SVG does not.
+    sources.forEach((source) => {
+        assert.ok(!/margin-right: ?0\.1em/.test(source), 'the per-column fudge should be gone');
+    });
+});
+
+test('an annotation is the way to write chords and marks on one line', () => {
+    // `||: Cm :|| (2x)`: the repeat marks are not sung, so they cannot be lyrics,
+    // and they are not chords either. ChordPro's `[*text]` puts them in the chord
+    // slot, which is what the reference implementation does with them too, and
+    // both chordsheetjs formatters give them a class of their own.
+    const html = format('[*||:][Cm][*:||][* (2x)]\n');
+
+    assert.match(html, /<div class="annotation">\|\|:<\/div>/);
+    assert.match(html, /<div class="chord">Cm<\/div>/);
+
+    // Every lyric column is empty, so the row collapses to the one line.
+    assert.ok(!/<div class="lyrics">[^<]/.test(html));
+});
+
+test('both export stylesheets and the preview style the annotation', () => {
+    const css = readSource('../../resources/css/app.css');
+    const js = readSource('../../resources/js/score-editor-chordpro.js');
+
+    assert.match(css, /\.chordpro-preview \.annotation \{[^}]*color: #555/);
+    assert.match(css, /\.dark \.chordpro-preview \.annotation \{[^}]*color: #9ca3af/);
+
+    const rules = js.match(/\.annotation\{font-weight:bold;color:#555;white-space:nowrap;\}/g) ?? [];
+    assert.equal(rules.length, 2, 'the clipboard copy and the HTML export both need it');
 });
