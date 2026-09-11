@@ -13,6 +13,7 @@ new class extends Component
     public int $assignmentCount = 0;
     public bool $isOwner = false;
     public bool $showOpenButton = false;
+    public bool $showBookletActions = false;
     public ?int $musicPlanId = null;
 
     public function mount(MusicPlan $musicPlan): void
@@ -119,6 +120,9 @@ new class extends Component
                     <a href="{{ route('music-plan-editor', ['musicPlan' => $musicPlan]) }}" class="inline-block">
                         <flux:button size="xs" variant="outline" color="amber" icon="pencil"></flux:button>
                     </a>
+                    @endif
+                    @if($isOwner && $showBookletActions)
+                    <x-music-plan-booklet-actions :plan="$musicPlan" compact />
                     @endif
                 </div>
             </div>

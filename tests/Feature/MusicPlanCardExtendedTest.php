@@ -107,3 +107,52 @@ test('genre-icon falls back to the default icon without a genre', function () {
         ->not->toContain('viewBox="0 0 390 600"')
         ->not->toContain('wire:id');
 });
+
+test('card offers booklet creation to the owner when asked for booklet actions', function () {
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
+
+    Livewire::actingAs($owner)
+        ->test('music-plan-card-extended', ['musicPlan' => $plan, 'showBookletActions' => true])
+        ->assertSee('Füzet készítése')
+        ->assertSee(route('booklets.store'));
+});
+
+test('card links to an existing booklet of the plan', function () {
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
+    $booklet = \App\Models\Booklet::factory()->create([
+        'user_id' => $owner->id,
+        'music_plan_id' => $plan->id,
+    ]);
+
+    Livewire::actingAs($owner)
+        ->test('music-plan-card-extended', ['musicPlan' => $plan, 'showBookletActions' => true])
+        ->assertSee('Füzet megnyitása')
+        ->assertSee(route('booklets.edit', $booklet));
+});
+
+test('card hides booklet actions unless they are asked for', function () {
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
+
+    Livewire::actingAs($owner)
+        ->test('music-plan-card-extended', ['musicPlan' => $plan])
+        ->assertDontSee('Füzet készítése');
+});
+
+test('booklet buttons on the card are square icon buttons like the view and edit ones', function () {
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
+
+    $html = Livewire::actingAs($owner)
+        ->test('music-plan-card-extended', ['musicPlan' => $plan, 'showBookletActions' => true])
+        ->html();
+
+    $bookletButton = Str::after($html, '<form method="POST" action="'.route('booklets.store').'"');
+
+    expect(Str::before($bookletButton, '</form>'))
+        ->toContain('w-6')
+        ->not->toContain('px-2')
+        ->not->toContain('<span>'); // an empty label span would be a flex item and push the icon off centre
+});
