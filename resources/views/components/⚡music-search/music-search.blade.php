@@ -1,4 +1,4 @@
-<div>
+<div class="min-w-0 max-w-full">
     @include('partials.music-browser-filters')
 
     @if($selectable)
@@ -12,7 +12,7 @@
     @endif
 
     <div class="mt-4 relative">
-        <div class="overflow-x-auto transition-opacity duration-200" wire:loading.class="opacity-50 pointer-events-none">
+        <div class="min-w-0 max-w-full transition-opacity duration-200" wire:loading.class="opacity-50 pointer-events-none">
             @include('partials.music-browser-table', ['mode' => 'select'])
         </div>
 
