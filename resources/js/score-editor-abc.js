@@ -381,8 +381,11 @@ export function abcMixin() {
             const zoomedPaperWidth = Math.round(canvas.width * zoom);
             const availableWidth = Math.max(200, Math.round((container.clientWidth || zoomedPaperWidth) - 4));
             const paperPageWidth = normalizeAbcPageWidth(this.abcPageWidth);
+            // Responsive lays the music out at whatever width the container
+            // offers, wider than the paper page included; the zoom then only
+            // decides how large the notes come out inside that width.
             const renderWidth = isResponsive
-                ? Math.min(zoomedPaperWidth, availableWidth)
+                ? availableWidth
                 : isPaper
                     ? Math.round(zoomedPaperWidth * paperPageWidth / canvas.width)
                     : zoomedPaperWidth;

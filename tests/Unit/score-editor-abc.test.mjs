@@ -240,3 +240,30 @@ test('an ABC render invalidated while fonts load leaves the preview alone', asyn
     assert.equal(container.innerHTML, 'previous preview');
     assert.deepEqual(engraved, []);
 });
+
+test('responsive ABC lays the music out across the whole container, not just a paper page', async t => {
+    const { component, container, loads, engraved } = deferredFontPreview(t);
+    component.isResponsiveRatio = () => true;
+    component.isPaperRatio = () => false;
+    component.abcZoom = 100;
+    container.clientWidth = 1400;
+    const render = component.renderAbcPreview();
+
+    loads.forEach(load => load.resolve([]));
+    await render;
+    assert.equal(engraved.length, 1);
+    assert.match(engraved[0], /%%pagewidth 1396px\n/);
+});
+
+test('responsive ABC trades container width for note size as the zoom rises', async t => {
+    const { component, container, loads, engraved } = deferredFontPreview(t);
+    component.isResponsiveRatio = () => true;
+    component.isPaperRatio = () => false;
+    component.abcZoom = 200;
+    container.clientWidth = 1400;
+    const render = component.renderAbcPreview();
+
+    loads.forEach(load => load.resolve([]));
+    await render;
+    assert.match(engraved[0], /%%pagewidth 698px\n/);
+});
