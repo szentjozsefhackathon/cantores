@@ -57,6 +57,9 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | b
     && . $NVM_DIR/nvm.sh \
     && nvm install 22 \
     && nvm use 22 \
+    && sudo ln -sf "$(nvm which 22)" /usr/local/bin/node \
+    && sudo ln -sf "$(dirname "$(nvm which 22)")/npm" /usr/local/bin/npm \
+    && sudo ln -sf "$(dirname "$(nvm which 22)")/npx" /usr/local/bin/npx \
     && curl -fsSL https://claude.ai/install.sh | bash
 
 ARG PLAYWRIGHT_VERSION=1.63.0
