@@ -5,6 +5,7 @@ use App\Livewire\Pages\ScoreEditor;
 use App\Models\Music;
 use App\Models\Score;
 use App\Models\User;
+use App\Services\ScoreFileResponder;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -170,9 +171,16 @@ it('does not let a public incipit be cached past a revocation', function () {
 
     $cacheControl = $response->headers->get('Cache-Control');
 
+    // Reusable without a round trip while it is fresh, and reusable while it
+    // revalidates after that — but never past the two windows together, which
+    // is what a takedown has to outrun.
     expect($cacheControl)->toContain('public')
         ->and($cacheControl)->not->toContain('immutable')
-        ->and($cacheControl)->toContain('must-revalidate');
+        ->and($cacheControl)->toContain('max-age='.ScoreFileResponder::PUBLIC_MAX_AGE)
+        ->and($cacheControl)->toContain('stale-while-revalidate='.ScoreFileResponder::PUBLIC_STALE_WHILE_REVALIDATE);
+
+    expect(ScoreFileResponder::PUBLIC_MAX_AGE + ScoreFileResponder::PUBLIC_STALE_WHILE_REVALIDATE)
+        ->toBeLessThanOrEqual(2 * 3600);
 });
 
 it('saves public_preview flag when saving a score with a music attached', function () {

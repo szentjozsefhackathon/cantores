@@ -1,3 +1,7 @@
+@push('page-bundles')
+resources/js/aretino-mini-editor.js
+@endpush
+
 <div class="py-8">
     <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
 

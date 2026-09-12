@@ -12,6 +12,24 @@ use Livewire\Component;
 
 new class extends Component
 {
+    /**
+     * How many suggested songs a celebration's teaser strip carries. The strip is a
+     * teaser, not the list — "Az összes énekjavaslat" leads to the full set — and every
+     * extra slide costs a notation image plus its markup on a phone, so it is capped.
+     */
+    private const SUGGESTION_PREVIEW_LIMIT = 6;
+
+    /**
+     * How many songs a single published plan's teaser strip carries.
+     */
+    private const PLAN_PREVIEW_LIMIT = 4;
+
+    /**
+     * How many of the published plans on a card get a teaser strip at all. The plans
+     * beyond this still get their link row; only their images are left to the plan page.
+     */
+    private const PLAN_PREVIEW_STRIPS = 3;
+
     public array $celebrations = [];
 
     public string $date;
@@ -59,6 +77,22 @@ new class extends Component
      * @var array<int, array<int, array{music_id: int, title: string, slot: string, incipit_url: string}>>|null
      */
     private ?array $suggestionPreviews = null;
+
+    /**
+     * Memoized untruncated suggestion counts keyed by celebration loop index, so a card can say
+     * how much more there is behind a strip that only carries self::SUGGESTION_PREVIEW_LIMIT.
+     *
+     * @var array<int, int>|null
+     */
+    private ?array $suggestionPreviewTotals = null;
+
+    /**
+     * Untruncated song counts per published plan id, filled in as planPreviews() builds each
+     * capped strip, so a strip can say how many songs it left to the plan page.
+     *
+     * @var array<int, int>
+     */
+    private array $planPreviewTotals = [];
 
     public function mount(bool $selectable = false, bool $welcome = false): void
     {
@@ -408,9 +442,29 @@ new class extends Component
     }
 
     /**
-     * Build the ordered, de-duplicated song-preview list for a single music plan's carousel. Each
-     * item carries its incipit URL when one is visible so the teaser can show a notated snippet
-     * where available and fall back to the title otherwise, mirroring the suggestion carousel.
+     * Whether a published plan is near enough to the top of a card's list to be worth a
+     * teaser strip. Beyond that the plan keeps its link row but costs no notation images.
+     */
+    public function planHasPreviewStrip(int $planIndex): bool
+    {
+        return $planIndex < self::PLAN_PREVIEW_STRIPS;
+    }
+
+    /**
+     * How many songs of a plan its capped teaser strip leaves out. Counted from the list
+     * planPreviews() built, so hidden songs never inflate it.
+     */
+    public function planPreviewOverflow(MusicPlan $plan): int
+    {
+        return max(0, ($this->planPreviewTotals[$plan->id] ?? 0) - self::PLAN_PREVIEW_LIMIT);
+    }
+
+    /**
+     * Build the ordered, de-duplicated song-preview list for a single music plan's teaser strip.
+     * Each item carries its incipit URL when one is visible so the teaser can show a notated
+     * snippet where available and fall back to the title otherwise, mirroring the suggestions.
+     *
+     * Capped at self::PLAN_PREVIEW_LIMIT: the plan page has the whole list.
      *
      * @return array<int, array{music: \App\Models\Music, title: string, slot: string, slot_priority: int, incipit_url: ?string}>
      */
@@ -449,7 +503,9 @@ new class extends Component
 
         usort($items, fn(array $a, array $b): int => [$a['slot_priority'], $a['slot']] <=> [$b['slot_priority'], $b['slot']]);
 
-        return $items;
+        $this->planPreviewTotals[$plan->id] = count($items);
+
+        return array_slice($items, 0, self::PLAN_PREVIEW_LIMIT);
     }
 
     /**
@@ -511,9 +567,22 @@ new class extends Component
     }
 
     /**
+     * How many suggested songs a celebration has in total, including the ones the capped
+     * teaser strip leaves out.
+     */
+    public function suggestionPreviewTotalFor(int $celebrationIndex): int
+    {
+        $this->suggestionPreviews();
+
+        return $this->suggestionPreviewTotals[$celebrationIndex] ?? 0;
+    }
+
+    /**
      * Build, for every displayed celebration, an ordered and de-duplicated list of suggested songs
-     * for the engagement carousel. Each item carries its incipit URL when one is visible, so the
+     * for the engagement strip. Each item carries its incipit URL when one is visible, so the
      * teaser can show a notated snippet where available and fall back to the title otherwise.
+     * Each list is capped at self::SUGGESTION_PREVIEW_LIMIT; the untruncated counts are kept in
+     * $suggestionPreviewTotals so a card can still say how much more is behind it.
      *
      * Music plans for the unioned related celebrations are loaded in a single query (with their
      * assignments, slots and incipit scores eager-loaded), then walked per index in celebration
@@ -530,6 +599,8 @@ new class extends Component
         $related = $this->relatedIds();
 
         if ($related['all'] === []) {
+            $this->suggestionPreviewTotals = [];
+
             return $this->suggestionPreviews = [];
         }
 
@@ -558,6 +629,7 @@ new class extends Component
             ->groupBy('celebration_id');
 
         $previews = [];
+        $totals = [];
 
         foreach ($related['perIndex'] as $index => $celebrationIds) {
             $seen = [];
@@ -604,8 +676,11 @@ new class extends Component
             // Order songs by their slot position (priority then name), mirroring the suggestions list.
             usort($items, fn(array $a, array $b): int => [$a['slot_priority'], $a['slot']] <=> [$b['slot_priority'], $b['slot']]);
 
-            $previews[$index] = $items;
+            $totals[$index] = count($items);
+            $previews[$index] = array_slice($items, 0, self::SUGGESTION_PREVIEW_LIMIT);
         }
+
+        $this->suggestionPreviewTotals = $totals;
 
         return $this->suggestionPreviews = $previews;
     }
@@ -678,6 +753,15 @@ new class extends Component
     }
 
     /**
+     * The suggestions page URL for a celebration, so a teaser can be a plain link rather
+     * than a component action that costs a round trip before it redirects anywhere.
+     */
+    public function suggestionsUrl(int $celebrationIndex): string
+    {
+        return route('suggestions', $this->suggestionsCriteria($celebrationIndex));
+    }
+
+    /**
      * Open the suggestions page for the given celebration.
      */
     public function openSuggestions(int $celebrationIndex): void
@@ -686,9 +770,22 @@ new class extends Component
             return;
         }
 
+        $this->redirectRoute('suggestions', $this->suggestionsCriteria($celebrationIndex), navigate: true);
+    }
+
+    /**
+     * The query the suggestions page needs to reproduce a celebration's song suggestions.
+     *
+     * @return array<string, mixed>
+     */
+    private function suggestionsCriteria(int $celebrationIndex): array
+    {
+        if (! isset($this->celebrations[$celebrationIndex])) {
+            return [];
+        }
+
         $celebrationData = $this->celebrations[$celebrationIndex];
 
-        // Build criteria to pass to suggestions page
         $criteria = [
             'date' => $celebrationData['dateISO'] ?? null,
             'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? null,
@@ -700,12 +797,7 @@ new class extends Component
             'year_parity' => $celebrationData['yearParity'] ?? null,
         ];
 
-        // Remove null values
-        $criteria = array_filter($criteria, fn($value) => $value !== null);
-
-        // Store criteria in session or pass as query parameters
-        // For now, we'll redirect to suggestions page with query parameters
-        $this->redirectRoute('suggestions', $criteria, navigate: true);
+        return array_filter($criteria, fn($value): bool => $value !== null);
     }
 };
 ?>
@@ -969,75 +1061,65 @@ new class extends Component
                                 $hasSuggestions = $this->hasSuggestions($celebrationIndex);
                                 @endphp
                                 @if(!empty($previews))
-                                <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">
-                                    Énekjavaslatok az ünnepre
-                                </flux:heading>
-                                <div x-data="{
-                                        current: 0,
-                                        total: {{ count($previews) }},
-                                        timer: null,
-                                        go(step) { this.current = (this.current + step + this.total) % this.total; this.start(); },
-                                        start() { this.stop(); if (this.total > 1) { this.timer = setInterval(() => { this.current = (this.current + 1) % this.total; }, 4000); } },
-                                        stop() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
-                                     }"
-                                     x-init="start()"
-                                     x-on:mouseenter="stop()"
-                                     x-on:mouseleave="start()"
-                                     wire:key="suggestion-carousel-{{ $celebrationIndex }}-{{ $date }}-{{ \App\Facades\GenreContext::getId() ?? 'all' }}"
-                                     class="flex items-stretch gap-1.5">
-                                    @if(count($previews) > 1)
-                                    <button type="button"
-                                        x-on:click.stop="go(-1)"
-                                        class="flex shrink-0 items-center justify-center rounded-md px-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-blue-600 dark:text-neutral-500 dark:hover:bg-neutral-800"
-                                        aria-label="Előző javaslat">
-                                        <flux:icon name="chevron-left" class="h-5 w-5" />
-                                    </button>
-                                    @endif
-                                    <div
-                                        wire:click="openSuggestions({{ $celebrationIndex }})"
-                                        role="button"
-                                        tabindex="0"
-                                        x-on:keydown.enter="$wire.openSuggestions({{ $celebrationIndex }})"
-                                        class="group/sugg relative h-38 flex-1 cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500"
+                                @php
+                                $suggestionTotal = $this->suggestionPreviewTotalFor($celebrationIndex);
+                                $suggestionsUrl = $this->suggestionsUrl($celebrationIndex);
+                                @endphp
+                                <div class="mb-2 flex items-baseline justify-between gap-2">
+                                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400">
+                                        Énekjavaslatok az ünnepre
+                                    </flux:heading>
+                                    <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $suggestionTotal }} ének</flux:text>
+                                </div>
+                                {{--
+                                    A native scroll-snap strip rather than a scripted carousel: no timer, no
+                                    transform animation and no Alpine component per card, and the browser only
+                                    fetches the incipits of the slides the reader actually scrolls to.
+                                --}}
+                                <div wire:key="suggestion-carousel-{{ $celebrationIndex }}-{{ $date }}-{{ \App\Facades\GenreContext::getId() ?? 'all' }}"
+                                     class="incipit-strip -mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1.5">
+                                    @foreach($previews as $i => $preview)
+                                    <a
+                                        wire:key="suggestion-preview-{{ $celebrationIndex }}-{{ $i }}-{{ $preview['music']->id }}"
+                                        href="{{ $suggestionsUrl }}"
+                                        wire:navigate
+                                        class="group/sugg relative flex h-38 w-[86%] shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white p-2 text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500 sm:w-72"
                                         title="Az összes énekjavaslat megtekintése">
-                                        <div class="flex h-full transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (current * 100) + '%)'">
-                                        @foreach($previews as $i => $preview)
-                                        <div wire:key="suggestion-preview-{{ $celebrationIndex }}-{{ $preview['music']->id }}" class="relative flex h-full w-full shrink-0 flex-col p-2">
-                                            <div class="mb-1.5 flex items-start justify-between gap-2">
-                                                <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
-                                                @if(count($previews) > 1)
-                                                <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ count($previews) }}</flux:text>
-                                                @endif
-                                            </div>
-                                            <flux:heading size="sm" class="truncate text-xs! text-neutral-800 transition-colors group-hover/sugg:text-blue-600 dark:text-neutral-100 dark:group-hover/sugg:text-blue-400">
-                                                {{ $preview['title'] }}
-                                            </flux:heading>
-                                            @if($preview['incipit_url'])
-                                            <div class="flex flex-1 items-center overflow-hidden">
-                                                <img src="{{ $preview['incipit_url'] }}" alt="{{ $preview['title'] }}" loading="lazy" class="block h-auto max-h-14 w-auto max-w-full" />
-                                            </div>
-                                            @endif
-                                            <div class="mt-auto flex min-w-0 flex-wrap items-center gap-1 pt-0">
-                                                <x-collection-badges :music="$preview['music']" />
-                                            </div>
-                                            @if($preview['music']->genres->isNotEmpty())
-                                            <div class="pointer-events-none absolute bottom-0 right-0 flex items-center justify-center gap-1 rounded-tl-md bg-gray-200/30 px-2 py-1 backdrop-blur-sm dark:bg-gray-700/30">
-                                                @foreach($preview['music']->genres as $genre)
-                                                    <flux:icon name="{{ $genre->icon() }}" class="h-4 w-4 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
-                                                @endforeach
-                                            </div>
+                                        <div class="mb-1.5 flex w-full items-start justify-between gap-2">
+                                            <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
+                                            @if($suggestionTotal > 1)
+                                            <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ $suggestionTotal }}</flux:text>
                                             @endif
                                         </div>
-                                        @endforeach
+                                        <flux:heading size="sm" class="w-full truncate text-xs! text-neutral-800 transition-colors group-hover/sugg:text-blue-600 dark:text-neutral-100 dark:group-hover/sugg:text-blue-400">
+                                            {{ $preview['title'] }}
+                                        </flux:heading>
+                                        @if($preview['incipit_url'])
+                                        <div class="flex w-full flex-1 items-center overflow-hidden">
+                                            <img src="{{ $preview['incipit_url'] }}" alt="{{ $preview['title'] }}" loading="lazy" decoding="async" class="block h-auto max-h-14 w-auto max-w-full" />
                                         </div>
-                                    </div>
-                                    @if(count($previews) > 1)
-                                    <button type="button"
-                                        x-on:click.stop="go(1)"
-                                        class="flex shrink-0 items-center justify-center rounded-md px-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-blue-600 dark:text-neutral-500 dark:hover:bg-neutral-800"
-                                        aria-label="Következő javaslat">
-                                        <flux:icon name="chevron-right" class="h-5 w-5" />
-                                    </button>
+                                        @endif
+                                        <div class="mt-auto flex min-w-0 flex-wrap items-center gap-1 pt-0">
+                                            <x-collection-badges :music="$preview['music']" :tooltip="false" />
+                                        </div>
+                                        @if($preview['music']->genres->isNotEmpty())
+                                        <div class="pointer-events-none absolute bottom-0 right-0 flex items-center justify-center gap-1 rounded-tl-md bg-gray-200/80 px-2 py-1 dark:bg-gray-700/80">
+                                            @foreach($preview['music']->genres as $genre)
+                                                <flux:icon name="{{ $genre->icon() }}" class="h-4 w-4 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
+                                            @endforeach
+                                        </div>
+                                        @endif
+                                    </a>
+                                    @endforeach
+                                    @if($suggestionTotal > count($previews))
+                                    <a
+                                        href="{{ $suggestionsUrl }}"
+                                        wire:navigate
+                                        class="flex h-38 w-32 shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-neutral-300 bg-white text-neutral-500 transition hover:border-blue-300 hover:text-blue-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:border-blue-500">
+                                        <flux:icon name="light-bulb" class="h-5 w-5" />
+                                        <flux:text class="text-sm font-medium">+{{ $suggestionTotal - count($previews) }}</flux:text>
+                                        <flux:text class="text-xs">további ének</flux:text>
+                                    </a>
                                     @endif
                                 </div>
                                 <flux:button
@@ -1088,7 +1170,7 @@ new class extends Component
                                 @if($publishedPlans->isNotEmpty())
                                 <div class="space-y-2">
                                     @foreach($publishedPlans as $plan)
-                                    @php $planPreviews = $this->planPreviews($plan); @endphp
+                                    @php $planPreviews = $this->planHasPreviewStrip($loop->index) ? $this->planPreviews($plan) : []; @endphp
                                     <div class="overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-700">
                                         <a
                                             href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
@@ -1105,63 +1187,49 @@ new class extends Component
                                             <flux:icon name="chevron-right" class="h-4 w-4 text-neutral-400 group-hover:text-blue-600 shrink-0" variant="mini" />
                                         </a>
                                         @if(!empty($planPreviews))
-                                        <div x-data="{
-                                                current: 0,
-                                                total: {{ count($planPreviews) }},
-                                                go(step) { this.current = (this.current + step + this.total) % this.total; },
-                                             }"
-                                             wire:key="plan-preview-carousel-{{ $plan->id }}"
-                                             class="flex items-stretch gap-1.5 border-t border-neutral-100 p-2 dark:border-neutral-800">
-                                            @if(count($planPreviews) > 1)
-                                            <button type="button"
-                                                x-on:click.stop="go(-1)"
-                                                class="flex shrink-0 items-center justify-center rounded-md px-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-blue-600 dark:text-neutral-500 dark:hover:bg-neutral-800"
-                                                aria-label="Előző ének">
-                                                <flux:icon name="chevron-left" class="h-5 w-5" />
-                                            </button>
-                                            @endif
+                                        @php $planOverflow = $this->planPreviewOverflow($plan); @endphp
+                                        <div wire:key="plan-preview-carousel-{{ $plan->id }}"
+                                             class="incipit-strip flex snap-x snap-mandatory gap-1.5 overflow-x-auto overscroll-x-contain border-t border-neutral-100 p-2 dark:border-neutral-800">
+                                            @foreach($planPreviews as $i => $preview)
+                                            <a
+                                                wire:key="plan-preview-{{ $plan->id }}-{{ $i }}-{{ $preview['music']->id }}"
+                                                href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
+                                                class="group/plan relative flex h-38 w-[86%] shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white p-2 text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500 sm:w-72"
+                                                title="Az énekrend megtekintése">
+                                                <div class="mb-1.5 flex w-full items-start justify-between gap-2">
+                                                    <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
+                                                    @if(count($planPreviews) + $planOverflow > 1)
+                                                    <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ count($planPreviews) + $planOverflow }}</flux:text>
+                                                    @endif
+                                                </div>
+                                                <flux:heading size="sm" class="w-full truncate text-xs! text-neutral-800 transition-colors group-hover/plan:text-blue-600 dark:text-neutral-100 dark:group-hover/plan:text-blue-400">
+                                                    {{ $preview['title'] }}
+                                                </flux:heading>
+                                                @if($preview['incipit_url'])
+                                                <div class="flex w-full flex-1 items-center overflow-hidden">
+                                                    <img src="{{ $preview['incipit_url'] }}" alt="{{ $preview['title'] }}" loading="lazy" decoding="async" class="block h-auto max-h-14 w-auto max-w-full" />
+                                                </div>
+                                                @endif
+                                                <div class="mt-auto flex min-w-0 flex-wrap items-center gap-1 pt-0">
+                                                    <x-collection-badges :music="$preview['music']" :tooltip="false" />
+                                                </div>
+                                                @if($preview['music']->genres->isNotEmpty())
+                                                <div class="pointer-events-none absolute bottom-0 right-0 flex items-center justify-center gap-1 rounded-tl-md bg-gray-200/80 px-2 py-1 dark:bg-gray-700/80">
+                                                    @foreach($preview['music']->genres as $genre)
+                                                        <flux:icon name="{{ $genre->icon() }}" class="h-4 w-4 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
+                                                    @endforeach
+                                                </div>
+                                                @endif
+                                            </a>
+                                            @endforeach
+                                            @if($planOverflow > 0)
                                             <a
                                                 href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}"
-                                                class="group/plan relative h-38 flex-1 cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white text-left transition hover:border-blue-300 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-blue-500"
-                                                title="Az énekrend megtekintése">
-                                                <div class="flex h-full transition-transform duration-500 ease-in-out" :style="'transform: translateX(-' + (current * 100) + '%)'">
-                                                @foreach($planPreviews as $i => $preview)
-                                                <div wire:key="plan-preview-{{ $plan->id }}-{{ $preview['music']->id }}" class="relative flex h-full w-full shrink-0 flex-col p-2">
-                                                    <div class="mb-1.5 flex items-start justify-between gap-2">
-                                                        <flux:badge color="blue" size="sm">{{ $preview['slot'] }}</flux:badge>
-                                                        @if(count($planPreviews) > 1)
-                                                        <flux:text class="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{{ $i + 1 }}/{{ count($planPreviews) }}</flux:text>
-                                                        @endif
-                                                    </div>
-                                                    <flux:heading size="sm" class="truncate text-xs! text-neutral-800 transition-colors group-hover/plan:text-blue-600 dark:text-neutral-100 dark:group-hover/plan:text-blue-400">
-                                                        {{ $preview['title'] }}
-                                                    </flux:heading>
-                                                    @if($preview['incipit_url'])
-                                                    <div class="flex flex-1 items-center overflow-hidden">
-                                                        <img src="{{ $preview['incipit_url'] }}" alt="{{ $preview['title'] }}" loading="lazy" class="block h-auto max-h-14 w-auto max-w-full" />
-                                                    </div>
-                                                    @endif
-                                                    <div class="mt-auto flex min-w-0 flex-wrap items-center gap-1 pt-0">
-                                                        <x-collection-badges :music="$preview['music']" />
-                                                    </div>
-                                                    @if($preview['music']->genres->isNotEmpty())
-                                                    <div class="pointer-events-none absolute bottom-0 right-0 flex items-center justify-center gap-1 rounded-tl-md bg-gray-200/30 px-2 py-1 backdrop-blur-sm dark:bg-gray-700/30">
-                                                        @foreach($preview['music']->genres as $genre)
-                                                            <flux:icon name="{{ $genre->icon() }}" class="h-4 w-4 flex-shrink-0 text-zinc-600 dark:text-zinc-300" />
-                                                        @endforeach
-                                                    </div>
-                                                    @endif
-                                                </div>
-                                                @endforeach
-                                                </div>
+                                                class="flex h-38 w-32 shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-neutral-300 bg-white text-neutral-500 transition hover:border-blue-300 hover:text-blue-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:border-blue-500">
+                                                <flux:icon name="list-music" class="h-5 w-5" />
+                                                <flux:text class="text-sm font-medium">+{{ $planOverflow }}</flux:text>
+                                                <flux:text class="text-xs">további ének</flux:text>
                                             </a>
-                                            @if(count($planPreviews) > 1)
-                                            <button type="button"
-                                                x-on:click.stop="go(1)"
-                                                class="flex shrink-0 items-center justify-center rounded-md px-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-blue-600 dark:text-neutral-500 dark:hover:bg-neutral-800"
-                                                aria-label="Következő ének">
-                                                <flux:icon name="chevron-right" class="h-5 w-5" />
-                                            </button>
                                             @endif
                                         </div>
                                         @endif

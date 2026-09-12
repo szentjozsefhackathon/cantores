@@ -20,17 +20,28 @@ use Symfony\Component\HttpFoundation\Response;
  * a stable URL whose bytes only change on re-upload, so it is immutable for a
  * year. A public one has to be revocable: a score can be taken down after a
  * rightholder complains, and a year-long immutable response would keep serving
- * it from intermediaries long after it left the site. Public responses
- * therefore get a short max-age and must revalidate — which costs nothing,
- * because the checksum ETag still answers the revalidation without decrypting.
+ * it from intermediaries long after it left the site.
+ *
+ * A public artifact is therefore fresh only briefly, and then stale-but-usable
+ * for an hour rather than must-revalidate. A page carrying dozens of public
+ * incipits used to stall on a conditional request per image every ten minutes;
+ * now the cached bytes paint at once and the revalidation happens behind them.
+ * What that costs is the bound on a takedown: a cache may keep showing a
+ * withdrawn artifact for max-age plus the stale window, not max-age alone.
  */
 class ScoreFileResponder
 {
     /**
-     * How long a public artifact may be reused before it must be revalidated.
-     * Bounds how long a takedown can be outrun by a cache.
+     * How long a public artifact stays fresh: reused with no request at all.
      */
     public const PUBLIC_MAX_AGE = 600;
+
+    /**
+     * How long past that a cache may still serve the stale bytes while it
+     * revalidates behind the reader's back. Together with PUBLIC_MAX_AGE this
+     * bounds how long a takedown can be outrun by a cache.
+     */
+    public const PUBLIC_STALE_WHILE_REVALIDATE = 3600;
 
     /**
      * A private artifact's URL only ever names one set of bytes.
@@ -151,7 +162,7 @@ class ScoreFileResponder
         if ($public) {
             $response->setPublic();
             $response->setMaxAge(self::PUBLIC_MAX_AGE);
-            $response->headers->addCacheControlDirective('must-revalidate');
+            $response->setStaleWhileRevalidate(self::PUBLIC_STALE_WHILE_REVALIDATE);
         } else {
             $response->setPrivate();
             $response->setMaxAge(self::PRIVATE_MAX_AGE);

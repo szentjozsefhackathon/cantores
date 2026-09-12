@@ -43,5 +43,25 @@
 
 
 
-@vite(['resources/js/app.js'])
+@php
+    /*
+       Only `app.js` is unconditional. A view that draws music pushes its own
+       entry point onto the `page-bundles` stack — one path per push — and it is
+       merged in here so a page still makes a single @vite() call: two calls
+       would emit the Vite dev client twice while `npm run dev` is running.
+
+       On a wire:navigate the new page's <script src> lands in the head and
+       Livewire waits for it to finish loading before it initialises Alpine on
+       the swapped-in body, so a bundle that registers Alpine.data() is always
+       registered before the component that needs it is processed.
+    */
+    $pageBundles = collect(preg_split('/\R/', $__env->yieldPushContent('page-bundles')))
+        ->map(trim(...))
+        ->filter()
+        ->unique()
+        ->values()
+        ->all();
+@endphp
+
+@vite(array_merge(['resources/js/app.js'], $pageBundles))
 @fluxAppearance

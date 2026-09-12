@@ -1,3 +1,7 @@
+@push('page-bundles')
+resources/js/booklet-editor.js
+@endpush
+
 @php
     use App\Enums\BookletImposition;
     use App\Enums\BookletOrientation;

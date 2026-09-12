@@ -515,3 +515,174 @@ test('creating a music plan persists the celebration liturgical color', function
         ->color_id->toBe('1')
         ->color_text->toBe('piros');
 });
+
+/**
+ * Give a plan one slot and one song per title, in the order the titles are listed. Slots are
+ * shared between plans, as they are in the application — the factory can only mint a dozen.
+ *
+ * @param  array<int, string>  $titles
+ * @return array<int, \App\Models\Music>
+ */
+function attachSongsToPlan(MusicPlan $plan, array $titles): array
+{
+    $songs = [];
+
+    foreach (array_values($titles) as $index => $title) {
+        $slot = \App\Models\MusicPlanSlot::firstOrCreate(
+            ['name' => 'Rész '.($index + 1)],
+            ['priority' => $index + 1],
+        );
+        $music = \App\Models\Music::factory()->create(['title' => $title]);
+
+        $plan->slots()->attach($slot->id, ['sequence' => $index + 1]);
+        $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+            ->where('music_plan_slot_id', $slot->id)
+            ->first();
+        \App\Models\MusicPlanSlotAssignment::create([
+            'music_plan_slot_plan_id' => $pivot->id,
+            'music_id' => $music->id,
+            'music_sequence' => 1,
+        ]);
+
+        $songs[] = $music;
+    }
+
+    return $songs;
+}
+
+test('the suggestion strip carries a handful of songs and leaves the rest to the suggestions page', function () {
+    Genre::factory()->create();
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $celebration = Celebration::factory()->liturgical()->create([
+        'name' => 'Pünkösd',
+        'actual_date' => '2026-06-01',
+    ]);
+
+    $plan = MusicPlan::factory()->create([
+        'user_id' => $user->id,
+        'genre_id' => null,
+        'is_private' => false,
+        'celebration_id' => $celebration->id,
+    ]);
+
+    attachSongsToPlan($plan, array_map(fn (int $i): string => "Javasolt ének $i", range(1, 9)));
+
+    mockCelebrations([celebrationPayload($celebration)]);
+
+    Livewire::test('liturgical-info')
+        ->set('date', '2026-06-01')
+        // The card says how much there is, so a short strip still reads as a deep library.
+        ->assertSee('9 ének')
+        ->assertSee('Javasolt ének 6')
+        ->assertDontSee('Javasolt ének 7')
+        ->assertSee('+3')
+        ->assertSee('további ének');
+});
+
+test('a published plan strip carries a handful of songs and only the first plans get one at all', function () {
+    Genre::factory()->create();
+    $viewer = User::factory()->create();
+    $author = User::factory()->create();
+    $this->actingAs($viewer);
+
+    $celebration = Celebration::factory()->liturgical()->create([
+        'name' => 'Pünkösd',
+        'actual_date' => '2026-06-01',
+    ]);
+
+    // Created oldest first; the card lists plans newest first, so this is the display order reversed.
+    $plans = collect(range(1, 4))->map(function (int $n) use ($author, $celebration): MusicPlan {
+        $plan = MusicPlan::factory()->create([
+            'user_id' => $author->id,
+            'genre_id' => null,
+            'is_private' => false,
+            'celebration_id' => $celebration->id,
+            'created_at' => now()->subDays(5 - $n),
+        ]);
+
+        attachSongsToPlan($plan, array_map(fn (int $i): string => "Terv {$n} ének {$i}", range(1, 6)));
+
+        return $plan;
+    });
+
+    mockCelebrations([celebrationPayload($celebration)]);
+
+    $component = Livewire::test('liturgical-info')->set('date', '2026-06-01');
+
+    // Newest three plans get a strip; the oldest keeps its link row and costs no images.
+    foreach ([$plans[3], $plans[2], $plans[1]] as $planWithStrip) {
+        $component->assertSeeHtml('wire:key="plan-preview-carousel-'.$planWithStrip->id.'"');
+    }
+    $component->assertDontSeeHtml('wire:key="plan-preview-carousel-'.$plans[0]->id.'"');
+
+    // Each strip stops after four songs and points at the plan for the other two.
+    $component
+        ->assertSee('Terv 4 ének 4')
+        ->assertDontSee('Terv 4 ének 5')
+        ->assertSee('+2');
+});
+
+test('the teasers are plain scroll strips, with no timer and no scripted carousel', function () {
+    Genre::factory()->create();
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $celebration = Celebration::factory()->liturgical()->create([
+        'name' => 'Pünkösd',
+        'actual_date' => '2026-06-01',
+    ]);
+
+    $plan = MusicPlan::factory()->create([
+        'user_id' => $user->id,
+        'genre_id' => null,
+        'is_private' => false,
+        'celebration_id' => $celebration->id,
+    ]);
+
+    attachSongsToPlan($plan, ['Első ének', 'Második ének']);
+
+    mockCelebrations([celebrationPayload($celebration)]);
+
+    Livewire::test('liturgical-info')
+        ->set('date', '2026-06-01')
+        ->assertSeeHtml('snap-x')
+        ->assertDontSeeHtml('setInterval')
+        ->assertDontSeeHtml('translateX');
+});
+
+test('a suggestion teaser is a plain link to the suggestions page', function () {
+    Genre::factory()->create();
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $celebration = Celebration::factory()->liturgical()->create([
+        'name' => 'Pünkösd',
+        'actual_date' => '2026-06-01',
+    ]);
+
+    $plan = MusicPlan::factory()->create([
+        'user_id' => $user->id,
+        'genre_id' => null,
+        'is_private' => false,
+        'celebration_id' => $celebration->id,
+    ]);
+
+    attachSongsToPlan($plan, ['Első ének']);
+
+    mockCelebrations([celebrationPayload($celebration)]);
+
+    Livewire::test('liturgical-info')
+        ->set('date', '2026-06-01')
+        ->assertSeeHtml(e(route('suggestions', [
+            'date' => '2026-06-01',
+            'name' => 'Pünkösd',
+            'season' => $celebration->season,
+            'week' => $celebration->week,
+            'day' => $celebration->day,
+            'readings_code' => $celebration->readings_code,
+            'year_letter' => $celebration->year_letter,
+            'year_parity' => $celebration->year_parity,
+        ])));
+});

@@ -1,3 +1,7 @@
+@push('page-bundles')
+resources/js/score-editor.js
+@endpush
+
 <div class="py-8">
     <div class="mx-auto max-w-5xl xl:max-w-7xl px-4 sm:px-6 lg:px-8">
         @if($isPreview)

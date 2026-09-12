@@ -1,3 +1,7 @@
+@push('page-bundles')
+resources/js/booklet-reader.js
+@endpush
+
 @php
     use App\Support\BookletStyles;
     use Illuminate\Support\Arr;

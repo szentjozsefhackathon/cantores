@@ -27,7 +27,14 @@ export default defineConfig(({ mode }) => {
         customLogger: logger,
         plugins: [
             laravel({
-                input: ['resources/js/app.js'],
+                input: [
+                    'resources/js/app.js',
+                    'resources/js/score-editor.js',
+                    'resources/js/booklet-editor.js',
+                    'resources/js/booklet-reader.js',
+                    'resources/js/aretino-mini-editor.js',
+                    'resources/js/abc-mini-editor.js',
+                ],
                 refresh: true,
             }),
             tailwindcss(),

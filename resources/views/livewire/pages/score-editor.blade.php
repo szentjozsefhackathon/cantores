@@ -1,3 +1,7 @@
+@push('page-bundles')
+resources/js/score-editor.js
+@endpush
+
 <div class="py-8" x-data="scoreEditor({
         scoreSettings: @js($settings ?: (object) []),
         clippedWarningText: @js(__('Content does not fit on page')),

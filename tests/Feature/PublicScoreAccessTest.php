@@ -5,6 +5,7 @@ use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\ScorePublication;
 use App\Models\User;
+use App\Services\ScoreFileResponder;
 use App\Services\ScoreFileStorage;
 use App\Services\ScorePublicationService;
 use Illuminate\Support\Js;
@@ -74,9 +75,15 @@ it('does not let a public artifact outlive a takedown in caches', function () {
     $response = get(route('public-scores.file.page', ['score' => $score, 'scoreFile' => $file, 'page' => 1]));
     $cacheControl = $response->headers->get('Cache-Control');
 
+    // Fresh briefly, then stale-but-usable while the browser revalidates; the
+    // two windows together are the bound a takedown has to outrun.
     expect($cacheControl)->toContain('public')
         ->and($cacheControl)->not->toContain('immutable')
-        ->and($cacheControl)->toContain('must-revalidate');
+        ->and($cacheControl)->toContain('max-age='.ScoreFileResponder::PUBLIC_MAX_AGE)
+        ->and($cacheControl)->toContain('stale-while-revalidate='.ScoreFileResponder::PUBLIC_STALE_WHILE_REVALIDATE);
+
+    expect(ScoreFileResponder::PUBLIC_MAX_AGE + ScoreFileResponder::PUBLIC_STALE_WHILE_REVALIDATE)
+        ->toBeLessThanOrEqual(2 * 3600);
 });
 
 it('hides every surface of a score that was never nominated', function () {

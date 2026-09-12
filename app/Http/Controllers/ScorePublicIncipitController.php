@@ -30,11 +30,14 @@ class ScorePublicIncipitController extends Controller
         $response = Storage::response($score->incipit_path, headers: ['Content-Type' => 'image/png']);
         $response->setLastModified($lastModified);
 
-        // Short and revalidated, not immutable: clearing public_preview has to
-        // take effect, and the ?v= cache-buster only covers edits.
+        // Bounded, not immutable: clearing public_preview has to take effect,
+        // and the ?v= cache-buster only covers edits. Past the fresh window the
+        // reader still gets the cached bytes at once while the browser
+        // revalidates behind them, which is what keeps a page of incipit strips
+        // from opening a conditional request per image.
         $response->setPublic();
         $response->setMaxAge(ScoreFileResponder::PUBLIC_MAX_AGE);
-        $response->headers->addCacheControlDirective('must-revalidate');
+        $response->setStaleWhileRevalidate(ScoreFileResponder::PUBLIC_STALE_WHILE_REVALIDATE);
         $response->isNotModified(request());
 
         return $response;
