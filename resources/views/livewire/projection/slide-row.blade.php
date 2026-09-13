@@ -146,6 +146,15 @@
                     >
                         <flux:icon name="rectangle-stack" variant="micro" class="shrink-0" />
                         <span x-text="slidesOf({{ $entry->id }})"></span>
+                        {{-- Slides left out of the service, counted where they
+                             were chosen from: a hymn showing three of its six
+                             verses says so on its own row, rather than only in a
+                             contact sheet somebody has to scroll. --}}
+                        <span
+                            class="text-amber-600 dark:text-amber-400"
+                            x-show="skippedOf({{ $entry->id }}) > 0"
+                            x-cloak
+                        >(−<span x-text="skippedOf({{ $entry->id }})"></span>)</span>
                     </span>
                 </flux:tooltip>
             @endif
@@ -224,9 +233,9 @@
             >
                 <flux:text class="mb-2 text-xs text-zinc-500">
                     @if($panelFormat === 'file')
-                        {{ __('Changes here apply to this projection only. An uploaded page is fitted to the screen; make it smaller where that is too big.') }}
+                        {{ __('Changes here apply to this projection at this screen shape only. An uploaded page is fitted to the screen; make it smaller where that is too big.') }}
                     @else
-                        {{ __('Changes here apply to this projection only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead.') }}
+                        {{ __('Changes here apply to this projection at this screen shape only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead.') }}
                     @endif
                 </flux:text>
 

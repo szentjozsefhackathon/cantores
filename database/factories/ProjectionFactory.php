@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ProjectionRatio;
+use App\Enums\ProjectionTextTheme;
 use App\Models\MusicPlan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -22,6 +23,7 @@ class ProjectionFactory extends Factory
             'music_plan_id' => null,
             'title' => fake()->words(3, true),
             'ratio' => ProjectionRatio::SixteenNine,
+            'text_theme' => ProjectionTextTheme::Dark,
         ];
     }
 

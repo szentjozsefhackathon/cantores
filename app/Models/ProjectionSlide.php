@@ -32,7 +32,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $music_plan_slot_plan_id
  * @property string|null $text
  * @property int $sequence
- * @property array<string, mixed>|null $settings_override
+ * @property array<string, array<string, mixed>>|null $settings_override
+ * @property array<string, list<int>>|null $excluded_slides
  * @property bool $show_slot
  * @property bool $show_music_title
  * @property bool $show_variation
@@ -69,6 +70,7 @@ class ProjectionSlide extends Model implements PlanEntry
         'text',
         'sequence',
         'settings_override',
+        'excluded_slides',
         'show_slot',
         'show_music_title',
         'show_variation',
@@ -82,6 +84,7 @@ class ProjectionSlide extends Model implements PlanEntry
     {
         return [
             'settings_override' => 'array',
+            'excluded_slides' => 'array',
             'show_slot' => 'boolean',
             'show_music_title' => 'boolean',
             'show_variation' => 'boolean',
@@ -95,6 +98,71 @@ class ProjectionSlide extends Model implements PlanEntry
     public function isText(): bool
     {
         return $this->score_id === null;
+    }
+
+    /**
+     * What this row has been told to do differently at one screen shape.
+     *
+     * Both of the row's JSON columns are keyed by ratio first, for the same
+     * reason the score's own settings are: a size chosen against a widescreen is
+     * not a decision about a square screen, and a deck that changed shape used to
+     * carry the first answer into the second silently.
+     *
+     * @return array<string, mixed>
+     */
+    public function overrideFor(string $ratio): array
+    {
+        $bucket = ($this->settings_override ?? [])[$ratio] ?? [];
+
+        return is_array($bucket) ? $bucket : [];
+    }
+
+    /**
+     * Which of the slides this row comes to at one shape the service walks past.
+     *
+     * Positions within the row, zero-based and in the order the score is cut —
+     * the count itself is never stored, because the cutting is read back off the
+     * score every time the deck is drawn.
+     *
+     * @return list<int>
+     */
+    public function excludedFor(string $ratio): array
+    {
+        $excluded = ($this->excluded_slides ?? [])[$ratio] ?? [];
+
+        if (! is_array($excluded)) {
+            return [];
+        }
+
+        return collect($excluded)
+            ->filter(fn ($index): bool => is_numeric($index) && (int) $index >= 0)
+            ->map(fn ($index): int => (int) $index)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The same list with one position turned on or off, ready to be written back
+     * into the column beside the shapes it says nothing about.
+     *
+     * @return array<string, list<int>>
+     */
+    public function excludedToggled(string $ratio, int $index): array
+    {
+        $excluded = $this->excludedFor($ratio);
+
+        $excluded = in_array($index, $excluded, true)
+            ? array_values(array_diff($excluded, [$index]))
+            : [...$excluded, $index];
+
+        sort($excluded);
+
+        $all = $this->excluded_slides ?? [];
+        $all[$ratio] = $excluded;
+
+        return array_filter($all, fn ($list): bool => is_array($list) && $list !== []);
     }
 
     public function projection(): BelongsTo

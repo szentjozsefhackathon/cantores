@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages;
 
 use App\Enums\ProjectionRatio;
+use App\Enums\ProjectionTextTheme;
 use App\Facades\GenreContext;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlotAssignment;
@@ -58,6 +59,16 @@ class ProjectionEditor extends Component
     public string $ratio = '16/9';
 
     /**
+     * How this deck sets a screen of words.
+     *
+     * The one thing here that is a look rather than a shape, and it is a
+     * deck-wide answer on purpose: a projection whose text slides changed colour
+     * halfway through reads as broken rather than as considered. It says nothing
+     * about the music, which three engines draw in ink and always will.
+     */
+    public string $textTheme = 'dark';
+
+    /**
      * The words just added, so that they open ready to be written in.
      *
      * Which panels a row has open is the row's own business, and a row is only
@@ -81,6 +92,7 @@ class ProjectionEditor extends Component
         $this->projection = $projection;
         $this->title = $projection->title;
         $this->ratio = $projection->ratio->value;
+        $this->textTheme = $projection->text_theme->value;
 
         $this->normalizeOrder();
     }
@@ -95,6 +107,7 @@ class ProjectionEditor extends Component
     {
         return [
             'ratio' => ['required', 'string', Rule::in(array_keys(ProjectionRatio::options()))],
+            'textTheme' => ['required', 'string', Rule::in(array_keys(ProjectionTextTheme::options()))],
         ];
     }
 
@@ -111,7 +124,7 @@ class ProjectionEditor extends Component
      */
     public function updated(string $property): void
     {
-        if (! in_array($property, ['title', 'ratio'], true)) {
+        if (! in_array($property, ['title', 'ratio', 'textTheme'], true)) {
             return;
         }
 
@@ -126,6 +139,7 @@ class ProjectionEditor extends Component
         $this->projection->update([
             'title' => $this->title,
             'ratio' => ProjectionRatio::from($this->ratio),
+            'text_theme' => ProjectionTextTheme::from($this->textTheme),
         ]);
 
         unset($this->geometry);
@@ -179,6 +193,21 @@ class ProjectionEditor extends Component
             $this->entrySources,
             $this->headings,
         );
+    }
+
+    /**
+     * Which slides the service walks past, row by row.
+     *
+     * Kept apart from the render payload on purpose: skipping a verse changes
+     * what is shown and nothing about what is drawn, and folding it into a row
+     * would have the browser re-engrave the whole deck for every click.
+     *
+     * @return array<int, list<int>>
+     */
+    #[Computed]
+    public function excluded(): array
+    {
+        return app(ProjectionRenderPayload::class)->exclusions($this->projection, $this->entries);
     }
 
     /**
@@ -575,10 +604,17 @@ class ProjectionEditor extends Component
     }
 
     /**
-     * Store one score's hand-made adjustments for this deck.
+     * Store one score's hand-made adjustments for this deck, at this shape.
      *
      * Sanitised against ProjectionSettingFields rather than trusted: the bucket
      * is arbitrary JSON from a browser, and it is replayed into a renderer.
+     *
+     * What arrives is flat — the browser is drawing one shape and knows only
+     * about that one — and it is filed under the shape the deck is currently
+     * thrown at, leaving the other two exactly as they were. That is the whole
+     * of the scoping: a slide nudged smaller for a square screen in March is
+     * still nudged smaller for a square screen in June, and the widescreen deck
+     * in between never heard about it.
      *
      * @param  array<string, mixed>  $override
      */
@@ -592,9 +628,47 @@ class ProjectionEditor extends Component
             return;
         }
 
-        $clean = ProjectionSettingFields::sanitize(self::overrideFormat($entry), $override);
+        $format = self::overrideFormat($entry);
+        $clean = ProjectionSettingFields::sanitizeByRatio($format, [
+            ...($entry->settings_override ?? []),
+            $this->projection->ratio->value => ProjectionSettingFields::sanitize($format, $override),
+        ]);
 
         $entry->update(['settings_override' => $clean === [] ? null : $clean]);
+
+        $this->forgetEntries();
+    }
+
+    /**
+     * Skip one of the slides a row comes to — or stop skipping it.
+     *
+     * The slide is still cut, still engraved and still in the contact sheet; the
+     * presenter simply walks past it. This is how three of a hymn's six verses
+     * are left out on an ordinary Sunday without touching a score that belongs to
+     * everyone who sings it.
+     *
+     * The position is checked for sanity and nothing else. How many slides a row
+     * actually comes to is known only to the browser that cut it — and changes
+     * under this whenever a `%pagebreak` moves — so an index past the end is
+     * harmless rather than wrong: it simply matches no slide.
+     */
+    public function toggleSlideExclusion(int $entryId, int $index): void
+    {
+        $this->authorize('update', $this->projection);
+
+        if ($index < 0) {
+            return;
+        }
+
+        $entry = $this->projection->entries()->find($entryId);
+
+        if (! $entry instanceof ProjectionSlide) {
+            return;
+        }
+
+        $excluded = $entry->excludedToggled($this->projection->ratio->value, $index);
+
+        $entry->update(['excluded_slides' => $excluded === [] ? null : $excluded]);
 
         $this->forgetEntries();
     }
@@ -611,6 +685,7 @@ class ProjectionEditor extends Component
         return $entry->score?->format?->value ?? 'file';
     }
 
+    /** Back to the score author's own layout — at this shape, not at all three. */
     public function resetOverride(int $entryId): void
     {
         $this->saveOverride($entryId, []);
@@ -657,7 +732,7 @@ class ProjectionEditor extends Component
     private function forget(): void
     {
         $this->projection->unsetRelation('entries');
-        unset($this->entries, $this->entrySources, $this->renderPayload, $this->chosenScoreIds, $this->chosenFileIds, $this->headings, $this->outline);
+        unset($this->entries, $this->entrySources, $this->renderPayload, $this->chosenScoreIds, $this->chosenFileIds, $this->headings, $this->outline, $this->excluded);
     }
 
     /**
@@ -676,6 +751,7 @@ class ProjectionEditor extends Component
             'projection-updated',
             payload: $this->renderPayload,
             geometry: $this->geometry,
+            excluded: $this->excluded,
         );
     }
 }

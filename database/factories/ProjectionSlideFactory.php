@@ -21,6 +21,7 @@ class ProjectionSlideFactory extends Factory
             'score_id' => Score::factory(),
             'sequence' => 0,
             'settings_override' => null,
+            'excluded_slides' => null,
             'show_slot' => false,
             'show_music_title' => true,
             'show_variation' => false,

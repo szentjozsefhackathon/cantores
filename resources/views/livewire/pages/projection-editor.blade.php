@@ -4,6 +4,7 @@ resources/js/projection-editor.js
 
 @php
     use App\Enums\ProjectionRatio;
+    use App\Enums\ProjectionTextTheme;
 @endphp
 
 {{-- The deck is handed over in an attribute of its own rather than inside
@@ -20,7 +21,11 @@ resources/js/projection-editor.js
     data-projection-config="{{ json_encode([
         'geometry' => $this->geometry,
         'entries' => $this->renderPayload,
+        'excluded' => $this->excluded,
         'overflowText' => __('This slide is fuller than the screen — make it smaller, or split it with a %pagebreak.'),
+        'skipText' => __('Leave this slide out of the projection'),
+        'unskipText' => __('Show this slide again'),
+        'skippedText' => __('Skipped'),
     ]) }}"
     x-data="projectionEditor(JSON.parse($el.dataset.projectionConfig))"
     x-on:projection-updated.window="applyUpdate($event.detail)"
@@ -42,6 +47,8 @@ resources/js/projection-editor.js
     <script src="{{ \App\Support\VendorAsset::url('js/abc2svg-1.js') }}"></script>
 
     <div class="mx-auto flex w-full max-w-[1600px] flex-col px-4 sm:px-6 lg:min-h-0 lg:flex-1 lg:px-8">
+
+        <x-plan-document-switcher :plan="$projection->musicPlan" :current="$projection" type="projection" />
 
         {{-- The bar. Very short, and meant to be: a deck has a name and a shape,
              and everything else about how a slide looks was decided by whoever
@@ -73,6 +80,20 @@ resources/js/projection-editor.js
                 </flux:select>
             </div>
 
+            {{-- How a screen of words is set. Music is not offered: three
+                 engines draw it in ink, and a staff reversed out of black is
+                 harder to read across a nave rather than easier. --}}
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Text slides')">
+                    <flux:icon name="swatch" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:select size="sm" wire:model.live="textTheme" :aria-label="__('Text slides')" class="w-36 text-xs">
+                    @foreach(ProjectionTextTheme::cases() as $case)
+                        <flux:select.option value="{{ $case->value }}">{{ $case->label() }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+
             <div class="ms-auto flex items-center gap-2">
                 <span
                     class="flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
@@ -89,7 +110,7 @@ resources/js/projection-editor.js
                     variant="primary"
                     icon="presentation"
                     href="{{ route('projections.present', ['projection' => $projection->id]) }}"
-                    x-bind:disabled="slideCount === 0"
+                    x-bind:disabled="shownCount === 0"
                 >
                     {{ __('Present') }}
                 </flux:button>
@@ -139,7 +160,10 @@ resources/js/projection-editor.js
             <flux:card class="relative flex flex-col p-4 lg:h-full lg:min-h-0">
                 <div class="mb-3 flex items-center justify-between gap-2">
                     <flux:subheading class="text-xs" x-show="slideCount > 0" x-cloak>
-                        <span x-text="slideCount"></span> {{ __('slides') }}
+                        <span x-text="shownCount"></span> {{ __('slides') }}
+                        <span x-show="slideCount > shownCount" x-cloak>
+                            (<span x-text="slideCount - shownCount"></span> {{ __('skipped') }})
+                        </span>
                     </flux:subheading>
                 </div>
 

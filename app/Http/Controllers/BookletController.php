@@ -44,6 +44,6 @@ class BookletController extends Controller
 
         $booklet->delete();
 
-        return redirect()->route('booklets');
+        return redirect()->route('plan-documents');
     }
 }

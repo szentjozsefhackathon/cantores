@@ -2,7 +2,7 @@
 
 use App\Livewire\Booklet\EntryRow;
 use App\Livewire\Pages\BookletEditor;
-use App\Livewire\Pages\Booklets;
+use App\Livewire\Pages\PlanDocuments;
 use App\Models\Booklet;
 use App\Models\BookletScore;
 use App\Models\Collection as CollectionModel;
@@ -1893,7 +1893,7 @@ it('offers my own plans and starts a booklet from the chosen one', function () {
 
     actingAs($mine);
 
-    $component = Livewire::test(Booklets::class);
+    $component = Livewire::test(PlanDocuments::class);
 
     expect($component->get('selectablePlans')->pluck('id')->all())
         ->toBe([$plan->id]);
@@ -1915,7 +1915,7 @@ it('lists only my own booklets', function () {
 
     actingAs($mine);
 
-    Livewire::test(Booklets::class)
+    Livewire::test(PlanDocuments::class)
         ->assertSee('Adventi füzet')
         ->assertDontSee('Karácsonyi füzet');
 });

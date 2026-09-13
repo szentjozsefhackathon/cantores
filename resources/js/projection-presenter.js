@@ -1,5 +1,5 @@
 import { onAlpineInit } from './alpine-init.js';
-import { renderDeck } from './projection-deck.js';
+import { isExcluded, renderDeck } from './projection-deck.js';
 
 /**
  * The deck on the wall.
@@ -22,6 +22,17 @@ onAlpineInit(() => {
     Alpine.data('projectionPresenter', (config = {}) => ({
         geometry: config.geometry ?? {},
         entries: config.entries ?? [],
+
+        /**
+         * The slides this service walks past, keyed by row.
+         *
+         * Every slide is still engraved: the deck is drawn once and in full, and
+         * the skipping is a filter over the result. Cutting them out before
+         * engraving would save a moment of load time and cost the one thing that
+         * matters here — that what the editor showed and what the wall shows are
+         * the same slides, made the same way.
+         */
+        excluded: config.excluded ?? {},
 
         slides: [],
         index: 0,
@@ -50,7 +61,9 @@ onAlpineInit(() => {
             this.busy = true;
 
             try {
-                this.slides = await renderDeck(this.entries, this.geometry);
+                const drawn = await renderDeck(this.entries, this.geometry);
+
+                this.slides = drawn.filter((slide) => !isExcluded(slide, this.excluded));
                 this.total = this.slides.length;
                 this.index = Math.min(this.index, Math.max(0, this.total - 1));
                 this.show();
@@ -69,6 +82,7 @@ onAlpineInit(() => {
         applyUpdate(detail = {}) {
             if (detail.payload) { this.entries = detail.payload; }
             if (detail.geometry) { this.geometry = detail.geometry; }
+            if (detail.excluded !== undefined) { this.excluded = detail.excluded ?? {}; }
 
             this.draw();
         },

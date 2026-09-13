@@ -281,12 +281,20 @@ Route::livewire('/folders/{folder}/edit', \App\Livewire\Pages\FolderEditor::clas
     ->middleware(['auth', 'verified'])
     ->name('folders.edit');
 
+// Everything a plan has been made into, booklets and projections together, one
+// service to a row: the two used to have a list each, and nothing then said
+// which deck belonged with which booklet.
+Route::livewire('/plan-documents', \App\Livewire\Pages\PlanDocuments::class)
+    ->middleware(['auth', 'verified'])
+    ->name('plan-documents');
+
+// The two screens that list was made out of
+Route::redirect('/booklets', '/plan-documents');
+Route::redirect('/projections', '/plan-documents');
+
 // Booklets: a music plan's scores laid onto real A4 or A5 pages. The editor
 // chooses and arranges; the pages themselves are engraved in the browser and
 // only come back here to be turned into a PDF.
-Route::livewire('/booklets', \App\Livewire\Pages\Booklets::class)
-    ->middleware(['auth', 'verified'])
-    ->name('booklets');
 
 Route::post('/booklets', [\App\Http\Controllers\BookletController::class, 'store'])
     ->middleware(['auth', 'verified'])
@@ -324,10 +332,6 @@ Route::get('/booklets/{booklet}/score-page/{scoreFile}/{page}', \App\Http\Contro
 // congregation reads from — the other half of what a booklet is. The editor
 // chooses and arranges; the slides themselves are engraved in the browser, from
 // each score's own layout for this ratio.
-Route::livewire('/projections', \App\Livewire\Pages\Projections::class)
-    ->middleware(['auth', 'verified'])
-    ->name('projections');
-
 Route::post('/projections', [\App\Http\Controllers\ProjectionController::class, 'store'])
     ->middleware(['auth', 'verified'])
     ->name('projections.store');

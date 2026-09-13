@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\ProjectionRatio;
+
 /**
  * What a projection may override on a score, within what bounds, and how to
  * label it.
@@ -177,6 +179,37 @@ class ProjectionSettingFields
                     // Stored quoted, the way the score editor's selects emit it.
                     $clean[$key] = "'".$family."'";
                 }
+            }
+        }
+
+        return $clean;
+    }
+
+    /**
+     * The same, for a whole column: shape first, then the keys.
+     *
+     * This is the shape `projection_slides.settings_override` is stored in, and
+     * the reason it is a shape rather than a bucket is the one the score's own
+     * settings column gives — a number chosen against a widescreen is not an
+     * answer about a square screen. Unknown shapes go the way unknown keys do,
+     * and a shape left holding nothing is dropped rather than stored empty.
+     *
+     * @param  array<string, mixed>  $override
+     * @return array<string, array<string, mixed>>
+     */
+    public static function sanitizeByRatio(?string $format, array $override): array
+    {
+        $clean = [];
+
+        foreach ($override as $ratio => $bucket) {
+            if (! is_string($ratio) || ProjectionRatio::tryFrom($ratio) === null || ! is_array($bucket)) {
+                continue;
+            }
+
+            $sanitized = self::sanitize($format, $bucket);
+
+            if ($sanitized !== []) {
+                $clean[$ratio] = $sanitized;
             }
         }
 

@@ -1,7 +1,7 @@
 import { onAlpineInit } from './alpine-init.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { SPLIT_DEFAULT, beginSplitDrag, clampSplitPercent } from './booklet-split.js';
-import { renderDeck, slideCounts } from './projection-deck.js';
+import { isExcluded, renderDeck, slideCounts } from './projection-deck.js';
 import { inheritedSlideSetting, resolveSlideSettings, fileSlideSettings } from './projection-settings.js';
 import { steppedValue, movesSetting } from './booklet-settings.js';
 
@@ -35,10 +35,33 @@ onAlpineInit(() => {
         return {
             geometry: config.geometry ?? {},
             entries: withPlainOverrides(config.entries),
+
+            /**
+             * Which slides the service walks past, keyed by row.
+             *
+             * State of its own rather than a field on a row, and that is what
+             * makes leaving a verse out cost nothing: the deck is re-engraved
+             * whenever what is *drawn* has changed, and skipping a slide changes
+             * only what is shown. Folded into a row it would freeze the browser
+             * re-cutting thirty scores per click.
+             */
+            excluded: plainExclusions(config.excluded),
+
             overflowText: config.overflowText ?? '',
+            skipText: config.skipText ?? '',
+            unskipText: config.unskipText ?? '',
+            skippedText: config.skippedText ?? '',
 
             slides: [],
             slideCount: 0,
+
+            /**
+             * How many slides the room will actually be shown — the same number
+             * the presenter counts to, which is what the sheet's numbering and
+             * the Present button both have to agree with.
+             */
+            shownCount: 0,
+
             counts: {},
             hoveredEntryId: null,
 
@@ -80,6 +103,7 @@ onAlpineInit(() => {
             applyUpdate(detail = {}) {
                 if (detail.payload) { this.entries = withPlainOverrides(detail.payload); }
                 if (detail.geometry) { this.geometry = detail.geometry; }
+                if (detail.excluded !== undefined) { this.excluded = plainExclusions(detail.excluded); }
 
                 // A payload that left before the knob currently turning was
                 // saved carries the older value, so anything still pending is
@@ -90,6 +114,10 @@ onAlpineInit(() => {
                 });
 
                 if (layoutSignature(this.entries, this.geometry) === this._drawnSignature) {
+                    // Nothing to engrave again — but which slides are shown may
+                    // still have moved, and that is settled by painting rather
+                    // than by drawing.
+                    this.paint();
                     this._busy?.settle();
 
                     return;
@@ -140,9 +168,16 @@ onAlpineInit(() => {
 
                 host.replaceChildren();
 
-                this.slides.forEach((slide, index) => {
+                // The number a slide carries is its number in the room, so the
+                // ones being walked past do not take one — the contact sheet and
+                // the projector count the same way, or the sheet is no use for
+                // finding a place in the service.
+                let shown = 0;
+
+                this.slides.forEach((slide) => {
+                    const skipped = this.isSkipped(slide);
                     const figure = document.createElement('figure');
-                    figure.className = 'projection-slide';
+                    figure.className = skipped ? 'projection-slide projection-slide-skipped' : 'projection-slide';
                     figure.dataset.projectionEntry = slide.entryId;
 
                     const box = document.createElement('div');
@@ -151,24 +186,93 @@ onAlpineInit(() => {
                     box.appendChild(slide.svg.cloneNode(true));
                     figure.appendChild(box);
 
+                    if (!skipped) { shown += 1; }
+
                     const caption = document.createElement('figcaption');
                     caption.className = 'projection-slide-number';
-                    caption.textContent = String(index + 1);
-                    if (slide.overflows) {
-                        caption.classList.add('projection-slide-overflows');
-                        caption.title = this.overflowText ?? '';
+
+                    const number = document.createElement('span');
+                    number.textContent = skipped ? this.skippedText : String(shown);
+                    if (slide.overflows && !skipped) {
+                        number.classList.add('projection-slide-overflows');
+                        number.title = this.overflowText ?? '';
                     }
+                    caption.appendChild(number);
+                    caption.appendChild(this.skipButton(slide, skipped));
+
                     figure.appendChild(caption);
 
                     host.appendChild(figure);
                 });
 
+                this.shownCount = shown;
+
                 this.highlight();
+            },
+
+            /**
+             * The one control the contact sheet carries: leave this slide out of
+             * the service, or put it back.
+             *
+             * Built by hand rather than written into the page, because the sheet
+             * itself is: the slides are engraved in the browser and there is no
+             * markup for them until they exist. It sits beside the number instead
+             * of over the picture — what is seen here is what the room will see,
+             * and nothing may cover it.
+             */
+            skipButton(slide, skipped) {
+                const button = document.createElement('button');
+
+                button.type = 'button';
+                button.className = 'projection-slide-skip';
+                button.title = skipped ? this.unskipText : this.skipText;
+                button.setAttribute('aria-label', button.title);
+                button.setAttribute('aria-pressed', skipped ? 'true' : 'false');
+                button.innerHTML = skipped ? RESTORE_ICON : SKIP_ICON;
+                button.addEventListener('click', () => this.toggleSkip(slide));
+
+                return button;
+            },
+
+            isSkipped(slide) {
+                return isExcluded(slide, this.excluded);
+            },
+
+            /**
+             * Leave a slide out, or put it back — on screen at once, and told to
+             * the server afterwards.
+             *
+             * Nothing is engraved again: the slide already exists and stays where
+             * it is. What comes back from the server is the same answer this just
+             * made, so applyUpdate finds the deck unchanged and paints.
+             */
+            toggleSkip(slide) {
+                const list = this.excluded[slide.entryId] ?? [];
+
+                this.excluded = {
+                    ...this.excluded,
+                    [slide.entryId]: list.includes(slide.index)
+                        ? list.filter((index) => index !== slide.index)
+                        : [...list, slide.index].sort((a, b) => a - b),
+                };
+
+                this.paint();
+
+                try {
+                    wire.toggleSlideExclusion(Number(slide.entryId), Number(slide.index));
+                } catch (e) {
+                    console.error('[projection] could not save a skipped slide', e);
+                }
             },
 
             /** How many screens one row came to — what the row's badge reads. */
             slidesOf(entryId) {
                 return this.counts[entryId] ?? 0;
+            },
+
+            /** ...and how many of them this service walks past. */
+            skippedOf(entryId) {
+                return (this.excluded[entryId] ?? []).filter((index) => index < this.slidesOf(entryId)).length;
             },
 
             hoverEntry(entryId) {
@@ -319,6 +423,43 @@ onAlpineInit(() => {
         };
     });
 });
+
+/**
+ * A circle with a stroke through it, and the same circle with a cross in it.
+ *
+ * Drawn from two primitives rather than pulled from the icon set, because these
+ * are built in JavaScript into a sheet that has no Blade behind it, and a path
+ * copied out of an icon library by hand is a path nobody can check.
+ */
+const SKIP_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+    + '<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+    + '<line x1="3.9" y1="12.1" x2="12.1" y2="3.9" stroke="currentColor" stroke-width="1.5"/></svg>';
+
+const RESTORE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+    + '<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+    + '<line x1="8" y1="4.6" x2="8" y2="11.4" stroke="currentColor" stroke-width="1.5"/>'
+    + '<line x1="4.6" y1="8" x2="11.4" y2="8" stroke="currentColor" stroke-width="1.5"/></svg>';
+
+/**
+ * The exclusion map as ordinary arrays of ordinary numbers.
+ *
+ * It arrives keyed by row id, which JSON writes as a string and PHP may have
+ * meant as an integer; it is read back against slide positions and sent to the
+ * server. Normalised once here so neither end has to be careful.
+ *
+ * @param {object} excluded
+ */
+function plainExclusions(excluded) {
+    const map = {};
+
+    Object.entries(excluded ?? {}).forEach(([entryId, list]) => {
+        if (Array.isArray(list) && list.length > 0) {
+            map[Number(entryId)] = list.map(Number).filter(Number.isFinite);
+        }
+    });
+
+    return map;
+}
 
 /**
  * Each row's override copied into an ordinary object.

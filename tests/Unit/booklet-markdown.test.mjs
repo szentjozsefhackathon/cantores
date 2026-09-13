@@ -253,3 +253,36 @@ test('the leading follows the size the booklet quoted, not the em it is set at',
     // Only the leading was restated: the letters are still set at the em asked for.
     assert.match(compensated[0].svg, /font-size="9.6"/);
 });
+
+/*
+ * A booklet is printed in ink on paper and never asks; a projection throws its
+ * words onto a screen in a darkened church and does. The palette is the whole of
+ * what a caller may change.
+ */
+
+test('rubrics are black on paper when nobody says otherwise', () => {
+    const rows = markdownRows('Álljunk fel.', options);
+
+    assert.ok(rows[0].svg.includes('fill="#000000"'));
+});
+
+test('a palette recolours the body, the quote and the rule together', () => {
+    const palette = { text: '#ffffff', quote: '#b4b4b4', rule: '#666666' };
+
+    const body = markdownRows('Álljunk fel.', { ...options, palette });
+    const quote = markdownRows('> Kyrie', { ...options, palette });
+    const rule = markdownRows('---', { ...options, palette });
+
+    assert.ok(body[0].svg.includes('fill="#ffffff"'));
+    assert.ok(quote[0].svg.includes('fill="#b4b4b4"'));
+    assert.ok(rule[0].svg.includes('stroke="#666666"'));
+});
+
+/* Missal red is the rubric colour on paper and nearly unreadable on black, so
+   `<red>` is restated in whatever this palette warns with. */
+test('the one inline colour follows the palette rather than the page', () => {
+    const rows = markdownRows('<red>Áll</red>', { ...options, palette: { accent: '#ff6b6b' } });
+
+    assert.ok(rows[0].svg.includes('fill="#ff6b6b"'));
+    assert.ok(!rows[0].svg.includes('#cc0000'));
+});

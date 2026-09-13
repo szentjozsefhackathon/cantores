@@ -40,6 +40,14 @@ class ProjectionPresenter extends Component
     /** @var list<array<string, mixed>> */
     public array $entries = [];
 
+    /**
+     * Which slides each row makes but this service walks past — the verses left
+     * out today, kept in the deck for the Sunday that wants them.
+     *
+     * @var array<int, list<int>>
+     */
+    public array $excluded = [];
+
     public function mount(Projection $projection): void
     {
         $this->authorize('view', $projection);
@@ -51,6 +59,7 @@ class ProjectionPresenter extends Component
 
         $this->geometry = $payload['geometry'];
         $this->entries = $payload['entries'];
+        $this->excluded = $payload['excluded'];
     }
 
     /**
@@ -72,8 +81,14 @@ class ProjectionPresenter extends Component
 
         $this->geometry = $payload['geometry'];
         $this->entries = $payload['entries'];
+        $this->excluded = $payload['excluded'];
 
-        $this->dispatch('projection-updated', payload: $this->entries, geometry: $this->geometry);
+        $this->dispatch(
+            'projection-updated',
+            payload: $this->entries,
+            geometry: $this->geometry,
+            excluded: $this->excluded,
+        );
     }
 
     public function rendering(IlluminateView $view): void

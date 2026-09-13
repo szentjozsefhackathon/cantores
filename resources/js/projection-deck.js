@@ -1,5 +1,5 @@
 import { canvasMeasurer } from './booklet-chordpro.js';
-import { markdownRows } from './booklet-markdown.js';
+import { DEFAULT_PALETTE, markdownRows } from './booklet-markdown.js';
 import { textRowSvg } from './booklet-text.js';
 import { renderRatioPages } from './projection-render.js';
 import { fileSlideSettings, resolveSlideSettings } from './projection-settings.js';
@@ -35,6 +35,36 @@ const HEADING_HEIGHT = 0.075;
 
 const HEADING_FONT = "'Barlow Condensed'";
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/**
+ * How a screen of words is coloured, by the name the deck chose.
+ *
+ * The JavaScript half of App\Enums\ProjectionTextTheme, key for key, and the
+ * fallback for a payload that predates it. Only words are coloured: the three
+ * engines that engrave music draw ink on paper, and a staff reversed out of
+ * black is harder to read across a nave rather than easier.
+ */
+const TEXT_PALETTES = {
+    dark: { background: '#000000', text: '#ffffff', quote: '#b4b4b4', rule: '#666666', accent: '#ff6b6b' },
+    light: { background: '#ffffff', ...DEFAULT_PALETTE },
+};
+
+const DEFAULT_TEXT_THEME = 'dark';
+
+/**
+ * The colours this deck sets its words in.
+ *
+ * The server states the whole palette in the geometry, so a colour is decided in
+ * one place and travels; the name is the fall-back for a deck drawn by a client
+ * that arrived before the server did.
+ */
+export function textPalette(geometry) {
+    const named = TEXT_PALETTES[geometry?.textTheme] ?? TEXT_PALETTES[DEFAULT_TEXT_THEME];
+
+    return { ...named, ...(geometry?.textPalette ?? {}) };
+}
+
 /**
  * Every slide this deck comes to, in order.
  *
@@ -48,17 +78,39 @@ export async function renderDeck(entries, geometry) {
     if (!isSlideRatio(ratio)) { return []; }
 
     const slides = [];
+    const palette = textPalette(geometry);
 
     for (const entry of entries ?? []) {
         try {
-            const made = await slidesOf(entry, ratio);
-            made.forEach((slide) => slides.push({ entryId: entry.id, ...slide }));
+            const made = await slidesOf(entry, ratio, palette);
+
+            // The position within the row, which is what a slide left out of the
+            // service is remembered by: the row is one thing chosen from the
+            // plan, and its slides are however many its page breaks cut it into.
+            made.forEach((slide, index) => slides.push({ entryId: entry.id, index, ...slide }));
         } catch (e) {
             console.error('[projection] could not draw a row', entry?.id, e);
         }
     }
 
     return slides;
+}
+
+/**
+ * Whether one slide is one the service walks past.
+ *
+ * Asked of the deck's exclusion map rather than of the slide, because the two
+ * answer different questions and change at different times: every slide is drawn
+ * whatever happens, and which of them are shown is settled afterwards, without
+ * engraving anything again.
+ *
+ * @param {{entryId: number, index: number}} slide
+ * @param {Object<string|number, Array<number>>} excluded keyed by row
+ */
+export function isExcluded(slide, excluded) {
+    const list = (excluded ?? {})[slide.entryId] ?? (excluded ?? {})[String(slide.entryId)];
+
+    return Array.isArray(list) && list.includes(slide.index);
 }
 
 /** How many slides each row came to, keyed by row — what the editor labels with. */
@@ -72,8 +124,8 @@ export function slideCounts(slides) {
     return counts;
 }
 
-async function slidesOf(entry, ratio) {
-    if (entry.kind === 'text') { return [textSlide(entry, ratio)]; }
+async function slidesOf(entry, ratio, palette) {
+    if (entry.kind === 'text') { return [textSlide(entry, ratio, palette)]; }
     if (entry.kind === 'file') { return await fileSlides(entry, ratio); }
 
     return await scoreSlides(entry, ratio);
@@ -147,7 +199,7 @@ async function fileSlides(entry, ratio) {
  * booklet's paragraphs are written in — so a rubric written for the handout can
  * be pasted onto a screen and read the same way.
  */
-function textSlide(entry, ratio) {
+function textSlide(entry, ratio, palette) {
     const canvas = { ...TEXT_CANVAS[ratio] };
     const width = canvas.width * (1 - 2 * TEXT_MARGIN);
     const fontSize = canvas.height * 0.075;
@@ -157,9 +209,10 @@ function textSlide(entry, ratio) {
         fontSize,
         fontFamily: HEADING_FONT,
         measure: canvasMeasurer(HEADING_FONT, fontSize),
+        palette,
     });
 
-    if (rows.length === 0) { return { svg: blankSlide(canvas), overflows: false }; }
+    if (rows.length === 0) { return { svg: blankSlide(canvas, palette.background), overflows: false }; }
 
     const total = rows.reduce((sum, row) => sum + row.height + (row.spaceBefore ?? 0), 0);
     const scale = Math.min(1, (canvas.height * (1 - 2 * TEXT_MARGIN)) / total);
@@ -180,7 +233,32 @@ function textSlide(entry, ratio) {
         viewBox: { x: 0, y: 0, w: canvas.width, h: canvas.height },
     });
 
-    return { svg: frameSlide(svg, canvas), overflows: total * scale > canvas.height };
+    return {
+        svg: painted(frameSlide(svg, canvas), canvas, palette.background),
+        overflows: total * scale > canvas.height,
+    };
+}
+
+/**
+ * The slide's ground, painted into the document rather than behind it.
+ *
+ * It has to be part of the SVG: the same slide is shown in the editor's contact
+ * sheet, thrown by the presenter and — one day — exported, and only a rectangle
+ * inside the drawing reaches all three. Laid underneath everything already
+ * there, so nothing has to be drawn in a particular order to survive it.
+ */
+function painted(svg, canvas, background) {
+    const rect = document.createElementNS(SVG_NS, 'rect');
+
+    rect.setAttribute('x', '0');
+    rect.setAttribute('y', '0');
+    rect.setAttribute('width', String(canvas.width));
+    rect.setAttribute('height', String(canvas.height));
+    rect.setAttribute('fill', background);
+
+    svg.insertBefore(rect, svg.firstChild);
+
+    return svg;
 }
 
 /**
@@ -254,10 +332,11 @@ function intrinsicBox(svg, fallback) {
     return { ...fallback };
 }
 
-function blankSlide(canvas) {
+function blankSlide(canvas, background = null) {
     const { svg } = stackSvgs([], { viewBox: { x: 0, y: 0, w: canvas.width, h: canvas.height } });
+    const framed = frameSlide(svg, canvas);
 
-    return frameSlide(svg, canvas);
+    return background === null ? framed : painted(framed, canvas, background);
 }
 
 /** One uploaded page, fetched once however many slides ask for it. */

@@ -19,6 +19,7 @@ resources/js/projection-presenter.js
     data-projection-config="{{ json_encode([
         'geometry' => $geometry,
         'entries' => $entries,
+        'excluded' => $excluded,
     ]) }}"
     x-data="projectionPresenter(JSON.parse($el.dataset.projectionConfig))"
     x-on:projection-updated.window="applyUpdate($event.detail)"

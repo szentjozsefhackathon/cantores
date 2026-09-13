@@ -56,6 +56,8 @@ resources/js/booklet-editor.js
 
     <div class="mx-auto flex w-full max-w-[1600px] flex-col px-4 sm:px-6 lg:min-h-0 lg:flex-1 lg:px-8">
 
+        <x-plan-document-switcher :plan="$booklet->musicPlan" :current="$booklet" type="booklet" />
+
         {{-- Geometry bar. Laid out as the score editor's setting toolbars are:
              every knob is its icon, and its name is in the tooltip, so a dozen
              of them fit on one line above a booklet rather than in a block of

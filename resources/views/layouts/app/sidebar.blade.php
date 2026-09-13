@@ -104,11 +104,11 @@
                 <flux:sidebar.item icon="folder" :href="route('folders')" :current="request()->routeIs('folders', 'folders.*')" wire:navigate>
                     {{ __('My Folders') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="book-open" :href="route('booklets')" :current="request()->routeIs('booklets', 'booklets.*')" wire:navigate>
-                    {{ __('My Booklets') }}
-                </flux:sidebar.item>
-                <flux:sidebar.item icon="presentation" :href="route('projections')" :current="request()->routeIs('projections', 'projections.*')" wire:navigate>
-                    {{ __('My Projections') }}
+                {{-- One entry for both: a booklet and a projection are the same
+                     service seen from opposite sides, and they are found
+                     together, by the service they were made for. --}}
+                <flux:sidebar.item icon="book-open" :href="route('plan-documents')" :current="request()->routeIs('plan-documents', 'booklets.*', 'projections.*')" wire:navigate>
+                    {{ __('Booklets & Projections') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>
             @if(auth()->check() && auth()->user()->isEditor)

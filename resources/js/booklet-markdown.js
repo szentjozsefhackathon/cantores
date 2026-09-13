@@ -46,6 +46,23 @@ const QUOTE_COLOR = '#555555';
 const RULE_COLOR = '#999999';
 
 /**
+ * The ink a rubric is set in.
+ *
+ * A booklet has exactly one answer — black on the paper it is printed on — and
+ * never asks. A projection asks: a screen of words thrown into a darkened church
+ * is white on black, which is the whole of what a caller may change here. The
+ * red of `<red>` travels with the rest, because the missal red that has marked
+ * rubrics for centuries is very nearly unreadable on black and its complement is
+ * not.
+ */
+export const DEFAULT_PALETTE = {
+    text: '#000000',
+    quote: QUOTE_COLOR,
+    rule: RULE_COLOR,
+    accent: '#cc0000',
+};
+
+/**
  * @typedef {object} MarkdownRow
  * @property {number} height
  * @property {number} spaceBefore
@@ -65,6 +82,8 @@ const RULE_COLOR = '#999999';
  * @param {number} [options.leadingScale] every size restated as the one the
  *   leading is measured in; see leadingScale() in booklet-geometry.js
  * @param {(text: string, opts?: {bold?: boolean, italic?: boolean}) => number} options.measure
+ * @param {{text?: string, quote?: string, rule?: string, accent?: string}} [options.palette]
+ *   the ink; black on paper where none is given
  * @returns {MarkdownRow[]}
  */
 export function markdownRows(source, options) {
@@ -215,12 +234,13 @@ export function parseBlocks(source) {
 function renderBlock(block, options, size) {
     const { fontSize, fontFamily, layoutWidth } = options;
     const leading = leadingOf(options);
+    const palette = { ...DEFAULT_PALETTE, ...(options.palette ?? {}) };
 
     if (block.type === 'rule') {
         const height = fontSize * RULE_HEIGHT * leading;
         const y = round(height / 2);
         const body = `<line x1="0" y1="${y}" x2="${round(layoutWidth)}" y2="${y}" `
-            + `stroke="${RULE_COLOR}" stroke-width="${round(Math.max(fontSize / 14, 0.5))}"/>`;
+            + `stroke="${palette.rule}" stroke-width="${round(Math.max(fontSize / 14, 0.5))}"/>`;
 
         return [{ height, svg: svgDocument(body, layoutWidth, height) }];
     }
@@ -228,7 +248,7 @@ function renderBlock(block, options, size) {
     const style = {
         bold: block.type === 'heading',
         italic: block.type === 'quote',
-        fill: block.type === 'quote' ? QUOTE_COLOR : '#000000',
+        fill: block.type === 'quote' ? palette.quote : palette.text,
     };
 
     const indent = block.type === 'list'
@@ -263,7 +283,10 @@ function renderBlock(block, options, size) {
                 fill: style.fill,
                 bold: run.bold,
                 italic: run.italic,
-                color: run.color,
+                // `<red>` is the only colour the inline grammar has, so a run
+                // that carries one carries that one: it is restated as whatever
+                // this palette's warning colour is rather than compared.
+                color: run.color ? palette.accent : null,
             }));
         });
 

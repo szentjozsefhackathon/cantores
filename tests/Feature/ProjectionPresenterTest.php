@@ -41,6 +41,37 @@ it('hands the browser the same deck the editor arranged', function () {
         ->and($presenter->get('entries')[0]['content'])->toContain('F G A B');
 });
 
+/*
+ * The slides left out of today's service travel beside the deck rather than
+ * inside it: every slide is still engraved, and the presenter filters. That is
+ * what keeps what the editor showed and what the wall shows the same slides,
+ * made the same way.
+ */
+it('tells the projector which slides this service walks past', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+        'excluded_slides' => ['16/9' => [1, 3], '1/1' => [0]],
+    ]);
+
+    actingAs($user);
+
+    $presenter = Livewire::test(ProjectionPresenter::class, ['projection' => $projection]);
+
+    expect($presenter->get('excluded'))->toBe([$entry->id => [1, 3]]);
+
+    // The shape decides which list applies, because the page breaks do.
+    $projection->update(['ratio' => '4/3']);
+
+    $presenter->call('reload');
+
+    expect($presenter->get('excluded'))->toBe([]);
+});
+
 it('refuses to project somebody elses deck', function () {
     $owner = User::factory()->create();
     $stranger = User::factory()->create();

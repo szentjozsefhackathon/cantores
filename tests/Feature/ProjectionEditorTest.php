@@ -1,7 +1,8 @@
 <?php
 
+use App\Enums\ProjectionTextTheme;
+use App\Livewire\Pages\PlanDocuments;
 use App\Livewire\Pages\ProjectionEditor;
-use App\Livewire\Pages\Projections;
 use App\Livewire\Projection\SlideRow;
 use App\Models\MusicPlan;
 use App\Models\Projection;
@@ -221,7 +222,7 @@ it('hands the browser the score source and the whole settings column', function 
 /*
  * The override bucket is arbitrary JSON from a browser and is replayed into a
  * renderer, so it is sanitised rather than trusted — unknown keys dropped,
- * numbers clamped.
+ * numbers clamped — and filed under the screen shape it was adjusted against.
  */
 it('sanitises an adjustment before storing it', function () {
     $user = User::factory()->create();
@@ -244,12 +245,200 @@ it('sanitises an adjustment before storing it', function () {
 
     $stored = $entry->fresh()->settings_override;
 
-    expect($stored)->toHaveKeys(['abcLyricSize', 'abcStemWidth'])
-        ->and($stored)->not->toHaveKey('somethingInvented')
+    expect($stored)->toHaveKey('16/9');
+
+    $bucket = $stored['16/9'];
+
+    expect($bucket)->toHaveKeys(['abcLyricSize', 'abcStemWidth'])
+        ->and($bucket)->not->toHaveKey('somethingInvented')
         // Belongs to another format's panel, so it is not this row's to keep.
-        ->and($stored)->not->toHaveKey('gabcLayoutWidth')
-        ->and($stored['abcLyricSize'])->toEqual(120)
-        ->and($stored['abcStemWidth'])->toEqual(2.0);
+        ->and($bucket)->not->toHaveKey('gabcLayoutWidth')
+        ->and($bucket['abcLyricSize'])->toEqual(120)
+        ->and($bucket['abcStemWidth'])->toEqual(2.0);
+});
+
+/*
+ * The point of scoping an adjustment to a shape: 70 points of lyric on a
+ * widescreen is not a decision about a square screen, and a deck that changed
+ * shape used to carry the first answer into the second and wreck it.
+ */
+it('keeps one screen shapes adjustments out of another shapes', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    $editor = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('toggleScore', $score->id);
+
+    $entry = $projection->entries()->firstOrFail();
+
+    $editor->call('saveOverride', $entry->id, ['abcLyricSize' => 40]);
+
+    $editor->set('ratio', '1/1')
+        ->call('saveOverride', $entry->id, ['abcLyricSize' => 20]);
+
+    $stored = $entry->fresh()->settings_override;
+
+    expect($stored['16/9']['abcLyricSize'])->toEqual(40)
+        ->and($stored['1/1']['abcLyricSize'])->toEqual(20);
+
+    // ...and resetting one leaves the other exactly where its author put it.
+    $editor->call('resetOverride', $entry->id);
+
+    $stored = $entry->fresh()->settings_override;
+
+    expect($stored)->not->toHaveKey('1/1')
+        ->and($stored['16/9']['abcLyricSize'])->toEqual(40);
+});
+
+// Only the shape being drawn travels, flat, in the same vocabulary the score's
+// own layout for that shape is written in.
+it('hands the browser only the adjustments for the shape it is drawing', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+        'settings_override' => ['16/9' => ['abcLyricSize' => 40], '1/1' => ['abcLyricSize' => 20]],
+    ]);
+
+    actingAs($user);
+
+    $payload = Livewire::test(ProjectionEditor::class, ['projection' => $projection])->get('renderPayload');
+
+    expect($payload[0]['override'])->toBe(['abcLyricSize' => 40.0]);
+
+    $projection->update(['ratio' => '1/1']);
+
+    $payload = Livewire::test(ProjectionEditor::class, ['projection' => $projection])->get('renderPayload');
+
+    expect($payload[0]['override'])->toBe(['abcLyricSize' => 20.0]);
+});
+
+/*
+ * A screen of words in a darkened church is white on black, which is what every
+ * other projection in the room does. The music is not offered the choice: three
+ * engines draw it in ink, and a staff reversed out of black is harder to read.
+ */
+it('sets a deck s words white on black until it is told otherwise', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    actingAs($user);
+
+    $editor = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->assertSet('textTheme', 'dark');
+
+    expect($editor->get('geometry')['textTheme'])->toBe('dark')
+        ->and($editor->get('geometry')['textPalette'])
+        ->toMatchArray(['background' => '#000000', 'text' => '#ffffff']);
+
+    $editor->set('textTheme', 'light');
+
+    expect($projection->fresh()->text_theme)->toBe(ProjectionTextTheme::Light)
+        ->and($editor->get('geometry')['textPalette'])
+        ->toMatchArray(['background' => '#ffffff', 'text' => '#000000']);
+});
+
+it('refuses a colour scheme it has never heard of', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->set('textTheme', 'chartreuse')
+        ->assertHasErrors('textTheme');
+
+    expect($projection->fresh()->text_theme)->toBe(ProjectionTextTheme::Dark);
+});
+
+/*
+ * Three of a hymn's six verses on an ordinary Sunday. The slide is still cut and
+ * still drawn — it is in the contact sheet, one click from coming back — and the
+ * presenter walks past it.
+ */
+it('leaves one of a rows slides out of the service and puts it back', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+    ]);
+
+    actingAs($user);
+
+    $editor = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('toggleSlideExclusion', $entry->id, 2);
+
+    expect($entry->fresh()->excluded_slides)->toBe(['16/9' => [2]])
+        ->and($editor->get('excluded'))->toBe([$entry->id => [2]]);
+
+    $editor->call('toggleSlideExclusion', $entry->id, 0);
+
+    expect($entry->fresh()->excluded_slides)->toBe(['16/9' => [0, 2]]);
+
+    $editor->call('toggleSlideExclusion', $entry->id, 2);
+
+    expect($entry->fresh()->excluded_slides)->toBe(['16/9' => [0]]);
+
+    $editor->call('toggleSlideExclusion', $entry->id, 0);
+
+    // Nothing left out, nothing stored: an empty column is the plain answer.
+    expect($entry->fresh()->excluded_slides)->toBeNull()
+        ->and($editor->get('excluded'))->toBe([]);
+});
+
+/*
+ * `%pagebreak169` and `%pagebreak43` cut one score into different numbers of
+ * screens, so "the third slide" is a different verse at a different shape.
+ */
+it('remembers a skipped slide against the shape it was skipped at', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+        'excluded_slides' => ['16/9' => [1]],
+    ]);
+
+    actingAs($user);
+
+    $projection->update(['ratio' => '4/3']);
+
+    $editor = Livewire::test(ProjectionEditor::class, ['projection' => $projection]);
+
+    expect($editor->get('excluded'))->toBe([]);
+
+    $editor->call('toggleSlideExclusion', $entry->id, 3);
+
+    expect($entry->fresh()->excluded_slides)->toBe(['16/9' => [1], '4/3' => [3]]);
+});
+
+it('refuses to skip a slide in somebody elses deck', function () {
+    $owner = User::factory()->create();
+    $stranger = User::factory()->create();
+    $projection = projectionFor($owner);
+    $score = Score::factory()->abc()->create(['user_id' => $owner->id]);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+    ]);
+
+    actingAs($stranger);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])->assertForbidden();
+
+    expect($entry->fresh()->excluded_slides)->toBeNull();
 });
 
 /*
@@ -322,7 +511,7 @@ it('lists only the viewers own projections', function () {
 
     actingAs($mine);
 
-    Livewire::test(Projections::class)
+    Livewire::test(PlanDocuments::class)
         ->assertSee('Advent')
         ->assertDontSee('Karácsony');
 });
@@ -333,7 +522,8 @@ it('starts a projection from the list and opens its editor', function () {
 
     actingAs($user);
 
-    Livewire::test(Projections::class)
+    Livewire::test(PlanDocuments::class)
+        ->call('setNewType', 'projection')
         ->call('createFromPlan', $plan->id)
         ->assertRedirect();
 

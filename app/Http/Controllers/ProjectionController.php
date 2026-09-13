@@ -44,6 +44,6 @@ class ProjectionController extends Controller
 
         $projection->delete();
 
-        return redirect()->route('projections');
+        return redirect()->route('plan-documents');
     }
 }

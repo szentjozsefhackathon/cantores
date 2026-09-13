@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\HasLoans;
 use App\Contracts\PlanDocument;
 use App\Enums\ProjectionRatio;
+use App\Enums\ProjectionTextTheme;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +38,7 @@ use Illuminate\Support\Facades\Auth;
  * @property int|null $music_plan_id
  * @property string $title
  * @property \App\Enums\ProjectionRatio $ratio
+ * @property \App\Enums\ProjectionTextTheme $text_theme
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\User $user
@@ -69,6 +71,7 @@ class Projection extends Model implements PlanDocument
         'music_plan_id',
         'title',
         'ratio',
+        'text_theme',
     ];
 
     /**
@@ -78,6 +81,7 @@ class Projection extends Model implements PlanDocument
     {
         return [
             'ratio' => ProjectionRatio::class,
+            'text_theme' => ProjectionTextTheme::class,
         ];
     }
 
@@ -102,7 +106,7 @@ class Projection extends Model implements PlanDocument
     public function scores(): BelongsToMany
     {
         return $this->belongsToMany(Score::class, 'projection_slides')
-            ->withPivot(['id', 'sequence', 'settings_override'])
+            ->withPivot(['id', 'sequence', 'settings_override', 'excluded_slides'])
             ->withTimestamps()
             ->orderByPivot('sequence');
     }
@@ -121,6 +125,10 @@ class Projection extends Model implements PlanDocument
         return [
             'ratio' => $this->ratio->value,
             'aspectRatio' => $this->ratio->css(),
+            // The one thing the deck does say about how something looks, and it
+            // says it about words alone: see App\Enums\ProjectionTextTheme.
+            'textTheme' => $this->text_theme->value,
+            'textPalette' => $this->text_theme->palette(),
         ];
     }
 

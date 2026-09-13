@@ -36,7 +36,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
     /**
      * The whole projection, ready to hand to the browser.
      *
-     * @return array{geometry: array<string, mixed>, entries: list<array<string, mixed>>}
+     * @return array{geometry: array<string, mixed>, entries: list<array<string, mixed>>, excluded: array<int, list<int>>}
      */
     public function for(Projection $projection, ?User $viewer, ?Loan $loan = null): array
     {
@@ -46,7 +46,32 @@ class ProjectionRenderPayload extends PlanRenderPayload
         return [
             'geometry' => $projection->geometry(),
             'entries' => $this->entries($projection, $entries, $sources, $this->headingsFor($entries, $viewer)),
+            'excluded' => $this->exclusions($projection, $entries),
         ];
+    }
+
+    /**
+     * Which slides the service walks past, row by row, at this deck's shape.
+     *
+     * Handed over beside the rows rather than inside them, and that is a
+     * deliberate line: what is drawn and what is shown are different questions.
+     * The browser re-engraves a deck whenever the thing to draw has changed, and
+     * skipping a verse changes nothing about the drawing — every slide is still
+     * cut, still engraved, still in the editor's contact sheet where it can be
+     * put back. Folded into a row, it would cost a full re-engraving of the deck
+     * per click.
+     *
+     * @param  Collection<int, ProjectionSlide>  $entries
+     * @return array<int, list<int>>
+     */
+    public function exclusions(Projection $projection, Collection $entries): array
+    {
+        $ratio = $projection->ratio->value;
+
+        return $entries
+            ->mapWithKeys(fn (ProjectionSlide $entry): array => [$entry->id => $entry->excludedFor($ratio)])
+            ->filter(fn (array $excluded): bool => $excluded !== [])
+            ->all();
     }
 
     /**
@@ -114,7 +139,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
                         ...$common,
                         'kind' => 'file',
                         'fileId' => $file['file_id'],
-                        'override' => self::overrideOf($entry, 'file'),
+                        'override' => self::overrideOf($entry, 'file', $projection->ratio->value),
                         'pages' => $this->pagesOf($projection, $file),
                     ];
                 }
@@ -128,7 +153,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
                     // of it: which slice is read is the deck's ratio, and the
                     // browser already knows that from the geometry.
                     'settings' => $source['settings'],
-                    'override' => self::overrideOf($entry, $source['format']),
+                    'override' => self::overrideOf($entry, $source['format'], $projection->ratio->value),
                 ];
             })
             ->filter()
@@ -202,11 +227,16 @@ class ProjectionRenderPayload extends PlanRenderPayload
      * written against, and a browser handed the column raw would draw a deck the
      * next save contradicts, then have to lay it all out again to agree.
      *
+     * Only this deck's shape travels. The column keeps a bucket per shape — a
+     * size chosen for a widescreen says nothing about a square screen — and the
+     * browser is drawing one of them, so it is handed that one flat, in exactly
+     * the vocabulary the score's own layout for this ratio is written in.
+     *
      * @return array<string, mixed>
      */
-    private static function overrideOf(ProjectionSlide $entry, ?string $format): array
+    private static function overrideOf(ProjectionSlide $entry, ?string $format, string $ratio): array
     {
-        return ProjectionSettingFields::sanitize($format ?? 'file', $entry->settings_override ?? []);
+        return ProjectionSettingFields::sanitize($format ?? 'file', $entry->overrideFor($ratio));
     }
 
     /**
