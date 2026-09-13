@@ -141,7 +141,7 @@ test('card hides booklet actions unless they are asked for', function () {
         ->assertDontSee('Füzet készítése');
 });
 
-test('booklet buttons on the card are square icon buttons like the view and edit ones', function () {
+test('booklet buttons on the card are square icon buttons at the same size as the view and edit ones', function () {
     $owner = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
 
@@ -152,7 +152,49 @@ test('booklet buttons on the card are square icon buttons like the view and edit
     $bookletButton = Str::after($html, '<form method="POST" action="'.route('booklets.store').'"');
 
     expect(Str::before($bookletButton, '</form>'))
-        ->toContain('w-6')
+        ->toContain('w-10')
         ->not->toContain('px-2')
         ->not->toContain('<span>'); // an empty label span would be a flex item and push the icon off centre
+});
+
+test('the create-projection button wears a plus icon the open-projection one does not', function () {
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
+    \App\Models\Projection::factory()->create([
+        'user_id' => $owner->id,
+        'music_plan_id' => $plan->id,
+    ]);
+
+    $html = Livewire::actingAs($owner)
+        ->test('music-plan-card-extended', ['musicPlan' => $plan, 'showBookletActions' => true])
+        ->html();
+
+    $createButton = Str::before(Str::after($html, '<form method="POST" action="'.route('projections.store').'"'), '</form>');
+
+    expect($createButton)->toContain('M12 6v7'); // the plus stroke of presentation-plus
+    expect(Str::before($html, '<form method="POST" action="'.route('projections.store').'"'))
+        ->toContain('m7 21 5-5 5 5') // the open-projection button is a plain presentation screen
+        ->not->toContain('M12 6v7');
+});
+
+test('every action on the plan lives in a toolbar column down the card\'s right edge', function () {
+    $owner = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
+
+    $html = Livewire::actingAs($owner)
+        ->test('music-plan-card-extended', ['musicPlan' => $plan, 'showBookletActions' => true])
+        ->html();
+
+    $toolbar = Str::after($html, 'flex flex-col items-center');
+
+    expect($toolbar)
+        ->toContain(route('music-plan-view', ['musicPlan' => $plan]))
+        ->toContain(route('music-plan-editor', ['musicPlan' => $plan]))
+        ->toContain(route('booklets.store'))
+        ->toContain(route('projections.store'));
+
+    // the toolbar is the card's last column, so nothing of the plan follows it
+    expect(Str::before($html, 'flex flex-col items-center'))
+        ->toContain($plan->celebration_name ?? '–')
+        ->not->toContain(route('booklets.store'));
 });

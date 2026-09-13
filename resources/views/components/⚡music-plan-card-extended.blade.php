@@ -88,11 +88,11 @@ new class extends Component
 @endplaceholder
 
 
-<div {{ $attributes->merge(['class' => 'max-w-md rounded-lg border border-gray-200 dark:border-gray-700 border-l-4 ' . ($musicPlan->celebration?->liturgicalBorderColorClass() ?? 'border-l-gray-200! dark:border-l-gray-700!') . ' bg-white dark:bg-gray-900 shadow-sm overflow-hidden']) }}>
-    <!-- Header with icon and title -->
-    <div class="p-3 border-b border-gray-200 dark:border-gray-700">
-        <div class="flex items-start justify-between gap-2">
-            <div class="flex items-center gap-2 flex-1 min-w-0">
+<div {{ $attributes->merge(['class' => 'max-w-md rounded-lg border border-gray-200 dark:border-gray-700 border-l-4 ' . ($musicPlan->celebration?->liturgicalBorderColorClass() ?? 'border-l-gray-200! dark:border-l-gray-700!') . ' bg-white dark:bg-gray-900 shadow-sm overflow-hidden flex items-stretch']) }}>
+    <div class="flex-1 min-w-0">
+        <!-- Header with icon and title -->
+        <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-2">
                 <x-genre-icon :genre-id="$musicPlan->genre_id" />
                 <div class="flex-1 min-w-0">
                     <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -111,217 +111,218 @@ new class extends Component
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <div class="flex items-center gap-1.5">
-                    <a href="{{ route('music-plan-view', ['musicPlan' => $musicPlan]) }}" target="_blank" class="inline-block">
-                        <flux:button size="xs" variant="outline" color="blue" icon="eye"></flux:button>
-                    </a>
-                    @if($isOwner)
-                    <a href="{{ route('music-plan-editor', ['musicPlan' => $musicPlan]) }}" class="inline-block">
-                        <flux:button size="xs" variant="outline" color="amber" icon="pencil"></flux:button>
-                    </a>
-                    @endif
-                    @if($isOwner && $showBookletActions)
-                    <x-music-plan-booklet-actions :plan="$musicPlan" compact />
-                    <x-music-plan-projection-actions :plan="$musicPlan" compact />
-                    @endif
+        </div>
+
+        <!-- Liturgical details -->
+        <div class="p-3 space-y-2">
+            @php
+            $firstCelebration = $musicPlan->celebration;
+            @endphp
+
+            <!-- Liturgical year and season info -->
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+                @if($firstCelebration && ($firstCelebration->year_letter || $firstCelebration->year_parity))
+                <div>
+                    <span class="font-semibold text-gray-900 dark:text-gray-100">
+                        {{ $firstCelebration->year_letter ?? '–' }}
+                        @if($firstCelebration->year_parity)
+                        ({{ $firstCelebration->year_parity }})
+                        @endif
+                    </span>
                 </div>
+                @endif
+
+                @if($firstCelebration && $firstCelebration->season_text)
+                <div>
+                    <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $firstCelebration->season_text }}</span>
+                </div>
+                @endif
+
+                @if($firstCelebration && $firstCelebration->week)
+                <flux:badge color="green" size="sm">{{ $firstCelebration->week }}. hét</flux:badge>
+                @endif
+
+                @if($musicPlan->day_name)
+                <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
+                @endif
             </div>
 
+            <!-- Private notes (owner only) -->
+            @if($isOwner && $musicPlan->private_notes)
+            <div class="pt-1 border-t border-gray-200 dark:border-gray-700">
+                <flux:text class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+                    {{ Str::limit($musicPlan->private_notes, 150) }}
+                </flux:text>
+            </div>
+            @endif
+
+            <!-- Plan slots summary -->
+            <div class="pt-1 border-t border-gray-200 dark:border-gray-700">
+                @if(!empty($planSlots))
+                <div class="space-y-1.5 max-h-48 overflow-y-auto">
+                    @foreach($planSlots as $slot)
+                    <div class="flex gap-1.5 p-1.5 rounded-md bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+                        <div class="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold text-xs flex-shrink-0">
+                            {{ $slot['sequence'] }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <flux:heading size="xs" class="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                {{ $slot['name'] }}
+                            </flux:heading>
+                            @if($slot['description'])
+                            <flux:text class="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                                {{ Str::limit($slot['description'], 60) }}
+                            </flux:text>
+                            @endif
+
+                            @if(!empty($slot['assignments']))
+                            <div class="mt-0.5 space-y-0.5">
+                                @foreach($slot['assignments'] as $assignment)
+                                @if(!empty($assignment['music']))
+                                <div class="text-xs flex items-start justify-between gap-2">
+                                    <div class="flex-1 min-w-0">
+                                        @if(!empty($assignment['scope_label']))
+                                        <flux:badge color="zinc" size="sm" class="mb-0.5">{{ $assignment['scope_label'] }}</flux:badge>
+                                        @endif
+                                        <div class="text-gray-700 dark:text-gray-300 font-medium truncate">
+                                            {{ $assignment['music']->title }}
+                                        </div>
+                                        @if($assignment['music']->subtitle)
+                                        <div class="text-gray-600 dark:text-gray-400 line-clamp-1">
+                                            {{ Str::limit($assignment['music']->subtitle, 50) }}
+                                        </div>
+                                        @endif
+
+                                        @if(!empty($assignment['music_incipits']))
+                                        @php $incipits = $assignment['music_incipits']; @endphp
+                                        <div class="mt-1" x-data="{ current: 0, total: {{ count($incipits) }} }">
+                                            <div class="flex items-center gap-0.5">
+                                                @if(count($incipits) > 1)
+                                                <button x-on:click.prevent="current = (current - 1 + total) % total"
+                                                    class="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors">
+                                                    <flux:icon name="chevron-left" class="h-3 w-3" />
+                                                </button>
+                                                @endif
+                                                <div class="overflow-hidden">
+                                                    @foreach($incipits as $i => $incipit)
+                                                    <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
+                                                        <x-incipit-image :src="$incipit['url']" :alt="$incipit['title']"
+                                                             img-class="block h-auto max-h-10 w-auto" />
+                                                    </div>
+                                                    @endforeach
+                                                </div>
+                                                @if(count($incipits) > 1)
+                                                <button x-on:click.prevent="current = (current + 1) % total"
+                                                    class="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors">
+                                                    <flux:icon name="chevron-right" class="h-3 w-3" />
+                                                </button>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        @endif
+
+                                        <!-- Collections and Authors badges -->
+                                        @if($assignment['music']->collections->isNotEmpty() || $assignment['music']->authors->isNotEmpty())
+                                        @php
+                                            $rankedCollections = $assignment['music']->displayCollections(auth()->user());
+                                            $hiddenCollections = $rankedCollections->slice(3);
+                                        @endphp
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            @foreach($rankedCollections->take(3) as $collection)
+                                            <flux:badge color="blue" size="sm">
+                                                {{ $collection->abbreviation ?? Str::limit($collection->title, 8) }}
+                                                @if($collection->pivot->order_number)
+                                                {{ $collection->pivot->order_number }}
+                                                @endif
+                                            </flux:badge>
+                                            @endforeach
+                                            @if($hiddenCollections->isNotEmpty())
+                                            <flux:tooltip content="{{ $hiddenCollections->map(fn ($collection) => $collection->formatWithPivot($collection->pivot))->join(', ') }}">
+                                                <flux:badge color="blue" size="sm">+{{ $hiddenCollections->count() }}</flux:badge>
+                                            </flux:tooltip>
+                                            @endif
+                                            @foreach($assignment['music']->authors as $author)
+                                            <flux:badge color="purple" size="sm">{{ $author->name }}</flux:badge>
+                                            @endforeach
+                                        </div>
+                                        @endif
+
+                                        @if(!empty($assignment['notes']))
+                                        <div class="text-gray-500 dark:text-gray-500 italic line-clamp-1">
+                                            {{ Str::limit($assignment['notes'], 50) }}
+                                        </div>
+                                        @endif
+                                    </div>
+                                    @if($musicPlanId)
+                                    <div class="flex-shrink-0">
+                                        <flux:button
+                                            wire:click="$parent.addMusicToMusicPlan({{ $assignment['music']->id }}, '{{ $slot['name'] }}')"
+                                            wire:loading.attr="disabled"
+                                            wire:loading.class="opacity-50 cursor-not-allowed"
+                                            icon="plus"
+                                            variant="primary"
+                                            size="xs"
+                                            title="Zene hozzáadása az énekrendhez" />
+                                    </div>
+                                    @endif
+                                </div>
+                                @endif
+                                @endforeach
+                            </div>
+                            @else
+                            <flux:text class="text-xs text-gray-500 dark:text-gray-400 italic mt-0.5">
+                                Nincs zene
+                            </flux:text>
+                            @endif
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                @else
+                <flux:callout variant="secondary" icon="musical-note" class="text-xs py-1.5">
+                    Ehhez az énekrendhez még nem adtál elemeket.
+                </flux:callout>
+                @endif
+            </div>
+
+            <!-- Metadata footer -->
+            <div class="flex items-center gap-3 pt-1 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400">
+                <div class="flex items-center gap-1">
+                    <flux:icon name="musical-note" class="h-3 w-3" variant="mini" />
+                    <span>{{ $assignmentCount }}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <flux:icon name="calendar-days" class="h-3 w-3" variant="mini" />
+                    <span>{{ $musicPlan->created_at->translatedFormat('Y. m. d.') }}</span>
+                </div>
+                @if($musicPlan->actual_date)
+                <flux:link
+                    href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}"
+                    target="_blank"
+                    class="text-xs hover:underline"
+                    onclick="event.stopPropagation()">
+                    Igenaptár
+                </flux:link>
+                @endif
+            </div>
         </div>
     </div>
 
-    <!-- Liturgical details -->
-    <div class="p-3 space-y-2">
-        @php
-        $firstCelebration = $musicPlan->celebration;
-        @endphp
-
-        <!-- Liturgical year and season info -->
-        <div class="flex flex-wrap items-center gap-2 text-xs">
-            @if($firstCelebration && ($firstCelebration->year_letter || $firstCelebration->year_parity))
-            <div>
-                <span class="font-semibold text-gray-900 dark:text-gray-100">
-                    {{ $firstCelebration->year_letter ?? '–' }}
-                    @if($firstCelebration->year_parity)
-                    ({{ $firstCelebration->year_parity }})
-                    @endif
-                </span>
-            </div>
-            @endif
-
-            @if($firstCelebration && $firstCelebration->season_text)
-            <div>
-                <span class="font-semibold text-gray-900 dark:text-gray-100">{{ $firstCelebration->season_text }}</span>
-            </div>
-            @endif
-
-            @if($firstCelebration && $firstCelebration->week)
-            <flux:badge color="green" size="sm">{{ $firstCelebration->week }}. hét</flux:badge>
-            @endif
-
-            @if($musicPlan->day_name)
-            <flux:badge color="purple" size="sm">{{ $musicPlan->day_name }}</flux:badge>
-            @endif
-        </div>
-
-        <!-- Private notes (owner only) -->
-        @if($isOwner && $musicPlan->private_notes)
-        <div class="pt-1 border-t border-gray-200 dark:border-gray-700">
-            <flux:text class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
-                {{ Str::limit($musicPlan->private_notes, 150) }}
-            </flux:text>
-        </div>
+    {{-- The card's toolbar: everything one can do with the plan, stacked in a
+         column down the right edge — reading and editing it above, the booklet
+         and the projection made from it below. --}}
+    <div class="flex flex-col items-center gap-1.5 flex-shrink-0 p-2 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40">
+        <a href="{{ route('music-plan-view', ['musicPlan' => $musicPlan]) }}" target="_blank" class="inline-block">
+            <flux:button variant="outline" color="blue" icon="eye"></flux:button>
+        </a>
+        @if($isOwner)
+        <a href="{{ route('music-plan-editor', ['musicPlan' => $musicPlan]) }}" class="inline-block">
+            <flux:button variant="outline" color="amber" icon="pencil"></flux:button>
+        </a>
         @endif
-
-        <!-- Plan slots summary -->
-        <div class="pt-1 border-t border-gray-200 dark:border-gray-700">
-            @if(!empty($planSlots))
-            <div class="space-y-1.5 max-h-48 overflow-y-auto">
-                @foreach($planSlots as $slot)
-                <div class="flex gap-1.5 p-1.5 rounded-md bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
-                    <div class="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 font-semibold text-xs flex-shrink-0">
-                        {{ $slot['sequence'] }}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <flux:heading size="xs" class="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                            {{ $slot['name'] }}
-                        </flux:heading>
-                        @if($slot['description'])
-                        <flux:text class="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
-                            {{ Str::limit($slot['description'], 60) }}
-                        </flux:text>
-                        @endif
-
-                        @if(!empty($slot['assignments']))
-                        <div class="mt-0.5 space-y-0.5">
-                            @foreach($slot['assignments'] as $assignment)
-                            @if(!empty($assignment['music']))
-                            <div class="text-xs flex items-start justify-between gap-2">
-                                <div class="flex-1 min-w-0">
-                                    @if(!empty($assignment['scope_label']))
-                                    <flux:badge color="zinc" size="sm" class="mb-0.5">{{ $assignment['scope_label'] }}</flux:badge>
-                                    @endif
-                                    <div class="text-gray-700 dark:text-gray-300 font-medium truncate">
-                                        {{ $assignment['music']->title }}
-                                    </div>
-                                    @if($assignment['music']->subtitle)
-                                    <div class="text-gray-600 dark:text-gray-400 line-clamp-1">
-                                        {{ Str::limit($assignment['music']->subtitle, 50) }}
-                                    </div>
-                                    @endif
-
-                                    @if(!empty($assignment['music_incipits']))
-                                    @php $incipits = $assignment['music_incipits']; @endphp
-                                    <div class="mt-1" x-data="{ current: 0, total: {{ count($incipits) }} }">
-                                        <div class="flex items-center gap-0.5">
-                                            @if(count($incipits) > 1)
-                                            <button x-on:click.prevent="current = (current - 1 + total) % total"
-                                                class="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors">
-                                                <flux:icon name="chevron-left" class="h-3 w-3" />
-                                            </button>
-                                            @endif
-                                            <div class="overflow-hidden">
-                                                @foreach($incipits as $i => $incipit)
-                                                <div x-show="current === {{ $i }}" @if($i > 0) x-cloak @endif>
-                                                    <x-incipit-image :src="$incipit['url']" :alt="$incipit['title']"
-                                                         img-class="block h-auto max-h-10 w-auto" />
-                                                </div>
-                                                @endforeach
-                                            </div>
-                                            @if(count($incipits) > 1)
-                                            <button x-on:click.prevent="current = (current + 1) % total"
-                                                class="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors">
-                                                <flux:icon name="chevron-right" class="h-3 w-3" />
-                                            </button>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    @endif
-
-                                    <!-- Collections and Authors badges -->
-                                    @if($assignment['music']->collections->isNotEmpty() || $assignment['music']->authors->isNotEmpty())
-                                    @php
-                                        $rankedCollections = $assignment['music']->displayCollections(auth()->user());
-                                        $hiddenCollections = $rankedCollections->slice(3);
-                                    @endphp
-                                    <div class="flex flex-wrap gap-1 mt-1">
-                                        @foreach($rankedCollections->take(3) as $collection)
-                                        <flux:badge color="blue" size="sm">
-                                            {{ $collection->abbreviation ?? Str::limit($collection->title, 8) }}
-                                            @if($collection->pivot->order_number)
-                                            {{ $collection->pivot->order_number }}
-                                            @endif
-                                        </flux:badge>
-                                        @endforeach
-                                        @if($hiddenCollections->isNotEmpty())
-                                        <flux:tooltip content="{{ $hiddenCollections->map(fn ($collection) => $collection->formatWithPivot($collection->pivot))->join(', ') }}">
-                                            <flux:badge color="blue" size="sm">+{{ $hiddenCollections->count() }}</flux:badge>
-                                        </flux:tooltip>
-                                        @endif
-                                        @foreach($assignment['music']->authors as $author)
-                                        <flux:badge color="purple" size="sm">{{ $author->name }}</flux:badge>
-                                        @endforeach
-                                    </div>
-                                    @endif
-
-                                    @if(!empty($assignment['notes']))
-                                    <div class="text-gray-500 dark:text-gray-500 italic line-clamp-1">
-                                        {{ Str::limit($assignment['notes'], 50) }}
-                                    </div>
-                                    @endif
-                                </div>
-                                @if($musicPlanId)
-                                <div class="flex-shrink-0">
-                                    <flux:button
-                                        wire:click="$parent.addMusicToMusicPlan({{ $assignment['music']->id }}, '{{ $slot['name'] }}')"
-                                        wire:loading.attr="disabled"
-                                        wire:loading.class="opacity-50 cursor-not-allowed"
-                                        icon="plus"
-                                        variant="primary"
-                                        size="xs"
-                                        title="Zene hozzáadása az énekrendhez" />
-                                </div>
-                                @endif
-                            </div>
-                            @endif
-                            @endforeach
-                        </div>
-                        @else
-                        <flux:text class="text-xs text-gray-500 dark:text-gray-400 italic mt-0.5">
-                            Nincs zene
-                        </flux:text>
-                        @endif
-                    </div>
-                </div>
-                @endforeach
-            </div>
-            @else
-            <flux:callout variant="secondary" icon="musical-note" class="text-xs py-1.5">
-                Ehhez az énekrendhez még nem adtál elemeket.
-            </flux:callout>
-            @endif
-        </div>
-
-        <!-- Metadata footer -->
-        <div class="flex items-center gap-3 pt-1 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400">
-            <div class="flex items-center gap-1">
-                <flux:icon name="musical-note" class="h-3 w-3" variant="mini" />
-                <span>{{ $assignmentCount }}</span>
-            </div>
-            <div class="flex items-center gap-1">
-                <flux:icon name="calendar-days" class="h-3 w-3" variant="mini" />
-                <span>{{ $musicPlan->created_at->translatedFormat('Y. m. d.') }}</span>
-            </div>
-            @if($musicPlan->actual_date)
-            <flux:link
-                href="https://igenaptar.katolikus.hu/nap/index.php?holnap={{ $musicPlan->actual_date->format('Y-m-d') }}"
-                target="_blank"
-                class="text-xs hover:underline"
-                onclick="event.stopPropagation()">
-                Igenaptár
-            </flux:link>
-            @endif
-        </div>
+        @if($isOwner && $showBookletActions)
+        <x-music-plan-booklet-actions :plan="$musicPlan" compact />
+        <x-music-plan-projection-actions :plan="$musicPlan" compact />
+        @endif
     </div>
 </div>

@@ -7,22 +7,21 @@
      that would start yet another one. Only the reader's own booklets: someone
      else's copy of a public plan is none of their business.
 
-     The compact form is for the plan cards, where there is only room for the
-     square icon buttons that sit beside the view and edit ones. --}}
+     The compact form is for the plan cards, whose toolbar column has room for
+     the square icon button but not for its label. --}}
 @auth
     @php
         $booklets = $plan->booklets()->mine()->latest('updated_at')->get();
-        $size = $compact ? 'xs' : 'base';
         $openLabel = 'Füzet megnyitása';
         $createLabel = $booklets->isEmpty() ? 'Füzet készítése' : 'Új füzet';
     @endphp
 
     @if($booklets->count() === 1)
-        <flux:button variant="outline" color="blue" icon="book" :size="$size" :square="$compact" :title="$openLabel"
+        <flux:button variant="outline" color="blue" icon="book" :square="$compact" :title="$openLabel"
             href="{{ route('booklets.edit', $booklets->first()) }}">{{ $compact ? "" : $openLabel }}</flux:button>
     @elseif($booklets->count() > 1)
         <flux:dropdown>
-            <flux:button variant="outline" color="blue" icon="book" :size="$size" :square="$compact" :title="$openLabel"
+            <flux:button variant="outline" color="blue" icon="book" :square="$compact" :title="$openLabel"
                 icon-trailing="{{ $compact ? '' : 'chevron-down' }}">{{ $compact ? "" : $openLabel }}</flux:button>
             <flux:menu>
                 @foreach($booklets as $booklet)
@@ -35,7 +34,7 @@
     <form method="POST" action="{{ route('booklets.store') }}" class="inline">
         @csrf
         <input type="hidden" name="music_plan_id" value="{{ $plan->id }}">
-        <flux:button type="submit" variant="outline" color="blue" :size="$size" :square="$compact" :title="$createLabel"
+        <flux:button type="submit" variant="outline" color="blue" :square="$compact" :title="$createLabel"
             icon="book-plus">{{ $compact ? "" : $createLabel }}</flux:button>
     </form>
 @endauth
