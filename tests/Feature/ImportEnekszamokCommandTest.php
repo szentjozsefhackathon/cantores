@@ -8,61 +8,6 @@ use App\ScriptureReferenceType;
 
 use function Pest\Laravel\artisan;
 
-const ENEKSZAMOK_HEADER = [
-    'title', 'original_title', 'composers', 'lyricists', 'scripture_refs',
-    'Sárga', 'Zöld', 'Kék Régi', 'Kék Új', 'Barna', 'Téglás Régi', 'Téglás Új',
-    'Emmánuel Örvendezzetek', 'Emmánuel Jézus Él', 'DÚR', 'Szent András',
-];
-
-const DECISIONS_HEADER = ['row_title', 'existing_id', 'existing_title', 'matched_via', 'similarity', 'decision'];
-
-/**
- * @param  array<int, array<string, string>>  $rows
- */
-function writeSongsCsv(array $rows): string
-{
-    $path = tempnam(sys_get_temp_dir(), 'songs').'.csv';
-    $handle = fopen($path, 'w');
-    fputcsv($handle, ENEKSZAMOK_HEADER);
-    foreach ($rows as $row) {
-        $line = [];
-        foreach (ENEKSZAMOK_HEADER as $column) {
-            $line[] = $row[$column] ?? '';
-        }
-        fputcsv($handle, $line);
-    }
-    fclose($handle);
-
-    return $path;
-}
-
-/**
- * @param  array<int, array<string, string>>  $rows
- */
-function writeDecisionsCsv(array $rows): string
-{
-    $path = tempnam(sys_get_temp_dir(), 'decisions').'.csv';
-    $handle = fopen($path, 'w');
-    fputcsv($handle, DECISIONS_HEADER);
-    foreach ($rows as $row) {
-        $line = [];
-        foreach (DECISIONS_HEADER as $column) {
-            $line[] = $row[$column] ?? '';
-        }
-        fputcsv($handle, $line);
-    }
-    fclose($handle);
-
-    return $path;
-}
-
-function createSongbookCollections(): void
-{
-    foreach (['SK', 'ZK', 'BK', 'JÉL', 'DÚR', 'SZTA', 'KÉK', 'TORG'] as $abbr) {
-        Collection::factory()->create(['abbreviation' => $abbr, 'is_private' => false]);
-    }
-}
-
 function runEnekszamokImport(array $rows, ?string $decisionsPath = null): Illuminate\Testing\PendingCommand
 {
     $user = User::factory()->create();
