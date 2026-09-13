@@ -69,6 +69,13 @@ services:
           memory: 256M      
   database_testing:
     image: pgvector/pgvector:pg17
+    # RefreshDatabase drops every table in one transaction, and `php artisan
+    # test --parallel` has sixteen connections doing it at once. Postgres sizes
+    # its whole lock table as max_locks_per_transaction x max_connections, so
+    # the default 64 — which is also roughly the number of tables this schema
+    # has — runs the shared lock table out of memory as soon as the schema grows
+    # past it. Raised rather than tracked: the number only ever goes up.
+    command: postgres -c max_locks_per_transaction=256
     env_file:
       - ./.env.testing # for the database credentials
       - path: ./.env.docker

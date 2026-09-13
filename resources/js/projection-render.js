@@ -1,0 +1,88 @@
+import { renderAbcSlide, hungarianChordsToAbc } from './score-editor-abc.js';
+import { renderAretinoSlide } from './score-editor-aretino.js';
+import { renderChordproSlide } from './score-editor-chordpro.js';
+import { renderGabcSlide } from './score-editor-gabc.js';
+import { splitPages } from './score-editor-pages.js';
+import { slideCanvas } from './slide-frame.js';
+
+/**
+ * Engraving one score onto the slides one projector ratio asks for.
+ *
+ * The three fixed ratios were built into the score editor and stayed there: an
+ * author could tune a 16:9 layout and had nowhere to send it, because the code
+ * that drew it read two dozen fields off the editor's own Alpine component.
+ * Each format now engraves its own slide beside the rest of its own knowledge —
+ * see renderAbcSlide, renderGabcSlide, renderAretinoSlide — and this is the
+ * dispatcher over them, which is all a caller needs to know.
+ *
+ * There is deliberately one copy of it. The editor draws these slides and so
+ * does a projection; docs/abc2svg-formatting.md and docs/vendor-patches.md
+ * already keep lists of the renderers that must stay in step with one another,
+ * and a third independent copy is a drift bug waiting for the next abc2svg
+ * patch.
+ */
+
+export { fitIntoBox, isSlideRatio, slideCanvas, slideRatios } from './slide-frame.js';
+
+/**
+ * The sources one score comes to at one ratio — everything an engine needs,
+ * page by page, with whatever each format insists on having done to it first.
+ *
+ * ABC is the only one that rewrites: it needs an `X:` header to parse at all,
+ * suppressing the clef is a source edit rather than a directive, and its chord
+ * symbols are written in Hungarian. All three happen before the split, because
+ * a header inserted afterwards would land on the first page alone.
+ */
+export function ratioPageSources(format, content, settings, ratio) {
+    let source = content ?? '';
+
+    if (format === 'abc') {
+        if (!/^X:/m.test(source)) { source = 'X:1\n' + source; }
+        if (settings?.abcNoClef) { source = source.replace(/\|[|:\]]?/, '$&[K:clef=none]'); }
+        source = hungarianChordsToAbc(source);
+    }
+
+    return splitPages(source, format, ratio);
+}
+
+/**
+ * Engrave one page of one score onto its slide.
+ *
+ * Comes back framed and ready to drop into a box of that ratio, and saying
+ * whether the music fitted — each engine reports running out of room in its own
+ * way, and each format's renderer knows which. Nothing here shrinks an
+ * engraving to make it fit: that answer belongs to the author, who gives it
+ * with a smaller size or another `%pagebreak`.
+ *
+ * @param {string} format gabc | abc | aretino | chordpro
+ * @param {string} pageSource one entry from ratioPageSources()
+ * @param {object} settings the resolved per-ratio settings bucket
+ * @param {string} ratio
+ * @return {Promise<{svg: SVGElement, overflows: boolean}>}
+ */
+export async function renderRatioPage(format, pageSource, settings, ratio) {
+    const canvas = slideCanvas(format, ratio);
+
+    if (canvas === null) {
+        throw new Error(`[projection] ${ratio} is not a slide ratio`);
+    }
+
+    if (format === 'abc') { return renderAbcSlide(pageSource, settings, canvas); }
+    if (format === 'gabc') { return renderGabcSlide(pageSource, settings, canvas); }
+    if (format === 'aretino') { return renderAretinoSlide(pageSource, settings, canvas, ratio); }
+    if (format === 'chordpro') { return renderChordproSlide(pageSource, settings, canvas); }
+
+    throw new Error(`[projection] ${format} cannot be engraved to a slide`);
+}
+
+/**
+ * Every slide one score comes to at one ratio, in order.
+ *
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean}>>}
+ */
+export function renderRatioPages(format, content, settings, ratio) {
+    return Promise.all(
+        ratioPageSources(format, content, settings, ratio)
+            .map((page) => renderRatioPage(format, page, settings, ratio)),
+    );
+}

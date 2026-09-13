@@ -32,6 +32,8 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property-read string|null $setting
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Booklet> $booklets
  * @property-read int|null $booklets_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Projection> $projections
+ * @property-read int|null $projections_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicAssignments
  * @property-read int|null $music_assignments_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlot> $slots
@@ -134,6 +136,20 @@ class MusicPlan extends Model
     public function booklets(): HasMany
     {
         return $this->hasMany(Booklet::class);
+    }
+
+    /**
+     * The projections made from this plan.
+     *
+     * The other thing a plan becomes: a booklet is the service in the hands of
+     * the people singing it, a projection the same service on the wall in front
+     * of the people being sung to. A plan may have both, and more than one of
+     * each — a 16:9 deck for the nave and a 4:3 one for the older projector in
+     * the chapel.
+     */
+    public function projections(): HasMany
+    {
+        return $this->hasMany(Projection::class);
     }
 
     /**

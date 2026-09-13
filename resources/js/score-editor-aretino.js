@@ -1,4 +1,5 @@
 import { renderAretino } from '@aretino-chant/core';
+import { SLIDE_FIT_TOLERANCE, emptySlide, fitSlide, parseSvg, viewBoxOf } from './slide-frame.js';
 import { gabcToAretino } from '@aretino-chant/gabc2aretino';
 import { guidoToAretino, guidoTextToAretino } from '@aretino-chant/guido2aretino';
 
@@ -46,6 +47,41 @@ export function aretinoProjectorOptions(ratio) {
     const canvas = ARETINO_SCREEN_CANVAS[ratio];
 
     return { width: canvas.width, canvasHeight: canvas.height, dpi: 96 };
+}
+
+/**
+ * One page of an Aretino chant engraved onto one projector slide.
+ *
+ * Aretino is the one engine that is told the box it is drawing into, so it
+ * reports having run out of room differently from the other two: handed a
+ * canvas height it holds that height and *widens* the viewBox instead — 960
+ * becomes 1236 and the slide is no longer 16:9. Nothing is lost, but the music
+ * is then letterboxed down to fit the screen, which is the same bad news the
+ * other engines deliver by clipping. So the overflow test here is the width,
+ * and the engine's own viewBox is kept rather than restated: rewriting it to
+ * the canvas would crop the very music that grew.
+ */
+export function renderAretinoSlide(pageSource, settings, canvas, ratio) {
+    const zoom = Number(settings.aretinoZoom) > 0 ? Number(settings.aretinoZoom) / 100 : 1;
+
+    const svg = parseSvg(renderAretino(pageSource, {
+        ...aretinoProjectorOptions(ratio),
+        zoom,
+        staffSpaceMm: Number(settings.aretinoStaffSize) / 4.0,
+        lyricSize: Number(settings.aretinoLyricSize),
+        textFont: settings.aretinoTextFont,
+        staffGap: Number(settings.aretinoStaffGap),
+        hideRepeatClef: !!settings.aretinoHideRepeatClef,
+    }));
+
+    if (svg === null) {
+        return { svg: emptySlide(canvas), overflows: false };
+    }
+
+    return {
+        svg: fitSlide(svg),
+        overflows: viewBoxOf(svg).width > canvas.width + SLIDE_FIT_TOLERANCE,
+    };
 }
 
 export function aretinoMixin() {
@@ -140,41 +176,29 @@ export function aretinoMixin() {
 
                 container.appendChild(pageEl);
 
-                let renderOpts;
-                if (isPaper) {
-                    renderOpts = { widthMm: Number(this.aretinoStaffWidth) };
-                } else if (isResponsive) {
-                    renderOpts = { width: container.clientWidth / zoom - 12 };
-                } else {
-                    // Fixed ratio: render at a predefined px width so all ratios share
-                    // the same 540 px height; CSS scaling handles smaller containers.
-                    renderOpts = aretinoProjectorOptions(ratio);
-                }
-
                 try {
-                    const svg = renderAretino(pageSource, {
-                        ...renderOpts,
-                        zoom: zoom,
-                        staffSpaceMm: Number(this.aretinoStaffSize) / 4.0,
-                        lyricSize: Number(this.aretinoLyricSize),
-                        textFont: this.aretinoTextFont,
-                        staffGap: Number(this.aretinoStaffGap),
-                        hideRepeatClef: !!this.aretinoHideRepeatClef,
-                    });
-                    pageEl.innerHTML = svg;
-                    const svgEl = pageEl.querySelector('svg');
-                    if (svgEl) {
-                        if (isFixedRatio) {
-                            // Scale SVG to fill the projector-screen container via CSS.
-                            svgEl.style.width = '100%';
-                            svgEl.style.height = '100%';
-                            svgEl.style.display = 'block';
-                        } else if (virtualCanvas.height) {
-                            const naturalH = parseFloat(svgEl.getAttribute('viewBox').split(/\s+/)[3]);
-                            if (naturalH > virtualCanvas.height + 2) {
-                                this.appendClipWarning(pageEl);
-                            }
+                    if (isFixedRatio) {
+                        // The slide is engraved by the one copy of that code a
+                        // projection also draws.
+                        const { svg, overflows } = renderAretinoSlide(pageSource, this, virtualCanvas, ratio);
+                        pageEl.replaceChildren(svg);
+                        if (overflows) {
+                            this.appendClipWarning(pageEl);
                         }
+                    } else {
+                        const renderOpts = isPaper
+                            ? { widthMm: Number(this.aretinoStaffWidth) }
+                            : { width: container.clientWidth / zoom - 12 };
+
+                        pageEl.innerHTML = renderAretino(pageSource, {
+                            ...renderOpts,
+                            zoom: zoom,
+                            staffSpaceMm: Number(this.aretinoStaffSize) / 4.0,
+                            lyricSize: Number(this.aretinoLyricSize),
+                            textFont: this.aretinoTextFont,
+                            staffGap: Number(this.aretinoStaffGap),
+                            hideRepeatClef: !!this.aretinoHideRepeatClef,
+                        });
                     }
                 } catch (e) {
                     console.error('[score-editor] aretino render error:', e);

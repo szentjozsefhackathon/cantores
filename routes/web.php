@@ -320,6 +320,41 @@ Route::get('/booklets/{booklet}/score-page/{scoreFile}/{page}', \App\Http\Contro
     ->middleware(['auth', 'verified'])
     ->name('booklets.score-page');
 
+// Projections: a music plan's scores cut into slides for the screen the
+// congregation reads from — the other half of what a booklet is. The editor
+// chooses and arranges; the slides themselves are engraved in the browser, from
+// each score's own layout for this ratio.
+Route::livewire('/projections', \App\Livewire\Pages\Projections::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projections');
+
+Route::post('/projections', [\App\Http\Controllers\ProjectionController::class, 'store'])
+    ->middleware(['auth', 'verified'])
+    ->name('projections.store');
+
+Route::livewire('/projections/{projection}/edit', \App\Livewire\Pages\ProjectionEditor::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projections.edit');
+
+// The deck as the room sees it: one slide at a time, full screen, driven from
+// the keyboard. Its own page rather than a mode of the editor, so the person at
+// the keyboard can put it on the projector and nothing else.
+Route::livewire('/projections/{projection}/present', \App\Livewire\Pages\ProjectionPresenter::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projections.present');
+
+Route::delete('/projections/{projection}', [\App\Http\Controllers\ProjectionController::class, 'destroy'])
+    ->middleware(['auth', 'verified'])
+    ->name('projections.destroy');
+
+// One page of an uploaded score, for a deck that shows a scan a page at a time.
+// The projection is in the path because it is the projection's access to the
+// score that is being checked.
+Route::get('/projections/{projection}/score-page/{scoreFile}/{page}', \App\Http\Controllers\ProjectionScorePageController::class)
+    ->whereNumber('page')
+    ->middleware(['auth', 'verified'])
+    ->name('projections.score-page');
+
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])
     ->name('music-editor');

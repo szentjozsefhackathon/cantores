@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Contracts\PlanEntry;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -50,7 +51,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @mixin \Eloquent
  */
-class BookletScore extends Model
+class BookletScore extends Model implements PlanEntry
 {
     /** @use HasFactory<\Database\Factories\BookletScoreFactory> */
     use HasFactory;

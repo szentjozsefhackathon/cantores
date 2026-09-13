@@ -367,6 +367,39 @@ c d c B | A G F2 | F4 |]
 w: Má-so-dik di-a-sor
 ```
 
+### Csak egy képarányra érvényes részek
+
+Ha egy részlet csak az egyik képarányban kell, tedd `%[` … `%]` közé, és írd a
+nyitó jel után, melyik arányról van szó. A megadott arányban a blokk élő
+forrássá válik, minden más arányban megjegyzés marad.
+
+| Jel | Mikor él a blokk? |
+|---|---|
+| `%[169 … %]` | csak 16:9 vetítésben |
+| `%[43 … %]` | csak 4:3 vetítésben |
+| `%[11 … %]` | csak 1:1 vetítésben |
+
+```abc
+X:1
+T:Feltételes rész
+M:4/4
+L:1/4
+K:F
+F G A B | c2 A2 | G4 |]
+w: Min-den a-rány-ban ez lát-szik
+%[169 c d e f | g2 e2 | f4 |] %]
+```
+
+Papíron és a többi arányban csak az első sor jelenik meg; 16:9-ben a második is.
+
+**Egy blokk egy sorban álljon.** A `%` csak a nyitó sort teszi megjegyzéssé, így
+egy több soros blokk további sorai a többi képarányban is élő forrásként
+viselkednének. Ha több sorra van szükség, írj több egysoros blokkot egymás alá.
+
+Papír és igazodó módban egyik blokk sem él, és a `%pagebreak` sorok is
+figyelmen kívül maradnak.
+
+
 ## 14. Gyakori hibák
 
 | Hiba | Mi történik? | Javítás |

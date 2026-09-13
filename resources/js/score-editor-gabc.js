@@ -7,6 +7,7 @@ import {
     gabcStaffSizeForStaffHeight,
     mmToPx,
 } from './booklet-geometry.js';
+import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide, parseSvg } from './slide-frame.js';
 
 /**
  * The page a GABC score is laid out on, in the user units exsurge counts in —
@@ -87,6 +88,29 @@ export function renderGabcToSvgMarkup(source, settings, layoutWidth) {
     });
 }
 
+/**
+ * One page of a GABC chant engraved onto one projector slide.
+ *
+ * exsurge is laid out at the canvas width and comes back however tall the chant
+ * happened to be; the viewBox is then restated as the canvas, so a chant that
+ * ran past the bottom is clipped rather than shrunk, and `overflows` says so.
+ */
+export async function renderGabcSlide(pageSource, settings, canvas) {
+    const svg = parseSvg(await renderGabcToSvgMarkup(pageSource, settings, canvas.width));
+
+    if (svg === null) {
+        return { svg: emptySlide(canvas), overflows: false };
+    }
+
+    const contentHeight = parseFloat(svg.getAttribute('height')) || 0;
+    svg.removeAttribute('height');
+
+    return {
+        svg: frameSlide(svg, canvas),
+        overflows: contentHeight > canvas.height + SLIDE_FIT_TOLERANCE,
+    };
+}
+
 function round(value, places) {
     const factor = 10 ** places;
 
@@ -157,8 +181,6 @@ export function gabcMixin() {
                 const pageEl = document.createElement('div');
                 if (isFixed) {
                     this.applyProjectorFrame(pageEl, ratio);
-                    pageEl.className = 'score-preview-page overflow-auto bg-white';
-                    pageEl.style.width = '100%';
                     pageEl.style.maxWidth = '100%';
                     pageEl.style.minWidth = '0';
                 } else if (isResponsive) {
@@ -174,44 +196,38 @@ export function gabcMixin() {
             });
             pages.forEach((pageSource, idx) => {
                 const pageEl = pageEls[idx];
-                renderGabcToSvgMarkup(pageSource, this, layoutWidth).then((markup) => {
-                    let html = markup;
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'image/svg+xml');
-                    const svg = doc.querySelector('svg');
-                    let contentH = 0;
-                    if (svg) {
-                        const h = svg.getAttribute('height');
-                        contentH = h ? parseFloat(h) : 0;
-                        const viewBoxHeight = isFixed ? canvas.height : contentH;
-                        svg.setAttribute('viewBox', '0 0 ' + layoutWidth + ' ' + viewBoxHeight);
+                const engraved = isFixed
+                    // The slide is engraved by renderGabcSlide above, which is
+                    // the one copy of that code a projection also draws.
+                    ? renderGabcSlide(pageSource, this, canvas)
+                    : renderGabcToSvgMarkup(pageSource, this, layoutWidth).then((markup) => {
+                        const svg = parseSvg(markup);
+                        if (svg === null) { return { svg: null, overflows: false }; }
+                        const contentHeight = parseFloat(svg.getAttribute('height')) || 0;
+                        svg.setAttribute('viewBox', '0 0 ' + layoutWidth + ' ' + contentHeight);
                         svg.setAttribute('width', '100%');
                         svg.removeAttribute('height');
                         svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
                         svg.style.display = 'block';
                         svg.style.overflow = 'hidden';
+                        svg.style.width = '100%';
+                        svg.style.maxWidth = 'none';
+                        return { svg, overflows: false };
+                    });
+
+                engraved.then(({ svg, overflows }) => {
+                    if (svg !== null) {
                         if (isFixed) {
-                            svg.style.width = '100%';
-                            svg.style.height = '100%';
-                            svg.style.maxWidth = 'none';
+                            pageEl.replaceChildren(svg);
                         } else {
-                            svg.style.width = '100%';
-                            svg.style.maxWidth = 'none';
-                        }
-                        html = new XMLSerializer().serializeToString(svg);
-                    }
-                    pageEl.innerHTML = html;
-                    if (!isFixed) {
-                        const svgEl = pageEl.querySelector('svg');
-                        if (svgEl) {
                             const zoomFrame = document.createElement('div');
                             zoomFrame.style.width = renderWidth + 'px';
                             zoomFrame.style.maxWidth = 'none';
                             pageEl.replaceChildren(zoomFrame);
-                            zoomFrame.appendChild(svgEl);
+                            zoomFrame.appendChild(svg);
                         }
                     }
-                    if (isFixed && canvas.height && contentH > canvas.height + 2) {
+                    if (overflows) {
                         this.appendClipWarning(pageEl);
                     }
                     this.hasPages = true;

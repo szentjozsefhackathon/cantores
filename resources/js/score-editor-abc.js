@@ -1,4 +1,6 @@
 import { ensureFontsLoaded } from './svg-fonts.js';
+import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
+import { stackSvgs } from './svg-stack.js';
 import { diatarToAbc } from './diatar-to-abc.js';
 import {
     DEFAULT_LYRIC_SIZE_PT,
@@ -266,6 +268,49 @@ export function abcStrokeWidths(settings) {
     };
 }
 
+/** Stems and staff lines thick enough to survive a beamer, as a stylesheet. */
+export function abcStackStyle(settings) {
+    const { stem, staffLine } = abcStrokeWidths(settings);
+
+    return `.sW{stroke-width:${stem}!important}.slW{stroke-width:${staffLine}!important}\n`;
+}
+
+let abcSlideSerial = 0;
+
+/**
+ * One page of an ABC score engraved onto one projector slide.
+ *
+ * abc2svg emits a document per music line, so a slide is the lines stacked and
+ * then told they are a canvas. The viewBox is overwritten rather than grown:
+ * the slide is the size it is, and music taller than it is clipped rather than
+ * shrunk — a decision that belongs to the author, who answers it with a smaller
+ * size or another `%pagebreak`, and is told about it by `overflows`.
+ *
+ * @param {string} pageSource one page, preamble excluded
+ * @param {object} settings the resolved per-ratio settings bucket
+ * @param {{width: number, height: number}} canvas
+ */
+export function renderAbcSlide(pageSource, settings, canvas) {
+    const markup = renderAbcToSvgMarkup(buildAbcPreamble(settings, canvas.width) + pageSource);
+    const host = document.createElement('div');
+    host.innerHTML = markup;
+
+    const fragments = Array.from(host.querySelectorAll('svg'));
+    fragments.forEach((fragment) => ensureAbcSvgViewBox(fragment, canvas.width));
+
+    if (fragments.length === 0) {
+        return { svg: emptySlide(canvas), overflows: false };
+    }
+
+    const { svg, height } = stackSvgs(fragments, { extraStyle: abcStackStyle(settings) });
+
+    // Scoped by id as well as stacked: an inline <style> is document-global, and
+    // a projection puts many slides in one document.
+    applyAbcSvgStyle(svg, `abc-slide-${++abcSlideSerial}`, settings);
+
+    return { svg: frameSlide(svg, canvas), overflows: height > canvas.height + SLIDE_FIT_TOLERANCE };
+}
+
 /** Ink colour and the stroke widths of stems and staff lines, scoped by id. */
 export function applyAbcSvgStyle(svg, svgId, settings) {
     svg.id = svgId;
@@ -411,25 +456,19 @@ export function abcMixin() {
                 }
                 container.appendChild(pageEl);
                 try {
-                    pageEl.innerHTML = renderAbcToSvgMarkup(preamble + pageContent);
-                    const svgs = Array.from(pageEl.querySelectorAll('svg'));
-                    svgs.forEach((svg) => ensureAbcSvgViewBox(svg, pageWidth));
-                    if (isFixed && svgs.length > 0) {
-                        const { svg: merged, totalHeight } = this.mergeAbcSvgsToElement(svgs);
-                        applyAbcSvgStyle(merged, `abc-svg-${idx}-${Date.now()}`, this);
-                        merged.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
-                        merged.setAttribute('width', '100%');
-                        merged.setAttribute('preserveAspectRatio', 'xMidYMin meet');
-                        merged.style.display = 'block';
-                        merged.style.width = '100%';
-                        merged.style.height = '100%';
-                        pageEl.innerHTML = '';
-                        pageEl.appendChild(merged);
-                        if (totalHeight > canvas.height + 2) {
+                    if (isFixed) {
+                        // The slide itself is engraved by projection-render.js,
+                        // which is the one copy of this a projection also draws.
+                        const { svg, overflows } = renderAbcSlide(pageContent, this, canvas);
+                        pageEl.replaceChildren(svg);
+                        if (overflows) {
                             this.appendClipWarning(pageEl);
                         }
                         this.hasPages = true;
                     } else {
+                        pageEl.innerHTML = renderAbcToSvgMarkup(preamble + pageContent);
+                        const svgs = Array.from(pageEl.querySelectorAll('svg'));
+                        svgs.forEach((svg) => ensureAbcSvgViewBox(svg, pageWidth));
                         svgs.forEach((svg, svgIdx) => {
                             applyAbcSvgStyle(svg, `abc-svg-${idx}-${svgIdx}-${Date.now()}`, this);
                             svg.setAttribute('width', '100%');

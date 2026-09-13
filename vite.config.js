@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => {
                     'resources/js/score-editor.js',
                     'resources/js/booklet-editor.js',
                     'resources/js/booklet-reader.js',
+                    'resources/js/projection-editor.js',
+                    'resources/js/projection-presenter.js',
                     'resources/js/aretino-mini-editor.js',
                     'resources/js/abc-mini-editor.js',
                 ],

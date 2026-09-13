@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasLoans;
+use App\Contracts\PlanDocument;
 use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
 use App\Support\BookletStyles;
@@ -56,7 +57,7 @@ use Illuminate\Support\Facades\Auth;
  *
  * @mixin \Eloquent
  */
-class Booklet extends Model
+class Booklet extends Model implements PlanDocument
 {
     /** @use HasFactory<\Database\Factories\BookletFactory> */
     use HasFactory, HasLoans;

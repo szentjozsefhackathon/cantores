@@ -384,6 +384,61 @@ select:focus[data-flux-control] {
     pointer-events: none;
 }
 
+/* Projection editor — the same split the booklet editor uses, and the same
+   reason for it: the plan on one side, a slow layout on the other, with the
+   share of the row the plan keeps set by the handle between them. */
+@media (min-width: 64rem) {
+    .projection-split { grid-template-columns: minmax(0, var(--projection-split, 60%)) auto minmax(0, 1fr); }
+}
+
+/* Projection plan — the counters exist for the reason the booklet's do: a row
+   answers for itself, and a row that has been moved is not told about it, so
+   where it stands in the list is said here rather than by the server. */
+.projection-plan { counter-reset: projection-entry; }
+.projection-plan li[data-entry] { counter-increment: projection-entry; }
+.projection-plan [data-entry-number]::before { content: counter(projection-entry) "."; }
+.projection-plan li[data-entry]:first-child [data-entry-move="up"],
+.projection-plan li[data-entry]:last-child [data-entry-move="down"] {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Projection preview — the slides as a contact sheet, each one in a box the
+   shape of the screen it will be thrown onto. Numbered beneath rather than
+   over, because the whole point of the box is that nothing covers the picture:
+   what is seen here is what the room will see. */
+.projection-slides { display: flex; flex-direction: column; align-items: stretch; gap: 1rem; }
+
+.projection-slide { margin: 0; }
+
+.projection-slide-box {
+    width: 100%;
+    overflow: hidden;
+    background: #ffffff;
+    border: 6px solid #374151;
+    border-radius: 4px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    transition: border-color 150ms ease;
+}
+
+.projection-slide-box > svg { display: block; width: 100%; height: 100%; }
+
+.projection-slide-number {
+    margin-top: 0.25rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: rgb(113 113 122);
+}
+
+/* A slide fuller than the screen. The engines do not shrink to fit — that is the
+   author's decision, made with a smaller size or another %pagebreak — so what is
+   shown here is what will be cut off in the room. */
+.projection-slide-overflows { color: rgb(185 28 28); font-weight: 500; }
+.projection-slide-overflows::after { content: " ⚠"; }
+
+/* The row the pointer is over, answered in the slides beside it. */
+.projection-slide-hovered .projection-slide-box { border-color: rgb(59 130 246); }
+
 /* Booklet preview — sheets of paper stacked down the pane */
 /* The shared booklet, taken full screen.
 
@@ -528,6 +583,13 @@ aretino-editor.split-screen::part(toolbar) {
 }
 
 .booklet-entry-hovered > [data-entry-card] {
+    outline: 2px solid var(--color-blue-500);
+    outline-offset: -1px;
+}
+
+/* The same, for a projection's rows: pointing at a row rings it, and rings the
+   slides it came to in the pane beside it. */
+.projection-entry-hovered > [data-entry-card] {
     outline: 2px solid var(--color-blue-500);
     outline-offset: -1px;
 }

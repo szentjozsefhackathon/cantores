@@ -5,6 +5,7 @@ import { markupRuns, runsText } from './chordpro-markup.js';
 import { chordStringsOf, displayChord, displayChordsInHtml, displayChordsInText } from './chordpro-notation.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
+import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
 
 let chordSheetJsPromise = null;
 function loadChordSheetJS() {
@@ -310,15 +311,15 @@ export function chordproPageLayout(rows, metrics) {
  * Returns null when there is nothing sung to draw.
  *
  * @param {string} content raw ChordPro
- * @param {{german: boolean, transpose: number|string, fontFamily: string, fontSize: number, columns?: number|string}} options
+ * @param {{german: boolean, transpose: number|string, fontFamily: string, fontSize: number, columns?: number|string, pageWidth?: number}} options
  * @returns {Promise<SVGElement|null>}
  */
-export async function renderChordproPageSvg(content, { german, transpose, fontFamily, fontSize, columns = 1 }) {
+export async function renderChordproPageSvg(content, { german, transpose, fontFamily, fontSize, columns = 1, pageWidth = CHORDPRO_PAGE_WIDTH_PX }) {
     if (!content || !content.trim()) { return null; }
 
     const song = await parseChordproSong(content, { german, transpose, sanitize: false });
     const family = safeFontFamily(fontFamily);
-    const metrics = chordproPageMetrics({ columns, fontSize });
+    const metrics = chordproPageMetrics({ columns, fontSize, pageWidth });
 
     // Every column is placed at a measured width, and a face the browser has
     // not loaded yet measures as whatever it falls back to: the words would be
@@ -364,6 +365,57 @@ function round(value, places) {
     return Math.round(value * factor) / factor;
 }
 
+/**
+ * The face a chord sheet is projected in, and how large.
+ *
+ * A screen is not a music stand. Merriweather was chosen for a sheet propped in
+ * front of one reader; a congregation reads a condensed sans from across a nave,
+ * which is the same choice ABC and Aretino already make for their own slides.
+ *
+ * The sizes are ABC's, ratio for ratio — 70, 58.5 and 52 points — put through
+ * the optical correction the face needs, so a chord sheet projected after a hymn
+ * comes out the same height of letter rather than the same nominal size. One
+ * column always: a second column on a projector is a second thing to find.
+ */
+export const CHORDPRO_RATIO_DEFAULTS = Object.fromEntries(
+    [['16/9', 70], ['4/3', 58.5], ['1/1', 52]].map(([ratio, pt]) => [ratio, {
+        chordproFontFamily: "'Barlow Condensed'",
+        chordproFontSize: round(ptToPx(opticalLyricSizePt(pt, 'Barlow Condensed')), 4),
+        chordproColumns: 1,
+        chordproZoom: 100,
+    }]),
+);
+
+/**
+ * One page of a chord sheet engraved onto one projector slide.
+ *
+ * A chord sheet has no projector canvas of its own — nothing engraves one to a
+ * screen but this — so it is laid out at the slide's own width and framed like
+ * the engraved formats: words taller than the slide are cut off rather than
+ * shrunk, and `overflows` says so.
+ */
+export async function renderChordproSlide(pageSource, settings, canvas) {
+    const svg = await renderChordproPageSvg(pageSource, {
+        german: settings.chordproGermanNotation,
+        transpose: settings.chordproTranspose,
+        fontFamily: settings.chordproFontFamily,
+        fontSize: Number(settings.chordproFontSize),
+        columns: settings.chordproColumns,
+        pageWidth: canvas.width,
+    });
+
+    if (svg === null) {
+        return { svg: emptySlide(canvas), overflows: false };
+    }
+
+    const contentHeight = Number(svg.getAttribute('height')) || 0;
+
+    return {
+        svg: frameSlide(svg, canvas),
+        overflows: contentHeight > canvas.height + SLIDE_FIT_TOLERANCE,
+    };
+}
+
 export function chordproMixin() {
     return {
         /**
@@ -387,6 +439,7 @@ export function chordproMixin() {
          * the score views or a booklet page.
          */
         chordproZoom: 120,
+        chordproPageRatio: 'paper',
         chordproFields: ['chordproFontSize', 'chordproFontFamily', 'chordproColumns', 'chordproTranspose', 'chordproGermanNotation', 'chordproZoom'],
 
         parseChordpro(content) {
@@ -408,6 +461,12 @@ export function chordproMixin() {
             this.hasPages = false;
             const content = this.localContent;
             if (!content || !content.trim()) { return; }
+
+            if (this.isFixedRatio(this.chordproPageRatio)) {
+                await this.renderChordproSlides(container, content);
+                return;
+            }
+
             try {
                 const ChordSheetJS = await loadChordSheetJS();
                 const song = balanceMarkup(await this.parseChordpro(content));
@@ -429,6 +488,40 @@ export function chordproMixin() {
                 this.hasPages = true;
             } catch (e) {
                 console.error('[score-editor] chordsheetjs error:', e);
+            }
+        },
+
+        /**
+         * The sheet as it will be projected: one framed slide per page break.
+         *
+         * A chord sheet is drawn as HTML on paper — it is words in a box, not an
+         * engraving — but a slide has to be an SVG like every other slide, since
+         * what a projection does with it is place it on a screen of a stated
+         * shape. So the projector ratios go through the same page engraver the
+         * export and the booklet already use.
+         */
+        async renderChordproSlides(container, content) {
+            const ratio = this.chordproPageRatio;
+            const canvas = this.getVirtualCanvasSize('chordpro');
+            const pages = this.splitPages(content, 'chordpro', ratio);
+
+            for (const [idx, pageSource] of pages.entries()) {
+                const pageEl = document.createElement('div');
+                this.applyProjectorFrame(pageEl, ratio);
+                container.appendChild(pageEl);
+
+                try {
+                    const { svg, overflows } = await renderChordproSlide(pageSource, this, canvas);
+                    pageEl.replaceChildren(svg);
+                    if (overflows) {
+                        this.appendClipWarning(pageEl);
+                    }
+                    this.hasPages = true;
+                } catch (e) {
+                    console.error('[score-editor] chordpro slide error:', e);
+                }
+
+                this.addPageControls(pageEl, idx + 1, pages.length, 'chordpro', { fullscreen: true, ratio });
             }
         },
 

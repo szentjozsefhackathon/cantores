@@ -123,6 +123,7 @@ new class extends Component
                     @endif
                     @if($isOwner && $showBookletActions)
                     <x-music-plan-booklet-actions :plan="$musicPlan" compact />
+                    <x-music-plan-projection-actions :plan="$musicPlan" compact />
                     @endif
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
-import { applyConditionalBlocks } from './score-editor-pages.js';
+import { splitPages as splitRatioPages } from './score-editor-pages.js';
+import { slideCanvas } from './slide-frame.js';
 import { abcMixin, applyAbcSvgStyle, abcStrokeWidths, buildAbcPreamble, ensureAbcFontsLoaded, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
 import { gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin, renderChordproIncipitSvg } from './score-editor-chordpro.js';
@@ -433,6 +434,7 @@ onAlpineInit(() => {
             this.$watch('abcZoom', () => this.scheduleRender());
             this.$watch('abcTranspose', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val, old) => { this.captureCurrentSettings('abc', old); this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
+            this.$watch('chordproPageRatio', (val, old) => { this.captureCurrentSettings('chordpro', old); this.applyRatioSettings('chordpro', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('chordproFontSize', () => this.scheduleRender());
             this.$watch('chordproZoom', () => this.scheduleRender());
             this.$watch('chordproFontFamily', () => this.scheduleRender());
@@ -576,7 +578,7 @@ onAlpineInit(() => {
                         chordproGermanNotation: !!this.chordproGermanNotation,
                         chordproZoom: Number(this.chordproZoom),
                     },
-                    ratio: 'auto',
+                    ratio: this.effectiveRatioKey(this.chordproPageRatio),
                 };
             }
             if (this.$wire.format === 'aretino') {
@@ -596,9 +598,15 @@ onAlpineInit(() => {
             return { settings: {}, ratio: 'auto' };
         },
 
+        // Every format answers for its own ratio. ChordPro and an uploaded file
+        // have no ratio select of their own, and must say so rather than fall
+        // through to GABC's — which is what they used to do, quietly laying a
+        // chord sheet out on whatever canvas the chant beside it was set to.
         ratioForFormat(format) {
             if (format === 'abc') { return this.abcPageRatio; }
             if (format === 'aretino') { return this.aretinoPageRatio; }
+            if (format === 'chordpro') { return this.chordproPageRatio; }
+            if (format === 'file') { return 'paper'; }
             return this.pageRatio;
         },
 
@@ -614,31 +622,18 @@ onAlpineInit(() => {
             return ratio === 'paper' || ratio === 'auto';
         },
 
+        // The three projector canvases live in slide-frame.js, because a
+        // projection engraves onto exactly the same ones and the two must not
+        // drift. Everything below is the paper and responsive answer, which is
+        // the editor's own business and belongs nowhere else.
         getVirtualCanvasSize(format) {
-            const ratio = this.ratioForFormat(format);
-            if (format === 'aretino') {
-                // Projector screens: constant height, width varies by ratio.
-                const screens = {
-                    '16/9': { width: 960, height: 540 },
-                    '4/3': { width: 720, height: 540 },
-                    '1/1': { width: 540, height: 540 },
-                };
-                return screens[ratio] ?? { width: 1920, height: null };
-            } else if (format === 'abc') {
-                const screens = {
-                    '16/9': { width: 1920, height: 1080 },
-                    '4/3': { width: 1440, height: 1080 },
-                    '1/1': { width: 1080, height: 1080 },
-                };
-                return screens[ratio] ?? { width: SCORE_PAGE_WIDTH_PX, height: null };
-
+            const canvas = slideCanvas(format, this.ratioForFormat(format));
+            if (canvas) {
+                return canvas;
             }
 
-            // GABC: the projector ratios keep a constant width and vary the
-            // height; on paper the page is the width the score asks for.
-            const heights = { '16/9': 1080, '4/3': 1440, '1/1': 1920 };
-            if (heights[ratio]) {
-                return { width: 1920, height: heights[ratio] };
+            if (format === 'aretino') {
+                return { width: 1920, height: null };
             }
 
             if (format === 'gabc') {
@@ -669,7 +664,7 @@ onAlpineInit(() => {
 
         captureCurrentSettings(format, ratio) {
             const effectiveRatio = this.effectiveRatioKey(ratio);
-            const ratioFields = new Set(['pageRatio', 'abcPageRatio', 'aretinoPageRatio']);
+            const ratioFields = new Set(['pageRatio', 'abcPageRatio', 'aretinoPageRatio', 'chordproPageRatio']);
             const { fields } = this.getFormatDefaults(format);
             const snap = {};
             fields.forEach(f => { if (!ratioFields.has(f) && f in this) { snap[f] = this[f]; } });
@@ -694,7 +689,7 @@ onAlpineInit(() => {
             const effectiveRatio = this.effectiveRatioKey(ratio);
             const score = this.readRatioBucket(this.scoreSettings, format, effectiveRatio);
             const temp = this.readRatioBucket(this.tempSettings, format, effectiveRatio);
-            const ratioFields = new Set(['pageRatio', 'abcPageRatio', 'aretinoPageRatio']);
+            const ratioFields = new Set(['pageRatio', 'abcPageRatio', 'aretinoPageRatio', 'chordproPageRatio']);
             const { fields, defaults } = this.getFormatDefaults(format, effectiveRatio);
             const merged = {};
             fields.forEach(f => { if (f in defaults && !ratioFields.has(f)) { merged[f] = defaults[f]; } });
@@ -706,7 +701,7 @@ onAlpineInit(() => {
         applyInitialSettings() {
             this.applyRatioSettings('gabc', this.pageRatio);
             this.applyRatioSettings('abc', this.abcPageRatio);
-            this.applyRatioSettings('chordpro', 'auto');
+            this.applyRatioSettings('chordpro', this.chordproPageRatio);
             this.applyRatioSettings('aretino', this.aretinoPageRatio);
         },
 
@@ -1130,44 +1125,7 @@ onAlpineInit(() => {
         },
 
         splitPages(content, format, ratio) {
-            const ratioSuffix = { '16/9': '169', '4/3': '43', '1/1': '11' };
-            const targetSuffix = ratioSuffix[ratio];
-            content = applyConditionalBlocks(content, ratio);
-            const isAuto = !targetSuffix;
-            const lines = content.split('\n');
-            let headerEnd = -1;
-            if (format === 'gabc' || format === 'aretino') {
-                for (let i = 0; i < lines.length; i++) {
-                    if (/^%%\s*$/.test(lines[i])) { headerEnd = i; break; }
-                }
-            } else {
-                for (let i = 0; i < lines.length; i++) {
-                    if (/^K:/.test(lines[i])) { headerEnd = i; break; }
-                }
-            }
-            const header = headerEnd >= 0 ? lines.slice(0, headerEnd + 1).join('\n') + '\n' : '';
-            const bodyLines = headerEnd >= 0 ? lines.slice(headerEnd + 1) : lines.slice();
-            const breakRe = /^\s*%pagebreak(\d*)\s*$/;
-            if (isAuto) {
-                const stripped = bodyLines.filter(l => !breakRe.test(l)).join('\n');
-                return [header + stripped];
-            }
-            const pages = [];
-            let current = [];
-            for (const line of bodyLines) {
-                const m = line.match(breakRe);
-                if (m) {
-                    const suffix = m[1];
-                    if (suffix === '' || suffix === targetSuffix) {
-                        pages.push(current.join('\n'));
-                        current = [];
-                    }
-                    continue;
-                }
-                current.push(line);
-            }
-            pages.push(current.join('\n'));
-            return pages.map(p => header + p);
+            return splitRatioPages(content, format, ratio);
         },
 
         appendClipWarning(pageEl) {

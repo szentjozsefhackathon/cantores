@@ -259,6 +259,7 @@
                         </flux:button>
                     </form>
                     <x-music-plan-booklet-actions :plan="$musicPlan" />
+                    <x-music-plan-projection-actions :plan="$musicPlan" />
                     <flux:button
                         variant="danger"
                         icon="trash"

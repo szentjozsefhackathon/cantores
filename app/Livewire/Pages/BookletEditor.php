@@ -11,9 +11,9 @@ use App\Models\BookletScore;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
-use App\Services\BookletOutline;
 use App\Services\BookletRenderPayload;
 use App\Services\MusicPlanScoreListService;
+use App\Services\PlanOutline;
 use App\Support\BookletSettingFields;
 use App\Support\BookletStyles;
 use App\Support\ImpositionLayout;
@@ -39,7 +39,7 @@ use Livewire\Component;
  * scores themselves, because that is where the four renderers live and because
  * nothing about a booklet is worth storing as a picture.
  *
- * The choosing is done on the plan itself rather than beside it: BookletOutline
+ * The choosing is done on the plan itself rather than beside it: PlanOutline
  * puts the two together, and the order it reads out of the plan is the order the
  * pages are printed in. So a booklet's shape is the service's shape — a slot may
  * be moved against the plan, a music only inside its slot, a score only inside
@@ -254,7 +254,7 @@ class BookletEditor extends Component
     #[Computed]
     public function outline(): array
     {
-        return app(BookletOutline::class)->for(
+        return app(PlanOutline::class)->for(
             $this->booklet,
             $this->entries,
             $this->chosenScoreIds,
@@ -589,7 +589,7 @@ class BookletEditor extends Component
         $assignment = $this->assignmentInPlan($assignmentId);
 
         $order = $this->outlineIds();
-        $at = app(BookletOutline::class)->appendIndex(
+        $at = app(PlanOutline::class)->appendIndex(
             $this->outline,
             $assignment?->music_plan_slot_plan_id,
             $assignment?->id,
@@ -630,7 +630,7 @@ class BookletEditor extends Component
         $slotPlanId = $assignment?->music_plan_slot_plan_id ?? $this->slotInPlan($slotPlanId);
 
         $order = $this->outlineIds();
-        $at = app(BookletOutline::class)->insertIndex(
+        $at = app(PlanOutline::class)->insertIndex(
             $this->outline,
             $slotPlanId,
             $assignment?->id,
@@ -795,7 +795,7 @@ class BookletEditor extends Component
     {
         $this->authorize('update', $this->booklet);
 
-        $outline = app(BookletOutline::class);
+        $outline = app(PlanOutline::class);
         $moved = $outline->moved($this->outline, $kind, $id, $direction);
 
         if ($moved === null) {
@@ -815,7 +815,7 @@ class BookletEditor extends Component
      */
     private function outlineIds(): array
     {
-        return app(BookletOutline::class)->flatten($this->outline);
+        return app(PlanOutline::class)->flatten($this->outline);
     }
 
     /**

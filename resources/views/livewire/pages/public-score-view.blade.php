@@ -223,6 +223,18 @@ resources/js/score-editor.js
 
                         {{-- ChordPro Settings Toolbar --}}
                         <div x-show="$wire.format === 'chordpro'" x-cloak class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
+                            <div class="flex items-center gap-1">
+                                <flux:tooltip :content="__('Page ratio')">
+                                    <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                </flux:tooltip>
+                                <flux:select size="sm" x-model="chordproPageRatio" class="w-28 text-xs">
+                                    <flux:select.option value="paper">{{ __('Paper') }}</flux:select.option>
+                                    <flux:select.option value="16/9">16:9</flux:select.option>
+                                    <flux:select.option value="4/3">4:3</flux:select.option>
+                                    <flux:select.option value="1/1">1:1</flux:select.option>
+                                </flux:select>
+                            </div>
+
                             <flux:tooltip :content="__('Font size (pt)')">
                                 <div class="flex items-center gap-1">
                                     <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />

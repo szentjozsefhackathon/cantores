@@ -1085,6 +1085,26 @@ Ha az oldalarányt `16:9`, `4:3` vagy `1:1` értékre állítod, a forrásban `%
 
 `auto` módban az összes `%pagebreak` sor figyelmen kívül marad — a kotta egyetlen egységként jelenik meg.
 
+### Csak egy képarányra érvényes részek
+
+Ha egy részlet csak az egyik arányban kell — más hangjegyosztás a széles
+vásznon, rövidebb szöveg a négyzetes képernyőn —, tedd `%[` … `%]` közé, és a
+nyitó jel után írd oda, melyik arányról van szó:
+
+| Jel | Mikor él a blokk? |
+|---|---|
+| `%[169 … %]` | csak 16:9 arányban |
+| `%[43 … %]` | csak 4:3 arányban |
+| `%[11 … %]` | csak 1:1 arányban |
+
+Minden más arányban a blokk megjegyzés marad, tehát nem jelenik meg. A jelölés a
+forrás hosszát nem változtatja meg, így a szerkesztő továbbra is helyesen találja
+meg a kottára kattintva a hozzá tartozó forrássort.
+
+**Egy blokk egy sorban álljon.** A `%` csak a nyitó sort teszi megjegyzéssé, így
+egy több soros blokk további sorai a többi arányban is élő forrásként
+viselkednének. Ha több sorra van szükség, írj több egysoros blokkot egymás alá.
+
 ### Export
 
 A kotta SVG és PNG formátumban exportálható és képként másolható is. Így szöveg- és kiadványszerkesztőben akár professzionális nyomtatással is előállítható.

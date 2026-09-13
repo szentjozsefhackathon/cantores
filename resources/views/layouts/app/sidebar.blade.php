@@ -107,6 +107,9 @@
                 <flux:sidebar.item icon="book-open" :href="route('booklets')" :current="request()->routeIs('booklets', 'booklets.*')" wire:navigate>
                     {{ __('My Booklets') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="presentation" :href="route('projections')" :current="request()->routeIs('projections', 'projections.*')" wire:navigate>
+                    {{ __('My Projections') }}
+                </flux:sidebar.item>
             </flux:sidebar.group>
             @if(auth()->check() && auth()->user()->isEditor)
             <flux:sidebar.group heading="Szerkesztő">

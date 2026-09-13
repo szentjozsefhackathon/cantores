@@ -297,6 +297,7 @@ new class extends Component
                         </flux:button>
                     </form>
                     <x-music-plan-booklet-actions :plan="$musicPlan" />
+                    <x-music-plan-projection-actions :plan="$musicPlan" />
                 </div>
             </div>
         </flux:card>

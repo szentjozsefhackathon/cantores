@@ -1,6 +1,6 @@
 import { ABC_RATIO_DEFAULTS, abcMixin } from './score-editor-abc.js';
 import { ARETINO_RATIO_DEFAULTS, aretinoMixin } from './score-editor-aretino.js';
-import { chordproMixin } from './score-editor-chordpro.js';
+import { CHORDPRO_RATIO_DEFAULTS, chordproMixin } from './score-editor-chordpro.js';
 import { GABC_SCREEN_DEFAULTS, gabcMixin } from './score-editor-gabc.js';
 
 /**
@@ -9,7 +9,7 @@ import { GABC_SCREEN_DEFAULTS, gabcMixin } from './score-editor-gabc.js';
  * A mixin is the single place a format states what it looks like untouched, so
  * the defaults are read back out of a fresh one rather than restated here.
  */
-const RATIO_FIELDS = { gabc: 'pageRatio', abc: 'abcPageRatio', aretino: 'aretinoPageRatio' };
+const RATIO_FIELDS = { gabc: 'pageRatio', abc: 'abcPageRatio', aretino: 'aretinoPageRatio', chordpro: 'chordproPageRatio' };
 
 export function formatDefaults(format, ratio = 'paper') {
     const factories = { gabc: gabcMixin, abc: abcMixin, chordpro: chordproMixin, aretino: aretinoMixin };
@@ -22,6 +22,7 @@ export function formatDefaults(format, ratio = 'paper') {
             abc: ABC_RATIO_DEFAULTS[ratio],
             aretino: ARETINO_RATIO_DEFAULTS[ratio],
             gabc: GABC_SCREEN_DEFAULTS,
+            chordpro: CHORDPRO_RATIO_DEFAULTS[ratio],
         };
         Object.assign(defaults, screenDefaults[format]);
     }

@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Booklet;
-use App\Models\BookletScore;
+use App\Contracts\PlanDocument;
+use App\Contracts\PlanEntry;
 use App\Models\MusicPlan;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * The booklet seen as the plan it was made from.
+ * A document seen as the plan it was made from.
  *
  * A booklet is a flat list of rows in one order — that is what is printed, and
  * that is all the renderer is ever told. But it is chosen from a service, and a
@@ -20,16 +20,22 @@ use Illuminate\Support\Facades\Auth;
  *
  * The tree is derived on every render and stored nowhere. A slot stands where its
  * first row stands, so a slot can be pulled out of liturgical order for the
- * booklet without the plan hearing about it; a slot holding nothing keeps the
+ * document without the plan hearing about it; a slot holding nothing keeps the
  * place the plan gives it, since it has nothing to be moved. Everything the
- * booklet holds comes before everything it merely could hold, so what is read
- * downwards is the booklet, and the rest of the plan waits underneath it.
+ * document holds comes before everything it merely could hold, so what is read
+ * downwards is the document, and the rest of the plan waits underneath it.
  *
- * The order the tree is walked in *is* the printed order: flatten() is what the
- * booklet's sequences are then written from, which is what keeps the two from
- * ever drifting apart.
+ * The order the tree is walked in *is* the order it is read: flatten() is what
+ * the document's sequences are then written from, which is what keeps the two
+ * from ever drifting apart.
+ *
+ * A projection is chosen in exactly the same way as a booklet — the two are one
+ * service seen from either side of it, the handout in the singers' hands and the
+ * screen in front of the congregation — so this answers for both, through
+ * App\Contracts\PlanDocument. It knows nothing about paper or about screens:
+ * what a document does with the order it is given is the document's own business.
  */
-class BookletOutline
+class PlanOutline
 {
     public function __construct(private MusicPlanScoreListService $scores) {}
 
@@ -40,14 +46,14 @@ class BookletOutline
      * The entries are handed in rather than read again — the editor already holds
      * them, and reads them once for everything it draws.
      *
-     * @param  Collection<int, BookletScore>  $entries
+     * @param  Collection<int, PlanEntry>  $entries
      * @param  list<int>  $chosenScoreIds
      * @param  list<int>  $chosenFileIds
      * @return list<array<string, mixed>>
      */
-    public function for(Booklet $booklet, Collection $entries, array $chosenScoreIds = [], array $chosenFileIds = []): array
+    public function for(PlanDocument $document, Collection $entries, array $chosenScoreIds = [], array $chosenFileIds = []): array
     {
-        $plan = $booklet->musicPlan;
+        $plan = $document->musicPlan;
         $slots = $plan instanceof MusicPlan ? $this->planSlots($plan) : [];
 
         $byMusic = [];
@@ -352,8 +358,8 @@ class BookletOutline
      * then the music it did not.
      *
      * @param  array<string, mixed>  $slot
-     * @param  array<int, list<BookletScore>>  $byMusic
-     * @param  list<BookletScore>  $texts
+     * @param  array<int, list<PlanEntry>>  $byMusic
+     * @param  list<PlanEntry>  $texts
      * @param  list<int>  $chosenScoreIds
      * @param  list<int>  $chosenFileIds
      * @return array<string, mixed>
@@ -396,7 +402,7 @@ class BookletOutline
             // it: the plan puts the switch beside the name, but the choice is
             // the opening row's.
             'headingEntryId' => $headingEntry?->id,
-            'showsName' => ! $headingEntry instanceof BookletScore || $headingEntry->show_slot,
+            'showsName' => ! $headingEntry instanceof PlanEntry || $headingEntry->show_slot,
         ];
     }
 
@@ -404,14 +410,14 @@ class BookletOutline
      * One music: what the booklet prints of it, then what it could still print.
      *
      * @param  array<string, mixed>  $assignment
-     * @param  list<BookletScore>  $entries
+     * @param  list<PlanEntry>  $entries
      * @param  list<int>  $chosenScoreIds
      * @param  list<int>  $chosenFileIds
      * @return array<string, mixed>
      */
     private function musicNode(array $assignment, int $slotPlanId, int $planIndex, array $entries, array $chosenScoreIds, array $chosenFileIds): array
     {
-        $children = array_map(fn (BookletScore $entry): array => $this->entryNode($entry), $entries);
+        $children = array_map(fn (PlanEntry $entry): array => $this->entryNode($entry), $entries);
         $headingEntry = $entries[0] ?? null;
 
         return [
@@ -429,10 +435,10 @@ class BookletOutline
             // The row that speaks this music's own name, and whether it is: the
             // switch stands beside the name in the plan, the choice is the row's.
             'headingEntryId' => $headingEntry?->id,
-            'showsName' => ! $headingEntry instanceof BookletScore || $headingEntry->show_music_title,
+            'showsName' => ! $headingEntry instanceof PlanEntry || $headingEntry->show_music_title,
             // Where the music can be looked up is asked for rather than kept
             // off, and the answer is the opening row's, like the names above it.
-            'showsReference' => $headingEntry instanceof BookletScore && $headingEntry->show_collections,
+            'showsReference' => $headingEntry instanceof PlanEntry && $headingEntry->show_collections,
         ];
     }
 
@@ -485,7 +491,7 @@ class BookletOutline
     /**
      * @return array<string, mixed>
      */
-    private function entryNode(BookletScore $entry): array
+    private function entryNode(PlanEntry $entry): array
     {
         return ['kind' => 'entry', 'entry' => $entry, 'weight' => 1];
     }
@@ -497,7 +503,7 @@ class BookletOutline
      *
      * @param  list<array<string, mixed>>  $nodes
      */
-    private function firstEntry(array $nodes): ?BookletScore
+    private function firstEntry(array $nodes): ?PlanEntry
     {
         foreach ($nodes as $node) {
             if ($node['kind'] === 'entry') {
@@ -506,7 +512,7 @@ class BookletOutline
 
             $found = $this->firstEntry($node['children']);
 
-            if ($found instanceof BookletScore) {
+            if ($found instanceof PlanEntry) {
                 return $found;
             }
         }
