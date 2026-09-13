@@ -1,6 +1,7 @@
+import { onAlpineInit } from './alpine-init.js';
 import { renderAretino } from '@aretino-chant/core';
 
-document.addEventListener('alpine:init', () => {
+onAlpineInit(() => {
     Alpine.data('aretinoMiniEditor', (initialContent = '') => ({
         content: initialContent,
         originalContent: initialContent,

@@ -1,3 +1,4 @@
+import { onAlpineInit } from './alpine-init.js';
 import { highlightEntry } from './booklet-hover.js';
 import { pageGeometry } from './booklet-geometry.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
@@ -30,7 +31,7 @@ import { gabcMixin } from './score-editor-gabc.js';
  */
 const SAVE_DEBOUNCE_MS = 600;
 
-document.addEventListener('alpine:init', () => {
+onAlpineInit(() => {
     Alpine.data('bookletEditor', (config = {}) => {
         /**
          * The booklet's own half of the server, kept rather than asked for, and

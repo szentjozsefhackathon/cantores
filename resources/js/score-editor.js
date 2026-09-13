@@ -1,3 +1,4 @@
+import { onAlpineInit } from './alpine-init.js';
 import { applyConditionalBlocks } from './score-editor-pages.js';
 import { abcMixin, applyAbcSvgStyle, abcStrokeWidths, buildAbcPreamble, ensureAbcFontsLoaded, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
 import { gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
@@ -159,7 +160,7 @@ function applyAretinoCodeMirrorFontSize(editor) {
     editor._view?.requestMeasure?.();
 }
 
-document.addEventListener('alpine:init', () => {
+onAlpineInit(() => {
     Alpine.data('scoreEditor', (config = {}) => ({
         hasPages: false,
         localContent: '',

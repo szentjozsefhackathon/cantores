@@ -1,3 +1,4 @@
+import { onAlpineInit } from './alpine-init.js';
 import { pageGeometry } from './booklet-geometry.js';
 import { createBusyFlag, renderDelayFor } from './booklet-pacing.js';
 import {
@@ -36,7 +37,7 @@ import { gabcMixin } from './score-editor-gabc.js';
 /** How long a screen has to stop changing size before it is laid out again. */
 const RESIZE_SETTLE_MS = 250;
 
-document.addEventListener('alpine:init', () => {
+onAlpineInit(() => {
     Alpine.data('bookletReader', (config = {}) => ({
         token: config.token ?? '',
         entries: config.entries ?? [],

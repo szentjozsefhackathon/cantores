@@ -1,3 +1,4 @@
+import { onAlpineInit } from './alpine-init.js';
 import { hungarianChordsToAbc } from './score-editor-abc.js';
 import { DEFAULT_TEXT_FONT } from './booklet-geometry.js';
 
@@ -110,7 +111,7 @@ function normalizeRenderedSvgs(container) {
 }
 
 if (typeof document !== 'undefined') {
-    document.addEventListener('alpine:init', () => {
+    onAlpineInit(() => {
         Alpine.data('abcMiniEditor', (initialContent = '') => ({
             content: initialContent,
             originalContent: initialContent,

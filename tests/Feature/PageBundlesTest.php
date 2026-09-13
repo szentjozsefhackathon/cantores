@@ -93,3 +93,32 @@ it('pushes its own bundle from every view that mounts a split Alpine component',
 
     expect(array_keys($mounted))->toEqualCanonicalizing(array_keys($entries));
 });
+
+/*
+ * A split bundle asked for by a page reached with wire:navigate is loaded after
+ * Alpine has started, so `alpine:init` has already fired for the last time and a
+ * listener on it would never run: the page would raise "scoreEditor is not
+ * defined" where a full page load worked. Registering through the shared helper
+ * covers both arrivals.
+ */
+it('registers its Alpine component so that a navigate visit still gets it', function () {
+    foreach (pageBundleEntries() as $component => $entry) {
+        $source = (string) file_get_contents(base_path($entry));
+
+        expect(str_contains($source, 'onAlpineInit('))
+            ->toBeTrue("{$entry} does not register {$component} through onAlpineInit().");
+    }
+
+    $sources = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(resource_path('js'), FilesystemIterator::SKIP_DOTS)
+    );
+
+    foreach ($sources as $source) {
+        if ($source->getFilename() === 'alpine-init.js' || ! str_ends_with($source->getFilename(), '.js')) {
+            continue;
+        }
+
+        expect(str_contains((string) file_get_contents($source->getPathname()), "addEventListener('alpine:init'"))
+            ->toBeFalse("{$source->getFilename()} listens for alpine:init, which a bundle loaded on a navigate visit never sees.");
+    }
+});
