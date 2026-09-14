@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
                     'resources/js/booklet-reader.js',
                     'resources/js/projection-editor.js',
                     'resources/js/projection-presenter.js',
+                    'resources/js/projection-remote.js',
                     'resources/js/aretino-mini-editor.js',
                     'resources/js/abc-mini-editor.js',
                 ],

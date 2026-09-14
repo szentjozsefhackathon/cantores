@@ -1,5 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
+import { HEARTBEAT_MS, POLL_MS, addressAt, indexOfAddress, screenClient, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -15,6 +16,22 @@ import { isExcluded, renderDeck } from './projection-deck.js';
  * movement of the mouse. In full screen they are not there at all: that picture
  * is the one the congregation is looking at, and a projector showing a toolbar is
  * showing the wrong thing.
+ *
+ * It is also one of the two clients of a Presentation — the row on which this
+ * screen and a phone agree about where the service has got to. That obeys a
+ * second rule, which outranks everything: **the wall never loses its picture**. A
+ * keystroke is applied here first and reported afterwards, and every read and
+ * every write swallows its failure. Losing the network costs the remote and
+ * nothing else; the keyboard, and so the service, carries on.
+ *
+ * And it is a *screen* before it is any particular deck. The page can be opened
+ * on a deck, which is the laptop driven by hand, or bare, which is the parish
+ * laptop put in front of the room at the start of Mass and not touched again:
+ * then it waits, and the deck arrives when a phone puts one on. Changing deck is
+ * the one thing here that is allowed to be slow — a deck has to be engraved
+ * before it can be shown — and the screen goes black while it happens, because a
+ * room watching the last hymn linger while the next is prepared is worse than a
+ * room watching nothing for two seconds.
  */
 
 /** How long the bar stays up after the last sign of life. */
@@ -36,6 +53,23 @@ onAlpineInit(() => {
          */
         excluded: config.excluded ?? {},
 
+        /**
+         * The verses brought back for this service alone, keyed by row.
+         *
+         * Today's deviation rather than an edit: it lives on the presentation
+         * and dies with it, and the projection stays as its author arranged it.
+         */
+        reveals: {},
+
+        /**
+         * The whole deck as engraved — every slide, the walked-past ones
+         * included — and the subset the room is actually shown.
+         *
+         * Both are kept, because bringing a verse back today must not cost a
+         * re-engraving: the slide was drawn at load like every other, and
+         * revealing it is a filter run again over what is already in hand.
+         */
+        drawn: [],
         slides: [],
         index: 0,
         total: 0,
@@ -43,6 +77,35 @@ onAlpineInit(() => {
         busy: true,
         blanked: false,
         idle: false,
+
+        /**
+         * What the room is looking at, as the screen says — and whether this
+         * page is still engraving it.
+         *
+         * `preparing` is not `blanked`. Blanking is an instruction the cantor
+         * gave and only the cantor takes back; this is a condition that clears
+         * itself when the drawing is done, and the phone is told which of the two
+         * the black on the wall means.
+         */
+        presentationId: config.presentationId ?? null,
+        title: config.title ?? '',
+        preparing: false,
+
+        /**
+         * The deck this screen has actually finished engraving, and the deck the
+         * server now has. While they differ the wall is behind an edit, and the
+         * phone is told as much — which is the honest answer to "is the room
+         * seeing my correction yet".
+         */
+        drawnRevision: config.revision ?? '',
+        serverRevision: config.revision ?? '',
+
+        /**
+         * The newest state this screen has acted on. Anything not newer is
+         * ignored, because without that a read answered just before the cantor
+         * pressed space arrives just after it and sends the room back a slide.
+         */
+        appliedVersion: 0,
 
         /**
          * Whether this page is the one the beamer is throwing.
@@ -55,6 +118,11 @@ onAlpineInit(() => {
         fullscreen: false,
 
         _idleTimer: null,
+        _pollTimer: null,
+        _heartbeatTimer: null,
+        _client: null,
+        _screen: null,
+        _refreshToken: 0,
 
         /**
          * Whether the bar and the key hints are out of sight.
@@ -68,17 +136,41 @@ onAlpineInit(() => {
             return this.fullscreen || this.idle;
         },
 
+        /** Whether this screen is waiting to be pointed at a deck at all. */
+        get waiting() {
+            return this.presentationId === null;
+        },
+
+        /** Whether the room should be looking at black, and for either reason. */
+        get dark() {
+            return this.blanked || this.preparing;
+        },
+
         get aspectRatio() {
             return this.geometry.aspectRatio ?? '16/9';
         },
 
         init() {
-            this.draw();
+            this._screen = screenClient(config);
+
+            // A deck named in the URL was engraved by the server into this page,
+            // so it goes up before anything is polled. A bare screen has nothing
+            // to draw yet and simply starts listening.
+            if (this.presentationId !== null) {
+                this._client = stateClient(config);
+                this.draw().then(() => this.follow());
+            } else {
+                this.busy = false;
+                this.follow();
+            }
+
             this.wake();
         },
 
         destroy() {
             clearTimeout(this._idleTimer);
+            clearInterval(this._pollTimer);
+            clearInterval(this._heartbeatTimer);
         },
 
         /** What the browser has just done with full screen, however it was asked. */
@@ -90,12 +182,7 @@ onAlpineInit(() => {
             this.busy = true;
 
             try {
-                const drawn = await renderDeck(this.entries, this.geometry);
-
-                this.slides = drawn.filter((slide) => !isExcluded(slide, this.excluded));
-                this.total = this.slides.length;
-                this.index = Math.min(this.index, Math.max(0, this.total - 1));
-                this.show();
+                this.paint(await renderDeck(this.entries, this.geometry), this.address());
             } catch (e) {
                 console.error('[projection] could not draw the deck', e);
             } finally {
@@ -104,16 +191,58 @@ onAlpineInit(() => {
         },
 
         /**
+         * A freshly engraved deck put on the wall in place of the old one.
+         *
+         * The slide being shown is kept across the swap: an edit made during the
+         * rehearsal must not send the room back to the beginning, and an address
+         * survives a row that was reordered, shortened or deleted where an array
+         * offset would not.
+         */
+        paint(drawn, address) {
+            this.drawn = drawn;
+            this.repaint(address);
+        },
+
+        /**
+         * The same engraved deck, filtered again — what a verse brought back for
+         * today costs, which is nothing.
+         */
+        repaint(address) {
+            const shown = shownExclusions(this.excluded, this.reveals);
+
+            this.slides = this.drawn.filter((slide) => !isExcluded(slide, shown));
+            this.total = this.slides.length;
+            this.index = indexOfAddress(this.slides, this.entries, address);
+            this.show();
+        },
+
+        /**
+         * The address of the slide on the screen — a row of the deck and a place
+         * within it, never a position in the filtered array.
+         */
+        address() {
+            return addressAt(this.slides, this.index);
+        },
+
+        /**
          * A correction made in the editor, fetched without leaving the
-         * projector. The slide being shown is kept if it still exists, so
-         * refreshing mid-service does not send the room back to the beginning.
+         * projector — by hand, from the reload button.
          */
         applyUpdate(detail = {}) {
             if (detail.payload) { this.entries = detail.payload; }
             if (detail.geometry) { this.geometry = detail.geometry; }
             if (detail.excluded !== undefined) { this.excluded = detail.excluded ?? {}; }
+            if (detail.revision) { this.serverRevision = detail.revision; }
 
-            this.draw();
+            const address = this.address();
+
+            renderDeck(this.entries, this.geometry)
+                .then((drawn) => {
+                    this.paint(drawn, address);
+                    this.drawnRevision = this.serverRevision;
+                    this.report();
+                })
+                .catch((e) => console.error('[projection] could not draw the deck', e));
         },
 
         show() {
@@ -130,6 +259,7 @@ onAlpineInit(() => {
 
             this.index = Math.min(Math.max(index, 0), this.total - 1);
             this.show();
+            this.report();
         },
 
         // A blanked screen goes on being moved through behind the black: the
@@ -142,6 +272,11 @@ onAlpineInit(() => {
 
         previous() {
             this.go(this.index - 1);
+        },
+
+        toggleBlank() {
+            this.blanked = !this.blanked;
+            this.report();
         },
 
         onKey(event) {
@@ -159,8 +294,8 @@ onAlpineInit(() => {
                 Backspace: () => this.previous(),
                 Home: () => this.go(0),
                 End: () => this.go(this.total - 1),
-                b: () => { this.blanked = !this.blanked; },
-                B: () => { this.blanked = !this.blanked; },
+                b: () => this.toggleBlank(),
+                B: () => this.toggleBlank(),
                 f: () => this.toggleFullscreen(),
                 F: () => this.toggleFullscreen(),
             };
@@ -170,6 +305,202 @@ onAlpineInit(() => {
 
             event.preventDefault();
             handler();
+        },
+
+        /*
+         * ---------------------------------------------------------------
+         * The half of this page that talks to the phone.
+         * ---------------------------------------------------------------
+         */
+
+        /**
+         * Start following the screen: what is on it, and where in it the service
+         * has got to.
+         *
+         * Both come back in one read, so a wall polls once a second and not
+         * twice. Taking up whatever it says is the point — a reloaded tab
+         * mid-service must land where the service is, not at the beginning, and
+         * a screen that was pointed at a deck while it was away must find it.
+         */
+        follow() {
+            this.pull();
+
+            this._pollTimer = setInterval(() => this.pull(), POLL_MS);
+            this._heartbeatTimer = setInterval(() => this.report(), HEARTBEAT_MS);
+        },
+
+        /**
+         * One read of the screen.
+         *
+         * Three different things can have moved, answered by three different
+         * fields. `presentationId` moves when a phone puts another deck on the
+         * screen, and the wall goes black and engraves it. `version` moves when
+         * someone presses space, and the screen swaps a slide. `revision` moves
+         * when someone saves an edit, and the screen reads the same deck again.
+         */
+        async pull() {
+            const answer = await this._screen.read();
+
+            // A failed read is not an event. Nothing is drawn over the deck and
+            // nothing moves; the next poll tries again.
+            if (answer === null) { return; }
+
+            this.title = answer.title ?? '';
+
+            if ((answer.presentationId ?? null) !== this.presentationId) {
+                await this.showDeck(answer);
+
+                return;
+            }
+
+            const state = answer.state;
+
+            if (state === null || state === undefined) { return; }
+
+            this.serverRevision = state.revision ?? this.serverRevision;
+
+            if (state.version > this.appliedVersion) {
+                this.adopt(state);
+            }
+
+            if (this.serverRevision !== this.drawnRevision) {
+                this.refresh();
+            }
+        },
+
+        /**
+         * Another deck put on this screen from somewhere else.
+         *
+         * The one slow thing this page is allowed to do, and the only place it
+         * takes the picture down on purpose. Everything of the deck that was on
+         * the wall is dropped — its client, its slides, the place the service had
+         * reached in it — because none of it means anything about the new one;
+         * and the room looks at black until the new deck is engraved, which is
+         * `preparing` and not `blanked`.
+         *
+         * A screen pointed at nothing goes back to waiting: that is how a service
+         * ends when the person who ends it is holding a phone at the organ.
+         */
+        async showDeck(answer) {
+            const token = ++this._refreshToken;
+
+            this.presentationId = answer.presentationId ?? null;
+            this.appliedVersion = 0;
+            this.reveals = {};
+            this.blanked = false;
+            this.drawnRevision = '';
+            this.serverRevision = '';
+
+            if (this.presentationId === null) {
+                this._client = null;
+                this.preparing = false;
+                this.paint([], { entryId: null, slideIndex: 0 });
+
+                return;
+            }
+
+            this._client = stateClient({ ...config, stateUrl: answer.stateUrl, payloadUrl: answer.payloadUrl });
+            this.preparing = true;
+
+            try {
+                await this.reengrave(token, true);
+
+                // Where the service already is in the deck just put up — a deck
+                // handed from one screen to another mid-hymn lands on the hymn,
+                // not at its first slide.
+                if (token === this._refreshToken && answer.state) { this.adopt(answer.state); }
+            } finally {
+                // Only if nothing has been pointed at this screen since: a
+                // cantor who taps twice must not be shown a deck that is on its
+                // way out by a swap that started first.
+                if (token === this._refreshToken) { this.preparing = false; }
+            }
+        },
+
+        /** Where somebody else has put the service. */
+        adopt(state) {
+            this.appliedVersion = state.version;
+            this.reveals = state.reveals ?? {};
+            this.blanked = Boolean(state.blanked);
+
+            this.repaint({ entryId: state.entryId, slideIndex: state.slideIndex });
+        },
+
+        /**
+         * Say where this screen has put the service — and, with it, which deck
+         * the room is actually looking at.
+         *
+         * Deliberately not awaited by anything that moves the picture: the
+         * keystroke has already been applied. If it fails, it fails silently and
+         * the next heartbeat carries the same answer.
+         */
+        report() {
+            // A screen waiting to be pointed at something has nothing to say
+            // about where a service has got to.
+            if (this._client === null) { return; }
+
+            const address = this.address();
+
+            this._client
+                .write({ ...address, blanked: this.blanked, drawnRevision: this.drawnRevision })
+                .then((state) => {
+                    if (state !== null) { this.appliedVersion = Math.max(this.appliedVersion, state.version); }
+                })
+                .catch(() => {});
+        },
+
+        /**
+         * Read the deck again because it moved underneath, and engrave it again
+         * without ever taking the picture down.
+         *
+         * An edit saved during the rehearsal, not a different deck: the slide on
+         * the wall is kept across the swap, and the room sees the correction
+         * appear under the hymn it is already singing.
+         */
+        async refresh() {
+            return this.reengrave(++this._refreshToken, false);
+        },
+
+        /**
+         * Draw the deck the client points at, and put it up when it is finished.
+         *
+         * The new deck is drawn into an array of its own and swapped in whole. If
+         * the read or the engraving fails, the old deck simply stays and this
+         * screen keeps its old revision, so the next change tries again — and
+         * nothing is drawn over the deck to say so.
+         *
+         * `fresh` is the difference between an edit and a different deck: an
+         * edit keeps the place the service had reached, and a different deck has
+         * no place to keep.
+         */
+        async reengrave(token, fresh) {
+            const payload = await this._client?.payload();
+
+            if (!payload || token !== this._refreshToken) { return; }
+
+            const address = fresh ? { entryId: null, slideIndex: 0 } : this.address();
+
+            let drawn;
+
+            try {
+                drawn = await renderDeck(payload.entries ?? [], payload.geometry ?? {});
+            } catch (e) {
+                console.error('[projection] could not re-draw the deck', e);
+
+                return;
+            }
+
+            if (token !== this._refreshToken) { return; }
+
+            this.entries = payload.entries ?? [];
+            this.geometry = payload.geometry ?? {};
+            this.excluded = payload.excluded ?? {};
+
+            this.paint(drawn, address);
+
+            this.drawnRevision = payload.revision ?? this.drawnRevision;
+            this.serverRevision = this.drawnRevision;
+            this.report();
         },
 
         /**
