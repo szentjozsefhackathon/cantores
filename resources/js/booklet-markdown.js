@@ -19,8 +19,12 @@
 
 import { escapeXml, round } from './booklet-text.js';
 
-/** Multiples of the font size. */
-const LINE = 1.45;
+/**
+ * Multiples of the font size. The leading is the default one: a document says
+ * how far apart its lines of words stand — see the text_line_height migration —
+ * and this is what it says when nobody has said anything.
+ */
+export const DEFAULT_LINE_HEIGHT = 1.45;
 const BLOCK_GAP = 0.35;
 const LIST_INDENT = 1.4;
 const QUOTE_INDENT = 1.0;
@@ -79,6 +83,8 @@ export const DEFAULT_PALETTE = {
  * @param {string} options.fontFamily
  * @param {number} options.layoutWidth in px
  * @param {number} [options.headingScale] the booklet's own heading factor
+ * @param {number} [options.lineHeight] how far apart two lines of words stand,
+ *   in multiples of the size they are set at
  * @param {number} [options.leadingScale] every size restated as the one the
  *   leading is measured in; see leadingScale() in booklet-geometry.js
  * @param {(text: string, opts?: {bold?: boolean, italic?: boolean}) => number} options.measure
@@ -108,6 +114,18 @@ export function markdownRows(source, options) {
     });
 
     return rows;
+}
+
+/**
+ * How far apart two lines of one block stand, in multiples of their own size.
+ *
+ * Asked of the document rather than nailed here since booklets and projections
+ * got a line-height setting; the constant is what an unset one still means.
+ */
+function lineHeightOf(options) {
+    const asked = Number(options.lineHeight);
+
+    return asked > 0 ? asked : DEFAULT_LINE_HEIGHT;
 }
 
 /**
@@ -263,7 +281,7 @@ function renderBlock(block, options, size) {
 
     const words = inlineWords(block.text, style);
     const lines = wrapWords(words, Math.max(layoutWidth - indent, size), measure);
-    const lineHeight = size * LINE * leading;
+    const lineHeight = size * lineHeightOf(options) * leading;
 
     return lines.map((line, i) => {
         const parts = [];

@@ -8,9 +8,9 @@ import {
     gabcLyricSizeForPt,
     pageGeometry,
 } from '../../resources/js/booklet-geometry.js';
-import { movesSetting, READER_SIZE_STEP_PT, readerStep, resolveSettings, steppedValue, travellingOverride, unifiedSettings } from '../../resources/js/booklet-settings.js';
+import { movesSetting, READER_SIZE_STEP_PT, readerStep, resolveSettings, steppedValue, textSettings, travellingOverride, unifiedSettings } from '../../resources/js/booklet-settings.js';
 
-const geometry = pageGeometry({
+const rawGeometry = {
     pageWidthMm: 148,
     pageHeightMm: 210,
     marginMm: 12,
@@ -21,7 +21,9 @@ const geometry = pageGeometry({
     textFont: 'Merriweather',
     abcLyricFirstSkip: 1.5,
     abcLyricSkip: 1,
-});
+};
+
+const geometry = pageGeometry(rawGeometry);
 
 /** Where each engine keeps the face it sets lyrics in. */
 const fontKeys = {
@@ -224,4 +226,39 @@ test('a spacing override is a page-fitting nudge, and a screen is not that page'
     }, geometry);
 
     assert.deepEqual(travelling, { abcTranspose: -2 });
+});
+
+/*
+ * A paragraph the booklet says rather than sings. It has no engine and no
+ * author, so the whole of what there is to resolve is the booklet's own two
+ * numbers and whatever the row said instead.
+ */
+
+test('words take the booklets text size and leading', () => {
+    const resolved = textSettings(null, pageGeometry({ ...rawGeometry, textSizeScale: 1.3, textLineHeight: 1.8 }));
+
+    assert.equal(resolved.textSizeScale, 1.3);
+    assert.equal(resolved.textLineHeight, 1.8);
+});
+
+test('a booklet that says nothing about its words leaves them as they were drawn', () => {
+    const resolved = textSettings(null, geometry);
+
+    assert.equal(resolved.textSizeScale, 1);
+    assert.equal(resolved.textLineHeight, 1.45);
+});
+
+test('a row wins over the booklet, one key at a time', () => {
+    const resolved = textSettings({ textSizeScale: 0.7 }, pageGeometry({ ...rawGeometry, textSizeScale: 1.3, textLineHeight: 1.8 }));
+
+    assert.equal(resolved.textSizeScale, 0.7);
+    assert.equal(resolved.textLineHeight, 1.8);
+});
+
+/* A spacing override is a page-fitting nudge and does not travel; how large a
+   rubric is set beside the lyrics is typography, and does. */
+test('a paragraphs own size reaches the reader with it', () => {
+    const travelling = travellingOverride('text', { textSizeScale: 1.4, textLineHeight: 1.2 }, geometry);
+
+    assert.deepEqual(travelling, { textSizeScale: 1.4, textLineHeight: 1.2 });
 });

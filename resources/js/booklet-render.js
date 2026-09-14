@@ -6,7 +6,7 @@ import { appendEntryRegions } from './booklet-hover.js';
 import { packPages } from './booklet-flow.js';
 import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
 import { markdownRows } from './booklet-markdown.js';
-import { fileSettings, layoutWidthFor, resolveSettings } from './booklet-settings.js';
+import { fileSettings, layoutWidthFor, resolveSettings, textSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
 import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcMixin, hungarianChordsToAbc } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -79,7 +79,8 @@ const PAGE_NUMBER_SIZE_FACTOR = 0.62;
 
 /**
  * A rubric is set at the lyric size, so a paragraph between two scores reads as
- * loudly as the lyrics beside it.
+ * loudly as the lyrics beside it — times whatever the booklet's own text scale
+ * says, and whatever the row says on top of that.
  */
 const TEXT_SIZE_FACTOR = 1;
 
@@ -358,18 +359,22 @@ function slotHeadingLine(slot) {
  * A paragraph of instructions, flowed like everything else.
  *
  * It is set in the interface font at the booklet's lyric size, so a rubric
- * between two scores reads as the booklet talking rather than as more music.
+ * between two scores reads as the booklet talking rather than as more music. How
+ * much larger or smaller than that, and how far apart its lines stand, are the
+ * booklet's to say and this row's to say otherwise: see textSettings().
  *
  * A paragraph standing at the head of a slot carries the slot's name, as the
  * first score of a slot otherwise would: the words were written to introduce
  * that moment of the service, and a heading printed after them reads backwards.
  */
 export function buildTextBlocks(entry, geometry, measure = null) {
-    const fontSize = geometry.lyricSizePx * TEXT_SIZE_FACTOR;
+    const { textSizeScale, textLineHeight } = textSettings(entry.override, geometry);
+    const fontSize = geometry.lyricSizePx * TEXT_SIZE_FACTOR * textSizeScale;
     const rows = markdownRows(entry.text ?? '', {
         fontSize,
         fontFamily: geometry.textFont,
         headingScale: geometry.headingScale,
+        lineHeight: textLineHeight,
         leadingScale: geometry.leadingScale ?? 1,
         layoutWidth: geometry.contentWidthPx,
         measure: measure ?? canvasMeasurer(geometry.textFont, fontSize),

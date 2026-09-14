@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { isExcluded, textPalette } from '../../resources/js/projection-deck.js';
+import { textSlideSettings } from '../../resources/js/projection-settings.js';
 
 /*
  * The two questions a deck answers about a slide before anything is drawn: what
@@ -60,4 +61,30 @@ test('a row is found whether its id arrived as a number or as a string', () => {
 test('a deck with nothing left out leaves nothing out', () => {
     assert.equal(isExcluded({ entryId: 7, index: 0 }, {}), false);
     assert.equal(isExcluded({ entryId: 7, index: 0 }, undefined), false);
+});
+
+/*
+ * And how large those words are set, with the leading they are stacked at. Two
+ * layers only: a screen of words has no engine and no author behind it.
+ */
+
+test('a screen of words takes the decks size and leading', () => {
+    const resolved = textSlideSettings(null, { textSizeScale: 1.5, textLineHeight: 1.2 });
+
+    assert.equal(resolved.textSizeScale, 1.5);
+    assert.equal(resolved.textLineHeight, 1.2);
+});
+
+test('a deck that says nothing leaves its words as they were drawn', () => {
+    const resolved = textSlideSettings(null, {});
+
+    assert.equal(resolved.textSizeScale, 1);
+    assert.equal(resolved.textLineHeight, 1.45);
+});
+
+test('a row wins over the deck, one key at a time', () => {
+    const resolved = textSlideSettings({ textLineHeight: 2.2 }, { textSizeScale: 1.5, textLineHeight: 1.2 });
+
+    assert.equal(resolved.textSizeScale, 1.5);
+    assert.equal(resolved.textLineHeight, 2.2);
 });

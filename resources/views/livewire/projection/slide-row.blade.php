@@ -177,30 +177,28 @@
                  variation — is switched on and off beside those names themselves:
                  the slot's and the music's in the plan around this row, the
                  variation's on the row, next to the name it carries. --}}
-            @if(! $entry->isText())
-                {{-- An uploaded score is a picture by the time it reaches a
-                     screen, so it gets a panel with the one knob a picture has;
-                     an engraved one gets its format's.
+            {{-- An uploaded score is a picture by the time it reaches a screen,
+                 so it gets a panel with the one knob a picture has; an engraved
+                 one gets its format's; a screen of words gets the two numbers
+                 the deck would otherwise set them in.
 
-                     Whether the score has been adjusted is answered from the
-                     browser, as each knob in the panel is: the saving is done by
-                     the deck rather than by this row, which hears nothing of
-                     it, and an override may in any case still be waiting to be
-                     sent. --}}
-                <flux:tooltip :content="__('Adjust this score')">
-                    <flux:button
-                        size="sm"
-                        variant="ghost"
-                        icon="adjustments-horizontal"
-                        wire:click="adjust"
-                        wire:ignore.self
-                        x-bind:class="hasOverride({{ $entry->id }}) ? '!text-blue-600 dark:!text-blue-400' : ''"
-                        aria-expanded="{{ $adjusting ? 'true' : 'false' }}"
-                        :aria-label="__('Adjust this score')"
-                    />
-                </flux:tooltip>
-            @endif
-
+                 Whether the row has been adjusted is answered from the browser,
+                 as each knob in the panel is: the saving is done by the deck
+                 rather than by this row, which hears nothing of it, and an
+                 override may in any case still be waiting to be sent. --}}
+            @php $adjustLabel = $entry->isText() ? __('Adjust these words') : __('Adjust this score'); @endphp
+            <flux:tooltip :content="$adjustLabel">
+                <flux:button
+                    size="sm"
+                    variant="ghost"
+                    icon="adjustments-horizontal"
+                    wire:click="adjust"
+                    wire:ignore.self
+                    x-bind:class="hasOverride({{ $entry->id }}) ? '!text-blue-600 dark:!text-blue-400' : ''"
+                    aria-expanded="{{ $adjusting ? 'true' : 'false' }}"
+                    :aria-label="$adjustLabel"
+                />
+            </flux:tooltip>
         </div>
 
         {{-- Both panels open inside the row they belong to: what is being adjusted
@@ -225,14 +223,16 @@
              for control: a knob is its icon, its name is the tooltip, and it turns
              blue once this deck has moved it away from the layout the score's own
              author chose for this ratio. --}}
-        @if(! $entry->isText() && $adjusting)
+        @if($adjusting)
             @php $panelFormat = ProjectionEditor::overrideFormat($entry); @endphp
             <div
                 class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700"
                 data-projection-panel="{{ $entry->id }}"
             >
                 <flux:text class="mb-2 text-xs text-zinc-500">
-                    @if($panelFormat === 'file')
+                    @if($panelFormat === 'text')
+                        {{ __('Changes here apply to these words at this screen shape only. They are set at the deck\'s own text size and line spacing; make them larger where a screen is nearly empty, smaller where it overflows.') }}
+                    @elseif($panelFormat === 'file')
                         {{ __('Changes here apply to this projection at this screen shape only. An uploaded page is fitted to the screen; make it smaller where that is too big.') }}
                     @else
                         {{ __('Changes here apply to this projection at this screen shape only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead.') }}

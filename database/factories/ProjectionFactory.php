@@ -24,6 +24,8 @@ class ProjectionFactory extends Factory
             'title' => fake()->words(3, true),
             'ratio' => ProjectionRatio::SixteenNine,
             'text_theme' => ProjectionTextTheme::Dark,
+            'text_size_scale' => 1.0,
+            'text_line_height' => 1.45,
         ];
     }
 

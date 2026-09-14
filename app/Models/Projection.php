@@ -39,6 +39,8 @@ use Illuminate\Support\Facades\Auth;
  * @property string $title
  * @property \App\Enums\ProjectionRatio $ratio
  * @property \App\Enums\ProjectionTextTheme $text_theme
+ * @property float $text_size_scale
+ * @property float $text_line_height
  * @property \Carbon\CarbonImmutable|null $created_at
  * @property \Carbon\CarbonImmutable|null $updated_at
  * @property-read \App\Models\User $user
@@ -72,6 +74,8 @@ class Projection extends Model implements PlanDocument
         'title',
         'ratio',
         'text_theme',
+        'text_size_scale',
+        'text_line_height',
     ];
 
     /**
@@ -82,6 +86,8 @@ class Projection extends Model implements PlanDocument
         return [
             'ratio' => ProjectionRatio::class,
             'text_theme' => ProjectionTextTheme::class,
+            'text_size_scale' => 'float',
+            'text_line_height' => 'float',
         ];
     }
 
@@ -129,6 +135,12 @@ class Projection extends Model implements PlanDocument
             // says it about words alone: see App\Enums\ProjectionTextTheme.
             'textTheme' => $this->text_theme->value,
             'textPalette' => $this->text_theme->palette(),
+            // And how large those words are set, as a factor of the size the
+            // slide computes from its own height, with the leading they are
+            // stacked at. The one other thing the deck says about a look, and
+            // it says it about words alone for the same reason the theme does.
+            'textSizeScale' => $this->text_size_scale,
+            'textLineHeight' => $this->text_line_height,
         ];
     }
 

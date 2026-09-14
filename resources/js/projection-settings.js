@@ -1,3 +1,4 @@
+import { DEFAULT_LINE_HEIGHT } from './booklet-markdown.js';
 import { formatDefaults } from './score-editor-settings.js';
 
 /**
@@ -77,4 +78,28 @@ export function inheritedSlideSetting(format, scoreSettings, ratio, override, ke
  */
 export function fileSlideSettings(override) {
     return { fileZoom: 1, ...(override ?? {}) };
+}
+
+/**
+ * A screen of words: the deck's own text size and leading, unless this row has
+ * said otherwise.
+ *
+ * Two layers rather than three, because a rubric has no engine defaults and no
+ * author — the words were typed into the row itself. Both numbers are factors of
+ * what the slide computes from its own height, so a deck keeps its proportions
+ * at every ratio.
+ *
+ * @param {object|null} override the slide's own bucket for this ratio
+ * @param {object} geometry the payload's geometry — Projection::geometry()
+ * @returns {{textSizeScale: number, textLineHeight: number}}
+ */
+export function textSlideSettings(override, geometry) {
+    const scale = Number(geometry?.textSizeScale);
+    const lineHeight = Number(geometry?.textLineHeight);
+
+    return {
+        textSizeScale: scale > 0 ? scale : 1,
+        textLineHeight: lineHeight > 0 ? lineHeight : DEFAULT_LINE_HEIGHT,
+        ...(override ?? {}),
+    };
 }

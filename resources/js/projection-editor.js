@@ -2,7 +2,7 @@ import { onAlpineInit } from './alpine-init.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { SPLIT_DEFAULT, beginSplitDrag, clampSplitPercent } from './booklet-split.js';
 import { isExcluded, renderDeck, slideCounts } from './projection-deck.js';
-import { inheritedSlideSetting, resolveSlideSettings, fileSlideSettings } from './projection-settings.js';
+import { inheritedSlideSetting, resolveSlideSettings, fileSlideSettings, textSlideSettings } from './projection-settings.js';
 import { steppedValue, movesSetting } from './booklet-settings.js';
 
 /**
@@ -324,7 +324,9 @@ onAlpineInit(() => {
                 if (!entry) { return {}; }
 
                 if (entry.kind === 'file') { return fileSlideSettings(entry.override); }
-                if (entry.kind === 'text') { return {}; }
+                // A screen of words has no engine behind it: the deck's own text
+                // size and leading are the whole of what there is to resolve.
+                if (entry.kind === 'text') { return textSlideSettings(entry.override, this.geometry); }
 
                 return resolveSlideSettings(entry.format, entry.settings ?? {}, this.geometry.ratio, entry.override);
             },
@@ -336,14 +338,19 @@ onAlpineInit(() => {
              */
             isOverridden(entryId, key) {
                 const entry = this.entries.find((row) => row.id === entryId);
-                if (!entry || entry.kind === 'text') { return false; }
+                if (!entry) { return false; }
 
                 const override = entry.override ?? {};
                 if (!Object.prototype.hasOwnProperty.call(override, key)) { return false; }
 
+                const without = { ...override };
+                delete without[key];
+
                 const inherited = entry.kind === 'file'
                     ? fileSlideSettings({})[key]
-                    : inheritedSlideSetting(entry.format, entry.settings ?? {}, this.geometry.ratio, override, key);
+                    : entry.kind === 'text'
+                        ? textSlideSettings(without, this.geometry)[key]
+                        : inheritedSlideSetting(entry.format, entry.settings ?? {}, this.geometry.ratio, override, key);
 
                 return movesSetting(override[key], inherited);
             },

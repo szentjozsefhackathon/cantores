@@ -29,6 +29,8 @@ class BookletFactory extends Factory
             'staff_height_mm' => 5,
             'text_font' => 'Alegreya',
             'heading_scale' => 0.9,
+            'text_size_scale' => 1.0,
+            'text_line_height' => 1.45,
             'abc_staff_sep' => 25,
             'abc_lyric_first_skip' => 1.4,
             'abc_lyric_skip' => 0.9,

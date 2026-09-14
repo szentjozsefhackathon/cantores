@@ -1444,5 +1444,11 @@
     "Skipped": "Kihagyva",
     "skipped": "kihagyva",
     "Changes here apply to this projection at this screen shape only. An uploaded page is fitted to the screen; make it smaller where that is too big.": "Az itteni módosítások csak erre a vetítésre és csak ehhez a képarányhoz tartoznak. A feltöltött oldal a képernyőhöz igazodik; kicsinyítsd, ha túl nagy.",
-    "Changes here apply to this projection at this screen shape only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead.": "Az itteni módosítások csak erre a vetítésre és csak ehhez a képarányhoz tartoznak – maga a kotta érintetlen marad. Kicsinyítsd a szöveget, ha egy dia túl tele van, vagy tedd a kottába egy %pagebreak sort, hogy kettévágd."
+    "Changes here apply to this projection at this screen shape only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead.": "Az itteni módosítások csak erre a vetítésre és csak ehhez a képarányhoz tartoznak – maga a kotta érintetlen marad. Kicsinyítsd a szöveget, ha egy dia túl tele van, vagy tedd a kottába egy %pagebreak sort, hogy kettévágd.",
+    "Text size (×)": "Szövegméret (×)",
+    "Line spacing": "Sortávolság",
+    "Text line spacing": "Szöveg sortávolsága",
+    "Adjust these words": "Ennek a szövegnek a beállítása",
+    "Changes here apply to these words only. They are set at the booklet's own text size and line spacing; make them smaller where a long instruction costs a page.": "Az itteni módosítások csak ehhez a szöveghez tartoznak. A füzet saját szövegmérete és sortávolsága szerint jelenik meg; kicsinyítsd, ha egy hosszú rubrika egy egész oldalba kerül.",
+    "Changes here apply to these words at this screen shape only. They are set at the deck's own text size and line spacing; make them larger where a screen is nearly empty, smaller where it overflows.": "Az itteni módosítások csak ehhez a szöveghez és csak ehhez a képarányhoz tartoznak. A vetítés saját szövegmérete és sortávolsága szerint jelenik meg; nagyítsd, ha a dia szinte üres, kicsinyítsd, ha nem fér ki."
 }

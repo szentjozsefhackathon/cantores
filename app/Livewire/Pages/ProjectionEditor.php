@@ -69,6 +69,21 @@ class ProjectionEditor extends Component
     public string $textTheme = 'dark';
 
     /**
+     * How large a screen of words is set, and how far apart its lines stand.
+     *
+     * A factor of the size the slide computes from its own height rather than a
+     * size in points: the canvas is the shape of the screen, and a deck asked
+     * for sixteen points would mean something different at every ratio. Deck
+     * wide like the theme, and for the same reason — but a row that needs to be
+     * larger or smaller than the rest still says so on its own panel.
+     */
+    #[Validate('required|numeric|min:0.3|max:4')]
+    public float $textSizeScale = 1.0;
+
+    #[Validate('required|numeric|min:0.8|max:3')]
+    public float $textLineHeight = 1.45;
+
+    /**
      * The words just added, so that they open ready to be written in.
      *
      * Which panels a row has open is the row's own business, and a row is only
@@ -93,6 +108,8 @@ class ProjectionEditor extends Component
         $this->title = $projection->title;
         $this->ratio = $projection->ratio->value;
         $this->textTheme = $projection->text_theme->value;
+        $this->textSizeScale = $projection->text_size_scale;
+        $this->textLineHeight = $projection->text_line_height;
 
         $this->normalizeOrder();
     }
@@ -124,7 +141,7 @@ class ProjectionEditor extends Component
      */
     public function updated(string $property): void
     {
-        if (! in_array($property, ['title', 'ratio', 'textTheme'], true)) {
+        if (! in_array($property, ['title', 'ratio', 'textTheme', 'textSizeScale', 'textLineHeight'], true)) {
             return;
         }
 
@@ -140,6 +157,8 @@ class ProjectionEditor extends Component
             'title' => $this->title,
             'ratio' => ProjectionRatio::from($this->ratio),
             'text_theme' => ProjectionTextTheme::from($this->textTheme),
+            'text_size_scale' => $this->textSizeScale,
+            'text_line_height' => $this->textLineHeight,
         ]);
 
         unset($this->geometry);
@@ -624,7 +643,7 @@ class ProjectionEditor extends Component
 
         $entry = $this->projection->entries()->with('score')->find($entryId);
 
-        if (! $entry instanceof ProjectionSlide || $entry->isText()) {
+        if (! $entry instanceof ProjectionSlide) {
             return;
         }
 
@@ -679,7 +698,7 @@ class ProjectionEditor extends Component
     public static function overrideFormat(ProjectionSlide $entry): ?string
     {
         if ($entry->isText()) {
-            return null;
+            return 'text';
         }
 
         return $entry->score?->format?->value ?? 'file';

@@ -585,3 +585,111 @@ it('starts a projection from the list and opens its editor', function () {
 
     expect(Projection::query()->where('user_id', $user->id)->where('music_plan_id', $plan->id)->exists())->toBeTrue();
 });
+
+/*
+ * A screen of words had no settings at all: it took a fifteenth of the slide's
+ * height and a leading nailed into the renderer, and nobody could move either.
+ * Both are the deck's to say now, as factors of what the slide computes from its
+ * own height — so the same words read the same way at all three shapes.
+ */
+it('saves how large the deck sets a screen of words', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->set('textSizeScale', 1.4)
+        ->set('textLineHeight', 1.1)
+        ->assertHasNoErrors();
+
+    $projection->refresh();
+
+    expect($projection->text_size_scale)->toBe(1.4)
+        ->and($projection->text_line_height)->toBe(1.1)
+        ->and($projection->geometry())->toMatchArray([
+            'textSizeScale' => 1.4,
+            'textLineHeight' => 1.1,
+        ]);
+});
+
+// Every deck thrown before this had its words at a fifteenth of the screen and a
+// leading of 1.45, and none of them may move when the setting arrives.
+it('leaves a deck that has said nothing about its words exactly as it was thrown', function () {
+    $projection = projectionFor(User::factory()->create());
+
+    expect($projection->geometry())->toMatchArray([
+        'textSizeScale' => 1.0,
+        'textLineHeight' => 1.45,
+    ]);
+});
+
+// And one screen that needs to be larger than the rest says so on its own row,
+// filed under the shape it was adjusted against like every other override here.
+it('lets one screen of words depart from the decks own text settings', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    actingAs($user);
+
+    $editor = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('addText');
+
+    $entry = $projection->entries()->firstOrFail();
+
+    $editor->call('saveOverride', $entry->id, [
+        'textSizeScale' => 1.8,
+        'textLineHeight' => 0.1,
+        // A knob that belongs to a score rather than to words.
+        'abcLyricSize' => 40,
+    ]);
+
+    expect($entry->fresh()->settings_override)
+        ->toEqual(['16/9' => ['textSizeScale' => 1.8, 'textLineHeight' => 0.8]]);
+
+    $payload = Livewire::test(ProjectionEditor::class, ['projection' => $projection])->get('renderPayload');
+
+    expect($payload[0]['kind'])->toBe('text')
+        ->and($payload[0]['override'])->toEqual(['textSizeScale' => 1.8, 'textLineHeight' => 0.8]);
+});
+
+// A size chosen for a widescreen says nothing about a square one, words included.
+it('keeps a screen of words adjusted at one shape out of the others', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    actingAs($user);
+
+    $editor = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('addText');
+
+    $entry = $projection->entries()->firstOrFail();
+
+    $editor->call('saveOverride', $entry->id, ['textSizeScale' => 1.8]);
+
+    $square = Livewire::test(ProjectionEditor::class, ['projection' => $projection->fresh()])
+        ->set('ratio', '1/1')
+        ->get('renderPayload');
+
+    expect($square[0]['override'])->toBe([]);
+});
+
+// The panel is opened from the row, so a row of words has to offer the button
+// that opens it — it had none, being neither a score nor a picture.
+it('offers a screen of words the same panel of knobs a score gets', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $entry = $projection->entries()->create(['text' => 'Álljunk fel.', 'sequence' => 1]);
+
+    actingAs($user);
+
+    $html = Livewire::test(SlideRow::class, ['entry' => $entry])
+        ->call('adjust')
+        ->html();
+
+    expect(ProjectionEditor::overrideFormat($entry))->toBe('text');
+
+    foreach (ProjectionSettingFields::panelFor('text') as $field) {
+        expect($html)->toContain($field['key']);
+    }
+});

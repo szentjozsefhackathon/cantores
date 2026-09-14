@@ -89,6 +89,11 @@ class BookletRenderPayload extends PlanRenderPayload
                         'slot' => $heading['slot'],
                         'music' => $heading['music'],
                         'reference' => $heading['reference'],
+                        // The two numbers a paragraph may be set apart by: how
+                        // large it is beside the music, and how far apart its
+                        // lines stand. Both are the booklet's until this row
+                        // says otherwise.
+                        'override' => BookletSettingFields::sanitize('text', $entry->settings_override ?? []),
                         'startOnNewPage' => $entry->start_on_new_page,
                     ];
                 }

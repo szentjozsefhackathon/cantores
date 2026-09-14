@@ -98,6 +98,17 @@ class ProjectionSettingFields
         'file' => [
             'fileZoom' => ['type' => 'number', 'min' => 0.2, 'max' => 1, 'step' => 0.05, 'label' => 'Size (×)', 'icon' => 'zoom-in'],
         ],
+        // A screen of words. It has no engine and no author's layout behind it
+        // — the words were typed into this row — so its whole table is the two
+        // numbers the deck would otherwise decide for it, each a factor of the
+        // deck's own: how large the words are set, and how far apart their lines
+        // stand. Unlike a score's knobs these are not per ratio in meaning, but
+        // they are stored per ratio like everything else here, because a size
+        // that fills a widescreen overflows a square one.
+        'text' => [
+            'textSizeScale' => ['type' => 'number', 'min' => 0.3, 'max' => 4, 'step' => 0.05, 'label' => 'Text size (×)', 'icon' => 'a-large-small'],
+            'textLineHeight' => ['type' => 'number', 'min' => 0.8, 'max' => 3, 'step' => 0.05, 'label' => 'Line spacing', 'icon' => 'align-vertical-space-between'],
+        ],
         'chordpro' => [
             'chordproFontSize' => ['type' => 'number', 'control' => 'step', 'min' => 6, 'max' => 200, 'step' => 1, 'percent' => 10, 'label' => 'Font size', 'icon' => 'a-large-small'],
             // A second column on a projector is a second thing to find, but a

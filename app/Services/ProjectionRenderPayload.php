@@ -108,6 +108,10 @@ class ProjectionRenderPayload extends PlanRenderPayload
                         'slot' => $heading['slot'],
                         'music' => $heading['music'],
                         'reference' => $heading['reference'],
+                        // The two numbers a screen of words may be set apart by,
+                        // read out of this deck's own shape like every other
+                        // override here.
+                        'override' => self::overrideOf($entry, 'text', $projection->ratio->value),
                     ];
                 }
 

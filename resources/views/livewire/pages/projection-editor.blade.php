@@ -94,6 +94,23 @@ resources/js/projection-editor.js
                 </flux:select>
             </div>
 
+            {{-- And how large those words are set, with the leading they are
+                 stacked at. Deck wide, like the theme beside them; a row that
+                 wants something else says so on its own panel. --}}
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Text size (×)')">
+                    <flux:icon name="document-text" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textSizeScale" :aria-label="__('Text size (×)')" min="0.3" max="4" step="0.05" class="w-16!" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Text line spacing')">
+                    <flux:icon name="align-vertical-space-between" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textLineHeight" :aria-label="__('Text line spacing')" min="0.8" max="3" step="0.05" class="w-16!" />
+            </div>
+
             <div class="ms-auto flex items-center gap-2">
                 <span
                     class="flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"

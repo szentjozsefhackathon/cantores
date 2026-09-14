@@ -35,6 +35,8 @@ use Illuminate\Support\Facades\Auth;
  * @property float $staff_height_mm
  * @property string $text_font
  * @property float $heading_scale
+ * @property float $text_size_scale
+ * @property float $text_line_height
  * @property float $abc_staff_sep
  * @property float $abc_lyric_first_skip
  * @property float $abc_lyric_skip
@@ -76,6 +78,8 @@ class Booklet extends Model implements PlanDocument
         'staff_height_mm',
         'text_font',
         'heading_scale',
+        'text_size_scale',
+        'text_line_height',
         'abc_staff_sep',
         'abc_lyric_first_skip',
         'abc_lyric_skip',
@@ -93,6 +97,8 @@ class Booklet extends Model implements PlanDocument
             'lyric_size_pt' => 'float',
             'staff_height_mm' => 'float',
             'heading_scale' => 'float',
+            'text_size_scale' => 'float',
+            'text_line_height' => 'float',
             'abc_staff_sep' => 'float',
             'abc_lyric_first_skip' => 'float',
             'abc_lyric_skip' => 'float',
@@ -173,6 +179,10 @@ class Booklet extends Model implements PlanDocument
             'staffHeightMm' => $this->staff_height_mm,
             'textFont' => $this->text_font,
             'headingScale' => $this->heading_scale,
+            // What a rubric is set at, as a factor of the lyric size and of the
+            // leading the renderer draws at. See the text_size_scale migration.
+            'textSizeScale' => $this->text_size_scale,
+            'textLineHeight' => $this->text_line_height,
             'abcStaffSep' => $this->abc_staff_sep,
             'abcLyricFirstSkip' => $this->abc_lyric_first_skip,
             'abcLyricSkip' => $this->abc_lyric_skip,

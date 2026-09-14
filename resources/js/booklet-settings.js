@@ -7,6 +7,7 @@ import {
     gabcLyricSizeForPt,
     gabcStaffSizeForStaffHeight,
 } from './booklet-geometry.js';
+import { DEFAULT_LINE_HEIGHT } from './booklet-markdown.js';
 
 /**
  * How a score gets its render settings inside a booklet.
@@ -164,6 +165,30 @@ export function unifiedSettings(format, geometry) {
  */
 export function fileSettings(override) {
     return { fileZoom: 1, ...(override ?? {}) };
+}
+
+/**
+ * A paragraph of words: the booklet's own text size and leading, unless this row
+ * has said otherwise.
+ *
+ * The same two layers everything else here resolves, with the two middle ones
+ * missing — a rubric has no engine defaults and no author, because the words
+ * were typed into the row itself. Both numbers are factors rather than sizes, so
+ * the paragraph keeps its relation to the music when the booklet is resized.
+ *
+ * @param {object|null} override booklet_scores.settings_override
+ * @param {object} geometry from pageGeometry()
+ * @returns {{textSizeScale: number, textLineHeight: number}}
+ */
+export function textSettings(override, geometry) {
+    const scale = Number(geometry?.textSizeScale);
+    const lineHeight = Number(geometry?.textLineHeight);
+
+    return {
+        textSizeScale: scale > 0 ? scale : 1,
+        textLineHeight: lineHeight > 0 ? lineHeight : DEFAULT_LINE_HEIGHT,
+        ...(override ?? {}),
+    };
 }
 
 /**

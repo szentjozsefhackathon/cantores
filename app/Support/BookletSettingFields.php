@@ -93,6 +93,16 @@ class BookletSettingFields
         'file' => [
             'fileZoom' => ['type' => 'number', 'min' => 0.2, 'max' => 1, 'step' => 0.05, 'label' => 'Size (×)', 'icon' => 'zoom-in'],
         ],
+        // A paragraph the booklet says rather than sings. It has no engine and
+        // no author's settings behind it — the words were typed into this row —
+        // so its whole table is the two numbers the booklet would otherwise
+        // decide for it: how large it is set beside the music, and how far apart
+        // its lines stand. Both are factors of the booklet's own, so a rubric
+        // left alone follows the booklet's type wherever the cantor takes it.
+        'text' => [
+            'textSizeScale' => ['type' => 'number', 'min' => 0.3, 'max' => 4, 'step' => 0.05, 'label' => 'Text size (×)', 'icon' => 'a-large-small'],
+            'textLineHeight' => ['type' => 'number', 'min' => 0.8, 'max' => 3, 'step' => 0.05, 'label' => 'Line spacing', 'icon' => 'align-vertical-space-between'],
+        ],
         'chordpro' => [
             'chordproFontSize' => ['type' => 'number', 'control' => 'step', 'min' => 6, 'max' => 32, 'step' => 0.5, 'label' => 'Font size', 'icon' => 'a-large-small'],
             'chordproFontFamily' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],

@@ -114,6 +114,24 @@ resources/js/booklet-editor.js
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="headingScale" :aria-label="__('Heading size (×)')" min="0.5" max="2" step="0.05" class="w-16!" />
             </div>
 
+            {{-- What the booklet says rather than sings: how large it is set
+                 beside the music, and how far apart its lines stand. Both are
+                 factors of the booklet's own type, and a paragraph that wants
+                 something else says so on its own row. --}}
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Text size (×)')">
+                    <flux:icon name="document-text" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textSizeScale" :aria-label="__('Text size (×)')" min="0.3" max="4" step="0.05" class="w-16!" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <flux:tooltip :content="__('Text line spacing')">
+                    <flux:icon name="align-vertical-space-between" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textLineHeight" :aria-label="__('Text line spacing')" min="0.8" max="3" step="0.05" class="w-16!" />
+            </div>
+
             <div class="flex items-center gap-1">
                 <flux:tooltip :content="__('Page size')">
                     <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />

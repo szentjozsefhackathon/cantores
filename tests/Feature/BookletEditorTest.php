@@ -2655,3 +2655,84 @@ it('lists the viewers own plans in the picker and searches them by celebration',
 
     expect($component->instance()->selectablePlans->pluck('id')->all())->toBe([$mine->id]);
 });
+
+// A rubric had no settings of its own: it took the lyric size and a leading
+// nailed into the renderer. Both are the booklet's to say now — as factors, so a
+// paragraph keeps its relation to the music when the booklet is resized.
+it('saves how large the booklet sets the words it says rather than sings', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->set('textSizeScale', 0.85)
+        ->set('textLineHeight', 1.2)
+        ->assertHasNoErrors();
+
+    $booklet->refresh();
+
+    expect($booklet->text_size_scale)->toBe(0.85)
+        ->and($booklet->text_line_height)->toBe(1.2)
+        ->and($booklet->geometry())->toMatchArray([
+            'textSizeScale' => 0.85,
+            'textLineHeight' => 1.2,
+        ]);
+});
+
+// Every booklet written before this had a rubric at the lyric size and a leading
+// of 1.45, and none of them may move when the setting arrives.
+it('leaves a booklet that has said nothing about its words exactly as it printed', function () {
+    $booklet = bookletFor(User::factory()->create());
+
+    expect($booklet->geometry())->toMatchArray([
+        'textSizeScale' => 1.0,
+        'textLineHeight' => 1.45,
+    ]);
+});
+
+// And a paragraph that needs to be smaller than the rest says so on its own row,
+// through the same override bucket a score's knobs are saved in.
+it('lets one paragraph depart from the booklets own text settings', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])->call('addText');
+
+    $entry = $booklet->entries()->firstOrFail();
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('saveOverride', $entry->id, [
+            'textSizeScale' => 0.6,
+            'textLineHeight' => 9,
+            // A knob that belongs to a score rather than to words.
+            'abcPageWidth' => 700,
+        ]);
+
+    expect($entry->fresh()->settings_override)
+        ->toEqual(['textSizeScale' => 0.6, 'textLineHeight' => 3.0])
+        ->and(collect(payloadOf($booklet))->firstWhere('kind', 'text')['override'])
+        ->toEqual(['textSizeScale' => 0.6, 'textLineHeight' => 3.0]);
+});
+
+// The panel is opened from the row, so a row of words has to offer the button
+// that opens it — it had none, being neither a score nor a picture.
+it('offers a paragraph the same panel of knobs a score gets', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $entry = $booklet->entries()->create(['text' => 'Álljunk fel.', 'sequence' => 1]);
+
+    actingAs($user);
+
+    $html = Livewire::test(EntryRow::class, ['entry' => $entry])
+        ->call('adjust')
+        ->html();
+
+    expect(BookletEditor::overrideFormat($entry))->toBe('text');
+
+    foreach (BookletSettingFields::panelFor('text') as $field) {
+        expect($html)->toContain($field['key']);
+    }
+});

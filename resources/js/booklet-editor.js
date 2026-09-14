@@ -3,7 +3,7 @@ import { highlightEntry } from './booklet-hover.js';
 import { pageGeometry } from './booklet-geometry.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
-import { fileSettings, movesSetting, resolveSettings, steppedValue, withPlainOverrides } from './booklet-settings.js';
+import { fileSettings, movesSetting, resolveSettings, steppedValue, textSettings, withPlainOverrides } from './booklet-settings.js';
 import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -262,6 +262,10 @@ onAlpineInit(() => {
                 // the factor it is being taken down by.
                 if (entry.kind === 'file') { return fileSettings(entry.override); }
 
+                // A paragraph has no engine behind it: the booklet's own text
+                // size and leading are the whole of what there is to resolve.
+                if (entry.kind === 'text') { return textSettings(entry.override, pageGeometry(this.geometry)); }
+
                 if (entry.kind !== 'score') { return {}; }
 
                 return resolveSettings(
@@ -379,6 +383,8 @@ onAlpineInit(() => {
                 delete override[key];
 
                 if (entry.kind === 'file') { return fileSettings(override)[key]; }
+
+                if (entry.kind === 'text') { return textSettings(override, pageGeometry(this.geometry))[key]; }
 
                 if (entry.kind !== 'score') { return undefined; }
 

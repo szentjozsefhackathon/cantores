@@ -88,6 +88,20 @@ class BookletEditor extends Component
     public float $headingScale = 0.9;
 
     /**
+     * How large the words the booklet says rather than sings are set, and how
+     * far apart their lines stand.
+     *
+     * A factor of the lyric size rather than a size of its own, so a rubric
+     * keeps its relation to the music when the booklet is resized — the same
+     * bargain the heading scale makes. A row may still say otherwise for itself.
+     */
+    #[Validate('required|numeric|min:0.3|max:4')]
+    public float $textSizeScale = 1.0;
+
+    #[Validate('required|numeric|min:0.8|max:3')]
+    public float $textLineHeight = 1.45;
+
+    /**
      * How far apart ABC staves stand throughout the booklet.
      *
      * The one format-specific knob on an otherwise format-blind toolbar, and it
@@ -156,6 +170,8 @@ class BookletEditor extends Component
         $this->lyricSizePt = $booklet->lyric_size_pt;
         $this->staffHeightMm = $booklet->staff_height_mm;
         $this->headingScale = $booklet->heading_scale;
+        $this->textSizeScale = $booklet->text_size_scale;
+        $this->textLineHeight = $booklet->text_line_height;
         $this->abcStaffSep = $booklet->abc_staff_sep;
         $this->abcLyricFirstSkip = $booklet->abc_lyric_first_skip;
         $this->abcLyricSkip = $booklet->abc_lyric_skip;
@@ -497,7 +513,7 @@ class BookletEditor extends Component
 
     public function updated(string $property): void
     {
-        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'headingScale', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip'], true)) {
+        if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'headingScale', 'textSizeScale', 'textLineHeight', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip'], true)) {
             return;
         }
 
@@ -527,6 +543,8 @@ class BookletEditor extends Component
             'staff_height_mm' => $this->staffHeightMm,
             'text_font' => $textFont,
             'heading_scale' => $this->headingScale,
+            'text_size_scale' => $this->textSizeScale,
+            'text_line_height' => $this->textLineHeight,
             'abc_staff_sep' => $this->abcStaffSep,
             'abc_lyric_first_skip' => $this->abcLyricFirstSkip,
             'abc_lyric_skip' => $this->abcLyricSkip,
@@ -879,7 +897,7 @@ class BookletEditor extends Component
 
         $entry = $this->booklet->entries()->with('score')->find($entryId);
 
-        if (! $entry instanceof BookletScore || $entry->isText()) {
+        if (! $entry instanceof BookletScore) {
             return;
         }
 
@@ -894,12 +912,13 @@ class BookletEditor extends Component
      * Which set of knobs a row answers to.
      *
      * A score engraved from source answers to its format's; an uploaded one has
-     * no format and answers to the single knob a picture has.
+     * no format and answers to the single knob a picture has; a paragraph of
+     * words answers to the two the booklet would otherwise set for it.
      */
     public static function overrideFormat(BookletScore $entry): ?string
     {
         if ($entry->isText()) {
-            return null;
+            return 'text';
         }
 
         return $entry->score?->format?->value ?? 'file';

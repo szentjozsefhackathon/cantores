@@ -286,3 +286,23 @@ test('the one inline colour follows the palette rather than the page', () => {
     assert.ok(rows[0].svg.includes('fill="#ff6b6b"'));
     assert.ok(!rows[0].svg.includes('#cc0000'));
 });
+
+/*
+ * How far apart two lines of words stand is the document's to say — see the
+ * text_line_height migration — and the constant is only what an unset one means.
+ */
+
+test('the leading is the documents, and the default when it says nothing', () => {
+    const source = 'Az elso sor egy masodikra fut at, mert hosszabb a szedestukornel.';
+
+    const loose = markdownRows(source, { ...options, lineHeight: 2.9 });
+    const tight = markdownRows(source, { ...options, lineHeight: 1 });
+    const unset = markdownRows(source, options);
+
+    assert.ok(loose.length > 1, 'the paragraph has to wrap for its leading to show');
+    assert.equal(loose.length, tight.length);
+    assert.ok(loose[0].height > tight[0].height);
+    // 1.45 is what the renderer always drew at, and every existing document
+    // keeps it by saying nothing.
+    assert.equal(unset[0].height, 10 * 1.45);
+});

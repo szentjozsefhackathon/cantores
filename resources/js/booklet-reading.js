@@ -91,6 +91,11 @@ export function readerGeometry(booklet, widthPx, settings = {}, styles = {}) {
         // leaves between staves are the cantor's typography, and they read the
         // same at any width.
         headingScale: booklet.headingScale,
+        // And so are the two numbers the booklet's own words are set in: a
+        // rubric a third larger than the lyrics is a third larger on a phone
+        // too, because the lyric size above already carries the screen's width.
+        textSizeScale: booklet.textSizeScale,
+        textLineHeight: booklet.textLineHeight,
         abcStaffSep: booklet.abcStaffSep,
         minSpaceBelowStaff: booklet.minSpaceBelowStaff,
         aretinoLyricDistance: booklet.aretinoLyricDistance,

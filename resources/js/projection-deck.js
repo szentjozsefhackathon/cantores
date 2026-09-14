@@ -2,7 +2,7 @@ import { canvasMeasurer } from './booklet-chordpro.js';
 import { DEFAULT_PALETTE, markdownRows } from './booklet-markdown.js';
 import { textRowSvg } from './booklet-text.js';
 import { renderRatioPages } from './projection-render.js';
-import { fileSlideSettings, resolveSlideSettings } from './projection-settings.js';
+import { fileSlideSettings, resolveSlideSettings, textSlideSettings } from './projection-settings.js';
 import { fitIntoBox, frameSlide, isSlideRatio, parseSvg, slideCanvas } from './slide-frame.js';
 import { stackSvgs } from './svg-stack.js';
 
@@ -25,6 +25,9 @@ const TEXT_CANVAS = { '16/9': { width: 1920, height: 1080 }, '4/3': { width: 144
 
 /** The margin around a slide's own words, as a share of its width. */
 const TEXT_MARGIN = 0.08;
+
+/** How large a screen of words is set, as a share of the slide's height. */
+const TEXT_HEIGHT = 0.075;
 
 /**
  * How large a heading is set beside the music it names, as a share of the
@@ -82,7 +85,7 @@ export async function renderDeck(entries, geometry) {
 
     for (const entry of entries ?? []) {
         try {
-            const made = await slidesOf(entry, ratio, palette);
+            const made = await slidesOf(entry, ratio, palette, geometry);
 
             // The position within the row, which is what a slide left out of the
             // service is remembered by: the row is one thing chosen from the
@@ -124,8 +127,8 @@ export function slideCounts(slides) {
     return counts;
 }
 
-async function slidesOf(entry, ratio, palette) {
-    if (entry.kind === 'text') { return [textSlide(entry, ratio, palette)]; }
+async function slidesOf(entry, ratio, palette, geometry) {
+    if (entry.kind === 'text') { return [textSlide(entry, ratio, palette, geometry)]; }
     if (entry.kind === 'file') { return await fileSlides(entry, ratio); }
 
     return await scoreSlides(entry, ratio);
@@ -198,16 +201,27 @@ async function fileSlides(entry, ratio) {
  * Set large and centred on the slide's own margin, using the same Markdown the
  * booklet's paragraphs are written in — so a rubric written for the handout can
  * be pasted onto a screen and read the same way.
+ *
+ * How large is a share of the slide's own height, times whatever the deck says
+ * and whatever this row says on top of that. A share rather than a size in
+ * points because the canvas is the screen: the same words have to read the same
+ * way at all three shapes.
+ *
+ * Whatever comes out is still fitted afterwards — a screen with too many words
+ * on it is scaled down to hold, as it always was — so a size set too large costs
+ * legibility rather than the bottom of the text.
  */
-function textSlide(entry, ratio, palette) {
+function textSlide(entry, ratio, palette, geometry) {
     const canvas = { ...TEXT_CANVAS[ratio] };
     const width = canvas.width * (1 - 2 * TEXT_MARGIN);
-    const fontSize = canvas.height * 0.075;
+    const { textSizeScale, textLineHeight } = textSlideSettings(entry.override, geometry);
+    const fontSize = canvas.height * TEXT_HEIGHT * textSizeScale;
 
     const rows = markdownRows(entry.text ?? '', {
         layoutWidth: width,
         fontSize,
         fontFamily: HEADING_FONT,
+        lineHeight: textLineHeight,
         measure: canvasMeasurer(HEADING_FONT, fontSize),
         palette,
     });

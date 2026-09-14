@@ -17,6 +17,8 @@
  * to millimetres by a constant, and rsvg-convert prints what the editor promised.
  */
 
+import { DEFAULT_LINE_HEIGHT } from './booklet-markdown.js';
+
 /** Millimetres per CSS pixel at 96 dpi. */
 export const MM_PER_PX = 25.4 / 96;
 
@@ -200,6 +202,12 @@ export function pageGeometry(geometry) {
         staffHeightMm: geometry.staffHeightMm,
         textFont,
         headingScale: Number(geometry.headingScale) > 0 ? Number(geometry.headingScale) : 1,
+        // What the booklet says rather than sings, as factors of the lyric size
+        // and of the leading the renderer draws at. Carried through untouched:
+        // resolving them against a row's own override is booklet-settings.js's
+        // job, as it is for everything else a row may move.
+        textSizeScale: positiveOr(geometry.textSizeScale, 1),
+        textLineHeight: positiveOr(geometry.textLineHeight, DEFAULT_LINE_HEIGHT),
         abcStaffSep: Number(geometry.abcStaffSep) >= 0 ? Number(geometry.abcStaffSep) : DEFAULT_ABC_STAFF_SEP,
         // The booklet's style, not the page's: the gap between a staff and the
         // lyrics under it, and the gap between two lyric lines, are what a face
