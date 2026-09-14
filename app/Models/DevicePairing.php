@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\DeviceDescription;
+use Carbon\CarbonImmutable;
+use Database\Factories\DevicePairingFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,15 +29,15 @@ use Illuminate\Support\Str;
  * @property string|null $session_id
  * @property string|null $ip_address
  * @property string|null $user_agent
- * @property \Carbon\CarbonImmutable $expires_at
- * @property \Carbon\CarbonImmutable|null $scanned_at
- * @property \Carbon\CarbonImmutable|null $approved_at
- * @property \Carbon\CarbonImmutable|null $claimed_at
- * @property \Carbon\CarbonImmutable|null $revoked_at
- * @property \Carbon\CarbonImmutable|null $last_seen_at
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
- * @property-read \App\Models\User|null $user
+ * @property CarbonImmutable $expires_at
+ * @property CarbonImmutable|null $scanned_at
+ * @property CarbonImmutable|null $approved_at
+ * @property CarbonImmutable|null $claimed_at
+ * @property CarbonImmutable|null $revoked_at
+ * @property CarbonImmutable|null $last_seen_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read User|null $user
  *
  * @method static \Database\Factories\DevicePairingFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|DevicePairing liveDevices()
@@ -46,7 +49,7 @@ use Illuminate\Support\Str;
  */
 class DevicePairing extends Model
 {
-    /** @use HasFactory<\Database\Factories\DevicePairingFactory> */
+    /** @use HasFactory<DevicePairingFactory> */
     use HasFactory;
 
     public const TOKEN_LENGTH = 32;
@@ -251,51 +254,13 @@ class DevicePairing extends Model
     /**
      * Something a person can recognise their own laptop by.
      *
-     * Deliberately crude. A real user-agent parser is a dependency, and the
-     * question this answers is only ever "which of my two screens is this".
+     * Shared with Screen, which asks the same question of the same string: the
+     * phone listing signed-in devices and the phone choosing which screen to
+     * drive are the same glance at the same laptop.
      */
     public function describeDevice(): string
     {
-        $agent = $this->user_agent ?? '';
-
-        $browsers = [
-            'Edg/' => 'Edge',
-            'OPR/' => 'Opera',
-            'Chrome' => 'Chrome',
-            'Firefox' => 'Firefox',
-            'Safari' => 'Safari',
-        ];
-
-        $systems = [
-            'Windows' => 'Windows',
-            'Android' => 'Android',
-            'iPhone' => 'iPhone',
-            'iPad' => 'iPad',
-            'Mac OS X' => 'macOS',
-            'Linux' => 'Linux',
-        ];
-
-        $browser = null;
-        foreach ($browsers as $needle => $name) {
-            if (str_contains($agent, $needle)) {
-                $browser = $name;
-                break;
-            }
-        }
-
-        $system = null;
-        foreach ($systems as $needle => $name) {
-            if (str_contains($agent, $needle)) {
-                $system = $name;
-                break;
-            }
-        }
-
-        if ($browser !== null && $system !== null) {
-            return __(':browser on :system', ['browser' => $browser, 'system' => $system]);
-        }
-
-        return $browser ?? $system ?? __('Unknown device');
+        return DeviceDescription::of($this->user_agent);
     }
 
     /**

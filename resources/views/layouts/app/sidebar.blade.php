@@ -110,6 +110,19 @@
                 <flux:sidebar.item icon="book-open" :href="route('plan-documents')" :current="request()->routeIs('plan-documents', 'booklets.*', 'projections.*')" wire:navigate>
                     {{ __('Booklets & Projections') }}
                 </flux:sidebar.item>
+                {{-- The laptop's way in, and the one thing anybody does at the
+                     laptop: put this in front of the room at the start of Mass
+                     and do not touch it again. Everything after that is done
+                     from the phone. --}}
+                <flux:sidebar.item icon="tv" :href="route('projection-screen')" :current="request()->routeIs('projection-screen')" wire:navigate>
+                    {{ __('Projection screen') }}
+                </flux:sidebar.item>
+                {{-- The phone's way in. Its own entry rather than a button on
+                     a deck, because the person reaching for it is at the organ
+                     and the deck is already up on a screen across the room. --}}
+                <flux:sidebar.item icon="presentation" :href="route('projection-remote')" :current="request()->routeIs('projection-remote', 'projection-remote.*')" wire:navigate>
+                    {{ __('Remote') }}
+                </flux:sidebar.item>
             </flux:sidebar.group>
             @if(auth()->check() && auth()->user()->isEditor)
             <flux:sidebar.group heading="Szerkesztő">

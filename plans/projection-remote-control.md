@@ -64,6 +64,7 @@ Timestamps rather than a status enum, after `Loan` and `DevicePairing`:
 presentations
   id, projection_id, user_id, device_pairing_id (nullable)
   entry_id, slide_index, blanked, version
+  revision, drawn_revision
   started_at, last_seen_at, ended_at
 ```
 
@@ -87,6 +88,55 @@ that, a read answered just before the cantor pressed space arrives just after it
 and sends the room back a slide. Writes themselves are last-one-wins, which is
 right: there is one liturgy, and the people driving it can see each other.
 
+**The deck changes under the presentation, and rehearsal is when it changes
+most.** The half hour before the service is exactly when a stanza is retyped, a
+row moved, a wrong note fixed in the score itself — and both clients engraved
+their deck once at load and are told nothing. Following the laptop therefore
+means two different things, and the state carries a number for each: `version`
+moves when someone presses space, `revision` moves when someone saves an edit. A
+client that sees a new `version` swaps a slide; a client that sees a new
+`revision` reads the payload again and engraves it again. Both ride the poll
+that is already running, so nothing new is asked of the network.
+
+**`revision` is read off the rows rather than bumped by hand.** It is the newest
+of three timestamps: the projection's own `updated_at`, the newest `updated_at`
+among its rows, and the newest among the scores those rows name — one joined
+query, and the same trick the application already dates an engraving with
+(`Score::incipitUrl` hangs `?v=updated_at->timestamp` off every one of them).
+Nothing has to remember to raise it: retyping a stanza, reordering the deck,
+changing the ratio and correcting the score all land in one of those three
+columns, and a row that changes without touching its parent — `ProjectionSlide`
+has no `$touches` today — is still caught, which is why it does not need one.
+
+Entitlement is deliberately outside the fingerprint. A loan recalled between
+Thursday and Sunday is not an edit to the deck, and it needs no bump to take
+effect: every payload read resolves it afresh through
+`ProjectionRenderPayload::for`, so the next re-engraving for any reason drops
+what may no longer be read. What it must never do is take the picture off the
+wall by itself in the middle of a Mass.
+
+**Re-engraving never takes the picture down.** The new deck is drawn into a
+second array in the background and swapped in when it is finished, the way
+`applyUpdate` and the presenter's reload button already do it — that seam exists,
+and this feature only gives it a reason to fire without a hand on the laptop. The
+slide address and `blanked` survive the swap. If the read or the engraving fails,
+the old deck simply stays and the client keeps its old revision, so the next
+change tries again; nothing is drawn over the deck to say so.
+
+**The address is resolved against the new deck forgivingly.** If the row still
+exists, `slide_index` is clamped to the number of slides it now comes to; if it
+is gone, the service lands on the first slide of the next row that survived, and
+on the last slide of the deck if there is none. A today-only reveal keyed to a
+row that no longer exists is dropped with it.
+
+**Each client reports the revision it has actually drawn, not the one it has
+heard of.** The presenter writes `drawn_revision` with its heartbeat, and the
+remote compares it with `revision`. That is the honest answer to *is the wall
+showing my edit yet*: the phone can say the wall is still on the previous deck
+and that it is catching up, instead of implying the room already sees what the
+phone sees. It also costs nothing to display — one comparison of two strings the
+poll already carries.
+
 **The hot path is a JSON endpoint, not a Livewire round trip.** The presenter's
 stage is `wire:ignore`d and its docblock says nothing there writes, both so that
 no component re-render can touch the picture mid-service. Polling the Livewire
@@ -109,12 +159,63 @@ must never feel like it is thinking.
 
 **The remote shows the deck, and what the deck is for.** It engraves the same
 payload through the same `renderDeck`, so what the phone shows is what the wall
-shows: the current slide, the next one, and a list to jump by. Around them it
-shows what no display program's remote can, because no display program has it —
-the slot the row stands in, the music's title and variation, how many slides the
-row came to. Engraving on the phone is the one performance risk in this design;
-if it proves too slow, the fallback is to label the deck and engrave only the
-current slide and its successor.
+shows: the current slide, what is coming after it, and a list to jump by. Around
+them it shows what no display program's remote can, because no display program
+has it — the slot the row stands in, the music's title and variation, how many
+slides the row came to. Engraving on the phone is the one performance risk in
+this design; if it proves too slow, the fallback is to label the deck and
+engrave only the current slide and its successor.
+
+**The page is three bands that never move.** A phone held in one hand over an
+organ bench has no room for a scroll: the Next button must be under the thumb at
+the end of every verse, in the same place it was at the end of the last one. So
+the slide the room is reading takes the upper half, edge to edge, because
+readable at a glance is the whole reason the picture is there at all; a
+scrollable strip of what is coming takes the quarter under it, each slide a tap
+away, which is the jump a clicker cannot make; and the quarter at the foot is
+previous, blank and next at 1 : 1 : 2, nothing else sharing it. The strip holds a
+window of what is coming rather than the whole deck, so that a tap costs the same
+whether the service is six slides long or sixty — and if even that proves too
+slow, dropping the pictures leaves the two arrows exactly as they are.
+
+**A control refuses to be pressed twice.** The hand that presses Next is the hand
+that just left the manual, and the eyes never leave the music: a press made
+without looking is made twice as often as it is meant, either because the thumb
+bounced or because the cantor cannot remember a second later whether the first
+one happened. So each of the three obeys once and then ignores itself for half a
+second — longer than any fumble, shorter than the gap between two verses — and
+turns bright blue for exactly as long as it is ignoring itself. The blue answers
+both halves of the problem at once: it is the receipt for the press that landed,
+and while it stands it is the reason the next press will not. The lock is per
+control, because the press that undoes an accidental Next is Previous, and that
+one must never be the press that is swallowed. A swallowed press is dropped on
+the phone and never sent, so the wall has nothing to correct and nothing to
+flicker through.
+
+**The wall goes out like house lights and comes back like a hymn board.**
+Blanking is the sermon beginning, and a screen that snaps to black pulls every
+eye in the room to it at the moment they were meant to go to the pulpit — so the
+picture fades over about three quarters of a second. Coming back is the opposite
+errand, a verse that has to be sung now, so it is instant; and so is the black of
+a deck being swapped, which is not the cantor asking for anything but the wall
+admitting it has nothing yet to show. The black is therefore laid *over* the
+picture rather than swapped for it, which is what lets the duration belong to the
+state rather than to the element.
+
+**Full screen is taken, not asked for.** The first press of a control is the
+gesture a browser requires, so it is spent on going full screen and never asked
+for again: a cantor who leaves full screen meant to leave it. Where a browser
+refuses outright — an iPhone — the three bands still fill the window, which is
+what the layout was built to survive.
+
+**The plan is behind a swipe.** It is read once or twice a service, to find the
+Communion hymn while the Offertory is still being played, and the three bands
+are read all the way through it, so it gets a drawer rather than a share of the
+screen. Every row in it is named by its music or its score, never by its
+position: the headings printed on a slide are silent wherever the deck's author
+asked for silence, and a list of "slide 7" is the one thing nobody is looking
+for. Ending the projection lives at the foot of that drawer, out of reach of a
+thumb going for Next.
 
 **Authorization is finished before this feature starts.** Both devices are the
 same person, so there is nothing to pair, no code to read across the room and no
@@ -145,10 +246,15 @@ concept above the row, and nothing here forecloses it.
    `{entry_id, slide_index, blanked}`. Nothing visible changes — but two
    presenter tabs on one deck now follow each other, which is the whole mechanism
    under test.
-2. `/remote`: the list, then the control page — previous, next, blank, jump,
-   current and next slide, plan context.
-3. Verses revealed for today only.
-4. Later: the websocket transport, and several screens under one controller.
+2. `revision` in the state answer, a payload endpoint to re-read from, and the
+   presenter re-engraving on its own when the deck moves under it — the reload
+   button stays as the manual override it is. Two presenter tabs now also follow
+   an edit made in a third.
+3. `/remote`: the list, then the control page — previous, next, blank, jump,
+   current and next slide, plan context, and whether the wall has caught up with
+   the last edit.
+4. Verses revealed for today only.
+5. Later: the websocket transport, and several screens under one controller.
 
 ## Testing
 
@@ -156,6 +262,160 @@ Pest feature tests for the state round trip and for `version` never going
 backwards; a read carrying a stale version ignored; another user's presentation
 answering 404; a loan revoked underneath ending the payload; a slide address that
 no longer exists after an edit resolving to something sane; the `live` scope
-ageing out on `last_seen_at`. A browser test that drives the deck from the
+ageing out on `last_seen_at`. For following the deck: `revision` moving when the
+projection, a row or a score behind a row is saved, and standing still when
+nothing was; an address resolved across a deleted row and across a row that lost
+slides; a today-only reveal pruned with the row it named; `drawn_revision`
+reported behind `revision` until the presenter has finished engraving. A browser test that drives the deck from the
 keyboard with both endpoints failing, so that the rule about the wall is enforced
 by something other than good intentions.
+
+## Since: the phone aims at a screen, not at a deck
+
+The first pass shipped and is right about everything below the seam — the row,
+the addressing, the two endpoints, the poll that doubles as a heartbeat. What it
+got wrong is the thing the phone is pointed at.
+
+`ProjectionPresenter::mount()` derives the `Presentation` from the URL the laptop
+loaded, and the blade then bakes that row's id into `stateUrl` and `payloadUrl`
+as constants. Both pages are bound to one deck for their whole life. Nothing in
+the application means *the wall*, so the remote has to guess which deck the room
+is seeing, and `ProjectionRemoteList` guesses by taking the newest live row —
+which is why `/remote` silently enters a deck nobody chose, why a laptop that has
+not started anything yet leaves the phone with an empty page instead of an
+answer, and why the back arrow on the control page returns to a list that
+immediately redirects into the deck it just left.
+
+The workaround for each of those separately is a flag: a query string that
+suppresses the redirect, an empty state, a stop button. Three patches around one
+missing noun.
+
+### Decisions
+
+**A `Screen` is one browser that is showing the room something.** It is the noun
+the first pass left out, and it holds exactly one interesting column: which
+presentation it is currently showing, nullable, because a screen that is showing
+nothing is the normal state before the service and the one the phone most needs
+to be able to say out loud.
+
+```
+screens
+  id, user_id, device_pairing_id (nullable)
+  session_id, user_agent
+  presentation_id (nullable)
+  last_seen_at
+```
+
+Live means `last_seen_at` inside the last few minutes, after `Presentation` and
+for the same reason — a closed tab goes stale rather than depending on an event
+browsers do not reliably give.
+
+**There is nothing to pair, and the button is not a pairing button.** Both
+devices already hold a session for the same person; that is what the QR sign-in
+was for, and it is why the remote needed no code read across the room in the
+first pass. What the phone is missing is not permission but an address: *which*
+browser is the wall. So claiming a screen is not a ceremony between two devices,
+it is one device saying "I am the one facing the room" — and the honest way to
+say that is to open the page that only a wall would open. Opening `/present`
+claims the screen for that session; nothing is typed, nothing is scanned, and a
+laptop signed in with a password rather than a QR code works identically.
+
+The button that is genuinely needed is therefore a way *to* that page, not a way
+to pair: a sidebar entry next to the remote's, so the parish laptop reaches the
+waiting screen without anyone remembering a URL. `device_pairing_id` is recorded
+where there is one, so that revoking a borrowed screen from the phone — which
+already ends the session — takes the screen with it rather than leaving a live
+row pointing at a laptop that has been signed out.
+
+**The laptop opens a screen; the deck arrives afterwards.** `/present` shows a
+waiting state naming the screen, and then follows its own pointer: the poll it
+already runs answers which presentation it is showing, and it draws whatever that
+is. `/projections/{projection}/present` stays exactly as it is and keeps working
+for someone driving the laptop directly — it simply also sets this browser's
+screen pointer on the way in. Starting a deck at the laptop and starting it from
+the phone become the same write, which is the only reason the two-screen setup
+later needs no new concept.
+
+**A screen changing decks goes black, and black is a state of its own.** The new
+deck has to be engraved before it can be shown, and that is seconds, not frames.
+The wall shows black while it engraves — deliberately, because a room watching
+the previous hymn linger while the next one is prepared is worse than a room
+watching nothing for two seconds. It is not the cantor's blank: `blanked` is an
+instruction and this is a condition, they clear on different events, and the
+phone must be able to say *the screen is preparing* rather than implying the
+cantor pressed something. The remote already has the vocabulary for exactly this
+distinction in `drawn_revision` against `revision`, and this is the same question
+one level up — which deck is drawn, rather than which version of it.
+
+**The remote is bound to the screen, and so it can be left.** `/remote` becomes
+the screen — the one live screen entered without asking, a picker when there are
+two, and when there are none the useful sentence the current page cannot say,
+that no screen is waiting and the laptop has not been started yet. The control
+page then never traps, because going back to the deck list is ordinary navigation
+rather than a redirect into the row the list just came from. When the laptop
+starts a deck, the phone's poll sees the screen's pointer change and follows it
+in; that is the same poll, one field wider.
+
+**Leaving the remote and clearing the wall are different actions.** Stopping mid
+service by accident is a far worse failure than a stale slide lingering after
+everyone has gone home, so the ordinary back gesture means only that this phone
+is done driving, and the wall keeps what it has. Clearing the screen — pointer to
+null, wall back to waiting — is a deliberate, separately worded action, and it is
+also what ends the presentation.
+
+**Pointing a screen at a deck belongs wherever decks are listed.** It is one
+write, and the remote is not the only client that will want it: the two-screen
+laptop is this feature's second caller, where one screen shows the deck and the
+other browses, edits scores and starts the next one. That second screen is not a
+new mechanism — it is a browser that can aim a screen and does not show a deck,
+which is precisely what the phone is. Building the action on the projection and
+plan-document pages rather than only inside the remote is what makes the later
+setup a layout question instead of a design question.
+
+**The presentation stays what it was.** A screen points at a presentation;
+`Presentation::resumeFor` still joins or starts one; the address, the version,
+the revision, the reveals and both endpoints are untouched. Everything the first
+pass established survives, which is the test of whether the missing noun was
+really missing.
+
+**The state client becomes rebuildable, and that is the real refactor.**
+`stateUrl` and `payloadUrl` stop being constants written at render time and
+become derived from whichever presentation the screen currently points at, on
+both pages. `stateClient` in `projection-follow.js` closes over its config today;
+it needs to be re-made when the pointer moves, with the old poll stopped before
+the new one starts, or two clients race each other writing where the service is.
+The rule the first pass would not trade stands unchanged: a failed read or write
+costs the remote and nothing else, and a screen that cannot reach the server goes
+on showing what it is showing.
+
+### Build order
+
+1. Table, model, policy. `/present` claims a screen for the session and shows the
+   waiting state; the sidebar reaches it; `/projections/{projection}/present` sets
+   the pointer on the way in. Nothing else changes yet.
+2. A screen's state in the poll, and the presenter rebuilding its client and
+   re-engraving when the pointer moves — black while it does. Two laptops, or a
+   laptop and a keyboard, can now hand a screen from deck to deck.
+3. `/remote` rebound to the screen: waiting state, picker, following the pointer
+   in, and a back gesture that leaves without redirecting.
+4. Starting and switching a deck from the phone, then the same action on the
+   projection and plan-document pages.
+5. Clearing the screen, as the deliberate action that also ends the presentation.
+6. Later, unchanged from the first pass: the websocket transport under the same
+   endpoints, and the two-screen laptop, which by then is layout.
+
+New strings land in `lang/hu.json` as they are written, not afterwards.
+
+### Testing
+
+Pest feature tests for claiming a screen from a session and re-claiming it on
+reload rather than growing a second row; a screen aged out by `last_seen_at`; a
+revoked `DevicePairing` taking its screen with it; another user's screen
+answering 404 in the shape the state endpoints already use; pointing a screen at
+a deck the user may not view refused; the pointer surviving a presentation that
+ends and reading as cleared afterwards. For the remote: no live screen answering
+the waiting state rather than an empty list, one live screen entered without
+asking, two offering a choice, and the back gesture leaving the pointer alone
+where clearing it changes both the screen and the presentation. A browser test
+for the swap itself — the wall black while the next deck engraves, then showing
+it, with the phone reporting the screen as preparing throughout.

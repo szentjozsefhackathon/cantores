@@ -124,3 +124,20 @@ it('leaves out a score the viewer can no longer read', function () {
     expect(Livewire::test(ProjectionPresenter::class, ['projection' => $projection])->get('entries'))
         ->toBe([]);
 });
+
+/*
+ * The wall goes dark the way house lights do and comes back the way a hymn
+ * board does. The black is laid over the picture rather than swapped for it, so
+ * that the duration can belong to the state: `darkFadeMs` is the whole rule, and
+ * it is zero in every direction except the cantor blanking the screen.
+ */
+it('fades the wall out and brings it back instantly', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionPresenter::class, ['projection' => $projection])
+        ->assertSeeHtml('transition: opacity ${darkFadeMs}ms ease-in')
+        ->assertSeeHtml('opacity: ${dark ? 1 : 0}');
+});

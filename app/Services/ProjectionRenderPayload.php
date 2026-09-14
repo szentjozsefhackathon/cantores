@@ -108,6 +108,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
                         'slot' => $heading['slot'],
                         'music' => $heading['music'],
                         'reference' => $heading['reference'],
+                        ...$this->nameOf($entry),
                         // The two numbers a screen of words may be set apart by,
                         // read out of this deck's own shape like every other
                         // override here.
@@ -128,6 +129,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
                     'music' => $heading['music'],
                     'reference' => $heading['reference'],
                     'variation' => $heading['variation'],
+                    ...$this->nameOf($entry),
                 ];
 
                 // An uploaded score has no source to re-engrave, so it travels
@@ -163,6 +165,42 @@ class ProjectionRenderPayload extends PlanRenderPayload
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * What the row is called when something has to name it.
+     *
+     * Not the heading: a heading is printed, and is therefore silent wherever
+     * the deck's author asked for silence — the slot named once by the row that
+     * opens it, the music's title switched off because the room can see it on
+     * the slide. A remote's list has the opposite problem. Every row in it has
+     * to be recognisable on its own, out of order, at a glance, by the person
+     * looking for the Communion hymn while playing the Offertory, so the name
+     * is read straight off the music and the score and owes the display
+     * switches nothing.
+     *
+     * @return array{label: ?string, slotName: ?string}
+     */
+    private function nameOf(ProjectionSlide $entry): array
+    {
+        $slotName = $entry->assignment?->musicPlanSlot?->name
+            ?? $entry->slotPlan?->musicPlanSlot?->name;
+
+        $label = $entry->assignment?->music?->title
+            ?? $entry->score?->music?->title
+            ?? $entry->score?->title;
+
+        return [
+            'label' => self::trimmed($label),
+            'slotName' => self::trimmed($slotName),
+        ];
+    }
+
+    private static function trimmed(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
     /**

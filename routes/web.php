@@ -1,6 +1,71 @@
 <?php
 
+use App\Http\Controllers\BookletController;
+use App\Http\Controllers\BookletLoanScorePageController;
+use App\Http\Controllers\BookletLoanStripController;
+use App\Http\Controllers\BookletPdfExportController;
+use App\Http\Controllers\BookletScorePageController;
+use App\Http\Controllers\BookletStripController;
+use App\Http\Controllers\HumanCheckController;
+use App\Http\Controllers\MusicPlanController;
+use App\Http\Controllers\PresentationPayloadController;
+use App\Http\Controllers\PresentationStateController;
+use App\Http\Controllers\ProjectionController;
+use App\Http\Controllers\ProjectionScorePageController;
+use App\Http\Controllers\PublicScoreDownloadController;
+use App\Http\Controllers\PublicScorePageController;
+use App\Http\Controllers\QrLoginClaimController;
+use App\Http\Controllers\ScoreFileDownloadController;
+use App\Http\Controllers\ScoreFilePageController;
+use App\Http\Controllers\ScoreFileThumbnailController;
+use App\Http\Controllers\ScoreIncipitController;
+use App\Http\Controllers\ScoreLoanFileDownloadController;
+use App\Http\Controllers\ScoreLoanFilePageController;
+use App\Http\Controllers\ScoreLoanIncipitController;
+use App\Http\Controllers\ScorePdfExportController;
+use App\Http\Controllers\ScorePublicIncipitController;
+use App\Http\Controllers\ScreenStateController;
+use App\Http\Controllers\SitemapController;
+use App\Livewire\Pages\AbcGuide;
+use App\Livewire\Pages\AretinoGuide;
+use App\Livewire\Pages\AuthorView;
+use App\Livewire\Pages\BookletEditor;
+use App\Livewire\Pages\BookletLoanView;
+use App\Livewire\Pages\CollectionView;
+use App\Livewire\Pages\Editor\Authors;
+use App\Livewire\Pages\Editor\ExternalLinks;
+use App\Livewire\Pages\Editor\Musics;
+use App\Livewire\Pages\Editor\MusicTagManager;
+use App\Livewire\Pages\Editor\MusicVerifier;
+use App\Livewire\Pages\Editor\ScorePublicationReview;
+use App\Livewire\Pages\FolderEditor;
+use App\Livewire\Pages\Folders;
+use App\Livewire\Pages\FolderView;
+use App\Livewire\Pages\LoanManager;
+use App\Livewire\Pages\Loans;
+use App\Livewire\Pages\MusicPlanLoanView;
+use App\Livewire\Pages\MusicView;
+use App\Livewire\Pages\MyMusicPlans;
+use App\Livewire\Pages\Notifications;
+use App\Livewire\Pages\PlanDocuments;
+use App\Livewire\Pages\ProjectionEditor;
+use App\Livewire\Pages\ProjectionPresenter;
+use App\Livewire\Pages\ProjectionRemote;
+use App\Livewire\Pages\ProjectionRemoteDecks;
+use App\Livewire\Pages\ProjectionRemoteList;
+use App\Livewire\Pages\PublicScores;
+use App\Livewire\Pages\PublicScoreView;
+use App\Livewire\Pages\QrLogin;
+use App\Livewire\Pages\QrLoginApproval;
+use App\Livewire\Pages\ScoreEditor;
+use App\Livewire\Pages\Scores;
+use App\Livewire\Pages\ScoreView;
+use App\Models\City;
+use App\Models\DirektoriumEdition;
+use App\Models\FirstName;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -18,17 +83,17 @@ Route::view('/about', 'pages.about')->name('about');
 
 Route::view('/guide', 'pages.guide')->name('guide');
 
-Route::livewire('/aretino/guide', \App\Livewire\Pages\AretinoGuide::class)
+Route::livewire('/aretino/guide', AretinoGuide::class)
     ->name('aretino.guide');
 
-Route::livewire('/abc/guide', \App\Livewire\Pages\AbcGuide::class)
+Route::livewire('/abc/guide', AbcGuide::class)
     ->name('abc.guide');
 
 // Music database landing page (public)
 Route::livewire('/music-database', 'pages::music-database')
     ->name('music-database');
 
-Route::get('/sitemap.xml', \App\Http\Controllers\SitemapController::class)->name('sitemap');
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::view('/terms', 'pages.terms')->name('terms');
 Route::view('/privacy', 'pages.privacy')->name('privacy');
@@ -37,11 +102,11 @@ Route::view('/privacy', 'pages.privacy')->name('privacy');
 Route::view('/kotta-jogok', 'pages.kotta-jogok')->name('score-rights');
 
 Route::get('/random-nickname', function () {
-    $cities = \App\Models\City::allCached();
-    $firstNames = \App\Models\FirstName::allCached();
+    $cities = City::allCached();
+    $firstNames = FirstName::allCached();
 
     // Get used combinations
-    $usedCombinations = \App\Models\User::select('city_id', 'first_name_id')
+    $usedCombinations = User::select('city_id', 'first_name_id')
         ->get()
         ->map(fn ($user) => $user->city_id.'_'.$user->first_name_id)
         ->toArray();
@@ -77,12 +142,12 @@ require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';
 
 // Music plan creation (POST)
-Route::post('/music-plans', [\App\Http\Controllers\MusicPlanController::class, 'store'])
+Route::post('/music-plans', [MusicPlanController::class, 'store'])
     ->middleware(['auth', 'verified'])
     ->name('music-plans.store');
 
 // Music plan copy (POST)
-Route::post('/music-plans/{musicPlan}/copy', [\App\Http\Controllers\MusicPlanController::class, 'copy'])
+Route::post('/music-plans/{musicPlan}/copy', [MusicPlanController::class, 'copy'])
     ->middleware(['auth', 'verified'])
     ->name('music-plans.copy');
 
@@ -96,7 +161,7 @@ Route::livewire('/music-plan/{musicPlan}/view', 'pages::music-plan.music-plan-vi
     ->name('music-plan-view');
 
 // Music plans list (authenticated user's own plans)
-Route::livewire('/my-music-plans', \App\Livewire\Pages\MyMusicPlans::class)
+Route::livewire('/my-music-plans', MyMusicPlans::class)
     ->middleware(['auth', 'verified'])
     ->name('my-music-plans');
 
@@ -109,7 +174,7 @@ Route::livewire('/collections', 'pages::collections-landing')
     ->name('collections');
 
 // Public read-only collection view
-Route::livewire('/collection/{collection}/view', \App\Livewire\Pages\CollectionView::class)
+Route::livewire('/collection/{collection}/view', CollectionView::class)
     ->name('collection-view');
 
 // Authors landing page (public)
@@ -117,22 +182,22 @@ Route::livewire('/authors', 'pages::authors-landing')
     ->name('authors');
 
 // Authors editor (browseable by guests, edit actions require auth)
-Route::livewire('/authors/editor', \App\Livewire\Pages\Editor\Authors::class)
+Route::livewire('/authors/editor', Authors::class)
     ->name('authors-editor');
 
 // Public read-only author view
-Route::livewire('/author/{author}/view', \App\Livewire\Pages\AuthorView::class)
+Route::livewire('/author/{author}/view', AuthorView::class)
     ->name('author-view');
 
-Route::livewire('/musics', \App\Livewire\Pages\Editor\Musics::class)
+Route::livewire('/musics', Musics::class)
     ->name('musics');
 
 // Shared score preview — public, no authentication required
-Route::livewire('/score/preview', \App\Livewire\Pages\ScoreEditor::class)
+Route::livewire('/score/preview', ScoreEditor::class)
     ->name('score.preview');
 
 // SVG → PDF export — public (guests may export) but protected by CSRF and rate limiting
-Route::post('/score/export-pdf', \App\Http\Controllers\ScorePdfExportController::class)
+Route::post('/score/export-pdf', ScorePdfExportController::class)
     ->middleware('throttle:20,1')
     ->name('score.export-pdf');
 
@@ -141,62 +206,62 @@ Route::post('/score/export-pdf', \App\Http\Controllers\ScorePdfExportController:
 // session before any of these open. See EnsureVisitorIsHuman.
 Route::middleware('human')->group(function (): void {
     // Lending link — public, resolves to edit for owner or read-only for others
-    Route::livewire('/s/{token}', \App\Livewire\Pages\ScoreView::class)
+    Route::livewire('/s/{token}', ScoreView::class)
         ->name('score.loan');
 
-    Route::get('/s/{token}/incipit', \App\Http\Controllers\ScoreLoanIncipitController::class)
+    Route::get('/s/{token}/incipit', ScoreLoanIncipitController::class)
         ->name('score.loan.incipit');
 
     // A score reached *through* a loan — the score itself, or a folder or plan that
     // reaches it. Access is derived from the loan on every request, so revoking the
     // loan revokes these URLs too. The /share/ prefix is left alone: these URLs are
     // bearer links already in circulation.
-    Route::livewire('/share/{token}/score/{score}', \App\Livewire\Pages\ScoreView::class)
+    Route::livewire('/share/{token}/score/{score}', ScoreView::class)
         ->name('loan.score');
 
-    Route::get('/share/{token}/score/{score}/incipit', \App\Http\Controllers\ScoreLoanIncipitController::class)
+    Route::get('/share/{token}/score/{score}/incipit', ScoreLoanIncipitController::class)
         ->name('loan.score.incipit');
 
     // Rendered pages and the original file of an uploaded score, reached through a
     // loan. A directly lent score is its own loan, so these serve every kind of
     // link uniformly.
-    Route::get('/share/{token}/score/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\ScoreLoanFilePageController::class)
+    Route::get('/share/{token}/score/{score}/file/{scoreFile}/page/{page}', ScoreLoanFilePageController::class)
         ->whereNumber('page')
         ->name('loan.score.file.page');
 
-    Route::get('/share/{token}/score/{score}/file/{scoreFile}/download', \App\Http\Controllers\ScoreLoanFileDownloadController::class)
+    Route::get('/share/{token}/score/{score}/file/{scoreFile}/download', ScoreLoanFileDownloadController::class)
         ->name('loan.score.file.download');
 
     // Plan lending link — public, no authentication required
-    Route::livewire('/p/{token}', \App\Livewire\Pages\MusicPlanLoanView::class)
+    Route::livewire('/p/{token}', MusicPlanLoanView::class)
         ->name('music-plan.loan');
 
     // Booklet lending link — the handout as the band reads it, on their own
     // phones. The same booklet the editor is showing, re-engraved to the width
     // of whatever screen it lands on, so a chord changed at the rehearsal is
     // there on the next refresh.
-    Route::livewire('/b/{token}', \App\Livewire\Pages\BookletLoanView::class)
+    Route::livewire('/b/{token}', BookletLoanView::class)
         ->name('booklet.loan');
 
     // The uploaded systems and pages that booklet draws, addressed by the token
     // rather than by the booklet: same two endpoints as the owner's, same check
     // underneath, and the reader's entitlement derived from the link on every
     // request. See BookletRenderPayload::drawsFile().
-    Route::get('/b/{token}/strip/{scoreFile}/{page}/{index}', \App\Http\Controllers\BookletLoanStripController::class)
+    Route::get('/b/{token}/strip/{scoreFile}/{page}/{index}', BookletLoanStripController::class)
         ->whereNumber(['page', 'index'])
         ->name('booklet.loan.strip');
 
-    Route::get('/b/{token}/score-page/{scoreFile}/{page}', \App\Http\Controllers\BookletLoanScorePageController::class)
+    Route::get('/b/{token}/score-page/{scoreFile}/{page}', BookletLoanScorePageController::class)
         ->whereNumber('page')
         ->name('booklet.loan.score-page');
 });
 
 // The human check itself: guests only, rate limited because it is the one page a
 // crawler that found a lending link is allowed to reach.
-Route::get('/emberi-ellenorzes', [\App\Http\Controllers\HumanCheckController::class, 'show'])
+Route::get('/emberi-ellenorzes', [HumanCheckController::class, 'show'])
     ->name('human-check');
 
-Route::post('/emberi-ellenorzes', [\App\Http\Controllers\HumanCheckController::class, 'store'])
+Route::post('/emberi-ellenorzes', [HumanCheckController::class, 'store'])
     ->middleware('throttle:20,1')
     ->name('human-check.store');
 
@@ -206,50 +271,50 @@ Route::post('/emberi-ellenorzes', [\App\Http\Controllers\HumanCheckController::c
 //
 // `claim` is declared before `{token}` and the token is constrained besides, so
 // the one cannot swallow the other.
-Route::get('/qr/claim', \App\Http\Controllers\QrLoginClaimController::class)
+Route::get('/qr/claim', QrLoginClaimController::class)
     ->middleware('throttle:30,1')
     ->name('qr-login.claim');
 
-Route::livewire('/qr', \App\Livewire\Pages\QrLogin::class)
+Route::livewire('/qr', QrLogin::class)
     ->middleware('throttle:30,1')
     ->name('qr-login');
 
 // The phone's side: behind `auth`, so a signed-out phone is carried through the
 // login form and back by `url.intended` with no help from us.
-Route::livewire('/qr/{token}', \App\Livewire\Pages\QrLoginApproval::class)
+Route::livewire('/qr/{token}', QrLoginApproval::class)
     ->where('token', '[A-Za-z0-9]{32}')
     ->middleware(['auth', 'verified'])
     ->name('qr-login.approve');
 
-Route::livewire('/scores', \App\Livewire\Pages\Scores::class)
+Route::livewire('/scores', Scores::class)
     ->middleware(['auth', 'verified'])
     ->name('scores');
 
-Route::livewire('/scores/create/{music?}', \App\Livewire\Pages\ScoreEditor::class)
+Route::livewire('/scores/create/{music?}', ScoreEditor::class)
     ->middleware(['auth', 'verified'])
     ->name('scores.create');
 
-Route::livewire('/scores/{score}/edit', \App\Livewire\Pages\ScoreEditor::class)
+Route::livewire('/scores/{score}/edit', ScoreEditor::class)
     ->middleware(['auth', 'verified'])
     ->name('scores.edit');
 
-Route::get('/scores/{score}/incipit', \App\Http\Controllers\ScoreIncipitController::class)
+Route::get('/scores/{score}/incipit', ScoreIncipitController::class)
     ->middleware(['auth', 'verified'])
     ->name('scores.incipit');
 
-Route::get('/scores/{score}/public-incipit', \App\Http\Controllers\ScorePublicIncipitController::class)
+Route::get('/scores/{score}/public-incipit', ScorePublicIncipitController::class)
     ->name('scores.public-incipit');
 
-Route::get('/scores/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\ScoreFilePageController::class)
+Route::get('/scores/{score}/file/{scoreFile}/page/{page}', ScoreFilePageController::class)
     ->middleware(['auth', 'verified'])
     ->whereNumber('page')
     ->name('scores.file.page');
 
-Route::get('/scores/{score}/file/{scoreFile}/thumbnail', \App\Http\Controllers\ScoreFileThumbnailController::class)
+Route::get('/scores/{score}/file/{scoreFile}/thumbnail', ScoreFileThumbnailController::class)
     ->middleware(['auth', 'verified'])
     ->name('scores.file.thumbnail');
 
-Route::get('/scores/{score}/file/{scoreFile}/download', \App\Http\Controllers\ScoreFileDownloadController::class)
+Route::get('/scores/{score}/file/{scoreFile}/download', ScoreFileDownloadController::class)
     ->middleware(['auth', 'verified'])
     ->name('scores.file.download');
 
@@ -257,55 +322,55 @@ Route::get('/scores/{score}/file/{scoreFile}/download', \App\Http\Controllers\Sc
 // separate from the /scores/* ones on purpose: those sit behind auth,verified,
 // and that middleware is a second line of defence over every private file.
 // PublicScoreAccessService is the single gate here.
-Route::livewire('/ingyenes-kottak', \App\Livewire\Pages\PublicScores::class)
+Route::livewire('/ingyenes-kottak', PublicScores::class)
     ->name('public-scores');
 
-Route::livewire('/ingyenes-kottak/{score}/{slug?}', \App\Livewire\Pages\PublicScoreView::class)
+Route::livewire('/ingyenes-kottak/{score}/{slug?}', PublicScoreView::class)
     ->name('public-scores.show');
 
-Route::get('/ingyenes-kottak/{score}/file/{scoreFile}/page/{page}', \App\Http\Controllers\PublicScorePageController::class)
+Route::get('/ingyenes-kottak/{score}/file/{scoreFile}/page/{page}', PublicScorePageController::class)
     ->whereNumber('page')
     ->name('public-scores.file.page');
 
-Route::get('/ingyenes-kottak/{score}/file/{scoreFile}/download', \App\Http\Controllers\PublicScoreDownloadController::class)
+Route::get('/ingyenes-kottak/{score}/file/{scoreFile}/download', PublicScoreDownloadController::class)
     ->middleware('throttle:60,1')
     ->name('public-scores.file.download');
 
 // Folder lending link — public, read-only, behind the human check like every
 // other lending link
-Route::livewire('/f/{token}', \App\Livewire\Pages\FolderView::class)
+Route::livewire('/f/{token}', FolderView::class)
     ->middleware('human')
     ->name('folder.loan');
 
-Route::livewire('/folders', \App\Livewire\Pages\Folders::class)
+Route::livewire('/folders', Folders::class)
     ->middleware(['auth', 'verified'])
     ->name('folders');
 
 // The lending centre: what I borrowed, what I lent, and what I published
-Route::livewire('/kolcsonzesek', \App\Livewire\Pages\Loans::class)
+Route::livewire('/kolcsonzesek', Loans::class)
     ->middleware(['auth', 'verified'])
     ->name('loans');
 
 // Which scores a lent folder or plan actually opens
-Route::livewire('/kolcsonzesek/{loan}', \App\Livewire\Pages\LoanManager::class)
+Route::livewire('/kolcsonzesek/{loan}', LoanManager::class)
     ->middleware(['auth', 'verified'])
     ->name('loans.manage');
 
 // The screen was called /shared-links before lending got its own vocabulary
 Route::redirect('/shared-links', '/kolcsonzesek');
 
-Route::livewire('/folders/create', \App\Livewire\Pages\FolderEditor::class)
+Route::livewire('/folders/create', FolderEditor::class)
     ->middleware(['auth', 'verified'])
     ->name('folders.create');
 
-Route::livewire('/folders/{folder}/edit', \App\Livewire\Pages\FolderEditor::class)
+Route::livewire('/folders/{folder}/edit', FolderEditor::class)
     ->middleware(['auth', 'verified'])
     ->name('folders.edit');
 
 // Everything a plan has been made into, booklets and projections together, one
 // service to a row: the two used to have a list each, and nothing then said
 // which deck belonged with which booklet.
-Route::livewire('/plan-documents', \App\Livewire\Pages\PlanDocuments::class)
+Route::livewire('/plan-documents', PlanDocuments::class)
     ->middleware(['auth', 'verified'])
     ->name('plan-documents');
 
@@ -317,26 +382,26 @@ Route::redirect('/projections', '/plan-documents');
 // chooses and arranges; the pages themselves are engraved in the browser and
 // only come back here to be turned into a PDF.
 
-Route::post('/booklets', [\App\Http\Controllers\BookletController::class, 'store'])
+Route::post('/booklets', [BookletController::class, 'store'])
     ->middleware(['auth', 'verified'])
     ->name('booklets.store');
 
-Route::livewire('/booklets/{booklet}/edit', \App\Livewire\Pages\BookletEditor::class)
+Route::livewire('/booklets/{booklet}/edit', BookletEditor::class)
     ->middleware(['auth', 'verified'])
     ->name('booklets.edit');
 
-Route::delete('/booklets/{booklet}', [\App\Http\Controllers\BookletController::class, 'destroy'])
+Route::delete('/booklets/{booklet}', [BookletController::class, 'destroy'])
     ->middleware(['auth', 'verified'])
     ->name('booklets.destroy');
 
-Route::post('/booklets/{booklet}/export-pdf', \App\Http\Controllers\BookletPdfExportController::class)
+Route::post('/booklets/{booklet}/export-pdf', BookletPdfExportController::class)
     ->middleware(['auth', 'verified', 'throttle:20,1'])
     ->name('booklets.export-pdf');
 
 // One system of an uploaded score, for a booklet that flows systems rather than
 // pages. The booklet is in the path because it is the booklet's access to the
 // score that is being checked.
-Route::get('/booklets/{booklet}/strip/{scoreFile}/{page}/{index}', \App\Http\Controllers\BookletStripController::class)
+Route::get('/booklets/{booklet}/strip/{scoreFile}/{page}/{index}', BookletStripController::class)
     ->whereNumber(['page', 'index'])
     ->middleware(['auth', 'verified'])
     ->name('booklets.strip');
@@ -344,7 +409,7 @@ Route::get('/booklets/{booklet}/strip/{scoreFile}/{page}/{index}', \App\Http\Con
 // One engraved page in vector form, for a booklet drawing a file whose systems
 // are windows onto it rather than cut-out images. One request per page: a
 // four-system page is fetched once. Same access question as the strip route.
-Route::get('/booklets/{booklet}/score-page/{scoreFile}/{page}', \App\Http\Controllers\BookletScorePageController::class)
+Route::get('/booklets/{booklet}/score-page/{scoreFile}/{page}', BookletScorePageController::class)
     ->whereNumber('page')
     ->middleware(['auth', 'verified'])
     ->name('booklets.score-page');
@@ -353,29 +418,89 @@ Route::get('/booklets/{booklet}/score-page/{scoreFile}/{page}', \App\Http\Contro
 // congregation reads from — the other half of what a booklet is. The editor
 // chooses and arranges; the slides themselves are engraved in the browser, from
 // each score's own layout for this ratio.
-Route::post('/projections', [\App\Http\Controllers\ProjectionController::class, 'store'])
+Route::post('/projections', [ProjectionController::class, 'store'])
     ->middleware(['auth', 'verified'])
     ->name('projections.store');
 
-Route::livewire('/projections/{projection}/edit', \App\Livewire\Pages\ProjectionEditor::class)
+Route::livewire('/projections/{projection}/edit', ProjectionEditor::class)
     ->middleware(['auth', 'verified'])
     ->name('projections.edit');
 
 // The deck as the room sees it: one slide at a time, full screen, driven from
 // the keyboard. Its own page rather than a mode of the editor, so the person at
 // the keyboard can put it on the projector and nothing else.
-Route::livewire('/projections/{projection}/present', \App\Livewire\Pages\ProjectionPresenter::class)
+Route::livewire('/projections/{projection}/present', ProjectionPresenter::class)
     ->middleware(['auth', 'verified'])
     ->name('projections.present');
 
-Route::delete('/projections/{projection}', [\App\Http\Controllers\ProjectionController::class, 'destroy'])
+// The screen itself: a browser facing the room, waiting to be given a deck.
+//
+// The parish laptop opens this once at the start of Mass and is not touched
+// again — everything after that is done from the phone. Opening it is the whole
+// of what claiming a screen means: both devices were already the same person, so
+// what the phone lacked was never permission but an address.
+Route::livewire('/present', ProjectionPresenter::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projection-screen');
+
+// What the room is looking at: read it, and point it somewhere else. The read is
+// polled about once a second by the wall and the phone alike, and carries the
+// presentation's own state nested inside, so that following the screen and
+// following the service are one request rather than two.
+Route::get('/screens/{screen}/state', [ScreenStateController::class, 'show'])
+    ->middleware(['auth', 'verified'])
+    ->name('screens.state');
+
+Route::post('/screens/{screen}/state', [ScreenStateController::class, 'update'])
+    ->middleware(['auth', 'verified'])
+    ->name('screens.state.store');
+
+// Where a running deck has got to, as the two devices driving it agree on it.
+//
+// Plain JSON rather than a Livewire round trip: the presenter's stage is
+// wire:ignore'd and its component writes nothing, so that no re-render can touch
+// the picture during a service, and polling the component would give that up.
+// These are polled about once a second from both ends while a Mass is going on.
+Route::get('/presentations/{presentation}/state', [PresentationStateController::class, 'show'])
+    ->middleware(['auth', 'verified'])
+    ->name('presentations.state');
+
+Route::post('/presentations/{presentation}/state', [PresentationStateController::class, 'update'])
+    ->middleware(['auth', 'verified'])
+    ->name('presentations.state.store');
+
+// The deck itself, re-read when the state answer says it has moved underneath.
+Route::get('/presentations/{presentation}/payload', PresentationPayloadController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('presentations.payload');
+
+// The deck driven from a phone. The cantor is at the organ and the laptop is
+// across the building, so the person who knows when to advance is never the
+// person whose hand is on the keyboard.
+Route::livewire('/remote', ProjectionRemoteList::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projection-remote');
+
+Route::livewire('/remote/{screen}', ProjectionRemote::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projection-remote.control');
+
+// Which deck to put on that screen. Its own page rather than a mode of the
+// control page, so that going back from the remote is ordinary navigation: a
+// list that redirected into the deck it had just come from is what made the
+// remote impossible to leave.
+Route::livewire('/remote/{screen}/decks', ProjectionRemoteDecks::class)
+    ->middleware(['auth', 'verified'])
+    ->name('projection-remote.decks');
+
+Route::delete('/projections/{projection}', [ProjectionController::class, 'destroy'])
     ->middleware(['auth', 'verified'])
     ->name('projections.destroy');
 
 // One page of an uploaded score, for a deck that shows a scan a page at a time.
 // The projection is in the path because it is the projection's access to the
 // score that is being checked.
-Route::get('/projections/{projection}/score-page/{scoreFile}/{page}', \App\Http\Controllers\ProjectionScorePageController::class)
+Route::get('/projections/{projection}/score-page/{scoreFile}/{page}', ProjectionScorePageController::class)
     ->whereNumber('page')
     ->middleware(['auth', 'verified'])
     ->name('projections.score-page');
@@ -385,7 +510,7 @@ Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->name('music-editor');
 
 // Public read-only music view
-Route::livewire('/music/{music}/view', \App\Livewire\Pages\MusicView::class)
+Route::livewire('/music/{music}/view', MusicView::class)
     ->name('music-view');
 
 // Music merging tool
@@ -399,22 +524,22 @@ Route::livewire('/editor/musics/duplicates', 'editor.duplicate-merger')
     ->name('duplicate-merger');
 
 // Music verification tool
-Route::livewire('/editor/musics/verify', \App\Livewire\Pages\Editor\MusicVerifier::class)
+Route::livewire('/editor/musics/verify', MusicVerifier::class)
     ->middleware(['auth', 'verified'])
     ->name('music-verifier');
 
 // Score publication review queue — the gate on the public library
-Route::livewire('/editor/score-publications', \App\Livewire\Pages\Editor\ScorePublicationReview::class)
+Route::livewire('/editor/score-publications', ScorePublicationReview::class)
     ->middleware(['auth', 'verified'])
     ->name('score-publication-review');
 
 // Music tag manager tool
-Route::livewire('/editor/music-tags', \App\Livewire\Pages\Editor\MusicTagManager::class)
+Route::livewire('/editor/music-tags', MusicTagManager::class)
     ->middleware(['auth', 'verified'])
     ->name('music-tag-manager');
 
 // External links manager tool
-Route::livewire('/editor/external-links', \App\Livewire\Pages\Editor\ExternalLinks::class)
+Route::livewire('/editor/external-links', ExternalLinks::class)
     ->middleware(['auth', 'verified'])
     ->name('external-links');
 
@@ -423,7 +548,7 @@ Route::livewire('/suggestions', 'pages::suggestions')
     ->name('suggestions');
 
 // Notifications page
-Route::livewire('/notifications', \App\Livewire\Pages\Notifications::class)
+Route::livewire('/notifications', Notifications::class)
     ->middleware(['auth', 'verified'])
     ->name('notifications');
 
@@ -433,11 +558,11 @@ Route::livewire('/contact', 'contact-us')
     ->name('contact');
 
 // Direktórium PDF page serving (auth-protected – copyright)
-Route::get('/direktorium/{edition}/page/{page}', function (\App\Models\DirektoriumEdition $edition, int $page) {
-    abort_if(! \Illuminate\Support\Facades\Storage::disk('private')->exists($edition->file_path), 404);
+Route::get('/direktorium/{edition}/page/{page}', function (DirektoriumEdition $edition, int $page) {
+    abort_if(! Storage::disk('private')->exists($edition->file_path), 404);
     abort_if($edition->total_pages && ($page < 1 || $page > $edition->total_pages), 404);
 
-    $fullPath = \Illuminate\Support\Facades\Storage::disk('private')->path($edition->file_path);
+    $fullPath = Storage::disk('private')->path($edition->file_path);
 
     return response()->file($fullPath, [
         'Content-Type' => 'application/pdf',
