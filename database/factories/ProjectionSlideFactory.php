@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Projection;
+use App\Models\ProjectionSlide;
 use App\Models\Score;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<\App\Models\ProjectionSlide>
+ * @extends Factory<ProjectionSlide>
  */
 class ProjectionSlideFactory extends Factory
 {
@@ -23,7 +24,7 @@ class ProjectionSlideFactory extends Factory
             'settings_override' => null,
             'excluded_slides' => null,
             'show_slot' => false,
-            'show_music_title' => true,
+            'show_music_title' => false,
             'show_variation' => false,
             'show_collections' => false,
         ];

@@ -91,7 +91,7 @@ it('lets a row carry words rather than a score', function () {
 it('names much less on a screen than a booklet does on a page', function () {
     $slide = ProjectionSlide::factory()->create();
 
-    expect($slide->show_music_title)->toBeTrue()
+    expect($slide->show_music_title)->toBeFalse()
         ->and($slide->show_slot)->toBeFalse()
         ->and($slide->show_collections)->toBeFalse()
         ->and($slide->show_variation)->toBeFalse();
