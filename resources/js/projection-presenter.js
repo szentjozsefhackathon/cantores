@@ -38,6 +38,27 @@ import { HEARTBEAT_MS, POLL_MS, addressAt, indexOfAddress, screenClient, shownEx
 const IDLE_MS = 2500;
 
 /**
+ * Whether a key was aimed at something being typed in rather than at the deck.
+ *
+ * Every key this page binds is also a key a text field needs: the arrows and
+ * Backspace move a caret, Space and Enter are ordinary characters, and so are
+ * the b and f that blank the screen and take it full. The screen waiting for a
+ * deck is the one that also carries a field — it is where the laptop is named —
+ * so a keystroke inside a field, or anywhere inside an open dialog, belongs to
+ * the field and not to the service.
+ */
+const isTypingTarget = (target) => {
+    if (! target || typeof target.tagName !== 'string') { return false; }
+
+    if (target.isContentEditable) { return true; }
+
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) { return true; }
+
+    return typeof target.closest === 'function'
+        && target.closest('dialog, [role="dialog"]') !== null;
+};
+
+/**
  * How long the picture takes to go out when the cantor blanks the screen.
  *
  * Long enough to read as the light going down rather than something breaking,
@@ -140,8 +161,19 @@ onAlpineInit(() => {
          * looking at this screen, so nothing that is a control appears on it at
          * all — not even for the moment after a mouse is moved. In a window the
          * bar still behaves as it always has, and comes back on any sign of life.
+         *
+         * Except while the screen is waiting, when there is no picture to
+         * protect: the rule exists so that a projector is never caught showing a
+         * toolbar over a hymn, and a screen showing nothing is not showing a
+         * hymn. It is also the half hour before Mass, which is exactly when a
+         * full-screen page with one centred line on black and no visible way out
+         * is what a browser's scam heuristics are looking for — Edge blocks the
+         * page outright, minutes in, and the wall is lost before the service has
+         * begun. Leaving the bar up costs nothing anybody is reading.
          */
         get controlsHidden() {
+            if (this.waiting) { return false; }
+
             return this.fullscreen || this.idle;
         },
 
@@ -303,6 +335,8 @@ onAlpineInit(() => {
         },
 
         onKey(event) {
+            if (isTypingTarget(event.target)) { return; }
+
             this.wake();
 
             const keys = {
@@ -534,6 +568,23 @@ onAlpineInit(() => {
             this.idle = false;
             clearTimeout(this._idleTimer);
             this._idleTimer = setTimeout(() => { this.idle = true; }, IDLE_MS);
+        },
+
+        /**
+         * Step out of full screen before anything asks the cantor to type.
+         *
+         * A dialog in the middle of a full-screen page waiting for text is the
+         * exact shape of a tech-support scam, and a browser that recognises the
+         * shape does not warn about the dialog — Edge takes the whole site down,
+         * minutes in, on the laptop the service is about to depend on. Naming a
+         * screen is not worth that. Out of full screen the same dialog is an
+         * ordinary dialog in an ordinary window, and the cantor takes the screen
+         * back when they are done, which is the gesture they already know.
+         */
+        leaveFullscreenToType() {
+            if (! document.fullscreenElement) { return; }
+
+            document.exitFullscreen?.().catch(() => {});
         },
 
         toggleFullscreen() {

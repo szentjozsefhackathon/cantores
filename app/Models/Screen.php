@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -33,6 +34,7 @@ use Illuminate\Support\Facades\Auth;
  *
  * @property int $id
  * @property int $user_id
+ * @property string $device_id
  * @property int|null $device_pairing_id
  * @property string $session_id
  * @property string|null $user_agent
@@ -42,11 +44,14 @@ use Illuminate\Support\Facades\Auth;
  * @property CarbonImmutable|null $updated_at
  * @property-read User $user
  * @property-read DevicePairing|null $devicePairing
+ * @property-read DeviceName|null $deviceName
  * @property-read Presentation|null $presentation
  *
  * @method static \Database\Factories\ScreenFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Screen live()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Screen mine(?\App\Models\User $user = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Screen offered(?\App\Models\User $user = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Screen withDeviceName(?\App\Models\User $user = null)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Screen newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Screen newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Screen query()
@@ -73,6 +78,7 @@ class Screen extends Model
      */
     protected $fillable = [
         'user_id',
+        'device_id',
         'device_pairing_id',
         'session_id',
         'user_agent',
@@ -114,23 +120,87 @@ class Screen extends Model
     }
 
     /**
+     * What this screen's owner calls this device, where they have called it
+     * anything.
+     *
+     * The name belongs to a person *and* a device, and only half of that pair is
+     * expressible as a foreign key. The other half has to be constrained by
+     * whoever loads it — `withDeviceName()` is that, and is what every query
+     * reaching a label uses. Left alone, this relation would hand back whichever
+     * row the device had, including the name a different cantor gave the same
+     * parish laptop.
+     */
+    public function deviceName(): HasOne
+    {
+        return $this->hasOne(DeviceName::class, 'device_id', 'device_id');
+    }
+
+    /**
+     * Load the labels, as the person asking for them.
+     *
+     * @param  Builder<Screen>  $query
+     */
+    public function scopeWithDeviceName(Builder $query, ?User $user = null): void
+    {
+        $userId = $user instanceof User ? $user->getKey() : Auth::id();
+
+        $query->with(['deviceName' => function ($name) use ($userId): void {
+            $name->where('user_id', $userId);
+        }]);
+    }
+
+    /**
+     * What to call this screen in a list of them.
+     *
+     * The typed name where there is one, and otherwise the crude user-agent
+     * description that has always answered here. Naming is an override and never
+     * a step: most screens are never named, and a nameless one must read exactly
+     * as it did before any of this existed.
+     */
+    public function label(): string
+    {
+        // Loaded by `withDeviceName()`, which constrains it to the right person.
+        // Asked of a screen nobody loaded it for — the presenter has only ever
+        // its own — the constraint has to be applied here instead, or a laptop
+        // two cantors share would show one of them the name the other gave it.
+        $device = $this->relationLoaded('deviceName')
+            ? $this->deviceName
+            : DeviceName::query()
+                ->where('user_id', $this->user_id)
+                ->where('device_id', $this->device_id)
+                ->first();
+
+        $name = $device?->name;
+
+        return is_string($name) && $name !== '' ? $name : $this->describeDevice();
+    }
+
+    /**
      * This browser, as the screen it is — claimed on the way into the page only
      * a wall opens.
      *
-     * Keyed by the session, because the session cookie is what makes a browser
-     * that browser: reloading the page is the same screen, and so, deliberately,
-     * is a second window of the same browser, because it is the same room.
+     * Keyed by the device, which keeps everything the session key was right
+     * about and fixes the one thing it was not. Reloading is the same screen,
+     * and so, deliberately, is a second window of the same browser, because the
+     * cookie travels with both and it is the same room either way. What changes
+     * is that the key now outlives a session: the parish laptop coming back next
+     * Sunday is the row it was, rather than a new one beside an orphan.
+     *
+     * The session is still written, because the heartbeat still asks which
+     * browser is speaking, but it is no longer what the row is found by.
      */
     public static function claimFor(
         User $user,
+        string $deviceId,
         string $sessionId,
         ?int $devicePairingId = null,
         ?string $userAgent = null,
     ): self {
-        $screen = self::query()->firstOrNew(['session_id' => $sessionId]);
+        $screen = self::query()->firstOrNew(['device_id' => $deviceId]);
 
         $screen->forceFill([
             'user_id' => $user->getKey(),
+            'session_id' => $sessionId,
             'device_pairing_id' => $devicePairingId,
             'user_agent' => $userAgent,
             'last_seen_at' => Carbon::now(),
@@ -231,5 +301,23 @@ class Screen extends Model
     public function scopeMine(Builder $query, ?User $user = null): void
     {
         $query->where('user_id', $user instanceof User ? $user->getKey() : Auth::id());
+    }
+
+    /**
+     * The screens their owner is willing to be offered — which is all of them
+     * until somebody says otherwise.
+     *
+     * The absence of a row is the yes, so a device nobody has ever thought about
+     * behaves exactly as it did before there was anything to think about.
+     *
+     * @param  Builder<Screen>  $query
+     */
+    public function scopeOffered(Builder $query, ?User $user = null): void
+    {
+        $userId = $user instanceof User ? $user->getKey() : Auth::id();
+
+        $query->whereDoesntHave('deviceName', function (Builder $name) use ($userId): void {
+            $name->where('user_id', $userId)->where('offered', false);
+        });
     }
 }

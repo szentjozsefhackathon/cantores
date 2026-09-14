@@ -13,28 +13,39 @@
 
             @if($this->screens->isNotEmpty())
                 <div class="mt-5 space-y-2">
+                    {{-- The row is a link with the pencil beside it rather than
+                         inside it: this is the page where two identical browser
+                         strings are the problem, so naming has to be reachable
+                         without first entering one of them to find out which it
+                         was. --}}
                     @foreach($this->screens as $screen)
-                        <a
+                        <div
                             wire:key="screen-{{ $screen->id }}"
-                            href="{{ route('projection-remote.control', ['screen' => $screen->id]) }}"
-                            wire:navigate
-                            class="flex items-center gap-3 rounded-lg border border-zinc-200 px-4 py-3 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                            class="flex items-center gap-1 rounded-lg border border-zinc-200 pe-2 dark:border-zinc-700"
                         >
-                            <flux:icon.tv class="size-5 shrink-0 text-zinc-400" />
+                            <a
+                                href="{{ route('projection-remote.control', ['screen' => $screen->id]) }}"
+                                wire:navigate
+                                class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                            >
+                                <flux:icon.tv class="size-5 shrink-0 text-zinc-400" />
 
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate font-medium">{{ $screen->describeDevice() }}</div>
-                                <div class="truncate text-xs text-zinc-500">
-                                    @if($screen->showing() !== null)
-                                        {{ $screen->showing()->projection->title }}
-                                    @else
-                                        {{ __('Showing nothing') }}
-                                    @endif
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate font-medium">{{ $screen->label() }}</div>
+                                    <div class="truncate text-xs text-zinc-500">
+                                        @if($screen->showing() !== null)
+                                            {{ $screen->showing()->projection->title }}
+                                        @else
+                                            {{ __('Showing nothing') }}
+                                        @endif
+                                    </div>
                                 </div>
-                            </div>
 
-                            <flux:icon.chevron-right class="size-5 shrink-0 text-zinc-400" />
-                        </a>
+                                <flux:icon.chevron-right class="size-5 shrink-0 text-zinc-400" />
+                            </a>
+
+                            <livewire:projection.screen-settings :screen="$screen" :key="'screen-settings-'.$screen->id" />
+                        </div>
                     @endforeach
                 </div>
             @else

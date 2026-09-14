@@ -1509,5 +1509,18 @@
     "Make a projection from a music plan first, and it will be here on Sunday.": "Készíts előbb vetítést egy énekrendből, és vasárnap már itt lesz.",
     "The screen goes dark for a moment while it draws the new deck.": "A képernyő egy pillanatra elsötétül, amíg megrajzolja az új vetítést.",
     "Clear the screen": "Képernyő ürítése",
-    "Take the deck off the screen and end this projection?": "Leveszed a vetítést a képernyőről, és lezárod?"
+    "Take the deck off the screen and end this projection?": "Leveszed a vetítést a képernyőről, és lezárod?",
+    ":device is waiting for a deck.": ":device vetítésre vár.",
+    "A screen name is at most :count characters.": "A képernyő neve legfeljebb :count karakter lehet.",
+    "Left empty, it is listed as :device.": "Üresen hagyva így szerepel: :device.",
+    "Name this screen": "Képernyő elnevezése",
+    "Offer this device as a projection screen": "Ez a gép felajánlható vetítőképernyőként",
+    "Open a screen": "Képernyő megnyitása",
+    "Opens a window to drag onto the projector.": "Új ablakot nyit, amit áthúzhatsz a projektorra.",
+    "Send to screen": "Kiküldés a képernyőre",
+    "The room is reading this deck.": "A templom ezt a vetítést nézi.",
+    "This screen": "Ez a képernyő",
+    "Turn this off on a computer that is never the one the room reads from. It can still present in its own window.": "Kapcsold ki azon a gépen, amelyről a közösség sosem olvas. Saját ablakában továbbra is tud vetíteni.",
+    "What you call this device, and whether decks may be sent to it. Both are yours alone and stay with the device.": "Ahogy te hívod ezt a gépet, és hogy küldhető-e rá vetítés. Mindkettő csak a tiéd, és a géphez tartozik.",
+    "Opens the screen window on this computer, with this deck on it.": "Megnyitja a vetítőablakot ezen a gépen, ezzel a diasorral."
 }

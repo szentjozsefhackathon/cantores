@@ -7,6 +7,7 @@ use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\Screen;
 use App\Services\ProjectionRenderPayload;
+use App\Support\DeviceId;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -103,6 +104,7 @@ class ProjectionPresenter extends Component
     {
         $this->screen = Screen::claimFor(
             Auth::user(),
+            DeviceId::current(),
             Session::getId(),
             Session::get(DevicePairing::DEVICE_SESSION_KEY),
             request()->userAgent(),

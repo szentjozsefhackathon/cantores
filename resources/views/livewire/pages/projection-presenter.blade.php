@@ -151,6 +151,15 @@ resources/js/projection-presenter.js
         <div class="max-w-md text-sm text-white/40">
             {{ __('Choose one from the remote on your phone, and it will appear here.') }}
         </div>
+
+        {{-- The one moment somebody is standing at this laptop with nothing to
+             do, which is why naming it belongs here: a screen called "Parish
+             laptop" is one the phone can pick out of a list of identical
+             browser strings. It is also where a computer that is never the wall
+             says so, once. --}}
+        <div class="flex items-center gap-2 text-sm text-white/50" x-on:click="leaveFullscreenToType()">
+            <livewire:projection.screen-settings :screen="$screen" :on-black="true" :show-label="true" :key="'screen-settings-'.$screen->id" />
+        </div>
     </div>
 
     {{-- Between two decks. Deliberately quiet: the room is looking at black and

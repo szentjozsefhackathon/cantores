@@ -22,6 +22,7 @@ class ScreenFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
+            'device_id' => (string) Str::uuid(),
             'device_pairing_id' => null,
             'session_id' => Str::random(40),
             'user_agent' => 'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0',

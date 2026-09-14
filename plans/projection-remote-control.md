@@ -419,3 +419,139 @@ asking, two offering a choice, and the back gesture leaving the pointer alone
 where clearing it changes both the screen and the presentation. A browser test
 for the swap itself — the wall black while the next deck engraves, then showing
 it, with the phone reporting the screen as preparing throughout.
+
+## Since: the laptop is two screens, and one of them is the wall
+
+The phone's Sunday works. The other half of the same problem is the laptop that
+*is* both devices: the projector hangs off it as a second display, and the person
+preparing the next hymn is sitting at the first one. Nothing was missing
+underneath — that was the point of the `Screen` — but the only control the deck
+pages offered was Present, which navigates *this* window to the deck. On a
+one-screen laptop that is right. On a two-screen laptop it is exactly backwards:
+it takes the window being worked in and puts the deck in it.
+
+**Present and Send to screen are opposite gestures, and both are wanted.**
+Present takes over this window; Send to screen takes over the wall and leaves
+this window alone. They sit side by side on the projection editor and in the
+document list, because those are where decks are, and because the second caller
+for this action was always the laptop rather than the phone.
+
+**A second window of the same browser is the same screen, and that is what makes
+it work.** `Screen::claimFor` keys on the session, so the window dragged onto the
+projector and the window being edited in are one row: the editor is already
+addressing the screen it opened, with nothing paired and nothing chosen. Which is
+why the no-screen state is a link to `/present` with `target="_blank"` rather
+than a sentence about the sidebar — the gesture that makes a screen here is
+opening the window that will be one.
+
+**It polls, slowly, and only here.** The label is a claim about another window,
+so a screen opened on the projector after this page loaded would otherwise leave
+the button saying none was waiting. Fifteen seconds on a small nested component
+is cheap, and this is the editor rather than the wall: the rule that no
+re-render may touch a picture the room is reading is untouched, and the presenter
+and the remote go on talking JSON.
+
+**The button answers for itself, and stops when it stops being true.** The person
+who pressed it is looking at a laptop while the deck went up somewhere else, so
+it reports what it did — and it drops the claim as soon as the screen is showing
+something else, rather than standing as a receipt for a deck that has been taken
+off.
+
+Nothing else moved: the same `Presentation::resumeFor` join, the same policy, the
+same 404. What is left from the original build order is the websocket transport.
+
+## Since: a screen is a device, and the name for it is mine
+
+Two things went wrong the first time this was used in anger, and they are the
+same thing seen from either end.
+
+The phone offered itself as a screen. `ProjectionPresenter::mount()` claims a
+screen whichever way the page was opened, so pressing Present to glance at a deck
+registers the phone as a wall — and the picker, finding two, stopped doing the
+one thing it is for. The normal Sunday is one screen entered without asking, and
+it had quietly become a choice between the wall and the hand holding the remote.
+
+The second is harder. A laptop at home with `/present` open is indistinguishable
+from the laptop in the church: the same account, because the QR flow signs the
+borrowed laptop in as the phone's user; the same `Edge on Windows`, because the
+description is a user-agent guess; and genuinely live, because its poll is still
+running. `mine()` cannot help — every screen a person can see is theirs by
+construction. The first pass was missing a noun for *the wall*. This one is
+missing a noun for *which* wall, and the reason it has none is that a screen is
+keyed by the session, and a session is a hundred and twenty minutes.
+
+### Decisions
+
+**The remote never offers the screen the phone itself is.** Shipped: a browser
+cannot be the remote for itself, so `ProjectionRemoteList` excludes the asking
+session and the one live screen is entered without asking again. Only there —
+Send to screen keeps its own-session row, because the two-screen laptop *is* that
+row, and dropping it would leave the wall unaddressable.
+
+**A device is a cookie, because the browser has nothing else to offer.** There is
+no stable device identifier to read, and fingerprinting is not something to put
+under a feature this load-bearing, so one is minted: a UUID in a long-lived
+signed `HttpOnly` cookie. A cookie rather than `localStorage` for a plain
+mechanical reason — `claimFor` runs server-side in `mount()`, and the cookie is
+already on the request, where a stored value would need a round trip after the
+claim it was needed for.
+
+**The screen row is keyed by the device, not the session.** Worth doing on its
+own: same browser, two windows, still one screen — which is the behaviour the
+two-screen laptop depends on and must not change — while a session rotating
+between Sundays stops growing a second row and orphaning the first.
+
+**The name belongs to the person, not to the device.** *For me* that machine is
+the parish laptop; what it is for anybody else is not the same question. So the
+name lives server-side in its own small row keyed by user and device, and not as
+a column on `screens`. Two things follow, and both are the point: a screen can be
+named from the phone, without anyone standing at the laptop; and the name
+outlives the row, so a screen that goes stale, is released, or reappears next
+Sunday under a new session comes back already called what it was called.
+
+**A device can be told it is not a screen.** The same row carries a flag, and one
+click on the laptop at home settles it permanently. This replaces the two
+heuristics considered and rejected: pausing the heartbeat while the tab is hidden
+guesses at what a screen is for and still leaves a five-minute tail, and matching
+on network would cut off a phone on mobile data, which is the flow the whole
+feature exists for. A person asked once is right forever; an inference is wrong
+every time the room is unusual.
+
+**The name is an override, never a step.** The default stays `describeDevice()`,
+and most screens will never be named. Where two rows would render identically the
+disambiguation to reach for first is what already distinguishes them —
+borrowed-ness, then display geometry — not a prompt to type something.
+
+**The device id is a label key and never a credential.** Authorization is
+unchanged: `mine()`, and the `update` gate on the screen, and the 404 that is not
+a 403. A copied cookie must buy nothing, and it does not, because reaching any of
+this still needs the session.
+
+### Build order
+
+1. The cookie and the `device_id` column; `claimFor` keyed on the device with the
+   session still recorded. Nothing user-visible changes.
+2. The names row, the fallback through `describeDevice()`, and every caller of
+   that method reading a label instead — the remote list, the send dropdown and
+   its tooltips, and the presenter's own chrome, which is the only place the name
+   can be checked by looking at the wall.
+3. Renaming from the remote, where there is a keyboard and both hands.
+4. Naming on the presenter's waiting state, for the laptop being set up.
+5. The not-a-screen flag, which turned out to be the same gesture as releasing
+   a screen rather than a second one: saying a device is not the wall also takes
+   whatever is on it off, and the row is left standing rather than deleted, so
+   the poll on a laptop that has just said so does not fall through the floor.
+
+New strings land in `lang/hu.json` as they are written, not afterwards.
+
+### Testing
+
+Pest feature tests for a device cookie surviving a new session without growing a
+second screen; two windows of one browser still being one screen; a name read
+back by another of the same person's devices, and the same device carrying
+different names for two people; a screen released and re-claimed coming back
+named; a device flagged not-a-screen absent from both pickers while remaining
+perfectly able to present in its own window; and the label falling back to the
+device description wherever nothing was typed. For the remote, the case already
+covered: the asking session left out, and the one remaining screen still entered
+without asking.

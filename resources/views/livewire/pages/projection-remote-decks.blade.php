@@ -11,7 +11,13 @@
                 {{ __('Remote') }}
             </flux:button>
 
-            <span class="min-w-0 flex-1 truncate text-sm text-zinc-500">{{ $screen->describeDevice() }}</span>
+            {{-- The phone's end of the same answer, and the end with a keyboard:
+                 the screen across the room can be named without walking to it.
+                 The name is the component's own, so a new one shows here as soon
+                 as it is saved. --}}
+            <div class="min-w-0 flex-1">
+                <livewire:projection.screen-settings :screen="$screen" :show-label="true" :key="'screen-settings-'.$screen->id" />
+            </div>
         </div>
 
         <flux:card class="p-4">

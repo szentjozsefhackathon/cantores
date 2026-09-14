@@ -37,6 +37,13 @@
                     <flux:badge color="zinc" size="sm">{{ $document->entries_count }}</flux:badge>
 
                     @if($isProjection)
+                        {{-- The screen, then this window. Two gestures rather
+                             than one, because a laptop with the projector as a
+                             second display must be able to put a deck up
+                             without giving up the page it is being prepared
+                             from. --}}
+                        <livewire:projection.send-to-screen :projection="$document" :compact="true" :key="'send-to-screen-'.$document->id" />
+
                         <flux:tooltip :content="__('Present')">
                             <flux:button
                                 size="xs"

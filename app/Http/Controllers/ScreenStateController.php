@@ -7,6 +7,7 @@ use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\Screen;
 use App\Services\ScreenState;
+use App\Support\DeviceId;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -35,7 +36,11 @@ class ScreenStateController extends Controller
         // The read doubles as the screen's heartbeat, but only for the browser
         // that *is* the screen. The phone reads this too, and a phone polling a
         // laptop that has been closed must not keep the laptop looking alive.
-        if ($screen->session_id === $request->session()->getId()) {
+        //
+        // Asked of the device rather than the session, as the claim now is: the
+        // laptop whose session rotated overnight is still the same browser, and
+        // must go on refreshing the row it claimed.
+        if ($screen->device_id === DeviceId::current()) {
             $screen->touchLastSeen();
         }
 

@@ -123,6 +123,12 @@ resources/js/projection-editor.js
                     {{ __('Drawing…') }}
                 </span>
 
+                {{-- The screen, then this window. On a laptop with the
+                     projector as a second display these are opposite gestures,
+                     and this is the one that keeps the editor in front of the
+                     person editing. --}}
+                <livewire:projection.send-to-screen :projection="$projection" />
+
                 <flux:button
                     size="sm"
                     variant="primary"

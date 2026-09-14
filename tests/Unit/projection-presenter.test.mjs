@@ -17,12 +17,18 @@ globalThis.window.Alpine = globalThis.Alpine;
 
 await import('../../resources/js/projection-presenter.js');
 
-/** A presenter with a deck of `total` slides, drawn already. */
+/**
+ * A presenter with a deck of `total` slides, drawn already.
+ *
+ * With a presentation on it, because that is what having a deck means: a screen
+ * with none is waiting, and a waiting screen keeps its bar.
+ */
 function presenter(total = 3) {
     const component = registered.projectionPresenter({});
 
     component.slides = Array.from({ length: total }, (unused, index) => ({ entryId: 1, index, svg: null }));
     component.total = total;
+    component.presentationId = 1;
     component.show = () => {};
 
     return component;
@@ -98,4 +104,96 @@ test('only B brings the picture back', () => {
 
     press('B');
     assert.equal(deck.blanked, false);
+});
+
+/* The screen waiting for a deck is also the screen carrying a text field, and
+   every key this page binds is a key that field needs. A name being typed is not
+   a service being driven. */
+test('a name being typed is left alone by the deck', () => {
+    const deck = presenter(3);
+    const field = { tagName: 'INPUT', closest: () => null };
+
+    let prevented = false;
+    const type = (key) => deck.onKey({ key, target: field, preventDefault() { prevented = true; } });
+
+    type('ArrowLeft');
+    type('Backspace');
+    type(' ');
+    type('b');
+    type('f');
+
+    assert.equal(deck.index, 0, 'typing moved the service');
+    assert.equal(deck.blanked, false, 'typing a b blanked the wall');
+    assert.equal(prevented, false, 'the field never received the key it was typed into');
+});
+
+test('a key pressed inside an open dialog belongs to the dialog', () => {
+    const deck = presenter(3);
+    const inside = { tagName: 'BUTTON', closest: (selector) => (selector.includes('dialog') ? {} : null) };
+
+    deck.onKey({ key: 'ArrowRight', target: inside, preventDefault() {} });
+
+    assert.equal(deck.index, 0);
+});
+
+test('the keyboard still drives the deck from the page itself', () => {
+    const deck = presenter(3);
+    const stage = { tagName: 'DIV', closest: () => null };
+
+    deck.onKey({ key: 'ArrowRight', target: stage, preventDefault() {} });
+
+    assert.equal(deck.index, 1);
+});
+
+/* The no-toolbar rule protects the picture the congregation is reading. A screen
+   waiting for a deck has no picture — and a full-screen page showing one centred
+   line on black with no way out is what a browser's scam heuristics look for. */
+test('a waiting screen keeps its bar even in full screen', () => {
+    const deck = presenter(0);
+
+    deck.presentationId = null;
+    deck.fullscreen = true;
+    deck.idle = true;
+
+    assert.equal(deck.waiting, true);
+    assert.equal(deck.controlsHidden, false, 'the wall sat in full screen with no way out of it');
+});
+
+test('a screen with a deck on it still hides everything in full screen', () => {
+    const deck = presenter(3);
+
+    deck.presentationId = 7;
+    deck.fullscreen = true;
+    deck.idle = false;
+
+    assert.equal(deck.controlsHidden, true, 'a control was left over the hymn');
+});
+
+/* A dialog waiting for text in the middle of a full-screen page is what a
+   browser's scam heuristics are built to catch, and Edge blocks the whole site
+   rather than the dialog. The page steps out of full screen before it asks. */
+test('the wall leaves full screen before anything asks for typing', () => {
+    const deck = presenter(3);
+    let left = false;
+
+    document.fullscreenElement = {};
+    document.exitFullscreen = () => { left = true; return Promise.resolve(); };
+
+    deck.leaveFullscreenToType();
+
+    assert.equal(left, true, 'a dialog was opened over a full-screen page');
+
+    document.fullscreenElement = null;
+});
+
+test('a windowed screen is not thrown out of anything to type in', () => {
+    const deck = presenter(3);
+    let left = false;
+
+    document.fullscreenElement = null;
+    document.exitFullscreen = () => { left = true; return Promise.resolve(); };
+
+    deck.leaveFullscreenToType();
+
+    assert.equal(left, false);
 });

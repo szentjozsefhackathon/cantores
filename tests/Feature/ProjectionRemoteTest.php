@@ -11,6 +11,7 @@ use App\Models\ProjectionSlide;
 use App\Models\Score;
 use App\Models\Screen;
 use App\Models\User;
+use App\Support\DeviceId;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -84,6 +85,44 @@ it('lists only the live screens of the person holding the phone', function () {
 
     expect($listed)->toHaveCount(2)
         ->and($listed->pluck('id'))->toContain($waiting->id);
+});
+
+// The phone that pressed Present is a screen like any other, and offering it
+// back to itself is what turned the normal Sunday into a choice. Asked of the
+// device, so a phone whose session rotated is still recognisably itself.
+it('leaves out the screen the phone itself is', function () {
+    $user = User::factory()->create();
+
+    $chapel = Screen::factory()->create(['user_id' => $user->id]);
+    $church = Screen::factory()->create(['user_id' => $user->id]);
+    $phone = Screen::factory()->create([
+        'user_id' => $user->id,
+        'device_id' => DeviceId::current(),
+    ]);
+
+    actingAs($user);
+
+    $listed = Livewire::test(ProjectionRemoteList::class)->instance()->screens();
+
+    expect($listed->pluck('id')->all())
+        ->toEqualCanonicalizing([$chapel->id, $church->id])
+        ->not->toContain($phone->id);
+});
+
+// And so the wall is still the one live screen, entered without asking.
+it('enters the only other screen without asking even when this browser is one too', function () {
+    $user = User::factory()->create();
+
+    $wall = Screen::factory()->create(['user_id' => $user->id]);
+    Screen::factory()->create([
+        'user_id' => $user->id,
+        'device_id' => DeviceId::current(),
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionRemoteList::class)
+        ->assertRedirect(route('projection-remote.control', ['screen' => $wall->id]));
 });
 
 /*
