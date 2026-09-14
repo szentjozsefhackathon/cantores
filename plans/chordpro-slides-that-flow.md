@@ -244,6 +244,17 @@ anywhere, because hiding the end of a sentence is worse than cutting it.
 Rows that carry no `splitBefore` — every row `markdownRows` writes — never leave
 the first packing, so a projected text row behaves exactly as it did.
 
+And a fourth, found the same way: (3) only took the line-boundary packing when
+it *saved* a slide, which is not the case the complaint was about. Score #338 at
+68 pt came to two slides either way — the chorus alone on the first at 711 of
+1080, the whole two-line verse moved to the second — because the tie was given
+to keeping the verse whole. A tie now goes to the packing that fills: the
+verse's first line, and the line the screen wrapped it into, stay on the screen
+with the room for them, and only a split that would actually cost a slide is
+refused. What is still never cut is a wrapped line or a label from its line —
+at 72 pt the same verse's first line comes to two rows that do not fit the
+room left, and the whole verse moves, correctly.
+
 ## Verification
 
 **Node unit tests**, which is where the substance is — `chordproSlidePages` is

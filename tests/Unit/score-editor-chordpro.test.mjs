@@ -443,6 +443,22 @@ test('a verse is cut at a line boundary when keeping it whole would cost a slide
 });
 
 /*
+ * And cut at a line boundary just as readily when keeping it whole costs no
+ * slide at all but leaves the screen above it a third empty — which is what a
+ * congregation actually sees: the chorus alone on one screen, the verse that
+ * would not quite fit alone on the next. Two slides either way, so the one that
+ * fills them wins.
+ */
+test('a verse is cut at a line boundary rather than leave the screen above it empty', async () => {
+    const sheet = '[C]Egy\n[G]Két\n\n[Am]Há\n[F]Négy\n';
+    const pages = await slidePages(sheet, ROW * 3 + GAP + 10);
+
+    assert.deepEqual(rowCounts(pages), [3, 1]);
+    assert.match(pages[0].rows[2].svg, /Há</, 'the first line of the second verse fills the room left');
+    assert.match(pages[1].rows[0].svg, /Négy</);
+});
+
+/*
  * The boundary is the newline the author wrote, not the wrap the screen forced:
  * a line too wide to fit keeps its pieces together, so a slide never opens on
  * the tail of a sentence whose head is on the slide before it.

@@ -24,9 +24,10 @@
  *   4. A piece that still does not fit is cut at its own boundaries — a
  *      paragraph, a heading, a verse — the way the booklet already flows prose
  *      across pages, with keepWithNext holding together whatever asked to be
- *      held together. A verse that would rather not be cut is cut anyway when
- *      keeping it whole would cost a screen, and a line longer than the screen
- *      is cut in the middle of itself sooner than hidden; see byBlocks.
+ *      held together. A verse that would rather not be cut is cut anyway
+ *      wherever keeping it whole would buy nothing but an empty half-screen,
+ *      and a line longer than the screen is cut in the middle of itself sooner
+ *      than hidden; see byBlocks.
  *
  * Below all four a single row taller than the screen is left over-tall and
  * handed back as it is: the caller sets it smaller, or says so. Nothing is ever
@@ -96,9 +97,14 @@ function fit(chunk, boxHeight) {
  *      the line it was written above.
  *   c. anywhere at all, which cuts a long line in the middle of itself.
  *
- * (a) also gives way to (b) when it merely costs a screen: a verse moved
- * wholesale leaves the room above it empty, and a congregation reading four
- * verses off five screens is being asked to look up one time too many.
+ * (a) gives way to (b) whenever (b) costs no more screens, which is the whole
+ * of what keeping a verse whole is worth: a verse that does not fit in the room
+ * left on this screen is moved to the next one entire, and the room it leaves
+ * behind — a third of a screen, often enough for the first line of it — stays
+ * empty for nothing. Where the two come to the same number of screens the one
+ * that fills them wins; only a split that would actually cost a screen is
+ * refused. What (b) still will not do is cut inside a line the screen wrapped
+ * or between a label and its line, because those are not preferences.
  *
  * (c) is reached only by a single line of words taller than the screen on its
  * own — at which point the choice is between cutting a sentence and hiding the
@@ -116,7 +122,7 @@ function byBlocks(rows, boxHeight) {
     }
 
     const atLines = packed(glued(rows, () => false), boxHeight);
-    const best = holds(atLines, boxHeight) && (!holds(whole, boxHeight) || atLines.length < whole.length)
+    const best = holds(atLines, boxHeight) && (!holds(whole, boxHeight) || atLines.length <= whole.length)
         ? atLines
         : whole;
 
