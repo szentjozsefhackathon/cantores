@@ -286,10 +286,30 @@ export function readerStep(field) {
     return toKnobUnit ? round(toKnobUnit(READER_SIZE_STEP_PT), 4) : Number(field.step) || 1;
 }
 
+/**
+ * One press of a stepped knob, in the knob's own unit.
+ *
+ * A knob may ask to be stepped by a share of what it already reads rather than
+ * by a fixed amount, with `percent`. That is what a size wants: the panel's
+ * sizes are in units nobody names — a lyric size of 4.6667 abc units, a staff
+ * scale of 0.75 — and one `step` of them is a step of the last decimal, so a
+ * cantor pressing bigger on a slide that is much too small presses it thirty
+ * times. A share of the value moves every size by the same visible amount
+ * whatever unit it is counted in.
+ *
+ * The step is still what the value is snapped to, so a percentage press lands
+ * on a number of the same shape as a typed one, and never moves by less than
+ * one step — which is what a share of a small value would otherwise come to.
+ */
 export function steppedValue(current, field, direction) {
     const step = Number(field.step) || 1;
     const from = Number.isFinite(Number(current)) ? Number(current) : 0;
-    const stepped = Math.round((from + direction * step) / step) * step;
+    const percent = Number(field.percent) || 0;
+    const factor = 1 + percent / 100;
+    const scaled = percent > 0 && from > 0
+        ? (direction > 0 ? Math.max(from * factor, from + step) : Math.min(from / factor, from - step))
+        : from + direction * step;
+    const stepped = Math.round(scaled / step) * step;
     const clamped = Math.min(Number(field.max), Math.max(Number(field.min), stepped));
 
     return Math.round(clamped * 1e4) / 1e4;

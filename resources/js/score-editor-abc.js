@@ -201,8 +201,16 @@ export async function ensureAbcFontsLoaded(settings) {
  * lyrics further from the staff, never closer, so it is left out of the way and
  * `abcLyricFirstSkip` — counted from the bottom staff line — is the one knob
  * for the staff-to-lyrics gap.
+ *
+ * `scope` is the suffix abc2svg appends to every name it would otherwise share
+ * between engravings — the `stdef` staff-line path, and the `f0` class carrying
+ * the lyric face and its size. A document holding one engraving can leave it at
+ * its default; one holding several — a projection's contact sheet, a booklet
+ * page — must give each its own, or the last score's `.f0` rule sets the lyric
+ * size of every score above it. See abcBlocks in booklet-render.js, which
+ * learned this first.
  */
-export function buildAbcPreamble(settings, pageWidth) {
+export function buildAbcPreamble(settings, pageWidth, scope = '1') {
     const { family, size: lyricSize, pageScale } = abcVocalFont(settings);
     const fontName = /[ .\-'&]/.test(family) ? `"${family}"` : family;
     const vocalfontLine = ['%%vocalfont', fontName, settings.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
@@ -213,7 +221,7 @@ export function buildAbcPreamble(settings, pageWidth) {
     const lyricFirstSkip = Number(settings.abcLyricFirstSkip ?? NaN);
     const lyricFirstSkipLine = Number.isFinite(lyricFirstSkip) && lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '';
 
-    return `%%fullsvg 1\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}`;
+    return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}`;
 }
 
 /** Engraves an ABC source (preamble included) into SVG markup. */
@@ -258,13 +266,22 @@ const ABC_ENGINE_STROKE_WIDTH = 0.7;
  * where a hairline dies on the beamer. On paper and in the responsive preview
  * they follow abc2svg, so a value saved before the knobs were taken off those
  * ratios cannot outlive the control that set it.
+ *
+ * `onSlide` says the engraving is a slide and settles the question without
+ * asking the settings, because outside the score editor the settings cannot
+ * answer it: a slide's bucket is resolved for a ratio the editor never stores
+ * in it — `abcPageRatio` is a field of the editor, not of a saved layout — so a
+ * projection read `paper` there and quietly drew every stem at the engine's
+ * hairline, whatever the deck's knobs had been set to.
  */
-export function abcStrokeWidths(settings) {
-    const isFixed = Object.prototype.hasOwnProperty.call(ABC_RATIO_DEFAULTS, settings.abcPageRatio);
+export function abcStrokeWidths(settings, onSlide = false) {
+    const isFixed = onSlide || Object.prototype.hasOwnProperty.call(ABC_RATIO_DEFAULTS, settings.abcPageRatio);
+    const stem = Number(settings.abcStemWidth);
+    const staffLine = Number(settings.abcStaffLineWidth);
 
     return {
-        stem: isFixed ? settings.abcStemWidth : ABC_ENGINE_STROKE_WIDTH,
-        staffLine: isFixed ? settings.abcStaffLineWidth : ABC_ENGINE_STROKE_WIDTH,
+        stem: isFixed && Number.isFinite(stem) ? stem : ABC_ENGINE_STROKE_WIDTH,
+        staffLine: isFixed && Number.isFinite(staffLine) ? staffLine : ABC_ENGINE_STROKE_WIDTH,
     };
 }
 
@@ -291,7 +308,8 @@ let abcSlideSerial = 0;
  * @param {{width: number, height: number}} canvas
  */
 export function renderAbcSlide(pageSource, settings, canvas) {
-    const markup = renderAbcToSvgMarkup(buildAbcPreamble(settings, canvas.width) + pageSource);
+    const scope = `s${++abcSlideSerial}`;
+    const markup = renderAbcToSvgMarkup(buildAbcPreamble(settings, canvas.width, scope) + pageSource);
     const host = document.createElement('div');
     host.innerHTML = markup;
 
@@ -302,19 +320,21 @@ export function renderAbcSlide(pageSource, settings, canvas) {
         return { svg: emptySlide(canvas), overflows: false };
     }
 
-    const { svg, height } = stackSvgs(fragments, { extraStyle: abcStackStyle(settings) });
+    // Nothing is hoisted into a sheet of the slide's own: `.sW` and `.slW` are
+    // the two names abc2svg does not suffix, so a rule for them written here
+    // would be a document-global one, and the next slide's copy would set this
+    // slide's stroke widths. They are written scoped instead, by id.
+    const { svg, height } = stackSvgs(fragments);
 
-    // Scoped by id as well as stacked: an inline <style> is document-global, and
-    // a projection puts many slides in one document.
-    applyAbcSvgStyle(svg, `abc-slide-${++abcSlideSerial}`, settings);
+    applyAbcSvgStyle(svg, `abc-slide-${scope}`, settings, true);
 
     return { svg: frameSlide(svg, canvas), overflows: height > canvas.height + SLIDE_FIT_TOLERANCE };
 }
 
 /** Ink colour and the stroke widths of stems and staff lines, scoped by id. */
-export function applyAbcSvgStyle(svg, svgId, settings) {
+export function applyAbcSvgStyle(svg, svgId, settings, onSlide = false) {
     svg.id = svgId;
-    const { stem, staffLine } = abcStrokeWidths(settings);
+    const { stem, staffLine } = abcStrokeWidths(settings, onSlide);
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
     style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${stem}!important}#${svgId} .slW{stroke-width:${staffLine}!important}`;
     svg.appendChild(style);

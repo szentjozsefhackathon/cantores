@@ -271,7 +271,7 @@
                                      fraction — 4.6667 of nothing anybody names — so
                                      it is offered the way the reader's toolbar offers
                                      it: bigger and smaller, and no number to read. --}}
-                                @php $knob = Js::from(Arr::only($field, ['key', 'min', 'max', 'step'])); @endphp
+                                @php $knob = Js::from(Arr::only($field, ['key', 'min', 'max', 'step', 'percent'])); @endphp
 
                                 <flux:tooltip :content="__('Smaller')">
                                     <flux:button size="sm" variant="ghost" icon="minus"
@@ -304,18 +304,6 @@
                                     x-bind:checked="!!settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
                                     x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', $event.target.checked)"
                                 />
-                            @else
-                                <flux:select
-                                    size="sm"
-                                    class="w-36 text-xs"
-                                    :aria-label="$field['label']"
-                                    x-bind:value="settingsOf({{ $entry->id }})['{{ $field['key'] }}']"
-                                    x-on:change="setOverride({{ $entry->id }}, '{{ $field['key'] }}', $event.target.value)"
-                                >
-                                    @foreach(ProjectionSettingFields::selectableFonts() as $font)
-                                        <flux:select.option value="'{{ $font }}'">{{ $font }}</flux:select.option>
-                                    @endforeach
-                                </flux:select>
                             @endif
                         </div>
                     @endforeach

@@ -90,16 +90,43 @@ test('keeps stem and staff-line widths on the projector ratios only', () => {
     assert.deepEqual(abcStrokeWidths({ ...settings, abcPageRatio: 'responsive' }), { stem: 0.7, staffLine: 0.7 });
 });
 
+/*
+ * A slide is a projector ratio whatever its bucket says. The score editor keeps
+ * `abcPageRatio` as a field of its own and never writes it into a saved layout,
+ * so a projection resolving a score's 16:9 bucket reads `paper` there — and
+ * every stem in the deck came out at the engine's hairline however the panel's
+ * knobs were set.
+ */
+test('a slide gets the stroke widths it was set, whatever the bucket says the ratio is', () => {
+    const settings = { abcStemWidth: 2.5, abcStaffLineWidth: 1.8, abcPageRatio: 'paper' };
+
+    assert.deepEqual(abcStrokeWidths(settings, true), { stem: 2.5, staffLine: 1.8 });
+    assert.deepEqual(abcStrokeWidths({ abcPageRatio: 'paper' }, true), { stem: 0.7, staffLine: 0.7 });
+});
+
 const engine = { abc2svg: {}, console };
 vm.createContext(engine);
 vm.runInContext(readFileSync(new URL('../../node_modules/@cantoreshu/abc2svg/abc2svg-1.js', import.meta.url), 'utf8'), engine);
 
-function renderedDimensions(settings, width) {
+const ONE_LINE_TUNE = 'X:1\nK:C\nC D E F |\nw: one two three four\n';
+
+// Long enough to be engraved as several music lines, which is when abc2svg
+// starts defining a staff and drawing the rest with a <use> of it.
+const TWO_LINE_TUNE = 'X:1\nK:C\nC D E F | G A B c |\nw: one two three four five six sev eight\n'
+    + 'C D E F | G A B c |\nw: nine ten twelve thir four fif six sev\n';
+
+function renderedMarkup(settings, width, scope = undefined, tune = ONE_LINE_TUNE) {
     let svg = '';
     const errors = [];
     new engine.abc2svg.Abc({ img_out: chunk => { svg += chunk; }, errmsg: message => errors.push(message) })
-        .tosvg('projection', buildAbcPreamble(settings, width) + 'X:1\nK:C\nC D E F |\nw: one two three four\n');
+        .tosvg('projection', buildAbcPreamble(settings, width, ...(scope === undefined ? [] : [scope])) + tune);
     assert.deepEqual(errors, []);
+
+    return svg;
+}
+
+function renderedDimensions(settings, width) {
+    const svg = renderedMarkup(settings, width);
     const scale = Number(svg.match(/class="g" transform="scale\(([^)]+)\)"/)[1]);
     const fontPx = Number(svg.match(/font:([\d.]+)px "Barlow Condensed"/)[1]);
     const staffPath = svg.match(/class="slW" d="([^"]+)"/)[1];
@@ -133,6 +160,38 @@ for (const [ratio, width, fontPx, staffPx] of [['16/9', 1920, 70 * 96 / 72, mmTo
         }
     });
 }
+
+/*
+ * Every name abc2svg shares between engravings carries the suffix it is given:
+ * `stdef`, the staff-line path each music line draws with a <use>, among them.
+ * A document showing several scores at once is a projection's contact sheet,
+ * and ids resolve across the whole of it — so with one suffix for all of them
+ * every slide drew the first slide's staff lines, at the first slide's staff
+ * scale. Setting one score's staff size moved the scores around it.
+ */
+test('scopes the names one engraving shares, so a slide is not drawn with anothers staff', () => {
+    const staffIds = (mm, scope) => {
+        const markup = renderedMarkup({
+            ...abcMixin(),
+            ...ABC_RATIO_DEFAULTS['16/9'],
+            abcPageScale: abcPageScaleForStaffHeight(mm),
+        }, 1920, scope, TWO_LINE_TUNE);
+
+        return {
+            defined: [...new Set(markup.match(/id="stdef[^"]*"/g))],
+            used: [...new Set(markup.match(/href="#stdef[^"]*"/g))],
+        };
+    };
+
+    const tall = staffIds(19.5, 's1');
+    const short = staffIds(8, 's2');
+
+    assert.deepEqual(tall.defined, ['id="stdefs1"']);
+    assert.deepEqual(short.defined, ['id="stdefs2"']);
+    // And each one draws with the staff it defined itself.
+    assert.deepEqual(tall.used, ['href="#stdefs1"']);
+    assert.deepEqual(short.used, ['href="#stdefs2"']);
+});
 
 test('passes zero and sub-half first lyric clearance to the renderer', () => {
     for (const value of [0, '0', 0.1, 0.4]) {

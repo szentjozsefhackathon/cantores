@@ -118,6 +118,35 @@ test('a knob a reader steps lands on the step\'s own grid, and stops at its ends
     assert.equal(steppedValue(1, { min: 0.2, max: 1, step: 0.05 }, -1), 0.95);
 });
 
+/*
+ * A slide's sizes are held in each engine's own units, where one step is a step
+ * of the last decimal — a projection's panel asked for a tenth of what the knob
+ * already reads instead, so bigger is visibly bigger whatever unit the size is
+ * counted in.
+ */
+test('a knob stepped by a share of itself moves by that share, and never by less than a step', () => {
+    const lyricSize = { min: 2, max: 120, step: 0.5, percent: 10 };
+
+    assert.equal(steppedValue(40, lyricSize, 1), 44);
+    assert.equal(steppedValue(44, lyricSize, -1), 40);
+
+    // Snapped to the step, so a press lands on a number of the same shape a
+    // typed one has.
+    assert.equal(steppedValue(4.6667, lyricSize, 1), 5);
+
+    // A tenth of a small value rounds to nothing, so the step is the floor.
+    const staffScale = { min: 0.2, max: 12, step: 0.05, percent: 10 };
+    assert.equal(steppedValue(0.3, staffScale, 1), 0.35);
+    assert.equal(steppedValue(0.3, staffScale, -1), 0.25);
+
+    // And the ends of the range still hold.
+    assert.equal(steppedValue(118, lyricSize, 1), 120);
+    assert.equal(steppedValue(2, lyricSize, -1), 2);
+
+    // Nothing to take a share of: the step is what is left.
+    assert.equal(steppedValue(0, lyricSize, 1), 2);
+});
+
 test('one press of a reader\'s size knob is half a point of type, whatever drew the score', () => {
     // Every format's knob, converted back into points through the same
     // conversions the booklet is laid out with, is the same rise in type.

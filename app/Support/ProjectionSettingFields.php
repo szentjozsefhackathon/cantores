@@ -30,6 +30,11 @@ use App\Enums\ProjectionRatio;
  *   slide has no such slack — the canvas *is* the width, and a score laid out
  *   wider would simply be engraved smaller, which is what the size knobs already
  *   do more honestly.
+ * - **The face is not here either.** A booklet imposes one face on every score
+ *   it gathers, so it has to offer the choice; a projection imposes nothing and
+ *   leaves each score the face its author chose against this very canvas. The
+ *   screen defaults are already a condensed sans, which is what a beamer wants,
+ *   and the knob was only ever a way to spoil that.
  *
  * Keys and units match `scores.settings` exactly, so an override is written in
  * the same vocabulary the score's own per-ratio settings use — which is what
@@ -48,15 +53,20 @@ class ProjectionSettingFields
      * is drawn as a pair of step buttons (`control => 'step'`): bigger and
      * smaller is the whole of what is wanted, and nobody types 31.0952.
      *
-     * @var array<string, array<string, array{type: string, control?: string, min?: float, max?: float, step?: float, label: string, icon?: string, glyph?: string}>>
+     * Those buttons move a size by `percent` of what it already reads rather
+     * than by `step`, which stays what the value is snapped to. A slide's sizes
+     * are held in each engine's own units — 4.6667 abc units of lyric, a staff
+     * scale of 0.75 — and one step of them is a step of the last decimal: on a
+     * slide that is plainly too small it took thirty presses to see anything.
+     *
+     * @var array<string, array<string, array{type: string, control?: string, min?: float, max?: float, step?: float, percent?: float, label: string, icon?: string, glyph?: string}>>
      */
     private const FIELDS = [
         'gabc' => [
             // exsurge's own units. The screen default is 12, which is about four
             // times what a booklet page asks for.
-            'lyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 80, 'step' => 0.5, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
-            'staffSize' => ['type' => 'number', 'control' => 'step', 'min' => 10, 'max' => 400, 'step' => 5, 'label' => 'Staff size', 'icon' => 'list-chevrons-up-down'],
-            'lyricFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
+            'lyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 80, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
+            'staffSize' => ['type' => 'number', 'control' => 'step', 'min' => 10, 'max' => 400, 'step' => 5, 'percent' => 10, 'label' => 'Staff size', 'icon' => 'list-chevrons-up-down'],
             'dropCaps' => ['type' => 'boolean', 'label' => 'Drop caps', 'icon' => 'text-initial'],
             'spaceBetweenSystems' => ['type' => 'number', 'min' => -2, 'max' => 4, 'step' => 0.1, 'label' => 'Space between lines', 'icon' => 'between-horizontal-start'],
             'minSpaceBelowStaff' => ['type' => 'number', 'min' => -2, 'max' => 4, 'step' => 0.1, 'label' => 'Min. space below staff', 'icon' => 'align-vertical-space-around'],
@@ -66,9 +76,8 @@ class ProjectionSettingFields
             // 70 points of lyric at 16:9, so the ceiling has to be well past a
             // page's. The floor stays low enough to rescue a slide that has too
             // many verses on it.
-            'abcLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 120, 'step' => 0.5, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
-            'abcPageScale' => ['type' => 'number', 'control' => 'step', 'min' => 0.2, 'max' => 12, 'step' => 0.05, 'label' => 'Staff scale', 'icon' => 'list-chevrons-up-down'],
-            'abcLyricFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
+            'abcLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 120, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
+            'abcPageScale' => ['type' => 'number', 'control' => 'step', 'min' => 0.2, 'max' => 12, 'step' => 0.05, 'percent' => 10, 'label' => 'Staff scale', 'icon' => 'list-chevrons-up-down'],
             'abcLyricBold' => ['type' => 'boolean', 'label' => 'Bold lyrics', 'icon' => 'bold'],
             'abcNoteSpacing' => ['type' => 'number', 'min' => 1, 'max' => 3, 'step' => 0.1, 'label' => 'Note spacing', 'icon' => 'space'],
             'abcStaffSep' => ['type' => 'number', 'min' => 0, 'max' => 120, 'step' => 1, 'label' => 'Staff separation', 'icon' => 'between-horizontal-start'],
@@ -90,8 +99,7 @@ class ProjectionSettingFields
             'fileZoom' => ['type' => 'number', 'min' => 0.2, 'max' => 1, 'step' => 0.05, 'label' => 'Size (×)', 'icon' => 'zoom-in'],
         ],
         'chordpro' => [
-            'chordproFontSize' => ['type' => 'number', 'control' => 'step', 'min' => 6, 'max' => 200, 'step' => 1, 'label' => 'Font size', 'icon' => 'a-large-small'],
-            'chordproFontFamily' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
+            'chordproFontSize' => ['type' => 'number', 'control' => 'step', 'min' => 6, 'max' => 200, 'step' => 1, 'percent' => 10, 'label' => 'Font size', 'icon' => 'a-large-small'],
             // A second column on a projector is a second thing to find, but a
             // long hymn on a square screen can want one.
             'chordproColumns' => ['type' => 'number', 'min' => 1, 'max' => 2, 'step' => 1, 'label' => 'Columns', 'icon' => 'view-columns'],
@@ -99,9 +107,8 @@ class ProjectionSettingFields
             'chordproGermanNotation' => ['type' => 'boolean', 'label' => 'German notation (H = B, B = B♭)', 'glyph' => 'H'],
         ],
         'aretino' => [
-            'aretinoLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 4, 'max' => 120, 'step' => 0.5, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
-            'aretinoStaffSize' => ['type' => 'number', 'control' => 'step', 'min' => 1, 'max' => 40, 'step' => 0.5, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
-            'aretinoTextFont' => ['type' => 'font', 'label' => 'Font', 'icon' => 'type-outline'],
+            'aretinoLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 4, 'max' => 120, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
+            'aretinoStaffSize' => ['type' => 'number', 'control' => 'step', 'min' => 1, 'max' => 40, 'step' => 0.5, 'percent' => 10, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
             'aretinoStaffGap' => ['type' => 'number', 'min' => 0, 'max' => 10, 'step' => 0.5, 'label' => 'Staff gap', 'icon' => 'between-horizontal-start'],
             'aretinoHideRepeatClef' => ['type' => 'boolean', 'label' => 'Hide repeated clef', 'icon' => 'clef-none'],
         ],
@@ -117,21 +124,6 @@ class ProjectionSettingFields
     public static function fontOptions(): array
     {
         return BookletSettingFields::fontOptions();
-    }
-
-    /**
-     * The faces to put in a select.
-     *
-     * The same list the rest of the application offers, in the same order. A
-     * projection does not shorten it to the two sans faces, tempting as that is:
-     * the screen defaults already choose Barlow Condensed, and a cantor who
-     * wants a Garamond chant on the wall for a Latin ordinary is not wrong.
-     *
-     * @return list<string>
-     */
-    public static function selectableFonts(): array
-    {
-        return BookletSettingFields::selectableFonts();
     }
 
     /**
@@ -219,7 +211,7 @@ class ProjectionSettingFields
     /**
      * The controls to render for a format, labels translated.
      *
-     * @return list<array{key: string, type: string, control?: string, min?: float, max?: float, step?: float, label: string, icon?: string, glyph?: string}>
+     * @return list<array{key: string, type: string, control?: string, min?: float, max?: float, step?: float, percent?: float, label: string, icon?: string, glyph?: string}>
      */
     public static function panelFor(?string $format): array
     {

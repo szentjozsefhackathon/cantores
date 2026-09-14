@@ -454,6 +454,62 @@ it('offers the stroke widths a beamer needs, which a booklet does not', function
         ->and(App\Support\BookletSettingFields::keysFor('abc'))->not->toContain('abcStemWidth');
 });
 
+/*
+ * A projection imposes nothing on the scores it gathers, so it has no face to
+ * offer: each score keeps the one its author chose against this very canvas, and
+ * the screen defaults are already the condensed sans a beamer wants. The knob
+ * was only a way to spoil that, and a face stored by an older client goes the
+ * way any other unknown key does.
+ */
+it('offers no face, and forgets one a slide was given', function () {
+    foreach (['abc', 'gabc', 'aretino', 'chordpro'] as $format) {
+        $keys = ProjectionSettingFields::keysFor($format);
+
+        expect($keys)->not->toContain('abcLyricFont')
+            ->and($keys)->not->toContain('lyricFont')
+            ->and($keys)->not->toContain('aretinoTextFont')
+            ->and($keys)->not->toContain('chordproFontFamily');
+    }
+
+    expect(ProjectionSettingFields::sanitize('abc', ['abcLyricFont' => 'Merriweather', 'abcLyricSize' => 40]))
+        ->toBe(['abcLyricSize' => 40.0]);
+});
+
+it('opens a panel of knobs with no face among them', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => Score::factory()->abc()->create(['user_id' => $user->id])->id,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(SlideRow::class, ['entry' => $entry])
+        ->call('adjust')
+        ->assertOk()
+        ->assertSee(__('Stem width'))
+        ->assertDontSee(__('Font'))
+        ->assertDontSee('<select', escape: false);
+});
+
+/*
+ * A slide's sizes are in each engine's own units — 4.6667 abc units of lyric, a
+ * staff scale of 0.75 — where one step is a step of the last decimal. The step
+ * buttons move them by a share of what they read instead, or a slide that is
+ * plainly too small takes thirty presses to fix.
+ */
+it('steps a size by a share of itself rather than by its last decimal', function () {
+    foreach (['abc', 'gabc', 'aretino', 'chordpro', 'file'] as $format) {
+        foreach (ProjectionSettingFields::panelFor($format) as $field) {
+            if (($field['control'] ?? null) === 'step') {
+                expect($field['percent'] ?? null)->toBe(10, $field['key'].' steps by its last decimal');
+            }
+        }
+    }
+});
+
 // A slide has no page to be laid out wider than, so there is no width to widen.
 it('offers no layout width, because the canvas is the width', function () {
     foreach (['abc', 'gabc', 'aretino'] as $format) {
