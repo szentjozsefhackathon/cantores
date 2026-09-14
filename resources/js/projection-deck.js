@@ -1,10 +1,11 @@
 import { canvasMeasurer } from './booklet-chordpro.js';
-import { DEFAULT_PALETTE, markdownRows } from './booklet-markdown.js';
+import { markdownRows } from './booklet-markdown.js';
 import { textRowSvg } from './booklet-text.js';
 import { renderRatioPages } from './projection-render.js';
 import { fileSlideSettings, resolveSlideSettings, textSlideSettings } from './projection-settings.js';
+import { slidePalette } from './slide-palette.js';
 import { packSoftPages } from './soft-pages.js';
-import { fitIntoBox, frameSlide, isSlideRatio, parseSvg, slideCanvas } from './slide-frame.js';
+import { fitIntoBox, frameSlide, isSlideRatio, paintSlide, parseSvg, slideCanvas } from './slide-frame.js';
 import { stackSvgs } from './svg-stack.js';
 
 /**
@@ -40,35 +41,13 @@ const HEADING_HEIGHT = 0.075;
 
 const HEADING_FONT = "'Barlow Condensed'";
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-/**
- * How a screen of words is coloured, by the name the deck chose.
- *
- * The JavaScript half of App\Enums\ProjectionTextTheme, key for key, and the
- * fallback for a payload that predates it. Only words are coloured: the three
- * engines that engrave music draw ink on paper, and a staff reversed out of
- * black is harder to read across a nave rather than easier.
- */
-const TEXT_PALETTES = {
-    dark: { background: '#000000', text: '#ffffff', quote: '#b4b4b4', rule: '#666666', accent: '#ff6b6b' },
-    light: { background: '#ffffff', ...DEFAULT_PALETTE },
-};
-
-const DEFAULT_TEXT_THEME = 'dark';
-
 /**
  * The colours this deck sets its words in.
  *
- * The server states the whole palette in the geometry, so a colour is decided in
- * one place and travels; the name is the fall-back for a deck drawn by a client
- * that arrived before the server did.
+ * The table itself lives in slide-palette.js, where the chord-sheet engraver can
+ * reach it too; this is the name the deck has always called it by.
  */
-export function textPalette(geometry) {
-    const named = TEXT_PALETTES[geometry?.textTheme] ?? TEXT_PALETTES[DEFAULT_TEXT_THEME];
-
-    return { ...named, ...(geometry?.textPalette ?? {}) };
-}
+export { slidePalette as textPalette } from './slide-palette.js';
 
 /**
  * Every slide this deck comes to, in order.
@@ -83,7 +62,7 @@ export async function renderDeck(entries, geometry) {
     if (!isSlideRatio(ratio)) { return []; }
 
     const slides = [];
-    const palette = textPalette(geometry);
+    const palette = slidePalette(geometry);
 
     for (const entry of entries ?? []) {
         try {
@@ -133,20 +112,24 @@ async function slidesOf(entry, ratio, palette, geometry) {
     if (entry.kind === 'text') { return textSlides(entry, ratio, palette, geometry); }
     if (entry.kind === 'file') { return await fileSlides(entry, ratio); }
 
-    return await scoreSlides(entry, ratio);
+    return await scoreSlides(entry, ratio, palette);
 }
 
 /**
  * A score, cut where its author said to cut it — and, for a chord sheet,
  * wherever it has to be cut besides, since words flow and an engraving does not.
  *
+ * The deck's ink is handed down with it, for the same reason: a chord sheet is
+ * words, and comes out white on black beside the screens of words it is sung
+ * from. The three engines ignore it and engrave their own black on white.
+ *
  * The heading rides on the first screen only. A hymn broken across three slides
  * is one hymn, and repeating its name on every screen would say three times what
  * the congregation read once.
  */
-async function scoreSlides(entry, ratio) {
+async function scoreSlides(entry, ratio, palette) {
     const settings = resolveSlideSettings(entry.format, entry.settings ?? {}, ratio, entry.override);
-    const pages = await renderRatioPages(entry.format, entry.content ?? '', settings, ratio);
+    const pages = await renderRatioPages(entry.format, entry.content ?? '', settings, ratio, palette);
     const canvas = slideCanvas(entry.format, ratio);
     const heading = headingOf(entry);
 
@@ -262,31 +245,9 @@ function textSlide(page, canvas, palette, box) {
     });
 
     return {
-        svg: painted(frameSlide(svg, canvas), canvas, palette.background),
+        svg: paintSlide(frameSlide(svg, canvas), canvas, palette.background),
         overflows: scale < 1,
     };
-}
-
-/**
- * The slide's ground, painted into the document rather than behind it.
- *
- * It has to be part of the SVG: the same slide is shown in the editor's contact
- * sheet, thrown by the presenter and — one day — exported, and only a rectangle
- * inside the drawing reaches all three. Laid underneath everything already
- * there, so nothing has to be drawn in a particular order to survive it.
- */
-function painted(svg, canvas, background) {
-    const rect = document.createElementNS(SVG_NS, 'rect');
-
-    rect.setAttribute('x', '0');
-    rect.setAttribute('y', '0');
-    rect.setAttribute('width', String(canvas.width));
-    rect.setAttribute('height', String(canvas.height));
-    rect.setAttribute('fill', background);
-
-    svg.insertBefore(rect, svg.firstChild);
-
-    return svg;
 }
 
 /**
@@ -364,7 +325,7 @@ function blankSlide(canvas, background = null) {
     const { svg } = stackSvgs([], { viewBox: { x: 0, y: 0, w: canvas.width, h: canvas.height } });
     const framed = frameSlide(svg, canvas);
 
-    return background === null ? framed : painted(framed, canvas, background);
+    return paintSlide(framed, canvas, background);
 }
 
 /** One uploaded page, fetched once however many slides ask for it. */

@@ -16,6 +16,7 @@ import {
     parseChordproSong,
     stripMarkup,
 } from '../../resources/js/score-editor-chordpro.js';
+import { slidePalette } from '../../resources/js/slide-palette.js';
 
 // Half the font size per character, as in booklet-chordpro's own tests: real
 // font metrics would make the arithmetic unreadable without testing anything
@@ -482,4 +483,36 @@ test('a line too wide for the screen wraps within the slide', async () => {
 
     assert.ok(narrow[0].rows.length > 1, 'the line wrapped');
     assert.match(narrow[0].rows[0].svg, /<text[^>]*>C</, 'the chord stays on the first piece');
+});
+
+/*
+ * The ink a chord sheet is set in on a screen. A sheet that flows and breaks
+ * where it must is words, not an engraving, so it is set the way the screens of
+ * words beside it in the same deck are — white on black, unless a deck whose
+ * room is lit says otherwise.
+ */
+test('a slide is set white on black unless a palette says otherwise', async () => {
+    const pages = await slidePages('{start_of_verse: Refrain}\n[C]Ave [G]Maria\n', 1080);
+    const drawn = pages[0].rows.map((row) => row.svg).join('');
+
+    assert.match(drawn, /fill="#ffffff"/, 'lyrics are white');
+    assert.match(drawn, /fill="#7dd3fc"/, 'chords answer black with a sky');
+    assert.doesNotMatch(drawn, /fill="#000000"/, 'nothing is left in printed black');
+});
+
+test('a lit room gets the same sheet in ink', async () => {
+    const pages = await chordproSlidePages('[C]Ave [G]Maria\n', {
+        german: true,
+        transpose: 0,
+        fontFamily: "'Merriweather'",
+        fontSize: 40,
+        canvas: { width: 1920, height: 1080 },
+        measure,
+        palette: slidePalette({ textTheme: 'light' }),
+    });
+
+    const drawn = pages[0].rows.map((row) => row.svg).join('');
+
+    assert.match(drawn, /fill="#000000"/);
+    assert.match(drawn, /fill="#1d4ed8"/);
 });

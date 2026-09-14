@@ -80,9 +80,10 @@ resources/js/projection-editor.js
                 </flux:select>
             </div>
 
-            {{-- How a screen of words is set. Music is not offered: three
-                 engines draw it in ink, and a staff reversed out of black is
-                 harder to read across a nave rather than easier. --}}
+            {{-- How a screen of words is set — a text row, and a chord sheet,
+                 which is words too. Engraved music is not offered: three engines
+                 draw it in ink, and a staff reversed out of black is harder to
+                 read across a nave rather than easier. --}}
             <div class="flex items-center gap-1">
                 <flux:tooltip :content="__('Text slides')">
                     <flux:icon name="swatch" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />

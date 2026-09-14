@@ -24,8 +24,20 @@ import { chordDisplayRuns } from './chordpro-notation.js';
 import { escapeXml, round } from './booklet-text.js';
 import { markupRuns, measureRuns, runBaselineShift, runFont, runsText, sliceRuns } from './chordpro-markup.js';
 
-const CHORD_COLOR = '#1d4ed8';
-const LABEL_COLOR = '#555555';
+/**
+ * The ink a chord sheet is set in, where nobody says otherwise.
+ *
+ * A booklet page has exactly one answer — printed ink on paper — and never asks.
+ * A slide asks: a chord sheet thrown into a darkened church is words like any
+ * other words, so it is set white on black, and the chord blue that reads on
+ * paper has to answer with something that survives the room. See
+ * resources/js/slide-palette.js, which states what a screen hands in here.
+ */
+const DEFAULT_PALETTE = {
+    text: '#000000',
+    chord: '#1d4ed8',
+    label: '#555555',
+};
 
 /** Multiples of the font size. Chords sit tighter than lyrics by convention. */
 const LYRIC_LINE = 1.35;
@@ -92,6 +104,8 @@ export function chordproBookletBlocks(paragraphs, options) {
  *        for the notations chordsheetjs has no setting for
  * @param {number} [options.contentHeight] page height, to decide whether a
  *        paragraph is short enough to be kept whole
+ * @param {{text?: string, chord?: string, label?: string}} [options.palette] the
+ *        ink; printed black, blue and grey where none is given
  * @returns {Array<{height: number, spaceBefore: number, keepWithNext: boolean, splitBefore: boolean, svg: string}>}
  */
 export function chordproRows(paragraphs, options) {
@@ -329,6 +343,7 @@ function splitColumn(column, room, options) {
 
 function chordLyricRow(columns, options) {
     const { fontSize, fontFamily } = options;
+    const palette = paletteOf(options);
 
     // An annotation occupies the chord line, so a row of nothing but annotations
     // still has one.
@@ -351,7 +366,7 @@ function chordLyricRow(columns, options) {
             parts.push(text(column.annotation, x, chordHeight * 0.8, {
                 fontFamily,
                 fontSize,
-                fill: LABEL_COLOR,
+                fill: palette.label,
                 bold: true,
             }));
         }
@@ -363,7 +378,7 @@ function chordLyricRow(columns, options) {
                 parts.push(text(run.text, chordX, chordHeight * 0.8 + runBaselineShift(run, fontSize), {
                     fontFamily,
                     fontSize: font.fontSize,
-                    fill: CHORD_COLOR,
+                    fill: palette.chord,
                     bold: true,
                 }));
                 chordX += options.measure(run.text, font);
@@ -383,6 +398,7 @@ function chordLyricRow(columns, options) {
             parts.push(text(run.text, lyricX, baseline + runBaselineShift(run, fontSize), {
                 fontFamily,
                 fontSize: font.fontSize,
+                fill: palette.text,
                 bold: run.bold,
                 italic: run.italic,
                 underline: run.underline,
@@ -406,6 +422,7 @@ function chordLyricRow(columns, options) {
  */
 function labelRow(label, options) {
     const { fontSize, fontFamily, layoutWidth, measure } = options;
+    const palette = paletteOf(options);
     const height = fontSize * LABEL_LINE;
     const { runs } = markupRuns(label, { bold: true, italic: true });
 
@@ -422,7 +439,7 @@ function labelRow(label, options) {
         parts.push(text(run.text, x, height * 0.75 + runBaselineShift(run, fontSize), {
             fontFamily,
             fontSize: font.fontSize,
-            fill: LABEL_COLOR,
+            fill: palette.label,
             bold: run.bold,
             italic: run.italic,
             underline: run.underline,
@@ -441,6 +458,11 @@ function commentOf(line) {
     const tag = (line.items ?? []).find((item) => item?.name === 'comment' && item?.value);
 
     return tag ? String(tag.value) : null;
+}
+
+/** Whatever the caller stated, over the ink a page is printed in. */
+function paletteOf(options) {
+    return { ...DEFAULT_PALETTE, ...(options.palette ?? {}) };
 }
 
 function text(content, x, y, { fontFamily, fontSize, fill = '#000000', bold = false, italic = false, underline = false }) {

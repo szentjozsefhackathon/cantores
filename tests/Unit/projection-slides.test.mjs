@@ -43,6 +43,19 @@ test('a deck naming a scheme nobody has heard of still gets one', () => {
     assert.equal(textPalette({ textTheme: 'chartreuse' }).background, '#000000');
 });
 
+/* A chord sheet is words too — it is laid out here rather than engraved by any
+   engine — so every theme has to answer for the two colours only it uses. */
+test('every theme says what a chord and a section label are set in', () => {
+    for (const theme of ['dark', 'light']) {
+        const palette = textPalette({ textTheme: theme });
+
+        assert.ok(palette.chord, `${theme} has no chord colour`);
+        assert.ok(palette.label, `${theme} has no label colour`);
+        assert.notEqual(palette.chord, palette.background);
+        assert.notEqual(palette.label, palette.background);
+    }
+});
+
 test('a slide is walked past only where its own row says that position is', () => {
     const excluded = { 7: [1, 3] };
 

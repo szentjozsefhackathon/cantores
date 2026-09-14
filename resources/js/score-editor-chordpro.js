@@ -7,7 +7,8 @@ import { splitSoftSegments } from './score-editor-pages.js';
 import { packSoftPages } from './soft-pages.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
-import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
+import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide, paintSlide } from './slide-frame.js';
+import { slidePalette } from './slide-palette.js';
 
 let chordSheetJsPromise = null;
 function loadChordSheetJS() {
@@ -414,14 +415,15 @@ export const CHORDPRO_RATIO_DEFAULTS = Object.fromEntries(
  * given, so the packing can be tested without a browser.
  *
  * @param {string} pageSource one entry from splitPages
- * @param {{german: boolean, transpose: number|string, fontFamily: string, fontSize: number, canvas: {width: number, height: number}, measure?: Function}} options
+ * @param {{german: boolean, transpose: number|string, fontFamily: string, fontSize: number, canvas: {width: number, height: number}, measure?: Function, palette?: import('./slide-palette.js').SlidePalette}} options
  * @returns {Promise<Array<import('./soft-pages.js').SoftPage>>}
  */
-export async function chordproSlidePages(pageSource, { german, transpose, fontFamily, fontSize, canvas, measure }) {
+export async function chordproSlidePages(pageSource, { german, transpose, fontFamily, fontSize, canvas, measure, palette = slidePalette() }) {
     const family = safeFontFamily(fontFamily);
     const layout = {
         fontSize,
         fontFamily: family,
+        palette,
         layoutWidth: canvas.width,
         // A verse is kept whole when it fits the screen it has to fit, and left
         // free to break when it does not.
@@ -466,9 +468,18 @@ export async function chordproSlidePages(pageSource, { german, transpose, fontFa
  * heights. `overflows` is now left for the one case that cannot be answered by
  * breaking — a single wrapped line taller than the screen on its own.
  *
+ * Set white on black unless the caller says otherwise. A chord sheet on a screen
+ * is words — it is not engraved, it flows and it breaks where it must, like the
+ * screens of words beside it in the same deck — so it takes the same ink those
+ * do, and for the same reason: a full white screen carrying two verses is the
+ * brightest thing in a darkened church. The paper renderers are untouched; they
+ * ask chordproRows for no palette and go on being printed in black.
+ *
+ * @param {import('./slide-palette.js').SlidePalette} [palette] the deck's ink; the dark theme where none is
+ *        given, which is what the score editor's own slide preview gets
  * @returns {Promise<Array<{svg: SVGElement, overflows: boolean}>>} never empty
  */
-export async function renderChordproSlides(pageSource, settings, canvas) {
+export async function renderChordproSlides(pageSource, settings, canvas, palette = slidePalette()) {
     const fontFamily = safeFontFamily(settings.chordproFontFamily);
     const fontSize = Number(settings.chordproFontSize);
 
@@ -482,17 +493,18 @@ export async function renderChordproSlides(pageSource, settings, canvas) {
         fontFamily,
         fontSize,
         canvas,
+        palette,
     });
 
     if (pages.length === 0) {
-        return [{ svg: emptySlide(canvas), overflows: false }];
+        return [{ svg: emptySlide(canvas, palette.background), overflows: false }];
     }
 
-    return pages.map((page) => chordproSlide(page, canvas));
+    return pages.map((page) => chordproSlide(page, canvas, palette));
 }
 
 /** One of those slides, its rows stacked down from the top margin. */
-function chordproSlide(page, canvas) {
+function chordproSlide(page, canvas, palette) {
     const fragments = [];
     const placements = [];
     let y = 0;
@@ -510,7 +522,7 @@ function chordproSlide(page, canvas) {
     });
 
     return {
-        svg: frameSlide(svg, canvas),
+        svg: paintSlide(frameSlide(svg, canvas), canvas, palette?.background),
         overflows: page.height > canvas.height + SLIDE_FIT_TOLERANCE,
     };
 }

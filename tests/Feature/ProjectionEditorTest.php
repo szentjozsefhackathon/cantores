@@ -349,8 +349,10 @@ it('hands the browser only the adjustments for the shape it is drawing', functio
 
 /*
  * A screen of words in a darkened church is white on black, which is what every
- * other projection in the room does. The music is not offered the choice: three
- * engines draw it in ink, and a staff reversed out of black is harder to read.
+ * other projection in the room does. Engraved music is not offered the choice:
+ * three engines draw it in ink, and a staff reversed out of black is harder to
+ * read. A chord sheet is offered it, because it is words — laid out on the slide
+ * rather than engraved by anybody — and takes its ink from here like the rest.
  */
 it('sets a deck s words white on black until it is told otherwise', function () {
     $user = User::factory()->create();
@@ -370,6 +372,25 @@ it('sets a deck s words white on black until it is told otherwise', function () 
     expect($projection->fresh()->text_theme)->toBe(ProjectionTextTheme::Light)
         ->and($editor->get('geometry')['textPalette'])
         ->toMatchArray(['background' => '#ffffff', 'text' => '#000000']);
+});
+
+/*
+ * The two colours only a chord sheet uses. They are stated here rather than in
+ * the browser so the deck, the editor's preview and — one day — an export all
+ * read the same answer; resources/js/slide-palette.js is the fall-back for a
+ * client that arrived before the server did.
+ */
+it('states what a chord and a section label are set in, for both schemes', function () {
+    foreach (ProjectionTextTheme::cases() as $theme) {
+        $palette = $theme->palette();
+
+        expect($palette)->toHaveKeys(['chord', 'label'])
+            ->and($palette['chord'])->not->toBe($palette['background'])
+            ->and($palette['label'])->not->toBe($palette['background']);
+    }
+
+    expect(ProjectionTextTheme::Dark->palette()['chord'])
+        ->not->toBe(ProjectionTextTheme::Light->palette()['chord']);
 });
 
 it('refuses a colour scheme it has never heard of', function () {

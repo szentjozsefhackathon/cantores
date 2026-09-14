@@ -466,3 +466,39 @@ test('chord superscripts use normal digits at 70 percent and reserve their measu
     assert.match(rows[0].svg, /x="31"[^>]*>C<\/text>/);
     assert.doesNotMatch(rows[0].svg, /[¹³]/);
 });
+
+/*
+ * The ink. A booklet page never states one and is printed black, blue and grey;
+ * a slide states the whole of it, because a chord sheet thrown into a darkened
+ * church is words like any other words on the screen beside it.
+ */
+
+const fills = (svg) => [...svg.matchAll(/fill="([^"]+)"/g)].map(([, fill]) => fill);
+
+test('a page with no palette is printed in ink', () => {
+    const rows = chordproRows(
+        [{ label: 'Refrain', lines: [{ items: [pair('C', 'Ave')] }] }],
+        options,
+    );
+
+    const drawn = fills(rows.map((row) => row.svg).join(''));
+
+    assert.ok(drawn.includes('#000000'), 'lyrics are black');
+    assert.ok(drawn.includes('#1d4ed8'), 'chords are blue');
+    assert.ok(drawn.includes('#555555'), 'the label is grey');
+});
+
+test('a stated palette colours lyrics, chords and labels', () => {
+    const palette = { text: '#ffffff', chord: '#7dd3fc', label: '#b4b4b4' };
+    const rows = chordproRows(
+        [{ label: 'Refrain', lines: [{ items: [pair('C', 'Ave')] }, { items: [{ name: 'comment', value: 'softly' }] }] }],
+        { ...options, palette },
+    );
+
+    const drawn = fills(rows.map((row) => row.svg).join(''));
+
+    assert.ok(drawn.includes('#ffffff'), 'lyrics take the stated text colour');
+    assert.ok(drawn.includes('#7dd3fc'), 'chords take the stated chord colour');
+    assert.ok(drawn.includes('#b4b4b4'), 'the label and the comment take the stated label colour');
+    assert.ok(!drawn.some((fill) => ['#000000', '#1d4ed8', '#555555'].includes(fill)), 'nothing is left in printed ink');
+});

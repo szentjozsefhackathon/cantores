@@ -125,9 +125,37 @@ export function frameSlide(svg, canvas) {
     return fitSlide(svg);
 }
 
-/** A slide that engraved to nothing — a blank page rather than a broken one. */
-export function emptySlide(canvas) {
-    return frameSlide(document.createElementNS(SVG_NS, 'svg'), canvas);
+/**
+ * The slide's ground, painted into the document rather than behind it.
+ *
+ * It has to be part of the SVG: the same slide is shown in the editor's contact
+ * sheet, thrown by the presenter and — one day — exported, and only a rectangle
+ * inside the drawing reaches all three. Laid underneath everything already
+ * there, so nothing has to be drawn in a particular order to survive it.
+ */
+export function paintSlide(svg, canvas, background) {
+    if (!background) { return svg; }
+
+    const rect = document.createElementNS(SVG_NS, 'rect');
+
+    rect.setAttribute('x', '0');
+    rect.setAttribute('y', '0');
+    rect.setAttribute('width', String(canvas.width));
+    rect.setAttribute('height', String(canvas.height));
+    rect.setAttribute('fill', background);
+
+    svg.insertBefore(rect, svg.firstChild);
+
+    return svg;
+}
+
+/**
+ * A slide that engraved to nothing — a blank page rather than a broken one.
+ * Still painted, where the slide has a ground: a verse that came to nothing is
+ * a black screen among black screens, not a white flash.
+ */
+export function emptySlide(canvas, background = null) {
+    return paintSlide(frameSlide(document.createElementNS(SVG_NS, 'svg'), canvas), canvas, background);
 }
 
 export function parseSvg(markup) {

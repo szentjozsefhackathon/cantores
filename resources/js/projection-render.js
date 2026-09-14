@@ -4,6 +4,7 @@ import { renderChordproSlides } from './score-editor-chordpro.js';
 import { renderGabcSlide } from './score-editor-gabc.js';
 import { splitPages } from './score-editor-pages.js';
 import { slideCanvas } from './slide-frame.js';
+import { slidePalette } from './slide-palette.js';
 
 /**
  * Engraving one score onto the slides one projector ratio asks for.
@@ -86,9 +87,14 @@ export async function renderRatioPage(format, pageSource, settings, ratio) {
  * page of it that will not fit is broken into as many slides as it needs rather
  * than cut off at the bottom edge — see renderChordproSlides.
  *
+ * The palette goes the same way, and no further: a chord sheet is words and
+ * takes the deck's ink, and the three engines draw their own black on their own
+ * white whatever the deck says.
+ *
+ * @param {import('./slide-palette.js').SlidePalette} [palette]
  * @return {Promise<Array<{svg: SVGElement, overflows: boolean}>>} never empty
  */
-export async function renderRatioPageSlides(format, pageSource, settings, ratio) {
+export async function renderRatioPageSlides(format, pageSource, settings, ratio, palette) {
     if (format !== 'chordpro') {
         return [await renderRatioPage(format, pageSource, settings, ratio)];
     }
@@ -99,18 +105,20 @@ export async function renderRatioPageSlides(format, pageSource, settings, ratio)
         throw new Error(`[projection] ${ratio} is not a slide ratio`);
     }
 
-    return renderChordproSlides(pageSource, settings, canvas);
+    return renderChordproSlides(pageSource, settings, canvas, palette ?? slidePalette());
 }
 
 /**
  * Every slide one score comes to at one ratio, in order.
  *
+ * @param {import('./slide-palette.js').SlidePalette} [palette] the deck's ink,
+ *        for the one format that is words rather than an engraving
  * @return {Promise<Array<{svg: SVGElement, overflows: boolean}>>}
  */
-export async function renderRatioPages(format, content, settings, ratio) {
+export async function renderRatioPages(format, content, settings, ratio, palette) {
     const pages = await Promise.all(
         ratioPageSources(format, content, settings, ratio)
-            .map((page) => renderRatioPageSlides(format, page, settings, ratio)),
+            .map((page) => renderRatioPageSlides(format, page, settings, ratio, palette)),
     );
 
     return pages.flat();

@@ -7,13 +7,15 @@ namespace App\Enums;
  *
  * Only its words. Music is engraved black on white by three engines that draw
  * ink on paper, and reversing a staff out of black does not help anybody read
- * it — so this decides the look of the text-only slides and nothing else.
+ * it — so this decides the look of everything that is read rather than played:
+ * the text slides, and the chord sheets, which are words with chords standing
+ * over them and are laid out here rather than engraved by anybody.
  *
  * The palette is stated here rather than in the stylesheet because the slide is
  * an SVG document: the background is a rectangle drawn into it and the type is a
  * `fill` on each run, so the colours have to travel with the deck all the way to
  * the browser that draws it. Their JavaScript half is the table in
- * resources/js/projection-deck.js, which reads exactly these keys.
+ * resources/js/slide-palette.js, which reads exactly these keys.
  */
 enum ProjectionTextTheme: string
 {
@@ -41,9 +43,10 @@ enum ProjectionTextTheme: string
      * `accent` is what `<red>` comes out as. Red on white is the rubric colour a
      * missal has used for centuries; the same red on black is nearly unreadable,
      * so the dark theme answers with the complement that keeps the warning
-     * without the mud.
+     * without the mud. `chord` is the same argument in blue: the royal blue a
+     * chord symbol is printed in dies on black and answers with a sky.
      *
-     * @return array{background: string, text: string, quote: string, rule: string, accent: string}
+     * @return array{background: string, text: string, chord: string, label: string, quote: string, rule: string, accent: string}
      */
     public function palette(): array
     {
@@ -51,6 +54,8 @@ enum ProjectionTextTheme: string
             self::Dark => [
                 'background' => '#000000',
                 'text' => '#ffffff',
+                'chord' => '#7dd3fc',
+                'label' => '#b4b4b4',
                 'quote' => '#b4b4b4',
                 'rule' => '#666666',
                 'accent' => '#ff6b6b',
@@ -58,6 +63,8 @@ enum ProjectionTextTheme: string
             self::Light => [
                 'background' => '#ffffff',
                 'text' => '#000000',
+                'chord' => '#1d4ed8',
+                'label' => '#555555',
                 'quote' => '#555555',
                 'rule' => '#999999',
                 'accent' => '#cc0000',
