@@ -210,7 +210,7 @@ resources/js/score-editor.js
                     <flux:tooltip :content="__('Font size (pt)')">
                         <div class="flex items-center gap-1">
                             <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
-                            <flux:input size="sm" type="number" x-model="chordproFontSizePt" min="6" max="24" step="0.5" class="w-16" />
+                            <flux:input size="sm" type="number" x-model="chordproFontSizePt" min="6" x-bind:max="isFixedRatio(chordproPageRatio) ? 144 : 24" step="0.5" class="w-16" />
                         </div>
                     </flux:tooltip>
 
@@ -221,7 +221,7 @@ resources/js/score-editor.js
                         </div>
                     </flux:tooltip>
 
-                    <flux:tooltip :content="__('Columns')">
+                    <flux:tooltip :content="__('Columns')" x-show="!isFixedRatio(chordproPageRatio)">
                         <div class="flex items-center gap-1">
                             <flux:icon name="view-columns" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                             <flux:select size="sm" x-model="chordproColumns" class="w-16 text-xs">

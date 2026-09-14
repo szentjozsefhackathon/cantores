@@ -31,7 +31,14 @@ const LABEL_COLOR = '#555555';
 const LYRIC_LINE = 1.35;
 const CHORD_LINE = 1.25;
 const LABEL_LINE = 1.5;
-const PARAGRAPH_GAP = 0.9;
+
+/**
+ * The air between two verses, as a multiple of the font size.
+ *
+ * Exported because a sheet cut into pieces has to put it back: the pieces are
+ * laid out apart from one another and neither knows it had a neighbour.
+ */
+export const PARAGRAPH_GAP = 0.9;
 
 /** Breathing room after a chord, so neighbouring chords never touch. */
 const CHORD_GAP = 0.4;
@@ -85,7 +92,7 @@ export function chordproBookletBlocks(paragraphs, options) {
  *        for the notations chordsheetjs has no setting for
  * @param {number} [options.contentHeight] page height, to decide whether a
  *        paragraph is short enough to be kept whole
- * @returns {Array<{height: number, spaceBefore: number, keepWithNext: boolean, svg: string}>}
+ * @returns {Array<{height: number, spaceBefore: number, keepWithNext: boolean, splitBefore: boolean, svg: string}>}
  */
 export function chordproRows(paragraphs, options) {
     const { fontSize, layoutWidth, contentHeight = Infinity } = options;
@@ -96,13 +103,13 @@ export function chordproRows(paragraphs, options) {
 
         const label = paragraph.label ?? null;
         if (label) {
-            rows.push(labelRow(label, options));
+            rows.push({ ...labelRow(label, options), startsLine: true, holdsNext: true });
         }
 
         (paragraph.lines ?? []).forEach((line) => {
             const comment = commentOf(line);
             if (comment !== null) {
-                rows.push(labelRow(comment, options));
+                rows.push({ ...labelRow(comment, options), startsLine: true, holdsNext: true });
 
                 return;
             }
@@ -112,8 +119,8 @@ export function chordproRows(paragraphs, options) {
                 return;
             }
 
-            wrapColumns(columns, layoutWidth, options).forEach((rowColumns) => {
-                rows.push(chordLyricRow(rowColumns, options));
+            wrapColumns(columns, layoutWidth, options).forEach((rowColumns, piece) => {
+                rows.push({ ...chordLyricRow(rowColumns, options), startsLine: piece === 0 });
             });
         });
 
@@ -128,11 +135,17 @@ export function chordproRows(paragraphs, options) {
         // still overflows.
         const keepWhole = height <= contentHeight;
 
-        rows.forEach((row, i) => {
+        rows.forEach(({ startsLine, holdsNext, ...row }, i) => {
             blocks.push({
                 ...row,
                 spaceBefore: i === 0 && paragraphIndex > 0 ? fontSize * PARAGRAPH_GAP : 0,
                 keepWithNext: keepWhole && i < rows.length - 1,
+                // Where this paragraph may be cut if it ever has to be: above a
+                // line of the song, never inside one that wrapped, and never
+                // between a label and what it introduces. keepWithNext says
+                // whether a verse would rather not be cut; this says where the
+                // cut would fall if it is.
+                splitBefore: i === 0 || (startsLine === true && rows[i - 1]?.holdsNext !== true),
             });
         });
     });

@@ -3,7 +3,7 @@ import { DEFAULT_PALETTE, markdownRows } from './booklet-markdown.js';
 import { textRowSvg } from './booklet-text.js';
 import { renderRatioPages } from './projection-render.js';
 import { fileSlideSettings, resolveSlideSettings, textSlideSettings } from './projection-settings.js';
-import { packTextPages } from './projection-text-pages.js';
+import { packSoftPages } from './soft-pages.js';
 import { fitIntoBox, frameSlide, isSlideRatio, parseSvg, slideCanvas } from './slide-frame.js';
 import { stackSvgs } from './svg-stack.js';
 
@@ -137,7 +137,8 @@ async function slidesOf(entry, ratio, palette, geometry) {
 }
 
 /**
- * A score, cut where its author said to cut it.
+ * A score, cut where its author said to cut it — and, for a chord sheet,
+ * wherever it has to be cut besides, since words flow and an engraving does not.
  *
  * The heading rides on the first screen only. A hymn broken across three slides
  * is one hymn, and repeating its name on every screen would say three times what
@@ -210,7 +211,7 @@ async function fileSlides(entry, ratio) {
  * way at all three shapes.
  *
  * The whole row is laid out once, at that size, and then cut into as many
- * screens as it needs — see packTextPages, which spends the author's own
+ * screens as it needs — see packSoftPages, which spends the author's own
  * `%pagebreak` lines before it spends anything of its own. Setting the words
  * smaller is what is left when even a single paragraph will not hold, and a
  * screen that had to do it says so.
@@ -232,7 +233,7 @@ function textSlides(entry, ratio, palette, geometry) {
         ratio,
     });
 
-    const pages = packTextPages(rows, box);
+    const pages = packSoftPages(rows, box);
 
     if (pages.length === 0) { return [{ svg: blankSlide(canvas, palette.background), overflows: false }]; }
 

@@ -1,8 +1,10 @@
-import { canvasMeasurer, chordproRows } from './booklet-chordpro.js';
+import { PARAGRAPH_GAP, canvasMeasurer, chordproRows } from './booklet-chordpro.js';
 import { packColumns } from './booklet-flow.js';
 import { DEFAULT_LYRIC_SIZE_PT, DEFAULT_PAGE_WIDTH_MM, mmToPx, opticalLyricSizePt, ptToPx } from './booklet-geometry.js';
 import { markupRuns, runsText } from './chordpro-markup.js';
 import { chordStringsOf, displayChord, displayChordsInHtml, displayChordsInText } from './chordpro-notation.js';
+import { splitSoftSegments } from './score-editor-pages.js';
+import { packSoftPages } from './soft-pages.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
@@ -387,32 +389,129 @@ export const CHORDPRO_RATIO_DEFAULTS = Object.fromEntries(
 );
 
 /**
- * One page of a chord sheet engraved onto one projector slide.
+ * The slides one page of a chord sheet comes to, as rows and heights.
+ *
+ * A chord sheet is not an engraving. The three engraved formats are cut where
+ * their author said and nowhere else, because a staff is the width it is and an
+ * engraving that ran over ran over on purpose; a chord sheet is words with
+ * chords standing over them, laid out a row at a time right here, and every one
+ * of those rows has a height before anything is drawn. So it flows instead of
+ * being cut off at the bottom edge — see packSoftPages for the order the cuts
+ * are spent in.
+ *
+ * Each piece between two suggestions is parsed and laid out on its own, which is
+ * what lets a suggestion inside a verse work: parsed apart, the two halves are
+ * two paragraphs, and the keepWithNext that holds a verse together does not
+ * reach across the cut. The price is that a section label written above the
+ * marker belongs to the piece it was written in, which is where it stands.
+ *
+ * One column, always — the same choice CHORDPRO_RATIO_DEFAULTS already makes for
+ * every projector ratio, and now made here too, so a `chordproColumns` saved
+ * before that default is honoured as one column on a screen rather than setting
+ * a congregation two things to find.
+ *
+ * Pure but for the parser: widths come from an injected `measure` where one is
+ * given, so the packing can be tested without a browser.
+ *
+ * @param {string} pageSource one entry from splitPages
+ * @param {{german: boolean, transpose: number|string, fontFamily: string, fontSize: number, canvas: {width: number, height: number}, measure?: Function}} options
+ * @returns {Promise<Array<import('./soft-pages.js').SoftPage>>}
+ */
+export async function chordproSlidePages(pageSource, { german, transpose, fontFamily, fontSize, canvas, measure }) {
+    const family = safeFontFamily(fontFamily);
+    const layout = {
+        fontSize,
+        fontFamily: family,
+        layoutWidth: canvas.width,
+        // A verse is kept whole when it fits the screen it has to fit, and left
+        // free to break when it does not.
+        contentHeight: canvas.height,
+        measure: measure ?? canvasMeasurer(family, fontSize),
+        spell: (chord) => displayChord(chord, german),
+    };
+
+    const rows = [];
+
+    for (const segment of splitSoftSegments(pageSource)) {
+        const song = await parseChordproSong(segment, { german, transpose, sanitize: false });
+        const segmentRows = chordproRows(song.bodyParagraphs ?? song.paragraphs ?? [], layout);
+
+        if (segmentRows.length === 0) {
+            continue;
+        }
+
+        if (rows.length > 0) {
+            // Laid out alone, a piece begins flush against nothing; put back the
+            // air a verse boundary would have had, for the case where the cut is
+            // not taken and the two end up on one screen after all.
+            rows.push({ ...segmentRows[0], breakBefore: 'soft', spaceBefore: fontSize * PARAGRAPH_GAP });
+            rows.push(...segmentRows.slice(1));
+
+            continue;
+        }
+
+        rows.push(...segmentRows);
+    }
+
+    return packSoftPages(rows, canvas.height);
+}
+
+/**
+ * One page of a chord sheet engraved onto the projector slides it needs.
  *
  * A chord sheet has no projector canvas of its own — nothing engraves one to a
  * screen but this — so it is laid out at the slide's own width and framed like
- * the engraved formats: words taller than the slide are cut off rather than
- * shrunk, and `overflows` says so.
+ * the engraved formats. Stacked from the top rather than centred, for the reason
+ * fitSlide gives: two consecutive slides of one hymn must not start at different
+ * heights. `overflows` is now left for the one case that cannot be answered by
+ * breaking — a single wrapped line taller than the screen on its own.
+ *
+ * @returns {Promise<Array<{svg: SVGElement, overflows: boolean}>>} never empty
  */
-export async function renderChordproSlide(pageSource, settings, canvas) {
-    const svg = await renderChordproPageSvg(pageSource, {
+export async function renderChordproSlides(pageSource, settings, canvas) {
+    const fontFamily = safeFontFamily(settings.chordproFontFamily);
+    const fontSize = Number(settings.chordproFontSize);
+
+    // Every row is placed at a measured width, and a face the browser has not
+    // loaded yet measures as whatever it falls back to.
+    await ensureFontsLoaded([fontFamily], fontSize);
+
+    const pages = await chordproSlidePages(pageSource, {
         german: settings.chordproGermanNotation,
         transpose: settings.chordproTranspose,
-        fontFamily: settings.chordproFontFamily,
-        fontSize: Number(settings.chordproFontSize),
-        columns: settings.chordproColumns,
-        pageWidth: canvas.width,
+        fontFamily,
+        fontSize,
+        canvas,
     });
 
-    if (svg === null) {
-        return { svg: emptySlide(canvas), overflows: false };
+    if (pages.length === 0) {
+        return [{ svg: emptySlide(canvas), overflows: false }];
     }
 
-    const contentHeight = Number(svg.getAttribute('height')) || 0;
+    return pages.map((page) => chordproSlide(page, canvas));
+}
+
+/** One of those slides, its rows stacked down from the top margin. */
+function chordproSlide(page, canvas) {
+    const fragments = [];
+    const placements = [];
+    let y = 0;
+
+    page.rows.forEach((row, i) => {
+        y += i === 0 ? 0 : (row.spaceBefore ?? 0);
+        fragments.push(new DOMParser().parseFromString(row.svg, 'image/svg+xml').documentElement);
+        placements.push({ x: 0, y, scale: 1 });
+        y += row.height;
+    });
+
+    const { svg } = stackSvgs(fragments, {
+        placements,
+        viewBox: { x: 0, y: 0, w: canvas.width, h: canvas.height },
+    });
 
     return {
         svg: frameSlide(svg, canvas),
-        overflows: contentHeight > canvas.height + SLIDE_FIT_TOLERANCE,
+        overflows: page.height > canvas.height + SLIDE_FIT_TOLERANCE,
     };
 }
 
@@ -463,7 +562,7 @@ export function chordproMixin() {
             if (!content || !content.trim()) { return; }
 
             if (this.isFixedRatio(this.chordproPageRatio)) {
-                await this.renderChordproSlides(container, content);
+                await this.renderChordproPreviewSlides(container, content);
                 return;
             }
 
@@ -492,37 +591,45 @@ export function chordproMixin() {
         },
 
         /**
-         * The sheet as it will be projected: one framed slide per page break.
+         * The sheet as it will be projected.
          *
          * A chord sheet is drawn as HTML on paper — it is words in a box, not an
          * engraving — but a slide has to be an SVG like every other slide, since
          * what a projection does with it is place it on a screen of a stated
-         * shape. So the projector ratios go through the same page engraver the
-         * export and the booklet already use.
+         * shape. So the projector ratios go through the engraver the export and
+         * the booklet already use.
+         *
+         * A page break is no longer a slide count: a page that will not fit the
+         * screen comes to more than one slide of its own accord. Every slide is
+         * drawn before any is placed, so the page controls can label a slide
+         * "3 / 7" with the number the reader will actually page through.
          */
-        async renderChordproSlides(container, content) {
+        async renderChordproPreviewSlides(container, content) {
             const ratio = this.chordproPageRatio;
             const canvas = this.getVirtualCanvasSize('chordpro');
-            const pages = this.splitPages(content, 'chordpro', ratio);
+            const slides = [];
 
-            for (const [idx, pageSource] of pages.entries()) {
-                const pageEl = document.createElement('div');
-                this.applyProjectorFrame(pageEl, ratio);
-                container.appendChild(pageEl);
-
+            for (const pageSource of this.splitPages(content, 'chordpro', ratio)) {
                 try {
-                    const { svg, overflows } = await renderChordproSlide(pageSource, this, canvas);
-                    pageEl.replaceChildren(svg);
-                    if (overflows) {
-                        this.appendClipWarning(pageEl);
-                    }
-                    this.hasPages = true;
+                    slides.push(...await renderChordproSlides(pageSource, this, canvas));
                 } catch (e) {
                     console.error('[score-editor] chordpro slide error:', e);
                 }
-
-                this.addPageControls(pageEl, idx + 1, pages.length, 'chordpro', { fullscreen: true, ratio });
             }
+
+            slides.forEach(({ svg, overflows }, idx) => {
+                const pageEl = document.createElement('div');
+                this.applyProjectorFrame(pageEl, ratio);
+                container.appendChild(pageEl);
+                pageEl.replaceChildren(svg);
+
+                if (overflows) {
+                    this.appendClipWarning(pageEl);
+                }
+
+                this.hasPages = true;
+                this.addPageControls(pageEl, idx + 1, slides.length, 'chordpro', { fullscreen: true, ratio });
+            });
         },
 
         /**

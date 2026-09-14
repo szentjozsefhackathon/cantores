@@ -700,8 +700,13 @@ resources/js/score-editor.js
                                 {{-- Points, not pixels: a chord sheet is printed
                                      and sung from, and 12 pt is what that means
                                      to whoever sets it. The setting underneath
-                                     is still px — see chordproFontSizePt. --}}
-                                <flux:input size="sm" type="number" x-model="chordproFontSizePt" min="6" max="24" step="0.5" class="w-16!" />
+                                     is still px — see chordproFontSizePt.
+
+                                     A projector is not a page: the ratio
+                                     defaults already set 62 pt at 16:9, so a
+                                     paper page's ceiling would put the toolbar
+                                     below the size the editor itself chose. --}}
+                                <flux:input size="sm" type="number" x-model="chordproFontSizePt" min="6" x-bind:max="isFixedRatio(chordproPageRatio) ? 144 : 24" step="0.5" class="w-16!" />
                             </div>
 
                             <div class="flex items-center gap-1">
@@ -711,7 +716,12 @@ resources/js/score-editor.js
                                 <x-lyric-font-select model="chordproFontFamily" />
                             </div>
 
-                            <div class="flex items-center gap-1">
+                            {{-- Columns are a page's answer to a long sheet; a
+                                 slide's answer is another slide, and
+                                 chordproSlidePages lays one column out whatever
+                                 this says. A control that does nothing is worse
+                                 than no control. --}}
+                            <div class="flex items-center gap-1" x-show="!isFixedRatio(chordproPageRatio)">
                                 <flux:tooltip :content="__('Columns')">
                                     <flux:icon name="view-columns" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
@@ -724,7 +734,7 @@ resources/js/score-editor.js
 
                             <div class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
 
-                            <div class="flex items-center gap-1" x-show="!['16/9', '4/3', '1/1'].includes(chordproPageRatio)">
+                            <div class="flex items-center gap-1" x-show="!isFixedRatio(chordproPageRatio)">
                                 <flux:tooltip :content="__('Zoom (%)')">
                                     <flux:icon name="zoom-in" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>

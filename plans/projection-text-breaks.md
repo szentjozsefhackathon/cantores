@@ -173,6 +173,11 @@ today and should not start.
   by four different engines and the overflow signal from each would have to drive
   the retry.
 
+  *Since:* ChordPro went first, because it turned out not to be one of the four —
+  it is engraved here, a row at a time, so its overflow is known before anything
+  is drawn. See `plans/chordpro-slides-that-flow.md`; the three engraved formats
+  still wait for the reason given above.
+
 ## Verification
 
 **Node unit tests** — the packing is pure, so it is tested the way

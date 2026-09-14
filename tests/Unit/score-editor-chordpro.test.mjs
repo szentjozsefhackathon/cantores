@@ -12,6 +12,7 @@ import {
     chordproMixin,
     chordproPageLayout,
     chordproPageMetrics,
+    chordproSlidePages,
     parseChordproSong,
     stripMarkup,
 } from '../../resources/js/score-editor-chordpro.js';
@@ -127,6 +128,30 @@ test('the preview opens magnified, because the sheet is set at printed size', ()
     const toolbar = readFileSync(new URL('../../resources/views/livewire/pages/score-editor.blade.php', import.meta.url), 'utf8');
 
     assert.match(toolbar, /x-model="chordproZoom"/);
+});
+
+/*
+ * A projector is not a page. The ratio defaults set 62 pt at 16:9 — larger than
+ * a paper toolbar's whole range — so the ceiling has to follow the ratio, or the
+ * spinner argues with the size the editor itself chose. And a column is a page's
+ * answer to a long sheet; a slide's answer is another slide, so the control that
+ * sets them has nothing to do on a projector and is not shown there.
+ */
+test('a chord sheet toolbar lets a projector have the size a projector needs', () => {
+    for (const page of ['score-editor', 'score-view', 'public-score-view']) {
+        const toolbar = readFileSync(new URL(`../../resources/views/livewire/pages/${page}.blade.php`, import.meta.url), 'utf8');
+
+        assert.match(
+            toolbar,
+            /x-model="chordproFontSizePt"[^>]*x-bind:max="isFixedRatio\(chordproPageRatio\) \? 144 : 24"/,
+            `${page} should raise the size ceiling on a slide`,
+        );
+        assert.match(
+            toolbar,
+            /x-show="!isFixedRatio\(chordproPageRatio\)"[\s\S]{0,400}x-model="chordproColumns"/,
+            `${page} should hide the column control on a slide`,
+        );
+    }
 });
 
 test('every chord sheet toolbar sets the size in points over a setting kept in px', () => {
@@ -329,3 +354,132 @@ for (const german of [false, true]) {
         });
     }
 }
+
+/*
+ * A chord sheet on a slide flows; it does not clip.
+ *
+ * The rows below are all the same height by construction — one chord line and
+ * one lyric line, 1.25 and 1.35 of the 40 px size — so a screen's capacity can
+ * be written as a number of rows and the tier order read straight off the
+ * result. What is being tested is which cuts get spent, and in what order.
+ */
+
+/** One chord-and-lyric row, and the air a verse boundary asks for. */
+const ROW = 40 * (1.25 + 1.35);
+const GAP = 40 * 0.9;
+
+const slidePages = (sheet, height, width = 1920) => chordproSlidePages(sheet, {
+    german: true,
+    transpose: 0,
+    fontFamily: "'Merriweather'",
+    fontSize: 40,
+    canvas: { width, height },
+    measure,
+});
+
+const rowCounts = (pages) => pages.map((page) => page.rows.length);
+
+test('a sheet that fits is one slide, and its suggestion goes unused', async () => {
+    const pages = await slidePages('[C]Egy\n%pagebreak?\n[G]Kettő\n', 1080);
+
+    assert.deepEqual(rowCounts(pages), [2]);
+    // Laid out apart and put back together, the two pieces keep the air a verse
+    // boundary would have had between them.
+    assert.equal(pages[0].rows[1].spaceBefore, GAP);
+    assert.equal(pages[0].height, ROW * 2 + GAP);
+});
+
+test('the same sheet on a screen too short for it is cut at the suggestion', async () => {
+    const pages = await slidePages('[C]Egy\n%pagebreak?\n[G]Kettő\n', ROW + 10);
+
+    assert.deepEqual(rowCounts(pages), [1, 1]);
+});
+
+test('only as many suggestions are spent as the screen actually needs', async () => {
+    const sheet = '[C]Egy\n%pagebreak?\n[G]Kettő\n%pagebreak?\n[Am]Három\n';
+
+    // Room for two of the three pieces: two slides, not one per suggestion.
+    assert.deepEqual(rowCounts(await slidePages(sheet, ROW * 2 + GAP + 10)), [2, 1]);
+    assert.deepEqual(rowCounts(await slidePages(sheet, ROW + 10)), [1, 1, 1]);
+});
+
+/*
+ * The tier below the author's own suggestions. A sheet that says nothing about
+ * where it should break is broken at its verses, and a verse that fits the
+ * screen is never split across two of them — which is what keepWithNext is for,
+ * and what used to be answered by cutting the last verse off the bottom edge.
+ */
+test('a sheet with no markers is cut at a verse boundary rather than truncated', async () => {
+    const sheet = '[C]Egy\n[G]Két\n\n[Am]Há\n[F]Négy\n';
+    const pages = await slidePages(sheet, ROW * 3);
+
+    assert.deepEqual(rowCounts(pages), [2, 2]);
+});
+
+/*
+ * The last resort, and the only case `overflows` is still for: one line set so
+ * large that no cut anywhere would make it fit. It comes back whole and too
+ * tall, because a screen ending mid-word is worse than a screen that overruns.
+ */
+test('a single row taller than the screen comes back over-tall rather than cut', async () => {
+    const pages = await slidePages('[C]Egy\n', ROW / 2);
+
+    assert.deepEqual(rowCounts(pages), [1]);
+    assert.ok(pages[0].height > ROW / 2);
+});
+
+/*
+ * A verse is a preference, not a promise. Two verses of two lines on a screen
+ * with room for three rows: keeping both verses whole costs two slides and half
+ * an empty screen, so the second verse is cut at its own newline instead.
+ */
+test('a verse is cut at a line boundary when keeping it whole would cost a slide', async () => {
+    const sheet = '[C]Egy\n[G]Két\n\n[Am]Há\n[F]Négy\n\n[C]Öt\n[G]Hat\n';
+    const pages = await slidePages(sheet, ROW * 3 + GAP);
+
+    assert.deepEqual(rowCounts(pages), [3, 3]);
+    assert.match(pages[0].rows[2].svg, /Há</);
+});
+
+/*
+ * The boundary is the newline the author wrote, not the wrap the screen forced:
+ * a line too wide to fit keeps its pieces together, so a slide never opens on
+ * the tail of a sentence whose head is on the slide before it.
+ */
+test('a wrapped line is not cut in the middle of itself to fill a slide', async () => {
+    const sheet = '[C]Egy kettő három négy\n[G]Öt\n';
+    const pages = await slidePages(sheet, ROW * 2 + 10, 200);
+
+    assert.ok(pages.length > 1, 'the sheet was cut');
+    assert.match(pages[pages.length - 1].rows[0].svg, /<text[^>]*>G</, 'the last slide opens on a line of its own');
+    pages.forEach((page) => assert.ok(page.height <= ROW * 2 + 10, 'and nothing overran'));
+});
+
+/*
+ * Below even that: a single written line taller than the whole screen. Cutting
+ * it mid-sentence is bad; hiding the end of it is worse, so it is cut.
+ */
+test('a line taller than the screen is cut inside itself rather than hidden', async () => {
+    const pages = await slidePages('[C]Egy kettő három négy öt hat\n', ROW * 2, 200);
+
+    assert.ok(pages.length > 1);
+    pages.forEach((page) => assert.ok(page.height <= ROW * 2));
+});
+
+test('a sheet with nothing sung in it comes to no slides at all', async () => {
+    assert.deepEqual(await slidePages('', 1080), []);
+    assert.deepEqual(await slidePages('{title: Teszt}\n', 1080), []);
+});
+
+/*
+ * A long line wraps to the next row before anything thinks about pages, and the
+ * chord stays over the syllable it was written on — the wrapping is
+ * booklet-chordpro's, but this is the path a slide takes through it, at the
+ * slide's own width rather than a page's.
+ */
+test('a line too wide for the screen wraps within the slide', async () => {
+    const narrow = await slidePages('[C]Egy kettő három négy öt hat\n', 1080, 200);
+
+    assert.ok(narrow[0].rows.length > 1, 'the line wrapped');
+    assert.match(narrow[0].rows[0].svg, /<text[^>]*>C</, 'the chord stays on the first piece');
+});

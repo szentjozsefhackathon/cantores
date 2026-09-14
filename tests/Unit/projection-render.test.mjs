@@ -5,7 +5,7 @@ import { opticalLyricSizePt, ptToPx } from '../../resources/js/booklet-geometry.
 import { CHORDPRO_RATIO_DEFAULTS, chordproMixin } from '../../resources/js/score-editor-chordpro.js';
 import { applyConditionalBlocks, splitPages } from '../../resources/js/score-editor-pages.js';
 import { formatDefaults } from '../../resources/js/score-editor-settings.js';
-import { fitIntoBox, isSlideRatio, ratioPageSources, slideCanvas, slideRatios } from '../../resources/js/projection-render.js';
+import { fitIntoBox, isSlideRatio, ratioPageSources, renderRatioPage, slideCanvas, slideRatios } from '../../resources/js/projection-render.js';
 
 /*
  * Engraving a slide needs a browser — abc2svg and exsurge are globals a page
@@ -155,6 +155,55 @@ test('a chord sheet keeps no header and still splits', () => {
     assert.equal(pages.length, 2);
     assert.match(pages[0], /\{title: Teszt\}/);
     assert.ok(!pages[1].includes('{title: Teszt}'));
+});
+
+/*
+ * One page, one slide, is true of an engraving and not of a chord sheet: words
+ * flow, so a page of them that will not fit comes to several. The dispatcher
+ * keeps the two apart rather than letting a caller take the first slide of a
+ * ChordPro page for the whole of it.
+ */
+test('an engraved page is one slide and a chord sheet page is not asked to be', async () => {
+    await assert.rejects(
+        () => renderRatioPage('chordpro', '[C]Egy\n', {}, '16/9'),
+        /cannot be engraved to a slide/,
+    );
+});
+
+/*
+ * A suggestion cuts nothing here, because whether it is taken is not known until
+ * the page has been laid out. ChordPro is the only format laid out in this
+ * repository, so it is the only one given the chance to decide: its pages keep
+ * the marker, spelled one way whatever suffix it was written with, and the three
+ * engraved formats have it stripped as before.
+ */
+test('a suggested break is left in a chord sheet page and taken out of everything else', () => {
+    const sheet = '[C]Első sor\n%pagebreak?\n[Am]Má-so-dik sor\n';
+    const [page] = splitPages(sheet, 'chordpro', '16/9');
+
+    assert.equal(splitPages(sheet, 'chordpro', '16/9').length, 1, 'a suggestion is not a page break');
+    assert.match(page, /^\[C\]Első sor\n%pagebreak\?\n\[Am\]/);
+
+    assert.ok(!splitPages(sheet, 'abc', '16/9')[0].includes('pagebreak'), 'ABC strips one');
+    assert.ok(!splitPages(sheet, 'gabc', '16/9')[0].includes('pagebreak'), 'GABC strips one');
+    assert.ok(!splitPages(sheet, 'chordpro', 'paper')[0].includes('pagebreak'), 'paper has no pages');
+});
+
+test('a suggestion numbered for one shape is spelled plainly there and dropped elsewhere', () => {
+    const sheet = '[C]Első sor\n%pagebreak169?\n[Am]Má-so-dik sor\n';
+
+    assert.match(splitPages(sheet, 'chordpro', '16/9')[0], /\n%pagebreak\?\n/);
+    assert.ok(!splitPages(sheet, 'chordpro', '4/3')[0].includes('pagebreak'));
+    assert.ok(!splitPages(sheet, 'chordpro', '1/1')[0].includes('pagebreak'));
+});
+
+test('a chord sheet still cuts hard, and carries its suggestions into the right page', () => {
+    const sheet = '[C]Egy\n%pagebreak?\n[G]Kettő\n%pagebreak\n[Am]Három\n%pagebreak?\n[F]Négy\n';
+    const pages = splitPages(sheet, 'chordpro', '16/9');
+
+    assert.equal(pages.length, 2);
+    assert.match(pages[0], /Egy\n%pagebreak\?\n\[G\]Kettő/);
+    assert.match(pages[1], /Három\n%pagebreak\?\n\[F\]Négy/);
 });
 
 /*

@@ -30,12 +30,24 @@ const HEADER_END = {
  *
  * Group 1 is the ratio it belongs to, empty for every ratio; group 2 is the `?`
  * that makes it a suggestion rather than an instruction — a break taken only
- * where what it sits in would otherwise overflow. Only screens of words honour
- * the suggestion so far (see packTextPages in projection-text-pages.js); an
- * engraved score strips one, because deciding whether a staff overflowed is an
- * answer each of the four engines gives differently.
+ * where what it sits in would otherwise overflow.
+ *
+ * A suggestion is honoured by whatever is laid out here and therefore has a
+ * height known before anything is drawn: screens of words (see packSoftPages in
+ * soft-pages.js) and chord sheets, which are words with chords standing over
+ * them and are engraved a row at a time by booklet-chordpro.js. The three
+ * engraved formats strip one, because deciding whether a staff overflowed is an
+ * answer each of their engines gives differently.
  */
 export const PAGE_BREAK = /^\s*%pagebreak(\d*)(\?)?\s*$/;
+
+/**
+ * A suggestion, as it is written into a page this module hands on.
+ *
+ * splitPages resolves the ratio suffixes itself, so a renderer downstream never
+ * has to ask which shape it is drawing: what reaches it is this line or nothing.
+ */
+export const SOFT_PAGE_BREAK = '%pagebreak?';
 
 /** The digits a ratio's own breaks and blocks are numbered with, if any. */
 export function ratioSuffix(ratio) {
@@ -83,9 +95,12 @@ export function applyConditionalBlocks(content, ratio, format) {
  * A fixed ratio cuts at `%pagebreak` and at the break numbered for it, and
  * nowhere else; a break numbered for another ratio is dropped rather than left
  * behind, since it would otherwise be read as a comment on a page it does not
- * belong to. A suggested break — `%pagebreak?` — is dropped the same way: see
- * PAGE_BREAK for why a score does not take one. Paper and responsive have no pages at all — every break is stripped
- * and the score comes back whole, which is what `auto` has always meant.
+ * belong to. A suggested break — `%pagebreak?` — cuts nothing here, because
+ * whether it is taken is not known until the page has been laid out: for
+ * ChordPro it is left in the page, spelled SOFT_PAGE_BREAK whatever suffix it
+ * was written with, and the other three strip it (see PAGE_BREAK). Paper and
+ * responsive have no pages at all — every break is stripped and the score comes
+ * back whole, which is what `auto` has always meant.
  *
  * The header is re-prefixed onto each page, so a page can be handed to an engine
  * on its own without knowing it was ever part of anything larger.
@@ -116,11 +131,15 @@ export function splitPages(content, format, ratio) {
 
         if (match) {
             const suffix = match[1];
-            const soft = match[2] === '?';
-            if (!soft && (suffix === '' || suffix === targetSuffix)) {
+            const mine = suffix === '' || suffix === targetSuffix;
+
+            if (mine && match[2] !== '?') {
                 pages.push(current.join('\n'));
                 current = [];
+            } else if (mine && format === 'chordpro') {
+                current.push(SOFT_PAGE_BREAK);
             }
+
             continue;
         }
 
@@ -130,6 +149,34 @@ export function splitPages(content, format, ratio) {
     pages.push(current.join('\n'));
 
     return pages.map(page => header + page);
+}
+
+/**
+ * One page's source, cut at the suggestions splitPages left standing in it.
+ *
+ * The pieces a soft break offers, in order, whether or not any of them is
+ * taken: the renderer lays each one out and then decides how few of the offered
+ * cuts it has to spend. A page carrying no suggestion comes back as itself.
+ *
+ * @param {string} pageSource one entry from splitPages
+ * @return {string[]} never empty
+ */
+export function splitSoftSegments(pageSource) {
+    const segments = [[]];
+
+    for (const line of String(pageSource ?? '').split('\n')) {
+        const match = line.match(PAGE_BREAK);
+
+        if (match && match[2] === '?') {
+            segments.push([]);
+
+            continue;
+        }
+
+        segments[segments.length - 1].push(line);
+    }
+
+    return segments.map((segment) => segment.join('\n'));
 }
 
 function headerEndIndex(lines, format) {

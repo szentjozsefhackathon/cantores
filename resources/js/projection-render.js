@@ -1,6 +1,6 @@
 import { renderAbcSlide, hungarianChordsToAbc } from './score-editor-abc.js';
 import { renderAretinoSlide } from './score-editor-aretino.js';
-import { renderChordproSlide } from './score-editor-chordpro.js';
+import { renderChordproSlides } from './score-editor-chordpro.js';
 import { renderGabcSlide } from './score-editor-gabc.js';
 import { splitPages } from './score-editor-pages.js';
 import { slideCanvas } from './slide-frame.js';
@@ -48,13 +48,17 @@ export function ratioPageSources(format, content, settings, ratio) {
 /**
  * Engrave one page of one score onto its slide.
  *
+ * The three engraved formats only: ChordPro is not engraved by an engine and
+ * does not answer one page with one slide, so it goes through
+ * renderRatioPageSlides below.
+ *
  * Comes back framed and ready to drop into a box of that ratio, and saying
  * whether the music fitted — each engine reports running out of room in its own
  * way, and each format's renderer knows which. Nothing here shrinks an
  * engraving to make it fit: that answer belongs to the author, who gives it
  * with a smaller size or another `%pagebreak`.
  *
- * @param {string} format gabc | abc | aretino | chordpro
+ * @param {string} format gabc | abc | aretino
  * @param {string} pageSource one entry from ratioPageSources()
  * @param {object} settings the resolved per-ratio settings bucket
  * @param {string} ratio
@@ -70,9 +74,32 @@ export async function renderRatioPage(format, pageSource, settings, ratio) {
     if (format === 'abc') { return renderAbcSlide(pageSource, settings, canvas); }
     if (format === 'gabc') { return renderGabcSlide(pageSource, settings, canvas); }
     if (format === 'aretino') { return renderAretinoSlide(pageSource, settings, canvas, ratio); }
-    if (format === 'chordpro') { return renderChordproSlide(pageSource, settings, canvas); }
 
     throw new Error(`[projection] ${format} cannot be engraved to a slide`);
+}
+
+/**
+ * The slides one page comes to — which is one of them, except for ChordPro.
+ *
+ * An engraved page is one slide by definition: it is the size its engine made
+ * it, and running over is the author's business. A chord sheet is words, so a
+ * page of it that will not fit is broken into as many slides as it needs rather
+ * than cut off at the bottom edge — see renderChordproSlides.
+ *
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean}>>} never empty
+ */
+export async function renderRatioPageSlides(format, pageSource, settings, ratio) {
+    if (format !== 'chordpro') {
+        return [await renderRatioPage(format, pageSource, settings, ratio)];
+    }
+
+    const canvas = slideCanvas(format, ratio);
+
+    if (canvas === null) {
+        throw new Error(`[projection] ${ratio} is not a slide ratio`);
+    }
+
+    return renderChordproSlides(pageSource, settings, canvas);
 }
 
 /**
@@ -80,9 +107,11 @@ export async function renderRatioPage(format, pageSource, settings, ratio) {
  *
  * @return {Promise<Array<{svg: SVGElement, overflows: boolean}>>}
  */
-export function renderRatioPages(format, content, settings, ratio) {
-    return Promise.all(
+export async function renderRatioPages(format, content, settings, ratio) {
+    const pages = await Promise.all(
         ratioPageSources(format, content, settings, ratio)
-            .map((page) => renderRatioPage(format, page, settings, ratio)),
+            .map((page) => renderRatioPageSlides(format, page, settings, ratio)),
     );
+
+    return pages.flat();
 }
