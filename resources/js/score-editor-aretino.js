@@ -60,8 +60,14 @@ export function aretinoProjectorOptions(ratio) {
  * other engines deliver by clipping. So the overflow test here is the width,
  * and the engine's own viewBox is kept rather than restated: rewriting it to
  * the canvas would crop the very music that grew.
+ *
+ * The lyric face is waited for first, for the reason ensureFontsLoaded()
+ * explains: Aretino places every syllable at a measured width, and a face the
+ * browser has not fetched yet measures as the fallback.
  */
-export function renderAretinoSlide(pageSource, settings, canvas, ratio) {
+export async function renderAretinoSlide(pageSource, settings, canvas, ratio) {
+    await ensureFontsLoaded([settings.aretinoTextFont], Number(settings.aretinoLyricSize));
+
     const zoom = Number(settings.aretinoZoom) > 0 ? Number(settings.aretinoZoom) / 100 : 1;
 
     const svg = parseSvg(renderAretino(pageSource, {
@@ -157,7 +163,7 @@ export function aretinoMixin() {
             const virtualCanvas = this.getVirtualCanvasSize('aretino');
             const zoom = Number(this.aretinoZoom) / 100;
 
-            pages.forEach((pageSource, idx) => {
+            for (const [idx, pageSource] of pages.entries()) {
                 const pageEl = document.createElement('div');
 
                 if (isFixedRatio) {
@@ -180,7 +186,7 @@ export function aretinoMixin() {
                     if (isFixedRatio) {
                         // The slide is engraved by the one copy of that code a
                         // projection also draws.
-                        const { svg, overflows } = renderAretinoSlide(pageSource, this, virtualCanvas, ratio);
+                        const { svg, overflows } = await renderAretinoSlide(pageSource, this, virtualCanvas, ratio);
                         pageEl.replaceChildren(svg);
                         if (overflows) {
                             this.appendClipWarning(pageEl);
@@ -204,7 +210,7 @@ export function aretinoMixin() {
                     console.error('[score-editor] aretino render error:', e);
                 }
                 this.addPageControls(pageEl, idx + 1, pages.length, 'aretino', { fullscreen: isFixedRatio, ratio });
-            });
+            }
             this.hasPages = true;
             this._aretinoPreviewDirty = false;
             this.updateAretinoHighlight();

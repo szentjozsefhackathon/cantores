@@ -320,11 +320,20 @@ let abcSlideSerial = 0;
  * shrunk — a decision that belongs to the author, who answers it with a smaller
  * size or another `%pagebreak`, and is told about it by `overflows`.
  *
+ * The lyric face is waited for first: abc2svg measures every syllable against
+ * whatever face the browser holds at that moment, and the widths it gets decide
+ * whether a hyphen fits between two syllables at all — `%%lyrichyphenremove`
+ * drops the hyphen and glues the syllables when the gap comes out too small. A
+ * slide engraved before the face arrived therefore loses hyphens, which is what
+ * a hard reload used to show until something forced a second render.
+ *
  * @param {string} pageSource one page, preamble excluded
  * @param {object} settings the resolved per-ratio settings bucket
  * @param {{width: number, height: number}} canvas
  */
-export function renderAbcSlide(pageSource, settings, canvas) {
+export async function renderAbcSlide(pageSource, settings, canvas) {
+    await ensureAbcFontsLoaded(settings);
+
     const scope = `s${++abcSlideSerial}`;
     const markup = renderAbcToSvgMarkup(buildAbcPreamble(settings, canvas.width, scope) + pageSource);
     const host = document.createElement('div');
@@ -486,7 +495,7 @@ export function abcMixin() {
                     : canvas.width;
             const preamble = buildAbcPreamble(this, pageWidth);
             const pages = this.splitPages(content, 'abc', ratio);
-            pages.forEach((pageContent, idx) => {
+            for (const [idx, pageContent] of pages.entries()) {
                 const pageEl = document.createElement('div');
                 if (isFixed) {
                     this.applyProjectorFrame(pageEl, ratio);
@@ -503,7 +512,7 @@ export function abcMixin() {
                     if (isFixed) {
                         // The slide itself is engraved by projection-render.js,
                         // which is the one copy of this a projection also draws.
-                        const { svg, overflows } = renderAbcSlide(pageContent, this, canvas);
+                        const { svg, overflows } = await renderAbcSlide(pageContent, this, canvas);
                         pageEl.replaceChildren(svg);
                         if (overflows) {
                             this.appendClipWarning(pageEl);
@@ -532,7 +541,7 @@ export function abcMixin() {
                     console.error('[score-editor] abc2svg error:', e);
                 }
                 this.addPageControls(pageEl, idx + 1, pages.length, 'abc', { fullscreen: isFixed, ratio });
-            });
+            }
         },
     };
 }

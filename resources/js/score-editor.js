@@ -2,7 +2,7 @@ import { onAlpineInit } from './alpine-init.js';
 import { splitPages as splitRatioPages } from './score-editor-pages.js';
 import { slideCanvas } from './slide-frame.js';
 import { abcMixin, applyAbcStrokeWidths, applyAbcSvgStyle, buildAbcPreamble, ensureAbcFontsLoaded, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
-import { gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
+import { ensureGabcFontsLoaded, gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin, renderChordproIncipitSvg } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { formatDefaults, incipitSettings, resetFormatSettings } from './score-editor-settings.js';
@@ -966,6 +966,7 @@ onAlpineInit(() => {
             // is broken at comes from the settings handed in rather than from
             // whatever width the editor is set to.
             const layoutWidth = normalizeGabcLayoutWidth(settings.gabcLayoutWidth);
+            await ensureGabcFontsLoaded(settings);
             // A layout that never calls back would leave the save waiting on it.
             const markup = await Promise.race([
                 renderGabcToSvgMarkup(page, settings, layoutWidth),

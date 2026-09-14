@@ -8,6 +8,7 @@ import {
     mmToPx,
 } from './booklet-geometry.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide, parseSvg } from './slide-frame.js';
+import { ensureFontsLoaded } from './svg-fonts.js';
 
 /**
  * The page a GABC score is laid out on, in the user units exsurge counts in —
@@ -64,6 +65,17 @@ export function configureChantContext(ctxt, settings) {
 }
 
 /**
+ * Wait for the face exsurge is about to measure its lyrics against.
+ *
+ * exsurge measures every syllable to place it and to break the chant into
+ * lines, so a face the browser has not fetched yet lays the whole chant out
+ * against the fallback — see ensureFontsLoaded().
+ */
+export async function ensureGabcFontsLoaded(settings) {
+    await ensureFontsLoaded([settings.lyricFont], Number(settings.lyricSize) * GABC_SIZE_UNIT * 1.3);
+}
+
+/**
  * Engraves one GABC page into SVG markup. exsurge lays out in two asynchronous
  * steps, which this wraps into a single promise.
  */
@@ -96,6 +108,8 @@ export function renderGabcToSvgMarkup(source, settings, layoutWidth) {
  * ran past the bottom is clipped rather than shrunk, and `overflows` says so.
  */
 export async function renderGabcSlide(pageSource, settings, canvas) {
+    await ensureGabcFontsLoaded(settings);
+
     const svg = parseSvg(await renderGabcToSvgMarkup(pageSource, settings, canvas.width));
 
     if (svg === null) {
@@ -150,7 +164,7 @@ export function gabcMixin() {
 
         normalizeGabcLayoutWidth,
 
-        renderGabcPreview() {
+        async renderGabcPreview() {
             const container = this.$refs.preview;
             if (!container) { return; }
             container.innerHTML = '';
@@ -177,6 +191,7 @@ export function gabcMixin() {
                 ? Math.max(200, Math.round(renderWidth / renderScale))
                 : canvas.width;
             const pages = this.splitPages(content, 'gabc', ratio);
+            await ensureGabcFontsLoaded(this);
             const pageEls = pages.map((_, idx) => {
                 const pageEl = document.createElement('div');
                 if (isFixed) {
