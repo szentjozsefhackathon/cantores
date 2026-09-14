@@ -5,9 +5,10 @@ resources/js/projection-presenter.js
 {{-- The deck on the wall.
 
      One slide, as large as the screen will take it, on black. Everything else is
-     a control that hides itself: the bar at the top fades out while nobody moves
-     the mouse, because a projector showing a toolbar during the Sanctus is a
-     projector showing the wrong thing.
+     a control that hides itself: in a window the bar at the top fades out while
+     nobody moves the mouse, and in full screen — where this page is what the
+     congregation is looking at — no control appears at all, because a projector
+     showing a toolbar during the Sanctus is a projector showing the wrong thing.
 
      The whole deck is engraved once, when the page loads, and then only swapped
      between. Re-engraving a score mid-service — abc2svg and exsurge both block
@@ -25,6 +26,7 @@ resources/js/projection-presenter.js
     x-on:projection-updated.window="applyUpdate($event.detail)"
     x-on:keydown.window="onKey($event)"
     x-on:mousemove.window="wake()"
+    x-on:fullscreenchange.window="syncFullscreen()"
 >
     {{-- The two engines that draw two of the four formats are globals rather
          than bundled modules, and must be loaded before anything asks for them. --}}
@@ -44,7 +46,7 @@ resources/js/projection-presenter.js
          room has settled. --}}
     <div
         class="absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-gradient-to-b from-black/80 to-transparent px-4 py-3 transition-opacity duration-500"
-        x-bind:class="idle ? 'pointer-events-none opacity-0' : 'opacity-100'"
+        x-bind:class="controlsHidden ? 'pointer-events-none opacity-0' : 'opacity-100'"
     >
         <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ route('projections.edit', ['projection' => $projection->id]) }}" class="!text-white">
             {{ __('Back to the editor') }}
@@ -85,7 +87,7 @@ resources/js/projection-presenter.js
 
     <div
         class="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center gap-3 bg-gradient-to-t from-black/80 to-transparent px-4 py-3 text-xs text-white/60 transition-opacity duration-500"
-        x-bind:class="idle ? 'pointer-events-none opacity-0' : 'opacity-100'"
+        x-bind:class="controlsHidden ? 'pointer-events-none opacity-0' : 'opacity-100'"
     >
         <span>{{ __('Space / → next · ← back · B blank · F full screen · Esc exit') }}</span>
     </div>

@@ -11,8 +11,10 @@ import { isExcluded, renderDeck } from './projection-deck.js';
  * between two verses of a hymn is the one failure a projection cannot recover
  * from.
  *
- * The controls fade out when the room goes quiet, and come back on any movement
- * of the mouse. A projector showing a toolbar is showing the wrong thing.
+ * In a window the controls fade out when the room goes quiet and come back on any
+ * movement of the mouse. In full screen they are not there at all: that picture
+ * is the one the congregation is looking at, and a projector showing a toolbar is
+ * showing the wrong thing.
  */
 
 /** How long the bar stays up after the last sign of life. */
@@ -42,7 +44,29 @@ onAlpineInit(() => {
         blanked: false,
         idle: false,
 
+        /**
+         * Whether this page is the one the beamer is throwing.
+         *
+         * Kept as state of its own rather than read off the document at render
+         * time, because only an event tells Alpine that the browser left or
+         * entered full screen — the user can leave it with Esc, which nothing
+         * here is told about otherwise.
+         */
+        fullscreen: false,
+
         _idleTimer: null,
+
+        /**
+         * Whether the bar and the key hints are out of sight.
+         *
+         * Full screen is the mode in which the congregation, not the cantor, is
+         * looking at this screen, so nothing that is a control appears on it at
+         * all — not even for the moment after a mouse is moved. In a window the
+         * bar still behaves as it always has, and comes back on any sign of life.
+         */
+        get controlsHidden() {
+            return this.fullscreen || this.idle;
+        },
 
         get aspectRatio() {
             return this.geometry.aspectRatio ?? '16/9';
@@ -55,6 +79,11 @@ onAlpineInit(() => {
 
         destroy() {
             clearTimeout(this._idleTimer);
+        },
+
+        /** What the browser has just done with full screen, however it was asked. */
+        syncFullscreen() {
+            this.fullscreen = Boolean(document.fullscreenElement);
         },
 
         async draw() {
@@ -103,18 +132,15 @@ onAlpineInit(() => {
             this.show();
         },
 
+        // A blanked screen goes on being moved through behind the black: the
+        // cantor lines the next hymn up while the sermon is being preached, and
+        // presses B once when it is time for the room to see it. Only B brings
+        // the picture back, so nothing can un-blank the wall by accident.
         next() {
-            // A blanked screen takes the next key as "come back" rather than as
-            // "move on": the alternative is a cantor pressing space to return and
-            // silently losing a slide.
-            if (this.blanked) { this.blanked = false; return; }
-
             this.go(this.index + 1);
         },
 
         previous() {
-            if (this.blanked) { this.blanked = false; return; }
-
             this.go(this.index - 1);
         },
 
