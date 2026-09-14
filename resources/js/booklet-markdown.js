@@ -9,15 +9,17 @@
  *
  * The Markdown understood here is the small part of it that a rubric needs:
  * headings, paragraphs, bullet and numbered lists, block quotes, rules, and
- * bold or italic inside any of them. Anything else is left as the literal text
- * someone typed, which is the friendlier failure for a person writing a rubric
- * rather than a document.
+ * bold or italic inside any of them, plus the `%pagebreak` a screen of words
+ * cuts itself at. Anything else is left as the literal text someone typed,
+ * which is the friendlier failure for a person writing a rubric rather than a
+ * document.
  *
  * Nothing here touches the DOM. Widths arrive through an injected `measure`, so
  * the wrapping can be tested against a known metric instead of a real font.
  */
 
 import { escapeXml, round } from './booklet-text.js';
+import { PAGE_BREAK, ratioSuffix } from './score-editor-pages.js';
 
 /**
  * Multiples of the font size. The leading is the default one: a document says
@@ -71,6 +73,8 @@ export const DEFAULT_PALETTE = {
  * @property {number} height
  * @property {number} spaceBefore
  * @property {boolean} keepWithNext
+ * @property {'hard'|'soft'|null} [breakBefore] a `%pagebreak` stood above this
+ *   row; only the first row of a block ever carries one
  * @property {string} svg
  */
 
@@ -90,11 +94,15 @@ export const DEFAULT_PALETTE = {
  * @param {(text: string, opts?: {bold?: boolean, italic?: boolean}) => number} options.measure
  * @param {{text?: string, quote?: string, rule?: string, accent?: string}} [options.palette]
  *   the ink; black on paper where none is given
+ * @param {string} [options.ratio] the screen shape these rows are being laid out
+ *   for, which is what decides whose `%pagebreak` lines are heard. A booklet
+ *   gives none and every break is dropped — the same thing paper has always
+ *   meant in splitPages()
  * @returns {MarkdownRow[]}
  */
 export function markdownRows(source, options) {
     const rows = [];
-    const blocks = parseBlocks(source);
+    const { blocks, breaks } = drawnBlocks(parseBlocks(source), options.ratio);
     const sizes = blocks.map((block) => blockFontSize(block, options));
 
     blocks.forEach((block, blockIndex) => {
@@ -104,6 +112,7 @@ export function markdownRows(source, options) {
             rows.push({
                 ...row,
                 spaceBefore: i === 0 ? gapBefore(blocks, sizes, blockIndex, options) : 0,
+                breakBefore: i === 0 ? breaks[blockIndex] : null,
                 // A heading belongs to what follows it; the lines of one
                 // paragraph do not, so a long rubric may break across pages.
                 keepWithNext: i < built.length - 1
@@ -114,6 +123,47 @@ export function markdownRows(source, options) {
     });
 
     return rows;
+}
+
+/**
+ * The blocks that are drawn, and what each one was asked to break after.
+ *
+ * A break is not a block: it has no height and nothing is set in it, and leaving
+ * it among the others would put a phantom gap into gapBefore() and a size into
+ * blockFontSize(). So it is taken out here and remembered beside the block it
+ * stood above — which is also why a break at the very end of a row is discarded
+ * rather than producing an empty screen.
+ *
+ * Two breaks with nothing between them are one break, and the stronger of the
+ * two wins: an author who wrote a suggestion directly above an instruction meant
+ * the instruction.
+ *
+ * @param {Array<{type: string}>} parsed
+ * @param {string} [ratio]
+ * @returns {{blocks: Array<{type: string}>, breaks: Array<'hard'|'soft'|null>}}
+ */
+function drawnBlocks(parsed, ratio) {
+    const suffix = ratio ? ratioSuffix(ratio) : null;
+    const blocks = [];
+    const breaks = [];
+    let pending = null;
+
+    for (const block of parsed) {
+        if (block.type !== 'break') {
+            blocks.push(block);
+            breaks.push(pending);
+            pending = null;
+
+            continue;
+        }
+
+        if (suffix === null) { continue; }
+        if (block.ratio !== '' && block.ratio !== suffix) { continue; }
+
+        pending = pending === 'hard' || !block.soft ? 'hard' : 'soft';
+    }
+
+    return { blocks, breaks };
 }
 
 /**
@@ -179,7 +229,8 @@ function gapBefore(blocks, sizes, index, options) {
 /**
  * Cut the source into blocks.
  *
- * @returns {Array<{type: string, level?: number, marker?: string, text: string}>}
+ * @returns {Array<{type: string, level?: number, marker?: string, text: string,
+ *   ratio?: string, soft?: boolean}>}
  */
 export function parseBlocks(source) {
     const lines = String(source ?? '').replace(/\r\n?/g, '\n').split('\n');
@@ -213,6 +264,19 @@ export function parseBlocks(source) {
         if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
             flush();
             blocks.push({ type: 'rule', text: '' });
+
+            return;
+        }
+
+        const pageBreak = line.match(PAGE_BREAK);
+        if (pageBreak) {
+            flush();
+            blocks.push({
+                type: 'break',
+                text: '',
+                ratio: pageBreak[1],
+                soft: pageBreak[2] === '?',
+            });
 
             return;
         }

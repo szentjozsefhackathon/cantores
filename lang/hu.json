@@ -1413,6 +1413,7 @@
     "Add to the projection": "Hozzáadás a vetítéshez",
     "Add this file to the projection": "Ez a fájl hozzáadása a vetítéshez",
     "Slides this score comes to at this shape": "Ennyi dia lesz ebből a kottából ennél a képaránynál",
+    "Slides these words come to at this shape": "Ennyi dia lesz ebből a szövegből ennél a képaránynál",
     "Back to the scores own layout": "Vissza a kotta saját beállításaihoz",
     "Show the slot name": "Tételnév megjelenítése",
     "Show the music title": "Ének címének megjelenítése",
@@ -1450,7 +1451,7 @@
     "Text line spacing": "Szöveg sortávolsága",
     "Adjust these words": "Ennek a szövegnek a beállítása",
     "Changes here apply to these words only. They are set at the booklet's own text size and line spacing; make them smaller where a long instruction costs a page.": "Az itteni módosítások csak ehhez a szöveghez tartoznak. A füzet saját szövegmérete és sortávolsága szerint jelenik meg; kicsinyítsd, ha egy hosszú rubrika egy egész oldalba kerül.",
-    "Changes here apply to these words at this screen shape only. They are set at the deck's own text size and line spacing; make them larger where a screen is nearly empty, smaller where it overflows.": "Az itteni módosítások csak ehhez a szöveghez és csak ehhez a képarányhoz tartoznak. A vetítés saját szövegmérete és sortávolsága szerint jelenik meg; nagyítsd, ha a dia szinte üres, kicsinyítsd, ha nem fér ki.",
+    "Changes here apply to these words at this screen shape only. They are set at the deck's own text size and line spacing; make them larger where a screen is nearly empty. Words that no longer fit are cut onto another screen rather than shrunk, so set a size and let the breaks follow.": "Az itteni módosítások csak ehhez a szöveghez és csak ehhez a képarányhoz tartoznak. A vetítés saját szövegmérete és sortávolsága szerint jelenik meg; nagyítsd, ha a dia szinte üres. Ami már nem fér ki, az nem kicsinyedik, hanem új diára kerül — állítsd be a méretet, a törések követik.",
     "Sign in with a QR code": "Bejelentkezés QR-kóddal",
     "Sign in with a QR code from your phone": "Bejelentkezés QR-kóddal a telefonodról",
     "Log in with an email address instead": "Inkább e-mail-címmel jelentkezem be",
@@ -1476,5 +1477,6 @@
     "Last active :time": "Utoljára aktív: :time",
     "To sign a new screen in, open :url on it and scan the code.": "Új képernyő beléptetéséhez nyisd meg rajta a :url címet, és olvasd be a kódot.",
     ":browser on :system": ":browser – :system",
-    "Unknown device": "Ismeretlen eszköz"
+    "Unknown device": "Ismeretlen eszköz",
+    "A line reading %pagebreak starts a new slide; %pagebreak? only does so when the words would not otherwise fit. Add 169, 43 or 11 — %pagebreak169? — to speak to one screen shape alone.": "A külön sorban álló %pagebreak új diát kezd; a %pagebreak? csak akkor, ha a szöveg másképp nem férne ki. A 169, 43 vagy 11 végződés — %pagebreak169? — egyetlen képaránynak szól."
 }

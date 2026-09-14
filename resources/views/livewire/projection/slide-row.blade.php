@@ -133,31 +133,30 @@
         @endif
 
         <div data-entry-options class="mt-2 flex flex-wrap items-center gap-0.5 border-t border-zinc-100 pt-2 dark:border-zinc-800">
-            {{-- A row does not choose where it breaks: the score does, with the
-                 `%pagebreak` its author wrote into it for this ratio. So what
-                 stands here is not a switch but a count — how many screens this
-                 row came to when the browser last cut it. --}}
-            @if(! $entry->isText())
-                <flux:tooltip :content="__('Slides this score comes to at this shape')">
+            {{-- A row does not choose where it breaks: its own source does, with
+                 the `%pagebreak` written into it for this ratio — the score's, or
+                 for a screen of words the Markdown's own. So what stands here is
+                 not a switch but a count: how many screens this row came to when
+                 the browser last cut it. --}}
+            <flux:tooltip :content="$entry->isText() ? __('Slides these words come to at this shape') : __('Slides this score comes to at this shape')">
+                <span
+                    class="inline-flex shrink-0 items-center gap-1 px-1.5 text-xs text-zinc-500 dark:text-zinc-400"
+                    x-show="slidesOf({{ $entry->id }}) > 0"
+                    x-cloak
+                >
+                    <flux:icon name="rectangle-stack" variant="micro" class="shrink-0" />
+                    <span x-text="slidesOf({{ $entry->id }})"></span>
+                    {{-- Slides left out of the service, counted where they
+                         were chosen from: a hymn showing three of its six
+                         verses says so on its own row, rather than only in a
+                         contact sheet somebody has to scroll. --}}
                     <span
-                        class="inline-flex shrink-0 items-center gap-1 px-1.5 text-xs text-zinc-500 dark:text-zinc-400"
-                        x-show="slidesOf({{ $entry->id }}) > 0"
+                        class="text-amber-600 dark:text-amber-400"
+                        x-show="skippedOf({{ $entry->id }}) > 0"
                         x-cloak
-                    >
-                        <flux:icon name="rectangle-stack" variant="micro" class="shrink-0" />
-                        <span x-text="slidesOf({{ $entry->id }})"></span>
-                        {{-- Slides left out of the service, counted where they
-                             were chosen from: a hymn showing three of its six
-                             verses says so on its own row, rather than only in a
-                             contact sheet somebody has to scroll. --}}
-                        <span
-                            class="text-amber-600 dark:text-amber-400"
-                            x-show="skippedOf({{ $entry->id }}) > 0"
-                            x-cloak
-                        >(−<span x-text="skippedOf({{ $entry->id }})"></span>)</span>
-                    </span>
-                </flux:tooltip>
-            @endif
+                    >(−<span x-text="skippedOf({{ $entry->id }})"></span>)</span>
+                </span>
+            </flux:tooltip>
 
             @if($entry->isText())
                 <flux:tooltip :content="__('Edit this text')">
@@ -216,6 +215,14 @@
                 <flux:text class="mt-2 text-xs text-zinc-500">
                     {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote, <red>red</red>, <small>small</small>.') }}
                 </flux:text>
+
+                {{-- The break is the one thing here that behaves differently
+                     from screen to screen, so it is explained rather than
+                     listed: a suggestion costs nothing where the words already
+                     fit, which is what makes it worth writing in advance. --}}
+                <flux:text class="mt-1 text-xs text-zinc-500">
+                    {{ __('A line reading %pagebreak starts a new slide; %pagebreak? only does so when the words would not otherwise fit. Add 169, 43 or 11 — %pagebreak169? — to speak to one screen shape alone.') }}
+                </flux:text>
             </div>
         @endif
 
@@ -231,7 +238,7 @@
             >
                 <flux:text class="mb-2 text-xs text-zinc-500">
                     @if($panelFormat === 'text')
-                        {{ __('Changes here apply to these words at this screen shape only. They are set at the deck\'s own text size and line spacing; make them larger where a screen is nearly empty, smaller where it overflows.') }}
+                        {{ __('Changes here apply to these words at this screen shape only. They are set at the deck\'s own text size and line spacing; make them larger where a screen is nearly empty. Words that no longer fit are cut onto another screen rather than shrunk, so set a size and let the breaks follow.') }}
                     @elseif($panelFormat === 'file')
                         {{ __('Changes here apply to this projection at this screen shape only. An uploaded page is fitted to the screen; make it smaller where that is too big.') }}
                     @else

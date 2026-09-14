@@ -9,6 +9,7 @@ use App\Models\Projection;
 use App\Models\ProjectionSlide;
 use App\Models\Score;
 use App\Models\User;
+use App\Support\BookletSettingFields;
 use App\Support\ProjectionSettingFields;
 use Livewire\Livewire;
 
@@ -155,6 +156,33 @@ it('adds a screen of words', function () {
     $entry = $projection->entries()->firstOrFail();
 
     expect($entry->isText())->toBeTrue();
+});
+
+/*
+ * Where a screen of words breaks is the browser's answer, read off the Markdown
+ * every time the deck is drawn, exactly as a score's `%pagebreak` is. So the
+ * payload has one job here: hand the text over untouched. Anything that stripped
+ * or rewrote a break on the way out would settle on Tuesday a question that has
+ * to be asked again at whatever shape the deck is thrown at on Sunday.
+ */
+it('hands a screens page breaks to the browser untouched', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $markdown = "Álljunk fel.\n%pagebreak169?\nÜljünk le.\n%pagebreak\nImádkozzunk.";
+
+    ProjectionSlide::factory()->text($markdown)->create([
+        'projection_id' => $projection->id,
+        'sequence' => 0,
+    ]);
+
+    actingAs($user);
+
+    $payload = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->get('renderPayload');
+
+    expect($payload)->toHaveCount(1)
+        ->and($payload[0]['kind'])->toBe('text')
+        ->and($payload[0]['text'])->toBe($markdown);
 });
 
 /*
@@ -451,7 +479,7 @@ it('offers the stroke widths a beamer needs, which a booklet does not', function
 
     expect($keys)->toContain('abcStemWidth')
         ->and($keys)->toContain('abcStaffLineWidth')
-        ->and(App\Support\BookletSettingFields::keysFor('abc'))->not->toContain('abcStemWidth');
+        ->and(BookletSettingFields::keysFor('abc'))->not->toContain('abcStemWidth');
 });
 
 /*

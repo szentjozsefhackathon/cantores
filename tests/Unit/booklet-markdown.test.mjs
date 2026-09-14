@@ -306,3 +306,57 @@ test('the leading is the documents, and the default when it says nothing', () =>
     // keeps it by saying nothing.
     assert.equal(unset[0].height, 10 * 1.45);
 });
+
+/*
+ * A page break is parsed here so that it never reaches the page as words, and
+ * carried on the row below it so that the projection can cut there. Which of
+ * them are heard is the shape's to decide; a booklet names no shape and hears
+ * none, which is what paper has always meant in splitPages().
+ */
+
+test('a page break is a block of its own rather than a paragraph', () => {
+    const blocks = parseBlocks(['Álljunk fel.', '%pagebreak169?', 'Üljünk le.'].join('\n'));
+
+    assert.deepEqual(blocks.map((block) => block.type), ['paragraph', 'break', 'paragraph']);
+    assert.equal(blocks[1].ratio, '169');
+    assert.equal(blocks[1].soft, true);
+});
+
+test('a booklet names no shape, so every break is dropped', () => {
+    const rows = markdownRows(['Álljunk fel.', '%pagebreak', 'Üljünk le.'].join('\n'), options);
+
+    assert.equal(rows.length, 2);
+    assert.ok(rows.every((row) => !row.breakBefore));
+});
+
+test('a break speaks only to the shape it names', () => {
+    const source = ['Álljunk fel.', '%pagebreak169', 'Üljünk le.'].join('\n');
+
+    assert.equal(markdownRows(source, { ...options, ratio: '16/9' })[1].breakBefore, 'hard');
+    assert.equal(markdownRows(source, { ...options, ratio: '4/3' })[1].breakBefore, null);
+});
+
+test('a break with no number speaks to every shape, and a question mark suggests', () => {
+    const source = ['Álljunk fel.', '%pagebreak?', 'Üljünk le.'].join('\n');
+
+    assert.equal(markdownRows(source, { ...options, ratio: '1/1' })[1].breakBefore, 'soft');
+});
+
+test('a break adds no height and no gap of its own', () => {
+    const plain = markdownRows(['Álljunk fel.', '', 'Üljünk le.'].join('\n'), { ...options, ratio: '16/9' });
+    const broken = markdownRows(['Álljunk fel.', '%pagebreak', 'Üljünk le.'].join('\n'), { ...options, ratio: '16/9' });
+
+    assert.equal(broken.length, plain.length);
+    assert.deepEqual(broken.map((row) => row.height), plain.map((row) => row.height));
+    assert.deepEqual(broken.map((row) => row.spaceBefore), plain.map((row) => row.spaceBefore));
+});
+
+test('an instruction beats a suggestion written against it, and a trailing break is discarded', () => {
+    const rows = markdownRows(
+        ['Álljunk fel.', '%pagebreak?', '%pagebreak', 'Üljünk le.', '%pagebreak'].join('\n'),
+        { ...options, ratio: '16/9' },
+    );
+
+    assert.equal(rows.length, 2);
+    assert.equal(rows[1].breakBefore, 'hard');
+});

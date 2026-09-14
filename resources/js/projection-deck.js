@@ -3,6 +3,7 @@ import { DEFAULT_PALETTE, markdownRows } from './booklet-markdown.js';
 import { textRowSvg } from './booklet-text.js';
 import { renderRatioPages } from './projection-render.js';
 import { fileSlideSettings, resolveSlideSettings, textSlideSettings } from './projection-settings.js';
+import { packTextPages } from './projection-text-pages.js';
 import { fitIntoBox, frameSlide, isSlideRatio, parseSvg, slideCanvas } from './slide-frame.js';
 import { stackSvgs } from './svg-stack.js';
 
@@ -14,10 +15,11 @@ import { stackSvgs } from './svg-stack.js';
  * own layout for this ratio, and then — and only then — fitted into the deck's
  * box with whatever heading the row still carries.
  *
- * A row is not a slide. One score is however many screens it breaks into, and
- * the count is never stored: it is read back off the source here, every time,
- * which is what makes a `%pagebreak` moved on Thursday a different screen on
- * Sunday.
+ * A row is not a slide. One score is however many screens it breaks into, and a
+ * screen of words is however many it has to be cut into to stay readable; the
+ * count is never stored either way. It is read back off the source here, every
+ * time, which is what makes a `%pagebreak` moved on Thursday a different screen
+ * on Sunday.
  */
 
 /** The canvas every non-engraved slide — words, a scan — is composed on. */
@@ -128,7 +130,7 @@ export function slideCounts(slides) {
 }
 
 async function slidesOf(entry, ratio, palette, geometry) {
-    if (entry.kind === 'text') { return [textSlide(entry, ratio, palette, geometry)]; }
+    if (entry.kind === 'text') { return textSlides(entry, ratio, palette, geometry); }
     if (entry.kind === 'file') { return await fileSlides(entry, ratio); }
 
     return await scoreSlides(entry, ratio);
@@ -196,7 +198,7 @@ async function fileSlides(entry, ratio) {
 }
 
 /**
- * A screen of words.
+ * The screens one row of words comes to.
  *
  * Set large and centred on the slide's own margin, using the same Markdown the
  * booklet's paragraphs are written in — so a rubric written for the handout can
@@ -207,15 +209,18 @@ async function fileSlides(entry, ratio) {
  * points because the canvas is the screen: the same words have to read the same
  * way at all three shapes.
  *
- * Whatever comes out is still fitted afterwards — a screen with too many words
- * on it is scaled down to hold, as it always was — so a size set too large costs
- * legibility rather than the bottom of the text.
+ * The whole row is laid out once, at that size, and then cut into as many
+ * screens as it needs — see packTextPages, which spends the author's own
+ * `%pagebreak` lines before it spends anything of its own. Setting the words
+ * smaller is what is left when even a single paragraph will not hold, and a
+ * screen that had to do it says so.
  */
-function textSlide(entry, ratio, palette, geometry) {
+function textSlides(entry, ratio, palette, geometry) {
     const canvas = { ...TEXT_CANVAS[ratio] };
     const width = canvas.width * (1 - 2 * TEXT_MARGIN);
     const { textSizeScale, textLineHeight } = textSlideSettings(entry.override, geometry);
     const fontSize = canvas.height * TEXT_HEIGHT * textSizeScale;
+    const box = canvas.height * (1 - 2 * TEXT_MARGIN);
 
     const rows = markdownRows(entry.text ?? '', {
         layoutWidth: width,
@@ -224,23 +229,31 @@ function textSlide(entry, ratio, palette, geometry) {
         lineHeight: textLineHeight,
         measure: canvasMeasurer(HEADING_FONT, fontSize),
         palette,
+        ratio,
     });
 
-    if (rows.length === 0) { return { svg: blankSlide(canvas, palette.background), overflows: false }; }
+    const pages = packTextPages(rows, box);
 
-    const total = rows.reduce((sum, row) => sum + row.height + (row.spaceBefore ?? 0), 0);
-    const scale = Math.min(1, (canvas.height * (1 - 2 * TEXT_MARGIN)) / total);
+    if (pages.length === 0) { return [{ svg: blankSlide(canvas, palette.background), overflows: false }]; }
+
+    return pages.map((page) => textSlide(page, canvas, palette, box));
+}
+
+/** One of those screens, stacked and centred on the canvas. */
+function textSlide(page, canvas, palette, box) {
+    const scale = Math.min(1, box / page.height);
+    const total = page.height * scale;
 
     const fragments = [];
     const placements = [];
-    let y = (canvas.height - total * scale) / 2;
+    let y = (canvas.height - total) / 2;
 
-    for (const row of rows) {
-        y += (row.spaceBefore ?? 0) * scale;
+    page.rows.forEach((row, i) => {
+        y += (i === 0 ? 0 : (row.spaceBefore ?? 0)) * scale;
         fragments.push(parseSvg(row.svg));
         placements.push({ x: canvas.width * TEXT_MARGIN, y, scale });
         y += row.height * scale;
-    }
+    });
 
     const { svg } = stackSvgs(fragments, {
         placements,
@@ -249,7 +262,7 @@ function textSlide(entry, ratio, palette, geometry) {
 
     return {
         svg: painted(frameSlide(svg, canvas), canvas, palette.background),
-        overflows: total * scale > canvas.height,
+        overflows: scale < 1,
     };
 }
 

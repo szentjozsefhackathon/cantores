@@ -25,7 +25,22 @@ const HEADER_END = {
     abc: /^K:/,
 };
 
-const PAGE_BREAK = /^\s*%pagebreak(\d*)\s*$/;
+/**
+ * A page break written into a source, on a line of its own.
+ *
+ * Group 1 is the ratio it belongs to, empty for every ratio; group 2 is the `?`
+ * that makes it a suggestion rather than an instruction — a break taken only
+ * where what it sits in would otherwise overflow. Only screens of words honour
+ * the suggestion so far (see packTextPages in projection-text-pages.js); an
+ * engraved score strips one, because deciding whether a staff overflowed is an
+ * answer each of the four engines gives differently.
+ */
+export const PAGE_BREAK = /^\s*%pagebreak(\d*)(\?)?\s*$/;
+
+/** The digits a ratio's own breaks and blocks are numbered with, if any. */
+export function ratioSuffix(ratio) {
+    return CONDITIONAL_BLOCK_RATIO_SUFFIXES[ratio] ?? null;
+}
 
 /**
  * Make the blocks written for this ratio live, and leave the rest inert.
@@ -68,7 +83,8 @@ export function applyConditionalBlocks(content, ratio, format) {
  * A fixed ratio cuts at `%pagebreak` and at the break numbered for it, and
  * nowhere else; a break numbered for another ratio is dropped rather than left
  * behind, since it would otherwise be read as a comment on a page it does not
- * belong to. Paper and responsive have no pages at all — every break is stripped
+ * belong to. A suggested break — `%pagebreak?` — is dropped the same way: see
+ * PAGE_BREAK for why a score does not take one. Paper and responsive have no pages at all — every break is stripped
  * and the score comes back whole, which is what `auto` has always meant.
  *
  * The header is re-prefixed onto each page, so a page can be handed to an engine
@@ -100,7 +116,8 @@ export function splitPages(content, format, ratio) {
 
         if (match) {
             const suffix = match[1];
-            if (suffix === '' || suffix === targetSuffix) {
+            const soft = match[2] === '?';
+            if (!soft && (suffix === '' || suffix === targetSuffix)) {
                 pages.push(current.join('\n'));
                 current = [];
             }
