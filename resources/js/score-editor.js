@@ -1,7 +1,7 @@
 import { onAlpineInit } from './alpine-init.js';
 import { splitPages as splitRatioPages } from './score-editor-pages.js';
 import { slideCanvas } from './slide-frame.js';
-import { abcMixin, applyAbcSvgStyle, abcStrokeWidths, buildAbcPreamble, ensureAbcFontsLoaded, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
+import { abcMixin, applyAbcStrokeWidths, applyAbcSvgStyle, buildAbcPreamble, ensureAbcFontsLoaded, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
 import { gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin, renderChordproIncipitSvg } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -1696,22 +1696,15 @@ onAlpineInit(() => {
             }
         },
 
-        // The abc stroke widths, which live on the score rather than in the
-        // fragments, and so have to be restated over the merged document.
-        abcStackStyle() {
-            const { stem, staffLine } = abcStrokeWidths(this);
-
-            return `.sW{stroke-width:${stem}!important}.slW{stroke-width:${staffLine}!important}\n`;
-        },
-
         // One font-embedded SVG document for export. Intrinsic width/height are
         // written so a consumer with no CSS still knows how big the page is.
         async buildMergedSvg(svgs) {
-            const { svg } = stackSvgs(svgs, {
-                extraStyle: this.abcStackStyle(),
-                intrinsicSize: true,
-            });
+            const { svg } = stackSvgs(svgs, { intrinsicSize: true });
 
+            // The stroke widths live on the score rather than in the fragments,
+            // so they are restated over the merged document — on the paths, not
+            // as a rule, because a reused staff is a <use> a rule cannot reach.
+            applyAbcStrokeWidths(svg, this);
             await injectWebFontsIntoSvg(svg, [this.abcLyricFont]);
 
             return new XMLSerializer().serializeToString(svg);
@@ -1721,7 +1714,9 @@ onAlpineInit(() => {
         // the fixed-ratio preview, so projector-frame scaling, clipping and
         // fullscreen treat the page as one unit. Returns { svg, totalHeight }.
         mergeAbcSvgsToElement(svgs) {
-            const { svg, width, height } = stackSvgs(svgs, { extraStyle: this.abcStackStyle() });
+            const { svg, width, height } = stackSvgs(svgs);
+
+            applyAbcStrokeWidths(svg, this);
 
             return { svg, totalHeight: height, width };
         },

@@ -285,11 +285,28 @@ export function abcStrokeWidths(settings, onSlide = false) {
     };
 }
 
-/** Stems and staff lines thick enough to survive a beamer, as a stylesheet. */
-export function abcStackStyle(settings) {
-    const { stem, staffLine } = abcStrokeWidths(settings);
+/**
+ * Stem and staff-line widths, written onto the paths themselves.
+ *
+ * They cannot be a rule in a stylesheet. abc2svg draws a staff once and then
+ * reuses it: the first full-width music line defines `<path id="stdef…"
+ * class="slW">` and every later line whose staff comes out the same width is a
+ * `<use>` of it. A `<use>` clones its referent into a shadow tree, which a
+ * selector written from outside — `#slide .slW` — cannot reach, so the override
+ * landed only on the lines abc2svg happened to draw inline: a short last line,
+ * or one the justifier ended at another width. Which lines those are depends on
+ * the page width, which is why one ratio thickened the last row and another the
+ * last three.
+ *
+ * An inline style is part of the element and travels into the clone with it,
+ * and outranks the engine's own unweighted `.slW` rule. The defs are walked
+ * along with the body, since that is where the reused staff lives.
+ */
+export function applyAbcStrokeWidths(root, settings, onSlide = false) {
+    const { stem, staffLine } = abcStrokeWidths(settings, onSlide);
 
-    return `.sW{stroke-width:${stem}!important}.slW{stroke-width:${staffLine}!important}\n`;
+    root.querySelectorAll('.sW').forEach((el) => el.style.setProperty('stroke-width', String(stem)));
+    root.querySelectorAll('.slW').forEach((el) => el.style.setProperty('stroke-width', String(staffLine)));
 }
 
 let abcSlideSerial = 0;
@@ -323,7 +340,7 @@ export function renderAbcSlide(pageSource, settings, canvas) {
     // Nothing is hoisted into a sheet of the slide's own: `.sW` and `.slW` are
     // the two names abc2svg does not suffix, so a rule for them written here
     // would be a document-global one, and the next slide's copy would set this
-    // slide's stroke widths. They are written scoped instead, by id.
+    // slide's stroke widths. They are written on the paths instead.
     const { svg, height } = stackSvgs(fragments);
 
     applyAbcSvgStyle(svg, `abc-slide-${scope}`, settings, true);
@@ -331,13 +348,20 @@ export function renderAbcSlide(pageSource, settings, canvas) {
     return { svg: frameSlide(svg, canvas), overflows: height > canvas.height + SLIDE_FIT_TOLERANCE };
 }
 
-/** Ink colour and the stroke widths of stems and staff lines, scoped by id. */
+/**
+ * Ink colour, scoped by id, and the stroke widths of stems and staff lines.
+ *
+ * Colour is a rule because it inherits, and an inherited property reaches the
+ * content of a `<use>` however the selector is written. Stroke widths do not
+ * survive that trip as a rule — see applyAbcStrokeWidths, which writes them on
+ * the paths instead.
+ */
 export function applyAbcSvgStyle(svg, svgId, settings, onSlide = false) {
     svg.id = svgId;
-    const { stem, staffLine } = abcStrokeWidths(settings, onSlide);
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `#${svgId}{color:#000!important;fill:#000!important}#${svgId} .sW{stroke-width:${stem}!important}#${svgId} .slW{stroke-width:${staffLine}!important}`;
+    style.textContent = `#${svgId}{color:#000!important;fill:#000!important}`;
     svg.appendChild(style);
+    applyAbcStrokeWidths(svg, settings, onSlide);
 }
 
 function round(value, places) {

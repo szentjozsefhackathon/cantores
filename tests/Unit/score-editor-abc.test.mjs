@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-import { ABC_RATIO_DEFAULTS, ABC_PAGE_WIDTH_DEFAULT, abcMixin, abcStrokeWidths, buildAbcPreamble, hungarianChordsToAbc, normalizeAbcPageWidth } from '../../resources/js/score-editor-abc.js';
+import { ABC_RATIO_DEFAULTS, ABC_PAGE_WIDTH_DEFAULT, abcMixin, abcStrokeWidths, applyAbcStrokeWidths, applyAbcSvgStyle, buildAbcPreamble, hungarianChordsToAbc, normalizeAbcPageWidth } from '../../resources/js/score-editor-abc.js';
 import { abcLyricSizeForPt, abcPageScaleForStaffHeight, DEFAULT_PAGE_WIDTH_MM, mmToPx, pxToMm, staffHeightMmForAbcPageScale } from '../../resources/js/booklet-geometry.js';
 
 test('normalizes ABC page width to the renderer-safe range', () => {
@@ -325,4 +325,64 @@ test('responsive ABC trades container width for note size as the zoom rises', as
     loads.forEach(load => load.resolve([]));
     await render;
     assert.match(engraved[0], /%%pagewidth 698px\n/);
+});
+
+/*
+ * A staff abc2svg reused is a <use> of a path kept in the defs, and the content
+ * of a <use> is a shadow tree no selector written outside it can reach. So the
+ * widths have to be written onto the paths — the one in the defs included, or
+ * every music line but the few drawn inline keeps the engine's hairline.
+ */
+function fakeElement(className) {
+    const declarations = {};
+
+    return {
+        className,
+        style: { setProperty: (name, value) => { declarations[name] = value; } },
+        declarations,
+    };
+}
+
+function fakeSvgDocument(elements) {
+    return {
+        children: [],
+        querySelectorAll: (selector) => elements.filter(el => `.${el.className}` === selector),
+        appendChild(child) { this.children.push(child); },
+    };
+}
+
+test('the reused staff is drawn from the defs, which is what a rule cannot style', () => {
+    const markup = renderedMarkup({ ...abcMixin(), ...ABC_RATIO_DEFAULTS['16/9'] }, 1920, 's1', TWO_LINE_TUNE);
+    const defs = markup.match(/<defs>[\s\S]*?<\/defs>/)[0];
+
+    assert.match(markup, /<use [^>]*xlink:href="#stdefs1"/);
+    assert.match(defs, /id="stdefs1" class="slW"/);
+});
+
+test('writes the stroke widths onto the paths, defs and body alike', () => {
+    const staffInDefs = fakeElement('slW');
+    const staffInline = fakeElement('slW');
+    const stem = fakeElement('sW');
+    const svg = fakeSvgDocument([staffInDefs, staffInline, stem]);
+
+    applyAbcStrokeWidths(svg, { abcStemWidth: 1.4, abcStaffLineWidth: 1 }, true);
+
+    assert.deepEqual(staffInDefs.declarations, { 'stroke-width': '1' });
+    assert.deepEqual(staffInline.declarations, { 'stroke-width': '1' });
+    assert.deepEqual(stem.declarations, { 'stroke-width': '1.4' });
+});
+
+test('leaves the stroke widths out of the scoped stylesheet, which only carries the ink', t => {
+    const previousDocument = globalThis.document;
+    t.after(() => { globalThis.document = previousDocument; });
+    globalThis.document = { createElementNS: () => ({ textContent: '' }) };
+
+    const staff = fakeElement('slW');
+    const svg = fakeSvgDocument([staff]);
+
+    applyAbcSvgStyle(svg, 'abc-slide-s1', { abcStemWidth: 1.4, abcStaffLineWidth: 1 }, true);
+
+    assert.equal(svg.id, 'abc-slide-s1');
+    assert.equal(svg.children[0].textContent, '#abc-slide-s1{color:#000!important;fill:#000!important}');
+    assert.deepEqual(staff.declarations, { 'stroke-width': '1' });
 });

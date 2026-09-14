@@ -144,3 +144,12 @@ if (svg) {
 
 This works for both on-screen display and `html2canvas`/`toBlob` export,
 because the style is embedded inside the SVG element.
+
+> **Warning:** a rule reaches `.slW` only where the staff line is drawn
+> inline. The first full-width music line defines `<path id="stdef…"
+> class="slW">` in the `<defs>` and every later line of the same width is a
+> `<use>` of it — shadow content a selector written outside cannot match, and
+> a scoped one (`#svgId .slW`) cannot match at all. Write the staff-line width
+> onto the paths instead, the `<defs>` one included; `applyAbcStrokeWidths()`
+> in `score-editor-abc.js` is that. Stems (`.sW`) and bar lines (`.bW`) are
+> always inline, so a rule is enough for them.
