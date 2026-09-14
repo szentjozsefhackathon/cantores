@@ -159,12 +159,63 @@ must never feel like it is thinking.
 
 **The remote shows the deck, and what the deck is for.** It engraves the same
 payload through the same `renderDeck`, so what the phone shows is what the wall
-shows: the current slide, the next one, and a list to jump by. Around them it
-shows what no display program's remote can, because no display program has it —
-the slot the row stands in, the music's title and variation, how many slides the
-row came to. Engraving on the phone is the one performance risk in this design;
-if it proves too slow, the fallback is to label the deck and engrave only the
-current slide and its successor.
+shows: the current slide, what is coming after it, and a list to jump by. Around
+them it shows what no display program's remote can, because no display program
+has it — the slot the row stands in, the music's title and variation, how many
+slides the row came to. Engraving on the phone is the one performance risk in
+this design; if it proves too slow, the fallback is to label the deck and
+engrave only the current slide and its successor.
+
+**The page is three bands that never move.** A phone held in one hand over an
+organ bench has no room for a scroll: the Next button must be under the thumb at
+the end of every verse, in the same place it was at the end of the last one. So
+the slide the room is reading takes the upper half, edge to edge, because
+readable at a glance is the whole reason the picture is there at all; a
+scrollable strip of what is coming takes the quarter under it, each slide a tap
+away, which is the jump a clicker cannot make; and the quarter at the foot is
+previous, blank and next at 1 : 1 : 2, nothing else sharing it. The strip holds a
+window of what is coming rather than the whole deck, so that a tap costs the same
+whether the service is six slides long or sixty — and if even that proves too
+slow, dropping the pictures leaves the two arrows exactly as they are.
+
+**A control refuses to be pressed twice.** The hand that presses Next is the hand
+that just left the manual, and the eyes never leave the music: a press made
+without looking is made twice as often as it is meant, either because the thumb
+bounced or because the cantor cannot remember a second later whether the first
+one happened. So each of the three obeys once and then ignores itself for half a
+second — longer than any fumble, shorter than the gap between two verses — and
+turns bright blue for exactly as long as it is ignoring itself. The blue answers
+both halves of the problem at once: it is the receipt for the press that landed,
+and while it stands it is the reason the next press will not. The lock is per
+control, because the press that undoes an accidental Next is Previous, and that
+one must never be the press that is swallowed. A swallowed press is dropped on
+the phone and never sent, so the wall has nothing to correct and nothing to
+flicker through.
+
+**The wall goes out like house lights and comes back like a hymn board.**
+Blanking is the sermon beginning, and a screen that snaps to black pulls every
+eye in the room to it at the moment they were meant to go to the pulpit — so the
+picture fades over about three quarters of a second. Coming back is the opposite
+errand, a verse that has to be sung now, so it is instant; and so is the black of
+a deck being swapped, which is not the cantor asking for anything but the wall
+admitting it has nothing yet to show. The black is therefore laid *over* the
+picture rather than swapped for it, which is what lets the duration belong to the
+state rather than to the element.
+
+**Full screen is taken, not asked for.** The first press of a control is the
+gesture a browser requires, so it is spent on going full screen and never asked
+for again: a cantor who leaves full screen meant to leave it. Where a browser
+refuses outright — an iPhone — the three bands still fill the window, which is
+what the layout was built to survive.
+
+**The plan is behind a swipe.** It is read once or twice a service, to find the
+Communion hymn while the Offertory is still being played, and the three bands
+are read all the way through it, so it gets a drawer rather than a share of the
+screen. Every row in it is named by its music or its score, never by its
+position: the headings printed on a slide are silent wherever the deck's author
+asked for silence, and a list of "slide 7" is the one thing nobody is looking
+for. Ending the projection lives at the foot of that drawer, out of reach of a
+thumb going for Next.
 
 **Authorization is finished before this feature starts.** Both devices are the
 same person, so there is nothing to pair, no code to read across the room and no

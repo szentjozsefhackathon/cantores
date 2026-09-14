@@ -103,7 +103,7 @@ resources/js/projection-presenter.js
         <div
             x-ref="stageBox"
             class="bg-white"
-            x-show="!dark"
+            x-show="!waiting"
             x-bind:style="`aspect-ratio: ${aspectRatio}; height: 100%; max-width: 100%; max-height: 100%;`"
             wire:ignore
         ></div>
@@ -112,8 +112,16 @@ resources/js/projection-presenter.js
     {{-- Nothing at all: the key a cantor presses when the sermon starts, and
          also the moment a deck is being swapped for another. The two are one
          picture and two states — blanking is an instruction only the cantor
-         takes back, and preparing clears itself when the drawing is done. --}}
-    <div class="pointer-events-none absolute inset-0 bg-black" x-show="dark" x-cloak></div>
+         takes back, and preparing clears itself when the drawing is done.
+
+         It arrives over the picture rather than instead of it, so that going out
+         can be a fade and coming back cannot: the duration is part of the state,
+         and is zero in every direction except the cantor blanking the wall. --}}
+    <div
+        class="pointer-events-none absolute inset-0 bg-black"
+        style="opacity: 0"
+        x-bind:style="`opacity: ${dark ? 1 : 0}; transition: opacity ${darkFadeMs}ms ease-in;`"
+    ></div>
 
     <div
         class="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center gap-3 bg-gradient-to-t from-black/80 to-transparent px-4 py-3 text-xs text-white/60 transition-opacity duration-500"

@@ -4,6 +4,7 @@ use App\Livewire\Pages\ProjectionPresenter;
 use App\Livewire\Pages\ProjectionRemote;
 use App\Livewire\Pages\ProjectionRemoteDecks;
 use App\Livewire\Pages\ProjectionRemoteList;
+use App\Models\Music;
 use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\ProjectionSlide;
@@ -221,6 +222,68 @@ it('refuses to put somebody elses deck on the screen', function () {
     expect($screen->refresh()->presentation_id)->toBeNull();
 });
 
+/*
+ * The list behind the swipe is read to find one row out of thirty — the
+ * Communion hymn, while the Offertory is still being played — and a row it
+ * cannot name is a row nobody can find. The printed heading will not do it: a
+ * deck whose author switched every heading off prints nothing at all, and used
+ * to leave the phone showing a column of "Dia".
+ */
+it('names every row for the phone even when the deck prints no headings at all', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+
+    $music = Music::factory()->create(['title' => 'Ave maris stella']);
+
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'music_id' => $music->id,
+        'title' => 'Ave maris stella – orgonakíséret',
+    ]);
+
+    // Every heading the slide could print, switched off — the factory's default
+    // and the common case for a deck of scores that name themselves.
+    ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+        'show_slot' => false,
+        'show_music_title' => false,
+    ]);
+
+    $screen = screenShowing($user, $projection);
+
+    actingAs($user);
+
+    $entry = Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('entries')[0];
+
+    expect($entry['music'])->toBeNull()
+        ->and($entry['label'])->toBe('Ave maris stella');
+});
+
+// A score chosen from no plan and belonging to no music still has its own name.
+it('falls back to the score-s own title when there is no music behind it', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'music_id' => null,
+        'title' => 'Vasárnapi zsoltár',
+    ]);
+
+    ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+    ]);
+
+    $screen = screenShowing($user, $projection);
+
+    actingAs($user);
+
+    expect(Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('entries')[0]['label'])
+        ->toBe('Vasárnapi zsoltár');
+});
+
 /**
  * A screen with a deck already on it — the state the phone finds on a Sunday
  * when the laptop was started first.
@@ -236,3 +299,24 @@ function screenShowing(User $user, Projection $projection): Screen
 
     return $screen;
 }
+
+/*
+ * The organ bench again. A press is made without looking and is therefore made
+ * twice as often as it is meant, so each of the three controls under the thumb
+ * refuses a second press for half a second and says so in blue for exactly as
+ * long as it is refusing. The rule itself lives in Alpine — what a test can hold
+ * still is that the three controls are wired to it.
+ */
+it('locks the thumb controls against a second press and lights them while they are locked', function () {
+    $user = User::factory()->create();
+    $screen = Screen::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    $remote = Livewire::test(ProjectionRemote::class, ['screen' => $screen]);
+
+    foreach (['previous', 'next', 'blank'] as $control) {
+        $remote->assertSeeHtml("pressed === '{$control}'")
+            ->assertSeeHtml("pressed === '{$control}'\n                ? 'border-blue-500 bg-blue-600");
+    }
+});

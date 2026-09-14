@@ -37,6 +37,15 @@ import { HEARTBEAT_MS, POLL_MS, addressAt, indexOfAddress, screenClient, shownEx
 /** How long the bar stays up after the last sign of life. */
 const IDLE_MS = 2500;
 
+/**
+ * How long the picture takes to go out when the cantor blanks the screen.
+ *
+ * Long enough to read as the light going down rather than something breaking,
+ * short enough that nobody is left watching a hymn fade while the preacher is
+ * already speaking.
+ */
+const BLANK_FADE_MS = 500;
+
 onAlpineInit(() => {
     Alpine.data('projectionPresenter', (config = {}) => ({
         geometry: config.geometry ?? {},
@@ -144,6 +153,20 @@ onAlpineInit(() => {
         /** Whether the room should be looking at black, and for either reason. */
         get dark() {
             return this.blanked || this.preparing;
+        },
+
+        /**
+         * How long the black takes to arrive.
+         *
+         * Blanking is the sermon beginning, and a wall that snaps to black pulls
+         * every eye in the room to it at the moment they were meant to go to the
+         * pulpit; a picture that dims away is not an event. Coming back is the
+         * opposite errand — a verse that has to be sung now — so it is instant,
+         * and so is the black of a deck being swapped, which is not the cantor
+         * asking for anything but the wall admitting it has nothing to show.
+         */
+        get darkFadeMs() {
+            return this.dark && !this.preparing ? BLANK_FADE_MS : 0;
         },
 
         get aspectRatio() {

@@ -16,6 +16,12 @@ import { POLL_MS, addressAt, indexOfAddress, screenClient, shownExclusions, stat
  * occasionally far worse on a bad cell, and the wall may lag a beat, but a
  * remote must never feel like it is thinking.
  *
+ * The page is three bands that never move: the slide the room is reading across
+ * the top half, a scrollable strip of what is coming under it, and the two
+ * controls pressed a hundred times a service across the bottom quarter. Nothing
+ * about a service is worth a thumb hunting for the Next button, so nothing here
+ * scrolls except the strip and the plan behind the swipe.
+ *
  * Engraving on a phone is the one performance risk in this design. If it proves
  * too slow, the fallback is to label the deck and engrave only the current slide
  * and its successor — the rest of this would not change.
@@ -26,6 +32,44 @@ import { POLL_MS, addressAt, indexOfAddress, screenClient, shownExclusions, stat
  * sentence the phone can say — which is what ends a service when the person
  * ending it is at the organ and the laptop is at the back of the church.
  */
+
+
+/**
+ * How much of what is coming the strip under the slide holds.
+ *
+ * A window rather than the whole deck, and the one place this page spends
+ * thought on performance: a thumbnail is a second clone of an engraved slide,
+ * and a Sunday deck is sixty of them. Eighteen live at a time and the window is
+ * re-cut only when the service walks out of it — about every twelve taps —
+ * which keeps a tap's work constant however long the deck is. If even that
+ * proves too slow on an old phone, the fallback is to drop the pictures and
+ * leave the two arrows: nothing else here depends on the strip.
+ */
+const STRIP_AHEAD = 16;
+const STRIP_BEHIND = 2;
+
+/** How near the end of the window the service may get before it is re-cut. */
+const STRIP_MARGIN = 4;
+
+/** A swipe, as opposed to a tap that wandered or a scroll of the strip. */
+const SWIPE_DISTANCE = 60;
+const SWIPE_DRIFT = 50;
+
+/**
+ * How long a control refuses to be pressed again.
+ *
+ * The other hand is on the organ and the eyes are on the music, so a press is
+ * made without looking and often made twice — the thumb bounces, or the cantor
+ * cannot remember a second later whether the first one happened. Half a second
+ * is longer than any of that and shorter than the gap between two verses, so a
+ * fumble costs nothing and a deliberate second tap still lands.
+ *
+ * The blue stands for exactly as long as the lock, which is the other half of
+ * the answer: a control that is still lit is a control that has just been
+ * pressed, and pressing it again would do nothing anyway.
+ */
+const PRESS_LOCK_MS = 500;
+
 onAlpineInit(() => {
     Alpine.data('projectionRemote', (config = {}) => ({
         geometry: config.geometry ?? {},
@@ -44,6 +88,22 @@ onAlpineInit(() => {
         blanked: false,
 
         busy: true,
+
+        /** The plan, behind a swipe: read twice a service, in the way the rest of it. */
+        listOpen: false,
+
+        fullscreen: false,
+
+        _stripFrom: 0,
+        _stripTo: -1,
+        _thumbs: [],
+        _touch: null,
+        _askedFullscreen: false,
+
+        /** The control lit blue, and when each of them was last obeyed. */
+        pressed: null,
+        _pressedAt: {},
+        _pressTimer: null,
 
         /**
          * What the screen is showing, and whether it has got there.
@@ -99,6 +159,12 @@ onAlpineInit(() => {
         init() {
             this._screen = screenClient(config);
 
+            // The page is a fixed three-band panel, and a body that still
+            // scrolls behind it is a body that bounces under the thumb.
+            this._bodyOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            this.syncFullscreen();
+
             const listen = () => {
                 this.pull();
                 this._pollTimer = setInterval(() => this.pull(), POLL_MS);
@@ -115,6 +181,8 @@ onAlpineInit(() => {
 
         destroy() {
             clearInterval(this._pollTimer);
+            clearTimeout(this._pressTimer);
+            document.body.style.overflow = this._bodyOverflow ?? '';
         },
 
         async draw() {
@@ -137,6 +205,7 @@ onAlpineInit(() => {
             this.slides = this.drawn.filter((slide) => !isExcluded(slide, shown));
             this.total = this.slides.length;
             this.index = indexOfAddress(this.slides, this.entries, address);
+            this.buildStrip();
             this.show();
         },
 
@@ -155,7 +224,99 @@ onAlpineInit(() => {
             };
 
             draw(this.$refs.currentBox, this.slides[this.index]);
-            draw(this.$refs.nextBox, this.slides[this.index + 1]);
+            this.syncStrip();
+        },
+
+        /*
+         * ---------------------------------------------------------------
+         * What is coming.
+         * ---------------------------------------------------------------
+         */
+
+        /**
+         * The strip of slides under the one the room is reading.
+         *
+         * Built by hand rather than bound, for the same reason the slide above
+         * it is: a slide is a finished SVG and cloning it is cheaper than
+         * asking Alpine to reason about it. What it is for is the jump a
+         * clicker cannot make — three verses on at a glance, tapped, without
+         * reading a list or counting numbers.
+         */
+        buildStrip() {
+            const strip = this.$refs.strip;
+
+            if (!strip) { return; }
+
+            const from = Math.max(0, this.index - STRIP_BEHIND);
+            const to = Math.min(this.slides.length - 1, this.index + STRIP_AHEAD);
+
+            this._stripFrom = from;
+            this._stripTo = to;
+            this._thumbs = [];
+
+            const thumbs = [];
+
+            for (let at = from; at <= to; at += 1) {
+                thumbs.push(this.thumbnail(at));
+            }
+
+            strip.replaceChildren(...thumbs);
+            strip.scrollLeft = 0;
+        },
+
+        /** One slide of the strip: the picture, its number, and where it goes. */
+        thumbnail(at) {
+            const slide = this.slides[at];
+            const button = document.createElement('button');
+
+            button.type = 'button';
+            button.className = 'relative h-full shrink-0 overflow-hidden rounded-md border-2 border-transparent bg-white';
+            button.style.aspectRatio = this.aspectRatio;
+            button.addEventListener('click', () => this.go(at));
+
+            if (slide) { button.appendChild(slide.svg.cloneNode(true)); }
+
+            const badge = document.createElement('span');
+
+            badge.className = 'absolute bottom-0 right-0 rounded-tl bg-black/60 px-1 text-[10px] leading-4 text-white';
+            badge.textContent = String(at + 1);
+            button.appendChild(badge);
+
+            this._thumbs.push({ at, button });
+
+            return button;
+        },
+
+        /**
+         * The strip after a move: the window re-cut if the service has walked
+         * near its edge, and scrolled so that what is *next* stands at the left.
+         */
+        syncStrip() {
+            const strip = this.$refs.strip;
+
+            if (!strip) { return; }
+
+            const past = this.index < this._stripFrom;
+            const near = this.index + STRIP_MARGIN > this._stripTo && this._stripTo < this.slides.length - 1;
+
+            if (past || near) { this.buildStrip(); }
+
+            for (const { at, button } of this._thumbs) {
+                button.classList.toggle('border-zinc-900', at === this.index);
+                button.classList.toggle('dark:border-white', at === this.index);
+                button.classList.toggle('border-transparent', at !== this.index);
+                button.classList.toggle('opacity-50', at < this.index);
+            }
+
+            const found = this._thumbs.find((thumb) => thumb.at === this.index + 1)
+                ?? this._thumbs.find((thumb) => thumb.at === this.index);
+
+            if (!found) { return; }
+
+            strip.scrollBy({
+                left: found.button.getBoundingClientRect().left - strip.getBoundingClientRect().left - 8,
+                behavior: 'smooth',
+            });
         },
 
         /**
@@ -173,7 +334,9 @@ onAlpineInit(() => {
             return this.entries.map((entry) => ({
                 id: entry.id,
                 heading: this.headingOf(entry),
+                slot: (entry.slotName ?? entry.slot ?? '').trim(),
                 reference: (entry.reference ?? '').trim(),
+                current: Boolean(on) && on.entryId === entry.id,
                 slides: this.drawn
                     .filter((slide) => slide.entryId === entry.id)
                     .map((slide) => ({
@@ -188,12 +351,19 @@ onAlpineInit(() => {
         /**
          * What a row is called in the cantor's hand.
          *
-         * The same parts the slide itself carries a line of, and for a row of
-         * words — which has none of them — the words themselves, cut short: on a
-         * phone the list has to be read at a glance while something else is
-         * being played.
+         * The music's own name first, which the payload carries for this list
+         * alone: the heading printed on the slide is silent wherever the deck's
+         * author asked for silence, and a row nobody can name is exactly what
+         * the person looking for the Communion hymn cannot use. Only where
+         * there is no music — a screen of words — does it fall back to the
+         * words themselves, cut short, because on a phone the list has to be
+         * read at a glance while something else is being played.
          */
         headingOf(entry) {
+            if (typeof entry.label === 'string' && entry.label.trim() !== '') {
+                return entry.label.trim();
+            }
+
             const line = [entry.slot, entry.music, entry.variation]
                 .map((part) => (typeof part === 'string' ? part.trim() : ''))
                 .filter((part) => part !== '')
@@ -213,6 +383,8 @@ onAlpineInit(() => {
          */
 
         go(index) {
+            this.askFullscreen();
+
             if (this.total === 0) { return; }
 
             this.index = Math.min(Math.max(index, 0), this.total - 1);
@@ -220,17 +392,43 @@ onAlpineInit(() => {
             this.push();
         },
 
+        /**
+         * A press of one of the three controls under the thumb, obeyed once.
+         *
+         * A press within the lock of the last one is dropped where it is made
+         * rather than sent — the wall never hears it, so there is nothing to
+         * correct afterwards and nothing for the screen to flicker through. The
+         * lock is per control: the press that undoes an accidental Next is
+         * Previous, and it must never be the press that is swallowed.
+         */
+        press(name, run) {
+            const now = Date.now();
+
+            if (now - (this._pressedAt[name] ?? 0) < PRESS_LOCK_MS) { return; }
+
+            this._pressedAt[name] = now;
+            this.pressed = name;
+
+            clearTimeout(this._pressTimer);
+            this._pressTimer = setTimeout(() => { this.pressed = null; }, PRESS_LOCK_MS);
+
+            run();
+        },
+
         next() {
-            this.go(this.index + 1);
+            this.press('next', () => this.go(this.index + 1));
         },
 
         previous() {
-            this.go(this.index - 1);
+            this.press('previous', () => this.go(this.index - 1));
         },
 
         toggleBlank() {
-            this.blanked = !this.blanked;
-            this.push();
+            this.press('blank', () => {
+                this.askFullscreen();
+                this.blanked = !this.blanked;
+                this.push();
+            });
         },
 
         /** Jump to a row — its first slide that this service is being shown. */
@@ -247,6 +445,92 @@ onAlpineInit(() => {
             );
 
             if (at !== -1) { this.go(at); }
+        },
+
+        /*
+         * ---------------------------------------------------------------
+         * The phone itself.
+         * ---------------------------------------------------------------
+         */
+
+        /** Whether this browser will give the page the whole screen at all. */
+        get fullscreenAvailable() {
+            return document.fullscreenEnabled === true;
+        },
+
+        syncFullscreen() {
+            this.fullscreen = Boolean(document.fullscreenElement);
+        },
+
+        toggleFullscreen() {
+            this._askedFullscreen = true;
+
+            if (document.fullscreenElement) {
+                document.exitFullscreen?.().catch(() => {});
+
+                return;
+            }
+
+            Promise.resolve(this.$refs.stage?.requestFullscreen?.()).catch(() => {});
+        },
+
+        /**
+         * The whole screen, taken at the first press rather than asked for.
+         *
+         * As automatic as a browser permits: full screen needs a gesture, so the
+         * gesture is the first thing the cantor does anyway. Asked once — a
+         * cantor who left full screen meant to leave it, and a page that drags
+         * them back every tap is a page they would put down. Where the browser
+         * refuses outright, iPhones included, the three bands still fill the
+         * window and nothing else here depends on it.
+         */
+        askFullscreen() {
+            if (this._askedFullscreen || !this.fullscreenAvailable || document.fullscreenElement) { return; }
+
+            this._askedFullscreen = true;
+
+            Promise.resolve(this.$refs.stage?.requestFullscreen?.()).catch(() => {});
+        },
+
+        openList() {
+            this.listOpen = true;
+        },
+
+        closeList() {
+            this.listOpen = false;
+        },
+
+        /**
+         * A thumb dragged across the page: left for the plan, right to put it
+         * away.
+         *
+         * Measured rather than bound to a library, and deliberately blind to
+         * anything that began inside the strip or the plan itself — both scroll,
+         * and a scroll that opened a drawer would make the strip unusable one
+         * handed.
+         */
+        onTouchStart(event) {
+            const touch = event.changedTouches?.[0];
+
+            this._touch = touch
+                ? { x: touch.clientX, y: touch.clientY, scroller: Boolean(event.target?.closest?.('[data-scrolls]')) }
+                : null;
+        },
+
+        onTouchEnd(event) {
+            const start = this._touch;
+            const touch = event.changedTouches?.[0];
+
+            this._touch = null;
+
+            if (!start || !touch || start.scroller) { return; }
+
+            const across = touch.clientX - start.x;
+
+            if (Math.abs(touch.clientY - start.y) > SWIPE_DRIFT) { return; }
+
+            if (across <= -SWIPE_DISTANCE) { this.openList(); }
+            if (across >= SWIPE_DISTANCE) { this.closeList(); }
         },
 
         /*
