@@ -58,6 +58,35 @@
                             @endguest
                         </flux:menu>
                     </flux:dropdown>
+                    {{-- Outside the @auth branches on purpose: these are the
+                         pages a search engine should be able to reach from every
+                         public page, and a crawler is never signed in. A
+                         dropdown because the row has to stay one line, and the
+                         links are in the markup either way. --}}
+                    <flux:dropdown align="end">
+                        <flux:button variant="ghost" size="sm" icon-trailing="chevron-down" class="text-accent! font-medium text-sm!">
+                            <flux:icon name="information-circle" class="inline" variant="mini"></flux:icon>
+                            Tudnivalók
+                        </flux:button>
+                        <flux:menu>
+                            <flux:menu.item href="{{ route('guide') }}" icon="book-open">
+                                Útmutató
+                            </flux:menu.item>
+                            <flux:menu.item href="{{ route('about') }}" icon="information-circle">
+                                Rólunk
+                            </flux:menu.item>
+                            <flux:menu.separator />
+                            <flux:menu.item href="{{ route('score-rights') }}" icon="scale">
+                                Kották jogi feltételei
+                            </flux:menu.item>
+                            <flux:menu.item href="{{ route('terms') }}" icon="document-text">
+                                Használati feltételek
+                            </flux:menu.item>
+                            <flux:menu.item href="{{ route('privacy') }}" icon="shield-check">
+                                Adatvédelem
+                            </flux:menu.item>
+                        </flux:menu>
+                    </flux:dropdown>
                     @auth
                         <a href="{{ url('/dashboard') }}">
                             <flux:button variant="primary" icon="home">{{ __('Dashboard') }}</flux:button>
@@ -71,11 +100,6 @@
                             </flux:button>
                         </div>
                     @else
-                        <a href="{{ url('/about') }}" class="text-accent hover:underline font-medium text-sm">
-                            <flux:icon name="information-circle" class="inline" variant="mini"></flux:icon>
-                            Rólunk
-                        </a>
-
                         <a
                             href="{{ route('login') }}"
                             class="text-accent hover:underline font-medium text-sm"
@@ -134,10 +158,23 @@
                     <flux:dropdown align="end">
                         <flux:button variant="ghost" size="sm" square icon="bars-3" aria-label="Menü" />
                         <flux:menu>
-                            <flux:menu.item href="{{ url('/about') }}" icon="information-circle">
+                            <flux:menu.item href="{{ route('guide') }}" icon="book-open">
+                                Útmutató
+                            </flux:menu.item>
+                            <flux:menu.item href="{{ route('about') }}" icon="information-circle">
                                 Rólunk
                             </flux:menu.item>
+                            <flux:menu.item href="{{ route('score-rights') }}" icon="scale">
+                                Kották jogi feltételei
+                            </flux:menu.item>
+                            <flux:menu.item href="{{ route('terms') }}" icon="document-text">
+                                Használati feltételek
+                            </flux:menu.item>
+                            <flux:menu.item href="{{ route('privacy') }}" icon="shield-check">
+                                Adatvédelem
+                            </flux:menu.item>
                             @guest
+                                <flux:menu.separator />
                                 <flux:menu.item href="{{ route('login') }}" icon="log-in">
                                     {{ __('Log in') }}
                                 </flux:menu.item>
@@ -163,6 +200,16 @@
                     </span>
                 @endif
             </div>
+            {{-- Plain links, on every public page, so the documents that
+                 explain and govern the site are reachable without signing in. --}}
+            <nav class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                <a href="{{ route('guide') }}" class="hover:text-blue-500 underline">Útmutató</a>
+                <a href="{{ route('about') }}" class="hover:text-blue-500 underline">Rólunk</a>
+                <a href="{{ route('public-scores') }}" class="hover:text-blue-500 underline">Ingyenes kották</a>
+                <a href="{{ route('score-rights') }}" class="hover:text-blue-500 underline">Kották jogi feltételei</a>
+                <a href="{{ route('terms') }}" class="hover:text-blue-500 underline">Használati feltételek</a>
+                <a href="{{ route('privacy') }}" class="hover:text-blue-500 underline">Adatvédelem</a>
+            </nav>
             <div class="flex items-center gap-1">
                 <span class="font-bold text-lg tracking-widest text-accent">U.I.O.G.D.</span>
             </div>
