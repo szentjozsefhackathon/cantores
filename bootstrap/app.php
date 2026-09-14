@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'human' => \App\Http\Middleware\EnsureVisitorIsHuman::class,
         ]);
+
+        // Appended, so it runs inside StartSession and can still reach the cookie
+        // that session is about to be handed.
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnforcePairedDeviceSession::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -1,6 +1,7 @@
 @props([
     'title' => null,
     'logo' => true,
+    'noindex' => false,
 ])
 
 <!DOCTYPE html>

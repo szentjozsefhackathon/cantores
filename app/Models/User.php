@@ -277,6 +277,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Get the borrowed screens this user signed in with a QR code.
+     */
+    public function devicePairings(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DevicePairing::class);
+    }
+
+    /**
      * Get the user's display name (City FirstName).
      */
     public function getDisplayNameAttribute(): string

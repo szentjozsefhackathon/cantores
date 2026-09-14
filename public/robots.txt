@@ -7,4 +7,8 @@ Disallow: /f/
 Disallow: /p/
 Disallow: /share/
 
+# The pairing codes underneath /qr, but not /qr itself: that page has to be
+# fetched for its noindex to be read at all.
+Disallow: /qr/
+
 Sitemap: https://cantores.hu/sitemap.xml

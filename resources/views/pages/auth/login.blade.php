@@ -75,5 +75,11 @@
                 </flux:button>
             </div>
         </form>
+
+        <div class="text-center">
+            <flux:link :href="route('qr-login')" wire:navigate class="text-sm" data-test="qr-login-link">
+                {{ __('Sign in with a QR code from your phone') }}
+            </flux:link>
+        </div>
     </div>
 </x-layouts::auth>

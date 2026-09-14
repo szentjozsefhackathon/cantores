@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.2",
         "anthropic-ai/sdk": "*",
+        "bacon/bacon-qr-code": "^3.0",
         "blade-ui-kit/blade-icons": "^1.8",
         "codeat3/blade-game-icons": "^1.5",
         "laravel/fortify": "^1.30",

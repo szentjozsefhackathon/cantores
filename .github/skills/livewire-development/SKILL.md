@@ -1,21 +1,12 @@
 ---
 name: livewire-development
-description: "Develops reactive Livewire 4 components. Activates when creating, updating, or modifying Livewire components; working with wire:model, wire:click, wire:loading, or any wire: directives; adding real-time updates, loading states, or reactivity; debugging component behavior; writing Livewire tests; or when the user mentions Livewire, component, counter, or reactive UI."
+description: "Use for any task or question involving Livewire. Activate if user mentions Livewire, wire: directives, or Livewire-specific concepts like wire:model, wire:click, wire:sort, or islands, invoke this skill. Covers building new components, debugging reactivity issues, real-time form validation, drag-and-drop, loading states, migrating from Livewire 3 to 4, converting component formats (SFC/MFC/class-based), and performance optimization. Do not use for non-Livewire reactive UI (React, Vue, Alpine-only, Inertia.js) or standard Laravel forms without Livewire."
 license: MIT
 metadata:
   author: laravel
 ---
 
 # Livewire Development
-
-## When to Apply
-
-Activate this skill when:
-
-- Creating or modifying Livewire components
-- Using wire: directives (model, click, loading, sort, intersect)
-- Implementing islands or async actions
-- Writing Livewire component tests
 
 ## Documentation
 
@@ -25,38 +16,51 @@ Use `search-docs` for detailed Livewire 4 patterns and documentation.
 
 ### Creating Components
 
-<!-- Component Creation Commands -->
 ```bash
+# Single-file component (SFC - default in v4)
+# Creates: resources/views/components/⚡create-post.blade.php
+php artisan make:livewire create-post
 
-# Single-file component (default in v4)
+# Page component (SFC - Full Page in v4)
+# Creates: resources/views/pages/⚡create-post.blade.php
+php artisan make:livewire pages::create-post
 
-{{ $assist->artisanCommand('make:livewire create-post') }}
-
-# Multi-file component
-
-{{ $assist->artisanCommand('make:livewire create-post --mfc') }}
+# Multi-file component (MFC)
+# Creates: resources/views/components/⚡create-post/create-post.php
+#          resources/views/components/⚡create-post/create-post.blade.php
+php artisan make:livewire create-post --mfc
 
 # Class-based component (v3 style)
-
-{{ $assist->artisanCommand('make:livewire create-post --class') }}
+# Creates: app/Livewire/CreatePost.php AND resources/views/livewire/create-post.blade.php
+php artisan make:livewire create-post --class
 
 # With namespace
-
-{{ $assist->artisanCommand('make:livewire Posts/CreatePost') }}
+php artisan make:livewire Posts/CreatePost
 ```
 
 ### Converting Between Formats
 
 Use `php artisan livewire:convert create-post` to convert between single-file, multi-file, and class-based formats.
 
+### Choosing a Component Format
+
+> **Always follow the project's existing conventions first.** Before creating any component, inspect the project's existing Livewire components to determine the established format (SFC, MFC, or class-based) and directory structure. Check `app/Livewire/`, `resources/views/components/`, and `resources/views/livewire/` for existing components. If the project already uses a consistent format, **use that same format** — even if it differs from the Livewire v4 defaults below. Only fall back to the v4 defaults (SFC in `resources/views/components/`) when no existing convention is established.
+
+Also check `config/livewire.php` for `make_command.type`, `make_command.emoji`, `component_locations`, and `component_namespaces` overrides, which change the default format and where files are stored.
+
 ### Component Format Reference
 
-| Format | Flag | Structure |
-|--------|------|-----------|
-| Single-file (SFC) | default | PHP + Blade in one file |
-| Multi-file (MFC) | `--mfc` | Separate PHP class, Blade, JS, tests |
-| Class-based | `--class` | Traditional v3 style class |
-| View-based | ⚡ prefix | Blade-only with functional state |
+| Format | Flag | Class Path | View Path |
+|--------|------|------------|-----------|
+| Single-file (SFC) | default | — | `resources/views/components/⚡create-post.blade.php` (PHP + Blade in one file) |
+| Full Page SFC | `pages::name` | — | `resources/views/pages/⚡create-post.blade.php` |
+| Multi-file (MFC) | `--mfc` | `resources/views/components/⚡create-post/create-post.php` | `resources/views/components/⚡create-post/create-post.blade.php` |
+| Class-based | `--class` | `app/Livewire/CreatePost.php` | `resources/views/livewire/create-post.blade.php` |
+| View-based | default (Blade-only) | — | `resources/views/components/⚡create-post.blade.php` (Blade-only with functional state) |
+
+> **Important:** The ⚡ prefix shown above is the **default** behavior in Livewire v4 — it is **configurable**. Check `config/livewire.php` for the `make_command.emoji` setting. When `true` (default), always include the ⚡ prefix in filenames you create. When `false`, omit the ⚡ prefix from all paths above.
+
+Namespaced components map to subdirectories: `make:livewire Posts/CreatePost` creates `resources/views/components/posts/⚡create-post.blade.php` (single-file by default). Use `make:livewire Posts/CreatePost --mfc` for multi-file output at `resources/views/components/posts/⚡create-post/create-post.php` and `resources/views/components/posts/⚡create-post/create-post.blade.php`.
 
 ### Single-File Component Example
 
@@ -72,7 +76,7 @@ new class extends Component {
     {
         $this->count++;
     }
-}
+};
 ?>
 
 <div>
@@ -86,7 +90,7 @@ new class extends Component {
 
 These things changed in Livewire 4, but may not have been updated in this application. Verify this application's setup to ensure you follow existing conventions.
 
-- Use `Route::livewire()` for full-page components; config keys renamed: `layout` → `component_layout`, `lazy_placeholder` → `component_placeholder`.
+- Use `Route::livewire()` for full-page components (e.g., `Route::livewire('/posts/create', CreatePost::class)`); config keys renamed: `layout` → `component_layout`, `lazy_placeholder` → `component_placeholder`.
 - `wire:model` now ignores child events by default (use `wire:model.deep` for old behavior); `wire:scroll` renamed to `wire:navigate:scroll`.
 - Component tags must be properly closed; `wire:transition` now uses View Transitions API (modifiers removed).
 - JavaScript: `$wire.$js('name', fn)` → `$wire.$js.name = fn`; `commit`/`request` hooks → `interceptMessage()`/`interceptRequest()`.
@@ -121,7 +125,7 @@ These things changed in Livewire 4, but may not have been updated in this applic
 
 - Always use `wire:key` in loops
 - Use `wire:loading` for loading states
-- Use `wire:model.live` for instant updates (default is debounced)
+- Use `wire:model.live` for live updates; `wire:model` is deferred by default
 - Validate and authorize in actions (treat like HTTP requests)
 
 ## Configuration

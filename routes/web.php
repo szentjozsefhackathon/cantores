@@ -200,6 +200,27 @@ Route::post('/emberi-ellenorzes', [\App\Http\Controllers\HumanCheckController::c
     ->middleware('throttle:20,1')
     ->name('human-check.store');
 
+// Signing a borrowed screen in from a phone. The laptop at the church is already
+// set up and belongs to nobody; typing an account into it in front of the
+// congregation is the friction this removes.
+//
+// `claim` is declared before `{token}` and the token is constrained besides, so
+// the one cannot swallow the other.
+Route::get('/qr/claim', \App\Http\Controllers\QrLoginClaimController::class)
+    ->middleware('throttle:30,1')
+    ->name('qr-login.claim');
+
+Route::livewire('/qr', \App\Livewire\Pages\QrLogin::class)
+    ->middleware('throttle:30,1')
+    ->name('qr-login');
+
+// The phone's side: behind `auth`, so a signed-out phone is carried through the
+// login form and back by `url.intended` with no help from us.
+Route::livewire('/qr/{token}', \App\Livewire\Pages\QrLoginApproval::class)
+    ->where('token', '[A-Za-z0-9]{32}')
+    ->middleware(['auth', 'verified'])
+    ->name('qr-login.approve');
+
 Route::livewire('/scores', \App\Livewire\Pages\Scores::class)
     ->middleware(['auth', 'verified'])
     ->name('scores');

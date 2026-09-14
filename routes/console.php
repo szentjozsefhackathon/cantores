@@ -11,3 +11,7 @@ Artisan::command('inspire', function () {
 Schedule::command('liturgical:warm-cache')
     ->dailyAt('03:00')
     ->withoutOverlapping();
+
+Schedule::command('cantores:prune-device-pairings')
+    ->hourly()
+    ->withoutOverlapping();
