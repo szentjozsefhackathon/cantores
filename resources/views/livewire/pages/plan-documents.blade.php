@@ -7,7 +7,20 @@
                     <flux:subheading>{{ __('Everything your music plans have been made into — the pages in the band\'s hands and the slides on the wall, service by service.') }}</flux:subheading>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    {{-- The laptop's way in, and the one thing anybody does at
+                         the laptop: put this in front of the room at the
+                         start of Mass and do not touch it again. --}}
+                    <flux:button :href="route('projection-screen')" variant="ghost" icon="tv" wire:navigate>
+                        {{ __('Projection screen') }}
+                    </flux:button>
+                    {{-- The phone's way in. Its own entry rather than a
+                         button on a deck, because the person reaching for it
+                         is at the organ and the deck is already up on a
+                         screen across the room. --}}
+                    <flux:button :href="route('projection-remote')" variant="ghost" icon="presentation" wire:navigate>
+                        {{ __('Remote') }}
+                    </flux:button>
                     <flux:modal.trigger name="new-plan-document">
                         <flux:button variant="primary" icon="book-plus" wire:click="setNewType('booklet')">
                             {{ __('New Booklet') }}
