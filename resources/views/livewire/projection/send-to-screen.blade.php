@@ -16,13 +16,20 @@
              window rather than this one, because this one is the one being
              worked in — it is dragged onto the projector and put full screen,
              and it is the same session, so it is already the screen this page
-             will be addressing. --}}
-        <flux:tooltip :content="__('Opens a window to drag onto the projector.')">
+             will be addressing.
+
+             Opened on this deck rather than bare, because pressing a deck's own
+             control and being given an empty screen is a gesture that has to be
+             made twice: opening the presenter *is* claiming a screen, and
+             naming the deck in the URL points it at the same moment. A screen
+             opened with nothing on it is what the button at the top of the page
+             is for, and that is a different errand. --}}
+        <flux:tooltip :content="__('Opens a window with this deck on it, to drag onto the projector.')">
             <flux:button
                 size="{{ $compact ? 'xs' : 'sm' }}"
                 variant="ghost"
                 icon="tv"
-                href="{{ route('projection-screen') }}"
+                href="{{ $this->deckUrl() }}"
                 target="{{ \App\Livewire\Projection\SendToScreen::WINDOW }}"
                 :aria-label="__('Open a screen')"
             >

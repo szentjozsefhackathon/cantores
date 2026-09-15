@@ -1,6 +1,7 @@
 import { canvasMeasurer } from './booklet-chordpro.js';
 import { markdownRows } from './booklet-markdown.js';
 import { textRowSvg } from './booklet-text.js';
+import { enginesReady } from './music-engines.js';
 import { renderRatioPages } from './projection-render.js';
 import { fileSlideSettings, resolveSlideSettings, textSlideSettings } from './projection-settings.js';
 import { slidePalette } from './slide-palette.js';
@@ -60,6 +61,12 @@ export async function renderDeck(entries, geometry) {
     const ratio = geometry?.ratio;
 
     if (!isSlideRatio(ratio)) { return []; }
+
+    // Before the first row, and not per row: a score drawn by an engine that
+    // has not arrived throws, and the throw costs that slide silently. See
+    // music-engines.js for why a page reached by navigation cannot assume they
+    // are there.
+    await enginesReady();
 
     const slides = [];
     const palette = slidePalette(geometry);

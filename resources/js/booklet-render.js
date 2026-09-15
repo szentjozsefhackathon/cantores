@@ -8,6 +8,7 @@ import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
 import { markdownRows } from './booklet-markdown.js';
 import { fileSettings, layoutWidthFor, resolveSettings, textSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
+import { enginesReady } from './music-engines.js';
 import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcMixin, hungarianChordsToAbc } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
@@ -114,6 +115,7 @@ export async function renderBooklet(entries, rawGeometry, host) {
     const blocks = [];
     const fonts = new Set([geometry.textFont]);
 
+    await enginesReady();
     await ensureFontsLoaded(bookletFonts(entries, geometry), geometry.lyricSizePx);
 
     for (const entry of entries) {
@@ -165,6 +167,7 @@ export async function renderBookletFlow(entries, rawGeometry, host) {
     const fonts = new Set([geometry.textFont]);
     const items = [];
 
+    await enginesReady();
     await ensureFontsLoaded(bookletFonts(entries, geometry), geometry.lyricSizePx);
 
     for (const entry of entries) {

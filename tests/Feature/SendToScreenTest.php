@@ -138,6 +138,26 @@ it('offers the way to make a screen from the editor when none is waiting', funct
         ->assertDontSee(__('Send to screen'));
 });
 
+/*
+ * And it opens that screen on the deck whose button was pressed.
+ *
+ * Pressing a deck's own control and being handed an empty screen is a gesture
+ * that has to be made twice — which is exactly what it looked like from the
+ * document list: the window came up waiting, and only a second press put the
+ * deck on it. Opening the presenter is itself claiming a screen, so naming the
+ * deck in that URL is the whole of the difference.
+ */
+it('opens the new screen window on the deck rather than empty', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(SendToScreen::class, ['projection' => $projection])
+        ->assertSee(route('projections.present', ['projection' => $projection->id]), escape: false)
+        ->assertDontSee('href="'.route('projection-screen').'"', escape: false);
+});
+
 it('offers the waiting screen from the editor and from the document list', function () {
     $user = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
