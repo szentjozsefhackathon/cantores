@@ -129,6 +129,11 @@ class ProjectionRenderPayload extends PlanRenderPayload
                     'music' => $heading['music'],
                     'reference' => $heading['reference'],
                     'variation' => $heading['variation'],
+                    // The opening notes, for the lists that name the row rather
+                    // than draw it: a row of a hymn is recognised by them faster
+                    // than by any title, which is why the editor's rows carry
+                    // them and why the remote's plan does now too.
+                    'incipitUrl' => $source['incipit_url'] ?? null,
                     ...$this->nameOf($entry),
                 ];
 
@@ -179,7 +184,13 @@ class ProjectionRenderPayload extends PlanRenderPayload
      * is read straight off the music and the score and owes the display
      * switches nothing.
      *
-     * @return array{label: ?string, slotName: ?string}
+     * What the editor's own row says is said here too, and for the same reason:
+     * several arrangements of one music share a title, so the score, the file
+     * chosen out of it and the variation are what actually tell two rows of the
+     * Communion hymn apart. All of it read straight off the score, owing the
+     * display switches nothing.
+     *
+     * @return array{label: ?string, slotName: ?string, scoreName: ?string, fileName: ?string, variationName: ?string}
      */
     private function nameOf(ProjectionSlide $entry): array
     {
@@ -193,6 +204,9 @@ class ProjectionRenderPayload extends PlanRenderPayload
         return [
             'label' => self::trimmed($label),
             'slotName' => self::trimmed($slotName),
+            'scoreName' => self::trimmed($entry->score?->title),
+            'fileName' => self::trimmed($entry->scoreFile?->displayName()),
+            'variationName' => self::trimmed($entry->score?->variation_name),
         ];
     }
 

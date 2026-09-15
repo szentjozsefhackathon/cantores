@@ -141,14 +141,19 @@ resources/js/projection-remote.js
                                 <span class="min-w-0 truncate" x-text="music.name"></span>
                             </div>
 
-                            {{-- One engraving of that music, and how much of it
-                                 today is being shown: 3/5 is the whole answer to
-                                 "which verses", and it is the number that changes
-                                 when a verse is taken out in the column opposite. --}}
+                            {{-- One engraving of that music, named as the editor
+                                 names it — the score, the file chosen out of it,
+                                 the variation, and the opening notes beneath —
+                                 because a slot sung from three engravings of one
+                                 music is three rows that share every word of
+                                 their title. And how much of it today is being
+                                 shown: 3/5 is the whole answer to "which verses",
+                                 and it is the number that changes when a verse is
+                                 taken out in the column opposite. --}}
                             <template x-for="row in music.rows" x-bind:key="row.id">
                                 <button
                                     type="button"
-                                    class="flex w-full items-center gap-1.5 rounded px-2 py-1 text-start text-xs"
+                                    class="block w-full rounded px-2 py-1 text-start text-xs"
                                     x-on:click="goToEntry(row.id)"
                                     x-bind:class="row.current
                                         ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
@@ -156,8 +161,25 @@ resources/js/projection-remote.js
                                             ? 'text-zinc-400 line-through dark:text-zinc-600'
                                             : 'hover:bg-zinc-200 dark:hover:bg-zinc-800')"
                                 >
-                                    <span class="min-w-0 flex-1 truncate" x-text="row.variation || row.reference || row.heading"></span>
-                                    <span class="shrink-0 text-[10px] tabular-nums opacity-70" x-text="`${row.shownCount}/${row.slideCount}`"></span>
+                                    <span class="flex items-center gap-1.5">
+                                        <span class="min-w-0 flex-1 truncate" x-bind:class="row.isText ? 'italic' : ''" x-text="rowName(row)"></span>
+                                        <span class="shrink-0 text-[10px] tabular-nums opacity-70" x-text="`${row.shownCount}/${row.slideCount}`"></span>
+                                    </span>
+
+                                    <span class="block truncate text-[10px] opacity-60" x-show="row.variationName" x-text="row.variationName"></span>
+
+                                    {{-- The opening notes. Plain rather than the
+                                         editor's zoomable strip: this is read at a
+                                         glance during a service, and a dialog over
+                                         the remote is the last thing anybody wants
+                                         open while pressing Next. --}}
+                                    <img
+                                        class="mt-0.5 max-h-12 max-w-full rounded bg-white object-contain"
+                                        x-show="row.incipit"
+                                        x-bind:src="row.incipit"
+                                        alt=""
+                                        loading="lazy"
+                                    />
                                 </button>
                             </template>
                         </div>
@@ -510,8 +532,29 @@ resources/js/projection-remote.js
                     >
                         <button type="button" class="block w-full text-start" x-on:click="goToEntry(row.id); closeList()">
                             <div class="truncate text-xs uppercase tracking-wide text-zinc-400" x-show="row.slot" x-text="row.slot"></div>
-                            <div class="truncate text-sm font-medium" x-text="row.heading"></div>
+
+                            {{-- The music, then the engraving of it this row is:
+                                 the same two lines the editor's plan shows, so
+                                 that a row found here and a row found there are
+                                 recognisably the same row. --}}
+                            <div class="truncate text-sm font-medium" x-show="row.music" x-text="row.music"></div>
+                            <div
+                                class="truncate text-sm text-zinc-600 dark:text-zinc-300"
+                                x-bind:class="row.isText ? 'italic' : ''"
+                                {{-- A score that names itself after its music says it once. --}}
+                                x-show="rowName(row) && rowName(row) !== row.music"
+                                x-text="rowName(row)"
+                            ></div>
+                            <div class="truncate text-xs text-zinc-500" x-show="row.variationName" x-text="row.variationName"></div>
                             <div class="truncate text-xs text-zinc-500" x-show="row.reference" x-text="row.reference"></div>
+
+                            <img
+                                class="mt-1 max-h-20 max-w-full rounded bg-white object-contain"
+                                x-show="row.incipit"
+                                x-bind:src="row.incipit"
+                                alt=""
+                                loading="lazy"
+                            />
                         </button>
 
                         <div class="mt-1.5 flex flex-wrap gap-1">

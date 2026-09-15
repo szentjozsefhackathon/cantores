@@ -201,6 +201,10 @@ function fakeElement(tag) {
         },
         listeners: {},
         appendChild(child) { this.children.push(child); return child; },
+        // Enough geometry for the pane that follows the service: laid out
+        // nowhere, so nothing is ever out of view and nothing scrolls.
+        getBoundingClientRect() { return { top: 0, bottom: 0, height: 0 }; },
+        scrollBy() {},
         replaceChildren(...kids) { this.children = kids; return undefined; },
         setAttribute(name, value) { this.attributes[name] = value; },
         addEventListener(type, handler) { this.listeners[type] = handler; },
@@ -418,6 +422,116 @@ test('the plan column counts what today’s service leaves out', () => {
     deck.toggleReveal(9, 0);
 
     assert.equal(deck.outline[1].musics[0].rows[0].shownCount, 0);
+});
+
+/* A slot's music is usually sung from one of several engravings of it, all
+   sharing its title, so a row named by its music alone is a row nobody can tell
+   from the two beneath it. The pane names rows the way the editor's plan does:
+   the score, the file chosen out of it, the variation, the opening words of a
+   paragraph — all read off the score rather than off the headings, since a deck
+   that prints none of it still has to be legible in the hand. */
+test('the plan column names a row the way the editor does', () => {
+    const deck = plan();
+
+    deck.entries = [
+        {
+            id: 7,
+            slotName: 'Kezdőének',
+            label: 'Veni Creator',
+            scoreName: 'Veni Creator Spiritus',
+            fileName: 'Orgonakíséret',
+            variationName: 'I. tónus',
+            incipitUrl: '/incipits/7.png',
+        },
+        { id: 8, kind: 'text', label: null, text: '# Állunk\nA kántor énekli a verseket.' },
+    ];
+
+    const [score, words] = deck.rows;
+
+    assert.equal(deck.rowName(score), 'Veni Creator Spiritus · Orgonakíséret');
+    assert.equal(score.variationName, 'I. tónus');
+    assert.equal(score.incipit, '/incipits/7.png');
+    assert.equal(score.isText, false);
+
+    assert.equal(words.isText, true);
+    assert.equal(deck.rowName(words), 'Állunk');
+});
+
+/* A score holding one file names only itself, and a row whose score has gone
+   since the deck was made still has to say something. */
+test('a row with nothing chosen out of it names the score alone', () => {
+    const deck = plan();
+
+    deck.entries = [
+        { id: 7, slotName: 'Kezdőének', label: 'Veni Creator', scoreName: 'Veni Creator Spiritus' },
+        { id: 8, slotName: 'Kezdőének', label: 'Veni Creator' },
+    ];
+
+    const [named, bare] = deck.rows;
+
+    assert.equal(deck.rowName(named), 'Veni Creator Spiritus');
+    assert.equal(deck.rowName(bare), 'Veni Creator');
+});
+
+/*
+ * ---------------------------------------------------------------
+ * The sheet of slides down the laptop's right-hand side.
+ * ---------------------------------------------------------------
+ */
+
+/** A deck pane 300 high, holding a slide wherever the test puts it. */
+function sheet(top, height = 100) {
+    const scrolled = [];
+    const component = registered.projectionRemote({});
+
+    component.$refs = {
+        deck: {
+            getBoundingClientRect: () => ({ top: 0, bottom: 300, height: 300 }),
+            scrollBy: (options) => scrolled.push(options),
+        },
+    };
+
+    const item = { figure: { getBoundingClientRect: () => ({ top, bottom: top + height, height }) } };
+
+    return { component, item, scrolled };
+}
+
+/* A sixty-slide deck is several screens of pictures, and the mark on the slide
+   the room is reading is worth nothing on the screenful nobody is looking at. */
+test('the sheet scrolls to the slide the room is reading', () => {
+    const { component, item, scrolled } = sheet(700);
+
+    component.scrollDeckTo(item, { entryId: 7, index: 3 });
+
+    assert.equal(scrolled.length, 1);
+    // Centred: the jump lands with what came before and what is coming either
+    // side of it rather than pinned to an edge.
+    assert.equal(scrolled[0].top, 600);
+});
+
+/* An ordinary Next moves nothing while the next slide is still on screen:
+   a pane that re-scrolled on every move could not be read ahead in. */
+test('a slide already in view is left where it is', () => {
+    const { component, item, scrolled } = sheet(120);
+
+    component.scrollDeckTo(item, { entryId: 7, index: 3 });
+
+    assert.deepEqual(scrolled, []);
+});
+
+/* The poll answers twice a second and says the same thing each time. A pane
+   that scrolled on every answer could not be scrolled by hand at all. */
+test('the sheet follows a move rather than an answer', () => {
+    const { component, item, scrolled } = sheet(700);
+
+    component.scrollDeckTo(item, { entryId: 7, index: 3 });
+    component.scrollDeckTo(item, { entryId: 7, index: 3 });
+
+    assert.equal(scrolled.length, 1);
+
+    component.scrollDeckTo(item, { entryId: 7, index: 4 });
+
+    assert.equal(scrolled.length, 2);
 });
 
 /*

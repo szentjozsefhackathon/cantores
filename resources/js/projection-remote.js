@@ -158,6 +158,8 @@ onAlpineInit(() => {
         _stripTo: -1,
         _thumbs: [],
         _deckItems: [],
+        /** Which slide the deck pane was last scrolled to follow. */
+        _deckAt: null,
         _wide: null,
         _onWide: null,
         _touch: null,
@@ -465,6 +467,10 @@ onAlpineInit(() => {
             if (!host) { return; }
 
             this._deckItems = [];
+            // The sheet is new, so wherever it was scrolled to is not where the
+            // service is: the next highlight scrolls rather than deciding it
+            // already has.
+            this._deckAt = null;
 
             if (!this.wide) {
                 host.replaceChildren();
@@ -548,12 +554,54 @@ onAlpineInit(() => {
         /** The slide the room is on, marked in the sheet beside it. */
         highlightDeck() {
             const on = this.slides[this.index];
+            let current = null;
 
             for (const item of this._deckItems) {
-                const current = Boolean(on) && on.entryId === item.entryId && on.index === item.index;
+                const here = Boolean(on) && on.entryId === item.entryId && on.index === item.index;
 
-                item.figure.classList.toggle('projection-slide-hovered', current);
+                item.figure.classList.toggle('projection-slide-hovered', here);
+
+                if (here) { current = item; }
             }
+
+            this.scrollDeckTo(current, on);
+        },
+
+        /**
+         * The sheet scrolled to keep up with the service.
+         *
+         * A sixty-slide deck is several screens of pictures, and the mark on the
+         * slide the room is reading is worth nothing on the screenful nobody is
+         * looking at — so the pane follows the service rather than waiting to be
+         * scrolled. Brought into view only when it has left it, and centred when
+         * it has: a jump of twenty slides lands in the middle of the sheet, with
+         * what came before and what is coming either side of it, while an
+         * ordinary Next moves nothing until the next slide reaches the edge.
+         *
+         * Only on a move, never on a redraw of the same slide: the poll answers
+         * twice a second, and a pane that re-scrolled on every answer could not
+         * be scrolled by hand at all.
+         */
+        scrollDeckTo(item, on) {
+            const host = this.$refs.deck;
+
+            if (!host || !item || !on) { return; }
+
+            const at = `${on.entryId}:${on.index}`;
+
+            if (at === this._deckAt) { return; }
+
+            this._deckAt = at;
+
+            const box = host.getBoundingClientRect();
+            const slide = item.figure.getBoundingClientRect();
+
+            if (slide.top >= box.top && slide.bottom <= box.bottom) { return; }
+
+            host.scrollBy({
+                top: slide.top - box.top - (box.height - slide.height) / 2,
+                behavior: 'smooth',
+            });
         },
 
         /**
@@ -588,6 +636,20 @@ onAlpineInit(() => {
                     music: (entry.label ?? '').trim(),
                     variation: (entry.variation ?? '').trim(),
                     reference: (entry.reference ?? '').trim(),
+                    // And what the editor's own row says of it. A slot's music
+                    // is often sung from one of several engravings of it, all
+                    // sharing a title, so the score, the file chosen out of it
+                    // and the variation are what actually tell two rows apart —
+                    // and the opening notes tell them apart faster than any of
+                    // the three. Read off the score rather than off the
+                    // headings, so a deck that prints none of it is still legible
+                    // to the person holding the remote.
+                    isText: entry.kind === 'text',
+                    words: this.firstLineOf(entry),
+                    score: (entry.scoreName ?? '').trim(),
+                    file: (entry.fileName ?? '').trim(),
+                    variationName: (entry.variationName ?? '').trim(),
+                    incipit: entry.incipitUrl ?? null,
                     current: Boolean(on) && on.entryId === entry.id,
                     slideCount: slides.length,
                     shownCount: slides.filter((slide) => slide.shown).length,
@@ -661,6 +723,43 @@ onAlpineInit(() => {
             const words = (entry.text ?? '').replace(/[#*_>\-]/g, ' ').replace(/\s+/g, ' ').trim();
 
             return words.length > 48 ? `${words.slice(0, 48)}…` : words;
+        },
+
+        /**
+         * The one line that names a row of the plan.
+         *
+         * The editor's row, said in a pane a quarter of its width: a screen of
+         * words is its opening words, and an engraving is the score it is, with
+         * the file chosen out of it where the score holds several. The music's
+         * own title is not repeated here — the band above the row already says
+         * it — and the heading is the last resort, for a row whose score has
+         * gone since the deck was made.
+         */
+        rowName(row) {
+            if (row.isText) { return row.words || row.heading; }
+
+            if (row.score === '') { return row.heading; }
+
+            return row.file === '' ? row.score : `${row.score} · ${row.file}`;
+        },
+
+        /**
+         * The opening words of a screen of words, as the editor's row shows them.
+         *
+         * A paragraph has no title, so the first line is its name — the rubric
+         * that stands before the Gloria, the greeting before the first hymn — and
+         * it is what the cantor scanning the plan is reading for. Cut to a line,
+         * with the Markdown that sets it left out of the name.
+         */
+        firstLineOf(entry) {
+            if (entry.kind !== 'text') { return ''; }
+
+            const line = (entry.text ?? '')
+                .split('\n')
+                .map((part) => part.replace(/^[#>\-*\s]+/, '').replace(/[*_]/g, '').trim())
+                .find((part) => part !== '') ?? '';
+
+            return line.length > 40 ? `${line.slice(0, 40)}…` : line;
         },
 
         /*

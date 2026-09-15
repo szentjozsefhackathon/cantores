@@ -342,6 +342,47 @@ it('falls back to the score-s own title when there is no music behind it', funct
         ->toBe('Vasárnapi zsoltár');
 });
 
+/*
+ * A slot's music is often sung from one of several engravings of it, all
+ * sharing its title, so the music's name alone leaves three identical rows in
+ * the plan. The row carries what the editor's own row shows — the score, the
+ * variation, the opening notes — read off the score rather than off the
+ * headings, since the deck may print none of it.
+ */
+it('names the engraving a row is, and not only the music', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+
+    $music = Music::factory()->create(['title' => 'Veni Creator']);
+
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'music_id' => $music->id,
+        'title' => 'Veni Creator Spiritus',
+        'variation_name' => 'I. tónus',
+    ]);
+
+    // The variation switched off on the slide: the plan still has to say it,
+    // because it is the only thing telling this row from the next.
+    ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+        'show_variation' => false,
+    ]);
+
+    $screen = screenShowing($user, $projection);
+
+    actingAs($user);
+
+    $entry = Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('entries')[0];
+
+    expect($entry['variation'])->toBeNull()
+        ->and($entry['label'])->toBe('Veni Creator')
+        ->and($entry['scoreName'])->toBe('Veni Creator Spiritus')
+        ->and($entry['variationName'])->toBe('I. tónus')
+        ->and($entry)->toHaveKey('incipitUrl');
+});
+
 /**
  * A screen with a deck already on it — the state the phone finds on a Sunday
  * when the laptop was started first.
