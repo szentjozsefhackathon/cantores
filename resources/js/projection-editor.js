@@ -1,7 +1,7 @@
 import { onAlpineInit } from './alpine-init.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { SPLIT_DEFAULT, beginSplitDrag, clampSplitPercent } from './booklet-split.js';
-import { isExcluded, renderDeck, slideCounts } from './projection-deck.js';
+import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck, slideCounts } from './projection-deck.js';
 import { inheritedSlideSetting, resolveSlideSettings, fileSlideSettings, textSlideSettings } from './projection-settings.js';
 import { steppedValue, movesSetting } from './booklet-settings.js';
 
@@ -430,22 +430,6 @@ onAlpineInit(() => {
         };
     });
 });
-
-/**
- * A circle with a stroke through it, and the same circle with a cross in it.
- *
- * Drawn from two primitives rather than pulled from the icon set, because these
- * are built in JavaScript into a sheet that has no Blade behind it, and a path
- * copied out of an icon library by hand is a path nobody can check.
- */
-const SKIP_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
-    + '<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>'
-    + '<line x1="3.9" y1="12.1" x2="12.1" y2="3.9" stroke="currentColor" stroke-width="1.5"/></svg>';
-
-const RESTORE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
-    + '<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>'
-    + '<line x1="8" y1="4.6" x2="8" y2="11.4" stroke="currentColor" stroke-width="1.5"/>'
-    + '<line x1="4.6" y1="8" x2="11.4" y2="8" stroke="currentColor" stroke-width="1.5"/></svg>';
 
 /**
  * The exclusion map as ordinary arrays of ordinary numbers.

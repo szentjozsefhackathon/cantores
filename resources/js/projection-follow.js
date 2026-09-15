@@ -177,27 +177,59 @@ export function indexOfAddress(slides, entries, address) {
 }
 
 /**
- * Which slides this service walks past, once today's reveals are taken off.
+ * Which slides this service walks past, once today's deviations are applied.
  *
  * A deck's exclusions are a deliberate arrangement — "the verses left out today,
  * kept in the deck for the Sunday that wants them" — and a cantor reacting to a
- * long procession is not rewriting it. So the reveal lives on the presentation
- * and is subtracted here, leaving the projection as its author arranged it.
+ * long procession is not rewriting it. So the deviation lives on the
+ * presentation and is applied here, leaving the projection as its author
+ * arranged it.
+ *
+ * The deviation is a toggle rather than a reveal: a slide named in it is shown
+ * where the deck leaves it out, and left out where the deck shows it. Both
+ * directions are needed by the same Sunday — the extra verse the procession
+ * wants, and the one the short one does not — and one symmetric difference says
+ * both without a second map on the row.
  *
  * @param {Object<string|number, Array<number>>} excluded from the payload
  * @param {Object<string|number, Array<number>>} reveals from the state
  */
 export function shownExclusions(excluded, reveals) {
     const effective = {};
+    const rows = new Set([
+        ...Object.keys(excluded ?? {}),
+        ...Object.keys(reveals ?? {}),
+    ]);
 
-    for (const [entryId, slides] of Object.entries(excluded ?? {})) {
-        const revealed = (reveals ?? {})[entryId] ?? (reveals ?? {})[String(entryId)] ?? [];
-        const left = (slides ?? []).filter((index) => !revealed.includes(index));
+    for (const entryId of rows) {
+        const deck = slidesOfRow(excluded, entryId);
+        const today = slidesOfRow(reveals, entryId);
+
+        const left = [
+            ...deck.filter((index) => !today.includes(index)),
+            ...today.filter((index) => !deck.includes(index)),
+        ].sort((a, b) => a - b);
 
         if (left.length > 0) { effective[entryId] = left; }
     }
 
     return effective;
+}
+
+/**
+ * One row's slide list out of a map keyed by row.
+ *
+ * Both spellings of the key, because JSON gives it back as a string and a tap
+ * gives it as a number.
+ *
+ * @param {Object<string|number, Array<number>>} map
+ * @param {string|number} entryId
+ * @return {Array<number>}
+ */
+function slidesOfRow(map, entryId) {
+    const list = (map ?? {})[entryId] ?? (map ?? {})[String(entryId)] ?? (map ?? {})[Number(entryId)];
+
+    return Array.isArray(list) ? list.map(Number) : [];
 }
 
 /**

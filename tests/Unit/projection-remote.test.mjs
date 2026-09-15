@@ -178,3 +178,244 @@ test('the laptop is not thrown into full screen by pressing next', () => {
     document.fullscreenEnabled = false;
     delete window.matchMedia;
 });
+
+/*
+ * ---------------------------------------------------------------
+ * The laptop's left pane: the deck as it was arranged.
+ * ---------------------------------------------------------------
+ */
+
+/** Enough of a document for the two sheets this page builds by hand. */
+function fakeElement(tag) {
+    return {
+        tagName: tag.toUpperCase(),
+        className: '',
+        innerHTML: '',
+        textContent: '',
+        style: {},
+        children: [],
+        attributes: {},
+        classes: new Set(),
+        classList: {
+            toggle(name, on) { on ? this.owner.classes.add(name) : this.owner.classes.delete(name); },
+        },
+        listeners: {},
+        appendChild(child) { this.children.push(child); return child; },
+        replaceChildren(...kids) { this.children = kids; return undefined; },
+        setAttribute(name, value) { this.attributes[name] = value; },
+        addEventListener(type, handler) { this.listeners[type] = handler; },
+    };
+}
+
+globalThis.document.createComment = (text) => ({ nodeType: 8, textContent: text });
+
+globalThis.document.createElement = (tag) => {
+    const element = fakeElement(tag);
+
+    element.classList.owner = element;
+
+    return element;
+};
+
+/**
+ * A remote with a deck drawn and a pane to draw it into: three slides in one
+ * row, the middle one left out by the deck itself.
+ */
+function pane() {
+    const component = registered.projectionRemote({ excluded: { 7: [1] }, skippedText: 'Left out' });
+
+    component.entries = [{ id: 7 }];
+    component.drawn = [0, 1, 2].map((index) => ({
+        entryId: 7,
+        index,
+        svg: { cloneNode: () => fakeElement('svg') },
+    }));
+
+    component.wide = true;
+    component.$refs = {
+        deck: fakeElement('div'),
+        currentBox: fakeElement('div'),
+        nextBox: fakeElement('div'),
+        strip: null,
+    };
+    component.push = () => {};
+
+    component.repaint({ entryId: 7, slideIndex: 0 });
+
+    return component;
+}
+
+/** What each slide of the pane reads under its picture. */
+function numbers(component) {
+    return component.$refs.deck.children.map((figure) => figure.children[1].children[0].textContent);
+}
+
+/* The sheet numbers the way the editor's does and the way the projector does:
+   the slides being walked past take no number, or the pane and the room would
+   be counting differently. */
+test('the deck pane numbers what the room will be shown', () => {
+    const deck = pane();
+
+    assert.equal(deck.$refs.deck.children.length, 3, 'a slide left out went missing from the sheet');
+    assert.deepEqual(numbers(deck), ['1', 'Left out', '2']);
+});
+
+/* Today's deviation is symmetric: the verse the deck leaves out comes back, and
+   the verse it shows is taken out. The same Sunday wants both. */
+test('a slide is taken out of today’s service and put back from the pane', () => {
+    const deck = pane();
+
+    assert.equal(deck.total, 2);
+
+    deck.toggleReveal(7, 0);
+
+    assert.equal(deck.total, 1, 'the slide taken out is still being shown');
+    assert.deepEqual(numbers(deck), ['Left out', 'Left out', '1']);
+    assert.deepEqual(deck.reveals, { 7: [0] });
+
+    deck.toggleReveal(7, 0);
+
+    assert.equal(deck.total, 2, 'the slide put back is still missing');
+    assert.deepEqual(deck.reveals, {});
+});
+
+/* And the verse the deck leaves out, brought back mid-procession, is where the
+   service should now be looking. */
+test('a verse brought back is the one the service lands on', () => {
+    const deck = pane();
+
+    deck.toggleReveal(7, 1);
+
+    assert.equal(deck.total, 3);
+    assert.equal(deck.index, 1, 'the service did not follow the verse it brought back');
+    assert.deepEqual(numbers(deck), ['1', '2', '3']);
+});
+
+/* Taking out the slide the room is on does not leave the service pointing at
+   something nobody can see: it is handed on to the nearest slide still shown. */
+test('taking out the slide the room is on hands the service on', () => {
+    const deck = pane();
+
+    deck.go(1);
+    assert.equal(deck.slides[deck.index].index, 2);
+
+    deck.toggleReveal(7, 2);
+
+    assert.equal(deck.total, 1);
+    assert.equal(deck.slides[deck.index].index, 0);
+});
+
+/* The pane is sixty clones of engraved slides, and a phone has no room to read
+   it. Below the breakpoint it is not built at all. */
+test('the deck pane is not built for a phone', () => {
+    const deck = pane();
+
+    deck.wide = false;
+    deck.buildDeck();
+
+    assert.equal(deck.$refs.deck.children.length, 0);
+});
+
+/*
+ * ---------------------------------------------------------------
+ * The laptop's middle column: what is coming, full size.
+ * ---------------------------------------------------------------
+ */
+
+/* Not a thumbnail of the next verse but the next verse: the hand presses Next
+   knowing what lands. Drawn from the slides today is actually being shown, so a
+   verse the deck leaves out is not what the box promises. */
+test('the laptop is shown the slide the room is about to be on', () => {
+    const deck = pane();
+
+    assert.equal(deck.$refs.nextBox.children[0].tagName, 'SVG', 'nothing was drawn under the controls');
+    assert.equal(deck.slides[deck.index + 1].index, 2, 'the box promised a slide today leaves out');
+
+    deck.go(1);
+
+    assert.equal(deck.$refs.nextBox.children[0].nodeType, 8, 'the end of the deck still promised a slide');
+});
+
+/* And a phone pays nothing for it: there is no room for the box down there, and
+   a clone nobody can see is a clone not worth making. */
+test('the next slide is not drawn for a phone', () => {
+    const deck = pane();
+
+    deck.wide = false;
+    deck.show();
+
+    assert.equal(deck.$refs.nextBox.children[0].nodeType, 8);
+});
+
+/*
+ * ---------------------------------------------------------------
+ * The laptop's left column: the deck as the service it came from.
+ * ---------------------------------------------------------------
+ */
+
+/** A deck of two slots: one music sung two ways, and one sung once. */
+function plan() {
+    const component = registered.projectionRemote({ excluded: { 8: [0] } });
+
+    component.entries = [
+        { id: 7, slotName: 'Kezdőének', label: 'Veni Creator', variation: 'I. tónus' },
+        { id: 8, slotName: 'Kezdőének', label: 'Veni Creator', variation: 'II. tónus' },
+        { id: 9, slotName: 'Áldozás', label: 'Ave verum' },
+    ];
+
+    component.drawn = [
+        { entryId: 7, index: 0, svg: null },
+        { entryId: 7, index: 1, svg: null },
+        { entryId: 8, index: 0, svg: null },
+        { entryId: 9, index: 0, svg: null },
+    ];
+
+    component.$refs = {};
+    component.push = () => {};
+    component.repaint({ entryId: 7, slideIndex: 0 });
+
+    return component;
+}
+
+/* The question the pane answers during a service is not "what is on slide 41"
+   but "is the Communion hymn in, and which verses of it". So it groups by what
+   the row is filed under — the deck may print none of it — and every row says
+   how much of itself the room is being shown. */
+test('the plan column groups the deck by slot and by music', () => {
+    const outline = plan().outline;
+
+    assert.deepEqual(outline.map((slot) => slot.name), ['Kezdőének', 'Áldozás']);
+    assert.deepEqual(outline[0].musics.map((music) => music.name), ['Veni Creator']);
+
+    const sung = outline[0].musics[0].rows;
+
+    assert.deepEqual(sung.map((row) => row.variation), ['I. tónus', 'II. tónus']);
+    assert.deepEqual(sung.map((row) => `${row.shownCount}/${row.slideCount}`), ['2/2', '0/1']);
+});
+
+/* A slot that comes round twice is two bands rather than one gathered from
+   both ends of the deck: the deck's order is the service's order, and that is
+   what the person reading the column is looking at. */
+test('the plan column keeps the service’s own order', () => {
+    const deck = plan();
+
+    deck.entries = [
+        { id: 7, slotName: 'Kezdőének', label: 'Veni Creator' },
+        { id: 9, slotName: 'Áldozás', label: 'Ave verum' },
+        { id: 8, slotName: 'Kezdőének', label: 'Veni Creator' },
+    ];
+
+    assert.deepEqual(deck.outline.map((slot) => slot.name), ['Kezdőének', 'Áldozás', 'Kezdőének']);
+});
+
+/* Taking a verse out in the column opposite is a number changing here, which is
+   the whole of what the two columns have to say to each other. */
+test('the plan column counts what today’s service leaves out', () => {
+    const deck = plan();
+
+    assert.equal(deck.outline[1].musics[0].rows[0].shownCount, 1);
+
+    deck.toggleReveal(9, 0);
+
+    assert.equal(deck.outline[1].musics[0].rows[0].shownCount, 0);
+});

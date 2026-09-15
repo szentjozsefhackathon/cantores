@@ -30,6 +30,7 @@ class ScreenState
      *     title: string|null,
      *     stateUrl: string|null,
      *     payloadUrl: string|null,
+     *     editUrl: string|null,
      *     state: array<string, mixed>|null,
      * }
      */
@@ -44,6 +45,7 @@ class ScreenState
                 'title' => null,
                 'stateUrl' => null,
                 'payloadUrl' => null,
+                'editUrl' => null,
                 'state' => null,
             ];
         }
@@ -54,6 +56,10 @@ class ScreenState
             'title' => $presentation->projection->title,
             'stateUrl' => route('presentations.state', ['presentation' => $presentation->id]),
             'payloadUrl' => route('presentations.payload', ['presentation' => $presentation->id]),
+            // Where the deck is changed for good rather than for today. The
+            // remote's own pane offers it, and the deck on a screen is swapped
+            // without the page reloading, so it travels with the other two.
+            'editUrl' => route('projections.edit', ['projection' => $presentation->projection_id]),
             'state' => $this->presentations->answer($presentation),
         ];
     }

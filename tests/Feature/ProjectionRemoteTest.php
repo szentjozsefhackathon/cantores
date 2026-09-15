@@ -373,8 +373,65 @@ it('locks the thumb controls against a second press and lights them while they a
 
     $remote = Livewire::test(ProjectionRemote::class, ['screen' => $screen]);
 
+    // Matched rather than compared, so that moving the three bands about the
+    // page — which the two-pane desktop layout does — cannot fail a test about
+    // what the controls are wired to.
     foreach (['previous', 'next', 'blank'] as $control) {
-        $remote->assertSeeHtml("pressed === '{$control}'")
-            ->assertSeeHtml("pressed === '{$control}'\n                ? 'border-blue-500 bg-blue-600");
+        expect($remote->html())->toMatch("/pressed === '{$control}'\s*\?\s*'border-blue-500 bg-blue-600/");
     }
+});
+
+/*
+ * The other window of the desktop arrangement: the deck on the projector, the
+ * remote beside it. A laptop has room for three columns — the deck read as the
+ * service it came from down the left, the service itself in the middle with the
+ * next slide full size under the controls, and every slide of the deck down the
+ * right — which a phone with one thumb free has not.
+ */
+it('gives the laptop the plan, the service and the deck side by side', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $screen = screenShowing($user, $projection);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionRemote::class, ['screen' => $screen])
+        ->assertSeeHtml('x-for="slot in outline"')
+        ->assertSeeHtml('x-ref="nextBox"')
+        ->assertSeeHtml('x-ref="deck"');
+});
+
+/*
+ * And the person reading ahead in the deck is the person who may want the deck
+ * itself changed, so the editor is one link away rather than a search away — a
+ * real link, opened in a tab of its own, because a button bound to an address
+ * is a button that goes nowhere.
+ */
+it('offers a way into the deck’s own editor', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $screen = screenShowing($user, $projection);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionRemote::class, ['screen' => $screen])
+        ->assertSeeHtml('<a href="'.route('projections.edit', ['projection' => $projection->id]).'"')
+        // And the same address in the JSON payload, where a slash is escaped,
+        // so a deck swapped under this window rebinds the link rather than
+        // leaving it pointing at the deck that has gone.
+        ->assertSeeHtml('projections\\/'.$projection->id.'\\/edit');
+});
+
+/*
+ * And on a screen showing nothing there is no deck to edit, so the button has
+ * no address to offer and says nothing rather than guessing at one.
+ */
+it('offers no editor for a screen showing nothing', function () {
+    $user = User::factory()->create();
+    $screen = Screen::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionRemote::class, ['screen' => $screen])
+        ->assertSeeHtml('&quot;editUrl&quot;:null');
 });

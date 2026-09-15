@@ -1,5 +1,5 @@
 import { onAlpineInit } from './alpine-init.js';
-import { isExcluded, renderDeck } from './projection-deck.js';
+import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
 import { POLL_MS, addressAt, indexOfAddress, isTypingTarget, screenClient, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
@@ -16,11 +16,18 @@ import { POLL_MS, addressAt, indexOfAddress, isTypingTarget, screenClient, shown
  * occasionally far worse on a bad cell, and the wall may lag a beat, but a
  * remote must never feel like it is thinking.
  *
- * The page is three bands that never move: the slide the room is reading across
- * the top half, a scrollable strip of what is coming under it, and the two
- * controls pressed a hundred times a service across the bottom quarter. Nothing
- * about a service is worth a thumb hunting for the Next button, so nothing here
- * scrolls except the strip and the plan behind the swipe.
+ * On a phone it is three bands that never move: the slide the room is reading
+ * across the top half, a scrollable strip of what is coming under it, and the
+ * two controls pressed a hundred times a service across the bottom quarter.
+ * Nothing about a service is worth a thumb hunting for the Next button, so
+ * nothing here scrolls except the strip and the plan behind the swipe.
+ *
+ * On a laptop it is three columns: the deck read as the service it came from
+ * down the left, the service itself in the middle — what the room is reading,
+ * the controls, and the next slide the same size beneath them — and every slide
+ * of the deck down the right, each with the control that takes one out of today
+ * or puts it back. The strip is the phone's alone up there; two scrollable
+ * sheets of the same pictures are enough.
  *
  * Engraving on a phone is the one performance risk in this design. If it proves
  * too slow, the fallback is to label the deck and engrave only the current slide
@@ -51,6 +58,17 @@ const STRIP_BEHIND = 2;
 /** How near the end of the window the service may get before it is re-cut. */
 const STRIP_MARGIN = 4;
 
+/**
+ * The width at which the remote stops being a phone.
+ *
+ * Tailwind's `lg`, and the same breakpoint the markup switches on: below it the
+ * page is three bands under one thumb, above it the two panes of a laptop
+ * standing beside the projector — the whole deck down the left, the service down
+ * the right. One number, read by both halves, so the pictures the browser builds
+ * cannot disagree with the layout Tailwind put them in.
+ */
+const WIDE_QUERY = '(min-width: 1024px)';
+
 /** A swipe, as opposed to a tap that wandered or a scroll of the strip. */
 const SWIPE_DISTANCE = 60;
 const SWIPE_DRIFT = 50;
@@ -76,7 +94,7 @@ onAlpineInit(() => {
         entries: config.entries ?? [],
         excluded: config.excluded ?? {},
 
-        /** The verses brought back for this service alone, keyed by row. */
+        /** Where today disagrees with the deck, keyed by row. */
         reveals: {},
 
         /** Every slide as engraved, and the subset the room is being shown. */
@@ -92,11 +110,31 @@ onAlpineInit(() => {
         /** The plan, behind a swipe: read twice a service, in the way the rest of it. */
         listOpen: false,
 
+        /**
+         * Whether this is a laptop beside the projector rather than a phone.
+         *
+         * Watched rather than measured once: a window dragged onto the other
+         * display crosses the breakpoint without reloading, and the two sheets
+         * of pictures the browser builds by hand have to be cut the other way
+         * when it does.
+         */
+        wide: false,
+
+        /** Where the deck itself is edited, for the pane that offers it. */
+        editUrl: config.editUrl ?? null,
+
+        skipText: config.skipText ?? '',
+        unskipText: config.unskipText ?? '',
+        skippedText: config.skippedText ?? '',
+
         fullscreen: false,
 
         _stripFrom: 0,
         _stripTo: -1,
         _thumbs: [],
+        _deckItems: [],
+        _wide: null,
+        _onWide: null,
         _touch: null,
         _askedFullscreen: false,
 
@@ -164,6 +202,7 @@ onAlpineInit(() => {
             this._bodyOverflow = document.body.style.overflow;
             document.body.style.overflow = 'hidden';
             this.syncFullscreen();
+            this.watchWidth();
 
             const listen = () => {
                 this.pull();
@@ -182,7 +221,30 @@ onAlpineInit(() => {
         destroy() {
             clearInterval(this._pollTimer);
             clearTimeout(this._pressTimer);
+            this._wide?.removeEventListener?.('change', this._onWide);
             document.body.style.overflow = this._bodyOverflow ?? '';
+        },
+
+        /**
+         * Which of the two layouts this window is in, now and whenever it
+         * changes.
+         *
+         * A change re-cuts what the browser builds by hand: the deck pane and
+         * the next slide are either worth building or are not worth cloning
+         * engraved slides into, and nothing below the breakpoint can see them.
+         */
+        watchWidth() {
+            this._wide = window.matchMedia?.(WIDE_QUERY) ?? null;
+            this.wide = this._wide?.matches === true;
+
+            this._onWide = () => {
+                this.wide = this._wide.matches;
+                this.buildDeck();
+                this.buildStrip();
+                this.show();
+            };
+
+            this._wide?.addEventListener?.('change', this._onWide);
         },
 
         async draw() {
@@ -205,6 +267,7 @@ onAlpineInit(() => {
             this.slides = this.drawn.filter((slide) => !isExcluded(slide, shown));
             this.total = this.slides.length;
             this.index = indexOfAddress(this.slides, this.entries, address);
+            this.buildDeck();
             this.buildStrip();
             this.show();
         },
@@ -224,7 +287,11 @@ onAlpineInit(() => {
             };
 
             draw(this.$refs.currentBox, this.slides[this.index]);
+            // The next slide full size is the laptop's; the phone has the
+            // strip, and a clone nobody can see is a clone not worth making.
+            draw(this.$refs.nextBox, this.wide ? this.slides[this.index + 1] : null);
             this.syncStrip();
+            this.highlightDeck();
         },
 
         /*
@@ -262,6 +329,7 @@ onAlpineInit(() => {
 
             strip.replaceChildren(...thumbs);
             strip.scrollLeft = 0;
+            strip.scrollTop = 0;
         },
 
         /** One slide of the strip: the picture, its number, and where it goes. */
@@ -313,10 +381,131 @@ onAlpineInit(() => {
 
             if (!found) { return; }
 
-            strip.scrollBy({
-                left: found.button.getBoundingClientRect().left - strip.getBoundingClientRect().left - 8,
-                behavior: 'smooth',
+            // What is *next* is brought to the near edge rather than merely
+            // into view: a thumbnail half off the end is a thumbnail nobody taps.
+            const thumb = found.button.getBoundingClientRect();
+            const box = strip.getBoundingClientRect();
+
+            strip.scrollBy({ left: thumb.left - box.left - 8, behavior: 'smooth' });
+        },
+
+        /*
+         * ---------------------------------------------------------------
+         * The deck itself, down the side of the laptop.
+         * ---------------------------------------------------------------
+         */
+
+        /**
+         * The whole deck as a contact sheet, every slide in it, the ones this
+         * service walks past included.
+         *
+         * The laptop's half of the remote, and the one thing the phone has no
+         * room for: a cantor at a keyboard beside the projector is reading ahead
+         * rather than pressing Next, and what they want in front of them is the
+         * deck as it was arranged — with a control on each slide to take one out
+         * of today's service or put one back.
+         *
+         * Built by hand and only when the window is wide, for the reason the
+         * strip is: a picture here is a second clone of an engraved slide, and a
+         * Sunday deck is sixty of them. It is re-cut when what is *shown*
+         * changes, which is a few times a service — never on a move, where only
+         * the highlight travels.
+         */
+        buildDeck() {
+            const host = this.$refs.deck;
+
+            if (!host) { return; }
+
+            this._deckItems = [];
+
+            if (!this.wide) {
+                host.replaceChildren();
+
+                return;
+            }
+
+            // The number a slide carries is its number in the room, as in the
+            // editor: the ones being walked past do not take one, or the sheet
+            // and the projector would be counting differently.
+            let shown = 0;
+
+            const items = this.drawn.map((slide) => {
+                const hidden = this.isHiddenToday(slide.entryId, slide.index);
+
+                if (!hidden) { shown += 1; }
+
+                return this.deckItem(slide, hidden, shown);
             });
+
+            host.replaceChildren(...items);
+            this.highlightDeck();
+        },
+
+        /** One slide of the sheet: the picture, its number, and the one control. */
+        deckItem(slide, hidden, number) {
+            const figure = document.createElement('figure');
+
+            figure.className = hidden ? 'projection-slide projection-slide-skipped' : 'projection-slide';
+
+            const box = document.createElement('button');
+
+            box.type = 'button';
+            box.className = 'projection-slide-box block w-full cursor-pointer p-0';
+            box.style.aspectRatio = this.aspectRatio;
+            box.appendChild(slide.svg.cloneNode(true));
+            box.addEventListener('click', () => this.goToSlide(slide.entryId, slide.index));
+            figure.appendChild(box);
+
+            const caption = document.createElement('figcaption');
+
+            caption.className = 'projection-slide-number';
+
+            const label = document.createElement('span');
+
+            label.textContent = hidden ? this.skippedText : String(number);
+            caption.appendChild(label);
+            caption.appendChild(this.deckToggle(slide, hidden));
+
+            figure.appendChild(caption);
+
+            this._deckItems.push({ entryId: slide.entryId, index: slide.index, figure });
+
+            return figure;
+        },
+
+        /**
+         * Take a slide out of today's service, or put one back.
+         *
+         * The editor's control, with the editor's icons, doing what the remote
+         * may do rather than what the editor does: this is today's deviation and
+         * not an edit, so the projection is left exactly as its author arranged
+         * it and the deviation travels on the presentation, where the wall reads
+         * it too. Whoever wants the deck itself changed has the button at the top
+         * of this pane.
+         */
+        deckToggle(slide, hidden) {
+            const button = document.createElement('button');
+
+            button.type = 'button';
+            button.className = 'projection-slide-skip';
+            button.title = hidden ? this.unskipText : this.skipText;
+            button.setAttribute('aria-label', button.title);
+            button.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+            button.innerHTML = hidden ? RESTORE_ICON : SKIP_ICON;
+            button.addEventListener('click', () => this.toggleReveal(slide.entryId, slide.index));
+
+            return button;
+        },
+
+        /** The slide the room is on, marked in the sheet beside it. */
+        highlightDeck() {
+            const on = this.slides[this.index];
+
+            for (const item of this._deckItems) {
+                const current = Boolean(on) && on.entryId === item.entryId && on.index === item.index;
+
+                item.figure.classList.toggle('projection-slide-hovered', current);
+            }
         },
 
         /**
@@ -331,21 +520,71 @@ onAlpineInit(() => {
         get rows() {
             const on = this.slides[this.index];
 
-            return this.entries.map((entry) => ({
-                id: entry.id,
-                heading: this.headingOf(entry),
-                slot: (entry.slotName ?? entry.slot ?? '').trim(),
-                reference: (entry.reference ?? '').trim(),
-                current: Boolean(on) && on.entryId === entry.id,
-                slides: this.drawn
+            return this.entries.map((entry) => {
+                const slides = this.drawn
                     .filter((slide) => slide.entryId === entry.id)
                     .map((slide) => ({
                         index: slide.index,
-                        skipped: this.isSkipped(entry.id, slide.index),
-                        revealed: this.isRevealed(entry.id, slide.index),
+                        shown: !this.isHiddenToday(entry.id, slide.index),
+                        deviates: this.isRevealed(entry.id, slide.index),
                         current: Boolean(on) && on.entryId === entry.id && on.index === slide.index,
-                    })),
-            }));
+                    }));
+
+                return {
+                    id: entry.id,
+                    heading: this.headingOf(entry),
+                    slot: (entry.slotName ?? entry.slot ?? '').trim(),
+                    // What the row is filed under rather than what it prints:
+                    // the outline groups by these two, and a deck whose author
+                    // switched every heading off must still group.
+                    music: (entry.label ?? '').trim(),
+                    variation: (entry.variation ?? '').trim(),
+                    reference: (entry.reference ?? '').trim(),
+                    current: Boolean(on) && on.entryId === entry.id,
+                    slideCount: slides.length,
+                    shownCount: slides.filter((slide) => slide.shown).length,
+                    slides,
+                };
+            });
+        },
+
+        /**
+         * The deck read as the service it was made from: slots, the music under
+         * each, and what the deck took from that music.
+         *
+         * The laptop's left pane, and the editor's plan pane with everything
+         * that edits it taken away — because the question it answers during a
+         * service is not "what is on slide 41" but "is the Communion hymn in,
+         * and which verses of it". Grouped by the row's own filing rather than
+         * by what it prints: a deck whose author switched every heading off is
+         * silent on the screen and must still be legible here.
+         *
+         * Consecutive rather than gathered: the deck's order *is* the service's
+         * order, so a slot that comes round twice is two bands, which is what
+         * the person reading it is looking at.
+         */
+        get outline() {
+            const groups = [];
+
+            for (const row of this.rows) {
+                let slot = groups[groups.length - 1];
+
+                if (slot === undefined || slot.name !== row.slot) {
+                    slot = { key: `slot-${groups.length}`, name: row.slot, musics: [] };
+                    groups.push(slot);
+                }
+
+                let music = slot.musics[slot.musics.length - 1];
+
+                if (music === undefined || music.name !== row.music) {
+                    music = { key: `${slot.key}-music-${slot.musics.length}`, name: row.music, rows: [] };
+                    slot.musics.push(music);
+                }
+
+                music.rows.push(row);
+            }
+
+            return groups;
         },
 
         /**
@@ -629,7 +868,8 @@ onAlpineInit(() => {
          */
 
         /**
-         * Whether a slide is one the deck leaves out and today has brought back.
+         * Whether a slide is one today disagrees with the deck about — brought
+         * back, or taken out.
          */
         isRevealed(entryId, slideIndex) {
             return (this.reveals[entryId] ?? this.reveals[String(entryId)] ?? []).includes(Number(slideIndex));
@@ -641,12 +881,24 @@ onAlpineInit(() => {
         },
 
         /**
-         * Bring a verse back for this service, or put it away again.
+         * And whether the room will actually be shown it today — the deck's
+         * arrangement, disagreed with where today disagrees.
+         */
+        isHiddenToday(entryId, slideIndex) {
+            return this.isSkipped(entryId, slideIndex) !== this.isRevealed(entryId, slideIndex);
+        },
+
+        /**
+         * Disagree with the deck about one slide for this service, or stop
+         * disagreeing.
          *
-         * A reveal costs nothing at render time — every slide was engraved at
-         * load, the walked-past ones included — which is the feature that makes
-         * this a remote rather than a clicker. And it is today's deviation, not
-         * an edit: the projection is left as its author arranged it.
+         * Symmetric: the verse the deck leaves out comes back, and the verse it
+         * shows is taken out, because the same Sunday wants both — the long
+         * procession and the short one. Either way it costs nothing at render
+         * time, since every slide was engraved at load, the walked-past ones
+         * included, which is the feature that makes this a remote rather than a
+         * clicker. And it is today's deviation, not an edit: the projection is
+         * left as its author arranged it.
          */
         toggleReveal(entryId, slideIndex) {
             const id = Number(entryId);
@@ -668,9 +920,12 @@ onAlpineInit(() => {
 
             this.reveals = reveals;
 
-            const address = current.includes(index)
-                ? addressAt(this.slides, this.index)
-                : { entryId: id, slideIndex: index };
+            // A slide brought into today's service is where the service should
+            // now be looking; one taken out of it is not, and repaint will hand
+            // the service on to the nearest slide that is still shown.
+            const address = next.includes(index) === this.isSkipped(id, index)
+                ? { entryId: id, slideIndex: index }
+                : addressAt(this.slides, this.index);
 
             this.repaint(address);
             this.push();
@@ -754,6 +1009,7 @@ onAlpineInit(() => {
          */
         async followDeck(answer) {
             this.presentationId = answer.presentationId ?? null;
+            this.editUrl = answer.editUrl ?? null;
             this.appliedVersion = 0;
             this.reveals = {};
             this.blanked = false;

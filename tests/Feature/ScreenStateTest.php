@@ -114,7 +114,11 @@ it('carries the presentation state inside the screen answer', function () {
         ->assertJsonPath('presentationId', $presentation->id)
         ->assertJsonPath('title', $projection->title)
         ->assertJsonPath('state.version', $presentation->version)
-        ->assertJsonPath('stateUrl', route('presentations.state', ['presentation' => $presentation->id]));
+        ->assertJsonPath('stateUrl', route('presentations.state', ['presentation' => $presentation->id]))
+        // The remote's deck pane offers the editor, and the deck on a screen is
+        // swapped without that page reloading, so the address travels with the
+        // other two rather than being baked in at mount.
+        ->assertJsonPath('editUrl', route('projections.edit', ['projection' => $projection->id]));
 });
 
 it('reads as showing nothing when the presentation on it has ended', function () {

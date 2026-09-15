@@ -104,6 +104,23 @@ export function isExcluded(slide, excluded) {
     return Array.isArray(list) && list.includes(slide.index);
 }
 
+/**
+ * A circle with a stroke through it, and the same circle with a cross in it.
+ *
+ * Drawn from two primitives rather than pulled from the icon set, because both
+ * sheets that carry them — the editor's and the remote's deck pane — are built
+ * in JavaScript and have no Blade behind them, and a path copied out of an icon
+ * library by hand is a path nobody can check.
+ */
+export const SKIP_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+    + '<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+    + '<line x1="3.9" y1="12.1" x2="12.1" y2="3.9" stroke="currentColor" stroke-width="1.5"/></svg>';
+
+export const RESTORE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+    + '<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+    + '<line x1="8" y1="4.6" x2="8" y2="11.4" stroke="currentColor" stroke-width="1.5"/>'
+    + '<line x1="4.6" y1="8" x2="11.4" y2="8" stroke="currentColor" stroke-width="1.5"/></svg>';
+
 /** How many slides each row came to, keyed by row — what the editor labels with. */
 export function slideCounts(slides) {
     const counts = {};
