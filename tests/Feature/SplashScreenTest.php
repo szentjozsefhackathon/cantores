@@ -46,7 +46,7 @@ it('opens a presenter window on the card rather than on the first slide', functi
 
     $presenter = Livewire::test(ProjectionPresenter::class, ['projection' => $projection]);
 
-    expect($presenter->get('presentation')->splash)->toBeTrue();
+    expect($presenter->get('presentation')->splash)->toBe(Presentation::SPLASH_CARD);
 });
 
 /*
@@ -54,55 +54,70 @@ it('opens a presenter window on the card rather than on the first slide', functi
  * about the browser: the first press comes as often from the phone at the organ
  * as from the laptop, and the other device has to hear about it.
  */
-it('carries the card to the other device and lets either of them end it', function () {
+it('walks the opening card to dark to deck, leaving the service on the first slide', function () {
     $user = User::factory()->create();
     [$projection, $entry] = splashDeck($user);
 
     $presentation = Presentation::factory()->create([
         'projection_id' => $projection->id,
         'user_id' => $user->id,
-        'splash' => true,
+        'splash' => Presentation::SPLASH_CARD,
     ]);
 
     actingAs($user);
 
     getJson(route('presentations.state', $presentation))
         ->assertOk()
-        ->assertJson(['splash' => true]);
+        ->assertJson(['splash' => Presentation::SPLASH_CARD]);
 
-    // The phone's first press: the card goes, and the service stays on the first
-    // slide rather than moving past it.
+    // The phone's first press blacks the wall out and moves the deck nowhere.
     postJson(route('presentations.state.store', $presentation), [
         'entryId' => $entry->id,
         'slideIndex' => 0,
-        'splash' => false,
-    ])->assertOk()->assertJson(['splash' => false, 'entryId' => $entry->id, 'slideIndex' => 0]);
+        'splash' => Presentation::SPLASH_DARK,
+    ])->assertOk()->assertJson([
+        'splash' => Presentation::SPLASH_DARK,
+        'entryId' => $entry->id,
+        'slideIndex' => 0,
+    ]);
 
-    getJson(route('presentations.state', $presentation))
-        ->assertOk()
-        ->assertJson(['splash' => false]);
+    // And the second starts the deck, on the slide the first press did not use
+    // up.
+    postJson(route('presentations.state.store', $presentation), [
+        'entryId' => $entry->id,
+        'slideIndex' => 0,
+        'splash' => Presentation::SPLASH_OFF,
+    ])->assertOk()->assertJson([
+        'splash' => Presentation::SPLASH_OFF,
+        'entryId' => $entry->id,
+        'slideIndex' => 0,
+    ]);
 });
 
 /*
  * The card ending is a change like any other, and the device that did not do it
  * finds out the way it finds out about everything else.
  */
-it('moves the version when the card ends', function () {
+it('moves the version on every step of the opening', function () {
     $user = User::factory()->create();
     [$projection] = splashDeck($user);
 
     $presentation = Presentation::factory()->create([
         'projection_id' => $projection->id,
         'user_id' => $user->id,
-        'splash' => true,
+        'splash' => Presentation::SPLASH_CARD,
         'version' => 4,
     ]);
 
     actingAs($user);
 
-    postJson(route('presentations.state.store', $presentation), ['splash' => false])
+    postJson(route('presentations.state.store', $presentation), ['splash' => Presentation::SPLASH_DARK])
         ->assertOk()
-        ->assertJson(['version' => 5, 'splash' => false]);
+        ->assertJson(['version' => 5, 'splash' => Presentation::SPLASH_DARK]);
+
+    postJson(route('presentations.state.store', $presentation), ['splash' => Presentation::SPLASH_OFF])
+        ->assertOk()
+        ->assertJson(['version' => 6, 'splash' => Presentation::SPLASH_OFF]);
 });
 
 /*
@@ -111,30 +126,36 @@ it('moves the version when the card ends', function () {
  * after it — which, without this, would put the card back over the hymn the room
  * had just been given.
  */
-it('never takes the card back once it has been let go of', function () {
+it('never walks the opening backwards', function () {
     $user = User::factory()->create();
     [$projection, $entry] = splashDeck($user);
 
     $presentation = Presentation::factory()->create([
         'projection_id' => $projection->id,
         'user_id' => $user->id,
-        'splash' => true,
+        'splash' => Presentation::SPLASH_CARD,
     ]);
 
     actingAs($user);
 
-    postJson(route('presentations.state.store', $presentation), ['splash' => false])->assertOk();
+    postJson(route('presentations.state.store', $presentation), ['splash' => Presentation::SPLASH_OFF])->assertOk();
 
+    // The wall's heartbeat, sent a moment before the phone's press and landing a
+    // moment after it.
     postJson(route('presentations.state.store', $presentation), [
         'entryId' => $entry->id,
-        'splash' => true,
-    ])->assertOk()->assertJson(['splash' => false]);
+        'splash' => Presentation::SPLASH_CARD,
+    ])->assertOk()->assertJson(['splash' => Presentation::SPLASH_OFF]);
+
+    postJson(route('presentations.state.store', $presentation), ['splash' => Presentation::SPLASH_DARK])
+        ->assertOk()
+        ->assertJson(['splash' => Presentation::SPLASH_OFF]);
 });
 
 /*
- * A heartbeat that says nothing about the card is a heartbeat that says nothing
- * about the card. The wall reports its address ten seconds after the page
- * loaded, long before anyone has pressed anything.
+ * A heartbeat that says nothing about the opening says nothing about the
+ * opening. The wall reports its address ten seconds after the page loaded, long
+ * before anyone has pressed anything.
  */
 it('leaves the card up for a heartbeat that only reports an address', function () {
     $user = User::factory()->create();
@@ -143,7 +164,7 @@ it('leaves the card up for a heartbeat that only reports an address', function (
     $presentation = Presentation::factory()->create([
         'projection_id' => $projection->id,
         'user_id' => $user->id,
-        'splash' => true,
+        'splash' => Presentation::SPLASH_CARD,
     ]);
 
     actingAs($user);
@@ -152,7 +173,7 @@ it('leaves the card up for a heartbeat that only reports an address', function (
         'entryId' => $entry->id,
         'slideIndex' => 0,
         'blanked' => false,
-    ])->assertOk()->assertJson(['splash' => true]);
+    ])->assertOk()->assertJson(['splash' => Presentation::SPLASH_CARD]);
 });
 
 /*
@@ -166,14 +187,14 @@ it('does not put the card back when a second window joins a running service', fu
     $presentation = Presentation::factory()->create([
         'projection_id' => $projection->id,
         'user_id' => $user->id,
-        'splash' => false,
+        'splash' => Presentation::SPLASH_OFF,
     ]);
 
     actingAs($user);
 
     Livewire::test(ProjectionPresenter::class, ['projection' => $projection]);
 
-    expect($presentation->fresh()->splash)->toBeFalse();
+    expect($presentation->fresh()->splash)->toBe(Presentation::SPLASH_OFF);
 });
 
 /*
@@ -181,7 +202,7 @@ it('does not put the card back when a second window joins a running service', fu
  * puts on a screen that is already facing the room is not that: the wall is
  * where it belongs, and an extra press mid-service buys nobody anything.
  */
-it('shows no card for a deck pointed at a screen from the phone', function () {
+it('shows no opening for a deck pointed at a screen from the phone', function () {
     $user = User::factory()->create();
     [$projection] = splashDeck($user);
 
@@ -194,5 +215,5 @@ it('shows no card for a deck pointed at a screen from the phone', function () {
 
     postJson(route('screens.state.store', $screen), ['projectionId' => $projection->id])
         ->assertOk()
-        ->assertJson(['state' => ['splash' => false]]);
+        ->assertJson(['state' => ['splash' => Presentation::SPLASH_OFF]]);
 });

@@ -228,24 +228,33 @@ test('a fit that says nothing leaves the picture where the deck was fitted', asy
 });
 
 /*
- * The title card. The window is opened on the laptop and dragged onto the
- * beamer, and what the congregation reads while that happens must not be the
- * first slide of a hymn nobody is singing yet.
+ * The opening of a service, which has three pictures. The card is up while the
+ * window is dragged onto the beamer and the projector is lined up against it;
+ * then the room fills and the wall should be showing nothing at all; then the
+ * first hymn is announced. Each press walks it on one, and none of them moves
+ * the deck — which is what makes the last of them land on the first slide.
  */
 function carded(total = 3) {
     const deck = presenter(total);
 
-    deck.splash = true;
+    deck.splash = 'card';
 
     return deck;
 }
 
-test('the first Next ends the card and lands on the first slide, not the second', () => {
+test('the opening walks card, dark, first slide — one press each', () => {
     const deck = carded();
 
     deck.next();
 
-    assert.equal(deck.splash, false, 'the card outlived the press that was meant to end it');
+    assert.equal(deck.splash, 'dark', 'the card did not give way to the dark');
+    assert.equal(deck.dark, true, 'the wall was not black between the card and the deck');
+    assert.equal(deck.index, 0);
+
+    deck.next();
+
+    assert.equal(deck.splash, 'off');
+    assert.equal(deck.dark, false);
     assert.equal(deck.index, 0, 'the room was shown the second slide without ever seeing the first');
 
     deck.next();
@@ -253,26 +262,34 @@ test('the first Next ends the card and lands on the first slide, not the second'
     assert.equal(deck.index, 1);
 });
 
-/* There is nothing behind the beginning, so going back out of the card is the
-   only honest thing Previous can do there. */
-test('going back out of the card leaves it without moving the deck', () => {
+/* There is nothing behind the beginning of a service, and an opening that could
+   be rewound is one a stale heartbeat could rewind for you, over a hymn. */
+test('going back during the opening walks it forwards too', () => {
     const deck = carded();
 
     deck.previous();
+    assert.equal(deck.splash, 'dark');
 
-    assert.equal(deck.splash, false);
+    deck.previous();
+    assert.equal(deck.splash, 'off');
     assert.equal(deck.index, 0);
 });
 
-/* Blanking during the card is the cantor saying "not yet, and not this either".
-   The card is over and the wall is black; B again brings up the first slide. */
-test('blanking during the card ends it and shows black', () => {
+/* Over the card, B asks for black — which is exactly what comes next. Over the
+   dark it hands that black to the cantor, and the next B reveals slide one. */
+test('B walks the opening and then becomes an ordinary blank', () => {
     const deck = carded();
 
     deck.toggleBlank();
 
-    assert.equal(deck.splash, false);
-    assert.equal(deck.blanked, true);
+    assert.equal(deck.splash, 'dark');
+    assert.equal(deck.blanked, false, 'the dark of the opening was mistaken for the cantor blanking the wall');
+    assert.equal(deck.dark, true);
+
+    deck.toggleBlank();
+
+    assert.equal(deck.splash, 'off');
+    assert.equal(deck.blanked, true, 'the wall lit up in the middle of handing the black over');
     assert.equal(deck.index, 0);
 
     deck.toggleBlank();
@@ -281,12 +298,12 @@ test('blanking during the card ends it and shows black', () => {
     assert.equal(deck.index, 0, 'coming back from black skipped the first slide');
 });
 
-test('a jump straight to a slide ends the card and goes there', () => {
+test('a jump straight to a slide reaches past the whole opening', () => {
     const deck = carded(4);
 
     deck.go(2);
 
-    assert.equal(deck.splash, false);
+    assert.equal(deck.splash, 'off');
     assert.equal(deck.index, 2);
 });
 
@@ -301,6 +318,23 @@ test('the card keeps its bar even in full screen', () => {
 
     assert.equal(deck.showingSplash, true);
     assert.equal(deck.controlsHidden, false, 'the wall sat in full screen with no way out of it');
+});
+
+/* The person at the keyboard is told what the next press does. The room is not:
+   in full screen the bar is gone, and a line of instructions thrown across a
+   church is the one thing this page exists to prevent. */
+test('each picture of the opening says what the next press will do', () => {
+    const deck = registered.projectionPresenter({ cardHint: 'card hint', darkHint: 'dark hint' });
+
+    deck.presentationId = 1;
+    deck.splash = 'card';
+    assert.equal(deck.openingHint, 'card hint');
+
+    deck.splash = 'dark';
+    assert.equal(deck.openingHint, 'dark hint');
+
+    deck.splash = 'off';
+    assert.equal(deck.openingHint, '');
 });
 
 /* A screen still engraving a deck has nothing to say, and a card over that would
@@ -318,9 +352,9 @@ test('the card is not drawn over a deck that is still being prepared', () => {
     assert.equal(deck.showingSplash, false);
 });
 
-/* The wall reports where it is; what it must never report is a card it has
-   already let go of, since that is the state the phone reads back. */
-test('the wall reports the card it is holding, and the one it has ended', () => {
+/* The wall reports where the opening is; what it must never report is a picture
+   it has already walked past, since that is the state the phone reads back. */
+test('the wall reports the picture of the opening it is holding', () => {
     const deck = carded();
     const written = [];
 
@@ -328,18 +362,22 @@ test('the wall reports the card it is holding, and the one it has ended', () => 
 
     deck.report();
     deck.next();
+    deck.next();
 
-    assert.deepEqual(written.map((state) => state.splash), [true, false]);
+    assert.deepEqual(written.map((state) => state.splash), ['card', 'dark', 'off']);
 });
 
-/* Where the card comes from at all: the server, because the press that ends it
-   may have been a thumb on a phone across the building. */
-test('the wall takes the card up and puts it down as the server says', () => {
+/* Where the opening comes from at all: the server, because the press that walked
+   it may have been a thumb on a phone across the building. */
+test('the wall walks the opening as the server says', () => {
     const deck = presenter(3);
 
-    deck.adopt({ version: 2, entryId: 1, slideIndex: 0, splash: true, blanked: false, reveals: {} });
-    assert.equal(deck.splash, true);
+    deck.adopt({ version: 2, entryId: 1, slideIndex: 0, splash: 'card', blanked: false, reveals: {} });
+    assert.equal(deck.splash, 'card');
 
-    deck.adopt({ version: 3, entryId: 1, slideIndex: 0, splash: false, blanked: false, reveals: {} });
-    assert.equal(deck.splash, false);
+    deck.adopt({ version: 3, entryId: 1, slideIndex: 0, splash: 'dark', blanked: false, reveals: {} });
+    assert.equal(deck.splash, 'dark');
+
+    deck.adopt({ version: 4, entryId: 1, slideIndex: 0, splash: 'off', blanked: false, reveals: {} });
+    assert.equal(deck.splash, 'off');
 });

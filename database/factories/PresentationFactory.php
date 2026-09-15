@@ -26,6 +26,7 @@ class PresentationFactory extends Factory
             'slide_index' => 0,
             'entry_sequence' => null,
             'blanked' => false,
+            'splash' => Presentation::SPLASH_OFF,
             'version' => 1,
             'drawn_revision' => null,
             'reveals' => null,

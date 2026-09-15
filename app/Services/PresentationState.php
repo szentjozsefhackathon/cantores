@@ -40,7 +40,7 @@ class PresentationState
      *     entryId: int|null,
      *     slideIndex: int,
      *     blanked: bool,
-     *     splash: bool,
+     *     splash: string,
      *     reveals: array<int, list<int>>,
      *     revision: string,
      *     drawnRevision: string|null,
@@ -58,8 +58,9 @@ class PresentationState
             'entryId' => $address['entryId'],
             'slideIndex' => $address['slideIndex'],
             'blanked' => $presentation->blanked,
-            // Whether the room is still looking at the title card. A fact both
-            // ends need, because either of them may be the one that ends it.
+            // How far into its opening the service is — the title card, the
+            // dark after it, or neither. A fact both ends need, because either
+            // of them may be the one that walks it on.
             'splash' => $presentation->splash,
             'reveals' => $presentation->revealsIn($entries),
             'revision' => $projection->revision(),

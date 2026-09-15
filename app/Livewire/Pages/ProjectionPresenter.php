@@ -138,7 +138,7 @@ class ProjectionPresenter extends Component
             $projection,
             Auth::user(),
             Session::get(DevicePairing::DEVICE_SESSION_KEY),
-            splash: true,
+            splash: Presentation::SPLASH_CARD,
         );
 
         // Opening a deck by hand is also a way of saying which deck this screen

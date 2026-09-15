@@ -55,9 +55,15 @@ resources/js/projection-remote.js
         // centring it and jumping a second later.
         'fit' => $screen->fit(),
         'presentationId' => $presentation?->id,
-        // Whether the wall is still holding its title card, so that the preview
-        // under the thumb is the same picture the room is looking at.
-        'splash' => $presentation?->splash ?? false,
+        // How far into its opening the service is, so that the preview under the
+        // thumb is the same picture the room is looking at — which is the whole
+        // point of the card, since the beamer is lined up against it by the
+        // person holding this.
+        'splash' => $presentation?->splash ?? \App\Models\Presentation::SPLASH_OFF,
+        // And what the next press will do about it. With two states there was no
+        // way to tell how a cantor was meant to get out of the card at all.
+        'cardHint' => __('Title card on the screen. Next blacks it out.'),
+        'darkHint' => __('The screen is black. Next starts the first slide.'),
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
         'editUrl' => $projection === null ? null : route('projections.edit', ['projection' => $projection->id]),
@@ -206,10 +212,26 @@ resources/js/projection-remote.js
                      projector up is watched twice over: once across the room
                      and once under the thumb. --}}
                 x-bind:style="`aspect-ratio: ${aspectRatio}; transform: ${fitTransform}; transform-origin: center;`"
-                x-bind:class="blanked ? 'opacity-25' : ''"
-                x-show="!waiting"
+                x-bind:class="blanked || openingDark ? 'opacity-25' : ''"
+                x-show="!waiting && !showingSplash"
                 wire:ignore
             ></div>
+
+            {{-- The title card, as the room is reading it.
+
+                 Drawn here and not merely announced, because the card is what
+                 the projector is lined up against and the person doing the
+                 lining up is holding this: the fit panel moves both pictures at
+                 once, and it is guesswork unless they are the same picture. --}}
+            <div
+                class="flex w-full max-h-full max-w-full flex-col items-center justify-center gap-2 overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-4 text-center lg:h-full lg:w-auto"
+                x-bind:style="`aspect-ratio: ${aspectRatio}; transform: ${fitTransform}; transform-origin: center;`"
+                x-show="showingSplash"
+                x-cloak
+            >
+                <div class="text-2xl font-semibold leading-none tracking-tight text-white/90">Cantores.hu</div>
+                <div class="max-w-[80%] truncate text-xs text-white/40" x-text="title"></div>
+            </div>
 
             {{-- The thin bar over the letterbox. Everything that is not driving the
                  service lives here, small and out of the thumb's way. --}}
@@ -258,6 +280,11 @@ resources/js/projection-remote.js
                 <div class="rounded bg-amber-500/90 px-2 py-0.5 text-amber-950" x-show="wallBehind">
                     {{ __('The screen is still catching up with the last change.') }}
                 </div>
+                {{-- What the room is looking at during the opening, and what the
+                     next press will do about it. Louder than the rest of this
+                     strip on purpose: it is the one state of the remote nobody
+                     can work out from the buttons. --}}
+                <div class="rounded bg-blue-600/90 px-2 py-0.5 font-medium text-white" x-show="openingHint" x-text="openingHint"></div>
                 <div class="rounded bg-black/60 px-2 py-0.5 text-white" x-show="preparing && !waiting">
                     {{ __('The screen is preparing the deck…') }}
                 </div>
@@ -267,7 +294,7 @@ resources/js/projection-remote.js
                 <div class="rounded bg-black/60 px-2 py-0.5 text-white" x-show="busy">
                     {{ __('Drawing the deck…') }}
                 </div>
-                <div class="rounded bg-black/60 px-2 py-0.5 text-white" x-show="!busy && !waiting && total === 0">
+                <div class="rounded bg-black/60 px-2 py-0.5 text-white" x-show="!busy && !waiting && !opening && total === 0">
                     {{ __('This projection has no slides yet.') }}
                 </div>
             </div>
@@ -338,9 +365,10 @@ resources/js/projection-remote.js
                 x-bind:class="pressed === 'next'
                     ? 'border-blue-500 bg-blue-600 text-white ring-4 ring-blue-400/50'
                     : 'border-zinc-900 bg-zinc-900 text-white active:bg-zinc-700 dark:border-white dark:bg-white dark:text-zinc-900 dark:active:bg-zinc-200'"
-                {{-- Not while the card is up: the press that ends it is Next, and
-                     a one-slide deck would otherwise have no way out of it. --}}
-                x-bind:disabled="!splash && index >= total - 1"
+                {{-- Not while the opening is being walked: the press that walks it
+                     is this one, and a one-slide deck would otherwise have no
+                     way out of the card at all. --}}
+                x-bind:disabled="!opening && index >= total - 1"
                 aria-label="{{ __('Next slide') }}"
             >
                 <flux:icon.chevron-right class="size-10 lg:size-5" />

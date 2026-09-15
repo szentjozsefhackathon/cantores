@@ -34,6 +34,13 @@ import { HEARTBEAT_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypin
  * room watching nothing for two seconds.
  */
 
+/**
+ * The three pictures a service opens with. @see Presentation::SPLASH_ORDER
+ */
+const SPLASH_CARD = 'card';
+const SPLASH_DARK = 'dark';
+const SPLASH_OFF = 'off';
+
 /** How long the bar stays up after the last sign of life. */
 const IDLE_MS = 2500;
 
@@ -101,22 +108,23 @@ onAlpineInit(() => {
         preparing: false,
 
         /**
-         * Whether the room is still looking at the title card rather than at the
-         * deck.
+         * How far into its opening the service is: `card`, then `dark`, then
+         * `off`.
          *
-         * The window is opened on the laptop and dragged onto the beamer, and
-         * for those seconds the congregation reads whatever is on it. A card is
-         * the honest picture for that, and it is the only chance anybody gets to
-         * see whether the beamer is lined up before a hymn is riding on it.
+         * Three pictures rather than two, because the beginning of a Mass has
+         * three. The card is up while the window is dragged onto the beamer and
+         * the projector is lined up against it; then the room fills, and what
+         * belongs on the wall is nothing at all, since a title card held for
+         * twenty minutes in front of a seated congregation is an advertisement
+         * and not a welcome; then the first hymn is announced and the deck
+         * begins. Each press walks it on one.
          *
-         * It lives on the presentation and not here, because the press that ends
-         * it comes as often from the phone at the organ as from this keyboard,
-         * and whichever hears it, the wall must land on the *first* slide. Held
-         * here only as this screen's copy of that, reported like everything else
-         * and never taken back: a client may let the card go and may not ask for
-         * it again.
+         * It lives on the presentation and not here, because the press that
+         * walks it comes as often from the phone at the organ as from this
+         * keyboard. Held here only as this screen's copy, reported like
+         * everything else and only ever walked forwards.
          */
-        splash: Boolean(config.splash),
+        splash: config.splash ?? SPLASH_OFF,
 
         /**
          * The deck this screen has actually finished engraving, and the deck the
@@ -200,12 +208,22 @@ onAlpineInit(() => {
          * them would claim a service was about to start when none is.
          */
         get showingSplash() {
-            return this.splash && !this.waiting && !this.preparing;
+            return this.splash === SPLASH_CARD && !this.waiting && !this.preparing;
         },
 
-        /** Whether the room should be looking at black, and for either reason. */
+        /** Whether the service is in the quiet dark between the card and the deck. */
+        get openingDark() {
+            return this.splash === SPLASH_DARK && !this.waiting;
+        },
+
+        /** Whether the opening still has a picture of its own to walk through. */
+        get opening() {
+            return this.splash !== SPLASH_OFF;
+        },
+
+        /** Whether the room should be looking at black, and for any of three reasons. */
         get dark() {
-            return this.blanked || this.preparing;
+            return this.blanked || this.preparing || this.openingDark;
         },
 
         /**
@@ -220,6 +238,20 @@ onAlpineInit(() => {
          */
         get darkFadeMs() {
             return this.dark && !this.preparing ? BLANK_FADE_MS : 0;
+        },
+
+        /**
+         * What the person at this keyboard is told about the opening.
+         *
+         * In the bar and never over the picture: in full screen the bar is gone
+         * and the room is looking at the card or at black, and a line of
+         * instructions projected across a church is the one thing this page
+         * exists to prevent.
+         */
+        get openingHint() {
+            if (this.showingSplash) { return config.cardHint ?? ''; }
+
+            return this.openingDark ? config.darkHint ?? '' : '';
         },
 
         get aspectRatio() {
@@ -338,23 +370,26 @@ onAlpineInit(() => {
         go(index) {
             if (this.total === 0) { return; }
 
-            this.splash = false;
+            // A slide asked for by name is the deck starting, whatever the
+            // opening had left to show: somebody has reached past it.
+            this.splash = SPLASH_OFF;
             this.index = Math.min(Math.max(index, 0), this.total - 1);
             this.show();
             this.report();
         },
 
         /**
-         * The card put away, with the deck left exactly where it stands.
+         * One step of the opening: the card gives way to the dark, and the dark
+         * to the deck.
          *
-         * This is what makes the first Next land on the first slide rather than
-         * the second: the card is not a slide before the deck but a picture over
-         * it, so ending it is a move of nothing at all. The same is true
-         * backwards — Previous at the very beginning has nowhere to go, and
-         * ending the card is the only honest thing it can do.
+         * The deck is not moved by either step. That is what makes the press
+         * which ends the dark land on the *first* slide rather than the second —
+         * the opening is a pair of pictures over the deck and not a pair of
+         * slides before it.
          */
-        leaveSplash() {
-            this.splash = false;
+        walkOpening() {
+            this.splash = this.splash === SPLASH_CARD ? SPLASH_DARK : SPLASH_OFF;
+            this.show();
             this.report();
         },
 
@@ -363,23 +398,41 @@ onAlpineInit(() => {
         // presses B once when it is time for the room to see it. Only B brings
         // the picture back, so nothing can un-blank the wall by accident.
         next() {
-            if (this.showingSplash) { return this.leaveSplash(); }
+            if (this.opening) { return this.walkOpening(); }
 
             this.go(this.index + 1);
         },
 
+        // Backwards out of the opening is forwards too. There is nothing behind
+        // the beginning of a service to go back to, and the alternative — an
+        // opening that can be rewound — is an opening a stale heartbeat could
+        // rewind for you, over a hymn.
         previous() {
-            if (this.showingSplash) { return this.leaveSplash(); }
+            if (this.opening) { return this.walkOpening(); }
 
             this.go(this.index - 1);
         },
 
-        // Blanking during the card is the cantor saying "not yet, and not this
-        // either": the card is over and the wall is black, which is where a
-        // sermon before the first hymn belongs. Pressing B again brings up the
-        // first slide, as it would have anywhere else in the deck.
+        /**
+         * B during the opening.
+         *
+         * Over the card it is the same press as Next, because what it asks for —
+         * black — is exactly what comes next. Over the dark it hands that black
+         * to the cantor: the wall does not change, but the opening is over and
+         * the next B reveals the first slide, as B does everywhere else.
+         */
         toggleBlank() {
-            this.splash = false;
+            if (this.showingSplash) { return this.walkOpening(); }
+
+            if (this.openingDark) {
+                this.splash = SPLASH_OFF;
+                this.blanked = true;
+                this.show();
+                this.report();
+
+                return;
+            }
+
             this.blanked = !this.blanked;
             this.report();
         },
@@ -512,7 +565,7 @@ onAlpineInit(() => {
             // Taken up before the engraving rather than after it, because
             // engraving ends in a report: a card read off the answer a moment
             // later would be reported away before this screen had drawn it.
-            this.splash = Boolean(answer.state?.splash);
+            this.splash = answer.state?.splash ?? SPLASH_OFF;
             this.drawnRevision = '';
             this.serverRevision = '';
 
@@ -547,7 +600,7 @@ onAlpineInit(() => {
             this.appliedVersion = state.version;
             this.reveals = state.reveals ?? {};
             this.blanked = Boolean(state.blanked);
-            this.splash = Boolean(state.splash);
+            this.splash = state.splash ?? SPLASH_OFF;
 
             this.repaint({ entryId: state.entryId, slideIndex: state.slideIndex });
         },

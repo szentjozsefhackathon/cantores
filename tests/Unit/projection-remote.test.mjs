@@ -664,67 +664,103 @@ test('a poll answered before the press does not undo the press', async () => {
 });
 
 /*
- * The title card, from the thumb's side. The press that ends it is as often this
- * one as the keyboard across the building, and either way the room must land on
- * the first slide rather than the second.
+ * The opening of a service, from the thumb's side. The press that walks it is as
+ * often this one as the keyboard across the building, and either way the deck
+ * stays where it stands until the opening is over.
  */
 function carded(total = 5) {
     const deck = remote(total);
 
-    deck.splash = true;
+    deck.splash = 'card';
 
     return deck;
 }
 
-test('the first press of anything ends the card without moving the service', () => {
+test('one press of anything walks the opening on and moves the service nowhere', () => {
     for (const key of [' ', 'ArrowRight', 'PageDown', 'Enter', 'ArrowLeft', 'End']) {
         const deck = carded();
 
         deck.onKey(press(key));
 
-        assert.equal(deck.splash, false, `${key} left the card up`);
+        assert.equal(deck.splash, 'dark', `${key} did not black the wall out`);
         assert.equal(deck.index, 0, `${key} moved the service past the slide nobody had seen`);
+
+        deck.onKey(press(key));
+
+        assert.equal(deck.splash, 'off', `${key} did not start the deck`);
+        assert.equal(deck.index, 0, `${key} skipped the first slide`);
     }
 });
 
-test('the Next button ends the card and lands on the first slide', () => {
+test('the Next button walks card, dark, first slide', () => {
     const deck = carded();
 
     deck.next();
-
-    assert.equal(deck.splash, false);
+    assert.equal(deck.splash, 'dark');
     assert.equal(deck.index, 0);
 
     deck._pressedAt = {};
     deck.next();
+    assert.equal(deck.splash, 'off');
+    assert.equal(deck.index, 0);
 
+    deck._pressedAt = {};
+    deck.next();
     assert.equal(deck.index, 1);
 });
 
-test('blanking from the phone ends the card and leaves the deck at its beginning', () => {
+test('the blank button walks the opening and then blanks as it always did', () => {
     const deck = carded();
 
     deck.toggleBlank();
+    assert.equal(deck.splash, 'dark');
+    assert.equal(deck.blanked, false, 'the dark of the opening was mistaken for a blank');
 
-    assert.equal(deck.splash, false);
+    deck._pressedAt = {};
+    deck.toggleBlank();
+    assert.equal(deck.splash, 'off');
     assert.equal(deck.blanked, true);
+    assert.equal(deck.index, 0);
+
+    deck._pressedAt = {};
+    deck.toggleBlank();
+    assert.equal(deck.blanked, false);
     assert.equal(deck.index, 0);
 });
 
-/* A row tapped in the plan is a content interaction like any other. */
-test('a slide tapped in the plan ends the card and goes there', () => {
+/* A row tapped in the plan is somebody reaching past the opening entirely. */
+test('a slide tapped in the plan reaches past the opening and goes there', () => {
     const deck = carded();
 
     deck.go(3);
 
-    assert.equal(deck.splash, false);
+    assert.equal(deck.splash, 'off');
     assert.equal(deck.index, 3);
 });
 
-/* The phone has to carry the card on the wire — a press here is what ends it —
-   without ever drawing it: the preview goes on showing the first slide, which is
-   the slide the next press will put on the wall. */
-test('the phone reports the card without ever holding one', () => {
+/* The card is what the beamer is lined up against, and the person doing the
+   lining up is holding the phone: both pictures have to be the same one. */
+test('the phone draws the card and says what the next press does', () => {
+    const deck = registered.projectionRemote({ cardHint: 'card hint', darkHint: 'dark hint' });
+
+    deck.presentationId = 1;
+
+    deck.splash = 'card';
+    assert.equal(deck.showingSplash, true);
+    assert.equal(deck.openingDark, false);
+    assert.equal(deck.openingHint, 'card hint');
+
+    deck.splash = 'dark';
+    assert.equal(deck.showingSplash, false, 'the phone held a card the room had stopped looking at');
+    assert.equal(deck.openingDark, true);
+    assert.equal(deck.openingHint, 'dark hint');
+
+    deck.splash = 'off';
+    assert.equal(deck.opening, false);
+    assert.equal(deck.openingHint, '');
+});
+
+test('the phone reports each picture of the opening as it walks it', () => {
     const deck = carded();
     const written = [];
 
@@ -733,14 +769,24 @@ test('the phone reports the card without ever holding one', () => {
 
     deck.push();
     deck.next();
+    deck._pressedAt = {};
+    deck.next();
 
-    assert.deepEqual(written.map((state) => state.splash), [true, false]);
-    assert.equal(deck.showingSplash, undefined, 'the remote grew a title card of its own');
+    assert.deepEqual(written.map((state) => state.splash), ['card', 'dark', 'off']);
 });
 
-/* Where the card comes from at all: the server, because the press that ended it
-   may have been a keyboard across the building. */
-test('the phone takes the card up and puts it down as the server says', async () => {
+/* A wall still engraving a deck is not holding a card, it is holding nothing. */
+test('the preview shows no card while the screen is preparing a deck', () => {
+    const deck = carded();
+
+    deck.preparing = true;
+
+    assert.equal(deck.showingSplash, false);
+});
+
+/* Where the opening comes from at all: the server, because the press that walked
+   it may have been a keyboard across the building. */
+test('the phone walks the opening as the server says', async () => {
     const deck = remote();
     let answer = null;
 
@@ -756,9 +802,12 @@ test('the phone takes the card up and puts it down as the server says', async ()
         return deck.pull();
     };
 
-    await says(2, true);
-    assert.equal(deck.splash, true);
+    await says(2, 'card');
+    assert.equal(deck.splash, 'card');
 
-    await says(3, false);
-    assert.equal(deck.splash, false, 'the phone went on thinking the wall held a card');
+    await says(3, 'dark');
+    assert.equal(deck.splash, 'dark');
+
+    await says(4, 'off');
+    assert.equal(deck.splash, 'off', 'the phone went on thinking the wall was still opening');
 });

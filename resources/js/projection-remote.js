@@ -100,6 +100,11 @@ const PRESS_LOCK_MS = 500;
  */
 const FIT_SETTLE_MS = 2000;
 
+/** The three pictures a service opens with. @see Presentation::SPLASH_ORDER */
+const SPLASH_CARD = 'card';
+const SPLASH_DARK = 'dark';
+const SPLASH_OFF = 'off';
+
 onAlpineInit(() => {
     Alpine.data('projectionRemote', (config = {}) => ({
         geometry: config.geometry ?? {},
@@ -183,20 +188,20 @@ onAlpineInit(() => {
         preparing: false,
 
         /**
-         * Whether the wall is still holding its title card rather than showing
-         * the deck.
+         * How far into its opening the service is: `card`, then `dark`, then
+         * `off`.
          *
-         * Worth a field here and not only on the laptop, because the first press
-         * of the service is as often this thumb as that keyboard, and the answer
-         * has to be the same either way: the card ends and the room lands on the
-         * *first* slide.
+         * Drawn here as well as on the wall, because the card is what the beamer
+         * is lined up against and the person doing the lining up is holding this
+         * — the picture under the thumb and the picture across the room have to
+         * be the same one or the fit panel is guesswork.
          *
-         * Never drawn here, though. The remote is where the cantor reads what is
-         * *coming*, and a phone showing a title card is a phone showing nothing:
-         * the preview goes on holding the first slide, which is the slide the
-         * next press will put on the wall.
+         * And named here, in the strip under the preview, because with two
+         * states it was not clear how a cantor was ever meant to get *out* of
+         * the card. Now each press walks the opening on one, and the phone says
+         * which press that is.
          */
-        splash: Boolean(config.splash),
+        splash: config.splash ?? SPLASH_OFF,
 
         /**
          * The deck the server has, and the deck the wall has finished engraving.
@@ -219,6 +224,31 @@ onAlpineInit(() => {
         _fitAt: 0,
 
         /** Whether the screen has anything on it at all. */
+        /** Whether the title card is the picture on the wall — and so in the preview. */
+        get showingSplash() {
+            return this.splash === SPLASH_CARD && !this.waiting && !this.preparing;
+        },
+
+        /** Whether the wall is in the quiet dark between the card and the deck. */
+        get openingDark() {
+            return this.splash === SPLASH_DARK && !this.waiting;
+        },
+
+        /** Whether the opening still has a picture of its own to walk through. */
+        get opening() {
+            return this.splash !== SPLASH_OFF;
+        },
+
+        /**
+         * The line under the preview that says what the room is looking at and
+         * what the next press will do about it.
+         */
+        get openingHint() {
+            if (this.showingSplash) { return config.cardHint ?? ''; }
+
+            return this.openingDark ? config.darkHint ?? '' : '';
+        },
+
         get waiting() {
             return this.presentationId === null;
         },
@@ -789,23 +819,26 @@ onAlpineInit(() => {
 
             if (this.total === 0) { return; }
 
-            this.splash = false;
+            // A slide asked for by name is the deck starting, whatever the
+            // opening had left to show: somebody has reached past it.
+            this.splash = SPLASH_OFF;
             this.index = Math.min(Math.max(index, 0), this.total - 1);
             this.show();
             this.push();
         },
 
         /**
-         * The card put away, with the deck left where it stands.
+         * One step of the opening: the card gives way to the dark, and the dark
+         * to the deck.
          *
-         * The card is a picture over the deck and not a slide before it, so the
-         * first Next ends it and shows the first slide — not the second. Going
-         * backwards out of it is the same move: there is nothing behind the
-         * beginning to go back to.
+         * The deck is not moved by either step, which is what makes the press
+         * that ends the dark land on the *first* slide and not the second.
+         * Backwards out of the opening is forwards too — there is nothing behind
+         * the beginning of a service to go back to.
          */
-        leaveSplash() {
+        walkOpening() {
             this.askFullscreen();
-            this.splash = false;
+            this.splash = this.splash === SPLASH_CARD ? SPLASH_DARK : SPLASH_OFF;
             this.push();
         },
 
@@ -838,20 +871,44 @@ onAlpineInit(() => {
         },
 
         next() {
-            this.press('next', () => (this.splash ? this.leaveSplash() : this.go(this.index + 1)));
+            this.press('next', () => (this.opening ? this.walkOpening() : this.go(this.index + 1)));
         },
 
         previous() {
-            this.press('previous', () => (this.splash ? this.leaveSplash() : this.go(this.index - 1)));
+            this.press('previous', () => (this.opening ? this.walkOpening() : this.go(this.index - 1)));
         },
 
+        /**
+         * Blank during the opening: over the card the same press as Next, since
+         * black is what comes next anyway; over the dark, the handover — the
+         * wall does not change, but the opening is over and the next press of
+         * this button reveals the first slide.
+         */
         toggleBlank() {
-            this.press('blank', () => {
-                this.askFullscreen();
-                this.splash = false;
+            this.press('blank', () => this.blankNow());
+        },
+
+        /**
+         * The blank itself, wherever it was asked for.
+         *
+         * Over the card it is the same press as Next, because black is what
+         * comes next anyway. Over the dark it is the handover: the wall does not
+         * change, but the opening is over and the next press of this button
+         * reveals the first slide, as it would anywhere else in the deck.
+         */
+        blankNow() {
+            if (this.showingSplash) { return this.walkOpening(); }
+
+            this.askFullscreen();
+
+            if (this.openingDark) {
+                this.splash = SPLASH_OFF;
+                this.blanked = true;
+            } else {
                 this.blanked = !this.blanked;
-                this.push();
-            });
+            }
+
+            this.push();
         },
 
         /** Jump to a row — its first slide that this service is being shown. */
@@ -947,11 +1004,11 @@ onAlpineInit(() => {
 
         /** A keyed move: obeyed at once, and lighting the control it stands for. */
         moved(name, index) {
-            // The very first press, whatever key it was, ends the card and moves
-            // nothing: what the room has not seen yet cannot be advanced past.
-            if (this.splash) {
+            // A press during the opening walks the opening and moves nothing:
+            // what the room has not been shown yet cannot be advanced past.
+            if (this.opening) {
                 this.flash(name);
-                this.leaveSplash();
+                this.walkOpening();
 
                 return;
             }
@@ -963,9 +1020,7 @@ onAlpineInit(() => {
         /** The blank, without the thumb's lock in front of it. */
         blank() {
             this.flash('blank');
-            this.splash = false;
-            this.blanked = !this.blanked;
-            this.push();
+            this.blankNow();
         },
 
         /*
@@ -1290,7 +1345,7 @@ onAlpineInit(() => {
                 this.appliedVersion = state.version;
                 this.reveals = state.reveals ?? {};
                 this.blanked = Boolean(state.blanked);
-                this.splash = Boolean(state.splash);
+                this.splash = state.splash ?? SPLASH_OFF;
                 this.repaint({ entryId: state.entryId, slideIndex: state.slideIndex });
             }
 
@@ -1315,7 +1370,7 @@ onAlpineInit(() => {
             this.appliedVersion = 0;
             this.reveals = {};
             this.blanked = false;
-            this.splash = Boolean(answer.state?.splash);
+            this.splash = answer.state?.splash ?? SPLASH_OFF;
             this.ended = false;
 
             if (this.presentationId === null) {

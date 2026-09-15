@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Presentation;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Where the service has got to, as one of its devices reports it.
@@ -48,7 +49,7 @@ class PresentationStateRequest extends FormRequest
             'entryId' => ['sometimes', 'nullable', 'integer'],
             'slideIndex' => ['sometimes', 'integer', 'min:0'],
             'blanked' => ['sometimes', 'boolean'],
-            'splash' => ['sometimes', 'boolean'],
+            'splash' => ['sometimes', 'string', Rule::in(array_keys(Presentation::SPLASH_ORDER))],
             'drawnRevision' => ['sometimes', 'nullable', 'string', 'max:32'],
             'reveals' => ['sometimes', 'nullable', 'array'],
             'reveals.*' => ['array'],
@@ -61,7 +62,7 @@ class PresentationStateRequest extends FormRequest
      * Just the part of the state that moves the service, in the vocabulary
      * Presentation::applyState speaks.
      *
-     * @return array{entryId?: int|null, slideIndex?: int, blanked?: bool, splash?: bool, reveals?: array<int, list<int>>}
+     * @return array{entryId?: int|null, slideIndex?: int, blanked?: bool, splash?: string, reveals?: array<int, list<int>>}
      */
     public function state(): array
     {

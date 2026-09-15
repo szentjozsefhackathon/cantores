@@ -39,10 +39,14 @@ resources/js/projection-presenter.js
         // centring it and jumping a second later.
         'fit' => $screen->fit(),
         'presentationId' => $presentation?->id,
-        // Whether the room is still looking at the title card. Baked in so the
-        // card is the first thing painted rather than something that arrives a
-        // second later, over a slide the congregation has already read.
-        'splash' => $presentation?->splash ?? false,
+        // How far into its opening the service is. Baked in so the card is the
+        // first thing painted rather than something that arrives a second
+        // later, over a slide the congregation has already read.
+        'splash' => $presentation?->splash ?? \App\Models\Presentation::SPLASH_OFF,
+        // What to tell the person at this keyboard while the opening is being
+        // walked. Held in the bar, never over the picture.
+        'cardHint' => __('The title card is on the screen. The next press blacks it out.'),
+        'darkHint' => __('The screen is black. The next press starts the first slide.'),
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
         'csrfToken' => csrf_token(),
@@ -175,9 +179,16 @@ resources/js/projection-presenter.js
         <span x-show="serverRevision !== drawnRevision" x-cloak class="text-amber-300/80">
             {{ __('Reading the deck again…') }}
         </span>
+
+        {{-- Where the opening says what it is and what the next press does. In
+             the bar and not over the picture: in full screen the bar is gone and
+             the room is looking at the card or at black, and a line of
+             instructions thrown across a church is the one thing this page
+             exists to prevent. --}}
+        <span x-show="openingHint" x-cloak class="text-white/80" x-text="openingHint"></span>
     </div>
 
-    <div class="absolute inset-0 flex items-center justify-center text-sm text-white/50" x-show="!waiting && !preparing && !showingSplash && total === 0 && !busy" x-cloak>
+    <div class="absolute inset-0 flex items-center justify-center text-sm text-white/50" x-show="!waiting && !preparing && !opening && total === 0 && !busy" x-cloak>
         {{ __('This projection has no slides yet.') }}
     </div>
 
