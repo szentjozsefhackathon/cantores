@@ -39,6 +39,9 @@ use Illuminate\Support\Facades\Auth;
  * @property string $session_id
  * @property string|null $user_agent
  * @property int|null $presentation_id
+ * @property float $fit_scale
+ * @property float $fit_x
+ * @property float $fit_y
  * @property CarbonImmutable $last_seen_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -74,6 +77,21 @@ class Screen extends Model
     public const STALE_MINUTES = 5;
 
     /**
+     * How far the picture on the wall may be pushed about.
+     *
+     * Wide enough for the square screen this exists for — a 1:1 deck on a 4:3
+     * beamer hung high wants most of a quarter-picture of downward travel — and
+     * narrow enough that a fumbled press cannot lose the deck off the edge of
+     * the room, which on a laptop across the building is not something anybody
+     * can walk over and undo.
+     */
+    public const FIT_MIN_SCALE = 0.25;
+
+    public const FIT_MAX_SCALE = 2.0;
+
+    public const FIT_MAX_OFFSET = 1.0;
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
@@ -83,6 +101,9 @@ class Screen extends Model
         'session_id',
         'user_agent',
         'presentation_id',
+        'fit_scale',
+        'fit_x',
+        'fit_y',
         'last_seen_at',
     ];
 
@@ -93,6 +114,9 @@ class Screen extends Model
     {
         return [
             'last_seen_at' => 'datetime',
+            'fit_scale' => 'float',
+            'fit_x' => 'float',
+            'fit_y' => 'float',
         ];
     }
 
@@ -244,6 +268,46 @@ class Screen extends Model
         $presentation = $this->presentation;
 
         return $presentation instanceof Presentation && $presentation->isLive() ? $presentation : null;
+    }
+
+    /**
+     * Where this screen's picture lands, as its two clients speak of it.
+     *
+     * @return array{scale: float, x: float, y: float}
+     */
+    public function fit(): array
+    {
+        return [
+            'scale' => (float) $this->fit_scale,
+            'x' => (float) $this->fit_x,
+            'y' => (float) $this->fit_y,
+        ];
+    }
+
+    /**
+     * Line the picture up on the wall, as the phone has just nudged it.
+     *
+     * Clamped here rather than trusted, because the phone is the thing across
+     * the building from the projector: the person pressing an arrow cannot see
+     * that the tenth press did nothing, and a screen that has been driven past
+     * the edge of itself is a screen somebody has to walk to the laptop to
+     * rescue. Nothing else about the screen moves — this is not the deck, and
+     * changing it must not look to anyone like the service went anywhere.
+     *
+     * @param  array{scale?: float|int|string|null, x?: float|int|string|null, y?: float|int|string|null}  $fit
+     */
+    public function adjustFit(array $fit): void
+    {
+        $this->forceFill([
+            'fit_scale' => self::clamp($fit['scale'] ?? $this->fit_scale, self::FIT_MIN_SCALE, self::FIT_MAX_SCALE),
+            'fit_x' => self::clamp($fit['x'] ?? $this->fit_x, -self::FIT_MAX_OFFSET, self::FIT_MAX_OFFSET),
+            'fit_y' => self::clamp($fit['y'] ?? $this->fit_y, -self::FIT_MAX_OFFSET, self::FIT_MAX_OFFSET),
+        ])->save();
+    }
+
+    private static function clamp(float|int|string|null $value, float $low, float $high): float
+    {
+        return min($high, max($low, (float) $value));
     }
 
     /**

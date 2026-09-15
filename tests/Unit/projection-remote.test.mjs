@@ -419,3 +419,132 @@ test('the plan column counts what today’s service leaves out', () => {
 
     assert.equal(deck.outline[1].musics[0].rows[0].shownCount, 0);
 });
+
+/*
+ * ---------------------------------------------------------------
+ * Where the picture lands on the wall.
+ * ---------------------------------------------------------------
+ *
+ * The one control on this page that is not about the service at all: a square
+ * screen hung high off a beamer nobody may touch, and a deck landing above the
+ * heads it was built for. The phone is the only device in the building that can
+ * see whether it has been fixed.
+ */
+
+/** A remote whose screen writes are remembered rather than sent. */
+function lining() {
+    const deck = remote();
+    const sent = [];
+
+    deck._screen = { adjust: (fit) => { sent.push(fit); return Promise.resolve(fit); } };
+    deck.sent = sent;
+
+    return deck;
+}
+
+test('the four arrows move the picture and tell the screen', () => {
+    const deck = lining();
+
+    deck.moveFit(0, 1);
+    deck.moveFit(1, 0);
+
+    assert.ok(deck.fit.y > 0, 'the picture did not come down');
+    assert.ok(deck.fit.x > 0, 'the picture did not go right');
+    assert.equal(deck.sent.length, 2, 'the wall was not told');
+    assert.deepEqual(deck.sent.at(-1), deck.fit, 'the wall was told something other than what the phone shows');
+});
+
+test('the zoom scales the picture and centring puts it back', () => {
+    const deck = lining();
+
+    deck.zoomFit(-1);
+    assert.ok(deck.fit.scale < 1, 'the picture did not shrink');
+    assert.equal(deck.fitIsNeutral, false);
+
+    deck.resetFit();
+
+    assert.deepEqual(deck.fit, { scale: 1, x: 0, y: 0 });
+    assert.equal(deck.fitIsNeutral, true);
+    assert.equal(deck.fitPercent, 100);
+});
+
+/* The phone cannot see that the tenth press did nothing, and a picture driven
+   off the edge of the room is one somebody has to walk to the laptop to fix. */
+test('the picture cannot be pressed off the edge of the screen', () => {
+    const deck = lining();
+
+    for (let press = 0; press < 200; press += 1) {
+        deck.moveFit(-1, -1);
+        deck.zoomFit(-1);
+    }
+
+    assert.ok(deck.fit.x >= -1 && deck.fit.y >= -1, 'the picture left the screen');
+    assert.ok(deck.fit.scale >= 0.25, 'the picture shrank to nothing');
+});
+
+/* While the panel is open the arrows are aimed at the picture: nobody opens it
+   in order to change slide, and two meanings for one key is one too many. */
+test('the keyboard drives the picture while the panel is open', () => {
+    const deck = lining();
+
+    deck.openFit();
+    deck.index = 1;
+
+    deck.onKey(press('ArrowRight'));
+
+    assert.equal(deck.index, 1, 'lining the projector up moved the service');
+    assert.ok(deck.fit.x > 0, 'the arrow did not move the picture');
+
+    deck.onKey(press('0'));
+    assert.equal(deck.fitIsNeutral, true);
+
+    deck.onKey(press('Escape'));
+    assert.equal(deck.fitOpen, false);
+
+    deck.onKey(press('ArrowRight'));
+    assert.equal(deck.index, 2, 'the service stayed put once the panel was shut');
+});
+
+/* An arrow pressed with the mouse leaves the focus inside the dialog, and every
+   key inside a dialog otherwise belongs to the dialog. It must not cost the
+   keyboard the arrows for the rest of the session. */
+test('the keyboard still works after an arrow has been pressed with the mouse', () => {
+    const deck = lining();
+
+    deck.openFit();
+    deck.onKey({ key: 'ArrowUp', target: { tagName: 'BUTTON', closest: (what) => (what.includes('dialog') ? {} : null) }, preventDefault() {} });
+
+    assert.ok(deck.fit.y < 0, 'the arrow was swallowed by the panel it was aimed at');
+});
+
+/* Every press here is optimistic, and the poll that lands a moment later was
+   answered before the write. Lining a projector up by pressing an arrow that
+   undoes itself is not something anybody can do from across a building. */
+test('a poll answered before the press does not undo the press', async () => {
+    const deck = lining();
+
+    deck.presentationId = 1;
+    deck.refresh = () => Promise.resolve();
+    deck._screen.read = () => Promise.resolve({
+        presentationId: 1,
+        title: 'Vasárnap',
+        fit: { scale: 1, x: 0, y: 0 },
+        state: { version: 0, revision: 'r', drawnRevision: 'r', endedAt: null },
+    });
+
+    deck.moveFit(1, 0);
+
+    const pressed = deck.fit.x;
+
+    await deck.pull();
+
+    assert.equal(deck.fit.x, pressed, 'the screen’s stale answer undid the arrow');
+
+    // And once the write has plainly landed, the screen is the authority again:
+    // another phone lining the same wall up is followed like anything else.
+    deck._fitAt = Date.now() - 60000;
+
+    await deck.pull();
+
+    assert.equal(deck.fit.x, 0, 'the phone went on believing its own hand');
+});

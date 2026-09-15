@@ -50,6 +50,10 @@ resources/js/projection-remote.js
         // only for whatever was up at mount, and afterwards come from the
         // screen's own answer.
         'screenUrl' => route('screens.state', ['screen' => $screen->id]),
+        // Where this screen's picture lands, baked in so that a wall lined
+        // up last Sunday draws its first slide where it belongs rather than
+        // centring it and jumping a second later.
+        'fit' => $screen->fit(),
         'presentationId' => $presentation?->id,
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
@@ -173,7 +177,10 @@ resources/js/projection-remote.js
             <div
                 x-ref="currentBox"
                 class="w-full max-h-full max-w-full overflow-hidden bg-white lg:h-full lg:w-auto"
-                x-bind:style="`aspect-ratio: ${aspectRatio};`"
+                {{-- Moved exactly as the wall moves it, so that lining the
+                     projector up is watched twice over: once across the room
+                     and once under the thumb. --}}
+                x-bind:style="`aspect-ratio: ${aspectRatio}; transform: ${fitTransform}; transform-origin: center;`"
                 x-bind:class="blanked ? 'opacity-25' : ''"
                 x-show="!waiting"
                 wire:ignore
@@ -191,6 +198,22 @@ resources/js/projection-remote.js
                 <span class="shrink-0 text-xs tabular-nums text-white/80" x-show="total > 0" x-cloak>
                     <span x-text="index + 1"></span>/<span x-text="total"></span>
                 </span>
+
+                {{-- Where the picture lands on the wall. Up here with the things
+                     that are not driving the service, because it is pressed while
+                     the beamer is being lined up and never during a hymn — and
+                     lit while the picture is anywhere but where the application
+                     would have put it, which is the only warning anybody gets
+                     that the deck is not simply centred. --}}
+                <button
+                    type="button"
+                    class="shrink-0 rounded p-1"
+                    x-on:click="openFit()"
+                    x-bind:class="fitIsNeutral ? '' : 'text-amber-300'"
+                    aria-label="{{ __('Fit the picture to the screen') }}"
+                >
+                    <flux:icon.viewfinder-circle class="size-5" />
+                </button>
 
                 <button type="button" class="shrink-0 rounded p-1" x-on:click="toggleFullscreen()" x-show="fullscreenAvailable" aria-label="{{ __('Full screen') }}">
                     <flux:icon.arrows-pointing-out class="size-5" x-show="!fullscreen" />
@@ -348,6 +371,104 @@ resources/js/projection-remote.js
             class="projection-slides min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3"
             wire:ignore
         ></div>
+    </div>
+
+    {{-- ---------------------------------------------------------------
+         Where the picture lands on the wall.
+         ---------------------------------------------------------------
+
+         The presenter fits a deck into the projector and centres it, which is
+         the right answer in every room but one: a 4:3 beamer on a square screen
+         hung high, a deck built 1:1 for the glass, and the whole thing still
+         landing above the heads it was meant for and clipped at the foot. The
+         deck is not wrong — next Sunday's lands identically — so what is nudged
+         is the screen, and the setting stays on it, lined up once and still true
+         next week.
+
+         It is here rather than at the laptop because of the arithmetic of the
+         building: the laptop faces the room from somewhere else, and the only
+         person who can see whether the picture is where it should be is the one
+         at the organ holding this. Four arrows, two zooms and the way back to
+         centred — sized for a thumb, and driven by the same keys on a laptop
+         while the panel is open. --}}
+    <div class="fixed inset-0 z-20 flex items-center justify-center p-4" x-show="fitOpen" x-cloak>
+        <div class="absolute inset-0 bg-black/60" x-on:click="closeFit()"></div>
+
+        <div
+            role="dialog"
+            aria-modal="true"
+            class="relative w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl dark:bg-zinc-900"
+            x-transition:enter="transition ease-out duration-150"
+            x-transition:enter-start="scale-95 opacity-0"
+            x-transition:enter-end="scale-100 opacity-100"
+        >
+            <div class="flex items-center gap-2">
+                <span class="flex-1 text-sm font-medium">{{ __('Fit the picture to the screen') }}</span>
+                <button type="button" class="rounded p-1" x-on:click="closeFit()" aria-label="{{ __('Close') }}">
+                    <flux:icon.x-mark class="size-5" />
+                </button>
+            </div>
+
+            {{-- The four directions, laid out as the directions they are: a
+                 cross a thumb can hit without reading, with the way back to
+                 centred in the middle of it, where a thumb that has pushed the
+                 picture somewhere silly already is. --}}
+            <div class="mx-auto mt-3 grid w-48 grid-cols-3 gap-1.5">
+                <div></div>
+                <button type="button" class="flex h-14 items-center justify-center rounded-xl border border-zinc-300 bg-white active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:active:bg-zinc-700" x-on:click="moveFit(0, -1)" aria-label="{{ __('Move the picture up') }}">
+                    <flux:icon.arrow-up class="size-6" />
+                </button>
+                <div></div>
+
+                <button type="button" class="flex h-14 items-center justify-center rounded-xl border border-zinc-300 bg-white active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:active:bg-zinc-700" x-on:click="moveFit(-1, 0)" aria-label="{{ __('Move the picture left') }}">
+                    <flux:icon.arrow-left class="size-6" />
+                </button>
+
+                <button
+                    type="button"
+                    class="flex h-14 items-center justify-center rounded-xl border border-dashed border-zinc-300 text-zinc-500 disabled:opacity-40 dark:border-zinc-700"
+                    x-on:click="resetFit()"
+                    x-bind:disabled="fitIsNeutral"
+                    aria-label="{{ __('Centre the picture again') }}"
+                >
+                    <flux:icon.arrow-uturn-left class="size-5" />
+                </button>
+
+                <button type="button" class="flex h-14 items-center justify-center rounded-xl border border-zinc-300 bg-white active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:active:bg-zinc-700" x-on:click="moveFit(1, 0)" aria-label="{{ __('Move the picture right') }}">
+                    <flux:icon.arrow-right class="size-6" />
+                </button>
+
+                <div></div>
+                <button type="button" class="flex h-14 items-center justify-center rounded-xl border border-zinc-300 bg-white active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:active:bg-zinc-700" x-on:click="moveFit(0, 1)" aria-label="{{ __('Move the picture down') }}">
+                    <flux:icon.arrow-down class="size-6" />
+                </button>
+                <div></div>
+            </div>
+
+            {{-- And how large it is, said as a percentage: a number the cantor
+                 can read back to somebody standing at the projector. --}}
+            <div class="mt-3 flex items-center justify-center gap-3">
+                <button type="button" class="flex size-14 items-center justify-center rounded-xl border border-zinc-300 bg-white active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:active:bg-zinc-700" x-on:click="zoomFit(-1)" aria-label="{{ __('Smaller') }}">
+                    <flux:icon.magnifying-glass-minus class="size-6" />
+                </button>
+
+                <span class="min-w-16 text-center text-lg font-medium tabular-nums" x-text="`${fitPercent}%`"></span>
+
+                <button type="button" class="flex size-14 items-center justify-center rounded-xl border border-zinc-300 bg-white active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:active:bg-zinc-700" x-on:click="zoomFit(1)" aria-label="{{ __('Larger') }}">
+                    <flux:icon.magnifying-glass-plus class="size-6" />
+                </button>
+            </div>
+
+            <p class="mt-3 text-center text-xs text-zinc-500">
+                {{ __('This stays with the screen, not with the deck.') }}
+            </p>
+
+            {{-- The laptop beside the projector drives the same four arrows from
+                 the keyboard while this is open. --}}
+            <p class="mt-1 hidden text-center text-xs text-zinc-400 lg:block">
+                {{ __('Arrows move · + and − scale · 0 centres · Esc closes') }}
+            </p>
+        </div>
     </div>
 
     {{-- ---------------------------------------------------------------

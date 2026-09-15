@@ -232,6 +232,109 @@ function slidesOfRow(map, entryId) {
     return Array.isArray(list) ? list.map(Number) : [];
 }
 
+/*
+ * ---------------------------------------------------------------
+ * Where the picture lands on the wall.
+ * ---------------------------------------------------------------
+ *
+ * The presenter fits the deck's own shape into the projector's and centres it,
+ * which is right everywhere except the rooms where it is not: a square screen
+ * hung high, a beamer that cannot be moved, a deck built 1:1 for it and still
+ * landing half a foot above the heads it was meant for. So the fitted picture
+ * is nudged and scaled afterwards, and the three numbers that say how live on
+ * the screen — the room, not the deck.
+ *
+ * All three are relative to the fitted picture rather than to pixels, so a
+ * window resized, a projector swapped and a deck in another shape all keep
+ * whatever was lined up. Both ends share this so that the phone's preview and
+ * the wall cannot drift apart.
+ */
+
+/** The picture as the application has always drawn it: centred, and as large as fits. */
+export const FIT_NEUTRAL = Object.freeze({ scale: 1, x: 0, y: 0 });
+
+/** @see Screen::FIT_MIN_SCALE */
+const FIT_MIN_SCALE = 0.25;
+const FIT_MAX_SCALE = 2;
+const FIT_MAX_OFFSET = 1;
+
+/**
+ * One press of an arrow, and one press of a zoom.
+ *
+ * Small enough that a picture can be put where it belongs rather than near it,
+ * and large enough that getting it there is a handful of presses and not a
+ * minute of tapping while a congregation waits.
+ */
+export const FIT_MOVE_STEP = 0.02;
+export const FIT_ZOOM_STEP = 0.025;
+
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+
+/**
+ * A fit as it came off the wire, made safe to draw with.
+ *
+ * Anything missing or unreadable is the neutral fit, because the one thing this
+ * must never do is leave a room looking at a picture pushed off its screen by a
+ * field that arrived as undefined.
+ *
+ * @param {{scale?: number, x?: number, y?: number}|null|undefined} raw
+ * @return {{scale: number, x: number, y: number}}
+ */
+export function fitFrom(raw) {
+    const number = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+
+    return {
+        scale: clamp(number(raw?.scale, 1), FIT_MIN_SCALE, FIT_MAX_SCALE),
+        x: clamp(number(raw?.x, 0), -FIT_MAX_OFFSET, FIT_MAX_OFFSET),
+        y: clamp(number(raw?.y, 0), -FIT_MAX_OFFSET, FIT_MAX_OFFSET),
+    };
+}
+
+/**
+ * The same fit, moved by one press.
+ *
+ * @param {{scale: number, x: number, y: number}} fit
+ */
+export function movedFit(fit, across, down) {
+    return fitFrom({ ...fit, x: fit.x + across, y: fit.y + down });
+}
+
+/** And the same fit, one press larger or smaller. */
+export function zoomedFit(fit, by) {
+    return fitFrom({ ...fit, scale: fit.scale + by });
+}
+
+/**
+ * What it comes to in CSS.
+ *
+ * The move is written in per cent of the picture's own size, which is what
+ * makes the numbers mean the same thing on a phone's preview and on a wall: the
+ * translate comes before the scale, so an arrow moves the picture by the same
+ * fraction of itself whether it has been scaled down or not.
+ */
+export function fitTransform(fit) {
+    const { scale, x, y } = fitFrom(fit);
+
+    const per = (fraction) => Number((fraction * 100).toFixed(3));
+
+    return `translate(${per(x)}%, ${per(y)}%) scale(${Number(scale.toFixed(4))})`;
+}
+
+/**
+ * Whether two fits are the same picture.
+ *
+ * Read off a float column and sent back as a float, so they are compared as
+ * near enough rather than as equal.
+ */
+export function sameFit(one, other) {
+    const a = fitFrom(one);
+    const b = fitFrom(other);
+
+    return Math.abs(a.scale - b.scale) < 0.0005
+        && Math.abs(a.x - b.x) < 0.0005
+        && Math.abs(a.y - b.y) < 0.0005;
+}
+
 /**
  * A client for a screen — what the room is looking at, rather than where in it
  * the service has got to.
@@ -256,5 +359,12 @@ export function screenClient(config) {
          * this call is on the hot path.
          */
         point: (projectionId) => http.post(config.screenUrl, { projectionId }),
+
+        /**
+         * Move the picture on the wall, without saying anything about what is
+         * on it. Pressed a dozen times while a beamer is lined up and never
+         * again during the service.
+         */
+        adjust: (fit) => http.post(config.screenUrl, { fit }),
     };
 }

@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
-import { POLL_MS, addressAt, indexOfAddress, isTypingTarget, screenClient, shownExclusions, stateClient } from './projection-follow.js';
+import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, movedFit, sameFit, screenClient, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
 
 /**
  * The deck in the cantor's hand.
@@ -88,6 +88,18 @@ const SWIPE_DRIFT = 50;
  */
 const PRESS_LOCK_MS = 500;
 
+/**
+ * How long the phone trusts its own hand over the screen's answer, after it has
+ * moved the picture.
+ *
+ * The nudge is optimistic like everything else here, and the poll that arrives a
+ * moment later was answered before the write landed. Without a pause the arrow
+ * the cantor pressed appears to bounce back, and lining a projector up by
+ * pressing an arrow that undoes itself is not something anybody can do from
+ * across a building.
+ */
+const FIT_SETTLE_MS = 2000;
+
 onAlpineInit(() => {
     Alpine.data('projectionRemote', (config = {}) => ({
         geometry: config.geometry ?? {},
@@ -109,6 +121,19 @@ onAlpineInit(() => {
 
         /** The plan, behind a swipe: read twice a service, in the way the rest of it. */
         listOpen: false,
+
+        /**
+         * Where the picture lands on the wall, and the panel that moves it.
+         *
+         * A fact about the room rather than about the deck — one of the
+         * churches throws a 4:3 beamer at a square screen hung high, so a deck
+         * built 1:1 for it still lands above the heads it was meant for. It
+         * belongs to the screen, so it is lined up once and is still true next
+         * Sunday, and it is done from here because the person who can see the
+         * wall is never the person at the laptop.
+         */
+        fit: fitFrom(config.fit),
+        fitOpen: false,
 
         /**
          * Whether this is a laptop beside the projector rather than a phone.
@@ -173,6 +198,7 @@ onAlpineInit(() => {
         _client: null,
         _screen: null,
         _pollTimer: null,
+        _fitAt: 0,
 
         /** Whether the screen has anything on it at all. */
         get waiting() {
@@ -192,6 +218,28 @@ onAlpineInit(() => {
 
         get aspectRatio() {
             return this.geometry.aspectRatio ?? '16/9';
+        },
+
+        /**
+         * The fit as CSS, for this phone's own preview.
+         *
+         * The preview is the whole of how this is used: the cantor is at the
+         * organ looking at the wall, and the picture in the hand moves with it,
+         * so a nudge is confirmed twice over — once across the room and once
+         * under the thumb.
+         */
+        get fitTransform() {
+            return fitTransform(this.fit);
+        },
+
+        /** The scale as the panel says it: a percentage, not a multiplier. */
+        get fitPercent() {
+            return Math.round(this.fit.scale * 100);
+        },
+
+        /** Whether the picture is where the application would have put it anyway. */
+        get fitIsNeutral() {
+            return sameFit(this.fit, FIT_NEUTRAL);
         },
 
         init() {
@@ -712,11 +760,26 @@ onAlpineInit(() => {
          * second press, and the wall itself has never locked one.
          */
         onKey(event) {
-            if (isTypingTarget(event.target)) { return; }
-
             // A browser shortcut is not a slide: nothing here is worth costing
             // somebody the tab they meant to switch to.
             if (event.ctrlKey || event.metaKey || event.altKey) { return; }
+
+            // While the picture is being lined up, the arrows are aimed at the
+            // picture. Two things a key could mean is one too many, and nobody
+            // opens that panel in order to change slide.
+            //
+            // Asked before the typing question rather than after it, because
+            // that one hands every key inside a dialog to the dialog — which is
+            // right where a dialog holds a field and wrong here, where pressing
+            // an arrow with the mouse would leave the arrows on the keyboard
+            // doing nothing for the rest of the session.
+            if (this.fitOpen) {
+                this.onFitKey(event);
+
+                return;
+            }
+
+            if (isTypingTarget(event.target)) { return; }
 
             const keys = {
                 ArrowRight: () => this.moved('next', this.index + 1),
@@ -851,7 +914,10 @@ onAlpineInit(() => {
 
             this._touch = null;
 
-            if (!start || !touch || start.scroller) { return; }
+            // The panel that lines the picture up owns the whole screen while
+            // it is open: a thumb dragged across an arrow there is aiming at
+            // the arrow, not asking for the plan.
+            if (!start || !touch || start.scroller || this.fitOpen) { return; }
 
             const across = touch.clientX - start.x;
 
@@ -859,6 +925,90 @@ onAlpineInit(() => {
 
             if (across <= -SWIPE_DISTANCE) { this.openList(); }
             if (across >= SWIPE_DISTANCE) { this.closeList(); }
+        },
+
+        /*
+         * ---------------------------------------------------------------
+         * Where the picture lands on the wall.
+         * ---------------------------------------------------------------
+         *
+         * The presenter fits the deck into the projector and centres it, which
+         * is right in every room but the ones it is not: a square screen, a
+         * beamer bolted where it is, a deck built for the glass and still
+         * landing high and clipped. What is wrong there is not the deck — next
+         * Sunday's lands identically — so it is the screen that is nudged, and
+         * from here, because the laptop is across the building and the person
+         * who can see the wall is holding this.
+         */
+
+        openFit() {
+            this.fitOpen = true;
+        },
+
+        closeFit() {
+            this.fitOpen = false;
+        },
+
+        /** One press of an arrow: -1, 0 or 1 in each direction. */
+        moveFit(across, down) {
+            this.putFit(movedFit(this.fit, across * FIT_MOVE_STEP, down * FIT_MOVE_STEP));
+        },
+
+        /** One press of a zoom, larger or smaller. */
+        zoomFit(by) {
+            this.putFit(zoomedFit(this.fit, by * FIT_ZOOM_STEP));
+        },
+
+        /** Back to centred and as large as fits — the fit nobody has to think about. */
+        resetFit() {
+            this.putFit({ ...FIT_NEUTRAL });
+        },
+
+        /**
+         * A nudge: shown here at once and told to the screen afterwards.
+         *
+         * Optimistic like every other control on this page, and for a reason of
+         * its own — lining a projector up is a dozen presses in a row, and a
+         * panel that waited for each of them would be lined up by guesswork. A
+         * failed write is not an event: the picture on the wall stays where it
+         * was, and the next press says the whole fit again rather than a
+         * difference, so nothing accumulates a press that never landed.
+         */
+        putFit(fit) {
+            this.fit = fit;
+            this._fitAt = Date.now();
+
+            this._screen.adjust(fit).catch(() => {});
+        },
+
+        /**
+         * The keyboard while the panel is open: the laptop's end of the same
+         * four arrows.
+         *
+         * Nothing here is locked or flashed. The lock is for a thumb bouncing on
+         * glass without looking, and this is a hand at a keyboard watching a wall
+         * move.
+         */
+        onFitKey(event) {
+            const keys = {
+                ArrowLeft: () => this.moveFit(-1, 0),
+                ArrowRight: () => this.moveFit(1, 0),
+                ArrowUp: () => this.moveFit(0, -1),
+                ArrowDown: () => this.moveFit(0, 1),
+                '+': () => this.zoomFit(1),
+                '=': () => this.zoomFit(1),
+                '-': () => this.zoomFit(-1),
+                _: () => this.zoomFit(-1),
+                0: () => this.resetFit(),
+                Escape: () => this.closeFit(),
+            };
+
+            const handler = keys[event.key];
+
+            if (!handler) { return; }
+
+            event.preventDefault();
+            handler();
         },
 
         /*
@@ -964,6 +1114,13 @@ onAlpineInit(() => {
             if (answer === null) { return; }
 
             this.title = answer.title ?? '';
+
+            // The screen's own answer about where its picture lands — unless
+            // this phone has just moved it, in which case the answer in hand
+            // was written before the press and saying so would undo it.
+            if (Date.now() - this._fitAt > FIT_SETTLE_MS) {
+                this.fit = fitFrom(answer.fit);
+            }
 
             if ((answer.presentationId ?? null) !== this.presentationId) {
                 await this.followDeck(answer);

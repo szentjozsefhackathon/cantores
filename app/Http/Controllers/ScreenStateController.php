@@ -55,6 +55,13 @@ class ScreenStateController extends Controller
     {
         abort_unless(Gate::allows('view', $screen), 404);
 
+        // Lining the picture up on the wall, which is not pointing the screen
+        // anywhere: the two travel in one request because the remote may send
+        // both, and a nudge on its own is a nudge on its own.
+        if ($request->adjustsFit()) {
+            $screen->adjustFit($request->fit());
+        }
+
         if (! $request->pointsSomewhere()) {
             $screen->touchLastSeen();
 

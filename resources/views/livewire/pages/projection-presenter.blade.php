@@ -34,6 +34,10 @@ resources/js/projection-presenter.js
         'revision' => $revision,
         'title' => $title,
         'screenUrl' => route('screens.state', ['screen' => $screen->id]),
+        // Where this screen's picture lands, baked in so that a wall lined
+        // up last Sunday draws its first slide where it belongs rather than
+        // centring it and jumping a second later.
+        'fit' => $screen->fit(),
         'presentationId' => $presentation?->id,
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
@@ -98,13 +102,20 @@ resources/js/projection-presenter.js
 
     {{-- The slide itself. The white box is the shape of the screen the deck was
          built for, fitted into whatever shape the projector actually is — so a
-         16:9 deck on a 4:3 beamer is letterboxed rather than stretched. --}}
-    <div class="absolute inset-0 flex items-center justify-center">
+         16:9 deck on a 4:3 beamer is letterboxed rather than stretched.
+
+         And then moved, in the rooms where fitting it is not the end of the
+         matter: a square screen hung high off a beamer nobody may touch leaves
+         a deck landing above the heads it was meant for. The nudge comes from
+         the phone and is a fact about this screen, so it is applied over the
+         fit rather than folded into it — the deck is still the shape its author
+         built, and what moved is the projector's idea of centre. --}}
+    <div class="absolute inset-0 flex items-center justify-center overflow-hidden">
         <div
             x-ref="stageBox"
             class="bg-white"
             x-show="!waiting"
-            x-bind:style="`aspect-ratio: ${aspectRatio}; height: 100%; max-width: 100%; max-height: 100%;`"
+            x-bind:style="`aspect-ratio: ${aspectRatio}; height: 100%; max-width: 100%; max-height: 100%; transform: ${fitTransform}; transform-origin: center;`"
             wire:ignore
         ></div>
     </div>

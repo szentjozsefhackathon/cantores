@@ -197,3 +197,32 @@ test('a windowed screen is not thrown out of anything to type in', () => {
 
     assert.equal(left, false);
 });
+
+/* The wall is the one device that cannot be lined up from where it stands: the
+   laptop faces the room from somewhere else, and the person who can see whether
+   the picture is where it belongs is at the organ holding a phone. So the fit is
+   read off the screen, and is a fact about the room rather than about the deck —
+   a screen still waiting for one is lined up as readily as a screen mid-hymn. */
+test('the wall takes the fit its screen was given', async () => {
+    const deck = presenter(3);
+
+    deck.presentationId = 1;
+    deck._screen = { read: () => Promise.resolve({ presentationId: 1, title: 'Vasárnap', fit: { scale: 0.8, x: 0, y: 0.1 }, state: null }) };
+
+    await deck.pull();
+
+    assert.equal(deck.fit.scale, 0.8);
+    assert.equal(deck.fit.y, 0.1);
+    assert.equal(deck.fitTransform, 'translate(0%, 10%) scale(0.8)');
+});
+
+test('a fit that says nothing leaves the picture where the deck was fitted', async () => {
+    const deck = presenter(3);
+
+    deck.presentationId = 1;
+    deck._screen = { read: () => Promise.resolve({ presentationId: 1, state: null }) };
+
+    await deck.pull();
+
+    assert.deepEqual(deck.fit, { scale: 1, x: 0, y: 0 });
+});

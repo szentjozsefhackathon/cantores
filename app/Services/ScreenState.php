@@ -46,6 +46,7 @@ class ScreenState
                 'stateUrl' => null,
                 'payloadUrl' => null,
                 'editUrl' => null,
+                'fit' => $screen->fit(),
                 'state' => null,
             ];
         }
@@ -60,6 +61,11 @@ class ScreenState
             // remote's own pane offers it, and the deck on a screen is swapped
             // without the page reloading, so it travels with the other two.
             'editUrl' => route('projections.edit', ['projection' => $presentation->projection_id]),
+            // Where the picture lands on this wall. A fact about the room and
+            // not about the deck, so it is answered even by a screen showing
+            // nothing — the cantor lines the beamer up before the deck is on
+            // it as readily as during the first hymn.
+            'fit' => $screen->fit(),
             'state' => $this->presentations->answer($presentation),
         ];
     }

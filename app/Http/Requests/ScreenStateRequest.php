@@ -7,9 +7,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * What a screen is to be pointed at.
+ * What a screen is to be pointed at — and where on it the picture should land.
  *
- * One field, and its absence means something different from its being null:
+ * `projectionId`'s absence means something different from its being null:
  * `projectionId` omitted is a request that says only "still here", while
  * `projectionId` null is the deliberate sentence that takes the deck off the
  * wall and ends the service.
@@ -41,6 +41,10 @@ class ScreenStateRequest extends FormRequest
     {
         return [
             'projectionId' => ['sometimes', 'nullable', 'integer'],
+            'fit' => ['sometimes', 'array'],
+            'fit.scale' => ['sometimes', 'numeric'],
+            'fit.x' => ['sometimes', 'numeric'],
+            'fit.y' => ['sometimes', 'numeric'],
         ];
     }
 
@@ -58,5 +62,36 @@ class ScreenStateRequest extends FormRequest
         $id = $this->input('projectionId');
 
         return $id === null ? null : (int) $id;
+    }
+
+    /**
+     * Whether this request is moving the picture on the wall.
+     *
+     * Its own question, and not part of pointing the screen anywhere: a cantor
+     * lining the beamer up is not changing what the room is looking at, and a
+     * remote nudging the picture mid-hymn must not so much as touch the deck.
+     */
+    public function adjustsFit(): bool
+    {
+        return $this->has('fit');
+    }
+
+    /**
+     * The nudge itself. Bounds are the screen's own business; what is left out
+     * here is simply left where it was.
+     *
+     * @return array{scale?: float, x?: float, y?: float}
+     */
+    public function fit(): array
+    {
+        $fit = [];
+
+        foreach (['scale', 'x', 'y'] as $field) {
+            if ($this->has("fit.{$field}")) {
+                $fit[$field] = (float) $this->input("fit.{$field}");
+            }
+        }
+
+        return $fit;
     }
 }

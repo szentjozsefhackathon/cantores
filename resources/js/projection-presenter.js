@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
-import { HEARTBEAT_MS, POLL_MS, addressAt, indexOfAddress, isTypingTarget, screenClient, shownExclusions, stateClient } from './projection-follow.js';
+import { HEARTBEAT_MS, POLL_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, screenClient, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -126,6 +126,16 @@ onAlpineInit(() => {
          */
         fullscreen: false,
 
+        /**
+         * Where on this wall the picture lands.
+         *
+         * Read only here, and belonging to the screen rather than to the deck:
+         * it is the shape of the room — a square screen, a beamer that cannot
+         * be moved — and it is lined up from the phone, because the person who
+         * can see the wall is never the person at the laptop.
+         */
+        fit: fitFrom(config.fit),
+
         _idleTimer: null,
         _pollTimer: null,
         _heartbeatTimer: null,
@@ -182,6 +192,11 @@ onAlpineInit(() => {
 
         get aspectRatio() {
             return this.geometry.aspectRatio ?? '16/9';
+        },
+
+        /** The fit, as the one line of CSS it comes to. */
+        get fitTransform() {
+            return fitTransform(this.fit);
         },
 
         init() {
@@ -382,6 +397,12 @@ onAlpineInit(() => {
             if (answer === null) { return; }
 
             this.title = answer.title ?? '';
+
+            // Taken up whatever else the answer says, because it is a fact
+            // about this screen and not about the deck: a picture lined up
+            // while the wall was waiting is still lined up when a deck arrives
+            // on it, and one nudged mid-hymn moves under the hymn.
+            this.fit = fitFrom(answer.fit);
 
             if ((answer.presentationId ?? null) !== this.presentationId) {
                 await this.showDeck(answer);

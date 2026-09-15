@@ -1522,5 +1522,14 @@
     "This screen": "Ez a képernyő",
     "Turn this off on a computer that is never the one the room reads from. It can still present in its own window.": "Kapcsold ki azon a gépen, amelyről a közösség sosem olvas. Saját ablakában továbbra is tud vetíteni.",
     "What you call this device, and whether decks may be sent to it. Both are yours alone and stay with the device.": "Ahogy te hívod ezt a gépet, és hogy küldhető-e rá vetítés. Mindkettő csak a tiéd, és a géphez tartozik.",
-    "Opens the screen window on this computer, with this deck on it.": "Megnyitja a vetítőablakot ezen a gépen, ezzel a diasorral."
+    "Opens the screen window on this computer, with this deck on it.": "Megnyitja a vetítőablakot ezen a gépen, ezzel a diasorral.",
+    "Fit the picture to the screen": "Kép igazítása a vászonhoz",
+    "Move the picture up": "Kép mozgatása felfelé",
+    "Move the picture down": "Kép mozgatása lefelé",
+    "Move the picture left": "Kép mozgatása balra",
+    "Move the picture right": "Kép mozgatása jobbra",
+    "Centre the picture again": "Kép visszaigazítása középre",
+    "Larger": "Nagyobb",
+    "This stays with the screen, not with the deck.": "Ez a képernyőhöz tartozik, nem a diasorhoz.",
+    "Arrows move · + and − scale · 0 centres · Esc closes": "Nyilak mozgatnak · + és − méretez · 0 középre · Esc bezár"
 }
