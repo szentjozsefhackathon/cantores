@@ -810,7 +810,7 @@ new class extends Component
                 <div class="flex flex-col gap-2">
                     <div class="flex items-center gap-2">
                         <flux:icon name="book-open-text" class="h-6 w-6 shrink-0" variant="outline" />
-                        <flux:heading :size="$welcome ? 'lg' : 'xl'" class="text-gray-800 dark:text-white">{{ $welcome ? 'Énekrendtervező' : 'Liturgikus naptár és énekrendek' }}</flux:heading>
+                        <flux:heading :size="$welcome ? 'lg' : 'xl'" class="text-gray-800 dark:text-white">Énekrendtervező</flux:heading>
                     </div>
                     @if($welcome)
                     <flux:text class="text-gray-500 dark:text-blue-100">Válassz egy napot, és másold át, ami tetszik.</flux:text>

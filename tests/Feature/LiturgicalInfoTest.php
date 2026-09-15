@@ -1,8 +1,14 @@
 <?php
 
 use App\Models\Celebration;
+use App\Models\Collection;
 use App\Models\Genre;
+use App\Models\Music;
 use App\Models\MusicPlan;
+use App\Models\MusicPlanSlot;
+use App\Models\MusicPlanSlotAssignment;
+use App\Models\MusicPlanSlotPlan;
+use App\Models\Score;
 use App\Models\User;
 use App\Services\LiturgicalInfoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -239,20 +245,20 @@ test('suggestion carousel previews songs with incipits and links to all suggesti
         'celebration_id' => $celebration->id,
     ]);
 
-    $slot = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Kezdőének']);
-    $music = \App\Models\Music::factory()->create(['title' => 'Jöjj Szentlélek Úristen']);
+    $slot = MusicPlanSlot::factory()->create(['name' => 'Kezdőének']);
+    $music = Music::factory()->create(['title' => 'Jöjj Szentlélek Úristen']);
 
     $plan->slots()->attach($slot->id, ['sequence' => 1]);
-    $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+    $pivot = MusicPlanSlotPlan::where('music_plan_id', $plan->id)
         ->where('music_plan_slot_id', $slot->id)
         ->first();
-    \App\Models\MusicPlanSlotAssignment::create([
+    MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
 
-    $score = \App\Models\Score::factory()->create([
+    $score = Score::factory()->create([
         'user_id' => $user->id,
         'music_id' => $music->id,
         'public_preview' => true,
@@ -287,14 +293,14 @@ test('suggestion carousel includes songs even when they have no incipit', functi
         'celebration_id' => $celebration->id,
     ]);
 
-    $slot = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Kezdőének']);
-    $music = \App\Models\Music::factory()->create(['title' => 'Incipit nélküli ének']);
+    $slot = MusicPlanSlot::factory()->create(['name' => 'Kezdőének']);
+    $music = Music::factory()->create(['title' => 'Incipit nélküli ének']);
 
     $plan->slots()->attach($slot->id, ['sequence' => 1]);
-    $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+    $pivot = MusicPlanSlotPlan::where('music_plan_id', $plan->id)
         ->where('music_plan_slot_id', $slot->id)
         ->first();
-    \App\Models\MusicPlanSlotAssignment::create([
+    MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
@@ -327,14 +333,14 @@ test('suggestion carousel is keyed by date so it resets when the day changes', f
         'celebration_id' => $celebration->id,
     ]);
 
-    $slot = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Kezdőének']);
-    $music = \App\Models\Music::factory()->create(['title' => 'Valamilyen ének']);
+    $slot = MusicPlanSlot::factory()->create(['name' => 'Kezdőének']);
+    $music = Music::factory()->create(['title' => 'Valamilyen ének']);
 
     $plan->slots()->attach($slot->id, ['sequence' => 1]);
-    $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+    $pivot = MusicPlanSlotPlan::where('music_plan_id', $plan->id)
         ->where('music_plan_slot_id', $slot->id)
         ->first();
-    \App\Models\MusicPlanSlotAssignment::create([
+    MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
@@ -367,13 +373,13 @@ test('suggestion carousel orders songs by slot priority and shows collection bad
         'celebration_id' => $celebration->id,
     ]);
 
-    $opening = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Kezdőének', 'priority' => 1]);
-    $offertory = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Felajánlás', 'priority' => 2]);
+    $opening = MusicPlanSlot::factory()->create(['name' => 'Kezdőének', 'priority' => 1]);
+    $offertory = MusicPlanSlot::factory()->create(['name' => 'Felajánlás', 'priority' => 2]);
 
-    $openingSong = \App\Models\Music::factory()->create(['title' => 'Opening song']);
-    $offertorySong = \App\Models\Music::factory()->create(['title' => 'Offertory song']);
+    $openingSong = Music::factory()->create(['title' => 'Opening song']);
+    $offertorySong = Music::factory()->create(['title' => 'Offertory song']);
 
-    $collection = \App\Models\Collection::factory()->create([
+    $collection = Collection::factory()->create([
         'user_id' => $user->id,
         'is_private' => false,
         'abbreviation' => 'SzVU',
@@ -383,10 +389,10 @@ test('suggestion carousel orders songs by slot priority and shows collection bad
     // Attach the lower-priority slot first to prove ordering is by priority, not insertion order.
     foreach ([[$offertory, $offertorySong], [$opening, $openingSong]] as [$slot, $song]) {
         $plan->slots()->attach($slot->id, ['sequence' => 1]);
-        $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+        $pivot = MusicPlanSlotPlan::where('music_plan_id', $plan->id)
             ->where('music_plan_slot_id', $slot->id)
             ->first();
-        \App\Models\MusicPlanSlotAssignment::create([
+        MusicPlanSlotAssignment::create([
             'music_plan_slot_plan_id' => $pivot->id,
             'music_id' => $song->id,
             'music_sequence' => 1,
@@ -418,16 +424,16 @@ test('suggestion carousel shows the same song twice when it is assigned to two d
         'celebration_id' => $celebration->id,
     ]);
 
-    $bevonulas = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Bevonulás', 'priority' => 1]);
-    $felajanlas = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Felajánlás', 'priority' => 2]);
-    $music = \App\Models\Music::factory()->create(['title' => 'Mindkét helyen énekelt ének']);
+    $bevonulas = MusicPlanSlot::factory()->create(['name' => 'Bevonulás', 'priority' => 1]);
+    $felajanlas = MusicPlanSlot::factory()->create(['name' => 'Felajánlás', 'priority' => 2]);
+    $music = Music::factory()->create(['title' => 'Mindkét helyen énekelt ének']);
 
     foreach ([$bevonulas, $felajanlas] as $slot) {
         $plan->slots()->attach($slot->id, ['sequence' => 1]);
-        $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+        $pivot = MusicPlanSlotPlan::where('music_plan_id', $plan->id)
             ->where('music_plan_slot_id', $slot->id)
             ->first();
-        \App\Models\MusicPlanSlotAssignment::create([
+        MusicPlanSlotAssignment::create([
             'music_plan_slot_plan_id' => $pivot->id,
             'music_id' => $music->id,
             'music_sequence' => 1,
@@ -460,20 +466,20 @@ test('other cantors section shows an animated incipit carousel for each publishe
         'celebration_id' => $celebration->id,
     ]);
 
-    $slot = \App\Models\MusicPlanSlot::factory()->create(['name' => 'Kezdőének']);
-    $music = \App\Models\Music::factory()->create(['title' => 'Jöjj Szentlélek Úristen']);
+    $slot = MusicPlanSlot::factory()->create(['name' => 'Kezdőének']);
+    $music = Music::factory()->create(['title' => 'Jöjj Szentlélek Úristen']);
 
     $plan->slots()->attach($slot->id, ['sequence' => 1]);
-    $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+    $pivot = MusicPlanSlotPlan::where('music_plan_id', $plan->id)
         ->where('music_plan_slot_id', $slot->id)
         ->first();
-    \App\Models\MusicPlanSlotAssignment::create([
+    MusicPlanSlotAssignment::create([
         'music_plan_slot_plan_id' => $pivot->id,
         'music_id' => $music->id,
         'music_sequence' => 1,
     ]);
 
-    $score = \App\Models\Score::factory()->create([
+    $score = Score::factory()->create([
         'user_id' => $author->id,
         'music_id' => $music->id,
         'public_preview' => true,
@@ -521,24 +527,24 @@ test('creating a music plan persists the celebration liturgical color', function
  * shared between plans, as they are in the application — the factory can only mint a dozen.
  *
  * @param  array<int, string>  $titles
- * @return array<int, \App\Models\Music>
+ * @return array<int, Music>
  */
 function attachSongsToPlan(MusicPlan $plan, array $titles): array
 {
     $songs = [];
 
     foreach (array_values($titles) as $index => $title) {
-        $slot = \App\Models\MusicPlanSlot::firstOrCreate(
+        $slot = MusicPlanSlot::firstOrCreate(
             ['name' => 'Rész '.($index + 1)],
             ['priority' => $index + 1],
         );
-        $music = \App\Models\Music::factory()->create(['title' => $title]);
+        $music = Music::factory()->create(['title' => $title]);
 
         $plan->slots()->attach($slot->id, ['sequence' => $index + 1]);
-        $pivot = \App\Models\MusicPlanSlotPlan::where('music_plan_id', $plan->id)
+        $pivot = MusicPlanSlotPlan::where('music_plan_id', $plan->id)
             ->where('music_plan_slot_id', $slot->id)
             ->first();
-        \App\Models\MusicPlanSlotAssignment::create([
+        MusicPlanSlotAssignment::create([
             'music_plan_slot_plan_id' => $pivot->id,
             'music_id' => $music->id,
             'music_sequence' => 1,
@@ -686,3 +692,13 @@ test('a suggestion teaser is a plain link to the suggestions page', function () 
             'year_parity' => $celebration->year_parity,
         ])));
 });
+
+/**
+ * The card is one named tool, so it answers to the same name wherever it is
+ * shown. Only its prominence changes: on the front page it sits among other
+ * tools, on the dashboard it leads the page.
+ */
+it('calls itself the same tool on the front page and on the dashboard', function (bool $welcome) {
+    Livewire::test('liturgical-info', ['welcome' => $welcome])
+        ->assertSee('Énekrendtervező');
+})->with([true, false]);
