@@ -226,3 +226,120 @@ test('a fit that says nothing leaves the picture where the deck was fitted', asy
 
     assert.deepEqual(deck.fit, { scale: 1, x: 0, y: 0 });
 });
+
+/*
+ * The title card. The window is opened on the laptop and dragged onto the
+ * beamer, and what the congregation reads while that happens must not be the
+ * first slide of a hymn nobody is singing yet.
+ */
+function carded(total = 3) {
+    const deck = presenter(total);
+
+    deck.splash = true;
+
+    return deck;
+}
+
+test('the first Next ends the card and lands on the first slide, not the second', () => {
+    const deck = carded();
+
+    deck.next();
+
+    assert.equal(deck.splash, false, 'the card outlived the press that was meant to end it');
+    assert.equal(deck.index, 0, 'the room was shown the second slide without ever seeing the first');
+
+    deck.next();
+
+    assert.equal(deck.index, 1);
+});
+
+/* There is nothing behind the beginning, so going back out of the card is the
+   only honest thing Previous can do there. */
+test('going back out of the card leaves it without moving the deck', () => {
+    const deck = carded();
+
+    deck.previous();
+
+    assert.equal(deck.splash, false);
+    assert.equal(deck.index, 0);
+});
+
+/* Blanking during the card is the cantor saying "not yet, and not this either".
+   The card is over and the wall is black; B again brings up the first slide. */
+test('blanking during the card ends it and shows black', () => {
+    const deck = carded();
+
+    deck.toggleBlank();
+
+    assert.equal(deck.splash, false);
+    assert.equal(deck.blanked, true);
+    assert.equal(deck.index, 0);
+
+    deck.toggleBlank();
+
+    assert.equal(deck.blanked, false);
+    assert.equal(deck.index, 0, 'coming back from black skipped the first slide');
+});
+
+test('a jump straight to a slide ends the card and goes there', () => {
+    const deck = carded(4);
+
+    deck.go(2);
+
+    assert.equal(deck.splash, false);
+    assert.equal(deck.index, 2);
+});
+
+/* The card is a picture, not a console — but it is also the half hour before
+   Mass, when a full-screen page showing one centred line with no visible way out
+   is exactly what a browser's scam heuristics are built to catch. */
+test('the card keeps its bar even in full screen', () => {
+    const deck = carded();
+
+    deck.fullscreen = true;
+    deck.idle = true;
+
+    assert.equal(deck.showingSplash, true);
+    assert.equal(deck.controlsHidden, false, 'the wall sat in full screen with no way out of it');
+});
+
+/* A screen still engraving a deck has nothing to say, and a card over that would
+   claim a service was about to start when none is. */
+test('the card is not drawn over a deck that is still being prepared', () => {
+    const deck = carded();
+
+    deck.preparing = true;
+
+    assert.equal(deck.showingSplash, false);
+
+    deck.preparing = false;
+    deck.presentationId = null;
+
+    assert.equal(deck.showingSplash, false);
+});
+
+/* The wall reports where it is; what it must never report is a card it has
+   already let go of, since that is the state the phone reads back. */
+test('the wall reports the card it is holding, and the one it has ended', () => {
+    const deck = carded();
+    const written = [];
+
+    deck._client = { write: (state) => { written.push(state); return Promise.resolve(null); } };
+
+    deck.report();
+    deck.next();
+
+    assert.deepEqual(written.map((state) => state.splash), [true, false]);
+});
+
+/* Where the card comes from at all: the server, because the press that ends it
+   may have been a thumb on a phone across the building. */
+test('the wall takes the card up and puts it down as the server says', () => {
+    const deck = presenter(3);
+
+    deck.adopt({ version: 2, entryId: 1, slideIndex: 0, splash: true, blanked: false, reveals: {} });
+    assert.equal(deck.splash, true);
+
+    deck.adopt({ version: 3, entryId: 1, slideIndex: 0, splash: false, blanked: false, reveals: {} });
+    assert.equal(deck.splash, false);
+});

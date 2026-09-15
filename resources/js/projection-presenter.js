@@ -101,6 +101,24 @@ onAlpineInit(() => {
         preparing: false,
 
         /**
+         * Whether the room is still looking at the title card rather than at the
+         * deck.
+         *
+         * The window is opened on the laptop and dragged onto the beamer, and
+         * for those seconds the congregation reads whatever is on it. A card is
+         * the honest picture for that, and it is the only chance anybody gets to
+         * see whether the beamer is lined up before a hymn is riding on it.
+         *
+         * It lives on the presentation and not here, because the press that ends
+         * it comes as often from the phone at the organ as from this keyboard,
+         * and whichever hears it, the wall must land on the *first* slide. Held
+         * here only as this screen's copy of that, reported like everything else
+         * and never taken back: a client may let the card go and may not ask for
+         * it again.
+         */
+        splash: Boolean(config.splash),
+
+        /**
          * The deck this screen has actually finished engraving, and the deck the
          * server now has. While they differ the wall is behind an edit, and the
          * phone is told as much — which is the honest answer to "is the room
@@ -151,17 +169,20 @@ onAlpineInit(() => {
          * all — not even for the moment after a mouse is moved. In a window the
          * bar still behaves as it always has, and comes back on any sign of life.
          *
-         * Except while the screen is waiting, when there is no picture to
-         * protect: the rule exists so that a projector is never caught showing a
-         * toolbar over a hymn, and a screen showing nothing is not showing a
-         * hymn. It is also the half hour before Mass, which is exactly when a
+         * Except while the screen is waiting or holding its title card, when
+         * there is no picture to protect: the rule exists so that a projector is
+         * never caught showing a toolbar over a hymn, and neither of those is a
+         * hymn. Both are also the half hour before Mass, which is exactly when a
          * full-screen page with one centred line on black and no visible way out
          * is what a browser's scam heuristics are looking for — Edge blocks the
          * page outright, minutes in, and the wall is lost before the service has
-         * begun. Leaving the bar up costs nothing anybody is reading.
+         * begun. Leaving the bar up costs nothing anybody is reading, and while
+         * the card is up it is what the cantor reaches for: the window has just
+         * been dragged onto the beamer and full screen is the next thing asked
+         * for.
          */
         get controlsHidden() {
-            if (this.waiting) { return false; }
+            if (this.waiting || this.showingSplash) { return false; }
 
             return this.fullscreen || this.idle;
         },
@@ -169,6 +190,17 @@ onAlpineInit(() => {
         /** Whether this screen is waiting to be pointed at a deck at all. */
         get waiting() {
             return this.presentationId === null;
+        },
+
+        /**
+         * Whether the title card is the picture right now.
+         *
+         * Not while a deck is being engraved and not on a screen with no deck at
+         * all: both of those are the wall saying it has nothing, and a card over
+         * them would claim a service was about to start when none is.
+         */
+        get showingSplash() {
+            return this.splash && !this.waiting && !this.preparing;
         },
 
         /** Whether the room should be looking at black, and for either reason. */
@@ -306,8 +338,23 @@ onAlpineInit(() => {
         go(index) {
             if (this.total === 0) { return; }
 
+            this.splash = false;
             this.index = Math.min(Math.max(index, 0), this.total - 1);
             this.show();
+            this.report();
+        },
+
+        /**
+         * The card put away, with the deck left exactly where it stands.
+         *
+         * This is what makes the first Next land on the first slide rather than
+         * the second: the card is not a slide before the deck but a picture over
+         * it, so ending it is a move of nothing at all. The same is true
+         * backwards — Previous at the very beginning has nowhere to go, and
+         * ending the card is the only honest thing it can do.
+         */
+        leaveSplash() {
+            this.splash = false;
             this.report();
         },
 
@@ -316,14 +363,23 @@ onAlpineInit(() => {
         // presses B once when it is time for the room to see it. Only B brings
         // the picture back, so nothing can un-blank the wall by accident.
         next() {
+            if (this.showingSplash) { return this.leaveSplash(); }
+
             this.go(this.index + 1);
         },
 
         previous() {
+            if (this.showingSplash) { return this.leaveSplash(); }
+
             this.go(this.index - 1);
         },
 
+        // Blanking during the card is the cantor saying "not yet, and not this
+        // either": the card is over and the wall is black, which is where a
+        // sermon before the first hymn belongs. Pressing B again brings up the
+        // first slide, as it would have anywhere else in the deck.
         toggleBlank() {
+            this.splash = false;
             this.blanked = !this.blanked;
             this.report();
         },
@@ -445,6 +501,10 @@ onAlpineInit(() => {
             this.appliedVersion = 0;
             this.reveals = {};
             this.blanked = false;
+            // Taken up before the engraving rather than after it, because
+            // engraving ends in a report: a card read off the answer a moment
+            // later would be reported away before this screen had drawn it.
+            this.splash = Boolean(answer.state?.splash);
             this.drawnRevision = '';
             this.serverRevision = '';
 
@@ -479,6 +539,7 @@ onAlpineInit(() => {
             this.appliedVersion = state.version;
             this.reveals = state.reveals ?? {};
             this.blanked = Boolean(state.blanked);
+            this.splash = Boolean(state.splash);
 
             this.repaint({ entryId: state.entryId, slideIndex: state.slideIndex });
         },
@@ -499,7 +560,7 @@ onAlpineInit(() => {
             const address = this.address();
 
             this._client
-                .write({ ...address, blanked: this.blanked, drawnRevision: this.drawnRevision })
+                .write({ ...address, blanked: this.blanked, splash: this.splash, drawnRevision: this.drawnRevision })
                 .then((state) => {
                     if (state !== null) { this.appliedVersion = Math.max(this.appliedVersion, state.version); }
                 })

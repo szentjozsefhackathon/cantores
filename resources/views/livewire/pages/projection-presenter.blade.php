@@ -39,6 +39,10 @@ resources/js/projection-presenter.js
         // centring it and jumping a second later.
         'fit' => $screen->fit(),
         'presentationId' => $presentation?->id,
+        // Whether the room is still looking at the title card. Baked in so the
+        // card is the first thing painted rather than something that arrives a
+        // second later, over a slide the congregation has already read.
+        'splash' => $presentation?->splash ?? false,
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
         'csrfToken' => csrf_token(),
@@ -114,10 +118,35 @@ resources/js/projection-presenter.js
         <div
             x-ref="stageBox"
             class="bg-white"
-            x-show="!waiting"
+            x-show="!waiting && !showingSplash"
             x-bind:style="`aspect-ratio: ${aspectRatio}; height: 100%; max-width: 100%; max-height: 100%; transform: ${fitTransform}; transform-origin: center;`"
             wire:ignore
         ></div>
+    </div>
+
+    {{-- The title card: what the room looks at between the window being opened
+         and the service starting.
+
+         Drawn in the deck's own footprint rather than across the whole screen,
+         and under the same fit the slides get, so that what the card shows is
+         exactly where the first hymn will land. That is the second thing it is
+         for: the beamer is lined up against this, in the quiet before Mass,
+         rather than against a hymn nobody is ready to sing.
+
+         Dark and not black, because black on a projector is indistinguishable
+         from a projector that is off, and the half hour this is up is the half
+         hour somebody would otherwise walk over to check. --}}
+    <div class="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden" x-show="showingSplash" x-cloak>
+        <div
+            class="flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-8 text-center"
+            x-bind:style="`aspect-ratio: ${aspectRatio}; height: 100%; max-width: 100%; max-height: 100%; transform: ${fitTransform}; transform-origin: center;`"
+        >
+            <div class="text-[7vmin] font-semibold leading-none tracking-tight text-white/90">Cantores.hu</div>
+
+            {{-- The deck's name under it, small: the one glance that says the
+                 right projection is loaded before anybody depends on it. --}}
+            <div class="max-w-[80%] truncate text-[2.5vmin] text-white/40" x-text="title"></div>
+        </div>
     </div>
 
     {{-- Nothing at all: the key a cantor presses when the sermon starts, and
@@ -148,7 +177,7 @@ resources/js/projection-presenter.js
         </span>
     </div>
 
-    <div class="absolute inset-0 flex items-center justify-center text-sm text-white/50" x-show="!waiting && !preparing && total === 0 && !busy" x-cloak>
+    <div class="absolute inset-0 flex items-center justify-center text-sm text-white/50" x-show="!waiting && !preparing && !showingSplash && total === 0 && !busy" x-cloak>
         {{ __('This projection has no slides yet.') }}
     </div>
 

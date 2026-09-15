@@ -48,6 +48,7 @@ class PresentationStateRequest extends FormRequest
             'entryId' => ['sometimes', 'nullable', 'integer'],
             'slideIndex' => ['sometimes', 'integer', 'min:0'],
             'blanked' => ['sometimes', 'boolean'],
+            'splash' => ['sometimes', 'boolean'],
             'drawnRevision' => ['sometimes', 'nullable', 'string', 'max:32'],
             'reveals' => ['sometimes', 'nullable', 'array'],
             'reveals.*' => ['array'],
@@ -60,13 +61,13 @@ class PresentationStateRequest extends FormRequest
      * Just the part of the state that moves the service, in the vocabulary
      * Presentation::applyState speaks.
      *
-     * @return array{entryId?: int|null, slideIndex?: int, blanked?: bool, reveals?: array<int, list<int>>}
+     * @return array{entryId?: int|null, slideIndex?: int, blanked?: bool, splash?: bool, reveals?: array<int, list<int>>}
      */
     public function state(): array
     {
         $state = [];
 
-        foreach (['entryId', 'slideIndex', 'blanked'] as $field) {
+        foreach (['entryId', 'slideIndex', 'blanked', 'splash'] as $field) {
             if ($this->has($field)) {
                 $state[$field] = $this->input($field);
             }

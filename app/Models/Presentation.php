@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Auth;
  * @property int $slide_index
  * @property int|null $entry_sequence
  * @property bool $blanked
+ * @property bool $splash
  * @property int $version
  * @property string|null $drawn_revision
  * @property array<int|string, list<int>>|null $reveals
@@ -94,6 +95,7 @@ class Presentation extends Model
         'slide_index',
         'entry_sequence',
         'blanked',
+        'splash',
         'version',
         'drawn_revision',
         'reveals',
@@ -109,6 +111,7 @@ class Presentation extends Model
     {
         return [
             'blanked' => 'boolean',
+            'splash' => 'boolean',
             'reveals' => 'array',
             'started_at' => 'datetime',
             'last_seen_at' => 'datetime',
@@ -141,9 +144,18 @@ class Presentation extends Model
      * Joining rather than starting afresh is what makes two windows on one deck
      * follow each other, which is the whole mechanism this feature is built out
      * of — the remote is only a third client of the same row.
+     *
+     * `$splash` asks for the title card, and is asked for only by a presenter
+     * window opening a deck itself. It reaches the row only when one is created:
+     * a second window joining a service already under way must not put a card
+     * over the hymn the room is singing.
      */
-    public static function resumeFor(Projection $projection, User $user, ?int $devicePairingId = null): self
-    {
+    public static function resumeFor(
+        Projection $projection,
+        User $user,
+        ?int $devicePairingId = null,
+        bool $splash = false,
+    ): self {
         $existing = self::query()
             ->live()
             ->where('projection_id', $projection->getKey())
@@ -166,6 +178,7 @@ class Presentation extends Model
             'entry_id' => null,
             'slide_index' => 0,
             'blanked' => false,
+            'splash' => $splash,
             'version' => 1,
             'started_at' => $now,
             'last_seen_at' => $now,
@@ -244,7 +257,14 @@ class Presentation extends Model
      * — which, a beat after the remote moved itself optimistically, reads as the
      * wall contradicting the tap that has not landed yet.
      *
-     * @param  array{entryId?: int|null, slideIndex?: int, blanked?: bool, reveals?: array<int, list<int>>}  $state
+     * The title card is a latch rather than a field: it may be let go of and
+     * never taken back. Every heartbeat carries it, and a screen that has not
+     * heard of it at all carries nothing — so a client reporting `true` can only
+     * leave the card where it was, and one reporting `false` ends it for every
+     * device at once. Without that, the wall's ten-second heartbeat would put
+     * the card back over a slide the phone had just moved to.
+     *
+     * @param  array{entryId?: int|null, slideIndex?: int, blanked?: bool, splash?: bool, reveals?: array<int, list<int>>}  $state
      */
     public function applyState(array $state, ?ProjectionSlide $entry = null): void
     {
@@ -252,12 +272,14 @@ class Presentation extends Model
             'entry_id' => array_key_exists('entryId', $state) ? $state['entryId'] : $this->entry_id,
             'slide_index' => array_key_exists('slideIndex', $state) ? max(0, (int) $state['slideIndex']) : $this->slide_index,
             'blanked' => array_key_exists('blanked', $state) ? (bool) $state['blanked'] : $this->blanked,
+            'splash' => $this->splash && (bool) ($state['splash'] ?? true),
             'reveals' => array_key_exists('reveals', $state) ? ($state['reveals'] ?: null) : $this->reveals,
         ];
 
         $moved = $next['entry_id'] !== $this->entry_id
             || $next['slide_index'] !== $this->slide_index
             || $next['blanked'] !== $this->blanked
+            || $next['splash'] !== $this->splash
             || self::canonicalReveals($next['reveals']) !== self::canonicalReveals($this->reveals);
 
         if ($entry instanceof ProjectionSlide && $entry->id === $next['entry_id']) {

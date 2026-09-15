@@ -55,6 +55,9 @@ resources/js/projection-remote.js
         // centring it and jumping a second later.
         'fit' => $screen->fit(),
         'presentationId' => $presentation?->id,
+        // Whether the wall is still holding its title card, so that the preview
+        // under the thumb is the same picture the room is looking at.
+        'splash' => $presentation?->splash ?? false,
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
         'editUrl' => $projection === null ? null : route('projections.edit', ['projection' => $projection->id]),
@@ -335,7 +338,9 @@ resources/js/projection-remote.js
                 x-bind:class="pressed === 'next'
                     ? 'border-blue-500 bg-blue-600 text-white ring-4 ring-blue-400/50'
                     : 'border-zinc-900 bg-zinc-900 text-white active:bg-zinc-700 dark:border-white dark:bg-white dark:text-zinc-900 dark:active:bg-zinc-200'"
-                x-bind:disabled="index >= total - 1"
+                {{-- Not while the card is up: the press that ends it is Next, and
+                     a one-slide deck would otherwise have no way out of it. --}}
+                x-bind:disabled="!splash && index >= total - 1"
                 aria-label="{{ __('Next slide') }}"
             >
                 <flux:icon.chevron-right class="size-10 lg:size-5" />

@@ -662,3 +662,103 @@ test('a poll answered before the press does not undo the press', async () => {
 
     assert.equal(deck.fit.x, 0, 'the phone went on believing its own hand');
 });
+
+/*
+ * The title card, from the thumb's side. The press that ends it is as often this
+ * one as the keyboard across the building, and either way the room must land on
+ * the first slide rather than the second.
+ */
+function carded(total = 5) {
+    const deck = remote(total);
+
+    deck.splash = true;
+
+    return deck;
+}
+
+test('the first press of anything ends the card without moving the service', () => {
+    for (const key of [' ', 'ArrowRight', 'PageDown', 'Enter', 'ArrowLeft', 'End']) {
+        const deck = carded();
+
+        deck.onKey(press(key));
+
+        assert.equal(deck.splash, false, `${key} left the card up`);
+        assert.equal(deck.index, 0, `${key} moved the service past the slide nobody had seen`);
+    }
+});
+
+test('the Next button ends the card and lands on the first slide', () => {
+    const deck = carded();
+
+    deck.next();
+
+    assert.equal(deck.splash, false);
+    assert.equal(deck.index, 0);
+
+    deck._pressedAt = {};
+    deck.next();
+
+    assert.equal(deck.index, 1);
+});
+
+test('blanking from the phone ends the card and leaves the deck at its beginning', () => {
+    const deck = carded();
+
+    deck.toggleBlank();
+
+    assert.equal(deck.splash, false);
+    assert.equal(deck.blanked, true);
+    assert.equal(deck.index, 0);
+});
+
+/* A row tapped in the plan is a content interaction like any other. */
+test('a slide tapped in the plan ends the card and goes there', () => {
+    const deck = carded();
+
+    deck.go(3);
+
+    assert.equal(deck.splash, false);
+    assert.equal(deck.index, 3);
+});
+
+/* The phone has to carry the card on the wire — a press here is what ends it —
+   without ever drawing it: the preview goes on showing the first slide, which is
+   the slide the next press will put on the wall. */
+test('the phone reports the card without ever holding one', () => {
+    const deck = carded();
+    const written = [];
+
+    deck.push = registered.projectionRemote({}).push.bind(deck);
+    deck._client = { write: (state) => { written.push(state); return Promise.resolve(null); } };
+
+    deck.push();
+    deck.next();
+
+    assert.deepEqual(written.map((state) => state.splash), [true, false]);
+    assert.equal(deck.showingSplash, undefined, 'the remote grew a title card of its own');
+});
+
+/* Where the card comes from at all: the server, because the press that ended it
+   may have been a keyboard across the building. */
+test('the phone takes the card up and puts it down as the server says', async () => {
+    const deck = remote();
+    let answer = null;
+
+    deck.repaint = () => {};
+    deck._screen = { read: () => Promise.resolve(answer) };
+
+    const says = (version, splash) => {
+        answer = {
+            presentationId: 1,
+            state: { version, splash, blanked: false, reveals: {}, entryId: 1, slideIndex: 0, revision: 'a', drawnRevision: 'a', endedAt: null },
+        };
+
+        return deck.pull();
+    };
+
+    await says(2, true);
+    assert.equal(deck.splash, true);
+
+    await says(3, false);
+    assert.equal(deck.splash, false, 'the phone went on thinking the wall held a card');
+});

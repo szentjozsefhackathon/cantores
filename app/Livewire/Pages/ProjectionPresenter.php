@@ -129,10 +129,16 @@ class ProjectionPresenter extends Component
         // Rejoining rather than starting afresh is what makes two windows on one
         // deck follow each other — and the remote is only a third client of the
         // same row.
+        // And asking for the title card, which is this page's to ask for: the
+        // window is opened here and then dragged onto the beamer, and what the
+        // room watches while that happens should not be the first slide of a
+        // hymn nobody is singing yet. A deck a phone points at a screen already
+        // on the wall asks for no such thing.
         $presentation = Presentation::resumeFor(
             $projection,
             Auth::user(),
             Session::get(DevicePairing::DEVICE_SESSION_KEY),
+            splash: true,
         );
 
         // Opening a deck by hand is also a way of saying which deck this screen

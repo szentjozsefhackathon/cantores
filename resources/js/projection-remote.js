@@ -183,6 +183,22 @@ onAlpineInit(() => {
         preparing: false,
 
         /**
+         * Whether the wall is still holding its title card rather than showing
+         * the deck.
+         *
+         * Worth a field here and not only on the laptop, because the first press
+         * of the service is as often this thumb as that keyboard, and the answer
+         * has to be the same either way: the card ends and the room lands on the
+         * *first* slide.
+         *
+         * Never drawn here, though. The remote is where the cantor reads what is
+         * *coming*, and a phone showing a title card is a phone showing nothing:
+         * the preview goes on holding the first slide, which is the slide the
+         * next press will put on the wall.
+         */
+        splash: Boolean(config.splash),
+
+        /**
          * The deck the server has, and the deck the wall has finished engraving.
          *
          * Two numbers rather than one, because "the edit is saved" and "the room
@@ -773,8 +789,23 @@ onAlpineInit(() => {
 
             if (this.total === 0) { return; }
 
+            this.splash = false;
             this.index = Math.min(Math.max(index, 0), this.total - 1);
             this.show();
+            this.push();
+        },
+
+        /**
+         * The card put away, with the deck left where it stands.
+         *
+         * The card is a picture over the deck and not a slide before it, so the
+         * first Next ends it and shows the first slide — not the second. Going
+         * backwards out of it is the same move: there is nothing behind the
+         * beginning to go back to.
+         */
+        leaveSplash() {
+            this.askFullscreen();
+            this.splash = false;
             this.push();
         },
 
@@ -807,16 +838,17 @@ onAlpineInit(() => {
         },
 
         next() {
-            this.press('next', () => this.go(this.index + 1));
+            this.press('next', () => (this.splash ? this.leaveSplash() : this.go(this.index + 1)));
         },
 
         previous() {
-            this.press('previous', () => this.go(this.index - 1));
+            this.press('previous', () => (this.splash ? this.leaveSplash() : this.go(this.index - 1)));
         },
 
         toggleBlank() {
             this.press('blank', () => {
                 this.askFullscreen();
+                this.splash = false;
                 this.blanked = !this.blanked;
                 this.push();
             });
@@ -915,6 +947,15 @@ onAlpineInit(() => {
 
         /** A keyed move: obeyed at once, and lighting the control it stands for. */
         moved(name, index) {
+            // The very first press, whatever key it was, ends the card and moves
+            // nothing: what the room has not seen yet cannot be advanced past.
+            if (this.splash) {
+                this.flash(name);
+                this.leaveSplash();
+
+                return;
+            }
+
             this.flash(name);
             this.go(index);
         },
@@ -922,6 +963,7 @@ onAlpineInit(() => {
         /** The blank, without the thumb's lock in front of it. */
         blank() {
             this.flash('blank');
+            this.splash = false;
             this.blanked = !this.blanked;
             this.push();
         },
@@ -1192,7 +1234,7 @@ onAlpineInit(() => {
             if (this._client === null) { return; }
 
             this._client
-                .write({ ...addressAt(this.slides, this.index), blanked: this.blanked, reveals: this.reveals })
+                .write({ ...addressAt(this.slides, this.index), blanked: this.blanked, splash: this.splash, reveals: this.reveals })
                 .then((state) => {
                     if (state !== null) { this.appliedVersion = Math.max(this.appliedVersion, state.version); }
                 })
@@ -1245,6 +1287,7 @@ onAlpineInit(() => {
                 this.appliedVersion = state.version;
                 this.reveals = state.reveals ?? {};
                 this.blanked = Boolean(state.blanked);
+                this.splash = Boolean(state.splash);
                 this.repaint({ entryId: state.entryId, slideIndex: state.slideIndex });
             }
 
@@ -1269,6 +1312,7 @@ onAlpineInit(() => {
             this.appliedVersion = 0;
             this.reveals = {};
             this.blanked = false;
+            this.splash = Boolean(answer.state?.splash);
             this.ended = false;
 
             if (this.presentationId === null) {
