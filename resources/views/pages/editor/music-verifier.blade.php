@@ -7,7 +7,7 @@
 
     @if (!$showVerification)
     <!-- Selection Phase -->
-    <div class="max-w-3xl mx-auto">
+    <div class="max-w-5xl mx-auto">
         <flux:heading size="lg" class="mb-4">{{ __('Select Music to Verify') }}</flux:heading>
         
         <!-- Or use music-search component -->

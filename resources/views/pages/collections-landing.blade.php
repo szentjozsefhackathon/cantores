@@ -33,8 +33,7 @@ new class extends Component
 
     public function rendering(View $view): void
     {
-        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-        $view->layout($layout, [
+                $view->layout('layouts::shell', [
             'title'       => 'Gyűjtemények',
             'description' => 'Böngéssz liturgikus énekeskönyvek, kottagyűjtemények és dallamtárak között. Fedezd fel a gyűjteményeket az Énektárban.',
         ]);
@@ -120,7 +119,7 @@ new class extends Component
 <div>
     {{-- Hero Section --}}
     <div class="relative overflow-hidden bg-linear-to-br from-emerald-600 via-teal-700 to-cyan-800 dark:from-emerald-900 dark:via-teal-900 dark:to-cyan-950">
-        <div class="relative mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <div class="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
@@ -149,7 +148,7 @@ new class extends Component
 
     {{-- Stats Bar --}}
     <div class="border-b border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-        <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-2 divide-x divide-gray-200 dark:divide-zinc-700">
                 <div class="flex flex-col items-center py-6 text-center">
                     <flux:icon name="book-open" class="mb-2 h-6 w-6 text-emerald-400" />
@@ -165,7 +164,7 @@ new class extends Component
         </div>
     </div>
 
-    <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8 space-y-8">
+    <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 space-y-8">
 
         {{-- Search --}}
         <div class="flex items-center gap-3">

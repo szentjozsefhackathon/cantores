@@ -10,7 +10,6 @@ use App\Models\Score;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -118,9 +117,7 @@ class PublicScores extends Component
 
     public function rendering(IlluminateView $view): void
     {
-        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-
-        $view->layout($layout, [
+        $view->layout('layouts::shell', [
             'title' => __('Free sheet music'),
             'description' => __('Freely downloadable sheet music — public domain and Creative Commons scores for cantors and church musicians.'),
             'canonical' => route('public-scores'),

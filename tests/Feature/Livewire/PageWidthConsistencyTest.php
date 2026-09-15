@@ -20,7 +20,7 @@ uses(RefreshDatabase::class);
  */
 it('keeps the reading pages as wide as the site chrome', function (string $page) {
     $chrome = file_get_contents(resource_path('views/layouts/app/main.blade.php'));
-    expect($chrome)->toContain('lg:max-w-4xl');
+    expect($chrome)->toContain('lg:max-w-6xl');
 
     $user = User::factory()->create();
     $this->actingAs($user);
@@ -34,6 +34,6 @@ it('keeps the reading pages as wide as the site chrome', function (string $page)
 
     $html = $component->html();
 
-    expect($html)->toContain('lg:max-w-4xl');
+    expect($html)->toContain('lg:max-w-6xl');
     expect($html)->not->toContain('max-w-7xl');
 })->with(['music', 'collection', 'author', 'my music plans']);

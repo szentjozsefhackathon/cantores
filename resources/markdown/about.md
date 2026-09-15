@@ -1,25 +1,56 @@
-# Üdvözlünk a Cantores.hu oldalon!
+# Cantores.hu – liturgikus zenei műhely
 
-A Cantores.hu egy kántoroknak és más érdeklődőknek szóló platform, amely elsősorban az énekrendek, illetve a liturgia zenei anyagának összeállításában segít.
+A Cantores.hu nem egyszerűen énektár, és nem is pusztán vetítőprogram. Olyan liturgikus zenei
+műhely, ahol a kántorok és a templomi zenekarvezetők a saját munkamódszerük szerint készíthetik
+elő a szolgálatukat.
 
-## A honlap főbb funkciói
+A célunk nem az, hogy mindenre egyetlen kész megoldást adjunk, hanem az, hogy a saját anyagaidból,
+saját változataidból és saját zenei gondolkodásodból tudj gyorsan és igényesen dolgozni.
 
-1. **Liturgikus információk:** Naptár, ünnepek, olvasmányok, színek.
-2. **Énektár:** Kereshető, bővíthető énekgyűjtemény.
-3. **Orgona- és egyéb zenei darabok katalógusa:** Előadási darabok kereshető, bővíthető gyűjteménye.
-4. **Napló:** Saját énekrendek privát nyilvántartása.
-5. **Énekrend-javaslatok:** Egy adott ünnephez javasolt énekek/darabok gyűjteménye.
-6. **Saját kottatár és kottakölcsönzés:** Saját kottáid tárolása, és titkos linken való kölcsönadása
-   például a kórusodnak.
+Egy közösség gyakran nem pontosan úgy énekel egy darabot, ahogy az egy gyűjteményben szerepel.
+Más hangnemet használ, más versszakokat választ, saját kísérete van, készít egy átiratot,
+szólamokat ír hozzá, vagy egyszerűen kialakít egy bevált változatot. Ezek az anyagok ma sokszor
+külön mappákban, számítógépeken, pendrive-okon és különféle dokumentumokban élnek. A Cantores ezt
+a munkát gyűjti egy helyre.
+
+**Ami nincs készen, azt itt meg tudod csinálni. Amit egyszer megcsináltál, azt többé nem kell újra
+megcsinálnod.**
+
+## Mit tudsz itt megcsinálni?
+
+Ezek nem külön szigetek: ugyanaz az anyag megy végig az énekrendtől a kivetített képig,
+újragépelés nélkül.
+
+1. **Énekrend és liturgikus naptár:** Ünnepek, olvasmányok, liturgikus színek, és az ezekhez
+   összeállított énekrend – sablonból, javaslatokból vagy tiszta lapról.
+2. **Énektár:** Kereshető, bővíthető énekgyűjtemény énekekkel, gyűjteményekkel és szerzőkkel,
+   közös törzsadatbázisban.
+3. **Saját kottatár és kottaszerkesztő:** A saját változataid – más hangnem, más versszakok,
+   saját kíséret, saját szólamok. Beírhatod őket négy formátumban (Aretino, ABC, Gregorio/GABC,
+   ChordPro), vagy feltöltheted, ami már megvan.
+4. **Mappák és kölcsönzés:** Rendszerezés mappákba, és titkos, bármikor visszavonható linken
+   való kölcsönadás – például a kórusodnak vagy a kántortársaidnak.
+5. **Füzetek:** Ugyanabból az anyagból nyomtatható füzet A4, A5 vagy A6 méretben, füzetnyomtatásra
+   montírozva, a zenészek kezébe.
+6. **Vetítés:** És ugyanabból a kivetített kép, a saját képarányodra tördelve, távirányítóval,
+   vetítővászonnal és QR-kódos bejelentkezéssel.
 7. **Ingyenes kották:** Szabadon letölthető kották, amelyek jogilag is szabadon terjeszthetők.
 
-## Miért érdemes regisztrálni?
+A saját kottáid, feldolgozásaid, változataid és énekrendjeid nem egyetlen gépen maradnak. Otthon,
+a templomban vagy a próbán ugyanaz az anyag érhető el, és semmit nem kell telepíteni.
 
-A Cantores.hu a regisztrált felhasználók által megosztott énekrendeket összesíti, és ezek alapján ajánl énekrendet egy adott ünnepre. Ezért minél többen regisztrálnak, és osztják meg énekrendjeiket, annál jobb javaslatokat tudunk adni mindenki számára.
+## Kiknek készül?
 
-## Kiknek ajánljuk?
+Elsősorban kántoroknak, szkólavezetőknek, kórusvezetőknek és gitáros zenekarok vezetőinek –
+azoknak, akik nemcsak tartalmat szeretnének fogyasztani, hanem saját zenei munkát végeznek.
+Az énektárat és a közzétett énekrendeket természetesen bárki böngészheti.
 
-Minden magyar kántornak, kórusvezetőnek, liturgikus szolgálattevőnek, zenésznek, vagy érdeklődőnek.
+## Miért érdemes megosztani az énekrendjeidet?
+
+A Cantores.hu a regisztrált felhasználók által megosztott énekrendeket összesíti, és ezek alapján
+ajánl énekrendet egy adott ünnepre. Ezért minél többen regisztrálnak, és osztják meg
+énekrendjeiket, annál jobb javaslatokat tudunk adni mindenki számára. A saját elvégzett munkád
+értéke közben megmarad: bármikor újra felhasználhatod.
 
 ## Publikusak az énekrendek?
 

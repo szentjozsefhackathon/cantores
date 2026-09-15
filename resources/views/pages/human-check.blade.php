@@ -1,4 +1,4 @@
-<x-layouts::app.main :title="__('Human check')" :noindex="true">
+<x-layouts::shell :title="__('Human check')" :noindex="true">
     <x-turnstile.scripts />
 
     <main class="mx-auto flex w-full max-w-lg flex-col items-center gap-6 py-12 text-center">
@@ -36,4 +36,4 @@
             document.getElementById('human-check-form').submit();
         };
     </script>
-</x-layouts::app.main>
+</x-layouts::shell>

@@ -144,7 +144,7 @@ class ScoreView extends Component
      * The uploaded files behind this score, oldest first — a score often keeps
      * the editable source beside the PDFs cut for different paper.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreFile>
+     * @return Collection<int, ScoreFile>
      */
     #[Computed]
     public function scoreFiles(): Collection
@@ -193,7 +193,7 @@ class ScoreView extends Component
             return;
         }
 
-        $view->layout('layouts::app.main', [
+        $view->layout('layouts::shell', [
             'title' => $this->score->title,
             'noindex' => true,
         ]);

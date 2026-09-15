@@ -16,9 +16,10 @@ new class extends Component
 {
     public function rendering(View $view): void
     {
-        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-
-        $view->layout($layout);
+        $view->layout('layouts::shell', [
+            'title'       => 'Énekrend javaslatok',
+            'description' => 'Mit énekelnek mások erre az ünnepre? Énekrend-javaslatok a közzétett énekrendekből, liturgikus naptár és énekrendi helyek szerint.',
+        ]);
     }
 
     /** @var array<string, mixed> */

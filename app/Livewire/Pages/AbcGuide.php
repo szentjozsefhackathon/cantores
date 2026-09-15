@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Pages;
 
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\View as IlluminateView;
 use League\CommonMark\Environment\Environment;
@@ -26,8 +25,7 @@ class AbcGuide extends Component
 
     public function rendering(IlluminateView $view): void
     {
-        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-        $view->layout($layout, ['title' => 'ABC - felhasználói útmutató']);
+        $view->layout('layouts::shell', ['title' => 'ABC - felhasználói útmutató']);
     }
 
     public function render(): IlluminateView

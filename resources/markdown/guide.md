@@ -5,6 +5,10 @@ tartja azt, ami egy vasárnaphoz kell: az énekrendet, a kottákat, a kinyomtato
 a kivetített képet – és mindezt úgy, hogy **semmit nem kell telepíteni**, mert minden a
 szerveren van, és minden eszközről ugyanaz.
 
+Nem kész megoldásokat ad: a saját anyagaidból és a saját változataidból dolgozol. Ami nincs
+készen, azt itt megcsinálod – és amit egyszer megcsináltál, azt többé nem kell újra
+megcsinálnod, mert ugyanaz az anyag megy tovább az énekrendbe, a füzetbe és a vetítésbe.
+
 Ez az útmutató fejezetenként végigveszi, mit tud a rendszer. Nem kell sorban elolvasni:
 ugorj arra a fejezetre, amire épp szükséged van.
 
@@ -76,13 +80,13 @@ gerince: a kották, a füzetek és a vetítések mind egy énekrendből nőnek k
 ### Új énekrend
 
 A [Saját énekrendek](/my-music-plans) oldalon indíthatsz újat. Megadod az alkalmat
-(dátumot és ünnepet), és kapsz egy üres, **slotokra** bontott énekrendet.
+(dátumot és ünnepet), és kapsz egy üres, **helyekre** bontott énekrendet.
 
-### Slotok
+### Helyek
 
-A slot a liturgia egy-egy helye: kezdőének, dicsőség, válaszos zsoltár, alleluja,
-felajánlás, szentáldozás, befejezés és így tovább. Egy slotba több ének is kerülhet
-(például hosszú áldozás alatt), és a sorrend húzással átrendezhető. A slotokat
+A hely a liturgia egy-egy pontja: kezdőének, dicsőség, válaszos zsoltár, alleluja,
+felajánlás, szentáldozás, befejezés és így tovább. Egy helyre több ének is kerülhet
+(például hosszú áldozás alatt), és a sorrend húzással átrendezhető. A helyeket
 sablonokból is kitöltheted – a sablon egy szokásos miserend váza, amit aztán
 testre szabsz.
 
@@ -92,12 +96,12 @@ Minden énekhez tartozhat:
 - **megjegyzés** – például versszakszám vagy hangnem,
 - **privát jegyzet** – amit csak te látsz, akkor is, ha az énekrendet közzéteszed.
 
-### A mise szokásos slotjai
+### A mise szokásos helyei
 
-A slotok neve és sorrendje sablononként eltérhet – az alábbi táblázat a leggyakoribb
+A helyek neve és sorrendje sablononként eltérhet – az alábbi táblázat a leggyakoribb
 összeállítást mutatja:
 
-| Slot | Mikor |
+| Hely | Mikor |
 |---|---|
 | **Kezdőének** | a pap bevonulásakor |
 | **Kyrie** | bűnbánati rész – „Uram, irgalmazz” |
@@ -112,11 +116,11 @@ A slotok neve és sorrendje sablononként eltérhet – az alábbi táblázat a 
 | **Hálaadó ének** | az áldozás után |
 | **Befejező ének** | a kivonuláskor |
 
-A saját közösséged gyakorlatához igazodva slotot vehetsz fel vagy hagyhatsz el.
+A saját közösséged gyakorlatához igazodva helyet vehetsz fel vagy hagyhatsz el.
 
 ### Ünnep és liturgikus adatok
 
-Az ünnep megadásakor a rendszer kiírja a nap liturgikus adatait: a szezont, a fokozatot,
+Az ünnep megadásakor a rendszer kiírja a nap liturgikus adatait: az időszakot, a fokozatot,
 az olvasmányokat és a szentírási hivatkozásokat. Ezekre a javaslatok is építenek. Ha
 olyan alkalomra készülsz, ami nincs a naptárban (házasságkötés, temetés, iskolamise),
 egyedi alkalmat is megadhatsz.
@@ -147,13 +151,13 @@ kottája az övé marad, csak ebben az énekrendben látszik.
 
 A [Javaslatok](/suggestions) abból dolgoznak, amit a közösség valóban énekelt: a közzétett
 énekrendek alapján megmutatják, milyen énekek szoktak elhangozni egy adott ünnepen, adott
-sloton.
+helyen.
 
-- A javaslatok **slotonként** jelennek meg: a kezdőénekhez kezdőénekek jönnek.
+- A javaslatok **helyenként** jelennek meg: a kezdőénekhez kezdőénekek jönnek.
 - Az azonos relevanciájú találatokat **népszerűség** szerint rendezzük.
-- A javaslat mellett látszik, miért ajánljuk: ugyanaz az ünnep, ugyanaz a szezon, egyező
+- A javaslat mellett látszik, miért ajánljuk: ugyanaz az ünnep, ugyanaz az időszak, egyező
   szentírási hivatkozás.
-- Az énekrend szerkesztőjében egy kattintással beteheted a javaslatot a slotba.
+- Az énekrend szerkesztőjében egy kattintással beteheted a javaslatot a helyre.
 
 A javaslatok annál jobbak, minél többen tesznek közzé énekrendet – a közzététel ezért
 nem önmutogatás, hanem a rendszer üzemanyaga.
@@ -331,12 +335,12 @@ kezükbe kapnak. A [Füzetek és vetítések](/plan-documents) oldalról indul, 
 
 ### Amit a füzetszerkesztő tud
 
-- **Válogatás az énekrendből** – slotonként felkínálja a szóba jöhető kottákat
+- **Válogatás az énekrendből** – helyenként felkínálja a szóba jöhető kottákat
   (változatokkal együtt), te pedig kiválasztod, melyik kerüljön a füzetbe.
 - **Saját szövegek** – a kották közé bevezető, könyörgés, rendezői utasítás, bármilyen
   szöveg beszúrható.
 - **Lapméret és tördelés** – A4, A5, A6; álló vagy fekvő; egész oldal, kétoldalas
-  („two-up”) vagy **füzetnyomtatás** (imposztálás), amikor a lapokat összehajtva kapod
+  („two-up”) vagy **füzetnyomtatás** (montírozás), amikor a lapokat összehajtva kapod
   meg a helyes oldalsorrendet.
 - **Tipográfia** – margó, szótagméret, kottasor-magasság, címméret, sorköz, betűtípus,
   és kész **stílusok**, amikből indulhatsz.
@@ -367,7 +371,7 @@ annak a képernyőnek, amit a közösség néz.
 - **Válogatás és sorrend** – ugyanúgy az énekrendből, mint a füzetnél; egyes tételek
   kihagyhatók anélkül, hogy törölnéd őket.
 - **Saját szövegdiák** – könyörgés, hirdetés, felirat.
-- **Slotnevek** – kiírathatók a diára („Kezdőének”), vagy elrejthetők.
+- **Helynevek** – kiírathatók a diára („Kezdőének”), vagy elrejthetők.
 - **Tördelés** – a szövegdiák maguktól törnek képernyőnyi darabokra; a `%pagebreak`
   jelöléssel te szabod meg a kemény töréseket, a `%pagebreak?` pedig javaslat, amit a
   rendszer csak akkor használ ki, ha kell. Az akkordos (ChordPro) lapok maguktól folynak

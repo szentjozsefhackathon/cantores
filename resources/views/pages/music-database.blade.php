@@ -5,7 +5,6 @@ namespace App\Livewire\Pages;
 use App\Models\Author;
 use App\Models\Collection;
 use App\Models\Music;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -14,8 +13,7 @@ new class extends Component
 {
     public function rendering(View $view): void
     {
-        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-        $view->layout($layout, [
+                $view->layout('layouts::shell', [
             'title'       => 'Énektár',
             'description' => 'Kereshető adatbázis liturgikus énekekkel, gyűjteményekkel és szerzőkkel. Találd meg a liturgiába illő éneket cím, szerző vagy liturgikus jellemzők alapján.',
         ]);
@@ -64,7 +62,7 @@ new class extends Component
 <div>
     {{-- Hero Section --}}
     <div class="relative overflow-hidden bg-linear-to-br from-blue-600 via-indigo-700 to-purple-800 dark:from-blue-900 dark:via-indigo-900 dark:to-purple-950">
-        <div class="relative mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <div class="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20">
@@ -98,7 +96,7 @@ new class extends Component
 
     {{-- Stats Bar --}}
     <div class="border-b border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-        <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-3 divide-x divide-gray-200 dark:divide-zinc-700">
                 <a href="{{ route('musics') }}" wire:navigate class="group flex flex-col items-center py-6 text-center hover:bg-gray-50 dark:hover:bg-zinc-800 transition">
                     <flux:icon name="music" class="mb-2 h-6 w-6 text-indigo-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition" />
@@ -119,7 +117,7 @@ new class extends Component
         </div>
     </div>
 
-    <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8 space-y-16">
+    <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 space-y-16">
 
             {{-- Recent Music Section --}}
         @if ($this->recentMusics->isNotEmpty())

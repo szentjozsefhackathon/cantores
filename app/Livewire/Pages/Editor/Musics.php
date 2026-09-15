@@ -34,8 +34,7 @@ class Musics extends Component
 
     public function rendering(IlluminateView $view): void
     {
-        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-        $view->layout($layout);
+        $view->layout('layouts::shell');
     }
 
     public function mount(): void

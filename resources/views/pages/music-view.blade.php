@@ -7,7 +7,7 @@
         $hasResources = $downloadableScores->isNotEmpty() || $music->urls->isNotEmpty();
         $incipitScores = $music->visibleIncipitScores(auth()->user());
     @endphp
-    <div data-page-shell class="mx-auto w-full space-y-6 px-4 sm:px-6 lg:max-w-4xl lg:px-8">
+    <div data-page-shell class="mx-auto w-full space-y-6 px-4 sm:px-6 lg:max-w-6xl lg:px-8">
         <header class="space-y-4 border-b border-zinc-200 pb-5 dark:border-zinc-700">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div class="min-w-0 flex-1 space-y-2">

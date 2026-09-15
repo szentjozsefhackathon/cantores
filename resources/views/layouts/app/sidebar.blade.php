@@ -1,3 +1,4 @@
+@props(['title' => null, 'description' => null, 'canonical' => null, 'noindex' => false, 'ogImage' => null, 'jsonLd' => null])
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark" x-data="{
   init() {

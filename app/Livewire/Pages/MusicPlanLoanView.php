@@ -90,7 +90,7 @@ class MusicPlanLoanView extends Component
             $title .= ' – '.$date;
         }
 
-        $view->layout('layouts::app.main', [
+        $view->layout('layouts::shell', [
             'title' => $title,
             'noindex' => true,
         ]);

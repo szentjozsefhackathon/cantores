@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/livewire-starter-kit",
+    "name": "szentjozsefhackathon/cantores",
     "type": "project",
-    "description": "The official Laravel starter kit for Livewire.",
+    "description": "Cantores.hu – liturgikus zenei műhely kántoroknak és zenekarvezetőknek.",
     "keywords": [
         "laravel",
         "framework"

@@ -58,7 +58,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE);
                 }
                 assert.equal(layout.collectionsScrollFree, true, 'The collection list scrolls with the page, not inside itself');
                 assert.equal(layout.tables, 0, 'Scores are cards, not table rows');
-                assert.equal(layout.shellWidth <= 896, true, `Page content keeps the chrome's width at ${width}px`);
+                assert.equal(layout.shellWidth <= 1152, true, `Page content keeps the chrome's width at ${width}px`);
                 assert.equal(layout.controlsFit, true, 'Actions stay inside the viewport');
                 if (layout.hasResourceColumn) {
                     assert.equal(width >= 1024 ? layout.beside : layout.below, true, `Collections outrank the other resources at ${width}px`);

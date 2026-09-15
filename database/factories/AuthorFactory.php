@@ -2,19 +2,21 @@
 
 namespace Database\Factories;
 
+use App\Models\Author;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Author>
+ * @extends Factory<Author>
  */
 class AuthorFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<\App\Models\Author>
+     * @var class-string<Author>
      */
-    protected $model = \App\Models\Author::class;
+    protected $model = Author::class;
 
     /**
      * Define the model's default state.
@@ -25,8 +27,13 @@ class AuthorFactory extends Factory
     {
         return [
             'name' => $this->faker->name(),
-            'user_id' => \App\Models\User::factory(),
-            'is_private' => $this->faker->boolean(20), // 20% private
+            'user_id' => User::factory(),
+            'is_private' => false,
         ];
+    }
+
+    public function private(): static
+    {
+        return $this->state(['is_private' => true]);
     }
 }

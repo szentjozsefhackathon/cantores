@@ -12,7 +12,7 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white antialiased dark:bg-linear-to-b dark:from-neutral-950 dark:to-neutral-900">
-        <header class="w-full lg:max-w-4xl mx-auto flex items-center justify-between gap-2 text-sm px-4 py-3 sm:px-6 lg:px-8 mb-6">
+        <header class="w-full lg:max-w-6xl mx-auto flex items-center justify-between gap-2 text-sm px-4 py-3 sm:px-6 lg:px-8 mb-6">
             <div class="flex items-center gap-4">
                 {{-- Mobile: icon only --}}
                 <div class="lg:hidden">
@@ -191,7 +191,7 @@
             @endif
         </header>
         {{ $slot }}
-        <footer class="w-full lg:max-w-4xl mx-auto mt-2 flex flex-col items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+        <footer class="w-full lg:max-w-6xl mx-auto mt-2 flex flex-col items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
             <div class="items-center">&copy; {{ date('Y') }} Cantores.hu. A fejlesztést a <a href="https://github.com/szentjozsefhackathon/" target="_blank" class="hover:text-blue-500 underline">Szent József Hackathon</a> keretében végezzük.
                 <a href="https://aretino-chant.github.io" target="_blank" class="hover:text-blue-500 underline">Aretino Chant</a> – saját kottázási rendszerünkkel.
                 @if(config('version.hash'))

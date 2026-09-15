@@ -5,7 +5,6 @@ namespace App\Livewire\Pages;
 use App\Facades\GenreContext;
 use App\Models\MusicPlan;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -15,8 +14,7 @@ new class extends Component
 {
     public function rendering(View $view): void
     {
-        $layout = Auth::check() ? 'layouts::app' : 'layouts::app.main';
-        $view->layout($layout, [
+                $view->layout('layouts::shell', [
             'title'       => 'Énekrendek',
             'description' => 'Böngéssz liturgikus énekrendek között, vagy hozd létre saját énekrendedet. Liturgiába illő énekek és énekrendek egy helyen, a Cantores.hu-n.',
         ]);

@@ -2,19 +2,21 @@
 
 namespace Database\Factories;
 
+use App\Models\Collection;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Collection>
+ * @extends Factory<Collection>
  */
 class CollectionFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<\App\Models\Collection>
+     * @var class-string<Collection>
      */
-    protected $model = \App\Models\Collection::class;
+    protected $model = Collection::class;
 
     /**
      * Define the model's default state.
@@ -27,9 +29,14 @@ class CollectionFactory extends Factory
             'title' => $this->faker->words(4, true),
             'abbreviation' => $this->faker->optional()->regexify('[A-Z]{2,4}'),
             'author' => $this->faker->optional()->name(),
-            'user_id' => \App\Models\User::factory(),
-            'is_private' => $this->faker->boolean(20), // 20% private
+            'user_id' => User::factory(),
+            'is_private' => false,
             'priority' => 100,
         ];
+    }
+
+    public function private(): static
+    {
+        return $this->state(['is_private' => true]);
     }
 }

@@ -12,6 +12,7 @@ use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\ScorePublication;
 use App\Models\ScoreUrl;
+use App\Models\User;
 use App\MusicUrlLabel;
 use App\Services\LoanAccessService;
 use App\Services\ScoreDuplicator;
@@ -20,6 +21,7 @@ use App\Services\ScorePublicationService;
 use App\Support\ScorePublicationRules;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -246,8 +248,7 @@ class ScoreEditor extends Component
             default => __('Create Score'),
         };
 
-        $layout = $isGuest ? 'layouts::app.main' : 'layouts::app';
-        $view->layout($layout, ['title' => $title, 'noindex' => $this->isSharedLink]);
+        $view->layout('layouts::shell', ['title' => $title, 'noindex' => $this->isSharedLink]);
     }
 
     /**
@@ -491,7 +492,7 @@ class ScoreEditor extends Component
         }
 
         $user = Auth::user();
-        abort_unless($user instanceof \App\Models\User, 403);
+        abort_unless($user instanceof User, 403);
 
         $defaults = $user->score_settings ?? [];
         $defaults[$format][$ratio] = $ratioSettings;
@@ -1011,7 +1012,7 @@ class ScoreEditor extends Component
     /**
      * Every file uploaded to this score, oldest first.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreFile>
+     * @return EloquentCollection<int, ScoreFile>
      */
     #[Computed]
     public function scoreFiles(): EloquentCollection
@@ -1077,10 +1078,10 @@ class ScoreEditor extends Component
      * owner needs to see those here rather than assume the score is private just
      * because it has no lending link of its own.
      *
-     * @return \Illuminate\Support\Collection<int, array{label: string, revoke_id: int}>
+     * @return Collection<int, array{label: string, revoke_id: int}>
      */
     #[Computed]
-    public function indirectLoans(): \Illuminate\Support\Collection
+    public function indirectLoans(): Collection
     {
         if (! $this->score instanceof Score) {
             return collect();
@@ -1110,8 +1111,8 @@ class ScoreEditor extends Component
     }
 
     #[Computed]
-    /** @return \Illuminate\Support\Collection<int, \App\Models\ScoreUrl> */
-    public function scoreUrls(): \Illuminate\Support\Collection
+    /** @return Collection<int, ScoreUrl> */
+    public function scoreUrls(): Collection
     {
         $persisted = $this->score instanceof Score
             ? $this->score->urls()->orderBy('id')->get()
@@ -1132,8 +1133,8 @@ class ScoreEditor extends Component
     }
 
     #[Computed]
-    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Folder> */
-    public function userFolders(): \Illuminate\Database\Eloquent\Collection
+    /** @return EloquentCollection<int, Folder> */
+    public function userFolders(): EloquentCollection
     {
         if (! Auth::check()) {
             return Folder::query()->whereNull('id')->get();
@@ -1189,8 +1190,8 @@ class ScoreEditor extends Component
     }
 
     #[Computed]
-    /** @return \Illuminate\Database\Eloquent\Collection<int, Score> */
-    public function relatedScores(): \Illuminate\Database\Eloquent\Collection
+    /** @return EloquentCollection<int, Score> */
+    public function relatedScores(): EloquentCollection
     {
         if ($this->isSharedLink || $this->musicId === null || ! Auth::check()) {
             return Score::query()->whereNull('id')->get();

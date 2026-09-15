@@ -6,6 +6,7 @@ use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\ScorePublication;
 use App\Models\ScoreVersion;
+use App\MusicUrlLabel;
 use App\Services\PublicScoreAccessService;
 use App\Services\ScoreAttributionBuilder;
 use Illuminate\Database\Eloquent\Collection;
@@ -99,7 +100,7 @@ class PublicScoreView extends Component
      * The score links as the version carries them, so a link added since approval
      * does not appear on the public page before anyone has looked at it.
      *
-     * @return \Illuminate\Support\Collection<int, array{url: string, label: \App\MusicUrlLabel|null, comment: string|null}>
+     * @return \Illuminate\Support\Collection<int, array{url: string, label: MusicUrlLabel|null, comment: string|null}>
      */
     #[Computed]
     public function urls(): \Illuminate\Support\Collection
@@ -116,7 +117,7 @@ class PublicScoreView extends Component
 
         return collect($version->urls ?? [])->map(fn (array $url): array => [
             'url' => $url['url'],
-            'label' => \App\MusicUrlLabel::tryFrom((string) ($url['label'] ?? '')),
+            'label' => MusicUrlLabel::tryFrom((string) ($url['label'] ?? '')),
             'comment' => $url['comment'] ?? null,
         ]);
     }
@@ -130,7 +131,7 @@ class PublicScoreView extends Component
     /**
      * The files this publication offers, oldest first.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScoreFile>
+     * @return Collection<int, ScoreFile>
      */
     #[Computed]
     public function scoreFiles(): Collection
@@ -197,7 +198,7 @@ class PublicScoreView extends Component
 
         $license = $this->publication->effectiveLicense();
 
-        $view->layout('layouts::app.main', [
+        $view->layout('layouts::shell', [
             'title' => $this->score->title,
             'description' => __('Free downloadable sheet music: :title (:license)', [
                 'title' => $this->score->title,

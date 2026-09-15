@@ -7,6 +7,7 @@ use App\Models\Loan;
 use App\Models\Score;
 use App\Services\LoanAccessService;
 use App\Services\LoanKeepingService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Component;
@@ -26,7 +27,7 @@ class FolderView extends Component
 
     public bool $canKeep = false;
 
-    /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\Score> */
+    /** @var Collection<int, Score> */
     public $scores;
 
     public function mount(string $token): void
@@ -95,7 +96,7 @@ class FolderView extends Component
             return;
         }
 
-        $view->layout('layouts::app.main', [
+        $view->layout('layouts::shell', [
             'title' => $this->folder->name,
             'noindex' => true,
         ]);

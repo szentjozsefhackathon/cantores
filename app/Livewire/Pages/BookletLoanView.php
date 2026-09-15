@@ -113,7 +113,7 @@ class BookletLoanView extends Component
 
     public function rendering(IlluminateView $view): void
     {
-        $view->layout('layouts::app.main', [
+        $view->layout('layouts::shell', [
             'title' => $this->title,
             'noindex' => true,
         ]);

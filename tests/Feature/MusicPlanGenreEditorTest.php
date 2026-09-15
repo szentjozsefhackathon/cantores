@@ -123,9 +123,13 @@ test('genre-select is shown on view page for editors with a published plan', fun
     $this->actingAs($editor)
         ->get(route('music-plan-view', $musicPlan))
         ->assertOk()
-        ->assertSee('Műfaj');
+        ->assertSee('Műfaj szerkesztése');
 });
 
+/**
+ * The sidebar carries a genre selector of its own, so the assertions below name
+ * the plan's own genre editor rather than the word it shares with the chrome.
+ */
 test('genre-select is not shown on view page for regular users', function () {
     $user = User::factory()->create();
     $musicPlan = MusicPlan::factory()->create(['is_private' => false]);
@@ -133,5 +137,5 @@ test('genre-select is not shown on view page for regular users', function () {
     $this->actingAs($user)
         ->get(route('music-plan-view', $musicPlan))
         ->assertOk()
-        ->assertDontSee('Műfaj');
+        ->assertDontSee('Műfaj szerkesztése');
 });

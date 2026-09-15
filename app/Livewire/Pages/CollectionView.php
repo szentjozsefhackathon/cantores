@@ -92,7 +92,7 @@ class CollectionView extends Component
 
         return view('pages.collection-view', [
             'musics' => $musics,
-        ])->layout('layouts::app.main', [
+        ])->layout('layouts::shell', [
             'title' => $this->collection->title,
             'description' => $description,
         ]);
