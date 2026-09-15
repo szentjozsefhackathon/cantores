@@ -14,6 +14,27 @@
  * service, carries on.
  */
 
+/**
+ * Whether a key was aimed at something being typed in rather than at the deck.
+ *
+ * Every key the wall and the remote bind is also a key a text field needs: the
+ * arrows and Backspace move a caret, Space and Enter are ordinary characters,
+ * and so are the b and f that blank the screen and take it full. Both pages
+ * carry fields — the wall is where the laptop is named, the remote where a deck
+ * is searched for — so a keystroke inside a field, or anywhere inside an open
+ * dialog, belongs to the field and not to the service.
+ */
+export const isTypingTarget = (target) => {
+    if (! target || typeof target.tagName !== 'string') { return false; }
+
+    if (target.isContentEditable) { return true; }
+
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) { return true; }
+
+    return typeof target.closest === 'function'
+        && target.closest('dialog, [role="dialog"]') !== null;
+};
+
 /** A slide index no deck reaches: "as far as this row goes". @see Presentation::LAST_SLIDE */
 export const LAST_SLIDE = 2147483647;
 

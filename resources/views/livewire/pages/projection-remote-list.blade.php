@@ -31,7 +31,17 @@
                                 <flux:icon.tv class="size-5 shrink-0 text-zinc-400" />
 
                                 <div class="min-w-0 flex-1">
-                                    <div class="truncate font-medium">{{ $screen->label() }}</div>
+                                    <div class="flex min-w-0 items-center gap-2">
+                                        <span class="truncate font-medium">{{ $screen->label() }}</span>
+                                        {{-- The laptop's own projector window, which is
+                                             the same device as the window this list is
+                                             being read in. Said out loud, because a row
+                                             that is this browser is the one row somebody
+                                             could mistake for a different room. --}}
+                                        @if($this->isThisDevice($screen))
+                                            <flux:badge size="sm" color="zinc" class="shrink-0">{{ __('This device') }}</flux:badge>
+                                        @endif
+                                    </div>
                                     <div class="truncate text-xs text-zinc-500">
                                         @if($screen->showing() !== null)
                                             {{ $screen->showing()->projection->title }}

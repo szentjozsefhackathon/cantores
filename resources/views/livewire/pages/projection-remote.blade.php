@@ -39,6 +39,9 @@ resources/js/projection-remote.js
     x-data="projectionRemote(JSON.parse($el.dataset.projectionConfig))"
     x-ref="stage"
     x-on:fullscreenchange.window="syncFullscreen()"
+    {{-- The laptop's end of the same remote: the keys every display program
+         taught the person standing at it, driving the screen next to it. --}}
+    x-on:keydown.window="onKey($event)"
     x-on:touchstart.passive="onTouchStart($event)"
     x-on:touchend.passive="onTouchEnd($event)"
     class="fixed inset-0 z-50 flex flex-col overscroll-none bg-zinc-200 select-none dark:bg-black"

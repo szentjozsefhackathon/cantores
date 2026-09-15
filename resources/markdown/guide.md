@@ -408,6 +408,11 @@ A [Távirányító](/remote) a telefonod. Kiválasztod, melyik vászonra melyik 
 és onnantól a telefonról lapozol, sötétítesz, ugrasz tételre. Nincs szükség hotspotra vagy
 külön hálózatra: mindkét eszköz ugyanazzal a szerverrel beszél, ugyanazzal a fiókkal.
 
+A Távirányító ugyanúgy megnyitható a laptopon is, egy másik ablakban – ilyenkor a lista
+**Ez az eszköz** jelöléssel mutatja a saját vetítőablakodat is. A vezérlőablakban a
+billentyűzet is működik: `szóköz`, `→`, `PageDown` előre, `←`, `PageUp` vissza, `Home` és
+`End` a pakli két vége, `B` sötétítés, `L` az énekrend, `F` teljes képernyő.
+
 > **Miért így?** Ha a plébánia lecseréli a laptopot két szolgálat között, itt nem történik
 > semmi: a paklit, a kottákat és a kinézetet nem a gép tárolja, hanem a szerver. Az új
 > laptopon ugyanaz a link ugyanúgy néz ki.

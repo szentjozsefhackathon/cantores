@@ -44,31 +44,34 @@ class ProjectionRemoteList extends Component
 
     public function mount(): ?RedirectResponse
     {
-        $live = $this->screens();
+        $elsewhere = $this->elsewhere();
 
-        if ($live->count() === 1) {
-            return redirect()->route('projection-remote.control', ['screen' => $live->first()->id]);
+        if ($elsewhere->count() === 1) {
+            return redirect()->route('projection-remote.control', ['screen' => $elsewhere->first()->id]);
         }
 
         return null;
     }
 
     /**
-     * The screens this person has facing a room right now, other than the one
-     * they are holding.
+     * The screens this person has facing a room right now, this browser's own
+     * among them.
      *
-     * Its own screen is excluded because a browser cannot be the remote for
-     * itself: the presenter page claims a screen on the way in whichever way it
-     * was opened, so a phone that pressed Present to look at a deck arrives here
-     * offering itself as somewhere to send one. That is never the answer, and
-     * while it stands it costs the normal Sunday its best moment — the one live
-     * screen entered without asking becomes a picker between the wall and the
-     * hand.
+     * Its own was left out while the remote was a phone's page and nothing
+     * else: a browser cannot be the remote for itself, and the presenter claims
+     * a screen on the way in whichever way it was opened, so a phone that
+     * pressed Present to look at a deck arrived here offering itself as
+     * somewhere to send one.
      *
-     * Only here. Sending a deck keeps the same-session row, because the
-     * two-screen laptop is exactly that: the window on the projector and the
-     * window being worked in are one session, and excluding it would leave the
-     * wall unaddressable.
+     * The laptop is the case that says otherwise, because there the two windows
+     * *are* one device. The deck goes on the projector and the control window
+     * stays on the built-in display — the arrangement every desktop display
+     * program has — and keying the exclusion to the device made exactly that
+     * screen the one thing the remote could not address.
+     *
+     * So both are listed and only one is entered without asking. See
+     * `elsewhere()`: the normal Sunday keeps its best moment, and the row for
+     * this browser is there for the person who deliberately wants it.
      *
      * @return EloquentCollection<int, Screen>
      */
@@ -79,11 +82,32 @@ class ProjectionRemoteList extends Component
             ->live()
             ->mine()
             ->offered()
-            ->where('device_id', '!=', DeviceId::current())
             ->withDeviceName()
             ->with(['presentation.projection', 'devicePairing'])
             ->latest('last_seen_at')
             ->get();
+    }
+
+    /**
+     * The same screens, less this browser's own.
+     *
+     * What the redirect counts, and only the redirect. One screen across the
+     * room is the normal Sunday and is entered without asking; a phone that is
+     * a screen itself must not turn that into a choice, and a laptop must not
+     * be thrown into driving its own window before it has asked to.
+     *
+     * @return EloquentCollection<int, Screen>
+     */
+    #[Computed]
+    public function elsewhere(): EloquentCollection
+    {
+        return $this->screens->reject(fn (Screen $screen): bool => $this->isThisDevice($screen));
+    }
+
+    /** Whether a row is the browser this list is being read in. */
+    public function isThisDevice(Screen $screen): bool
+    {
+        return $screen->device_id === DeviceId::current();
     }
 
     public function rendering(IlluminateView $view): void

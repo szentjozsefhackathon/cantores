@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
-import { HEARTBEAT_MS, POLL_MS, addressAt, indexOfAddress, screenClient, shownExclusions, stateClient } from './projection-follow.js';
+import { HEARTBEAT_MS, POLL_MS, addressAt, indexOfAddress, isTypingTarget, screenClient, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -36,27 +36,6 @@ import { HEARTBEAT_MS, POLL_MS, addressAt, indexOfAddress, screenClient, shownEx
 
 /** How long the bar stays up after the last sign of life. */
 const IDLE_MS = 2500;
-
-/**
- * Whether a key was aimed at something being typed in rather than at the deck.
- *
- * Every key this page binds is also a key a text field needs: the arrows and
- * Backspace move a caret, Space and Enter are ordinary characters, and so are
- * the b and f that blank the screen and take it full. The screen waiting for a
- * deck is the one that also carries a field — it is where the laptop is named —
- * so a keystroke inside a field, or anywhere inside an open dialog, belongs to
- * the field and not to the service.
- */
-const isTypingTarget = (target) => {
-    if (! target || typeof target.tagName !== 'string') { return false; }
-
-    if (target.isContentEditable) { return true; }
-
-    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) { return true; }
-
-    return typeof target.closest === 'function'
-        && target.closest('dialog, [role="dialog"]') !== null;
-};
 
 /**
  * How long the picture takes to go out when the cantor blanks the screen.

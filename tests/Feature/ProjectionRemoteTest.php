@@ -87,26 +87,45 @@ it('lists only the live screens of the person holding the phone', function () {
         ->and($listed->pluck('id'))->toContain($waiting->id);
 });
 
-// The phone that pressed Present is a screen like any other, and offering it
-// back to itself is what turned the normal Sunday into a choice. Asked of the
-// device, so a phone whose session rotated is still recognisably itself.
-it('leaves out the screen the phone itself is', function () {
+// The laptop showing the deck on the projector is the same device as the window
+// the remote is opened in, so leaving this browser out of the list left the one
+// screen a desktop has unaddressable. It is listed, and said to be this device.
+it('lists the screen this browser itself is', function () {
     $user = User::factory()->create();
 
     $chapel = Screen::factory()->create(['user_id' => $user->id]);
     $church = Screen::factory()->create(['user_id' => $user->id]);
-    $phone = Screen::factory()->create([
+    $here = Screen::factory()->create([
         'user_id' => $user->id,
         'device_id' => DeviceId::current(),
     ]);
 
     actingAs($user);
 
-    $listed = Livewire::test(ProjectionRemoteList::class)->instance()->screens();
+    $component = Livewire::test(ProjectionRemoteList::class);
 
-    expect($listed->pluck('id')->all())
-        ->toEqualCanonicalizing([$chapel->id, $church->id])
-        ->not->toContain($phone->id);
+    expect($component->instance()->screens()->pluck('id')->all())
+        ->toEqualCanonicalizing([$chapel->id, $church->id, $here->id]);
+
+    $component->assertSee(__('This device'));
+});
+
+// Listed, but never the screen somebody is thrown into: a phone that pressed
+// Present is a screen like any other, and driving itself is never what the
+// cantor reaching for the remote meant.
+it('does not enter this browser\'s own screen without asking', function () {
+    $user = User::factory()->create();
+
+    Screen::factory()->create([
+        'user_id' => $user->id,
+        'device_id' => DeviceId::current(),
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionRemoteList::class)
+        ->assertOk()
+        ->assertNoRedirect();
 });
 
 // And so the wall is still the one live screen, entered without asking.

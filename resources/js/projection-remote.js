@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
-import { POLL_MS, addressAt, indexOfAddress, screenClient, shownExclusions, stateClient } from './projection-follow.js';
+import { POLL_MS, addressAt, indexOfAddress, isTypingTarget, screenClient, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
  * The deck in the cantor's hand.
@@ -407,12 +407,17 @@ onAlpineInit(() => {
             if (now - (this._pressedAt[name] ?? 0) < PRESS_LOCK_MS) { return; }
 
             this._pressedAt[name] = now;
+            this.flash(name);
+
+            run();
+        },
+
+        /** The control lit blue for as long as the lock it stands for lasts. */
+        flash(name) {
             this.pressed = name;
 
             clearTimeout(this._pressTimer);
             this._pressTimer = setTimeout(() => { this.pressed = null; }, PRESS_LOCK_MS);
-
-            run();
         },
 
         next() {
@@ -445,6 +450,79 @@ onAlpineInit(() => {
             );
 
             if (at !== -1) { this.go(at); }
+        },
+
+        /*
+         * ---------------------------------------------------------------
+         * The same remote, driven from a keyboard.
+         * ---------------------------------------------------------------
+         */
+
+        /**
+         * A key pressed on the laptop driving the screen beside it.
+         *
+         * The desktop end of this page. A cantor at the organ has a thumb and
+         * nothing else, but a cantor at a laptop already has the gesture every
+         * display program taught them — space for the next slide — and the
+         * three bands are useless to them if reaching a slide means aiming a
+         * mouse at it. The same keys as the wall's own, so that whichever of
+         * the two windows has the focus, the service moves the same way.
+         *
+         * Nothing here goes through the press lock. That lock is for a thumb
+         * bouncing on glass without looking; a second press of a key is a
+         * second press, and the wall itself has never locked one.
+         */
+        onKey(event) {
+            if (isTypingTarget(event.target)) { return; }
+
+            // A browser shortcut is not a slide: nothing here is worth costing
+            // somebody the tab they meant to switch to.
+            if (event.ctrlKey || event.metaKey || event.altKey) { return; }
+
+            const keys = {
+                ArrowRight: () => this.moved('next', this.index + 1),
+                ArrowDown: () => this.moved('next', this.index + 1),
+                PageDown: () => this.moved('next', this.index + 1),
+                ' ': () => this.moved('next', this.index + 1),
+                Enter: () => this.moved('next', this.index + 1),
+                ArrowLeft: () => this.moved('previous', this.index - 1),
+                ArrowUp: () => this.moved('previous', this.index - 1),
+                PageUp: () => this.moved('previous', this.index - 1),
+                Backspace: () => this.moved('previous', this.index - 1),
+                Home: () => this.moved('previous', 0),
+                End: () => this.moved('next', this.total - 1),
+                b: () => this.blank(),
+                B: () => this.blank(),
+                f: () => this.toggleFullscreen(),
+                F: () => this.toggleFullscreen(),
+                l: () => this.toggleList(),
+                L: () => this.toggleList(),
+                Escape: () => this.closeList(),
+            };
+
+            // Escape belongs to the browser wherever the plan is already shut —
+            // it is how a full-screen window is left.
+            if (event.key === 'Escape' && !this.listOpen) { return; }
+
+            const handler = keys[event.key];
+
+            if (!handler) { return; }
+
+            event.preventDefault();
+            handler();
+        },
+
+        /** A keyed move: obeyed at once, and lighting the control it stands for. */
+        moved(name, index) {
+            this.flash(name);
+            this.go(index);
+        },
+
+        /** The blank, without the thumb's lock in front of it. */
+        blank() {
+            this.flash('blank');
+            this.blanked = !this.blanked;
+            this.push();
         },
 
         /*
@@ -487,6 +565,13 @@ onAlpineInit(() => {
         askFullscreen() {
             if (this._askedFullscreen || !this.fullscreenAvailable || document.fullscreenElement) { return; }
 
+            // Only where the remote is the whole device. On a laptop this page
+            // is a window beside the one the room is reading — often literally
+            // beside it, on the other display — and a window that swallows the
+            // screen at the first press is a window that hides the deck it was
+            // opened to drive. The button is still there for whoever wants it.
+            if (window.matchMedia?.('(pointer: coarse)')?.matches !== true) { return; }
+
             this._askedFullscreen = true;
 
             Promise.resolve(this.$refs.stage?.requestFullscreen?.()).catch(() => {});
@@ -498,6 +583,10 @@ onAlpineInit(() => {
 
         closeList() {
             this.listOpen = false;
+        },
+
+        toggleList() {
+            this.listOpen = !this.listOpen;
         },
 
         /**
