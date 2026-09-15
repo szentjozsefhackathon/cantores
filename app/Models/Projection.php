@@ -6,6 +6,8 @@ use App\Concerns\HasLoans;
 use App\Contracts\PlanDocument;
 use App\Enums\ProjectionRatio;
 use App\Enums\ProjectionTextTheme;
+use App\Observers\ProjectionRevisionObserver;
+use App\Support\CacheKey;
 use Carbon\CarbonImmutable;
 use Database\Factories\ProjectionFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * A projection: the scores for one service, cut into slides for a screen.
@@ -70,6 +73,17 @@ class Projection extends Model implements PlanDocument
 {
     /** @use HasFactory<ProjectionFactory> */
     use HasFactory, HasLoans;
+
+    /**
+     * How long a deck's revision may be believed without asking the database.
+     *
+     * Short on purpose. An edit to the deck itself forgets the entry outright,
+     * so this governs one case only: a score corrected in another window, which
+     * belongs to every deck that names it and so cannot be forgotten by name.
+     * Five seconds is longer than the poll and far shorter than the pause
+     * between fixing a note and looking up at the wall.
+     */
+    public const REVISION_TTL_SECONDS = 5;
 
     /**
      * @var list<string>
@@ -144,8 +158,43 @@ class Projection extends Model implements PlanDocument
      * every payload read resolves it afresh, so the next re-engraving for any
      * reason drops what may no longer be read. What it must never do is take the
      * picture off the wall by itself in the middle of a Mass.
+     *
+     * Cached, because this is the one join on the hot path: both devices ask it
+     * about once a second each, and the answer changes a handful of times in a
+     * rehearsal and never during the Mass itself. An edit to the deck forgets
+     * the key as it is saved, so the rehearsal still feels immediate; an edit to
+     * a *score* is caught by the short life of the entry instead, because a
+     * score belongs to every deck that names it and no save knows them all. What
+     * that costs is at most REVISION_TTL_SECONDS between fixing a wrong note and
+     * seeing it on the wall, against a query per poll per device for ever.
      */
     public function revision(): string
+    {
+        return Cache::remember(
+            self::revisionKey($this->getKey()),
+            self::REVISION_TTL_SECONDS,
+            fn (): string => $this->readRevision(),
+        );
+    }
+
+    /**
+     * Where a deck's revision is remembered between the polls asking for it.
+     *
+     * Public because forgetting it is somebody else's job: the two models whose
+     * saves are an edit to this deck forget it as they are saved, which is what
+     * makes the cache invisible during a rehearsal.
+     *
+     * @see ProjectionRevisionObserver
+     */
+    public static function revisionKey(int $projectionId): string
+    {
+        return CacheKey::forModel('projection', 'revision', ['id' => $projectionId]);
+    }
+
+    /**
+     * The revision as the database has it, without asking the cache.
+     */
+    public function readRevision(): string
     {
         $newest = ProjectionSlide::query()
             ->where('projection_slides.projection_id', $this->getKey())

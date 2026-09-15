@@ -23,6 +23,18 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 class PresentationState
 {
     /**
+     * The rows already read for a presentation, within this request.
+     *
+     * A write reads them twice — once to find the row the client named, once to
+     * resolve the address it is answered with — and the deck cannot change
+     * between the two. Resolved per request, so nothing here outlives the
+     * container that made it.
+     *
+     * @var array<int, EloquentCollection<int, ProjectionSlide>>
+     */
+    private array $entries = [];
+
+    /**
      * @return array{
      *     version: int,
      *     entryId: int|null,
@@ -64,6 +76,8 @@ class PresentationState
      */
     public function entriesOf(Presentation $presentation): EloquentCollection
     {
-        return $presentation->projection->entries()->get(['id', 'projection_id', 'sequence']);
+        return $this->entries[$presentation->getKey()] ??= $presentation->projection
+            ->entries()
+            ->get(['id', 'projection_id', 'sequence']);
     }
 }

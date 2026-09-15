@@ -75,6 +75,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       migrator:
         condition: service_completed_successfully
     labels:
@@ -110,6 +112,48 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3      
+  redis:
+    # Where sessions live, and nowhere else for now — the cache is still
+    # memcached's, and moving it is a separate decision.
+    #
+    # Redis rather than memcached for exactly one reason, which is the whole
+    # reason this container exists: it survives its own restart. A session store
+    # that forgets on restart signs every church laptop out, and the laptop is
+    # across the building from the person holding the phone. Appending rather
+    # than snapshotting, and fsyncing once a second, so a hard stop costs at most
+    # the last second of sessions instead of the last several minutes; the RDB
+    # snapshots are turned off outright rather than kept as a second mechanism
+    # doing the same job worse.
+    #
+    # `volatile-lru` over `noeviction` deliberately. Everything written here
+    # carries a TTL, so under memory pressure Redis drops the sessions nobody has
+    # touched for longest — which is somebody signing in again — rather than
+    # refusing writes, which is the whole site returning 500s.
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 192m
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --save
+      - ""
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - volatile-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
   memcached:
     image: memcached:1.6
     restart: unless-stopped
@@ -207,6 +251,7 @@ secrets:
 
 volumes:
   db-data:
+  redis-data:
   storage:
   letsencrypt:
   cache:

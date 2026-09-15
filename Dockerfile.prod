@@ -71,10 +71,17 @@ COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
 # Add PHP extensions
 COPY --from=mlocati/php-extension-installer:2.7.24 /usr/bin/install-php-extensions /usr/local/bin/
-RUN install-php-extensions gd gmp memcached pdo_pgsql pdo_mysql xdebug zip pcntl bcmath intl
+# No xdebug. It was installed here alongside the rest, and installing it is
+# enabling it: xdebug 3 defaults to `mode=develop`, which replaces PHP's error
+# handling and costs something on every request in production — including each
+# of the two polls a second that every running projection makes. Nothing in this
+# image ever attaches a debugger to it. It stays in the dev image, where it is
+# wanted; see Dockerfile.dev.
+RUN install-php-extensions gd gmp memcached redis pdo_pgsql pdo_mysql zip pcntl bcmath intl
 
 # Apache configuration
 COPY docker/sites-available/000-default.conf.prod /etc/apache2/sites-available/000-default.conf
+COPY docker/conf-available/performance.conf /etc/apache2/conf-available/performance.conf
 
 # Copy application code
 COPY . .
@@ -107,4 +114,4 @@ RUN chown -R www-data:www-data storage
 RUN cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
 RUN echo "opcache.jit=tracing" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
  && echo "opcache.jit_buffer_size=128M" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
-RUN a2enmod rewrite headers
+RUN a2enmod rewrite headers && a2enconf performance

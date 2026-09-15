@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
-import { HEARTBEAT_MS, POLL_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, screenClient, shownExclusions, stateClient } from './projection-follow.js';
+import { HEARTBEAT_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, poller, screenClient, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -155,8 +155,8 @@ onAlpineInit(() => {
         fit: fitFrom(config.fit),
 
         _idleTimer: null,
-        _pollTimer: null,
-        _heartbeatTimer: null,
+        _poll: null,
+        _heartbeat: null,
         _client: null,
         _screen: null,
         _refreshToken: 0,
@@ -250,8 +250,8 @@ onAlpineInit(() => {
 
         destroy() {
             clearTimeout(this._idleTimer);
-            clearInterval(this._pollTimer);
-            clearInterval(this._heartbeatTimer);
+            this._poll?.stop();
+            this._heartbeat?.stop();
         },
 
         /** What the browser has just done with full screen, however it was asked. */
@@ -430,10 +430,17 @@ onAlpineInit(() => {
          * a screen that was pointed at a deck while it was away must find it.
          */
         follow() {
-            this.pull();
+            this._poll = poller(() => this.pull());
+            // The same shape, three times as slow, and allowed to drift three
+            // times as far — which is still well inside the five minutes a
+            // presentation is counted live for.
+            this._heartbeat = poller(() => this.report(), {
+                interval: HEARTBEAT_MS,
+                maxInterval: HEARTBEAT_MS * 3,
+            });
 
-            this._pollTimer = setInterval(() => this.pull(), POLL_MS);
-            this._heartbeatTimer = setInterval(() => this.report(), HEARTBEAT_MS);
+            this._poll.start();
+            this._heartbeat.start();
         },
 
         /**
@@ -449,8 +456,9 @@ onAlpineInit(() => {
             const answer = await this._screen.read();
 
             // A failed read is not an event. Nothing is drawn over the deck and
-            // nothing moves; the next poll tries again.
-            if (answer === null) { return; }
+            // nothing moves; the next beat tries again, a little later than this
+            // one did — which is the whole of what saying `false` here means.
+            if (answer === null) { return false; }
 
             this.title = answer.title ?? '';
 
@@ -554,17 +562,22 @@ onAlpineInit(() => {
          */
         report() {
             // A screen waiting to be pointed at something has nothing to say
-            // about where a service has got to.
+            // about where a service has got to. Not a failure: there is simply
+            // nothing to report, and the next beat is due at the usual time.
             if (this._client === null) { return; }
 
             const address = this.address();
 
-            this._client
+            return this._client
                 .write({ ...address, blanked: this.blanked, splash: this.splash, drawnRevision: this.drawnRevision })
                 .then((state) => {
-                    if (state !== null) { this.appliedVersion = Math.max(this.appliedVersion, state.version); }
+                    if (state === null) { return false; }
+
+                    this.appliedVersion = Math.max(this.appliedVersion, state.version);
+
+                    return true;
                 })
-                .catch(() => {});
+                .catch(() => false);
         },
 
         /**

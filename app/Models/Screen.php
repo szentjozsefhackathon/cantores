@@ -77,6 +77,18 @@ class Screen extends Model
     public const STALE_MINUTES = 5;
 
     /**
+     * How stale `last_seen_at` is allowed to get before it costs a write.
+     *
+     * A tenth of the window it is read against, so a screen is never anywhere
+     * near being aged out by the saving, and a tenth of a second's worth of
+     * writes on the busiest Sunday this feature is built for.
+     *
+     * @see \App\Http\Middleware\EnforcePairedDeviceSession, which does the
+     * same thing to the same column for the same reason.
+     */
+    public const SEEN_EVERY_SECONDS = 30;
+
+    /**
      * How far the picture on the wall may be pushed about.
      *
      * Wide enough for the square screen this exists for — a 1:1 deck on a 4:3
@@ -317,9 +329,20 @@ class Screen extends Model
      * phone too, and a phone polling a laptop that has been closed must not keep
      * the laptop looking alive. That is the whole difference between a heartbeat
      * and a page view.
+     *
+     * Written at most once every SEEN_EVERY_SECONDS, because the caller is the
+     * poll: left alone this is a row update every second for every wall in the
+     * country, to move a column that is read against a five minute window. The
+     * skipped write changes nothing anybody can observe — the row it would have
+     * written is already well inside that window — and it is the difference
+     * between a hundred writes a second and three.
      */
     public function touchLastSeen(): void
     {
+        if ($this->last_seen_at?->gt(Carbon::now()->subSeconds(self::SEEN_EVERY_SECONDS))) {
+            return;
+        }
+
         $now = Carbon::now();
 
         $this->getConnection()

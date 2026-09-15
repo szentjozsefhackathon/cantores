@@ -448,11 +448,11 @@ Route::livewire('/present', ProjectionPresenter::class)
 // presentation's own state nested inside, so that following the screen and
 // following the service are one request rather than two.
 Route::get('/screens/{screen}/state', [ScreenStateController::class, 'show'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
     ->name('screens.state');
 
 Route::post('/screens/{screen}/state', [ScreenStateController::class, 'update'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
     ->name('screens.state.store');
 
 // Where a running deck has got to, as the two devices driving it agree on it.
@@ -462,16 +462,16 @@ Route::post('/screens/{screen}/state', [ScreenStateController::class, 'update'])
 // the picture during a service, and polling the component would give that up.
 // These are polled about once a second from both ends while a Mass is going on.
 Route::get('/presentations/{presentation}/state', [PresentationStateController::class, 'show'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
     ->name('presentations.state');
 
 Route::post('/presentations/{presentation}/state', [PresentationStateController::class, 'update'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
     ->name('presentations.state.store');
 
 // The deck itself, re-read when the state answer says it has moved underneath.
 Route::get('/presentations/{presentation}/payload', PresentationPayloadController::class)
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'throttle:projection-payload'])
     ->name('presentations.payload');
 
 // The deck driven from a phone. The cantor is at the organ and the laptop is

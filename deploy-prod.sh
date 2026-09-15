@@ -184,8 +184,11 @@ echo "6. Restarting app services (traefik kept running)..."
 echo "   Putting application into maintenance mode..."
 $SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml exec -T app php artisan down 2>/dev/null || echo '   ℹ️  App container not running or already in maintenance mode'"
 
-# Bring up infrastructure services first (database, redis, sphinx) if not already running
-$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && APP_DOMAIN=cantores.hu docker compose -f docker-compose.prod.yml --env-file .env.prod up -d database memcached maintenance"
+# Bring up infrastructure services first if not already running. Redis belongs
+# in this list and not in the app's dependencies alone: the app is started with
+# --no-deps below, so anything left out here is not running when the first
+# request arrives — and the first request needs a session.
+$SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && APP_DOMAIN=cantores.hu docker compose -f docker-compose.prod.yml --env-file .env.prod up -d database redis memcached maintenance"
 
 # Stop only the app-layer containers so traefik keeps serving (returns 502 briefly, not 404)
 $SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml stop app 2>/dev/null || true"

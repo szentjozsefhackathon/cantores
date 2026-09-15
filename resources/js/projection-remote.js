@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
-import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, movedFit, sameFit, screenClient, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
+import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, movedFit, poller, sameFit, screenClient, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
 
 /**
  * The deck in the cantor's hand.
@@ -215,7 +215,7 @@ onAlpineInit(() => {
 
         _client: null,
         _screen: null,
-        _pollTimer: null,
+        _poll: null,
         _fitAt: 0,
 
         /** Whether the screen has anything on it at all. */
@@ -271,8 +271,8 @@ onAlpineInit(() => {
             this.watchWidth();
 
             const listen = () => {
-                this.pull();
-                this._pollTimer = setInterval(() => this.pull(), POLL_MS);
+                this._poll = poller(() => this.pull());
+                this._poll.start();
             };
 
             if (this.presentationId !== null) {
@@ -285,7 +285,7 @@ onAlpineInit(() => {
         },
 
         destroy() {
-            clearInterval(this._pollTimer);
+            this._poll?.stop();
             clearTimeout(this._pressTimer);
             this._wide?.removeEventListener?.('change', this._onWide);
             document.body.style.overflow = this._bodyOverflow ?? '';
@@ -1252,7 +1252,10 @@ onAlpineInit(() => {
         async pull() {
             const answer = await this._screen.read();
 
-            if (answer === null) { return; }
+            // A failed read is not an event here either: nothing is drawn to say
+            // so, and saying `false` only asks the next beat to wait a little
+            // longer than this one did.
+            if (answer === null) { return false; }
 
             this.title = answer.title ?? '';
 

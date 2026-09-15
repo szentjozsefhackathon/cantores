@@ -29,7 +29,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
 # Add extensions not included in the base image
 COPY --from=mlocati/php-extension-installer:2.7.24 /usr/bin/install-php-extensions /usr/local/bin/
-RUN install-php-extensions gd gmp memcached pdo_pgsql pdo_mysql xdebug zip pcntl bcmath intl
+RUN install-php-extensions gd gmp memcached redis pdo_pgsql pdo_mysql xdebug zip pcntl bcmath intl
 COPY docker/sites-available/000-default.conf.dev /etc/apache2/sites-available/000-default.conf
 
 RUN echo "xdebug.mode=debug,develop,profile" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \

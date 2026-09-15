@@ -39,6 +39,8 @@ services:
         condition: service_completed_successfully
       database:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       migrator:
         condition: service_completed_successfully
   database:
@@ -168,6 +170,38 @@ services:
       resources:
         limits:
           memory: 64M
+  redis:
+    # The session store, matching production so that "signed out on restart" is
+    # not a thing that only happens on the server. Same appending and same
+    # eviction policy for the same reasons; see docker-compose.prod.yml, which
+    # is where those reasons are written down.
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --save
+      - ""
+      - --maxmemory
+      - 64mb
+      - --maxmemory-policy
+      - volatile-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - creshu-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
   memcached:
     image: memcached:1.6
     command:
@@ -239,6 +273,7 @@ services:
 volumes:
   db-data:
   db-testing-data:
+  redis-data:
   qdrant_storage:
   xdebug-profiles:
   claude-home:  

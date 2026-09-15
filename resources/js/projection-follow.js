@@ -45,6 +45,95 @@ export const POLL_MS = 1000;
 export const HEARTBEAT_MS = 10000;
 
 /**
+ * How far apart the asking is allowed to drift when nobody is answering.
+ *
+ * Small, because what is being backed away from is a Mass. Five seconds is long
+ * enough to take most of the load off a server that is struggling — a hundred
+ * parishes asking twice a second become a hundred parishes asking a fifth as
+ * often — and short enough that a blink of bad wifi costs the remote one beat
+ * and not a hymn.
+ */
+export const POLL_BACKOFF_MAX_MS = 5000;
+
+/**
+ * The asking itself: one beat at a time, and never two at once.
+ *
+ * `setInterval` is the wrong shape for this and was the one real hazard in the
+ * feature. It fires on a clock rather than on an answer, so a read that takes
+ * three seconds has three more behind it before it lands — which means every
+ * client answers a slow server by asking it more often, and a hundred of them
+ * doing that together is how a server that was merely slow stops answering at
+ * all. A beat scheduled *after* the previous one finishes cannot do that: one
+ * request per client is in flight, whatever the server is doing.
+ *
+ * The backing off is the other half of the same thought. A tick that says it
+ * failed doubles the wait, up to `maxInterval`, and the first tick that
+ * succeeds puts it straight back — so an outage thins the asking out instead of
+ * thickening it, and recovery costs one beat. The wait is jittered so that a
+ * hundred clients that lost the server at the same moment do not come back to
+ * it at the same moment either.
+ *
+ * A tick says it failed by answering exactly `false`, or by throwing. Anything
+ * else — including the `undefined` of a tick that simply did its work — is a
+ * success, so that the rule of this file still holds: a failure is not an
+ * event, and nothing is ever drawn over a deck to announce one.
+ *
+ * @param {() => (boolean|void|Promise<boolean|void>)} tick
+ * @param {{interval?: number, maxInterval?: number, random?: () => number}} options
+ */
+export function poller(tick, options = {}) {
+    const interval = options.interval ?? POLL_MS;
+    // Never below the interval, whatever was asked for: the ceiling is there to
+    // make a struggling server asked *less* often, and a beat that is already
+    // slower than the ceiling must not be sped up by failing.
+    const maxInterval = Math.max(interval, options.maxInterval ?? POLL_BACKOFF_MAX_MS);
+    const random = options.random ?? Math.random;
+
+    let timer = null;
+    let wait = interval;
+    let running = false;
+
+    /** Give or take a quarter, so that a crowd does not return as a crowd. */
+    const jittered = (ms) => Math.round(ms * (0.75 + (random() * 0.5)));
+
+    async function beat() {
+        let ok = true;
+
+        try {
+            ok = await tick() !== false;
+        } catch {
+            ok = false;
+        }
+
+        wait = ok ? interval : Math.min(maxInterval, wait * 2);
+
+        if (running) { timer = setTimeout(beat, ok ? wait : jittered(wait)); }
+    }
+
+    return {
+        /** Ask now, and keep asking. Asking twice is asking once. */
+        start() {
+            if (running) { return; }
+
+            running = true;
+            beat();
+        },
+
+        /** Stop, whatever is in flight. Nothing lands after this. */
+        stop() {
+            running = false;
+            clearTimeout(timer);
+            timer = null;
+        },
+
+        /** How long the next wait would be — the backing off, made visible. */
+        get wait() {
+            return wait;
+        },
+    };
+}
+
+/**
  * Every request this feature makes, and the rule all of them obey.
  *
  * A failure is not an event: it answers `null` and is over. That is the one rule
@@ -55,14 +144,30 @@ export const HEARTBEAT_MS = 10000;
  * @param {string} csrfToken
  */
 function jsonRequests(csrfToken) {
+    /*
+     * `X-Requested-With` is not decoration. Laravel records the current URL as
+     * the session's previous one on every plain GET, and `fetch` is a plain GET
+     * as far as that check is concerned — so without this header a wall spends a
+     * Mass telling its own session that the last page it was on was
+     * `/screens/5/state`, once a second. Two things follow from that, and both
+     * are wrong: the session is dirtied by every poll, which is what would stop
+     * it ever being written conditionally; and anything that sends this person
+     * back where they came from — a login, a form — sends them to a JSON
+     * endpoint. Saying what this request actually is fixes both.
+     */
+    const asked = {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+    };
+
     const headers = {
+        ...asked,
         'Content-Type': 'application/json',
         'X-CSRF-TOKEN': csrfToken ?? '',
-        Accept: 'application/json',
     };
 
     return {
-        get: (url) => request(url, { headers: { Accept: 'application/json' } }),
+        get: (url) => request(url, { headers: asked }),
         post: (url, body) => request(url, { method: 'POST', headers, body: JSON.stringify(body) }),
     };
 
