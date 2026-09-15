@@ -595,6 +595,24 @@ onAlpineInit(() => {
             }
         },
 
+        /**
+         * The opening as the server has it, which is the only place it is decided.
+         *
+         * A latch there: a picture reported behind the one the service has
+         * already reached is refused rather than argued with, and a refusal
+         * moves no version — so the poll that corrects everything else never
+         * fires for it. This screen reports every ten seconds whether anything
+         * happened, and without taking the refusal back a heartbeat sent a
+         * moment before the phone's press would leave the wall holding a card
+         * over the hymn the room had just been given.
+         */
+        takeOpening(splash) {
+            if (!splash || splash === this.splash) { return; }
+
+            this.splash = splash;
+            this.show();
+        },
+
         /** Where somebody else has put the service. */
         adopt(state) {
             this.appliedVersion = state.version;
@@ -627,6 +645,7 @@ onAlpineInit(() => {
                     if (state === null) { return false; }
 
                     this.appliedVersion = Math.max(this.appliedVersion, state.version);
+                    this.takeOpening(state.splash);
 
                     return true;
                 })

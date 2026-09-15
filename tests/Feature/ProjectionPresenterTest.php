@@ -138,6 +138,6 @@ it('fades the wall out and brings it back instantly', function () {
     actingAs($user);
 
     Livewire::test(ProjectionPresenter::class, ['projection' => $projection])
-        ->assertSeeHtml('transition: opacity ${darkFadeMs}ms ease-in')
-        ->assertSeeHtml('opacity: ${dark ? 1 : 0}');
+        ->assertSeeHtml('transition: `opacity ${darkFadeMs}ms ease-in`')
+        ->assertSeeHtml('opacity: dark ?');
 });

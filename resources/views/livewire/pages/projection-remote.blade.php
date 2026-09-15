@@ -70,6 +70,11 @@ resources/js/projection-remote.js
         'skipText' => __('Leave this slide out of today\'s service'),
         'unskipText' => __('Show this slide in today\'s service'),
         'skippedText' => __('Left out'),
+        // Asked before the screen is cleared. Here rather than on the button
+        // itself, because Blade leaves a directive inside a component's
+        // attribute uncompiled and Alpine is then handed an expression it
+        // cannot parse.
+        'clearText' => __('Take the deck off the screen and end this projection?'),
         'csrfToken' => csrf_token(),
     ]) }}"
     x-data="projectionRemote(JSON.parse($el.dataset.projectionConfig))"
@@ -211,7 +216,14 @@ resources/js/projection-remote.js
                 {{-- Moved exactly as the wall moves it, so that lining the
                      projector up is watched twice over: once across the room
                      and once under the thumb. --}}
-                x-bind:style="`aspect-ratio: ${aspectRatio}; transform: ${fitTransform}; transform-origin: center;`"
+                {{-- Bound as an object and never as a string. Alpine writes a string
+                     binding with setAttribute('style', …), which throws away the
+                     `display: none` x-show had just put on the same element — and the
+                     fit is re-read from the screen every second, so a box hidden by
+                     x-show came back a beat later and the room's slide was drawn
+                     beside the card that had replaced it. The object form sets the
+                     properties one by one and leaves the rest of the style alone. --}}
+                x-bind:style="{ aspectRatio: aspectRatio, transform: fitTransform, transformOrigin: 'center' }"
                 x-bind:class="blanked || openingDark ? 'opacity-25' : ''"
                 x-show="!waiting && !showingSplash"
                 wire:ignore
@@ -225,7 +237,7 @@ resources/js/projection-remote.js
                  once, and it is guesswork unless they are the same picture. --}}
             <div
                 class="flex w-full max-h-full max-w-full flex-col items-center justify-center gap-2 overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-4 text-center lg:h-full lg:w-auto"
-                x-bind:style="`aspect-ratio: ${aspectRatio}; transform: ${fitTransform}; transform-origin: center;`"
+                x-bind:style="{ aspectRatio: aspectRatio, transform: fitTransform, transformOrigin: 'center' }"
                 x-show="showingSplash"
                 x-cloak
             >
@@ -321,7 +333,7 @@ resources/js/projection-remote.js
             x-ref="strip"
             data-scrolls
             class="order-2 flex h-1/4 shrink-0 touch-pan-x items-center gap-2 overflow-x-auto overflow-y-hidden px-2 py-2 lg:hidden"
-            x-bind:style="`--slide-ratio: ${aspectRatio};`"
+            x-bind:style="{ '--slide-ratio': aspectRatio }"
             wire:ignore
         ></div>
 
@@ -393,7 +405,7 @@ resources/js/projection-remote.js
             <div
                 x-ref="nextBox"
                 class="w-full max-h-full max-w-full overflow-hidden bg-white lg:h-full lg:w-auto"
-                x-bind:style="`aspect-ratio: ${aspectRatio};`"
+                x-bind:style="{ aspectRatio: aspectRatio }"
                 x-show="index < total - 1"
                 wire:ignore
             ></div>
@@ -650,7 +662,7 @@ resources/js/projection-remote.js
                     variant="subtle"
                     icon="power"
                     class="w-full"
-                    x-on:click="confirm(@js(__('Take the deck off the screen and end this projection?'))) && clearScreen()"
+                    x-on:click="confirm(clearText) && clearScreen()"
                 >
                     {{ __('Clear the screen') }}
                 </flux:button>

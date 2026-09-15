@@ -123,7 +123,11 @@ resources/js/projection-presenter.js
             x-ref="stageBox"
             class="bg-white"
             x-show="!waiting && !showingSplash"
-            x-bind:style="`aspect-ratio: ${aspectRatio}; height: 100%; max-width: 100%; max-height: 100%; transform: ${fitTransform}; transform-origin: center;`"
+            {{-- An object and not a string: a string binding is written with
+                 setAttribute('style', …) and throws away the `display: none`
+                 x-show put on this same element, and the fit is re-read every
+                 second — so the deck came back out from under the card. --}}
+            x-bind:style="{ aspectRatio: aspectRatio, height: '100%', maxWidth: '100%', maxHeight: '100%', transform: fitTransform, transformOrigin: 'center' }"
             wire:ignore
         ></div>
     </div>
@@ -143,7 +147,7 @@ resources/js/projection-presenter.js
     <div class="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden" x-show="showingSplash" x-cloak>
         <div
             class="flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-8 text-center"
-            x-bind:style="`aspect-ratio: ${aspectRatio}; height: 100%; max-width: 100%; max-height: 100%; transform: ${fitTransform}; transform-origin: center;`"
+            x-bind:style="{ aspectRatio: aspectRatio, height: '100%', maxWidth: '100%', maxHeight: '100%', transform: fitTransform, transformOrigin: 'center' }"
         >
             <div class="text-[7vmin] font-semibold leading-none tracking-tight text-white/90">Cantores.hu</div>
 
@@ -164,7 +168,7 @@ resources/js/projection-presenter.js
     <div
         class="pointer-events-none absolute inset-0 bg-black"
         style="opacity: 0"
-        x-bind:style="`opacity: ${dark ? 1 : 0}; transition: opacity ${darkFadeMs}ms ease-in;`"
+        x-bind:style="{ opacity: dark ? '1' : '0', transition: `opacity ${darkFadeMs}ms ease-in` }"
     ></div>
 
     <div

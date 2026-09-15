@@ -811,3 +811,77 @@ test('the phone walks the opening as the server says', async () => {
     await says(4, 'off');
     assert.equal(deck.splash, 'off', 'the phone went on thinking the wall was still opening');
 });
+
+/*
+ * Every field the page reads has to be answerable before the first poll comes
+ * back.
+ *
+ * Alpine evaluates each expression as the page is built, and one that reaches
+ * for a field the component never declared does not merely draw nothing: it
+ * throws, and the throw takes down the directives still queued behind it —
+ * which on this page is the strip, the plan and the three controls under the
+ * thumb. A remote whose Next button is not wired to anything is worse than one
+ * that says the wrong thing.
+ */
+test('the phone can answer for its own state before it has been told anything', () => {
+    const deck = registered.projectionRemote({ clearText: 'end it?' });
+
+    for (const field of ['ended', 'waiting', 'preparing', 'busy', 'blanked', 'wallBehind', 'opening', 'openingHint', 'showingSplash', 'total', 'index', 'clearText']) {
+        assert.notEqual(deck[field], undefined, `the page reads ${field} and the phone cannot say what it is`);
+    }
+
+    assert.equal(deck.ended, false, 'a service nobody has closed is not over');
+    assert.equal(deck.clearText, 'end it?');
+});
+
+/* And the screen closed from the laptop, which is where `ended` comes from. */
+test('the phone hears that the service was closed on the screen itself', async () => {
+    const deck = remote();
+
+    deck.repaint = () => {};
+    deck._screen = {
+        read: () => Promise.resolve({
+            presentationId: 1,
+            state: { version: 2, splash: 'off', blanked: false, reveals: {}, entryId: 1, slideIndex: 0, revision: 'a', drawnRevision: 'a', endedAt: '2026-09-15T10:00:00+00:00' },
+        }),
+    };
+
+    await deck.pull();
+
+    assert.equal(deck.ended, true);
+});
+
+/*
+ * The other half of the same latch, from the thumb's side. A press made in the
+ * same second as the laptop's reports a picture the service has already walked
+ * past; the server refuses it and moves no version, so the answer to the press
+ * is the only thing that will ever say so. Without reading it, the phone goes on
+ * walking an opening that is over instead of driving the deck — and holds a card
+ * the room stopped looking at.
+ */
+test('the phone takes back an opening the server refused', async () => {
+    const deck = carded();
+    const written = [];
+
+    deck.push = registered.projectionRemote({}).push.bind(deck);
+    deck._client = {
+        write: (state) => {
+            written.push(state);
+
+            return Promise.resolve({ version: 9, splash: 'off', entryId: 1, slideIndex: 0, blanked: false, reveals: {} });
+        },
+    };
+
+    deck.next();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.deepEqual(written.map((state) => state.splash), ['dark'], 'the phone did not report the press it had made');
+    assert.equal(deck.splash, 'off', 'the phone went on walking an opening the service had left');
+    assert.equal(deck.appliedVersion, 9);
+
+    deck._pressedAt = {};
+    deck.next();
+
+    assert.equal(deck.index, 1, 'the next press was spent on an opening that was over');
+});

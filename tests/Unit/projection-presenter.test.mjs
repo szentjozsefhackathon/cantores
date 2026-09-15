@@ -381,3 +381,21 @@ test('the wall walks the opening as the server says', () => {
     deck.adopt({ version: 4, entryId: 1, slideIndex: 0, splash: 'off', blanked: false, reveals: {} });
     assert.equal(deck.splash, 'off');
 });
+
+/*
+ * The heartbeat is a report and not an argument: the server keeps the opening as
+ * a latch, refuses a picture the service has already walked past, and bumps no
+ * version for the refusal — so the poll that corrects everything else never
+ * fires for this. A wall that does not take the refusal back from the answer to
+ * its own beat holds the title card over the hymn a phone has just started.
+ */
+test('the wall takes back an opening the server refused', async () => {
+    const deck = carded();
+
+    deck._client = { write: () => Promise.resolve({ version: 9, splash: 'off', entryId: 1, slideIndex: 0, blanked: false, reveals: {} }) };
+
+    await deck.report();
+
+    assert.equal(deck.splash, 'off', 'the wall went on holding a card the room had stopped looking at');
+    assert.equal(deck.appliedVersion, 9);
+});

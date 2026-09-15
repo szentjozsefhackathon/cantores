@@ -157,6 +157,17 @@ onAlpineInit(() => {
         unskipText: config.unskipText ?? '',
         skippedText: config.skippedText ?? '',
 
+        /**
+         * What is asked before the screen is cleared.
+         *
+         * Carried in the configuration rather than written into the button,
+         * because the button is a Blade component and Blade leaves `@js` inside
+         * a component's attribute uncompiled — the browser is then handed an `@`
+         * where it expects an expression, and nothing on the page below it is
+         * ever wired up.
+         */
+        clearText: config.clearText ?? '',
+
         fullscreen: false,
 
         _stripFrom: 0,
@@ -186,6 +197,18 @@ onAlpineInit(() => {
         presentationId: config.presentationId ?? null,
         title: config.title ?? '',
         preparing: false,
+
+        /**
+         * Whether the service has been closed on the screen itself.
+         *
+         * Declared here and not merely written by the first poll: a field the
+         * template reads has to exist before the first answer comes back, or
+         * every expression drawn from it throws while the page is still
+         * building — and an Alpine directive that throws takes the directives
+         * queued behind it down with it, which on this page is every control
+         * under the thumb.
+         */
+        ended: false,
 
         /**
          * How far into its opening the service is: `card`, then `dark`, then
@@ -1291,9 +1314,30 @@ onAlpineInit(() => {
             this._client
                 .write({ ...addressAt(this.slides, this.index), blanked: this.blanked, splash: this.splash, reveals: this.reveals })
                 .then((state) => {
-                    if (state !== null) { this.appliedVersion = Math.max(this.appliedVersion, state.version); }
+                    if (state === null) { return; }
+
+                    this.appliedVersion = Math.max(this.appliedVersion, state.version);
+                    this.takeOpening(state.splash);
                 })
                 .catch(() => {});
+        },
+
+        /**
+         * The opening as the server has it, which is the only place it is decided.
+         *
+         * A latch there: a picture reported behind the one the service has
+         * already reached is refused rather than argued with, and a refusal
+         * moves no version — so the poll that corrects everything else never
+         * fires for it. Without taking the refusal back here, a phone that
+         * pressed Next in the same second as the laptop goes on holding a card
+         * the room stopped looking at, and goes on walking an opening that is
+         * over instead of driving the deck.
+         */
+        takeOpening(splash) {
+            if (!splash || splash === this.splash) { return; }
+
+            this.splash = splash;
+            this.show();
         },
 
         /**

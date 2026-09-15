@@ -476,3 +476,28 @@ it('offers no editor for a screen showing nothing', function () {
     Livewire::test(ProjectionRemote::class, ['screen' => $screen])
         ->assertSeeHtml('&quot;editUrl&quot;:null');
 });
+
+/*
+ * Blade compiles a directive written in the page, and leaves one written inside
+ * a component's attribute alone — so `@js(...)` on a `<flux:button>` reaches the
+ * browser with the `@` still on it, where Alpine expects an expression.
+ *
+ * Not a quiet failure. The parse error takes down every directive queued behind
+ * it, and behind that button is the whole of the thumb: the controls stop being
+ * wired to anything, and the card the beamer was lined up against can no longer
+ * be walked off the wall. So the page is checked for the mistake rather than for
+ * the one button it was first made on.
+ */
+it('leaves no Blade directive in the markup Alpine has to parse', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $screen = screenShowing($user, $projection);
+
+    actingAs($user);
+
+    $html = Livewire::test(ProjectionRemote::class, ['screen' => $screen])->html();
+
+    expect($html)->not->toContain('@js(')
+        ->and($html)->toContain('confirm(clearText)')
+        ->and($html)->toContain('&quot;clearText&quot;:'.e(json_encode(__('Take the deck off the screen and end this projection?'))));
+});
