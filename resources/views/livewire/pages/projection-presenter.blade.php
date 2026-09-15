@@ -99,7 +99,7 @@ resources/js/projection-presenter.js
     {{-- The slide itself. The white box is the shape of the screen the deck was
          built for, fitted into whatever shape the projector actually is — so a
          16:9 deck on a 4:3 beamer is letterboxed rather than stretched. --}}
-    <div class="absolute inset-0 flex items-center justify-center" x-on:click="next()">
+    <div class="absolute inset-0 flex items-center justify-center">
         <div
             x-ref="stageBox"
             class="bg-white"
