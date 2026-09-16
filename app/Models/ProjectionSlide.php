@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Contracts\PlanEntry;
+use Carbon\CarbonImmutable;
+use Database\Factories\ProjectionSlideFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,6 +32,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $score_file_id
  * @property int|null $music_plan_slot_assignment_id
  * @property int|null $music_plan_slot_plan_id
+ * @property int|null $added_music_id
  * @property string|null $text
  * @property int $sequence
  * @property array<string, array<string, mixed>>|null $settings_override
@@ -38,13 +41,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $show_music_title
  * @property bool $show_variation
  * @property bool $show_collections
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
- * @property-read \App\Models\Projection $projection
- * @property-read \App\Models\Score|null $score
- * @property-read \App\Models\ScoreFile|null $scoreFile
- * @property-read \App\Models\MusicPlanSlotAssignment|null $assignment
- * @property-read \App\Models\MusicPlanSlotPlan|null $slotPlan
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read Projection $projection
+ * @property-read Score|null $score
+ * @property-read ScoreFile|null $scoreFile
+ * @property-read MusicPlanSlotAssignment|null $assignment
+ * @property-read MusicPlanSlotPlan|null $slotPlan
+ * @property-read ProjectionMusic|null $addedMusic
  *
  * @method static \Database\Factories\ProjectionSlideFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ProjectionSlide newModelQuery()
@@ -55,7 +59,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ProjectionSlide extends Model implements PlanEntry
 {
-    /** @use HasFactory<\Database\Factories\ProjectionSlideFactory> */
+    /** @use HasFactory<ProjectionSlideFactory> */
     use HasFactory;
 
     /**
@@ -67,6 +71,7 @@ class ProjectionSlide extends Model implements PlanEntry
         'score_file_id',
         'music_plan_slot_assignment_id',
         'music_plan_slot_plan_id',
+        'added_music_id',
         'text',
         'sequence',
         'settings_override',
@@ -201,5 +206,14 @@ class ProjectionSlide extends Model implements PlanEntry
     public function slotPlan(): BelongsTo
     {
         return $this->belongsTo(MusicPlanSlotPlan::class, 'music_plan_slot_plan_id');
+    }
+
+    /**
+     * The music this row was chosen from when it is one only this document
+     * holds — the plan has no assignment to name it by.
+     */
+    public function addedMusic(): BelongsTo
+    {
+        return $this->belongsTo(ProjectionMusic::class, 'added_music_id');
     }
 }

@@ -7,13 +7,16 @@ use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
 use App\Facades\GenreContext;
 use App\Models\Booklet;
+use App\Models\BookletMusic;
 use App\Models\BookletScore;
+use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Services\BookletRenderPayload;
-use App\Services\MusicPlanScoreListService;
+use App\Services\PlanOrder;
 use App\Services\PlanOutline;
+use App\Services\PlanScoreToggle;
 use App\Support\BookletSettingFields;
 use App\Support\BookletStyles;
 use App\Support\ImpositionLayout;
@@ -157,6 +160,17 @@ class BookletEditor extends Component
      * lending link on the site.
      */
     public ?string $shareUrl = null;
+
+    /**
+     * Where a music picked in the search will be added: a slot's id, or null for
+     * between slots. Only read while the search is open.
+     */
+    public ?int $addingMusicToSlot = null;
+
+    /**
+     * The music just added, so that it opens with its scores on offer.
+     */
+    public ?int $openedAddedMusicId = null;
 
     public function mount(Booklet $booklet): void
     {
@@ -594,60 +608,77 @@ class BookletEditor extends Component
      * A score holding several files may be in the booklet several times over,
      * once per file, so it is the file that is toggled rather than the score.
      */
-    public function toggleScore(int $scoreId, ?int $assignmentId = null, ?int $fileId = null): void
+    public function toggleScore(int $scoreId, ?int $assignmentId = null, ?int $fileId = null, ?int $addedMusicId = null): void
     {
         $this->authorize('update', $this->booklet);
 
-        $source = app(MusicPlanScoreListService::class)->sourcesFor([$scoreId], Auth::user())->get($scoreId);
+        app(PlanScoreToggle::class)->toggle($this->booklet, Auth::user(), $scoreId, $assignmentId, $fileId, $addedMusicId);
 
-        if ($source === null) {
-            // Unreadable now — a recalled loan, an unpublished score. It cannot
-            // be added, but one already standing in the booklet must still be
-            // removable.
-            $stale = $this->booklet->entries()->where('score_id', $scoreId)->first();
+        $this->forgetEntries();
+    }
 
-            if ($stale instanceof BookletScore) {
-                $this->removeEntry($stale->id);
-            }
+    /**
+     * Open the music search for a music this booklet will hold and its plan will
+     * not — inside a slot, or between slots when none is given.
+     */
+    public function startAddingMusic(?int $slotPlanId = null): void
+    {
+        $this->authorize('update', $this->booklet);
 
+        $this->addingMusicToSlot = $this->slotInPlan($slotPlanId);
+
+        $this->modal('booklet-add-music')->show();
+    }
+
+    /**
+     * Add the music picked in the search, at the end of where it was asked for.
+     *
+     * No score of it is taken: which engraving is printed is the choice this
+     * editor exists for.
+     */
+    #[On('music-selected-booklet')]
+    public function addMusic(int $musicId): void
+    {
+        $this->authorize('update', $this->booklet);
+
+        $music = Music::query()->visibleTo(Auth::user())->find($musicId);
+
+        if (! $music instanceof Music) {
             return;
         }
 
-        if ($fileId !== null && ! isset($source['files'][$fileId])) {
-            return;
-        }
+        $slotPlanId = $this->slotInPlan($this->addingMusicToSlot);
 
-        $existing = $this->booklet->entries()
-            ->where('score_id', $scoreId)
-            ->get()
-            ->first(fn (BookletScore $entry): bool => app(BookletRenderPayload::class)->fileOf($entry, $source)['file_id'] === ($fileId ?? $source['file_id']));
-
-        if ($existing instanceof BookletScore) {
-            $this->removeEntry($existing->id);
-
-            return;
-        }
-
-        $assignment = $this->assignmentInPlan($assignmentId);
-
-        $order = $this->outlineIds();
-        $at = app(PlanOutline::class)->appendIndex(
-            $this->outline,
-            $assignment?->music_plan_slot_plan_id,
-            $assignment?->id,
-        );
-
-        $entry = $this->booklet->entries()->create([
-            'score_id' => $scoreId,
-            'score_file_id' => $fileId,
-            'music_plan_slot_assignment_id' => $assignment?->id,
-            'music_plan_slot_plan_id' => $assignment?->music_plan_slot_plan_id,
-            'sequence' => (int) $this->booklet->entries()->max('sequence') + 1,
+        $added = $this->booklet->addedMusics()->create([
+            'music_id' => $music->id,
+            'music_plan_slot_plan_id' => $slotPlanId,
+            'sequence' => app(PlanOutline::class)->appendIndex($this->outline, $slotPlanId, null),
         ]);
 
-        array_splice($order, $at, 0, [$entry->id]);
+        $this->addingMusicToSlot = null;
+        $this->openedAddedMusicId = $added->id;
 
-        $this->applyOrder($order);
+        $this->modal('booklet-add-music')->close();
+
+        $this->forgetEntries();
+    }
+
+    /**
+     * Take a music this booklet holds on its own back out, with every row of it.
+     */
+    public function removeAddedMusic(int $addedMusicId): void
+    {
+        $this->authorize('update', $this->booklet);
+
+        $music = $this->booklet->addedMusics()->find($addedMusicId);
+
+        if (! $music instanceof BookletMusic) {
+            return;
+        }
+
+        app(PlanOrder::class)->removeAddedMusic($this->booklet, $this->outline, $music);
+
+        $this->forgetEntries();
     }
 
     /**
@@ -664,35 +695,41 @@ class BookletEditor extends Component
      * are is the opening it has, and the new paragraph starts empty like any
      * other.
      */
-    public function addText(?int $slotPlanId = null, ?int $assignmentId = null, ?int $afterEntryId = null): void
+    public function addText(?int $slotPlanId = null, ?int $assignmentId = null, ?int $afterEntryId = null, ?int $addedMusicId = null): void
     {
         $this->authorize('update', $this->booklet);
 
-        $assignment = $this->assignmentInPlan($assignmentId);
-        $slotPlanId = $assignment?->music_plan_slot_plan_id ?? $this->slotInPlan($slotPlanId);
+        $added = app(PlanScoreToggle::class)->addedMusicOf($this->booklet, $addedMusicId);
+        $assignment = $added === null ? $this->assignmentInPlan($assignmentId) : null;
+        $slotPlanId = $added !== null
+            ? $added->music_plan_slot_plan_id
+            : ($assignment?->music_plan_slot_plan_id ?? $this->slotInPlan($slotPlanId));
 
+        $tree = $this->outline;
         $order = $this->outlineIds();
         $at = app(PlanOutline::class)->insertIndex(
-            $this->outline,
+            $tree,
             $slotPlanId,
             $assignment?->id,
             in_array($afterEntryId, $order, true) ? $afterEntryId : null,
+            $added?->id,
         );
 
         $entry = $this->booklet->entries()->create([
-            'text' => $this->opensTheBooklet($at, $slotPlanId, $assignment?->id, $order)
+            'text' => $added === null && $this->opensTheBooklet($at, $slotPlanId, $assignment?->id, $order)
                 ? '# '.Str::ucfirst($this->booklet->title)
                 : '',
             'music_plan_slot_assignment_id' => $assignment?->id,
             'music_plan_slot_plan_id' => $slotPlanId,
+            'added_music_id' => $added?->id,
             'sequence' => (int) $this->booklet->entries()->max('sequence') + 1,
         ]);
 
-        array_splice($order, $at, 0, [$entry->id]);
-
         $this->openedTextId = $entry->id;
 
-        $this->applyOrder($order);
+        app(PlanOrder::class)->insert($this->booklet, $tree, $entry->id, $at);
+
+        $this->forgetEntries();
     }
 
     /**
@@ -721,7 +758,8 @@ class BookletEditor extends Component
 
         return ! $first->isText()
             || $first->music_plan_slot_plan_id !== null
-            || $first->music_plan_slot_assignment_id !== null;
+            || $first->music_plan_slot_assignment_id !== null
+            || $first->added_music_id !== null;
     }
 
     /**
@@ -792,7 +830,7 @@ class BookletEditor extends Component
             return;
         }
 
-        $entry->delete();
+        app(PlanOrder::class)->remove($this->booklet, $this->outline, [$entry->id]);
 
         $this->forgetEntries();
     }
@@ -829,6 +867,15 @@ class BookletEditor extends Component
     }
 
     /**
+     * Move a music only this booklet holds — across whole slots, when it stands
+     * between them, which is how one added at the end is put in its place.
+     */
+    public function moveAddedMusic(int $addedMusicId, int $direction): void
+    {
+        $this->moveNode('added', $addedMusicId, $direction);
+    }
+
+    /**
      * Nothing may leave the thing it belongs to, so a move is made on the tree
      * and not on the list: the outline swaps two of one container's children and
      * hands back the printed order that follows from it.
@@ -837,14 +884,9 @@ class BookletEditor extends Component
     {
         $this->authorize('update', $this->booklet);
 
-        $outline = app(PlanOutline::class);
-        $moved = $outline->moved($this->outline, $kind, $id, $direction);
-
-        if ($moved === null) {
-            return;
+        if (app(PlanOrder::class)->move($this->booklet, $kind, $id, $direction, $this->outline)) {
+            $this->forgetEntries();
         }
-
-        $this->applyOrder($outline->flatten($moved));
     }
 
     /**
@@ -870,40 +912,8 @@ class BookletEditor extends Component
      */
     private function normalizeOrder(): void
     {
-        $ordered = $this->outlineIds();
-
-        if ($ordered === $this->entries->pluck('id')->all()) {
-            return;
-        }
-
-        $this->writeOrder($ordered);
-        $this->forget();
-    }
-
-    /**
-     * Put the entries in the given order.
-     *
-     * Sequences are rewritten from scratch, so a list that had drifted out of
-     * step — a deletion, an older booklet — comes back in order.
-     *
-     * @param  list<int>  $entryIds
-     */
-    private function applyOrder(array $entryIds): void
-    {
-        $this->writeOrder($entryIds);
-
-        $this->forgetEntries();
-    }
-
-    /**
-     * @param  list<int>  $entryIds
-     */
-    private function writeOrder(array $entryIds): void
-    {
-        $entries = $this->booklet->entries()->get()->keyBy('id');
-
-        foreach ($entryIds as $position => $id) {
-            $entries[$id]?->update(['sequence' => $position]);
+        if (app(PlanOrder::class)->normalize($this->booklet, $this->outline, $this->entries->pluck('id')->all())) {
+            $this->forget();
         }
     }
 

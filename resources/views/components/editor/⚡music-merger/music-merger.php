@@ -493,6 +493,15 @@ return new class extends Component
                 ->where('music_id', $this->rightMusic->id)
                 ->update(['music_id' => $this->leftMusic->id]);
 
+            // And the musics a deck or a booklet holds without its plan.
+            \App\Models\ProjectionMusic::query()
+                ->where('music_id', $this->rightMusic->id)
+                ->update(['music_id' => $this->leftMusic->id]);
+
+            \App\Models\BookletMusic::query()
+                ->where('music_id', $this->rightMusic->id)
+                ->update(['music_id' => $this->leftMusic->id]);
+
             $this->repointReferences();
 
             // Delete right music

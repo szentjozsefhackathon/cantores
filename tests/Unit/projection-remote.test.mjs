@@ -929,3 +929,73 @@ test('taking the shown row out of the deck hands the service to the row after it
 
     assert.equal(component.slides[component.index].entryId, 3, 'the service landed on the last slide of the deck instead of the row after the one removed');
 });
+
+/*
+ * Moving the row the room is reading must not take the room anywhere. A move
+ * removes nothing, so the address the wall keeps — the row and the slide in it —
+ * is still in the reordered deck, and that is where the service stays.
+ */
+test('moving the shown row leaves the service on the same slide', () => {
+    const component = registered.projectionRemote({});
+
+    component.excluded = {};
+    component.reveals = {};
+    component.$refs = {};
+    component.push = () => {};
+    component.buildDeck = () => {};
+    component.buildStrip = () => {};
+    component.show = () => {};
+
+    const previousEntries = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    const previousAddress = { entryId: 2, slideIndex: 1 };
+
+    component.entries = [{ id: 2 }, { id: 1 }, { id: 3 }];
+    component.drawn = [
+        { entryId: 2, index: 0, svg: null },
+        { entryId: 2, index: 1, svg: null },
+        { entryId: 1, index: 0, svg: null },
+        { entryId: 3, index: 0, svg: null },
+    ];
+
+    component.repaint(previousAddress, previousEntries);
+
+    assert.deepEqual(
+        { entryId: component.slides[component.index].entryId, index: component.slides[component.index].index },
+        { entryId: 2, index: 1 },
+    );
+});
+
+/*
+ * The arrows the phone draws in Reorder are the server's own verdicts, keyed
+ * the way the move endpoint is asked — and a music only this deck holds is
+ * moved by its own id, not by an assignment's.
+ */
+test('the plan column draws the arrows the server allows', () => {
+    const component = registered.projectionRemote({
+        outline: [
+            {
+                kind: 'slot', id: 4, name: 'Gloria', canMoveUp: false, canMoveDown: true,
+                children: [
+                    { kind: 'music', local: false, assignmentId: 9, addedMusicId: null, title: 'Glória', canMoveUp: false, canMoveDown: false, offers: [],
+                        children: [{ kind: 'entry', entryId: 1, canMoveUp: false, canMoveDown: false }] },
+                ],
+            },
+            { kind: 'music', local: true, assignmentId: null, addedMusicId: 5, title: 'Boldog születésnapot', canMoveUp: true, canMoveDown: false, offers: [], children: [] },
+        ],
+    });
+
+    component.entries = [{ id: 1, label: 'Glória' }];
+    component.drawn = [{ entryId: 1, index: 0, svg: null }];
+    component.slides = component.drawn;
+
+    const [gloria, song] = component.outline;
+
+    assert.deepEqual(gloria.moves, { up: false, down: true });
+    assert.equal(gloria.slotId, 4);
+    assert.deepEqual(gloria.blocks[0].rows[0].moves, { up: false, down: false });
+    assert.equal(song.name, null);
+    assert.deepEqual(
+        { local: song.blocks[0].local, moveKind: song.blocks[0].moveKind, moveId: song.blocks[0].moveId, moves: song.blocks[0].moves },
+        { local: true, moveKind: 'added', moveId: 5, moves: { up: true, down: false } },
+    );
+});

@@ -11,6 +11,7 @@ use App\Models\FirstName;
 use App\Models\Genre;
 use App\Models\Music;
 use App\Models\Projection;
+use App\Models\ProjectionMusic;
 use App\Models\ProjectionSlide;
 use App\Models\User;
 use App\Observers\AuthorObserver;
@@ -87,6 +88,7 @@ class AppServiceProvider extends ServiceProvider
         User::observe(UserObserver::class);
         Projection::observe(ProjectionRevisionObserver::class);
         ProjectionSlide::observe(ProjectionRevisionObserver::class);
+        ProjectionMusic::observe(ProjectionRevisionObserver::class);
 
         Event::listen(Login::class, UpdateLastLoginAt::class);
 

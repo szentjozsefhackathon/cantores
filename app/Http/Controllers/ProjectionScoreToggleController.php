@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProjectionScoreToggleRequest;
 use App\Models\Projection;
+use App\Services\PlanScoreToggle;
 use App\Services\ProjectionRenderPayload;
-use App\Services\ProjectionScoreToggle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Auth;
  */
 class ProjectionScoreToggleController extends Controller
 {
-    public function __invoke(ProjectionScoreToggleRequest $request, ProjectionScoreToggle $toggle, ProjectionRenderPayload $payloads, Projection $projection): JsonResponse
+    public function __invoke(ProjectionScoreToggleRequest $request, PlanScoreToggle $toggle, ProjectionRenderPayload $payloads, Projection $projection): JsonResponse
     {
         $toggle->toggle(
             $projection,
@@ -31,6 +31,7 @@ class ProjectionScoreToggleController extends Controller
             $request->scoreId(),
             $request->assignmentId(),
             $request->fileId(),
+            $request->addedMusicId(),
         );
 
         return response()->json([

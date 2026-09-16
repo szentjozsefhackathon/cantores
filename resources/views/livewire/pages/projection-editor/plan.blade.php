@@ -50,6 +50,15 @@
             {{-- Words before the first slot: what the deck shows before the service
                  begins. Everything else is written into the plan itself, from the
                  slot, the music or the score it belongs under. --}}
+            {{-- A music the plan does not have. Added between slots at the end,
+                 and moved into place from there with its arrows: a song asked for
+                 a minute before Mass has no time for a dialog about where. --}}
+            <flux:tooltip :content="__('Add a music only this projection holds, at its end')">
+                <flux:button size="sm" variant="ghost" icon="music" wire:click="startAddingMusic">
+                    {{ __('Add music') }}
+                </flux:button>
+            </flux:tooltip>
+
             <flux:tooltip :content="__('Add text at the very top of the projection')">
                 <flux:button size="sm" variant="ghost" icon="message-square-plus" wire:click="addText">
                     {{ __('Add text') }}
@@ -62,7 +71,7 @@
         <flux:text class="text-sm text-zinc-500">
             {{ $projection->musicPlan
                 ? __('This plan has no slots yet.')
-                : __('This projection has no music plan yet, so it can hold words but no music. Add a plan to choose what is sung.') }}
+                : __('This projection has no music plan yet. Add words or music here, or add a plan to choose from a service.') }}
         </flux:text>
     @endif
 
@@ -122,10 +131,34 @@
         </flux:modal>
     @endunless
 
+    {{-- The one search for a music the plan does not have, wherever it was
+         asked for: the slot it goes into is kept on the component while this is
+         open. Lazy, so a projection nobody adds music to never loads it. --}}
+    <flux:modal name="projection-add-music" class="w-full max-w-4xl">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">{{ __('Add music') }}</flux:heading>
+                <flux:subheading>{{ __('Only this projection holds it; the plan stays as it is.') }}</flux:subheading>
+            </div>
+
+            <livewire:music-search lazy selectable="true" source="-projection" wire:key="projection-add-music-search" />
+
+            <div class="flex justify-end">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
+
     <ul class="projection-plan space-y-1.5">
         @foreach($this->outline as $node)
             @if($node['kind'] === 'entry')
                 @include('livewire.pages.projection-editor.entry', ['entry' => $node['entry']])
+            @elseif($node['kind'] === 'music')
+                {{-- A music this projection holds between slots: after the homily, for
+                     a birthday. It moves across whole slots with its arrows. --}}
+                @include('livewire.pages.projection-editor.music', ['music' => $node])
             @else
                 @php $slotChosen = $node['weight'] > 0; @endphp
                 <li
@@ -167,6 +200,11 @@
                             <flux:tooltip :content="__('Add text under the slot name')">
                                 <flux:button size="sm" variant="ghost" icon="message-square-plus" :aria-label="__('Add text under the slot name')" wire:click="addText({{ $node['id'] }})" />
                             </flux:tooltip>
+                            {{-- A music the plan does not have, for this projection alone:
+                                 added at the end of the slot. --}}
+                            <flux:tooltip :content="__('Add music to this slot, only in this projection')">
+                                <flux:button size="sm" variant="ghost" icon="plus" :aria-label="__('Add music to this slot, only in this projection')" wire:click="startAddingMusic({{ $node['id'] }})" />
+                            </flux:tooltip>
                             @if($node['canMoveUp'] || $node['canMoveDown'])
                                 <flux:tooltip :content="__('Move this slot up')">
                                     <flux:button size="sm" variant="ghost" icon="chevron-up" :aria-label="__('Move this slot up')" :disabled="! $node['canMoveUp']" wire:click="moveSlot({{ $node['id'] }}, -1)" />
@@ -183,112 +221,7 @@
                             @if($child['kind'] === 'entry')
                                 @include('livewire.pages.projection-editor.entry', ['entry' => $child['entry']])
                             @else
-                                @php $musicChosen = $child['weight'] > 0; @endphp
-                                <li wire:key="music-{{ $child['id'] }}" data-plan-music="{{ $child['id'] }}">
-                                    <div class="flex items-center gap-1.5 text-sm">
-                                        <flux:icon name="music" variant="micro" class="shrink-0 {{ $musicChosen ? 'text-green-600 dark:text-green-400' : 'text-indigo-400' }}" />
-
-                                        <div class="flex min-w-0 flex-1 items-center gap-1 {{ $musicChosen ? 'font-medium' : 'text-zinc-500 dark:text-zinc-400' }}">
-                                            <span class="min-w-0 truncate">
-                                                @if($child['musicId'])
-                                                    <a href="{{ route('music-view', $child['musicId']) }}" target="_blank" class="hover:underline">{{ $child['title'] }}</a>
-                                                @else
-                                                    {{ $child['title'] }}
-                                                @endif
-                                            </span>
-
-                                            {{-- The music's own name is shown above it
-                                                 where a slot holds several, beside the slot
-                                                 where it holds one. Either way this is the
-                                                 switch that keeps it off the screen, next to
-                                                 the name it governs. --}}
-                                            @if($musicChosen)
-                                                <flux:tooltip :content="__('Show the music title')">
-                                                    <flux:button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        :icon="$child['showsName'] ? 'eye' : 'eye-slash'"
-                                                        wire:click="toggleMusicName({{ $child['headingEntryId'] }})"
-                                                        aria-pressed="{{ $child['showsName'] ? 'true' : 'false' }}"
-                                                        class="shrink-0 {{ $child['showsName'] ? '!text-blue-600 dark:!text-blue-400' : '' }}"
-                                                        :aria-label="__('Show the music title')"
-                                                    />
-                                                </flux:tooltip>
-                                            @endif
-
-                                            {{-- Where the music is to be found in the books the
-                                                 congregation already holds, said as briefly as it
-                                                 can be.
-
-                                                 No third eye beside the other two: the reference
-                                                 itself is the switch, and it is drawn as it will
-                                                 be shown — solid once the deck says it,
-                                                 outlined and pale while it does not. So there is
-                                                 nothing to read to know what will happen, and
-                                                 nothing to tell apart from the eyes that govern
-                                                 the names. --}}
-                                            @if($child['reference'])
-                                                @if($musicChosen)
-                                                    <flux:tooltip :content="$child['showsReference']
-                                                        ? __('Shown on the slide — click to leave it out')
-                                                        : __('Not shown — click to put it on the slide')">
-                                                        <button
-                                                            type="button"
-                                                            data-plan-music-reference
-                                                            wire:click="toggleMusicCollections({{ $child['headingEntryId'] }})"
-                                                            aria-pressed="{{ $child['showsReference'] ? 'true' : 'false' }}"
-                                                            class="shrink-0 cursor-pointer rounded-md border px-1.5 py-0.5 text-xs font-normal transition
-                                                                {{ $child['showsReference']
-                                                                    ? 'border-blue-600 bg-blue-600/10 text-blue-700 dark:border-blue-400 dark:bg-blue-400/15 dark:text-blue-300'
-                                                                    : 'border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 dark:border-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300' }}"
-                                                        >{{ $child['reference'] }}</button>
-                                                    </flux:tooltip>
-                                                @else
-                                                    {{-- Nothing of this music is in the deck, so
-                                                         there is no row to keep the answer on: the
-                                                         reference is only told, not offered. --}}
-                                                    <span data-plan-music-reference class="shrink-0 text-xs font-normal text-zinc-400 dark:text-zinc-500">{{ $child['reference'] }}</span>
-                                                @endif
-                                            @endif
-                                        </div>
-
-                                        <div class="flex shrink-0 items-center gap-0.5">
-                                            <flux:tooltip :content="__('Add text under the music name')">
-                                                <flux:button size="sm" variant="ghost" icon="message-square-plus" :aria-label="__('Add text under the music name')" wire:click="addText(null, {{ $child['id'] }})" />
-                                            </flux:tooltip>
-                                            @if($child['canMoveUp'] || $child['canMoveDown'])
-                                                <flux:tooltip :content="__('Move this music up')">
-                                                    <flux:button size="sm" variant="ghost" icon="chevron-up" :aria-label="__('Move this music up')" :disabled="! $child['canMoveUp']" wire:click="moveMusic({{ $child['id'] }}, -1)" />
-                                                </flux:tooltip>
-                                                <flux:tooltip :content="__('Move this music down')">
-                                                    <flux:button size="sm" variant="ghost" icon="chevron-down" :aria-label="__('Move this music down')" :disabled="! $child['canMoveDown']" wire:click="moveMusic({{ $child['id'] }}, 1)" />
-                                                </flux:tooltip>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    @if($child['children'] !== [])
-                                        <ul class="mt-1 ms-3 space-y-1.5">
-                                            @foreach($child['children'] as $grandchild)
-                                                @include('livewire.pages.projection-editor.entry', ['entry' => $grandchild['entry']])
-                                            @endforeach
-                                        </ul>
-                                    @endif
-
-                                    @if($child['offers'] !== [])
-                                        <div class="mt-0.5 ms-3">
-                                            @foreach($child['offers'] as $offer)
-                                                @include('livewire.pages.projection-editor.offer', [
-                                                    'score' => $offer['score'],
-                                                    'files' => $offer['files'],
-                                                    'assignmentId' => $child['id'],
-                                                ])
-                                            @endforeach
-                                        </div>
-                                    @elseif($child['children'] === [])
-                                        <div class="ps-2 text-xs text-zinc-400">{{ __('No scores available') }}</div>
-                                    @endif
-                                </li>
+                                @include('livewire.pages.projection-editor.music', ['music' => $child])
                             @endif
                         @endforeach
 

@@ -71,17 +71,14 @@ class ProjectionRenderPayload extends PlanRenderPayload
      * once, in PlanOutline, so the remote never offers or omits a score the
      * editor would not.
      *
+     * A deck with no plan is read the same way: its rows, and whatever music it
+     * holds on its own.
+     *
      * @param  Collection<int, ProjectionSlide>  $entries
      * @return list<array<string, mixed>>
      */
     public function outlineFor(Projection $projection, Collection $entries, ?User $viewer): array
     {
-        if ($projection->music_plan_id === null) {
-            return $entries
-                ->map(fn (ProjectionSlide $entry): array => ['kind' => 'entry', 'entryId' => $entry->id])
-                ->all();
-        }
-
         $chosenScoreIds = $entries->whereNotNull('score_id')->pluck('score_id')->all();
         $sources = $this->sourcesFor($entries, $viewer);
         $chosenFileIds = $entries
@@ -99,35 +96,61 @@ class ProjectionRenderPayload extends PlanRenderPayload
     }
 
     /**
+     * Every node says whether it may move, and says it the way the endpoint
+     * will answer: a slot or a music carries PlanOutline's own verdict, and a
+     * row — which the editors grey by stylesheet — is worked out here from its
+     * siblings, by the same "nearest sibling with anything in it" test. So an
+     * arrow the phone shows as live is never a move the server refuses.
+     *
      * @param  list<array<string, mixed>>  $nodes
      * @return list<array<string, mixed>>
      */
     private function slimOutline(array $nodes): array
     {
-        return array_values(array_map(function (array $node): array {
+        $weights = array_column($nodes, 'weight');
+
+        return array_values(array_map(function (array $node, int $index) use ($weights): array {
             if ($node['kind'] === 'entry') {
-                return ['kind' => 'entry', 'entryId' => $node['entry']->id];
+                return [
+                    'kind' => 'entry',
+                    'entryId' => $node['entry']->id,
+                    'canMoveUp' => array_sum(array_slice($weights, 0, $index)) > 0,
+                    'canMoveDown' => array_sum(array_slice($weights, $index + 1)) > 0,
+                ];
             }
 
+            $moves = [
+                'canMoveUp' => $node['canMoveUp'] ?? false,
+                'canMoveDown' => $node['canMoveDown'] ?? false,
+            ];
+
             if ($node['kind'] === 'music') {
+                $local = $node['local'] ?? false;
+
                 return [
                     'kind' => 'music',
-                    'assignmentId' => $node['id'],
+                    'local' => $local,
+                    'assignmentId' => $local ? null : $node['id'],
+                    'addedMusicId' => $local ? $node['id'] : null,
+                    'slotId' => $node['slotId'],
                     'title' => $node['title'],
                     'offers' => collect($node['offers'])
                         ->flatMap(fn (array $offer): array => $this->offerLines($offer))
                         ->values()
                         ->all(),
                     'children' => $this->slimOutline($node['children']),
+                    ...$moves,
                 ];
             }
 
             return [
                 'kind' => 'slot',
+                'id' => $node['id'],
                 'name' => $node['name'],
                 'children' => $this->slimOutline($node['children']),
+                ...$moves,
             ];
-        }, $nodes));
+        }, $nodes, array_keys($nodes)));
     }
 
     /**
@@ -194,7 +217,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
     public function entriesOf(Projection $projection): Collection
     {
         return $projection->entries()
-            ->with(['score.music.collections', 'scoreFile', 'assignment.music.collections', 'assignment.musicPlanSlot', 'slotPlan.musicPlanSlot'])
+            ->with(['score.music.collections', 'scoreFile', 'assignment.music.collections', 'assignment.musicPlanSlot', 'slotPlan.musicPlanSlot', 'addedMusic.music.collections', 'addedMusic.slotPlan.musicPlanSlot'])
             ->get();
     }
 
@@ -218,6 +241,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
                         'kind' => 'text',
                         'text' => $entry->text ?? '',
                         'assignmentId' => $entry->music_plan_slot_assignment_id,
+                        'addedMusicId' => $entry->added_music_id,
                         'slot' => $heading['slot'],
                         'music' => $heading['music'],
                         'reference' => $heading['reference'],
@@ -239,6 +263,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
                     'id' => $entry->id,
                     'scoreId' => $entry->score_id,
                     'assignmentId' => $entry->music_plan_slot_assignment_id,
+                    'addedMusicId' => $entry->added_music_id,
                     'slot' => $heading['slot'],
                     'music' => $heading['music'],
                     'reference' => $heading['reference'],
@@ -312,6 +337,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
             ?? $entry->slotPlan?->musicPlanSlot?->name;
 
         $label = $entry->assignment?->music?->title
+            ?? $entry->addedMusic?->music?->title
             ?? $entry->score?->music?->title
             ?? $entry->score?->title;
 

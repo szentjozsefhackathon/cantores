@@ -2,6 +2,9 @@
 
 namespace App\Contracts;
 
+use App\Models\MusicPlanSlotAssignment;
+use App\Models\MusicPlanSlotPlan;
+use App\Models\Score;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -18,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $score_file_id
  * @property int|null $music_plan_slot_assignment_id
  * @property int|null $music_plan_slot_plan_id
+ * @property int|null $added_music_id
  * @property string|null $text
  * @property int $sequence
  * @property bool $show_slot
@@ -33,17 +37,25 @@ interface PlanEntry
     public function isText(): bool;
 
     /**
-     * @return BelongsTo<\App\Models\Score, covariant \Illuminate\Database\Eloquent\Model>
+     * @return BelongsTo<Score, covariant \Illuminate\Database\Eloquent\Model>
      */
     public function score(): BelongsTo;
 
     /**
-     * @return BelongsTo<\App\Models\MusicPlanSlotAssignment, covariant \Illuminate\Database\Eloquent\Model>
+     * @return BelongsTo<MusicPlanSlotAssignment, covariant \Illuminate\Database\Eloquent\Model>
      */
     public function assignment(): BelongsTo;
 
     /**
-     * @return BelongsTo<\App\Models\MusicPlanSlotPlan, covariant \Illuminate\Database\Eloquent\Model>
+     * @return BelongsTo<MusicPlanSlotPlan, covariant \Illuminate\Database\Eloquent\Model>
      */
     public function slotPlan(): BelongsTo;
+
+    /**
+     * The document's own music this row was chosen from, when the plan has no
+     * such music.
+     *
+     * @return BelongsTo<covariant \Illuminate\Database\Eloquent\Model, covariant \Illuminate\Database\Eloquent\Model>
+     */
+    public function addedMusic(): BelongsTo;
 }

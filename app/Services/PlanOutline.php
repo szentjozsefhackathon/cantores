@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Contracts\PlanAddedMusic;
 use App\Contracts\PlanDocument;
 use App\Contracts\PlanEntry;
 use App\Models\MusicPlan;
+use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
@@ -34,6 +36,12 @@ use Illuminate\Support\Facades\Auth;
  * screen in front of the congregation — so this answers for both, through
  * App\Contracts\PlanDocument. It knows nothing about paper or about screens:
  * what a document does with the order it is given is the document's own business.
+ *
+ * A document may also hold a music its plan does not (App\Contracts\PlanAddedMusic).
+ * It is a music node like any other, marked `local`, standing inside the slot it
+ * was added in or between slots when it has none. Every node that is not a row
+ * carries a `key` — `slot:4`, `music:12`, `added:5` — which is what the tree is
+ * searched by, so a plan's music and a document's own music never share an id.
  */
 class PlanOutline
 {
@@ -54,9 +62,16 @@ class PlanOutline
     public function for(PlanDocument $document, Collection $entries, array $chosenScoreIds = [], array $chosenFileIds = []): array
     {
         $plan = $document->musicPlan;
+        $viewer = Auth::user();
         $slots = $plan instanceof MusicPlan ? $this->planSlots($plan) : [];
+        $slotIds = array_column($slots, 'id');
+
+        /** @var Collection<int, PlanAddedMusic> $addedMusics */
+        $addedMusics = $document->addedMusics()->with('music.collections')->orderBy('id')->get();
+        $addedScores = $this->scores->forMusicIds($addedMusics->pluck('music_id')->unique()->values()->all(), $viewer);
 
         $byMusic = [];
+        $byAdded = [];
         $bySlot = [];
         $loose = [];
 
@@ -68,9 +83,15 @@ class PlanOutline
             }
         }
 
-        $slotIds = array_column($slots, 'id');
+        $addedIds = $addedMusics->pluck('id')->all();
 
         foreach ($entries->sortBy('sequence') as $entry) {
+            if ($entry->added_music_id !== null && in_array($entry->added_music_id, $addedIds, true)) {
+                $byAdded[$entry->added_music_id][] = $entry;
+
+                continue;
+            }
+
             if (isset($slotOfAssignment[$entry->music_plan_slot_assignment_id])) {
                 $byMusic[$entry->music_plan_slot_assignment_id][] = $entry;
 
@@ -86,11 +107,38 @@ class PlanOutline
             $loose[] = $entry;
         }
 
+        $addedNodes = [];
+
+        foreach ($addedMusics as $added) {
+            $container = in_array($added->music_plan_slot_plan_id, $slotIds, true)
+                ? 'slot:'.$added->music_plan_slot_plan_id
+                : 'root';
+
+            $addedNodes[$container][] = $this->addedMusicNode(
+                $added,
+                $container === 'root' ? null : $added->music_plan_slot_plan_id,
+                $byAdded[$added->id] ?? [],
+                $addedScores->get($added->music_id, collect())->all(),
+                $chosenScoreIds,
+                $chosenFileIds,
+                $viewer,
+            );
+        }
+
         $placed = [];
         $unplaced = [];
+        $empty = [];
+
+        foreach ($addedNodes as $container => $nodes) {
+            foreach ($nodes as $node) {
+                if ($node['weight'] === 0) {
+                    $empty[$container][] = $node;
+                }
+            }
+        }
 
         foreach ($slots as $index => $slot) {
-            $node = $this->slotNode($slot, $index, $byMusic, $bySlot[$slot['id']] ?? [], $chosenScoreIds, $chosenFileIds);
+            $node = $this->slotNode($slot, $index, $byMusic, $bySlot[$slot['id']] ?? [], $addedNodes['slot:'.$slot['id']] ?? [], $chosenScoreIds, $chosenFileIds);
 
             if ($node['weight'] > 0) {
                 $placed[] = ['sequence' => $node['sequence'], 'node' => $node];
@@ -105,9 +153,55 @@ class PlanOutline
             $placed[] = ['sequence' => $entry->sequence, 'node' => $this->entryNode($entry)];
         }
 
+        foreach ($addedNodes['root'] ?? [] as $node) {
+            if ($node['weight'] > 0) {
+                $placed[] = ['sequence' => $node['sequence'], 'node' => $node];
+            }
+        }
+
         usort($placed, fn (array $a, array $b): int => $a['sequence'] <=> $b['sequence']);
 
-        return $this->withMoves($this->anchor(array_column($placed, 'node'), $unplaced));
+        $count = 0;
+        $tree = $this->placeEmpty($this->anchor(array_column($placed, 'node'), $unplaced), 'root', $empty, $count);
+
+        return $this->withMoves($tree);
+    }
+
+    /**
+     * How many rows are printed before each of the document's own musics.
+     *
+     * The number an empty added music keeps its place by, read off a tree in
+     * the order it would be written. Every added music is answered, not only the
+     * empty ones: a music whose last row is about to go has to know where it
+     * stood.
+     *
+     * @param  list<array<string, mixed>>  $outline
+     * @return array<int, int> keyed by added music id
+     */
+    public function placeholders(array $outline): array
+    {
+        $counts = [];
+        $count = 0;
+
+        $walk = function (array $nodes) use (&$walk, &$counts, &$count): void {
+            foreach ($nodes as $node) {
+                if ($node['kind'] === 'entry') {
+                    $count++;
+
+                    continue;
+                }
+
+                if ($node['local'] ?? false) {
+                    $counts[$node['id']] = $count;
+                }
+
+                $walk($node['children']);
+            }
+        };
+
+        $walk($outline);
+
+        return $counts;
     }
 
     /**
@@ -138,6 +232,9 @@ class PlanOutline
     /**
      * Swap one node with the nearest sibling that has anything in the booklet.
      *
+     * `$kind` is `entry`, `slot`, `music` or `added` — the last being a music only
+     * the document holds.
+     *
      * Nearest rather than next, because a slot the booklet takes nothing from
      * changes nothing about the printed order: stepping over it would look like
      * an arrow that did not work. Nothing can leave the container it is in, which
@@ -149,10 +246,11 @@ class PlanOutline
      */
     public function moved(array $outline, string $kind, int $id, int $direction): ?array
     {
+        $key = "{$kind}:{$id}";
         $index = null;
 
         foreach ($outline as $position => $node) {
-            if ($node['kind'] === $kind && $this->idOf($node) === $id) {
+            if ($this->keyOf($node) === $key) {
                 $index = $position;
 
                 break;
@@ -177,7 +275,10 @@ class PlanOutline
             return null;
         }
 
-        if ($outline[$index]['weight'] === 0) {
+        // A document's own music may be moved while it is still empty: it is
+        // added at the end and has to be put in its place before a score of it
+        // is chosen.
+        if ($outline[$index]['weight'] === 0 && ! ($outline[$index]['local'] ?? false)) {
             return null;
         }
 
@@ -208,7 +309,7 @@ class PlanOutline
      *
      * @param  list<array<string, mixed>>  $outline
      */
-    public function insertIndex(array $outline, ?int $slotPlanId, ?int $assignmentId, ?int $afterEntryId): int
+    public function insertIndex(array $outline, ?int $slotPlanId, ?int $assignmentId, ?int $afterEntryId, ?int $addedMusicId = null): int
     {
         if ($afterEntryId !== null) {
             $position = array_search($afterEntryId, $this->flatten($outline), true);
@@ -216,13 +317,15 @@ class PlanOutline
             return $position === false ? 0 : $position + 1;
         }
 
+        $key = $this->containerKey($slotPlanId, $assignmentId, $addedMusicId);
+
         // Nothing named at all: the words open the booklet.
-        if ($slotPlanId === null && $assignmentId === null) {
+        if ($key === null) {
             return 0;
         }
 
         $count = 0;
-        $this->countUpTo($outline, $assignmentId === null ? 'slot' : 'music', $assignmentId ?? $slotPlanId, $count);
+        $this->countUpTo($outline, $key, $count);
 
         return $count;
     }
@@ -239,26 +342,39 @@ class PlanOutline
      *
      * @param  list<array<string, mixed>>  $outline
      */
-    public function appendIndex(array $outline, ?int $slotPlanId, ?int $assignmentId): int
+    public function appendIndex(array $outline, ?int $slotPlanId, ?int $assignmentId, ?int $addedMusicId = null): int
     {
-        $kind = $assignmentId === null ? 'slot' : 'music';
-        $id = $assignmentId ?? $slotPlanId;
+        $key = $this->containerKey($slotPlanId, $assignmentId, $addedMusicId);
         $end = count($this->flatten($outline));
 
-        if ($id === null) {
+        if ($key === null) {
             return $end;
         }
 
-        $container = $this->find($outline, $kind, $id);
+        $container = $this->find($outline, $key);
 
         if ($container === null) {
             return $end;
         }
 
         $count = 0;
-        $this->countUpTo($outline, $kind, $id, $count);
+        $this->countUpTo($outline, $key, $count);
 
         return $count + count($this->flatten([$container]));
+    }
+
+    /**
+     * The key of the innermost container named: the document's own music, the
+     * plan's music, or the slot.
+     */
+    private function containerKey(?int $slotPlanId, ?int $assignmentId, ?int $addedMusicId): ?string
+    {
+        return match (true) {
+            $addedMusicId !== null => "added:{$addedMusicId}",
+            $assignmentId !== null => "music:{$assignmentId}",
+            $slotPlanId !== null => "slot:{$slotPlanId}",
+            default => null,
+        };
     }
 
     /**
@@ -267,7 +383,7 @@ class PlanOutline
      * @param  list<array<string, mixed>>  $nodes
      * @return bool whether it was reached, which is what stops the counting
      */
-    private function countUpTo(array $nodes, string $kind, int $id, int &$count): bool
+    private function countUpTo(array $nodes, string $key, int &$count): bool
     {
         foreach ($nodes as $node) {
             if ($node['kind'] === 'entry') {
@@ -276,11 +392,11 @@ class PlanOutline
                 continue;
             }
 
-            if ($node['kind'] === $kind && $node['id'] === $id) {
+            if ($node['key'] === $key) {
                 return true;
             }
 
-            if ($this->countUpTo($node['children'], $kind, $id, $count)) {
+            if ($this->countUpTo($node['children'], $key, $count)) {
                 return true;
             }
         }
@@ -294,18 +410,18 @@ class PlanOutline
      * @param  list<array<string, mixed>>  $nodes
      * @return array<string, mixed>|null
      */
-    private function find(array $nodes, string $kind, int $id): ?array
+    private function find(array $nodes, string $key): ?array
     {
         foreach ($nodes as $node) {
             if ($node['kind'] === 'entry') {
                 continue;
             }
 
-            if ($node['kind'] === $kind && $node['id'] === $id) {
+            if ($node['key'] === $key) {
                 return $node;
             }
 
-            $found = $this->find($node['children'], $kind, $id);
+            $found = $this->find($node['children'], $key);
 
             if ($found !== null) {
                 return $found;
@@ -360,11 +476,12 @@ class PlanOutline
      * @param  array<string, mixed>  $slot
      * @param  array<int, list<PlanEntry>>  $byMusic
      * @param  list<PlanEntry>  $texts
+     * @param  list<array<string, mixed>>  $addedNodes  the document's own musics added in this slot
      * @param  list<int>  $chosenScoreIds
      * @param  list<int>  $chosenFileIds
      * @return array<string, mixed>
      */
-    private function slotNode(array $slot, int $planIndex, array $byMusic, array $texts, array $chosenScoreIds, array $chosenFileIds): array
+    private function slotNode(array $slot, int $planIndex, array $byMusic, array $texts, array $addedNodes, array $chosenScoreIds, array $chosenFileIds): array
     {
         $placed = [];
         $unplaced = [];
@@ -385,6 +502,12 @@ class PlanOutline
             $placed[] = ['sequence' => $entry->sequence, 'node' => $this->entryNode($entry)];
         }
 
+        foreach ($addedNodes as $node) {
+            if ($node['weight'] > 0) {
+                $placed[] = ['sequence' => $node['sequence'], 'node' => $node];
+            }
+        }
+
         usort($placed, fn (array $a, array $b): int => $a['sequence'] <=> $b['sequence']);
 
         $children = $this->anchor(array_column($placed, 'node'), $unplaced);
@@ -392,10 +515,11 @@ class PlanOutline
 
         return [
             'kind' => 'slot',
+            'key' => 'slot:'.$slot['id'],
             'id' => $slot['id'],
             'name' => $slot['name'],
             'planIndex' => $planIndex,
-            'children' => $this->withMoves($children),
+            'children' => $children,
             'weight' => $this->weigh($children),
             'sequence' => $placed === [] ? PHP_INT_MAX : $placed[0]['sequence'],
             // The row that speaks this slot's name, and whether it is speaking
@@ -422,13 +546,15 @@ class PlanOutline
 
         return [
             'kind' => 'music',
+            'key' => 'music:'.$assignment['id'],
+            'local' => false,
             'id' => $assignment['id'],
             'slotId' => $slotPlanId,
             'planIndex' => $planIndex,
             'musicId' => $assignment['music_id'],
             'title' => $assignment['music_title'],
             'reference' => $assignment['music_reference'],
-            'children' => $this->withMoves($children),
+            'children' => $children,
             'offers' => $this->offers($assignment['scores'], $chosenScoreIds, $chosenFileIds),
             'weight' => count($children),
             'sequence' => $entries === [] ? PHP_INT_MAX : $entries[0]->sequence,
@@ -440,6 +566,83 @@ class PlanOutline
             // off, and the answer is the opening row's, like the names above it.
             'showsReference' => $headingEntry instanceof PlanEntry && $headingEntry->show_collections,
         ];
+    }
+
+    /**
+     * One music the document holds and its plan does not.
+     *
+     * Shaped exactly like a plan's music node, so the panes and the remote draw
+     * it without a case of their own — `local` is what tells it apart, and the
+     * `id` is the added music's rather than an assignment's.
+     *
+     * @param  list<PlanEntry>  $entries
+     * @param  list<array<string, mixed>>  $scores
+     * @param  list<int>  $chosenScoreIds
+     * @param  list<int>  $chosenFileIds
+     * @return array<string, mixed>
+     */
+    private function addedMusicNode(PlanAddedMusic $added, ?int $slotPlanId, array $entries, array $scores, array $chosenScoreIds, array $chosenFileIds, ?User $viewer): array
+    {
+        $children = array_map(fn (PlanEntry $entry): array => $this->entryNode($entry), $entries);
+        $headingEntry = $entries[0] ?? null;
+
+        return [
+            'kind' => 'music',
+            'key' => 'added:'.$added->id,
+            'local' => true,
+            'id' => $added->id,
+            'slotId' => $slotPlanId,
+            'planIndex' => null,
+            'musicId' => $added->music_id,
+            'title' => $added->music?->title,
+            'reference' => $added->music?->collectionReference($viewer),
+            'children' => $children,
+            'offers' => $this->offers($scores, $chosenScoreIds, $chosenFileIds),
+            'weight' => count($children),
+            'sequence' => $entries === [] ? $added->sequence : $entries[0]->sequence,
+            'placeholder' => $added->sequence,
+            'headingEntryId' => $headingEntry?->id,
+            'showsName' => ! $headingEntry instanceof PlanEntry || $headingEntry->show_music_title,
+            'showsReference' => $headingEntry instanceof PlanEntry && $headingEntry->show_collections,
+        ];
+    }
+
+    /**
+     * Put the document's own musics that hold nothing yet where they were left.
+     *
+     * They have no row to stand behind and no place in the plan, so each keeps
+     * the number of rows printed before it, and is put back in front of the first
+     * thing that comes after that many rows — inside the container it belongs to
+     * and nowhere else.
+     *
+     * @param  list<array<string, mixed>>  $nodes
+     * @param  array<string, list<array<string, mixed>>>  $empty  keyed by container: `root` or `slot:<id>`
+     * @return list<array<string, mixed>>
+     */
+    private function placeEmpty(array $nodes, string $container, array $empty, int &$count): array
+    {
+        $waiting = $empty[$container] ?? [];
+        usort($waiting, fn (array $a, array $b): int => $a['placeholder'] <=> $b['placeholder']);
+
+        $result = [];
+
+        foreach ($nodes as $node) {
+            while ($waiting !== [] && $waiting[0]['placeholder'] <= $count) {
+                $result[] = array_shift($waiting);
+            }
+
+            if ($node['kind'] === 'entry') {
+                $count++;
+            } elseif ($node['kind'] === 'slot') {
+                $node['children'] = $this->placeEmpty($node['children'], $node['key'], $empty, $count);
+            } else {
+                $count += $node['weight'];
+            }
+
+            $result[] = $node;
+        }
+
+        return [...$result, ...$waiting];
     }
 
     /**
@@ -545,7 +748,7 @@ class PlanOutline
             $at = count($ordered);
 
             foreach ($ordered as $index => $placed) {
-                if ($placed['kind'] === $node['kind'] && $placed['planIndex'] > $node['planIndex']) {
+                if ($placed['kind'] === $node['kind'] && ! ($placed['local'] ?? false) && $placed['planIndex'] > $node['planIndex']) {
                     $at = $index;
 
                     break;
@@ -565,6 +768,9 @@ class PlanOutline
      * instead, since a row is a component of its own and hears nothing of where
      * it has ended up.
      *
+     * A document's own music may move while it is empty, the one node that may:
+     * see moved().
+     *
      * @param  list<array<string, mixed>>  $children
      * @return list<array<string, mixed>>
      */
@@ -577,9 +783,11 @@ class PlanOutline
 
             $before = array_slice($children, 0, $index);
             $after = array_slice($children, $index + 1);
+            $movable = $node['weight'] > 0 || ($node['local'] ?? false);
 
-            $children[$index]['canMoveUp'] = $node['weight'] > 0 && $this->weigh($before) > 0;
-            $children[$index]['canMoveDown'] = $node['weight'] > 0 && $this->weigh($after) > 0;
+            $children[$index]['children'] = $this->withMoves($node['children']);
+            $children[$index]['canMoveUp'] = $movable && $this->weigh($before) > 0;
+            $children[$index]['canMoveDown'] = $movable && $this->weigh($after) > 0;
         }
 
         return $children;
@@ -596,8 +804,8 @@ class PlanOutline
     /**
      * @param  array<string, mixed>  $node
      */
-    private function idOf(array $node): ?int
+    private function keyOf(array $node): string
     {
-        return $node['kind'] === 'entry' ? $node['entry']->id : $node['id'];
+        return $node['kind'] === 'entry' ? 'entry:'.$node['entry']->id : $node['key'];
     }
 }

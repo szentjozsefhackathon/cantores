@@ -72,6 +72,11 @@ resources/js/projection-remote.js
         // editor's plan pane does — the deck stays the owner's own, so this is
         // offered wherever the edit link already is.
         'scoreToggleUrl' => $projection === null ? null : route('projections.score-toggle', ['projection' => $projection->id]),
+        // And the rest of what the phone may change for good — moving things
+        // into place, and a music the plan does not have. Rebound from the
+        // screen's answer whenever another deck is put up.
+        ...($projection === null ? [] : \App\Services\ScreenState::deckUrls($projection->id)),
+        'removeAddedMusicText' => __('Remove this music and the scores chosen from it?'),
         'skipText' => __('Leave this slide out of today\'s service'),
         'unskipText' => __('Show this slide in today\'s service'),
         'skippedText' => __('Left out'),
@@ -143,6 +148,28 @@ resources/js/projection-remote.js
             </flux:button>
         </div>
 
+        {{-- Changes that stay with the deck: a music the plan does not have,
+             added at the end, and moving things into place. Reorder puts arrows
+             on every line and stops a tap from going anywhere — off, the column
+             is only for finding the Communion hymn. --}}
+        <div class="flex shrink-0 items-center gap-1 border-b border-zinc-300 px-2 py-1 dark:border-zinc-800" x-show="moveUrl" x-cloak>
+            <button
+                type="button"
+                class="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px]"
+                x-on:click="toggleReorder()"
+                x-bind:class="reorder ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800'"
+                x-bind:aria-pressed="reorder ? 'true' : 'false'"
+            >
+                <flux:icon.arrows-up-down class="size-3" />
+                {{ __('Reorder') }}
+            </button>
+            <span class="flex-1"></span>
+            <button type="button" class="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40" x-on:click="openAddMusic(null)">
+                <flux:icon.plus class="size-3" />
+                {{ __('Add music') }}
+            </button>
+        </div>
+
         <div data-scrolls class="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-2 py-2">
             <template x-for="band in outline" x-bind:key="band.key">
                 <div class="space-y-1">
@@ -152,11 +179,18 @@ resources/js/projection-remote.js
                          nothing from it yet — the plan gives every slot a place,
                          and this is where a slot still waiting to be filled says
                          so. --}}
-                    <div
-                        class="truncate rounded bg-zinc-200 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-                        x-show="band.name"
-                        x-text="band.name"
-                    ></div>
+                    <div class="flex items-center gap-0.5 rounded bg-zinc-200 px-2 py-0.5 dark:bg-zinc-800" x-show="band.name">
+                        <span class="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300" x-text="band.name"></span>
+                        <template x-if="reorder && band.moves">
+                            <span class="flex shrink-0">
+                                <button type="button" class="rounded p-0.5 text-zinc-500 disabled:opacity-30" x-bind:disabled="!band.moves.up" x-on:click="move('slot', band.slotId, -1)" aria-label="{{ __('Move this slot up') }}"><flux:icon.chevron-up class="size-3.5" /></button>
+                                <button type="button" class="rounded p-0.5 text-zinc-500 disabled:opacity-30" x-bind:disabled="!band.moves.down" x-on:click="move('slot', band.slotId, 1)" aria-label="{{ __('Move this slot down') }}"><flux:icon.chevron-down class="size-3.5" /></button>
+                            </span>
+                        </template>
+                        <button type="button" class="shrink-0 rounded p-0.5 text-amber-600 dark:text-amber-300" x-show="addedMusicsUrl && band.slotId" x-on:click="openAddMusic(band.slotId)" aria-label="{{ __('Add music to this slot, only in this projection') }}" title="{{ __('Add music to this slot, only in this projection') }}">
+                            <flux:icon.plus class="size-3.5" />
+                        </button>
+                    </div>
 
                     <template x-if="band.blocks.length === 0">
                         <div class="ms-1 text-[11px] italic text-zinc-400">{{ __('Nothing chosen yet') }}</div>
@@ -165,11 +199,21 @@ resources/js/projection-remote.js
                     <template x-for="block in band.blocks" x-bind:key="block.key">
                         <div class="ms-1 space-y-0.5">
                             <template x-if="block.kind === 'music'">
-                                <div class="space-y-0.5">
+                                <div class="space-y-0.5" x-bind:class="block.local ? 'border-s-2 border-dashed border-amber-500 ps-1' : ''">
                                     <div class="flex items-center gap-1 text-xs font-medium" x-show="block.name">
-                                        <flux:icon name="music" variant="micro" class="shrink-0 text-indigo-400" />
-                                        <span class="min-w-0 truncate" x-text="block.name"></span>
+                                        <flux:icon name="music" variant="micro" class="shrink-0" x-bind:class="block.local ? 'text-amber-500' : 'text-indigo-400'" />
+                                        <span class="min-w-0 flex-1 truncate" x-text="block.name"></span>
+                                        <template x-if="reorder">
+                                            <span class="flex shrink-0">
+                                                <button type="button" class="rounded p-0.5 text-zinc-500 disabled:opacity-30" x-bind:disabled="!block.moves.up" x-on:click="move(block.moveKind, block.moveId, -1)" aria-label="{{ __('Move this music up') }}"><flux:icon.chevron-up class="size-3.5" /></button>
+                                                <button type="button" class="rounded p-0.5 text-zinc-500 disabled:opacity-30" x-bind:disabled="!block.moves.down" x-on:click="move(block.moveKind, block.moveId, 1)" aria-label="{{ __('Move this music down') }}"><flux:icon.chevron-down class="size-3.5" /></button>
+                                            </span>
+                                        </template>
+                                        <button type="button" class="shrink-0 rounded p-0.5 text-zinc-400 hover:text-red-500" x-show="block.local" x-on:click="removeAddedMusic(block.addedMusicId, block.rows.length)" aria-label="{{ __('Remove this music from the projection') }}" title="{{ __('Remove this music from the projection') }}">
+                                            <flux:icon.trash class="size-3.5" />
+                                        </button>
                                     </div>
+                                    <div class="text-[10px] text-amber-700 dark:text-amber-300" x-show="block.local">{{ __('Only in this projection') }}</div>
 
                                     {{-- One engraving of that music, named as the
                                          editor names it — the score, the file
@@ -187,7 +231,7 @@ resources/js/projection-remote.js
                                             <button
                                                 type="button"
                                                 class="block min-w-0 flex-1 rounded px-2 py-1 text-start text-xs"
-                                                x-on:click="goToEntry(row.id)"
+                                                x-on:click="reorder || goToEntry(row.id)"
                                                 x-bind:class="row.current
                                                     ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
                                                     : (row.shownCount === 0
@@ -215,6 +259,13 @@ resources/js/projection-remote.js
                                                 />
                                             </button>
 
+                                            <template x-if="reorder">
+                                                <span class="flex shrink-0 flex-col">
+                                                    <button type="button" class="rounded p-0.5 text-zinc-500 disabled:opacity-30" x-bind:disabled="!row.moves.up" x-on:click="move('entry', row.id, -1)" aria-label="{{ __('Move up') }}"><flux:icon.chevron-up class="size-3.5" /></button>
+                                                    <button type="button" class="rounded p-0.5 text-zinc-500 disabled:opacity-30" x-bind:disabled="!row.moves.down" x-on:click="move('entry', row.id, 1)" aria-label="{{ __('Move down') }}"><flux:icon.chevron-down class="size-3.5" /></button>
+                                                </span>
+                                            </template>
+
                                             {{-- Taking a whole engraving back out of today's
                                                  deck — a text row has no score behind it and
                                                  so nothing here to take out. --}}
@@ -222,7 +273,7 @@ resources/js/projection-remote.js
                                                 type="button"
                                                 class="shrink-0 rounded p-1 text-zinc-400 hover:text-red-500"
                                                 x-show="row.scoreId"
-                                                x-on:click="toggleScore(row.scoreId, row.assignmentId, row.fileId)"
+                                                x-on:click="toggleScore(row.scoreId, row.assignmentId, row.fileId, row.addedMusicId)"
                                                 x-bind:aria-label="removeScoreText"
                                                 :title="removeScoreText"
                                             >
@@ -242,7 +293,7 @@ resources/js/projection-remote.js
                                         <button
                                             type="button"
                                             class="block w-full rounded border border-dashed border-zinc-300 px-2 py-1 text-start text-[11px] text-zinc-400 disabled:opacity-40 dark:border-zinc-600"
-                                            x-on:click="toggleScore(offer.scoreId, block.assignmentId, offer.fileId)"
+                                            x-on:click="toggleScore(offer.scoreId, block.assignmentId, offer.fileId, block.addedMusicId)"
                                             x-bind:disabled="offer.inBooklets === false"
                                             x-bind:aria-label="addScoreText"
                                             :title="addScoreText"
@@ -275,7 +326,7 @@ resources/js/projection-remote.js
                                     <button
                                         type="button"
                                         class="block min-w-0 flex-1 rounded px-2 py-1 text-start text-xs"
-                                        x-on:click="goToEntry(block.row.id)"
+                                        x-on:click="reorder || goToEntry(block.row.id)"
                                         x-bind:class="block.row.current
                                             ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
                                             : (block.row.shownCount === 0
@@ -297,6 +348,13 @@ resources/js/projection-remote.js
                                             loading="lazy"
                                         />
                                     </button>
+
+                                    <template x-if="reorder">
+                                        <span class="flex shrink-0 flex-col">
+                                            <button type="button" class="rounded p-0.5 text-zinc-500 disabled:opacity-30" x-bind:disabled="!block.row.moves.up" x-on:click="move('entry', block.row.id, -1)" aria-label="{{ __('Move up') }}"><flux:icon.chevron-up class="size-3.5" /></button>
+                                            <button type="button" class="rounded p-0.5 text-zinc-500 disabled:opacity-30" x-bind:disabled="!block.row.moves.down" x-on:click="move('entry', block.row.id, 1)" aria-label="{{ __('Move down') }}"><flux:icon.chevron-down class="size-3.5" /></button>
+                                        </span>
+                                    </template>
 
                                     <button
                                         type="button"
@@ -673,6 +731,21 @@ resources/js/projection-remote.js
         >
             <div class="flex shrink-0 items-center gap-2 border-b border-zinc-200 px-3 py-2 dark:border-zinc-700">
                 <span class="flex-1 text-sm font-medium">{{ __('The plan') }}</span>
+                <button
+                    type="button"
+                    class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs"
+                    x-show="moveUrl"
+                    x-on:click="toggleReorder()"
+                    x-bind:class="reorder ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'text-zinc-500'"
+                    x-bind:aria-pressed="reorder ? 'true' : 'false'"
+                >
+                    <flux:icon.arrows-up-down class="size-4" />
+                    {{ __('Reorder') }}
+                </button>
+                <button type="button" class="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-amber-700 dark:text-amber-300" x-show="addedMusicsUrl" x-on:click="openAddMusic(null)">
+                    <flux:icon.plus class="size-4" />
+                    {{ __('Add music') }}
+                </button>
                 <button type="button" class="rounded p-1" x-on:click="closeList()" aria-label="{{ __('Close') }}">
                     <flux:icon.x-mark class="size-5" />
                 </button>
@@ -685,7 +758,18 @@ resources/js/projection-remote.js
                      left for the cantor to wonder whether it was forgotten. --}}
                 <template x-for="band in outline" x-bind:key="band.key">
                     <div class="space-y-1.5">
-                        <div class="truncate text-xs font-semibold uppercase tracking-wide text-zinc-400" x-show="band.name" x-text="band.name"></div>
+                        <div class="flex items-center gap-1" x-show="band.name">
+                            <span class="min-w-0 flex-1 truncate text-xs font-semibold uppercase tracking-wide text-zinc-400" x-text="band.name"></span>
+                            <template x-if="reorder && band.moves">
+                                <span class="flex shrink-0 gap-1">
+                                    <button type="button" class="rounded-lg border border-zinc-200 p-1.5 disabled:opacity-30 dark:border-zinc-700" x-bind:disabled="!band.moves.up" x-on:click="move('slot', band.slotId, -1)" aria-label="{{ __('Move this slot up') }}"><flux:icon.chevron-up class="size-4" /></button>
+                                    <button type="button" class="rounded-lg border border-zinc-200 p-1.5 disabled:opacity-30 dark:border-zinc-700" x-bind:disabled="!band.moves.down" x-on:click="move('slot', band.slotId, 1)" aria-label="{{ __('Move this slot down') }}"><flux:icon.chevron-down class="size-4" /></button>
+                                </span>
+                            </template>
+                            <button type="button" class="shrink-0 rounded-lg p-1.5 text-amber-600 dark:text-amber-300" x-show="addedMusicsUrl && band.slotId" x-on:click="openAddMusic(band.slotId)" aria-label="{{ __('Add music to this slot, only in this projection') }}">
+                                <flux:icon.plus class="size-4" />
+                            </button>
+                        </div>
 
                         <template x-if="band.blocks.length === 0">
                             <div class="rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-sm italic text-zinc-400 dark:border-zinc-600">
@@ -694,8 +778,20 @@ resources/js/projection-remote.js
                         </template>
 
                         <template x-for="block in band.blocks" x-bind:key="block.key">
-                            <div class="space-y-1.5">
-                                <div class="truncate text-sm font-medium text-zinc-500" x-show="block.kind === 'music' && block.name" x-text="block.name"></div>
+                            <div class="space-y-1.5" x-bind:class="block.local ? 'border-s-2 border-dashed border-amber-500 ps-2' : ''">
+                                <div class="flex items-center gap-1" x-show="block.kind === 'music' && block.name">
+                                    <span class="min-w-0 flex-1 truncate text-sm font-medium text-zinc-500" x-text="block.name"></span>
+                                    <template x-if="reorder && block.kind === 'music'">
+                                        <span class="flex shrink-0 gap-1">
+                                            <button type="button" class="rounded-lg border border-zinc-200 p-1.5 disabled:opacity-30 dark:border-zinc-700" x-bind:disabled="!block.moves.up" x-on:click="move(block.moveKind, block.moveId, -1)" aria-label="{{ __('Move this music up') }}"><flux:icon.chevron-up class="size-4" /></button>
+                                            <button type="button" class="rounded-lg border border-zinc-200 p-1.5 disabled:opacity-30 dark:border-zinc-700" x-bind:disabled="!block.moves.down" x-on:click="move(block.moveKind, block.moveId, 1)" aria-label="{{ __('Move this music down') }}"><flux:icon.chevron-down class="size-4" /></button>
+                                        </span>
+                                    </template>
+                                    <button type="button" class="shrink-0 rounded-lg p-1.5 text-zinc-400" x-show="block.local" x-on:click="removeAddedMusic(block.addedMusicId, block.rows.length)" aria-label="{{ __('Remove this music from the projection') }}">
+                                        <flux:icon.trash class="size-4" />
+                                    </button>
+                                </div>
+                                <div class="text-xs text-amber-700 dark:text-amber-300" x-show="block.local">{{ __('Only in this projection') }}</div>
 
                                 {{-- Each row named the way the cantor asked for it: the
                                      score, the slot it stands in — never "slide 7", which
@@ -711,7 +807,7 @@ resources/js/projection-remote.js
                                             : 'border-zinc-200 dark:border-zinc-700'"
                                     >
                                         <div class="flex items-start gap-1">
-                                            <button type="button" class="block min-w-0 flex-1 text-start" x-on:click="goToEntry(row.id); closeList()">
+                                            <button type="button" class="block min-w-0 flex-1 text-start" x-on:click="reorder || (goToEntry(row.id), closeList())">
                                                 <div class="truncate text-xs uppercase tracking-wide text-zinc-400" x-show="block.kind === 'row' && row.slot" x-text="row.slot"></div>
 
                                                 <div
@@ -736,11 +832,18 @@ resources/js/projection-remote.js
                                             {{-- Taking a whole engraving out of today's deck — a
                                                  text row has no score behind it and nothing here
                                                  to take out. --}}
+                                            <template x-if="reorder">
+                                                <span class="flex shrink-0 flex-col gap-1">
+                                                    <button type="button" class="rounded-lg border border-zinc-200 p-1.5 disabled:opacity-30 dark:border-zinc-700" x-bind:disabled="!row.moves.up" x-on:click="move('entry', row.id, -1)" aria-label="{{ __('Move up') }}"><flux:icon.chevron-up class="size-4" /></button>
+                                                    <button type="button" class="rounded-lg border border-zinc-200 p-1.5 disabled:opacity-30 dark:border-zinc-700" x-bind:disabled="!row.moves.down" x-on:click="move('entry', row.id, 1)" aria-label="{{ __('Move down') }}"><flux:icon.chevron-down class="size-4" /></button>
+                                                </span>
+                                            </template>
+
                                             <button
                                                 type="button"
                                                 class="shrink-0 rounded p-1 text-zinc-400"
                                                 x-show="row.scoreId"
-                                                x-on:click="toggleScore(row.scoreId, row.assignmentId, row.fileId)"
+                                                x-on:click="toggleScore(row.scoreId, row.assignmentId, row.fileId, row.addedMusicId)"
                                                 x-bind:aria-label="removeScoreText"
                                             >
                                                 <flux:icon.minus-circle class="size-5" />
@@ -807,7 +910,7 @@ resources/js/projection-remote.js
                                     <button
                                         type="button"
                                         class="block w-full rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-start disabled:opacity-40 dark:border-zinc-600"
-                                        x-on:click="toggleScore(offer.scoreId, block.assignmentId, offer.fileId)"
+                                        x-on:click="toggleScore(offer.scoreId, block.assignmentId, offer.fileId, block.addedMusicId)"
                                         x-bind:disabled="offer.inBooklets === false"
                                     >
                                         <span class="flex items-center gap-1.5 text-sm text-zinc-500">
@@ -845,6 +948,63 @@ resources/js/projection-remote.js
                 >
                     {{ __('Clear the screen') }}
                 </flux:button>
+            </div>
+        </div>
+    </div>
+    {{-- ---------------------------------------------------------------
+         A music the plan does not have.
+         ---------------------------------------------------------------
+
+         A bottom sheet with one field, because it is used a minute before
+         Mass or during it. What is picked goes to the end of the slot it was
+         asked for from, or to the end of the deck, and is moved into place
+         with Reorder — then its score is chosen from the offers like any
+         other music's. Above the plan sheet, since it is opened from there. --}}
+    <div class="fixed inset-0 z-30 flex items-end justify-center lg:items-center" x-show="addMusicOpen" x-cloak>
+        <div class="absolute inset-0 bg-black/50" x-on:click="closeAddMusic()"></div>
+
+        <div
+            role="dialog"
+            aria-modal="true"
+            class="relative flex max-h-[80vh] w-full max-w-md flex-col rounded-t-2xl bg-white shadow-xl lg:rounded-2xl dark:bg-zinc-900"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="translate-y-full lg:translate-y-0 lg:scale-95 lg:opacity-0"
+            x-transition:enter-end="translate-y-0 lg:scale-100 lg:opacity-100"
+        >
+            <div class="flex shrink-0 items-center gap-2 border-b border-zinc-200 px-3 py-2 dark:border-zinc-700">
+                <span class="flex-1 text-sm font-medium">{{ __('Add music') }}</span>
+                <button type="button" class="rounded p-1" x-on:click="closeAddMusic()" aria-label="{{ __('Close') }}">
+                    <flux:icon.x-mark class="size-5" />
+                </button>
+            </div>
+
+            <div class="shrink-0 px-3 pt-3">
+                <input
+                    type="search"
+                    class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base select-text dark:border-zinc-600 dark:bg-zinc-800"
+                    x-model="musicQuery"
+                    x-on:input.debounce.300ms="searchMusic()"
+                    x-effect="addMusicOpen && $nextTick(() => $el.focus())"
+                    placeholder="{{ __('Title, or collection and number') }}"
+                    aria-label="{{ __('Search music') }}"
+                />
+                <p class="mt-1 text-xs text-zinc-500">{{ __('Only this projection holds it; the plan stays as it is.') }}</p>
+            </div>
+
+            <div class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-3">
+                <template x-for="music in musicResults" x-bind:key="music.id">
+                    <button
+                        type="button"
+                        class="block w-full rounded-lg border border-zinc-200 px-3 py-2 text-start active:bg-zinc-100 dark:border-zinc-700 dark:active:bg-zinc-800"
+                        x-on:click="addMusic(music.id)"
+                    >
+                        <span class="block truncate text-sm font-medium" x-text="music.title"></span>
+                        <span class="block truncate text-xs text-zinc-500" x-show="music.subtitle || music.reference" x-text="[music.subtitle, music.reference].filter(Boolean).join(' · ')"></span>
+                    </button>
+                </template>
+
+                <div class="py-2 text-center text-sm text-zinc-400" x-show="musicSearching">{{ __('Searching…') }}</div>
+                <div class="py-2 text-center text-sm text-zinc-400" x-show="!musicSearching && musicQuery.trim() !== '' && musicResults.length === 0">{{ __('No music found.') }}</div>
             </div>
         </div>
     </div>

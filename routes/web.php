@@ -10,7 +10,10 @@ use App\Http\Controllers\HumanCheckController;
 use App\Http\Controllers\MusicPlanController;
 use App\Http\Controllers\PresentationPayloadController;
 use App\Http\Controllers\PresentationStateController;
+use App\Http\Controllers\ProjectionAddedMusicController;
 use App\Http\Controllers\ProjectionController;
+use App\Http\Controllers\ProjectionMoveController;
+use App\Http\Controllers\ProjectionMusicSearchController;
 use App\Http\Controllers\ProjectionScorePageController;
 use App\Http\Controllers\ProjectionScoreToggleController;
 use App\Http\Controllers\PublicScoreDownloadController;
@@ -512,6 +515,26 @@ Route::get('/projections/{projection}/score-page/{scoreFile}/{page}', Projection
 Route::post('/projections/{projection}/score-toggle', ProjectionScoreToggleController::class)
     ->middleware(['auth', 'verified', 'throttle:projection-payload'])
     ->name('projections.score-toggle');
+
+// The rest of what the remote may change for good: a music the plan does not
+// have, added or taken away, and any row, music or slot moved into place. Each
+// answers with the deck made fresh, like the toggle.
+Route::get('/projections/{projection}/music-search', ProjectionMusicSearchController::class)
+    ->middleware(['auth', 'verified', 'throttle:projection-payload'])
+    ->name('projections.music-search');
+
+Route::post('/projections/{projection}/added-musics', [ProjectionAddedMusicController::class, 'store'])
+    ->middleware(['auth', 'verified', 'throttle:projection-payload'])
+    ->name('projections.added-musics.store');
+
+Route::delete('/projections/{projection}/added-musics/{addedMusic}', [ProjectionAddedMusicController::class, 'destroy'])
+    ->middleware(['auth', 'verified', 'throttle:projection-payload'])
+    ->scopeBindings()
+    ->name('projections.added-musics.destroy');
+
+Route::post('/projections/{projection}/move', ProjectionMoveController::class)
+    ->middleware(['auth', 'verified', 'throttle:projection-payload'])
+    ->name('projections.move');
 
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])

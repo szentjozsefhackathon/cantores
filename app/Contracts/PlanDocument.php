@@ -2,6 +2,7 @@
 
 namespace App\Contracts;
 
+use App\Models\MusicPlan;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -20,14 +21,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * booklet — its paper, its margins, the size it unifies its scores to — is the
  * booklet's own business and none of the outline's.
  *
- * @property-read \App\Models\MusicPlan|null $musicPlan
+ * @property-read MusicPlan|null $musicPlan
  */
 interface PlanDocument
 {
     /**
      * The plan this document was built from, or none.
      *
-     * @return BelongsTo<\App\Models\MusicPlan, covariant \Illuminate\Database\Eloquent\Model>
+     * @return BelongsTo<MusicPlan, covariant \Illuminate\Database\Eloquent\Model>
      */
     public function musicPlan(): BelongsTo;
 
@@ -37,4 +38,11 @@ interface PlanDocument
      * @return HasMany<covariant \Illuminate\Database\Eloquent\Model, covariant \Illuminate\Database\Eloquent\Model>
      */
     public function entries(): HasMany;
+
+    /**
+     * The musics this document holds and its plan does not.
+     *
+     * @return HasMany<covariant \Illuminate\Database\Eloquent\Model, covariant \Illuminate\Database\Eloquent\Model>
+     */
+    public function addedMusics(): HasMany;
 }

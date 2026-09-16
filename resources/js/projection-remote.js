@@ -105,6 +105,61 @@ const SPLASH_CARD = 'card';
 const SPLASH_DARK = 'dark';
 const SPLASH_OFF = 'off';
 
+/** Where this browser remembers whether the plan column is reordering. */
+const REORDER_KEY = 'projection-remote.reorder';
+
+function storedReorder() {
+    try {
+        return window.localStorage?.getItem(REORDER_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
+function storeReorder(on) {
+    try {
+        window.localStorage?.setItem(REORDER_KEY, on ? '1' : '0');
+    } catch {
+        // A private window: the switch simply is not remembered.
+    }
+}
+
+/**
+ * Whether a node of the tree may move, keyed the way the move endpoint is asked.
+ *
+ * Read off the server's own verdicts, which it works out with the same test it
+ * enforces — so an arrow drawn live here is never a move that is refused.
+ */
+export function movesOf(tree) {
+    const moves = new Map();
+
+    const walk = (nodes) => {
+        for (const node of nodes) {
+            const flags = { up: Boolean(node.canMoveUp), down: Boolean(node.canMoveDown) };
+
+            if (node.kind === 'entry') {
+                moves.set(`entry:${node.entryId}`, flags);
+
+                continue;
+            }
+
+            if (node.kind === 'slot') {
+                moves.set(`slot:${node.id}`, flags);
+            } else if (node.local) {
+                moves.set(`added:${node.addedMusicId}`, flags);
+            } else {
+                moves.set(`music:${node.assignmentId}`, flags);
+            }
+
+            walk(node.children ?? []);
+        }
+    };
+
+    walk(tree);
+
+    return moves;
+}
+
 onAlpineInit(() => {
     Alpine.data('projectionRemote', (config = {}) => ({
         geometry: config.geometry ?? {},
@@ -167,6 +222,33 @@ onAlpineInit(() => {
 
         /** Where a score is added to, or removed from, this deck. */
         scoreToggleUrl: config.scoreToggleUrl ?? null,
+
+        /** Where a row, music or slot of this deck is moved. */
+        moveUrl: config.moveUrl ?? null,
+
+        /**
+         * Where a music the plan does not have is added to this deck, and
+         * searched for first.
+         */
+        addedMusicsUrl: config.addedMusicsUrl ?? null,
+        musicSearchUrl: config.musicSearchUrl ?? null,
+
+        /**
+         * Whether the plan column shows arrows rather than going to what is
+         * tapped. Off by default and remembered per browser: the remote is for
+         * pressing Next, and arrows on every line would crowd it.
+         */
+        reorder: false,
+
+        /** The bottom sheet a music is searched for in, and the slot it is for. */
+        addMusicOpen: false,
+        addMusicSlotId: null,
+        musicQuery: '',
+        musicResults: [],
+        musicSearching: false,
+        _musicSearchAt: 0,
+
+        removeAddedMusicText: config.removeAddedMusicText ?? '',
         addScoreText: config.addScoreText ?? '',
         removeScoreText: config.removeScoreText ?? '',
         csrfToken: config.csrfToken ?? '',
@@ -330,6 +412,7 @@ onAlpineInit(() => {
         init() {
             this._screen = screenClient(config);
             this._scoreHttp = jsonRequests(this.csrfToken);
+            this.reorder = storedReorder();
 
             // The page is a fixed three-band panel, and a body that still
             // scrolls behind it is a body that bounces under the thumb.
@@ -770,7 +853,9 @@ onAlpineInit(() => {
          * each one belongs under, and what stands empty beside it.
          */
         get outline() {
-            const rowsById = new Map(this.rows.map((row) => [row.id, row]));
+            const moves = movesOf(this.outlineTree);
+            const movesFor = (key) => moves.get(key) ?? { up: false, down: false };
+            const rowsById = new Map(this.rows.map((row) => [row.id, { ...row, moves: movesFor(`entry:${row.id}`) }]));
             let bandIndex = 0;
 
             const rowBlock = (entryId, key) => {
@@ -783,7 +868,14 @@ onAlpineInit(() => {
                 kind: 'music',
                 key,
                 name: node.title,
-                assignmentId: node.assignmentId,
+                assignmentId: node.assignmentId ?? null,
+                // A music only this deck holds: marked, removable, and moved
+                // by its own id rather than an assignment's.
+                local: Boolean(node.local),
+                addedMusicId: node.addedMusicId ?? null,
+                moveKind: node.local ? 'added' : 'music',
+                moveId: node.local ? node.addedMusicId : node.assignmentId,
+                moves: movesFor(node.local ? `added:${node.addedMusicId}` : `music:${node.assignmentId}`),
                 // The music's other engravings, not yet in today's deck — read
                 // off the same id a click here writes back through.
                 offers: node.offers ?? [],
@@ -799,12 +891,19 @@ onAlpineInit(() => {
                 if (node.kind === 'entry') {
                     const block = rowBlock(node.entryId, `${key}-row`);
 
-                    return { key, name: null, blocks: block === null ? [] : [block] };
+                    return { key, name: null, slotId: null, moves: null, blocks: block === null ? [] : [block] };
+                }
+
+                // A music between slots stands on its own, without a band name.
+                if (node.kind === 'music') {
+                    return { key, name: null, slotId: null, moves: null, blocks: [musicBlock(node, `${key}-music`)] };
                 }
 
                 return {
                     key,
                     name: node.name,
+                    slotId: node.id ?? null,
+                    moves: movesFor(`slot:${node.id}`),
                     blocks: node.children
                         .map((child, index) => (child.kind === 'entry'
                             ? rowBlock(child.entryId, `${key}-row-${index}`)
@@ -1472,6 +1571,10 @@ onAlpineInit(() => {
         async followDeck(answer) {
             this.presentationId = answer.presentationId ?? null;
             this.editUrl = answer.editUrl ?? null;
+            this.scoreToggleUrl = answer.deckUrls?.scoreToggleUrl ?? null;
+            this.moveUrl = answer.deckUrls?.moveUrl ?? null;
+            this.addedMusicsUrl = answer.deckUrls?.addedMusicsUrl ?? null;
+            this.musicSearchUrl = answer.deckUrls?.musicSearchUrl ?? null;
             this.appliedVersion = 0;
             this.reveals = {};
             this.blanked = false;
@@ -1528,10 +1631,97 @@ onAlpineInit(() => {
          * was. On success the answer already carries the deck made fresh, so the
          * redraw costs nothing beyond what a revision change already costs.
          */
-        async toggleScore(scoreId, assignmentId = null, fileId = null) {
+        async toggleScore(scoreId, assignmentId = null, fileId = null, addedMusicId = null) {
             if (!this.scoreToggleUrl || scoreId === null || scoreId === undefined) { return; }
 
-            const payload = await this._scoreHttp.post(this.scoreToggleUrl, { scoreId, assignmentId, fileId });
+            const payload = await this._scoreHttp.post(this.scoreToggleUrl, { scoreId, assignmentId, fileId, addedMusicId });
+
+            if (!payload) { return; }
+
+            await this.applyPayload(payload);
+        },
+
+        /** Arrows in the plan column, or taps that go to what is tapped. */
+        toggleReorder() {
+            this.reorder = !this.reorder;
+            storeReorder(this.reorder);
+        },
+
+        /**
+         * Move a row, a music or a slot one step, the way the editor's arrows
+         * do. The wall keeps its place by address, and a move removes nothing,
+         * so the slide in front of the room stays in front of it.
+         */
+        async move(kind, id, direction) {
+            if (!this.moveUrl || id === null || id === undefined) { return; }
+
+            const payload = await this._scoreHttp.post(this.moveUrl, { kind, id, direction });
+
+            if (!payload) { return; }
+
+            await this.applyPayload(payload);
+        },
+
+        /**
+         * Open the search for a music the plan does not have: for the end of a
+         * slot, or — with none — for the end of the deck. Never for "here": a
+         * song asked for during the Kyrie is almost always for later.
+         */
+        openAddMusic(slotId = null) {
+            this.addMusicSlotId = slotId;
+            this.musicQuery = '';
+            this.musicResults = [];
+            this.addMusicOpen = true;
+        },
+
+        closeAddMusic() {
+            this.addMusicOpen = false;
+        },
+
+        async searchMusic() {
+            const query = this.musicQuery.trim();
+            const asked = Date.now();
+
+            this._musicSearchAt = asked;
+
+            if (!this.musicSearchUrl || query === '') {
+                this.musicResults = [];
+
+                return;
+            }
+
+            this.musicSearching = true;
+
+            const url = `${this.musicSearchUrl}?q=${encodeURIComponent(query)}`;
+            const answer = await this._scoreHttp.get(url);
+
+            // An answer to an older query is not the list for this one.
+            if (this._musicSearchAt !== asked) { return; }
+
+            this.musicSearching = false;
+            this.musicResults = answer?.musics ?? [];
+        },
+
+        async addMusic(musicId) {
+            if (!this.addedMusicsUrl) { return; }
+
+            const payload = await this._scoreHttp.post(this.addedMusicsUrl, {
+                music_id: musicId,
+                slot_plan_id: this.addMusicSlotId,
+            });
+
+            if (!payload) { return; }
+
+            this.closeAddMusic();
+            await this.applyPayload(payload);
+        },
+
+        /** Asked first only when there are scores of it to lose. */
+        async removeAddedMusic(addedMusicId, rowCount = 0) {
+            if (!this.addedMusicsUrl || addedMusicId === null) { return; }
+            if (rowCount > 0 && !window.confirm(this.removeAddedMusicText)) { return; }
+
+            const payload = await this._scoreHttp.delete(`${this.addedMusicsUrl}/${addedMusicId}`);
 
             if (!payload) { return; }
 

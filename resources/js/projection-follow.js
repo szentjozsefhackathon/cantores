@@ -169,6 +169,7 @@ export function jsonRequests(csrfToken) {
     return {
         get: (url) => request(url, { headers: asked }),
         post: (url, body) => request(url, { method: 'POST', headers, body: JSON.stringify(body) }),
+        delete: (url) => request(url, { method: 'DELETE', headers }),
     };
 
     async function request(url, init) {

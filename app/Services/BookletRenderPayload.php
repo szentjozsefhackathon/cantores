@@ -56,7 +56,7 @@ class BookletRenderPayload extends PlanRenderPayload
     public function entriesOf(Booklet $booklet): Collection
     {
         return $booklet->entries()
-            ->with(['score.music.collections', 'scoreFile', 'assignment.music.collections', 'assignment.musicPlanSlot', 'slotPlan.musicPlanSlot'])
+            ->with(['score.music.collections', 'scoreFile', 'assignment.music.collections', 'assignment.musicPlanSlot', 'slotPlan.musicPlanSlot', 'addedMusic.music.collections', 'addedMusic.slotPlan.musicPlanSlot'])
             ->get();
     }
 

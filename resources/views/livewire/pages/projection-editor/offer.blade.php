@@ -5,7 +5,13 @@
      the melody sheet and the accompaniment are different music on the screen. So
      where there is a choice, the score only names itself and each file is added
      on its own line. --}}
-<div class="text-zinc-500 dark:text-zinc-400" wire:key="offer-{{ $assignmentId }}-{{ $score['id'] }}">
+@php
+    $addedMusicId ??= null;
+    $musicKey = $addedMusicId === null ? 'music-'.$assignmentId : 'added-'.$addedMusicId;
+    $musicArgs = implode(', ', [$assignmentId ?? 'null', 'null', $addedMusicId ?? 'null']);
+@endphp
+
+<div class="text-zinc-500 dark:text-zinc-400" wire:key="offer-{{ $musicKey }}-{{ $score['id'] }}">
     <div class="flex items-center gap-2 py-0.5 ps-2 text-sm">
         @if($files === [])
             <flux:tooltip :content="__('Add to the projection')">
@@ -14,7 +20,7 @@
                     variant="ghost"
                     icon="plus"
                     :aria-label="__('Add to the projection')"
-                    wire:click="toggleScore({{ $score['id'] }}, {{ $assignmentId }})"
+                    wire:click="toggleScore({{ $score['id'] }}, {{ $musicArgs }})"
                     class="shrink-0"
                     :disabled="! $score['in_booklets']"
                 />
@@ -50,14 +56,14 @@
     </div>
 
     @foreach($files as $file)
-        <div class="flex items-center gap-2 py-0.5 ps-4 text-sm" wire:key="offer-file-{{ $assignmentId }}-{{ $file['id'] }}">
+        <div class="flex items-center gap-2 py-0.5 ps-4 text-sm" wire:key="offer-file-{{ $musicKey }}-{{ $file['id'] }}">
             <flux:tooltip :content="__('Add this file to the projection')">
                 <flux:button
                     size="sm"
                     variant="ghost"
                     icon="plus"
                     :aria-label="__('Add this file to the projection')"
-                    wire:click="toggleScore({{ $score['id'] }}, {{ $assignmentId }}, {{ $file['id'] }})"
+                    wire:click="toggleScore({{ $score['id'] }}, {{ $assignmentId ?? 'null' }}, {{ $file['id'] }}, {{ $addedMusicId ?? 'null' }})"
                     class="shrink-0"
                 />
             </flux:tooltip>

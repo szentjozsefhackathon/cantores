@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Projection;
+use App\Models\ProjectionMusic;
 use App\Models\ProjectionSlide;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -41,7 +42,7 @@ class ProjectionRevisionObserver
     {
         $projectionId = match (true) {
             $model instanceof Projection => $model->getKey(),
-            $model instanceof ProjectionSlide => $model->projection_id,
+            $model instanceof ProjectionSlide, $model instanceof ProjectionMusic => $model->projection_id,
             default => null,
         };
 

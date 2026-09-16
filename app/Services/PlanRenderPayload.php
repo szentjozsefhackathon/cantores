@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\PlanAddedMusic;
 use App\Contracts\PlanEntry;
 use App\Models\Loan;
 use App\Models\Music;
@@ -64,6 +65,10 @@ abstract class PlanRenderPayload
      * A row can be told to keep its music's name off the page, which is how a
      * music the slot already names is stopped from saying it twice.
      *
+     * A music only this document holds names itself the way a plan's music does:
+     * under the slot it was added in, or — added between slots — its own title
+     * takes the slot's line, like a score chosen outside the plan.
+     *
      * @param  Collection<int, PlanEntry>  $entries
      * @return array<int, array{slot: ?string, music: ?string, reference: ?string, variation: ?string}>
      */
@@ -77,11 +82,22 @@ abstract class PlanRenderPayload
         $lastMusicKey = null;
 
         foreach ($entries as $entry) {
+            $added = $entry->added_music_id === null ? null : $entry->addedMusic;
+
+            if ($added instanceof PlanAddedMusic) {
+                $lines[$entry->id] = $this->addedMusicHeading($entry, $added, $lastSlotKey, $lastMusicKey, $musicCounts, $viewer);
+
+                $lastSlotKey = $added->music_plan_slot_plan_id ?? $lastSlotKey;
+                $lastMusicKey = 'added:'.$added->id;
+
+                continue;
+            }
+
             $assignment = $assignments->get($entry->music_plan_slot_assignment_id);
             $slotKey = $entry->isText()
                 ? $entry->music_plan_slot_plan_id
                 : $assignment?->music_plan_slot_plan_id;
-            $musicKey = $assignment?->id;
+            $musicKey = $assignment === null ? null : 'music:'.$assignment->id;
 
             $slotLine = null;
 
@@ -141,6 +157,49 @@ abstract class PlanRenderPayload
     }
 
     /**
+     * The heading of a row chosen from a music only this document holds.
+     *
+     * @param  array<int, int>  $musicCounts
+     * @return array{slot: ?string, music: ?string, reference: ?string, variation: ?string}
+     */
+    private function addedMusicHeading(PlanEntry $entry, PlanAddedMusic $added, ?int $lastSlotKey, ?string $lastMusicKey, array $musicCounts, ?User $viewer): array
+    {
+        $slotKey = $added->music_plan_slot_plan_id;
+        $namesMusic = 'added:'.$added->id !== $lastMusicKey;
+        $title = $added->music?->title;
+
+        $slotLine = null;
+        $musicTitle = null;
+
+        if ($slotKey === null) {
+            // Between slots: the music is the heading, as a score outside the
+            // plan is, and it answers to the slot's switch.
+            $slotLine = $namesMusic && $entry->show_slot ? $title : null;
+        } else {
+            $slotLine = $entry->show_slot && $slotKey !== $lastSlotKey
+                ? $added->slotPlan?->musicPlanSlot?->name
+                : null;
+            $musicTitle = $namesMusic && $entry->show_music_title ? $title : null;
+
+            if ($slotLine !== null && $musicTitle !== null && ($musicCounts[$slotKey] ?? 0) <= 1) {
+                $slotLine = implode(' – ', [$slotLine, $musicTitle]);
+                $musicTitle = null;
+            }
+        }
+
+        return [
+            'slot' => $slotLine,
+            'music' => $musicTitle,
+            'reference' => $namesMusic && $entry->show_collections
+                ? $added->music?->collectionReference($viewer)
+                : null,
+            'variation' => ! $entry->isText() && $entry->show_variation
+                ? $entry->score?->variationLabel()
+                : null,
+        ];
+    }
+
+    /**
      * Which of the score's files this row shows.
      *
      * A row names one where its owner chose between them. Where it does not — an
@@ -177,10 +236,24 @@ abstract class PlanRenderPayload
     private function musicCountsPerSlot(Collection $entries, Collection $assignments): array
     {
         return $entries
-            ->map(fn (PlanEntry $entry): ?MusicPlanSlotAssignment => $assignments->get($entry->music_plan_slot_assignment_id))
+            ->map(function (PlanEntry $entry) use ($assignments): ?array {
+                $added = $entry->added_music_id === null ? null : $entry->addedMusic;
+
+                if ($added instanceof PlanAddedMusic) {
+                    return $added->music_plan_slot_plan_id === null
+                        ? null
+                        : ['slot' => $added->music_plan_slot_plan_id, 'music' => 'added:'.$added->id];
+                }
+
+                $assignment = $assignments->get($entry->music_plan_slot_assignment_id);
+
+                return $assignment instanceof MusicPlanSlotAssignment
+                    ? ['slot' => $assignment->music_plan_slot_plan_id, 'music' => 'music:'.$assignment->music_id]
+                    : null;
+            })
             ->filter()
-            ->groupBy('music_plan_slot_plan_id')
-            ->map(fn (Collection $group): int => $group->pluck('music_id')->unique()->count())
+            ->groupBy('slot')
+            ->map(fn (Collection $group): int => $group->pluck('music')->unique()->count())
             ->all();
     }
 }

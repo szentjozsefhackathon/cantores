@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasLoans;
+use App\Contracts\PlanAddedMusic;
 use App\Contracts\PlanDocument;
 use App\Enums\ProjectionRatio;
 use App\Enums\ProjectionTextTheme;
@@ -55,6 +56,7 @@ use Illuminate\Support\Facades\DB;
  * @property-read MusicPlan|null $musicPlan
  * @property-read Collection<int, ProjectionSlide> $entries
  * @property-read int|null $entries_count
+ * @property-read Collection<int, ProjectionMusic> $addedMusics
  * @property-read Collection<int, Score> $scores
  * @property-read int|null $scores_count
  * @property-read Collection<int, Loan> $loans
@@ -131,6 +133,16 @@ class Projection extends Model implements PlanDocument
     }
 
     /**
+     * The musics this document holds and its plan does not.
+     *
+     * @see PlanAddedMusic
+     */
+    public function addedMusics(): HasMany
+    {
+        return $this->hasMany(ProjectionMusic::class);
+    }
+
+    /**
      * The times this deck has been put on a screen.
      */
     public function presentations(): HasMany
@@ -203,7 +215,13 @@ class Projection extends Model implements PlanDocument
             ->selectRaw('max(projection_slides.updated_at) as rows_at, max(scores.updated_at) as scores_at')
             ->first();
 
-        return collect([$this->updated_at, $newest?->rows_at, $newest?->scores_at])
+        // A music added without a score yet has no row to date it by, and it
+        // must still reach the phone.
+        $musicsAt = ProjectionMusic::query()
+            ->where('projection_id', $this->getKey())
+            ->max('updated_at');
+
+        return collect([$this->updated_at, $newest?->rows_at, $newest?->scores_at, $musicsAt])
             ->filter()
             // Fixed width and zero padded down to the microsecond, so the newest
             // of them is simply the largest string — and so two saves within the
@@ -293,12 +311,23 @@ class Projection extends Model implements PlanDocument
                 'text_line_height' => $this->text_line_height,
             ]);
 
+            $musicIds = [];
+
+            foreach ($this->addedMusics as $added) {
+                $musicIds[$added->id] = $copy->addedMusics()->create([
+                    'music_id' => $added->music_id,
+                    'music_plan_slot_plan_id' => $added->music_plan_slot_plan_id,
+                    'sequence' => $added->sequence,
+                ])->id;
+            }
+
             foreach ($this->entries as $entry) {
                 $copy->entries()->create([
                     'score_id' => $entry->score_id,
                     'score_file_id' => $entry->score_file_id,
                     'music_plan_slot_assignment_id' => $entry->music_plan_slot_assignment_id,
                     'music_plan_slot_plan_id' => $entry->music_plan_slot_plan_id,
+                    'added_music_id' => $musicIds[$entry->added_music_id] ?? null,
                     'text' => $entry->text,
                     'sequence' => $entry->sequence,
                     'settings_override' => $entry->settings_override,

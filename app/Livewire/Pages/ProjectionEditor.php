@@ -5,14 +5,17 @@ namespace App\Livewire\Pages;
 use App\Enums\ProjectionRatio;
 use App\Enums\ProjectionTextTheme;
 use App\Facades\GenreContext;
+use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Models\Projection;
+use App\Models\ProjectionMusic;
 use App\Models\ProjectionSlide;
+use App\Services\PlanOrder;
 use App\Services\PlanOutline;
+use App\Services\PlanScoreToggle;
 use App\Services\ProjectionRenderPayload;
-use App\Services\ProjectionScoreToggle;
 use App\Support\ProjectionSettingFields;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -99,6 +102,17 @@ class ProjectionEditor extends Component
      * behind it is choosing from that service, not from a list of them.
      */
     public string $planSearch = '';
+
+    /**
+     * Where a music picked in the search will be added: a slot's id, or null for
+     * between slots. Only read while the search is open.
+     */
+    public ?int $addingMusicToSlot = null;
+
+    /**
+     * The music just added, so that it opens with its scores on offer.
+     */
+    public ?int $openedAddedMusicId = null;
 
     public function mount(Projection $projection): void
     {
@@ -412,11 +426,79 @@ class ProjectionEditor extends Component
      * that is what names it and what says where it lands — under its own music,
      * in its own slot, rather than at the end.
      */
-    public function toggleScore(int $scoreId, ?int $assignmentId = null, ?int $fileId = null): void
+    public function toggleScore(int $scoreId, ?int $assignmentId = null, ?int $fileId = null, ?int $addedMusicId = null): void
     {
         $this->authorize('update', $this->projection);
 
-        app(ProjectionScoreToggle::class)->toggle($this->projection, Auth::user(), $scoreId, $assignmentId, $fileId);
+        app(PlanScoreToggle::class)->toggle($this->projection, Auth::user(), $scoreId, $assignmentId, $fileId, $addedMusicId);
+
+        $this->forgetEntries();
+    }
+
+    /**
+     * Open the music search for a music this deck will hold and its plan will
+     * not — inside a slot, or between slots when none is given.
+     */
+    public function startAddingMusic(?int $slotPlanId = null): void
+    {
+        $this->authorize('update', $this->projection);
+
+        $this->addingMusicToSlot = $this->slotInPlan($slotPlanId);
+
+        $this->modal('projection-add-music')->show();
+    }
+
+    /**
+     * Add the music picked in the search, at the end of where it was asked for.
+     *
+     * At the end, never "where we are now": a song asked for during the Kyrie is
+     * almost always for later, and the arrows have the least distance to cover
+     * from there. No score of it is taken — which engraving goes on the wall is
+     * the reason this editor exists.
+     */
+    #[On('music-selected-projection')]
+    public function addMusic(int $musicId): void
+    {
+        $this->authorize('update', $this->projection);
+
+        $music = Music::query()->visibleTo(Auth::user())->find($musicId);
+
+        if (! $music instanceof Music) {
+            return;
+        }
+
+        $outline = app(PlanOutline::class);
+        $tree = $this->outline;
+        $slotPlanId = $this->slotInPlan($this->addingMusicToSlot);
+
+        $added = $this->projection->addedMusics()->create([
+            'music_id' => $music->id,
+            'music_plan_slot_plan_id' => $slotPlanId,
+            'sequence' => $outline->appendIndex($tree, $slotPlanId, null),
+        ]);
+
+        $this->addingMusicToSlot = null;
+        $this->openedAddedMusicId = $added->id;
+
+        $this->modal('projection-add-music')->close();
+
+        $this->forgetEntries();
+    }
+
+    /**
+     * Take a music this deck holds on its own back out, with every row of it.
+     */
+    public function removeAddedMusic(int $addedMusicId): void
+    {
+        $this->authorize('update', $this->projection);
+
+        $music = $this->projection->addedMusics()->find($addedMusicId);
+
+        if (! $music instanceof ProjectionMusic) {
+            return;
+        }
+
+        app(PlanOrder::class)->removeAddedMusic($this->projection, $this->outline, $music);
 
         $this->forgetEntries();
     }
@@ -429,33 +511,38 @@ class ProjectionEditor extends Component
      * musics, or straight after a row already standing there. Given none of
      * those, they open the deck.
      */
-    public function addText(?int $slotPlanId = null, ?int $assignmentId = null, ?int $afterEntryId = null): void
+    public function addText(?int $slotPlanId = null, ?int $assignmentId = null, ?int $afterEntryId = null, ?int $addedMusicId = null): void
     {
         $this->authorize('update', $this->projection);
 
-        $assignment = $this->assignmentInPlan($assignmentId);
-        $slotPlanId = $assignment?->music_plan_slot_plan_id ?? $this->slotInPlan($slotPlanId);
+        $added = app(PlanScoreToggle::class)->addedMusicOf($this->projection, $addedMusicId);
+        $assignment = $added === null ? $this->assignmentInPlan($assignmentId) : null;
+        $slotPlanId = $added !== null
+            ? $added->music_plan_slot_plan_id
+            : ($assignment?->music_plan_slot_plan_id ?? $this->slotInPlan($slotPlanId));
 
-        $order = $this->outlineIds();
+        $tree = $this->outline;
         $at = app(PlanOutline::class)->insertIndex(
-            $this->outline,
+            $tree,
             $slotPlanId,
             $assignment?->id,
-            in_array($afterEntryId, $order, true) ? $afterEntryId : null,
+            in_array($afterEntryId, $this->outlineIds(), true) ? $afterEntryId : null,
+            $added?->id,
         );
 
         $entry = $this->projection->entries()->create([
             'text' => '',
             'music_plan_slot_assignment_id' => $assignment?->id,
             'music_plan_slot_plan_id' => $slotPlanId,
+            'added_music_id' => $added?->id,
             'sequence' => (int) $this->projection->entries()->max('sequence') + 1,
         ]);
 
-        array_splice($order, $at, 0, [$entry->id]);
-
         $this->openedTextId = $entry->id;
 
-        $this->applyOrder($order);
+        app(PlanOrder::class)->insert($this->projection, $tree, $entry->id, $at);
+
+        $this->forgetEntries();
     }
 
     /**
@@ -510,7 +597,7 @@ class ProjectionEditor extends Component
             return;
         }
 
-        $entry->delete();
+        app(PlanOrder::class)->remove($this->projection, $this->outline, [$entry->id]);
 
         $this->forgetEntries();
     }
@@ -535,6 +622,15 @@ class ProjectionEditor extends Component
     }
 
     /**
+     * Move a music only this deck holds — across whole slots, when it stands
+     * between them, which is how one added at the end is put in its place.
+     */
+    public function moveAddedMusic(int $addedMusicId, int $direction): void
+    {
+        $this->moveNode('added', $addedMusicId, $direction);
+    }
+
+    /**
      * Nothing may leave the thing it belongs to, so a move is made on the tree
      * and not on the list.
      */
@@ -542,14 +638,9 @@ class ProjectionEditor extends Component
     {
         $this->authorize('update', $this->projection);
 
-        $outline = app(PlanOutline::class);
-        $moved = $outline->moved($this->outline, $kind, $id, $direction);
-
-        if ($moved === null) {
-            return;
+        if (app(PlanOrder::class)->move($this->projection, $kind, $id, $direction, $this->outline)) {
+            $this->forgetEntries();
         }
-
-        $this->applyOrder($outline->flatten($moved));
     }
 
     /**
@@ -566,35 +657,8 @@ class ProjectionEditor extends Component
      */
     private function normalizeOrder(): void
     {
-        $ordered = $this->outlineIds();
-
-        if ($ordered === $this->entries->pluck('id')->all()) {
-            return;
-        }
-
-        $this->writeOrder($ordered);
-        $this->forget();
-    }
-
-    /**
-     * @param  list<int>  $entryIds
-     */
-    private function applyOrder(array $entryIds): void
-    {
-        $this->writeOrder($entryIds);
-
-        $this->forgetEntries();
-    }
-
-    /**
-     * @param  list<int>  $entryIds
-     */
-    private function writeOrder(array $entryIds): void
-    {
-        $entries = $this->projection->entries()->get()->keyBy('id');
-
-        foreach ($entryIds as $position => $id) {
-            $entries[$id]?->update(['sequence' => $position]);
+        if (app(PlanOrder::class)->normalize($this->projection, $this->outline, $this->entries->pluck('id')->all())) {
+            $this->forget();
         }
     }
 

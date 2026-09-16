@@ -51,13 +51,28 @@ class MusicPlanScoreListService
      */
     public function forViewer(MusicPlan $plan, ?User $viewer, ?Loan $openLoan = null): Collection
     {
-        $musicIds = $plan->assignedMusicIds();
+        return $this->forMusicIds($plan->assignedMusicIds()->values()->all(), $viewer, $plan, $this->loanLending($plan, $openLoan));
+    }
 
-        if ($musicIds->isEmpty()) {
+    /**
+     * Every score this viewer may see for the given musics, grouped by music id.
+     *
+     * The same list forViewer() gives, for musics no plan names: the ones a deck
+     * or a booklet holds on its own. Scoped and lent identically, so a music added
+     * to a document never offers a score the service list would hide.
+     *
+     * `$plan` only says whose plan the entries are read against; `$openLoan` must
+     * already be one that lends it.
+     *
+     * @param  list<int>  $musicIds
+     * @return Collection<int, Collection<int, array<string, mixed>>>
+     */
+    public function forMusicIds(array $musicIds, ?User $viewer, ?MusicPlan $plan = null, ?Loan $openLoan = null): Collection
+    {
+        if ($musicIds === []) {
             return collect();
         }
 
-        $openLoan = $this->loanLending($plan, $openLoan);
         $openLoanScoreIds = $openLoan instanceof Loan ? $this->loans->scoreIdsFor($openLoan) : [];
 
         $scores = Score::query()->whereIn('music_id', $musicIds);
@@ -257,7 +272,7 @@ class MusicPlanScoreListService
      * @param  Collection<int, Loan>  $loansByScoreId
      * @return array<string, mixed>
      */
-    private function describe(Score $score, ?User $viewer, MusicPlan $plan, Collection $loansByScoreId): array
+    private function describe(Score $score, ?User $viewer, ?MusicPlan $plan, Collection $loansByScoreId): array
     {
         $isOwn = $viewer instanceof User && $score->user_id === $viewer->getKey();
         $loan = $loansByScoreId->get($score->getKey());
@@ -286,7 +301,7 @@ class MusicPlanScoreListService
             // Whose plan this is, so a view that already names the plan's owner
             // can attribute the entries that are somebody else's without
             // repeating them on every line.
-            'is_plan_owners' => $score->user_id === $plan->user_id,
+            'is_plan_owners' => $plan instanceof MusicPlan && $score->user_id === $plan->user_id,
             // Read before a service, so what matters is whether the arrangement has
             // moved since it was last looked at, and when it stops opening.
             'changed_at' => $score->updated_at?->translatedFormat('Y-m-d'),

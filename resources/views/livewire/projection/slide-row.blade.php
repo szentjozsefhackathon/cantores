@@ -11,6 +11,7 @@
         $entry->music_plan_slot_plan_id ?? 'null',
         $entry->music_plan_slot_assignment_id ?? 'null',
         $entry->id,
+        $entry->added_music_id ?? 'null',
     ]);
 @endphp
 

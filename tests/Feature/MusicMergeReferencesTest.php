@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\Author;
+use App\Models\BookletMusic;
 use App\Models\Music;
 use App\Models\MusicVerification;
 use App\Models\Notification;
+use App\Models\ProjectionMusic;
 use App\Models\Score;
 use App\Models\User;
 use Livewire\Livewire;
@@ -84,4 +86,14 @@ it('repoints audit history from the deleted music onto the survivor', function (
     performMerge($this->left, $this->right);
 
     expect($audit->fresh()->auditable_id)->toBe($this->left->id);
+});
+
+it('repoints the musics decks and booklets hold without their plan', function () {
+    $projectionMusic = ProjectionMusic::factory()->create(['music_id' => $this->right->id]);
+    $bookletMusic = BookletMusic::factory()->create(['music_id' => $this->right->id]);
+
+    performMerge($this->left, $this->right);
+
+    expect($projectionMusic->fresh()->music_id)->toBe($this->left->id)
+        ->and($bookletMusic->fresh()->music_id)->toBe($this->left->id);
 });

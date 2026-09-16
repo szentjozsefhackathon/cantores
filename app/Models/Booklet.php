@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasLoans;
+use App\Contracts\PlanAddedMusic;
 use App\Contracts\PlanDocument;
 use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
@@ -50,6 +51,7 @@ use Illuminate\Support\Facades\DB;
  * @property-read MusicPlan|null $musicPlan
  * @property-read Collection<int, BookletScore> $entries
  * @property-read int|null $entries_count
+ * @property-read Collection<int, BookletMusic> $addedMusics
  * @property-read Collection<int, Score> $scores
  * @property-read int|null $scores_count
  * @property-read Collection<int, Loan> $loans
@@ -125,6 +127,16 @@ class Booklet extends Model implements PlanDocument
     public function entries(): HasMany
     {
         return $this->hasMany(BookletScore::class)->orderBy('sequence');
+    }
+
+    /**
+     * The musics this document holds and its plan does not.
+     *
+     * @see PlanAddedMusic
+     */
+    public function addedMusics(): HasMany
+    {
+        return $this->hasMany(BookletMusic::class);
     }
 
     public function scores(): BelongsToMany
@@ -259,12 +271,23 @@ class Booklet extends Model implements PlanDocument
                 'abc_lyric_skip' => $this->abc_lyric_skip,
             ]);
 
+            $musicIds = [];
+
+            foreach ($this->addedMusics as $added) {
+                $musicIds[$added->id] = $copy->addedMusics()->create([
+                    'music_id' => $added->music_id,
+                    'music_plan_slot_plan_id' => $added->music_plan_slot_plan_id,
+                    'sequence' => $added->sequence,
+                ])->id;
+            }
+
             foreach ($this->entries as $entry) {
                 $copy->entries()->create([
                     'score_id' => $entry->score_id,
                     'score_file_id' => $entry->score_file_id,
                     'music_plan_slot_assignment_id' => $entry->music_plan_slot_assignment_id,
                     'music_plan_slot_plan_id' => $entry->music_plan_slot_plan_id,
+                    'added_music_id' => $musicIds[$entry->added_music_id] ?? null,
                     'text' => $entry->text,
                     'sequence' => $entry->sequence,
                     'settings_override' => $entry->settings_override,

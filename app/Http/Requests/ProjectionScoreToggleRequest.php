@@ -38,6 +38,7 @@ class ProjectionScoreToggleRequest extends FormRequest
             'scoreId' => ['required', 'integer'],
             'assignmentId' => ['sometimes', 'nullable', 'integer'],
             'fileId' => ['sometimes', 'nullable', 'integer'],
+            'addedMusicId' => ['sometimes', 'nullable', 'integer'],
         ];
     }
 
@@ -49,6 +50,17 @@ class ProjectionScoreToggleRequest extends FormRequest
     public function assignmentId(): ?int
     {
         $id = $this->input('assignmentId');
+
+        return $id === null ? null : (int) $id;
+    }
+
+    /**
+     * A music only this deck holds, which the toggle checks is really this
+     * deck's own.
+     */
+    public function addedMusicId(): ?int
+    {
+        $id = $this->input('addedMusicId');
 
         return $id === null ? null : (int) $id;
     }
