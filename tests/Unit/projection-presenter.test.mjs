@@ -242,7 +242,7 @@ function carded(total = 3) {
     return deck;
 }
 
-test('the opening walks card, dark, first slide — one press each', () => {
+test('the opening walks card, dark, first slide — one press each, all of it black until B', () => {
     const deck = carded();
 
     deck.next();
@@ -254,12 +254,14 @@ test('the opening walks card, dark, first slide — one press each', () => {
     deck.next();
 
     assert.equal(deck.splash, 'off');
-    assert.equal(deck.dark, false);
-    assert.equal(deck.index, 0, 'the room was shown the second slide without ever seeing the first');
+    assert.equal(deck.blanked, true, 'the press that ended the opening showed a slide instead of only selecting one');
+    assert.equal(deck.dark, true, 'the deck started in front of the room instead of behind the black');
+    assert.equal(deck.index, 0);
 
     deck.next();
 
-    assert.equal(deck.index, 1);
+    assert.equal(deck.index, 1, 'Next did not go on advancing once the opening was over');
+    assert.equal(deck.dark, true, 'an ordinary Next lit the wall up on its own');
 });
 
 /* There is nothing behind the beginning of a service, and an opening that could
@@ -273,11 +275,13 @@ test('going back during the opening walks it forwards too', () => {
     deck.previous();
     assert.equal(deck.splash, 'off');
     assert.equal(deck.index, 0);
+    assert.equal(deck.blanked, true, 'the opening handed the deck over already showing');
 });
 
 /* Over the card, B asks for black — which is exactly what comes next. Over the
-   dark it hands that black to the cantor, and the next B reveals slide one. */
-test('B walks the opening and then becomes an ordinary blank', () => {
+   dark, B is the button that shows the slides, so it shows the first one in
+   the same press rather than handing back more black to un-press later. */
+test('B walks the opening and shows the first slide as soon as it is over', () => {
     const deck = carded();
 
     deck.toggleBlank();
@@ -289,13 +293,13 @@ test('B walks the opening and then becomes an ordinary blank', () => {
     deck.toggleBlank();
 
     assert.equal(deck.splash, 'off');
-    assert.equal(deck.blanked, true, 'the wall lit up in the middle of handing the black over');
-    assert.equal(deck.index, 0);
+    assert.equal(deck.blanked, false, 'B ended the opening without showing anything, though B is the button that shows slides');
+    assert.equal(deck.dark, false);
+    assert.equal(deck.index, 0, 'coming back from black skipped the first slide');
 
     deck.toggleBlank();
 
-    assert.equal(deck.blanked, false);
-    assert.equal(deck.index, 0, 'coming back from black skipped the first slide');
+    assert.equal(deck.blanked, true, 'a third press, now an ordinary blank, did not darken the wall');
 });
 
 test('a jump straight to a slide reaches past the whole opening', () => {

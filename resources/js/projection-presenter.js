@@ -386,9 +386,21 @@ onAlpineInit(() => {
          * which ends the dark land on the *first* slide rather than the second —
          * the opening is a pair of pictures over the deck and not a pair of
          * slides before it.
+         *
+         * Ending the dark hands the deck to the cantor still blanked, the same
+         * way B does it there: Next only ever advances, and it is B alone that
+         * puts a picture in front of the room. Without this, the press that ends
+         * the opening would be the one press of Next in the whole service that
+         * shows a slide rather than merely selecting one.
          */
         walkOpening() {
-            this.splash = this.splash === SPLASH_CARD ? SPLASH_DARK : SPLASH_OFF;
+            if (this.splash === SPLASH_CARD) {
+                this.splash = SPLASH_DARK;
+            } else {
+                this.splash = SPLASH_OFF;
+                this.blanked = true;
+            }
+
             this.show();
             this.report();
         },
@@ -417,16 +429,16 @@ onAlpineInit(() => {
          * B during the opening.
          *
          * Over the card it is the same press as Next, because what it asks for —
-         * black — is exactly what comes next. Over the dark it hands that black
-         * to the cantor: the wall does not change, but the opening is over and
-         * the next B reveals the first slide, as B does everywhere else.
+         * black — is exactly what comes next. Over the dark it ends the opening
+         * and shows the first slide in the same press: B is the button that
+         * shows the slides, so a press of it is never answered with more black.
          */
         toggleBlank() {
             if (this.showingSplash) { return this.walkOpening(); }
 
             if (this.openingDark) {
                 this.splash = SPLASH_OFF;
-                this.blanked = true;
+                this.blanked = false;
                 this.show();
                 this.report();
 

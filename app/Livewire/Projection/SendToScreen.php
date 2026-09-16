@@ -158,6 +158,7 @@ class SendToScreen extends Component
             $this->projection,
             Auth::user(),
             $screen->device_pairing_id,
+            splash: Presentation::splashFor($screen),
         ));
 
         $this->sentScreenId = $screen->id;

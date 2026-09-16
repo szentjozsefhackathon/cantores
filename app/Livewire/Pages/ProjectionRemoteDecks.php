@@ -81,6 +81,7 @@ class ProjectionRemoteDecks extends Component
             $projection,
             Auth::user(),
             $this->screen->device_pairing_id,
+            splash: Presentation::splashFor($this->screen),
         ));
 
         return redirect()->route('projection-remote.control', ['screen' => $this->screen->id]);

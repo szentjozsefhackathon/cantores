@@ -45,7 +45,25 @@
                                 :href="route('projections.edit', ['projection' => $this->currentPresentation->projection_id])"
                                 wire:navigate
                             >
-                                {{ __('Open deck') }}
+                                {{ __('Edit deck') }}
+                            </flux:button>
+
+                            {{-- The fast way out of a deck started by mistake —
+                                 the wrong aspect ratio, say — from the one page
+                                 a cantor is looking at when they notice, rather
+                                 than a trip to the remote or the wall itself.
+                                 The next deck put up afterwards opens on the
+                                 title card, the same as a screen opened fresh
+                                 would, so there is time to line the projector
+                                 up before the room sees anything. --}}
+                            <flux:button
+                                size="sm"
+                                variant="danger"
+                                icon="power"
+                                wire:click="removeFromScreen"
+                                wire:confirm="{{ __('Take this deck off the screen and end the projection? Starting a new one afterwards will show the title card again, giving you time to line it up.') }}"
+                            >
+                                {{ __('Remove from screen') }}
                             </flux:button>
                         </x-slot:actions>
                     </flux:callout>

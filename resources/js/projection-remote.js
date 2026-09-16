@@ -858,10 +858,21 @@ onAlpineInit(() => {
          * that ends the dark land on the *first* slide and not the second.
          * Backwards out of the opening is forwards too — there is nothing behind
          * the beginning of a service to go back to.
+         *
+         * Ending the dark hands the deck over still blanked, the same way the B
+         * button does it there: Next only ever advances, and it is B alone that
+         * puts a picture in front of the room.
          */
         walkOpening() {
             this.askFullscreen();
-            this.splash = this.splash === SPLASH_CARD ? SPLASH_DARK : SPLASH_OFF;
+
+            if (this.splash === SPLASH_CARD) {
+                this.splash = SPLASH_DARK;
+            } else {
+                this.splash = SPLASH_OFF;
+                this.blanked = true;
+            }
+
             this.push();
         },
 
@@ -915,9 +926,9 @@ onAlpineInit(() => {
          * The blank itself, wherever it was asked for.
          *
          * Over the card it is the same press as Next, because black is what
-         * comes next anyway. Over the dark it is the handover: the wall does not
-         * change, but the opening is over and the next press of this button
-         * reveals the first slide, as it would anywhere else in the deck.
+         * comes next anyway. Over the dark it ends the opening and shows the
+         * first slide in the same press: this is the button that shows the
+         * slides, so a press of it is never answered with more black.
          */
         blankNow() {
             if (this.showingSplash) { return this.walkOpening(); }
@@ -926,7 +937,7 @@ onAlpineInit(() => {
 
             if (this.openingDark) {
                 this.splash = SPLASH_OFF;
-                this.blanked = true;
+                this.blanked = false;
             } else {
                 this.blanked = !this.blanked;
             }

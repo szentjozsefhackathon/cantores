@@ -91,6 +91,11 @@ class ScreenStateController extends Controller
         // The screen's own pairing, not the caller's: the device driving this
         // write is usually the phone, and which borrowed laptop the deck is on
         // is a fact about the screen.
-        return Presentation::resumeFor($projection, Auth::user(), $screen->device_pairing_id);
+        return Presentation::resumeFor(
+            $projection,
+            Auth::user(),
+            $screen->device_pairing_id,
+            splash: Presentation::splashFor($screen),
+        );
     }
 }

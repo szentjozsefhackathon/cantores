@@ -63,7 +63,7 @@ resources/js/projection-remote.js
         // And what the next press will do about it. With two states there was no
         // way to tell how a cantor was meant to get out of the card at all.
         'cardHint' => __('Title card on the screen. Next blacks it out.'),
-        'darkHint' => __('The screen is black. Next starts the first slide.'),
+        'darkHint' => __('The screen is black. Next starts the deck, still black — B shows it.'),
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
         'editUrl' => $projection === null ? null : route('projections.edit', ['projection' => $projection->id]),

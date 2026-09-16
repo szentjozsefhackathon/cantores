@@ -46,7 +46,7 @@ resources/js/projection-presenter.js
         // What to tell the person at this keyboard while the opening is being
         // walked. Held in the bar, never over the picture.
         'cardHint' => __('The title card is on the screen. The next press blacks it out.'),
-        'darkHint' => __('The screen is black. The next press starts the first slide.'),
+        'darkHint' => __('The screen is black. The next press starts the deck, still black — B shows it.'),
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
         'csrfToken' => csrf_token(),

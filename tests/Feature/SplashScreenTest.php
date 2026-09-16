@@ -198,11 +198,13 @@ it('does not put the card back when a second window joins a running service', fu
 });
 
 /*
- * The card belongs to the window being dragged onto the beamer. A deck a phone
- * puts on a screen that is already facing the room is not that: the wall is
- * where it belongs, and an extra press mid-service buys nobody anything.
+ * The card belongs to a screen with nothing on it — the beamer is about to be
+ * lined up against whatever goes up next, and that is as true of a bare screen
+ * a phone points at a deck for the first time as it is of the wall's own
+ * window. This is also what lets "Remove from screen" hand the projector back
+ * a card to line up against: it leaves the screen exactly this empty.
  */
-it('shows no opening for a deck pointed at a screen from the phone', function () {
+it('shows the opening for a deck pointed at an empty screen from the phone', function () {
     $user = User::factory()->create();
     [$projection] = splashDeck($user);
 
@@ -214,6 +216,35 @@ it('shows no opening for a deck pointed at a screen from the phone', function ()
     actingAs($user);
 
     postJson(route('screens.state.store', $screen), ['projectionId' => $projection->id])
+        ->assertOk()
+        ->assertJson(['state' => ['splash' => Presentation::SPLASH_CARD]]);
+});
+
+/*
+ * A deck a phone puts on a screen that is already facing the room is not that:
+ * the wall is already lined up, and an extra press mid-service — switching
+ * from one deck to the next — buys nobody anything.
+ */
+it('shows no opening for a deck pointed at a screen already showing something', function () {
+    $user = User::factory()->create();
+    [$firstProjection] = splashDeck($user);
+    [$secondProjection] = splashDeck($user);
+
+    $showing = Presentation::factory()->create([
+        'projection_id' => $firstProjection->id,
+        'user_id' => $user->id,
+        'splash' => Presentation::SPLASH_OFF,
+    ]);
+
+    $screen = Screen::factory()->create([
+        'user_id' => $user->id,
+        'presentation_id' => $showing->id,
+        'last_seen_at' => Carbon::now(),
+    ]);
+
+    actingAs($user);
+
+    postJson(route('screens.state.store', $screen), ['projectionId' => $secondProjection->id])
         ->assertOk()
         ->assertJson(['state' => ['splash' => Presentation::SPLASH_OFF]]);
 });

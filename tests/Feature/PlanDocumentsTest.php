@@ -8,7 +8,9 @@ use App\Models\Celebration;
 use App\Models\MusicPlan;
 use App\Models\Presentation;
 use App\Models\Projection;
+use App\Models\Screen;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -158,7 +160,76 @@ it('enables the projection screen and remote, and names the live deck, once one 
     Livewire::test(PlanDocuments::class)
         ->assertDontSee('aria-disabled="true"', escape: false)
         ->assertSee(__('Currently projecting'))
-        ->assertSee('Nagyterem 16:9');
+        ->assertSee('Nagyterem 16:9')
+        ->assertSee(__('Edit deck'))
+        ->assertSee(__('Remove from screen'));
+});
+
+/*
+ * The fast way out of a deck started by mistake: take it off every screen
+ * showing it, and end it, from the one page a cantor is already looking at.
+ */
+it('removes the live deck from every screen showing it and ends the projection', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id, 'title' => 'Rossz oldalarány']);
+    $presentation = Presentation::resumeFor($projection, $user);
+
+    $screen = Screen::factory()->create([
+        'user_id' => $user->id,
+        'presentation_id' => $presentation->id,
+        'last_seen_at' => Carbon::now(),
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)->call('removeFromScreen');
+
+    expect($presentation->fresh()->ended_at)->not->toBeNull()
+        ->and($screen->fresh()->presentation_id)->toBeNull();
+
+    Livewire::test(PlanDocuments::class)
+        ->assertDontSee(__('Currently projecting'));
+});
+
+/*
+ * A live row with no screen left pointing at it is rare — a screen aged out or
+ * was pointed elsewhere already — but the button still has to end the service
+ * rather than do nothing.
+ */
+it('ends the presentation directly when nothing is left pointing a screen at it', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $presentation = Presentation::resumeFor($projection, $user);
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)->call('removeFromScreen');
+
+    expect($presentation->fresh()->ended_at)->not->toBeNull();
+});
+
+/*
+ * The deck a screen shows next opens on the title card again, the same way a
+ * freshly opened wall would — this is what "Remove from screen" buys: time to
+ * line the projector up before the room sees the replacement.
+ */
+it('shows the title card again for the next deck put on a screen just cleared', function () {
+    $user = User::factory()->create();
+    $wrong = Projection::factory()->create(['user_id' => $user->id]);
+    $right = Projection::factory()->create(['user_id' => $user->id]);
+    $presentation = Presentation::resumeFor($wrong, $user);
+
+    $screen = Screen::factory()->create([
+        'user_id' => $user->id,
+        'presentation_id' => $presentation->id,
+        'last_seen_at' => Carbon::now(),
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)->call('removeFromScreen');
+
+    expect(Presentation::splashFor($screen->fresh()))->toBe(Presentation::SPLASH_CARD);
 });
 
 it('sends the two old list screens to the consolidated one', function () {

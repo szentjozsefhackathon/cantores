@@ -688,11 +688,12 @@ test('one press of anything walks the opening on and moves the service nowhere',
         deck.onKey(press(key));
 
         assert.equal(deck.splash, 'off', `${key} did not start the deck`);
+        assert.equal(deck.blanked, true, `${key} showed the deck instead of only starting it`);
         assert.equal(deck.index, 0, `${key} skipped the first slide`);
     }
 });
 
-test('the Next button walks card, dark, first slide', () => {
+test('the Next button walks card, dark, first slide — all of it black until B', () => {
     const deck = carded();
 
     deck.next();
@@ -702,14 +703,16 @@ test('the Next button walks card, dark, first slide', () => {
     deck._pressedAt = {};
     deck.next();
     assert.equal(deck.splash, 'off');
+    assert.equal(deck.blanked, true, 'the press that ended the opening showed a slide instead of only selecting one');
     assert.equal(deck.index, 0);
 
     deck._pressedAt = {};
     deck.next();
     assert.equal(deck.index, 1);
+    assert.equal(deck.blanked, true, 'an ordinary Next lit the wall up on its own');
 });
 
-test('the blank button walks the opening and then blanks as it always did', () => {
+test('the blank button walks the opening and shows the first slide as soon as it is over', () => {
     const deck = carded();
 
     deck.toggleBlank();
@@ -719,12 +722,12 @@ test('the blank button walks the opening and then blanks as it always did', () =
     deck._pressedAt = {};
     deck.toggleBlank();
     assert.equal(deck.splash, 'off');
-    assert.equal(deck.blanked, true);
+    assert.equal(deck.blanked, false, 'the blank button ended the opening without showing anything, though it is the button that shows slides');
     assert.equal(deck.index, 0);
 
     deck._pressedAt = {};
     deck.toggleBlank();
-    assert.equal(deck.blanked, false);
+    assert.equal(deck.blanked, true, 'a third press, now an ordinary blank, did not darken the wall');
     assert.equal(deck.index, 0);
 });
 

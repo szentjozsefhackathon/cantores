@@ -6,6 +6,7 @@ use App\Models\Booklet;
 use App\Models\MusicPlan;
 use App\Models\Presentation;
 use App\Models\Projection;
+use App\Models\Screen;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -120,6 +121,38 @@ class PlanDocuments extends Component
     public function setNewType(string $type): void
     {
         $this->newType = $type === 'projection' ? 'projection' : 'booklet';
+    }
+
+    /**
+     * Take the deck being shown right now off every screen showing it, and end
+     * the projection with it.
+     *
+     * The fast way out of a deck started by mistake — the wrong aspect ratio,
+     * say — from the one page a cantor is looking at when they notice, rather
+     * than a trip to the remote or the wall itself. Once the screen is empty
+     * again, the next deck put on it opens on the title card the same way a
+     * screen opened fresh would, because {@see Presentation::splashFor()} reads
+     * "nothing on the screen" off exactly what this leaves behind.
+     */
+    public function removeFromScreen(): void
+    {
+        $presentation = $this->currentPresentation;
+
+        if (! $presentation instanceof Presentation) {
+            return;
+        }
+
+        $screens = Screen::query()->where('presentation_id', $presentation->getKey())->get();
+
+        if ($screens->isEmpty()) {
+            $presentation->end();
+        } else {
+            $screens->each(fn (Screen $screen) => $screen->point(null));
+        }
+
+        unset($this->currentPresentation);
+
+        $this->dispatch('toast', message: __('Removed from the screen.'), type: 'success');
     }
 
     /**

@@ -335,6 +335,24 @@ class Presentation extends Model
     }
 
     /**
+     * Whether a deck about to go up on this screen should open on the title
+     * card.
+     *
+     * The card belongs to a screen with nothing on it — the beamer is about to
+     * be lined up against whatever goes up, whether that is the first deck of
+     * the day or one put up straight after the last one was deliberately taken
+     * off. It does not belong to a deck simply replacing another mid-service,
+     * where the room is already looking at something and a card over it would
+     * read as the service stopping rather than moving on — so this reads
+     * "empty" off the screen itself rather than off which presentation row the
+     * deck happens to resolve to.
+     */
+    public static function splashFor(Screen $screen): string
+    {
+        return $screen->showing() === null ? self::SPLASH_CARD : self::SPLASH_OFF;
+    }
+
+    /**
      * Whichever of two openings is the further along, the row's own winning any
      * tie and anything unrecognisable.
      */
