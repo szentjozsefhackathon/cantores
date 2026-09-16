@@ -180,6 +180,15 @@ class ProjectionEditor extends Component
         $this->redirectRoute('projections.edit', ['projection' => $copy->id], navigate: true);
     }
 
+    public function delete(): void
+    {
+        $this->authorize('delete', $this->projection);
+
+        $this->projection->delete();
+
+        $this->redirectRoute('plan-documents', navigate: true);
+    }
+
     /**
      * The deck as the plan it was made from: slots, their music, and what of it
      * was taken.

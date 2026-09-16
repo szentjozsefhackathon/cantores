@@ -436,5 +436,11 @@ resources/js/booklet-editor.js
                 </flux:text>
             </flux:card>
         </div>
+
+        <div class="mt-6 flex justify-end">
+            <flux:button variant="danger" icon="trash" wire:click="delete" wire:confirm="{{ __('Delete this booklet? This cannot be undone.') }}">
+                {{ __('Delete') }}
+            </flux:button>
+        </div>
     </div>
 </div>

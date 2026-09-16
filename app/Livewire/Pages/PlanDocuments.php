@@ -223,53 +223,6 @@ class PlanDocuments extends Component
         $this->resetPage();
     }
 
-    public function deleteBooklet(Booklet $booklet): void
-    {
-        $this->authorize('delete', $booklet);
-
-        $booklet->delete();
-
-        unset($this->planless);
-
-        $this->dispatch('toast', message: __('Booklet deleted.'), type: 'success');
-    }
-
-    public function deleteProjection(Projection $projection): void
-    {
-        $this->authorize('delete', $projection);
-
-        $projection->delete();
-
-        unset($this->planless);
-
-        $this->dispatch('toast', message: __('Projection deleted.'), type: 'success');
-    }
-
-    /**
-     * Copy a booklet, then go straight to the copy — the fast way to a 4:3
-     * variation or an A4 sibling with a few extra scores, without leaving the
-     * geometry knobs to be found and set again by hand.
-     */
-    public function duplicateBooklet(Booklet $booklet): void
-    {
-        $this->authorize('view', $booklet);
-        $this->authorize('create', Booklet::class);
-
-        $copy = $booklet->duplicate();
-
-        $this->redirectRoute('booklets.edit', ['booklet' => $copy->id], navigate: true);
-    }
-
-    public function duplicateProjection(Projection $projection): void
-    {
-        $this->authorize('view', $projection);
-        $this->authorize('create', Projection::class);
-
-        $copy = $projection->duplicate();
-
-        $this->redirectRoute('projections.edit', ['projection' => $copy->id], navigate: true);
-    }
-
     public function rendering(IlluminateView $view): void
     {
         $view->layout('layouts::app', [

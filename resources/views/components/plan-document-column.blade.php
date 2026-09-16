@@ -60,25 +60,6 @@
                     @if($isProjection)
                         <livewire:projection.send-to-screen :projection="$document" :compact="true" :key="'send-to-screen-'.$document->id" />
                     @endif
-
-                    <flux:tooltip :content="__('Copy')">
-                        <flux:button
-                            size="xs"
-                            variant="ghost"
-                            icon="document-duplicate"
-                            :aria-label="__('Copy')"
-                            wire:click="{{ $isProjection ? 'duplicateProjection' : 'duplicateBooklet' }}({{ $document->id }})"
-                        />
-                    </flux:tooltip>
-
-                    <flux:button
-                        size="xs"
-                        variant="ghost"
-                        icon="trash"
-                        :aria-label="__('Delete')"
-                        wire:click="{{ $isProjection ? 'deleteProjection' : 'deleteBooklet' }}({{ $document->id }})"
-                        wire:confirm="{{ $isProjection ? __('Delete this projection?') : __('Delete this booklet?') }}"
-                    />
                 </li>
             @endforeach
         </ul>

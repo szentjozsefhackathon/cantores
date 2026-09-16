@@ -225,6 +225,15 @@ class BookletEditor extends Component
         $this->redirectRoute('booklets.edit', ['booklet' => $copy->id], navigate: true);
     }
 
+    public function delete(): void
+    {
+        $this->authorize('delete', $this->booklet);
+
+        $this->booklet->delete();
+
+        $this->redirectRoute('plan-documents', navigate: true);
+    }
+
     /**
      * The one rule that cannot be stated as an attribute: a booklet is set in
      * one of the three named styles, and that list lives in BookletStyles.
