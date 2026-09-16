@@ -128,6 +128,83 @@ it('refuses to delete someone else\'s document', function () {
     expect(Booklet::query()->find($booklet->id))->not->toBeNull();
 });
 
+it('copies a booklet from the list and goes straight to the copy', function () {
+    $user = User::factory()->create();
+    $plan = planWithCelebration($user);
+    $booklet = Booklet::factory()->forPlan($plan)->create(['title' => 'Zenekari füzet', 'page_size' => 'a5']);
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)
+        ->call('duplicateBooklet', $booklet->id)
+        ->assertRedirect();
+
+    $copy = Booklet::query()->where('id', '!=', $booklet->id)->where('music_plan_id', $plan->id)->first();
+
+    expect($copy)->not->toBeNull()
+        ->and($copy->title)->toBe(__(':title (copy)', ['title' => 'Zenekari füzet']))
+        ->and($copy->page_size->value)->toBe('a5')
+        ->and($copy->user_id)->toBe($user->id);
+});
+
+it('copies a booklet\'s entries along with it', function () {
+    $user = User::factory()->create();
+    $booklet = Booklet::factory()->create(['user_id' => $user->id]);
+    $booklet->entries()->create(['text' => 'Bevezető', 'sequence' => 1]);
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)->call('duplicateBooklet', $booklet->id);
+
+    $copy = Booklet::query()->where('id', '!=', $booklet->id)->where('user_id', $user->id)->first();
+
+    expect($copy->entries)->toHaveCount(1)
+        ->and($copy->entries->first()->text)->toBe('Bevezető');
+});
+
+it('refuses to copy someone else\'s booklet', function () {
+    $mine = User::factory()->create();
+    $booklet = Booklet::factory()->create(['user_id' => User::factory()->create()->id]);
+
+    actingAs($mine);
+
+    Livewire::test(PlanDocuments::class)
+        ->call('duplicateBooklet', $booklet->id)
+        ->assertForbidden();
+
+    expect(Booklet::query()->where('user_id', $mine->id)->count())->toBe(0);
+});
+
+it('copies a projection from the list and goes straight to the copy', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id, 'title' => 'Nagyterem 16:9', 'ratio' => '16/9']);
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)
+        ->call('duplicateProjection', $projection->id)
+        ->assertRedirect();
+
+    $copy = Projection::query()->where('id', '!=', $projection->id)->where('user_id', $user->id)->first();
+
+    expect($copy)->not->toBeNull()
+        ->and($copy->title)->toBe(__(':title (copy)', ['title' => 'Nagyterem 16:9']))
+        ->and($copy->ratio->value)->toBe('16/9');
+});
+
+it('refuses to copy someone else\'s projection', function () {
+    $mine = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => User::factory()->create()->id]);
+
+    actingAs($mine);
+
+    Livewire::test(PlanDocuments::class)
+        ->call('duplicateProjection', $projection->id)
+        ->assertForbidden();
+
+    expect(Projection::query()->where('user_id', $mine->id)->count())->toBe(0);
+});
+
 it('offers a create button inside each empty column, addressed to that plan', function () {
     $user = User::factory()->create();
     $plan = planWithCelebration($user, 'Üres terv');

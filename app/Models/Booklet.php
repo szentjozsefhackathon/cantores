@@ -7,13 +7,17 @@ use App\Contracts\PlanDocument;
 use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
 use App\Support\BookletStyles;
+use Carbon\CarbonImmutable;
+use Database\Factories\BookletFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A booklet: the scores for one service, laid onto real pages.
@@ -28,8 +32,8 @@ use Illuminate\Support\Facades\Auth;
  * @property int $user_id
  * @property int|null $music_plan_id
  * @property string $title
- * @property \App\Enums\BookletPageSize $page_size
- * @property \App\Enums\BookletOrientation $orientation
+ * @property BookletPageSize $page_size
+ * @property BookletOrientation $orientation
  * @property float $margin_mm
  * @property float $lyric_size_pt
  * @property float $staff_height_mm
@@ -40,15 +44,15 @@ use Illuminate\Support\Facades\Auth;
  * @property float $abc_staff_sep
  * @property float $abc_lyric_first_skip
  * @property float $abc_lyric_skip
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
- * @property-read \App\Models\User $user
- * @property-read \App\Models\MusicPlan|null $musicPlan
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\BookletScore> $entries
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read User $user
+ * @property-read MusicPlan|null $musicPlan
+ * @property-read Collection<int, BookletScore> $entries
  * @property-read int|null $entries_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Score> $scores
+ * @property-read Collection<int, Score> $scores
  * @property-read int|null $scores_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Loan> $loans
+ * @property-read Collection<int, Loan> $loans
  * @property-read int|null $loans_count
  *
  * @method static \Database\Factories\BookletFactory factory($count = null, $state = [])
@@ -61,7 +65,7 @@ use Illuminate\Support\Facades\Auth;
  */
 class Booklet extends Model implements PlanDocument
 {
-    /** @use HasFactory<\Database\Factories\BookletFactory> */
+    /** @use HasFactory<BookletFactory> */
     use HasFactory, HasLoans;
 
     /**
@@ -224,5 +228,55 @@ class Booklet extends Model implements PlanDocument
     public function scopeMine(Builder $query, ?User $user = null): void
     {
         $query->where('user_id', $user instanceof User ? $user->getKey() : Auth::id());
+    }
+
+    /**
+     * A second booklet, starting exactly where this one stands — the way to a
+     * 4:3 version of a 16:9 deck's A4 sibling, or an A5 with a few extra scores,
+     * without laying the whole thing out again by hand.
+     *
+     * Every geometry knob and every entry comes along, scores included: the copy
+     * is its own booklet from the moment it exists, not a view onto this one.
+     */
+    public function duplicate(): self
+    {
+        return DB::transaction(function (): self {
+            $copy = self::create([
+                'user_id' => $this->user_id,
+                'music_plan_id' => $this->music_plan_id,
+                'title' => __(':title (copy)', ['title' => $this->title]),
+                'page_size' => $this->page_size,
+                'orientation' => $this->orientation,
+                'margin_mm' => $this->margin_mm,
+                'lyric_size_pt' => $this->lyric_size_pt,
+                'staff_height_mm' => $this->staff_height_mm,
+                'text_font' => $this->text_font,
+                'heading_scale' => $this->heading_scale,
+                'text_size_scale' => $this->text_size_scale,
+                'text_line_height' => $this->text_line_height,
+                'abc_staff_sep' => $this->abc_staff_sep,
+                'abc_lyric_first_skip' => $this->abc_lyric_first_skip,
+                'abc_lyric_skip' => $this->abc_lyric_skip,
+            ]);
+
+            foreach ($this->entries as $entry) {
+                $copy->entries()->create([
+                    'score_id' => $entry->score_id,
+                    'score_file_id' => $entry->score_file_id,
+                    'music_plan_slot_assignment_id' => $entry->music_plan_slot_assignment_id,
+                    'music_plan_slot_plan_id' => $entry->music_plan_slot_plan_id,
+                    'text' => $entry->text,
+                    'sequence' => $entry->sequence,
+                    'settings_override' => $entry->settings_override,
+                    'start_on_new_page' => $entry->start_on_new_page,
+                    'show_slot' => $entry->show_slot,
+                    'show_variation' => $entry->show_variation,
+                    'show_music_title' => $entry->show_music_title,
+                    'show_collections' => $entry->show_collections,
+                ]);
+            }
+
+            return $copy;
+        });
     }
 }

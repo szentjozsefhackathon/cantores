@@ -17,7 +17,9 @@ use App\Models\User;
 use App\Support\BookletSettingFields;
 use App\Support\BookletStyles;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Js;
 use Livewire\Livewire;
 
@@ -103,7 +105,7 @@ it('will not pull in a score the viewer cannot read', function () {
 });
 
 /**
- * @return array{0: \App\Models\Booklet, 1: \Illuminate\Support\Collection<int, BookletScore>}
+ * @return array{0: Booklet, 1: Collection<int, BookletScore>}
  */
 function bookletWithEntries(User $user, int $count): array
 {
@@ -672,12 +674,12 @@ it('will not let a stranger change a row of someone elses booklet', function () 
 // card of its own beneath, with its opening notes. Both names are links, since both
 // are things the person assembling the booklet may want to open.
 it('reads slot, then music, then the score in a card of its own', function () {
-    \Illuminate\Support\Facades\Storage::fake();
+    Storage::fake();
     $user = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
     $booklet = bookletFor($user, $plan);
     [, $assignments, $scores] = slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
-    \Illuminate\Support\Facades\Storage::put($scores[0]->incipit_path, 'image');
+    Storage::put($scores[0]->incipit_path, 'image');
 
     actingAs($user);
 
@@ -762,11 +764,11 @@ it('names the music of a score chosen outside the plan', function () {
 });
 
 it('shows available incipits in the music slot selector', function () {
-    \Illuminate\Support\Facades\Storage::fake();
+    Storage::fake();
     $user = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
     [, , $scores] = slotWithMusics($plan, 'Entrance', ['With incipit', 'Without incipit']);
-    \Illuminate\Support\Facades\Storage::put($scores[0]->incipit_path, 'image');
+    Storage::put($scores[0]->incipit_path, 'image');
     actingAs($user);
 
     Livewire::test(BookletEditor::class, ['booklet' => bookletFor($user, $plan)])
@@ -1103,7 +1105,7 @@ it('forgets an override when it is reset', function () {
  * The two entries a settings test needs: one score in each of two formats, in the
  * order they were added.
  *
- * @return array{0: \App\Models\Booklet, 1: BookletScore, 2: BookletScore}
+ * @return array{0: Booklet, 1: BookletScore, 2: BookletScore}
  */
 function bookletWithAbcAndGabc(User $user): array
 {
@@ -1401,7 +1403,7 @@ it('hands the browser everything it needs to draw a score', function () {
  * A slot occurrence with the given musics, and one abc score for each.
  *
  * @param  list<string>  $musicTitles
- * @return array{0: \App\Models\MusicPlanSlotPlan, 1: \Illuminate\Support\Collection<int, MusicPlanSlotAssignment>, 2: \Illuminate\Support\Collection<int, Score>}
+ * @return array{0: MusicPlanSlotPlan, 1: Collection<int, MusicPlanSlotAssignment>, 2: Collection<int, Score>}
  */
 function slotWithMusics(MusicPlan $plan, string $slotName, array $musicTitles): array
 {
@@ -1439,7 +1441,7 @@ function slotWithMusics(MusicPlan $plan, string $slotName, array $musicTitles): 
 /**
  * The pane's slots, top to bottom.
  *
- * @return list<\DOMElement>
+ * @return list<DOMElement>
  */
 function planSlotElements(string $html): array
 {
@@ -2735,4 +2737,23 @@ it('offers a paragraph the same panel of knobs a score gets', function () {
     foreach (BookletSettingFields::panelFor('text') as $field) {
         expect($html)->toContain($field['key']);
     }
+});
+
+it('copies the booklet from the editor and goes straight to the copy', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $booklet->update(['title' => 'Zenekari füzet']);
+    $booklet->entries()->create(['text' => 'Bevezető', 'sequence' => 1]);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('duplicate')
+        ->assertRedirect();
+
+    $copy = Booklet::query()->where('id', '!=', $booklet->id)->where('user_id', $user->id)->first();
+
+    expect($copy)->not->toBeNull()
+        ->and($copy->title)->toBe(__(':title (copy)', ['title' => 'Zenekari füzet']))
+        ->and($copy->entries()->count())->toBe(1);
 });

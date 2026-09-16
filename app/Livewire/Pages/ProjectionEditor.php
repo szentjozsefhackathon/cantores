@@ -167,6 +167,20 @@ class ProjectionEditor extends Component
     }
 
     /**
+     * Copy this deck, then go straight to the copy — the fast way to a 4:3
+     * version of a 16:9 deck without leaving the editor to find it in the list.
+     */
+    public function duplicate(): void
+    {
+        $this->authorize('update', $this->projection);
+        $this->authorize('create', Projection::class);
+
+        $copy = $this->projection->duplicate();
+
+        $this->redirectRoute('projections.edit', ['projection' => $copy->id], navigate: true);
+    }
+
+    /**
      * The deck as the plan it was made from: slots, their music, and what of it
      * was taken.
      *

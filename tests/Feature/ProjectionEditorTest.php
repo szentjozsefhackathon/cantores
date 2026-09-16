@@ -742,3 +742,22 @@ it('offers a screen of words the same panel of knobs a score gets', function () 
         expect($html)->toContain($field['key']);
     }
 });
+
+it('copies the deck from the editor and goes straight to the copy', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $projection->update(['title' => 'Nagyterem 16:9', 'ratio' => '16/9']);
+    $projection->entries()->create(['text' => 'Bevezető', 'sequence' => 1]);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('duplicate')
+        ->assertRedirect();
+
+    $copy = Projection::query()->where('id', '!=', $projection->id)->where('user_id', $user->id)->first();
+
+    expect($copy)->not->toBeNull()
+        ->and($copy->title)->toBe(__(':title (copy)', ['title' => 'Nagyterem 16:9']))
+        ->and($copy->entries()->count())->toBe(1);
+});

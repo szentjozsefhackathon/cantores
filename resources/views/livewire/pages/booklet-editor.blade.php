@@ -193,6 +193,16 @@ resources/js/booklet-editor.js
                     <span x-text="pageCount"></span> {{ __('pages') }}
                 </span>
 
+                {{-- The way to a variation without laying the whole thing out
+                     again by hand: a 4:3 deck's A4 sibling, or an A5 with a
+                     few extra scores, starting from exactly where this one
+                     stands. --}}
+                <flux:tooltip :content="__('Copy this booklet')">
+                    <flux:button size="sm" variant="ghost" icon="document-duplicate" wire:click="duplicate">
+                        {{ __('Copy') }}
+                    </flux:button>
+                </flux:tooltip>
+
                 {{-- The other way out of a booklet, beside the PDF: the band
                      reads it on their own phones, live, and each of them sets
                      the size their own eyes want. It opens a dialog rather than

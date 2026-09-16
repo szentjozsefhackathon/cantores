@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A projection: the scores for one service, cut into slides for a screen.
@@ -269,5 +270,47 @@ class Projection extends Model implements PlanDocument
     public function scopeMine(Builder $query, ?User $user = null): void
     {
         $query->where('user_id', $user instanceof User ? $user->getKey() : Auth::id());
+    }
+
+    /**
+     * A second deck, starting exactly where this one stands — the way to a 4:3
+     * version of a 16:9 deck without laying every slide out again by hand.
+     *
+     * Every shape knob and every entry comes along, scores included: the copy is
+     * its own deck from the moment it exists, not a view onto this one, and its
+     * ratio is free to be changed without touching the original.
+     */
+    public function duplicate(): self
+    {
+        return DB::transaction(function (): self {
+            $copy = self::create([
+                'user_id' => $this->user_id,
+                'music_plan_id' => $this->music_plan_id,
+                'title' => __(':title (copy)', ['title' => $this->title]),
+                'ratio' => $this->ratio,
+                'text_theme' => $this->text_theme,
+                'text_size_scale' => $this->text_size_scale,
+                'text_line_height' => $this->text_line_height,
+            ]);
+
+            foreach ($this->entries as $entry) {
+                $copy->entries()->create([
+                    'score_id' => $entry->score_id,
+                    'score_file_id' => $entry->score_file_id,
+                    'music_plan_slot_assignment_id' => $entry->music_plan_slot_assignment_id,
+                    'music_plan_slot_plan_id' => $entry->music_plan_slot_plan_id,
+                    'text' => $entry->text,
+                    'sequence' => $entry->sequence,
+                    'settings_override' => $entry->settings_override,
+                    'excluded_slides' => $entry->excluded_slides,
+                    'show_slot' => $entry->show_slot,
+                    'show_music_title' => $entry->show_music_title,
+                    'show_variation' => $entry->show_variation,
+                    'show_collections' => $entry->show_collections,
+                ]);
+            }
+
+            return $copy;
+        });
     }
 }

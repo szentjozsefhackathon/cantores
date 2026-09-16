@@ -61,6 +61,16 @@
                         <livewire:projection.send-to-screen :projection="$document" :compact="true" :key="'send-to-screen-'.$document->id" />
                     @endif
 
+                    <flux:tooltip :content="__('Copy')">
+                        <flux:button
+                            size="xs"
+                            variant="ghost"
+                            icon="document-duplicate"
+                            :aria-label="__('Copy')"
+                            wire:click="{{ $isProjection ? 'duplicateProjection' : 'duplicateBooklet' }}({{ $document->id }})"
+                        />
+                    </flux:tooltip>
+
                     <flux:button
                         size="xs"
                         variant="ghost"

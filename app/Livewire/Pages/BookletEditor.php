@@ -211,6 +211,21 @@ class BookletEditor extends Component
     }
 
     /**
+     * Copy this booklet, then go straight to the copy — the fast way to a 4:3
+     * variation or an A4 sibling with a few extra scores, without leaving the
+     * editor to find it in the list.
+     */
+    public function duplicate(): void
+    {
+        $this->authorize('update', $this->booklet);
+        $this->authorize('create', Booklet::class);
+
+        $copy = $this->booklet->duplicate();
+
+        $this->redirectRoute('booklets.edit', ['booklet' => $copy->id], navigate: true);
+    }
+
+    /**
      * The one rule that cannot be stated as an attribute: a booklet is set in
      * one of the three named styles, and that list lives in BookletStyles.
      *

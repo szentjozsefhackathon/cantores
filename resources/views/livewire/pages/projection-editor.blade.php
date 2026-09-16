@@ -123,6 +123,15 @@ resources/js/projection-editor.js
                     {{ __('Drawing…') }}
                 </span>
 
+                {{-- The way to a variation without laying every slide out
+                     again by hand: a 4:3 version of a 16:9 deck, starting from
+                     exactly where this one stands. --}}
+                <flux:tooltip :content="__('Copy this deck')">
+                    <flux:button size="sm" variant="ghost" icon="document-duplicate" wire:click="duplicate">
+                        {{ __('Copy') }}
+                    </flux:button>
+                </flux:tooltip>
+
                 {{-- Put this deck on a screen, without leaving the editor.
                      Opens one if none is up yet, points an existing one at
                      this deck otherwise — the only gesture the toolbar needs,
