@@ -1,37 +1,82 @@
 <div class="py-8">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <flux:card class="p-4 lg:p-6">
+            {{-- The laptop's and the phone's way in, first thing on the page
+                 and full-width on a phone screen, because these are the two
+                 controls someone reaches for at the start of Mass rather than
+                 while building next Sunday's decks. Both stay quiet until
+                 there is something to be quiet about: a screen or a remote
+                 with nothing live behind it opens onto an empty room, and
+                 bootstrapping one is the slide deck's job, not this page's. --}}
+            <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                <flux:tooltip :content="$this->currentPresentation ? __('See what the room is looking at.') : __('Nothing is being projected right now.')">
+                    <flux:button
+                        :href="$this->currentPresentation ? route('projection-screen') : null"
+                        wire:navigate
+                        variant="{{ $this->currentPresentation ? 'primary' : 'ghost' }}"
+                        icon="tv"
+                        class="w-full sm:w-auto {{ $this->currentPresentation ? '' : 'pointer-events-none opacity-50' }}"
+                        :aria-disabled="$this->currentPresentation ? null : 'true'"
+                    >
+                        {{ __('Projection screen') }}
+                    </flux:button>
+                </flux:tooltip>
+
+                <flux:tooltip :content="$this->currentPresentation ? __('Drive the deck that is up right now.') : __('Nothing is being projected right now.')">
+                    <flux:button
+                        :href="$this->currentPresentation ? route('projection-remote') : null"
+                        wire:navigate
+                        variant="{{ $this->currentPresentation ? 'primary' : 'ghost' }}"
+                        icon="presentation"
+                        class="w-full sm:w-auto {{ $this->currentPresentation ? '' : 'pointer-events-none opacity-50' }}"
+                        :aria-disabled="$this->currentPresentation ? null : 'true'"
+                    >
+                        {{ __('Remote') }}
+                    </flux:button>
+                </flux:tooltip>
+
+                @if($this->currentPresentation)
+                    <flux:callout variant="secondary" icon="tv" inline class="flex-1">
+                        <flux:callout.heading>{{ __('Currently projecting') }}</flux:callout.heading>
+                        <flux:callout.text>{{ $this->currentPresentation->projection->title }}</flux:callout.text>
+                        <x-slot:actions>
+                            <flux:button
+                                size="sm"
+                                :href="route('projections.edit', ['projection' => $this->currentPresentation->projection_id])"
+                                wire:navigate
+                            >
+                                {{ __('Open deck') }}
+                            </flux:button>
+                        </x-slot:actions>
+                    </flux:callout>
+                @endif
+            </div>
+
             <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <flux:heading size="2xl">{{ __('Booklets & Projections') }}</flux:heading>
                     <flux:subheading>{{ __('Everything your music plans have been made into — the pages in the band\'s hands and the slides on the wall, service by service.') }}</flux:subheading>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                    {{-- The laptop's way in, and the one thing anybody does at
-                         the laptop: put this in front of the room at the
-                         start of Mass and do not touch it again. --}}
-                    <flux:button :href="route('projection-screen')" variant="ghost" icon="tv" wire:navigate>
-                        {{ __('Projection screen') }}
-                    </flux:button>
-                    {{-- The phone's way in. Its own entry rather than a
-                         button on a deck, because the person reaching for it
-                         is at the organ and the deck is already up on a
-                         screen across the room. --}}
-                    <flux:button :href="route('projection-remote')" variant="ghost" icon="presentation" wire:navigate>
-                        {{ __('Remote') }}
-                    </flux:button>
-                    <flux:modal.trigger name="new-plan-document">
-                        <flux:button variant="primary" icon="book-plus" wire:click="setNewType('booklet')">
-                            {{ __('New Booklet') }}
-                        </flux:button>
-                    </flux:modal.trigger>
-                    <flux:modal.trigger name="new-plan-document">
-                        <flux:button variant="filled" icon="presentation" wire:click="setNewType('projection')">
-                            {{ __('New Projection') }}
-                        </flux:button>
-                    </flux:modal.trigger>
-                </div>
+                {{-- Rare, next to the button inside every plan's own column:
+                     starting a document that is not for any of them, or for a
+                     plan too far back to be on this page. --}}
+                <flux:dropdown position="bottom" align="end">
+                    <flux:button variant="ghost" icon="plus" :aria-label="__('New document')" />
+
+                    <flux:menu>
+                        <flux:modal.trigger name="new-plan-document">
+                            <flux:menu.item icon="book-plus" wire:click="setNewType('booklet')">
+                                {{ __('New Booklet') }}
+                            </flux:menu.item>
+                        </flux:modal.trigger>
+                        <flux:modal.trigger name="new-plan-document">
+                            <flux:menu.item icon="presentation-plus" wire:click="setNewType('projection')">
+                                {{ __('New Projection') }}
+                            </flux:menu.item>
+                        </flux:modal.trigger>
+                    </flux:menu>
+                </flux:dropdown>
             </div>
 
             <div class="mb-6">
@@ -50,38 +95,22 @@
                 <div class="space-y-4">
                     @foreach($plans as $plan)
                         <div wire:key="plan-group-{{ $plan->id }}" class="rounded-lg border border-zinc-200 dark:border-zinc-700">
-                            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
-                                <div class="min-w-0">
-                                    <a href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}" wire:navigate class="block truncate font-medium hover:underline">
-                                        {{ $plan->celebration_name ?: __('Untitled plan') }}
-                                    </a>
-                                    @if($plan->actual_date)
-                                        <span class="text-xs text-zinc-500">{{ $plan->actual_date->translatedFormat('Y. F j.') }}</span>
-                                    @endif
-                                </div>
-
-                                <div class="flex items-center gap-1">
-                                    <form method="POST" action="{{ route('booklets.store') }}" class="inline">
-                                        @csrf
-                                        <input type="hidden" name="music_plan_id" value="{{ $plan->id }}">
-                                        <flux:tooltip :content="__('New Booklet')">
-                                            <flux:button type="submit" size="sm" variant="ghost" icon="book-plus" :aria-label="__('New Booklet')" />
-                                        </flux:tooltip>
-                                    </form>
-                                    <form method="POST" action="{{ route('projections.store') }}" class="inline">
-                                        @csrf
-                                        <input type="hidden" name="music_plan_id" value="{{ $plan->id }}">
-                                        <flux:tooltip :content="__('New Projection')">
-                                            <flux:button type="submit" size="sm" variant="ghost" icon="presentation" :aria-label="__('New Projection')" />
-                                        </flux:tooltip>
-                                    </form>
-                                </div>
+                            <div class="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+                                <a href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}" wire:navigate class="block truncate font-medium hover:underline">
+                                    {{ $plan->celebration_name ?: __('Untitled plan') }}
+                                </a>
+                                @if($plan->actual_date)
+                                    <span class="text-xs text-zinc-500">{{ $plan->actual_date->translatedFormat('Y. F j.') }}</span>
+                                @endif
                             </div>
 
                             {{-- The point of the whole screen: this service's
                                  pages and this service's slides, side by side,
                                  so nobody has to guess which deck was cut from
-                                 which booklet. --}}
+                                 which booklet. Each column carries its own
+                                 create button, because a column with nothing
+                                 in it yet is exactly where that button
+                                 belongs. --}}
                             <div class="grid gap-px bg-zinc-200 sm:grid-cols-2 dark:bg-zinc-700">
                                 <x-plan-document-column
                                     :documents="$plan->booklets"
@@ -89,6 +118,7 @@
                                     :heading="__('Booklets')"
                                     icon="book-open"
                                     :empty="__('No booklet for this service.')"
+                                    :plan="$plan"
                                 />
                                 <x-plan-document-column
                                     :documents="$plan->projections"
@@ -96,6 +126,7 @@
                                     :heading="__('Projections')"
                                     icon="presentation"
                                     :empty="__('No projection for this service.')"
+                                    :plan="$plan"
                                 />
                             </div>
                         </div>

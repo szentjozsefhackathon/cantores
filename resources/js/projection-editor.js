@@ -6,6 +6,44 @@ import { inheritedSlideSetting, resolveSlideSettings, fileSlideSettings, textSli
 import { steppedValue, movesSetting } from './booklet-settings.js';
 
 /**
+ * Panes mid-scroll, keyed by the pane itself, so a second hover landing before
+ * the first has settled cancels it rather than fighting it. The browser's own
+ * `behavior: 'smooth'` has no such guard — two calls in a row visibly race —
+ * and its duration is too short to read as a glide over the short hops this is
+ * mostly used for.
+ */
+const scrollAnimations = new WeakMap();
+
+function easeOutCubic(t) {
+    return 1 - (1 - t) ** 3;
+}
+
+/** Ease a pane's scroll position to `top`, over `duration` milliseconds. */
+function scrollPaneTo(pane, top, duration = 320) {
+    cancelAnimationFrame(scrollAnimations.get(pane));
+
+    const start = pane.scrollTop;
+    const change = top - start;
+
+    if (change === 0) { return; }
+
+    const startTime = performance.now();
+
+    const step = (now) => {
+        const progress = Math.min(1, (now - startTime) / duration);
+        pane.scrollTop = start + change * easeOutCubic(progress);
+
+        if (progress < 1) {
+            scrollAnimations.set(pane, requestAnimationFrame(step));
+        } else {
+            scrollAnimations.delete(pane);
+        }
+    };
+
+    scrollAnimations.set(pane, requestAnimationFrame(step));
+}
+
+/**
  * The projection editor's browser half.
  *
  * Built on the booklet editor's, and on purpose: the two are the same shape of
@@ -277,18 +315,43 @@ onAlpineInit(() => {
 
             hoverEntry(entryId) {
                 this.hoveredEntryId = entryId;
-                this.highlight();
+                this.highlight(true);
             },
 
-            highlight() {
+            /**
+             * Paint the hovered slide, and — only when the hover just moved
+             * there rather than this being a redraw's own housekeeping call —
+             * bring it into view. The plan panel can be scrolled far from
+             * where the contact sheet has settled, and a highlight nobody can
+             * see is not one that helps anybody find the slide they are
+             * looking at.
+             */
+            highlight(scroll = false) {
                 const host = this.$refs.slides;
                 if (!host) { return; }
+
+                let first = null;
 
                 host.querySelectorAll('[data-projection-entry]').forEach((figure) => {
                     const active = this.hoveredEntryId !== null
                         && figure.dataset.projectionEntry === String(this.hoveredEntryId);
                     figure.classList.toggle('projection-slide-hovered', active);
+                    if (active && !first) { first = figure; }
                 });
+
+                if (!scroll || !first) { return; }
+
+                // The scrollbar is on the pane wrapping this element, not on
+                // this element itself — `host` is sized to its content and
+                // never overflows, so scrolling it does nothing.
+                const pane = host.closest('[data-projection-pane="slides"]');
+                if (!pane || pane.scrollHeight <= pane.clientHeight) { return; }
+
+                const bounds = first.getBoundingClientRect();
+                const viewport = pane.getBoundingClientRect();
+                if (bounds.top >= viewport.top && bounds.bottom <= viewport.bottom) { return; }
+
+                scrollPaneTo(pane, pane.scrollTop + bounds.top - viewport.top - 16);
             },
 
             markBusy(event = null) {

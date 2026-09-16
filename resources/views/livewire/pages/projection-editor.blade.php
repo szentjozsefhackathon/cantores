@@ -123,21 +123,12 @@ resources/js/projection-editor.js
                     {{ __('Drawing…') }}
                 </span>
 
-                {{-- The screen, then this window. On a laptop with the
-                     projector as a second display these are opposite gestures,
-                     and this is the one that keeps the editor in front of the
-                     person editing. --}}
+                {{-- Put this deck on a screen, without leaving the editor.
+                     Opens one if none is up yet, points an existing one at
+                     this deck otherwise — the only gesture the toolbar needs,
+                     now that "Present" and "Open screen" said the same thing
+                     two different confusing ways. --}}
                 <livewire:projection.send-to-screen :projection="$projection" />
-
-                <flux:button
-                    size="sm"
-                    variant="primary"
-                    icon="presentation"
-                    href="{{ route('projections.present', ['projection' => $projection->id]) }}"
-                    x-bind:disabled="shownCount === 0"
-                >
-                    {{ __('Present') }}
-                </flux:button>
             </div>
         </div>
 

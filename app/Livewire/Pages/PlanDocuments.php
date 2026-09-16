@@ -4,6 +4,7 @@ namespace App\Livewire\Pages;
 
 use App\Models\Booklet;
 use App\Models\MusicPlan;
+use App\Models\Presentation;
 use App\Models\Projection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -98,6 +99,22 @@ class PlanDocuments extends Component
                 ->latest('updated_at')
                 ->get(),
         ];
+    }
+
+    /**
+     * The deck being shown live right now, on any screen this person has —
+     * so the same page that offers to bootstrap tomorrow's decks also says
+     * plainly whether today's is still up.
+     */
+    #[Computed]
+    public function currentPresentation(): ?Presentation
+    {
+        return Presentation::query()
+            ->live()
+            ->mine()
+            ->with('projection')
+            ->latest('last_seen_at')
+            ->first();
     }
 
     public function setNewType(string $type): void
@@ -203,9 +220,14 @@ class PlanDocuments extends Component
     }
 
     /**
-     * The services that have been made into something, most recently worked on
+     * Every service this person has a plan for, most recently worked on
      * first — with each service's own booklets and decks loaded beside it, so
      * which deck goes with which booklet is a matter of reading one row.
+     *
+     * A plan with nothing built from it yet still gets a row, its two columns
+     * empty and waiting: the whole point of putting the create buttons inside
+     * those columns is that the plan has to already be there for a button
+     * inside it to make sense.
      *
      * @return LengthAwarePaginator<int, MusicPlan>
      */
@@ -214,20 +236,16 @@ class PlanDocuments extends Component
         $userId = Auth::id();
         $search = trim($this->search);
 
-        $mine = fn (Builder $query) => $query->where('user_id', $userId)
-            ->when($search !== '', fn (Builder $documents) => $documents->where('title', 'ilike', "%{$search}%"));
-
-        $matchesSearch = fn (Builder $query) => $query->whereHas('booklets', $mine)
-            ->orWhereHas('projections', $mine);
+        $matchesDocuments = fn (Builder $query) => $query->where('user_id', $userId)
+            ->where('title', 'ilike', "%{$search}%");
 
         return MusicPlan::query()
-            ->where(fn (Builder $query) => $query->whereHas('booklets', fn (Builder $q) => $q->where('user_id', $userId))
-                ->orWhereHas('projections', fn (Builder $q) => $q->where('user_id', $userId)))
+            ->where('user_id', $userId)
             ->when($search !== '', fn (Builder $query) => $query->where(
-                fn (Builder $inner) => $inner->where($matchesSearch)->orWhereHas(
-                    'celebration',
-                    fn (Builder $celebration) => $celebration->where('name', 'ilike', "%{$search}%")
-                )
+                fn (Builder $inner) => $inner
+                    ->whereHas('celebration', fn (Builder $celebration) => $celebration->where('name', 'ilike', "%{$search}%"))
+                    ->orWhereHas('booklets', $matchesDocuments)
+                    ->orWhereHas('projections', $matchesDocuments)
             ))
             ->with([
                 'celebration',
@@ -236,8 +254,8 @@ class PlanDocuments extends Component
             ])
             ->orderByRaw(
                 'greatest('
-                .'coalesce((select max(updated_at) from booklets where booklets.music_plan_id = music_plans.id and booklets.user_id = ?), to_timestamp(0)), '
-                .'coalesce((select max(updated_at) from projections where projections.music_plan_id = music_plans.id and projections.user_id = ?), to_timestamp(0))'
+                .'coalesce((select max(updated_at) from booklets where booklets.music_plan_id = music_plans.id and booklets.user_id = ?), music_plans.updated_at), '
+                .'coalesce((select max(updated_at) from projections where projections.music_plan_id = music_plans.id and projections.user_id = ?), music_plans.updated_at)'
                 .') desc',
                 [$userId, $userId]
             )

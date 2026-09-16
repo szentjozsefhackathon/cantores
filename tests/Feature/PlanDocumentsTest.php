@@ -6,6 +6,7 @@ use App\Livewire\Pages\ProjectionEditor;
 use App\Models\Booklet;
 use App\Models\Celebration;
 use App\Models\MusicPlan;
+use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\User;
 use Livewire\Livewire;
@@ -38,7 +39,7 @@ it('lists a service once, with its booklets and its projections together', funct
         ->assertSee('Nagyterem 16:9');
 });
 
-it('leaves out plans nothing was built from, and other people\'s documents', function () {
+it('lists every plan of the viewer\'s own, built or not, and leaves out other people\'s plans and documents', function () {
     $mine = User::factory()->create();
     $theirs = User::factory()->create();
 
@@ -51,12 +52,11 @@ it('leaves out plans nothing was built from, and other people\'s documents', fun
 
     actingAs($mine);
 
-    // The empty plan is still offered in the new-document picker; what it must
-    // not have is a row of its own.
     Livewire::test(PlanDocuments::class)
         ->assertSee('Karácsonyi füzet')
         ->assertSee('plan-group-'.$used->id, escape: false)
-        ->assertDontSee('plan-group-'.$unused->id, escape: false)
+        ->assertSee('plan-group-'.$unused->id, escape: false)
+        ->assertDontSee('plan-group-'.$notMine->id, escape: false)
         ->assertDontSee('Idegen alkalom')
         ->assertDontSee('Idegen vetítés');
 });
@@ -124,6 +124,41 @@ it('refuses to delete someone else\'s document', function () {
         ->assertForbidden();
 
     expect(Booklet::query()->find($booklet->id))->not->toBeNull();
+});
+
+it('offers a create button inside each empty column, addressed to that plan', function () {
+    $user = User::factory()->create();
+    $plan = planWithCelebration($user, 'Üres terv');
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)
+        ->assertSeeHtml('action="'.route('booklets.store').'"')
+        ->assertSeeHtml('action="'.route('projections.store').'"')
+        ->assertSeeHtml('value="'.$plan->id.'"');
+});
+
+it('disables the projection screen and remote until something is actually live', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)
+        ->assertSee('aria-disabled="true"', escape: false)
+        ->assertDontSee('Currently projecting');
+});
+
+it('enables the projection screen and remote, and names the live deck, once one is up', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id, 'title' => 'Nagyterem 16:9']);
+    Presentation::resumeFor($projection, $user);
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)
+        ->assertDontSee('aria-disabled="true"', escape: false)
+        ->assertSee(__('Currently projecting'))
+        ->assertSee('Nagyterem 16:9');
 });
 
 it('sends the two old list screens to the consolidated one', function () {
