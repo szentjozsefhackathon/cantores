@@ -15,17 +15,28 @@ services:
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --entrypoints.websecure.asDefault=true
-      - --entrypoints.websecure.http.tls.certresolver=myresolver
-      - --certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
-      - --certificatesresolvers.myresolver.acme.email=postmaster@cantores.hu
-      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
-      - --certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web
+      # Cloudflare terminates the public TLS; what Traefik presents is the
+      # Cloudflare Origin CA certificate, which only Cloudflare trusts. That is
+      # what lets the zone run SSL mode "Full (strict)": Cloudflare verifies it
+      # is talking to this server rather than merely encrypting to whatever
+      # answers on the IP. The certificate is loaded as the default of the
+      # default TLS store (see `configs` at the bottom), so every router on
+      # websecure gets it without naming it.
+      #
+      # The PEM and key live in ./certs on the server and nowhere else — not in
+      # the repository, not in the image. Create them under SSL/TLS → Origin
+      # Server in the Cloudflare dashboard for cantores.hu and *.cantores.hu.
+      - --entrypoints.websecure.http.tls=true
+      - --providers.file.filename=/etc/traefik/tls.yml
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - letsencrypt:/letsencrypt
+      - ./certs:/certs:ro
+    configs:
+      - source: traefik_tls
+        target: /etc/traefik/tls.yml
     networks:
       - traefik
   migrator:
@@ -49,7 +60,13 @@ services:
     # additive givePermissionTo), so this is how a newly added permission or role
     # grant actually reaches production instead of sitting unseeded until someone
     # runs it by hand.
-    command: ["/bin/sh", "-c", "php artisan migrate -n --force && php artisan db:seed --force && php artisan icons:clear && php artisan icons:cache && php artisan view:clear && php artisan optimize"]
+    #
+    # package:discover comes first because bootstrap/cache is a named volume, and
+    # Docker only seeds a named volume from the image when it is first created.
+    # Without it the packages.php from whichever deploy created the volume
+    # survives every later image, and a newly added package's service provider is
+    # never registered — which is how laravel/octane's commands went missing.
+    command: ["/bin/sh", "-c", "php artisan package:discover && php artisan migrate -n --force && php artisan db:seed --force && php artisan icons:clear && php artisan icons:cache && php artisan view:clear && php artisan optimize"]
     restart: "no"
   app:
     image: creshu-app-prod
@@ -212,6 +229,10 @@ services:
     entrypoint: []
     command: ["/bin/sh", "-c", "php artisan queue:work --sleep=15 --tries=3 --timeout=3600"]
     restart: unless-stopped
+    # The FrankenPHP base image ships a HEALTHCHECK that polls Caddy's admin port,
+    # and this container never starts Caddy, so it would only ever report unhealthy.
+    healthcheck:
+      disable: true
   musescore:
     # Uploaded score files are attacker-controlled input parsed by MuseScore's Qt
     # stack, so this worker is kept away from anything it does not need: its own
@@ -240,6 +261,10 @@ services:
     entrypoint: []
     command: ["/bin/sh", "-c", "php artisan queue:work --queue=musescore --sleep=15 --tries=2 --timeout=600"]
     restart: unless-stopped
+    # The FrankenPHP base image ships a HEALTHCHECK that polls Caddy's admin port,
+    # and this container never starts Caddy, so it would only ever report unhealthy.
+    healthcheck:
+      disable: true
   scheduler:
     image: creshu-app-prod
     user: "33:33" # www-data
@@ -260,6 +285,10 @@ services:
     entrypoint: []
     command: ["/bin/sh", "-c", "php artisan schedule:work"]
     restart: unless-stopped
+    # The FrankenPHP base image ships a HEALTHCHECK that polls Caddy's admin port,
+    # and this container never starts Caddy, so it would only ever report unhealthy.
+    healthcheck:
+      disable: true
   maintenance:
     image: nginx:alpine
     mem_limit: 32m
@@ -275,6 +304,16 @@ services:
       - traefik.http.services.maintenance.loadbalancer.server.port=80
     restart: unless-stopped
 
+configs:
+  traefik_tls:
+    content: |
+      tls:
+        stores:
+          default:
+            defaultCertificate:
+              certFile: /certs/origin.pem
+              keyFile: /certs/origin.key
+
 secrets:
   github_token:
     environment: GITHUB_TOKEN
@@ -283,7 +322,6 @@ volumes:
   db-data:
   redis-data:
   storage:
-  letsencrypt:
   cache:
 networks:
   traefik:
