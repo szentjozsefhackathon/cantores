@@ -178,6 +178,14 @@ fi
 echo "   ✅ Import directory synced"
 
 # 7. Restart app services (keep traefik running to minimise downtime)
+#
+# Under Octane the app container is no longer a pool of processes that each read
+# the code afresh: it is a pool of workers holding the application they booted
+# with. So a deploy has to replace them, and it does — the container is stopped,
+# removed and recreated below, which is the strongest form of the reload and the
+# only one that also picks up a new image. `php artisan octane:reload` is the
+# gentler alternative and is the right tool only when the code inside a *running*
+# container has changed, which is not a thing this script ever does.
 echo "6. Restarting app services (traefik kept running)..."
 
 # Put application into maintenance mode before fiddling with the services to prevent errors for users during the transition. If app container isn't running, just continue with the deploy.
@@ -233,7 +241,27 @@ done
 
 # 8. Verify services are running
 echo "8. Verifying services..."
-sleep 5
+
+# Wait for the app's healthcheck rather than sleeping a fixed five seconds. The
+# distinction is new: mod_php answered the first request that arrived, whereas a
+# worker pool has a boot to get through first, so "the container started" and
+# "the site answers" are now separate moments. The healthcheck asks /up, which
+# means a worker booted Laravel and returned a response.
+echo "   Waiting for app to become healthy..."
+for i in {1..30}; do
+    APP_HEALTH=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml ps app --format '{{.Health}}'" 2>/dev/null)
+    if [ "$APP_HEALTH" = "healthy" ]; then
+        echo "   ✅ App healthy"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo "   ⚠️  App did not report healthy after 30 attempts (last status: ${APP_HEALTH:-unknown})"
+        echo "      Check the workers with: docker compose -f docker-compose.prod.yml logs app"
+    else
+        sleep 2
+    fi
+done
+
 SERVICES=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && docker compose -f docker-compose.prod.yml ps --services")
 echo "   Running services:"
 for service in $SERVICES; do

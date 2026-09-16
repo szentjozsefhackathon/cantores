@@ -1,5 +1,9 @@
 <?php
 
+use Spatie\Permission\DefaultTeamResolver;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+
 return [
 
     'models' => [
@@ -13,7 +17,7 @@ return [
          * `Spatie\Permission\Contracts\Permission` contract.
          */
 
-        'permission' => Spatie\Permission\Models\Permission::class,
+        'permission' => Permission::class,
 
         /*
          * When using the "HasRoles" trait from this package, we need to know which
@@ -24,7 +28,7 @@ return [
          * `Spatie\Permission\Contracts\Role` contract.
          */
 
-        'role' => Spatie\Permission\Models\Role::class,
+        'role' => Role::class,
 
     ],
 
@@ -107,6 +111,30 @@ return [
      * When set to true, Laravel\Octane\Events\OperationTerminated event listener will be registered
      * this will refresh permissions on every TickTerminated, TaskTerminated and RequestTerminated
      * NOTE: This should not be needed in most cases, but an Octane/Vapor combination benefited from it.
+     *
+     * False, and measured rather than assumed. The worry was that
+     * PermissionRegistrar is a singleton holding the role-to-permission map in
+     * the worker's memory rather than the request's, so that a runtime change
+     * from Admin\RolePermissionManager would be answered from a stale map by
+     * whichever workers had already booted. That does not happen here, and the
+     * test was run against the built image: with this false, four warm workers
+     * were primed with an allowed request, `system.maintain` was revoked from
+     * the admin role out of band, and all sixteen following requests refused —
+     * no stale window on any worker.
+     *
+     * The reason is that RolePermissionManager only grants and revokes
+     * permissions that already exist, and a role's permission association is
+     * read through the Eloquent relation on each request, not from the
+     * registrar's cached collection. What the collection does cache is the set
+     * of permissions themselves, so it is only a *newly created* permission
+     * that a warm worker could fail to see — and permissions are created solely
+     * by RolePermissionSeeder, which runs in the migrator container before the
+     * app container is recreated, so those workers boot after the write.
+     *
+     * Turning it on costs a re-read of the permission collection on every
+     * request, which is the per-request work Octane was adopted to remove. If a
+     * code path is ever added that creates permissions at runtime, this must
+     * become true again.
      */
     'register_octane_reset_listener' => false,
 
@@ -136,7 +164,7 @@ return [
     /*
      * The class to use to resolve the permissions team id
      */
-    'team_resolver' => \Spatie\Permission\DefaultTeamResolver::class,
+    'team_resolver' => DefaultTeamResolver::class,
 
     /*
      * Passport Client Credentials Grant
@@ -183,7 +211,7 @@ return [
          * When permissions or roles are updated the cache is flushed automatically.
          */
 
-        'expiration_time' => \DateInterval::createFromDateString('24 hours'),
+        'expiration_time' => DateInterval::createFromDateString('24 hours'),
 
         /*
          * The cache key used to store all permissions.

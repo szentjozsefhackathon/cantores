@@ -68,6 +68,47 @@ FILE_SIZE=$(stat -c%s "$FILE_PATH" 2>/dev/null || echo "0")
 echo "File size: $(numfmt --to=iec $FILE_SIZE)"
 echo
 
+# Smoke-test the image before it goes anywhere.
+#
+# The suite cannot do this. Pest runs the application, not the container, so an
+# ARG declared in the wrong scope, an entrypoint that leaves a shell as PID 1 so
+# SIGTERM never reaches Octane, a server that cannot bind its port unprivileged,
+# or a security header lost with the Apache vhost are all invisible to it. Each
+# of those ships silently and surfaces on a deploy; two of them did. This runs
+# the real image against a throwaway Postgres and Redis and refuses to upload if
+# anything it checks is wrong.
+#
+# It runs on the cached path too, because "already built for this commit" is not
+# the same as "known good" — the tarball may predate the checks. If the image
+# itself has been pruned since, it is restored from the tarball rather than
+# rebuilt, so what gets tested is exactly what would be uploaded.
+#
+# SKIP_SMOKE=1 bypasses it, for when the fault is in the harness rather than the
+# image — a port collision, or a box without the memory for a second Postgres.
+if [ "${SKIP_SMOKE:-0}" = "1" ]; then
+    echo "⚠️  SKIP_SMOKE=1 — uploading an image that has not been smoke-tested."
+else
+    # Both images, because the smoke test renders a score through the renderer
+    # as well as driving the app.
+    if ! docker image inspect creshu-app-prod >/dev/null 2>&1 ||
+       ! docker image inspect creshu-musescore-prod >/dev/null 2>&1; then
+        echo "Restoring the images from $FILE_PATH to test them..."
+        gunzip -c "$FILE_PATH" | docker load
+    fi
+
+    echo "🔬 Smoke-testing the image before upload..."
+    if ./smoke-prod-image.sh --no-build; then
+        echo "✅ Smoke test passed"
+    else
+        echo
+        echo "❌ Smoke test failed — nothing was uploaded."
+        echo "   The tarball is still at $FILE_PATH; fix the image and run again."
+        echo "   Re-run the checks on their own with: ./smoke-prod-image.sh --no-build"
+        exit 1
+    fi
+fi
+echo
+
 # Upload to remote server
 echo "Uploading to $DEPLOY_SERVER:$DEPLOY_PORT..."
 echo "Remote path: $DEPLOY_REMOTE_PATH"

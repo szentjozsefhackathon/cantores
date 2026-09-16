@@ -1,0 +1,80 @@
+# What replaced Apache.
+#
+# Octane ships a Caddyfile of its own and this is a fork of it, kept as close to
+# the stub as it can be so that an Octane upgrade can be diffed against
+# vendor/laravel/octane/src/Commands/stubs/Caddyfile and the difference read in
+# one screen. The whole of that difference is the `header` block below.
+#
+# It exists because docker/sites-available/000-default.conf.prod is gone, and two
+# of the things it did were not Apache housekeeping but security headers that the
+# site is entitled to keep. The stub sets neither.
+#
+# Everything in {$...} is filled in by `php artisan octane:frankenphp` from its
+# own options and from config/octane.php; nothing here should be hard-coded that
+# the command already knows.
+
+{
+	{$CADDY_GLOBAL_OPTIONS}
+
+	# localhost only, and never published to a port on the host. Caddy's admin
+	# API can reconfigure the running server, so it is reachable from inside
+	# this container and from nowhere else.
+	admin {$CADDY_SERVER_ADMIN_HOST}:{$CADDY_SERVER_ADMIN_PORT}
+
+	frankenphp {
+		worker {
+			file "{$APP_PUBLIC_PATH}/frankenphp-worker.php"
+			{$CADDY_SERVER_WORKER_DIRECTIVE}
+			{$CADDY_SERVER_WATCH_DIRECTIVES}
+		}
+	}
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$CADDY_SERVER_SERVER_NAME} {
+	# The access log, and the reason the log level is INFO rather than WARN in
+	# docker-compose.prod.yml: Caddy writes one JSON line per request at INFO
+	# with a `duration` field in it, which is the same thing the Apache
+	# CustomLog's %{ms}T was there for. The first step of
+	# plans/projection-polling-performance.md asks for exactly that number.
+	log {
+		level {$CADDY_SERVER_LOG_LEVEL}
+
+		# Redact the authorization query parameter that can be set by Mercure...
+		format filter {
+			wrap {$CADDY_SERVER_LOGGER}
+			fields {
+				uri query {
+					replace authorization REDACTED
+				}
+			}
+		}
+	}
+
+	# The two headers the Apache vhost set, carried over unchanged.
+	#
+	# frame-ancestors 'none' is the one that matters: a projection wall and a
+	# remote are a signed-in session driving a screen in a room, and neither may
+	# be framed by anything. `-Server` is the counterpart of ServerTokens Prod —
+	# Caddy announces itself by default where Apache announced itself.
+	header {
+		Content-Security-Policy "frame-ancestors 'none';"
+		-Server
+	}
+
+	route {
+		root * "{$APP_PUBLIC_PATH}"
+		encode zstd br gzip
+
+		# Mercure configuration is injected here...
+		{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+		php_server {
+			index frankenphp-worker.php
+			try_files {path} frankenphp-worker.php
+			# Required for the public/storage/ directory...
+			resolve_root_symlink
+		}
+	}
+}

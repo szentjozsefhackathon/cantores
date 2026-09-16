@@ -3,6 +3,12 @@
 /public/build
 /public/hot
 /public/storage
+# Written by `octane:frankenphp` on first start, and copied in at build time by
+# Dockerfile.prod. Either way it is generated, never edited.
+/public/frankenphp-worker.php
+# The FrankenPHP binary, if Octane is asked to download one locally. It is ~50MB
+# and belongs to the machine, not to the repository.
+/frankenphp
 /storage/*.key
 /storage/pail
 /vendor

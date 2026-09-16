@@ -4,10 +4,47 @@
 # Derives from the application image, as Dockerfile.lilypond does — from the dev
 # one when BASE_IMAGE says so, so the same tooling is available locally.
 ARG BASE_IMAGE=creshu-app-prod
-FROM ${BASE_IMAGE}
 
 ARG MUSESCORE_VERSION=4.7.4
 ARG MUSESCORE_BUILD=260706075
+
+# The download lives in its own stage, on a base of its own, for one reason:
+# cache. A stage rooted on the application image inherits that image's ID in its
+# cache key, and the application image gets a new ID on every commit — `COPY . .`
+# sees the changed tree, and the config/version.php layer carries the hash in the
+# instruction itself. So a MuseScore layer sitting on top of it could never be
+# reused, and each build re-fetched the 192 MB AppImage. Rooted here instead, the
+# key is this base plus the two version ARGs, none of which our commits touch, so
+# it is fetched once and then reused until the version is bumped.
+#
+# Pin BUILDER_IMAGE to a digest if even a moved `trixie-slim` tag is too much
+# churn; the tag is re-resolved on each build and a new upstream push would
+# invalidate this stage. Nothing from this stage but /opt/musescore reaches the
+# final image, so its contents are otherwise immaterial.
+ARG BUILDER_IMAGE=debian:trixie-slim
+FROM ${BUILDER_IMAGE} AS musescore-dist
+
+ARG MUSESCORE_VERSION
+ARG MUSESCORE_BUILD
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl
+
+# Fetch, extract and delete in one layer: a COPY or a separate RUN would leave
+# the 192 MB AppImage in the image forever. --appimage-extract sidesteps FUSE,
+# which is unavailable inside an unprivileged container.
+RUN curl -fsSL -o /tmp/ms.AppImage \
+      "https://github.com/musescore/MuseScore/releases/download/v${MUSESCORE_VERSION}/MuseScore-Studio-${MUSESCORE_VERSION}.${MUSESCORE_BUILD}-x86_64.AppImage" \
+ && chmod +x /tmp/ms.AppImage \
+ && cd /opt && /tmp/ms.AppImage --appimage-extract >/dev/null \
+ && mv squashfs-root musescore \
+ && rm -f /tmp/ms.AppImage
+
+
+FROM ${BASE_IMAGE}
 
 # The dev base image drops to an unprivileged user; apt and /opt need root here.
 # Restored at the end so the image keeps the user its base image chose.
@@ -17,7 +54,18 @@ USER root
 # MuseScore 4 bundles its own Qt6 but not the platform libraries Qt links
 # against. Debian 13 (trixie) ships the time_t-64 variants of several of these,
 # hence the libasound2t64 / libglib2.0-0t64 / libcups2t64 naming.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+#
+# This layer does sit on the application image, so it re-executes on every
+# commit and there is no avoiding that. The cache mounts make the re-execution
+# cheap: the .debs and the package lists are read from the builder's cache
+# instead of Debian's mirrors, so what is left is unpacking. `docker-clean` is
+# removed because it is what deletes the downloaded archives, and the mounts
+# take the place of the old `rm -rf /var/lib/apt/lists/*` — a cache mount is not
+# committed to the layer, so the image carries neither.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+ && apt-get update && apt-get install -y --no-install-recommends \
       libegl1 libgl1 libglx-mesa0 libopengl0 \
       libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
       libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 \
@@ -28,19 +76,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libnss3 libdbus-1-3 libglib2.0-0t64 libgomp1 libgpg-error0 \
       libdrm2 libgbm1 libfreetype6 fontconfig fonts-dejavu-core \
       xvfb xauth \
-      poppler-utils \
- && rm -rf /var/lib/apt/lists/*
+      poppler-utils
 
-# Fetch, extract and delete in one layer: a COPY or a separate RUN would leave
-# the 192 MB AppImage in the image forever. --appimage-extract sidesteps FUSE,
-# which is unavailable inside an unprivileged container.
-RUN curl -fsSL -o /tmp/ms.AppImage \
-      "https://github.com/musescore/MuseScore/releases/download/v${MUSESCORE_VERSION}/MuseScore-Studio-${MUSESCORE_VERSION}.${MUSESCORE_BUILD}-x86_64.AppImage" \
- && chmod +x /tmp/ms.AppImage \
- && cd /opt && /tmp/ms.AppImage --appimage-extract >/dev/null \
- && mv squashfs-root musescore \
- && rm -f /tmp/ms.AppImage \
- && ln -s /opt/musescore/AppRun /usr/local/bin/mscore
+COPY --from=musescore-dist /opt/musescore /opt/musescore
+RUN ln -s /opt/musescore/AppRun /usr/local/bin/mscore
 
 COPY docker/musescore/mscore-render /usr/local/bin/mscore-render
 RUN chmod +x /usr/local/bin/mscore-render

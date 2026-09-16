@@ -46,7 +46,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(GenreContext::class);
+        // `scoped` rather than `singleton`, and the difference only exists under
+        // Octane: a worker serves many requests from one container, and a
+        // singleton resolved during the first of them is handed to every request
+        // after it. GenreContext happens to be safe either way — it asks
+        // `Auth::user()` and the session afresh on every call rather than
+        // resolving them once and holding them — but "safe because of how it is
+        // written today" is not a property a binding should depend on. Scoped
+        // makes the container throw it away between requests, so the next person
+        // to add a memoised field here cannot leak one cantor's genre into
+        // another cantor's page.
+        $this->app->scoped(GenreContext::class);
+
+        // These four stay singletons deliberately. Each is built from config and
+        // holds a binary path and a timeout — nothing derived from a request, a
+        // user or a session — so there is nothing for a worker to leak, and
+        // rebuilding them per request would only be work.
         $this->app->singleton(SvgToPdfConverter::class, fn () => SvgToPdfConverter::fromConfig());
         $this->app->singleton(MuseScoreRenderer::class, fn () => MuseScoreRenderer::fromConfig());
         $this->app->singleton(PdfPageRasterizer::class, fn () => PdfPageRasterizer::fromConfig());

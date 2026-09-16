@@ -54,7 +54,18 @@ services:
   app:
     image: creshu-app-prod
     restart: unless-stopped
+    # OCTANE_WORKERS in .env.prod is sized against this number and not against
+    # the host's CPU count, which is what FrankenPHP would otherwise guess from:
+    # eight workers, each holding a booted Laravel, is the starting point, and
+    # the measurement that should replace the guess is a worker's resident size
+    # once the site has been warm for an hour. The Dockerfile's CMD carries the
+    # same default for a deploy whose .env.prod predates Octane.
     mem_limit: 1024m
+    # www-data, as the Apache children were. Apache ran a root master that forked
+    # unprivileged workers; FrankenPHP is one process, so the whole server drops
+    # instead — which is why it listens on 8000 rather than 80 and why the
+    # Traefik label below names that port.
+    user: "33:33"
     build:
       context: .
       dockerfile: Dockerfile.prod
@@ -83,7 +94,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=creshu-prod_traefik
       - traefik.http.routers.myapp.rule=Host(`${APP_DOMAIN}`) || Host(`www.${APP_DOMAIN}`)
-      - traefik.http.services.myapp.loadbalancer.server.port=80
+      - traefik.http.services.myapp.loadbalancer.server.port=8000
       - traefik.http.middlewares.mywwwredirect.redirectregex.regex=^https://www\.(.*)
       - traefik.http.middlewares.mywwwredirect.redirectregex.replacement=https://$${1}
       - traefik.http.routers.myapp.middlewares=mywwwredirect,hsts,compress
@@ -95,6 +106,25 @@ services:
     networks:
       - traefik
       - internal
+    # /up is Laravel's own health route (bootstrap/app.php), so a pass means a
+    # worker booted the framework and answered — not merely that a port is open,
+    # which is the distinction that matters now that starting the container and
+    # being able to serve a request are two different moments.
+    #
+    # This drives `docker compose ps`, `depends_on: service_healthy` and the
+    # verification step of deploy-prod.sh. It does *not* drive Traefik, which
+    # ignores Docker healthchecks and would need its own
+    # loadbalancer.healthcheck labels; with a single replica there is nothing for
+    # it to fail over to, so it is not worth the second mechanism.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    # Long enough for in-flight requests to finish before the workers are killed.
+    # The default is 10s and a score export can outlast it.
+    stop_grace_period: 30s
   database:
     image: pgvector/pgvector:pg17
     restart: unless-stopped

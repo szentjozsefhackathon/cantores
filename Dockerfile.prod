@@ -1,4 +1,5 @@
 ARG NODE_VERSION=22-alpine
+ARG FRANKENPHP_VERSION=1-php8.4
 
 # Stage 1: Install Composer dependencies (skip scripts to avoid artisan errors)
 FROM composer:2 AS composer
@@ -45,8 +46,29 @@ RUN npm run build
 RUN rm -rf node_modules
 RUN npm install --omit=dev
 
-# Stage 3: Final PHP/Apache image
-FROM php:8.4-apache AS php
+# Stage 3: Final PHP image
+#
+# FrankenPHP rather than php:8.4-apache, and the reason is not that Caddy is
+# faster than Apache. It is that this image no longer boots Laravel per request:
+# `php artisan octane:frankenphp` below keeps a pool of workers with the
+# container, the providers, the routes and the eleven observers already built,
+# and hands each request a fresh application state on top of them. Every Livewire
+# round trip in the site, and both of the projection polls a second that a
+# running service makes, stop paying for a framework boot.
+#
+# FrankenPHP over Swoole because it speaks HTTP itself: it replaces Apache
+# instead of sitting behind it, so mod_php's one-process-per-request ceiling and
+# docker/conf-available/performance.conf, which existed only to lower that
+# ceiling to what a gigabyte can pay for, both go away. Traefik is unaffected —
+# it goes on terminating TLS and routing by host label; the one thing it is told
+# is a different port number, because the server it now reaches is unprivileged.
+#
+# The tag is major-pinned so security rebuilds arrive without a version bump
+# landing unannounced. Octane requires FrankenPHP 1.5.0 or newer and will say so
+# loudly at startup if this is ever pinned below it. The ARG itself is declared
+# at the top of the file: an ARG referenced by a FROM has to be global, because
+# one declared inside a stage does not exist yet when the stage is opened.
+FROM dunglas/frankenphp:${FRANKENPHP_VERSION} AS php
 WORKDIR /var/www/html
 
 RUN apt-get update && apt-get upgrade -y && \
@@ -79,9 +101,9 @@ COPY --from=mlocati/php-extension-installer:2.7.24 /usr/bin/install-php-extensio
 # wanted; see Dockerfile.dev.
 RUN install-php-extensions gd gmp memcached redis pdo_pgsql pdo_mysql zip pcntl bcmath intl
 
-# Apache configuration
-COPY docker/sites-available/000-default.conf.prod /etc/apache2/sites-available/000-default.conf
-COPY docker/conf-available/performance.conf /etc/apache2/conf-available/performance.conf
+# The Caddyfile Octane is started with. A fork of Octane's own stub whose only
+# difference is the security headers the Apache vhost used to set; see the file.
+COPY docker/frankenphp/Caddyfile /etc/caddy/Caddyfile
 
 # Copy application code
 COPY . .
@@ -94,6 +116,13 @@ RUN --mount=type=secret,id=github_token \
         export COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"$(cat /run/secrets/github_token)\"}}"; \
     fi; \
     composer install --no-dev --no-interaction --no-cache
+
+# The worker script FrankenPHP's worker mode runs, which is a three-line shim
+# that requires Octane's own worker out of vendor. `octane:frankenphp` copies
+# this itself on first start if it is missing; doing it here instead means the
+# running container never writes into public/, and a failure to write shows up
+# at build time rather than on a Sunday morning.
+RUN cp vendor/laravel/octane/src/Commands/stubs/frankenphp-worker.php public/frankenphp-worker.php
 
 # Overlay built assets from node stage
 COPY --from=node /app/public/build ./public/build
@@ -110,8 +139,52 @@ RUN echo "<?php return [ 'hash' => '$GIT_COMMIT_HASH' ];" > config/version.php
 RUN chown -R www-data:www-data bootstrap/cache
 RUN chown -R www-data:www-data storage
 
-# PHP and Apache settings
+# Caddy's own state directories, which the base image creates for root. The
+# server runs as www-data (see docker-compose.prod.yml) for the same reason
+# Apache's children did: the PHP that parses uploaded score files should not be
+# uid 0. Nothing is written here while TLS is Traefik's job, but Caddy expects
+# the directories to be its own and complains on every start if they are not.
+RUN mkdir -p /data /config && chown -R www-data:www-data /data /config
+
+# PHP settings
 RUN cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
 RUN echo "opcache.jit=tracing" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
  && echo "opcache.jit_buffer_size=128M" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
-RUN a2enmod rewrite headers && a2enconf performance
+
+# What `Header unset X-Powered-By` in the Apache vhost was doing, done at the
+# source instead of stripped off each response on the way out.
+RUN echo "expose_php=Off" >> /usr/local/etc/php/conf.d/zz-cantores.ini
+
+# The server. Shell form so the worker and recycle counts can come from the
+# environment: .env.prod sets them against this container's memory limit rather
+# than letting FrankenPHP guess from the host's CPU count, which on a shared box
+# is a number about the machine and not about this container's share of it. The
+# defaults below are what a deploy gets whose .env.prod predates Octane.
+#
+# --host=0.0.0.0 is not optional: the command's own default is 127.0.0.1, which
+# in a container means Traefik cannot reach it. Port 8000 rather than 80 because
+# this process is www-data and an unprivileged process cannot bind a privileged
+# port; Traefik is told the new number by a label and nothing outside this
+# container sees the difference. It is written out rather than taken from the
+# environment on purpose — the Traefik label and the healthcheck in
+# docker-compose.prod.yml both name this number, so a settable one would only be
+# a way to move it in one place out of three.
+#
+# --max-requests recycles a worker after that many requests. Nothing here is
+# known to leak; it is the last line of defence for the thing that has not been
+# found yet, and a worker restart costs one boot amortised over 500 requests.
+#
+# ENTRYPOINT is cleared because the base image's entrypoint launches FrankenPHP
+# directly, and here Octane is the thing that launches it.
+#
+# `exec` is load-bearing and not a tidiness. Without it the shell stays on as
+# PID 1 with php as its child, and a shell does not forward signals: `docker
+# stop` would SIGTERM the shell, which ignores it, and the whole container would
+# be SIGKILLed when the grace period ran out — every deploy cutting off whatever
+# requests were in flight, and taking the full stop_grace_period to do it.
+# With `exec`, php replaces the shell as PID 1 and receives the SIGTERM itself;
+# `octane:frankenphp` implements SignalableCommandInterface and uses it to stop
+# taking requests and let the workers finish. Measured: 30s then exit 137
+# without it, under a second and exit 0 with it.
+ENTRYPOINT []
+CMD ["/bin/sh", "-c", "exec php artisan octane:frankenphp --host=0.0.0.0 --port=8000 --workers=${OCTANE_WORKERS:-8} --max-requests=${OCTANE_MAX_REQUESTS:-500} --caddyfile=/etc/caddy/Caddyfile --log-level=${OCTANE_LOG_LEVEL:-INFO}"]

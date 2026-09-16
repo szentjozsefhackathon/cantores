@@ -1,0 +1,123 @@
+# The throwaway stack smoke-prod-image.sh runs the production image against.
+#
+# It exists because the production image is the one thing the test suite cannot
+# check: Pest runs the application, not the container, so a broken ARG, an
+# entrypoint that does not forward signals, or a server that cannot bind its
+# port are all invisible until a deploy. Two such bugs shipped in the Octane
+# change and both were found here rather than on a Sunday.
+#
+# Nothing in this file is reachable from outside the machine and nothing in it
+# is persisted: the credentials below are fixtures, the database and Redis are
+# anonymous volumes that `down -v` removes, and the only published port is the
+# app's, on a high number that will not collide with the dev stack. It must
+# never be pointed at a real database.
+name: creshu-smoke
+
+services:
+  database:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: cantor
+      POSTGRES_PASSWORD: smoke
+      POSTGRES_DB: cantores
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cantor -d cantores"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    # Mirrors the production session store's durability settings, so that a
+    # change to them is exercised here before it reaches a church laptop.
+    command: ["redis-server", "--appendonly", "yes", "--save", "", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # The same command production's migrator runs, so that a migration, a seeder
+  # or an `optimize` that fails in the image fails here too.
+  migrator:
+    image: creshu-app-prod
+    user: "33:33"
+    environment: &app_env
+      APP_NAME: Cantores.hu
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${SMOKE_APP_KEY:?run this through smoke-prod-image.sh, which generates a key}
+      APP_URL: http://127.0.0.1:${SMOKE_PORT:-18001}
+      APP_LOCALE: hu
+      APP_FALLBACK_LOCALE: en
+      APP_MAINTENANCE_DRIVER: file
+      BCRYPT_ROUNDS: "4"
+      BROADCAST_CONNECTION: log
+      DB_CONNECTION: pgsql
+      DB_HOST: database
+      DB_PORT: "5432"
+      DB_DATABASE: cantores
+      DB_USERNAME: cantor
+      DB_PASSWORD: smoke
+      CACHE_STORE: redis
+      FILESYSTEM_DISK: local
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: debug
+      SESSION_DRIVER: redis
+      SESSION_CONNECTION: default
+      SESSION_LIFETIME: "120"
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "null"
+      QUEUE_CONNECTION: database
+      MAIL_MAILER: log
+      MAIL_FROM_ADDRESS: noreply@example.test
+      MAIL_FROM_NAME: Cantores
+      # Present so db:seed exercises SystemAdminSeeder, as it does in production.
+      ADMIN_EMAIL: admin@smoke.test
+      # Named so the worker-count assertion in the script has something to
+      # compare the running server's own configuration against.
+      OCTANE_SERVER: frankenphp
+      OCTANE_HTTPS: "false"
+      OCTANE_WORKERS: "4"
+      OCTANE_MAX_REQUESTS: "500"
+      OCTANE_LOG_LEVEL: INFO
+    volumes:
+      - storage:/var/www/html/storage
+      - cache:/var/www/html/bootstrap/cache
+    depends_on:
+      database: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    entrypoint: []
+    command: ["/bin/sh", "-c", "php artisan migrate -n --force && php artisan db:seed --force && php artisan icons:clear && php artisan icons:cache && php artisan view:clear && php artisan optimize"]
+    restart: "no"
+
+  app:
+    image: creshu-app-prod
+    # Both carried over from docker-compose.prod.yml, because both are part of
+    # what is being tested: the unprivileged user is why the server binds 8000
+    # rather than 80, and the grace period is only honoured if the entrypoint
+    # actually forwards SIGTERM.
+    user: "33:33"
+    stop_grace_period: 30s
+    environment: *app_env
+    ports:
+      - "${SMOKE_PORT:-18001}:8000"
+    volumes:
+      - storage:/var/www/html/storage
+      - cache:/var/www/html/bootstrap/cache
+    depends_on:
+      database: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      migrator: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8000/up"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+
+volumes:
+  storage:
+  cache:
