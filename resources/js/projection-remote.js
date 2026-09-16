@@ -394,13 +394,23 @@ onAlpineInit(() => {
             }
         },
 
-        /** The engraved deck filtered again — what a revealed verse costs. */
-        repaint(address) {
+        /**
+         * The engraved deck filtered again — what a revealed verse costs.
+         *
+         * `entries` defaults to the deck already in place, but a score just
+         * toggled out of today's deck has already overwritten `this.entries`
+         * by the time this runs — and with it, the row `address` is asking
+         * for landed on. Whoever removed a row from the order passes the
+         * order it still remembers, so "the next row after it" can be
+         * answered from where the row used to be rather than from a deck
+         * that no longer has it at all.
+         */
+        repaint(address, entries = this.entries) {
             const shown = shownExclusions(this.excluded, this.reveals);
 
             this.slides = this.drawn.filter((slide) => !isExcluded(slide, shown));
             this.total = this.slides.length;
-            this.index = indexOfAddress(this.slides, this.entries, address);
+            this.index = indexOfAddress(this.slides, entries, address);
             this.buildDeck();
             this.buildStrip();
             this.show();
@@ -1559,13 +1569,19 @@ onAlpineInit(() => {
         async applyPayload(payload) {
             const drawn = await renderDeck(payload.entries ?? [], payload.geometry ?? {});
 
+            // Captured before the deck underneath changes: a row just taken out
+            // of it is still in this order, so repaint can still say what used
+            // to come after it.
+            const previousEntries = this.entries;
+            const previousAddress = addressAt(this.slides, this.index);
+
             this.entries = payload.entries ?? [];
             this.geometry = payload.geometry ?? {};
             this.excluded = payload.excluded ?? {};
             this.outlineTree = payload.outline ?? [];
             this.drawn = drawn;
 
-            this.repaint(addressAt(this.slides, this.index));
+            this.repaint(previousAddress, previousEntries);
 
             this.ownRevision = payload.revision ?? this.ownRevision;
         },

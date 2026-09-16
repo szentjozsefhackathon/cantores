@@ -888,3 +888,44 @@ test('the phone takes back an opening the server refused', async () => {
 
     assert.equal(deck.index, 1, 'the next press was spent on an opening that was over');
 });
+
+/*
+ * ---------------------------------------------------------------
+ * A score taken out of today's deck from underneath the room.
+ * ---------------------------------------------------------------
+ */
+
+/*
+ * `applyPayload` overwrites `this.entries` with the deck's new order before it
+ * repaints, so by the time `indexOfAddress` goes looking for what used to come
+ * after the row that just disappeared, that row is not in `this.entries`
+ * either — and a lookup that cannot find it lands on the last slide of the
+ * whole deck rather than the row that was actually next. `repaint` is handed
+ * the order from before the removal for exactly this reason.
+ */
+test('taking the shown row out of the deck hands the service to the row after it', () => {
+    const component = registered.projectionRemote({});
+
+    const previousEntries = [{ id: 1 }, { id: 2 }, { id: 3 }];
+
+    component.excluded = {};
+    component.reveals = {};
+    component.$refs = {};
+    component.push = () => {};
+    component.buildDeck = () => {};
+    component.buildStrip = () => {};
+    component.show = () => {};
+
+    // The room is reading row 2's only slide when it is taken out of the deck.
+    const previousAddress = { entryId: 2, slideIndex: 0 };
+
+    component.entries = [{ id: 1 }, { id: 3 }];
+    component.drawn = [
+        { entryId: 1, index: 0, svg: null },
+        { entryId: 3, index: 0, svg: null },
+    ];
+
+    component.repaint(previousAddress, previousEntries);
+
+    assert.equal(component.slides[component.index].entryId, 3, 'the service landed on the last slide of the deck instead of the row after the one removed');
+});
