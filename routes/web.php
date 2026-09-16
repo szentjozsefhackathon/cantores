@@ -12,6 +12,7 @@ use App\Http\Controllers\PresentationPayloadController;
 use App\Http\Controllers\PresentationStateController;
 use App\Http\Controllers\ProjectionController;
 use App\Http\Controllers\ProjectionScorePageController;
+use App\Http\Controllers\ProjectionScoreToggleController;
 use App\Http\Controllers\PublicScoreDownloadController;
 use App\Http\Controllers\PublicScorePageController;
 use App\Http\Controllers\QrLoginClaimController;
@@ -504,6 +505,13 @@ Route::get('/projections/{projection}/score-page/{scoreFile}/{page}', Projection
     ->whereNumber('page')
     ->middleware(['auth', 'verified'])
     ->name('projections.score-page');
+
+// The remote's own way to add one of a music's other engravings to the deck, or
+// take one back out — the same write the editor's plan pane does, reached from
+// the phone driving the service instead.
+Route::post('/projections/{projection}/score-toggle', ProjectionScoreToggleController::class)
+    ->middleware(['auth', 'verified', 'throttle:projection-payload'])
+    ->name('projections.score-toggle');
 
 Route::livewire('/music/{music}', 'pages::editor.music-editor')
     ->middleware(['auth', 'verified'])

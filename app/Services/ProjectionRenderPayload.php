@@ -33,10 +33,15 @@ use Illuminate\Support\Collection;
  */
 class ProjectionRenderPayload extends PlanRenderPayload
 {
+    public function __construct(MusicPlanScoreListService $scores, private readonly PlanOutline $outline)
+    {
+        parent::__construct($scores);
+    }
+
     /**
      * The whole projection, ready to hand to the browser.
      *
-     * @return array{geometry: array<string, mixed>, entries: list<array<string, mixed>>, excluded: array<int, list<int>>}
+     * @return array{geometry: array<string, mixed>, entries: list<array<string, mixed>>, excluded: array<int, list<int>>, outline: list<array<string, mixed>>}
      */
     public function for(Projection $projection, ?User $viewer, ?Loan $loan = null): array
     {
@@ -47,7 +52,114 @@ class ProjectionRenderPayload extends PlanRenderPayload
             'geometry' => $projection->geometry(),
             'entries' => $this->entries($projection, $entries, $sources, $this->headingsFor($entries, $viewer)),
             'excluded' => $this->exclusions($projection, $entries),
+            'outline' => $this->outlineFor($projection, $entries, $viewer),
         ];
+    }
+
+    /**
+     * The deck read as the plan it came from: every slot the plan gives it and
+     * every music in each — not only the ones a score has been chosen from —
+     * with what the music could still be sung from riding alongside the ones
+     * that have been. This is what lets the remote show a slot nobody has
+     * touched yet, and a music sung from none of its engravings, exactly as
+     * plainly as one already on the screen.
+     *
+     * Read off the exact tree the editor's plan pane builds, and only slimmed
+     * for the wire: an entry becomes its id, since the full row already travels
+     * in `entries`, and a music's `offers` are flattened the way the editor's
+     * own row of "+" buttons already reads them. The choosing rule itself lives
+     * once, in PlanOutline, so the remote never offers or omits a score the
+     * editor would not.
+     *
+     * @param  Collection<int, ProjectionSlide>  $entries
+     * @return list<array<string, mixed>>
+     */
+    public function outlineFor(Projection $projection, Collection $entries, ?User $viewer): array
+    {
+        if ($projection->music_plan_id === null) {
+            return $entries
+                ->map(fn (ProjectionSlide $entry): array => ['kind' => 'entry', 'entryId' => $entry->id])
+                ->all();
+        }
+
+        $chosenScoreIds = $entries->whereNotNull('score_id')->pluck('score_id')->all();
+        $sources = $this->sourcesFor($entries, $viewer);
+        $chosenFileIds = $entries
+            ->whereNotNull('score_id')
+            ->map(function (ProjectionSlide $entry) use ($sources): ?int {
+                $source = $sources->get($entry->score_id);
+
+                return $source === null ? null : $this->fileOf($entry, $source)['file_id'];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return $this->slimOutline($this->outline->for($projection, $entries, $chosenScoreIds, $chosenFileIds));
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $nodes
+     * @return list<array<string, mixed>>
+     */
+    private function slimOutline(array $nodes): array
+    {
+        return array_values(array_map(function (array $node): array {
+            if ($node['kind'] === 'entry') {
+                return ['kind' => 'entry', 'entryId' => $node['entry']->id];
+            }
+
+            if ($node['kind'] === 'music') {
+                return [
+                    'kind' => 'music',
+                    'assignmentId' => $node['id'],
+                    'title' => $node['title'],
+                    'offers' => collect($node['offers'])
+                        ->flatMap(fn (array $offer): array => $this->offerLines($offer))
+                        ->values()
+                        ->all(),
+                    'children' => $this->slimOutline($node['children']),
+                ];
+            }
+
+            return [
+                'kind' => 'slot',
+                'name' => $node['name'],
+                'children' => $this->slimOutline($node['children']),
+            ];
+        }, $nodes));
+    }
+
+    /**
+     * One offered score, as one line — or, where it holds several files, one
+     * line per file not yet chosen.
+     *
+     * @param  array{score: array<string, mixed>, files: list<array<string, mixed>>}  $offer
+     * @return list<array<string, mixed>>
+     */
+    private function offerLines(array $offer): array
+    {
+        $score = $offer['score'];
+
+        if ($offer['files'] === []) {
+            return [[
+                'scoreId' => $score['id'],
+                'fileId' => null,
+                'title' => $score['title'],
+                'incipitUrl' => $score['incipit_url'] ?? null,
+                'inBooklets' => $score['in_booklets'],
+            ]];
+        }
+
+        return collect($offer['files'])
+            ->map(fn (array $file): array => [
+                'scoreId' => $score['id'],
+                'fileId' => $file['id'],
+                'title' => $file['name'],
+                'incipitUrl' => $score['incipit_url'] ?? null,
+                'inBooklets' => $score['in_booklets'],
+            ])
+            ->all();
     }
 
     /**
@@ -105,6 +217,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
                         'id' => $entry->id,
                         'kind' => 'text',
                         'text' => $entry->text ?? '',
+                        'assignmentId' => $entry->music_plan_slot_assignment_id,
                         'slot' => $heading['slot'],
                         'music' => $heading['music'],
                         'reference' => $heading['reference'],
@@ -125,6 +238,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
                 $common = [
                     'id' => $entry->id,
                     'scoreId' => $entry->score_id,
+                    'assignmentId' => $entry->music_plan_slot_assignment_id,
                     'slot' => $heading['slot'],
                     'music' => $heading['music'],
                     'reference' => $heading['reference'],

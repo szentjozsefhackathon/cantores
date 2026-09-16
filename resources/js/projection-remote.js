@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
-import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, movedFit, poller, sameFit, screenClient, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
+import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, poller, sameFit, screenClient, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
 
 /**
  * The deck in the cantor's hand.
@@ -111,6 +111,14 @@ onAlpineInit(() => {
         entries: config.entries ?? [],
         excluded: config.excluded ?? {},
 
+        /**
+         * The deck read as the plan it came from: every slot the plan gives it
+         * and every music in each, whether or not anything has been chosen from
+         * it yet — so a slot nobody has touched shows up here exactly as plainly
+         * as one already on the screen.
+         */
+        outlineTree: config.outline ?? [],
+
         /** Where today disagrees with the deck, keyed by row. */
         reveals: {},
 
@@ -156,6 +164,12 @@ onAlpineInit(() => {
         skipText: config.skipText ?? '',
         unskipText: config.unskipText ?? '',
         skippedText: config.skippedText ?? '',
+
+        /** Where a score is added to, or removed from, this deck. */
+        scoreToggleUrl: config.scoreToggleUrl ?? null,
+        addScoreText: config.addScoreText ?? '',
+        removeScoreText: config.removeScoreText ?? '',
+        csrfToken: config.csrfToken ?? '',
 
         /**
          * What is asked before the screen is cleared.
@@ -315,6 +329,7 @@ onAlpineInit(() => {
 
         init() {
             this._screen = screenClient(config);
+            this._scoreHttp = jsonRequests(this.csrfToken);
 
             // The page is a fixed three-band panel, and a body that still
             // scrolls behind it is a body that bounces under the thumb.
@@ -697,6 +712,9 @@ onAlpineInit(() => {
 
                 return {
                     id: entry.id,
+                    scoreId: entry.scoreId ?? null,
+                    fileId: entry.fileId ?? null,
+                    assignmentId: entry.assignmentId ?? null,
                     heading: this.headingOf(entry),
                     slot: (entry.slotName ?? entry.slot ?? '').trim(),
                     // What the row is filed under rather than what it prints:
@@ -728,42 +746,64 @@ onAlpineInit(() => {
         },
 
         /**
-         * The deck read as the service it was made from: slots, the music under
-         * each, and what the deck took from that music.
+         * The deck read as the plan it came from: every slot the plan gives it,
+         * every music in each, and what the deck took from that music — plus
+         * what it could still take, and a slot or a music the deck has taken
+         * nothing from yet shows up here exactly as plainly as one already on
+         * the screen.
          *
-         * The laptop's left pane, and the editor's plan pane with everything
-         * that edits it taken away — because the question it answers during a
-         * service is not "what is on slide 41" but "is the Communion hymn in,
-         * and which verses of it". Grouped by the row's own filing rather than
-         * by what it prints: a deck whose author switched every heading off is
-         * silent on the screen and must still be legible here.
-         *
-         * Consecutive rather than gathered: the deck's order *is* the service's
-         * order, so a slot that comes round twice is two bands, which is what
-         * the person reading it is looking at.
+         * Built from the plan's own tree rather than gathered from the rows
+         * chosen so far, which is the one thing a grouping-by-row could never
+         * show: a slot nobody has touched yet has no row to group by, and used
+         * to be invisible here for exactly that reason. `rows` still supplies
+         * every fact a row prints; this only says which slot and which music
+         * each one belongs under, and what stands empty beside it.
          */
         get outline() {
-            const groups = [];
+            const rowsById = new Map(this.rows.map((row) => [row.id, row]));
+            let bandIndex = 0;
 
-            for (const row of this.rows) {
-                let slot = groups[groups.length - 1];
+            const rowBlock = (entryId, key) => {
+                const row = rowsById.get(entryId);
 
-                if (slot === undefined || slot.name !== row.slot) {
-                    slot = { key: `slot-${groups.length}`, name: row.slot, musics: [] };
-                    groups.push(slot);
+                return row === undefined ? null : { kind: 'row', key, row };
+            };
+
+            const musicBlock = (node, key) => ({
+                kind: 'music',
+                key,
+                name: node.title,
+                assignmentId: node.assignmentId,
+                // The music's other engravings, not yet in today's deck — read
+                // off the same id a click here writes back through.
+                offers: node.offers ?? [],
+                rows: node.children
+                    .map((child) => rowsById.get(child.entryId))
+                    .filter((row) => row !== undefined),
+            });
+
+            const bandOf = (node) => {
+                const key = `slot-${bandIndex}`;
+                bandIndex += 1;
+
+                if (node.kind === 'entry') {
+                    const block = rowBlock(node.entryId, `${key}-row`);
+
+                    return { key, name: null, blocks: block === null ? [] : [block] };
                 }
 
-                let music = slot.musics[slot.musics.length - 1];
+                return {
+                    key,
+                    name: node.name,
+                    blocks: node.children
+                        .map((child, index) => (child.kind === 'entry'
+                            ? rowBlock(child.entryId, `${key}-row-${index}`)
+                            : musicBlock(child, `${key}-music-${index}`)))
+                        .filter((block) => block !== null),
+                };
+            };
 
-                if (music === undefined || music.name !== row.music) {
-                    music = { key: `${slot.key}-music-${slot.musics.length}`, name: row.music, rows: [] };
-                    slot.musics.push(music);
-                }
-
-                music.rows.push(row);
-            }
-
-            return groups;
+            return this.outlineTree.map((node) => bandOf(node));
         },
 
         /**
@@ -1469,6 +1509,26 @@ onAlpineInit(() => {
         },
 
         /**
+         * Add one of a music's other engravings to today's deck, or take one
+         * already in it back out — the same write the editor's plan pane does,
+         * reached from here instead.
+         *
+         * A failure is not an event, exactly as everywhere else this phone talks
+         * to the server: the tap simply did nothing, and the deck stays what it
+         * was. On success the answer already carries the deck made fresh, so the
+         * redraw costs nothing beyond what a revision change already costs.
+         */
+        async toggleScore(scoreId, assignmentId = null, fileId = null) {
+            if (!this.scoreToggleUrl || scoreId === null || scoreId === undefined) { return; }
+
+            const payload = await this._scoreHttp.post(this.scoreToggleUrl, { scoreId, assignmentId, fileId });
+
+            if (!payload) { return; }
+
+            await this.applyPayload(payload);
+        },
+
+        /**
          * Read the deck again and engrave it again, without the list under the
          * cantor's thumb jumping about: the new deck is drawn in the background
          * and swapped in finished, and the slide being shown survives the swap.
@@ -1483,21 +1543,31 @@ onAlpineInit(() => {
 
                 if (!payload) { return; }
 
-                const drawn = await renderDeck(payload.entries ?? [], payload.geometry ?? {});
-
-                this.entries = payload.entries ?? [];
-                this.geometry = payload.geometry ?? {};
-                this.excluded = payload.excluded ?? {};
-                this.drawn = drawn;
-
-                this.repaint(addressAt(this.slides, this.index));
-
-                this.ownRevision = payload.revision ?? this.ownRevision;
+                await this.applyPayload(payload);
             } catch (e) {
                 console.error('[remote] could not re-draw the deck', e);
             } finally {
                 this._refreshing = false;
             }
+        },
+
+        /**
+         * Draw a deck just read from the server, and remember it as the one this
+         * phone has drawn — the one thing both a revision catching up and a
+         * score just toggled have in common.
+         */
+        async applyPayload(payload) {
+            const drawn = await renderDeck(payload.entries ?? [], payload.geometry ?? {});
+
+            this.entries = payload.entries ?? [];
+            this.geometry = payload.geometry ?? {};
+            this.excluded = payload.excluded ?? {};
+            this.outlineTree = payload.outline ?? [];
+            this.drawn = drawn;
+
+            this.repaint(addressAt(this.slides, this.index));
+
+            this.ownRevision = payload.revision ?? this.ownRevision;
         },
 
         _refreshing: false,

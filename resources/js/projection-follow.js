@@ -143,7 +143,7 @@ export function poller(tick, options = {}) {
  *
  * @param {string} csrfToken
  */
-function jsonRequests(csrfToken) {
+export function jsonRequests(csrfToken) {
     /*
      * `X-Requested-With` is not decoration. Laravel records the current URL as
      * the session's previous one on every plain GET, and `fetch` is a plain GET

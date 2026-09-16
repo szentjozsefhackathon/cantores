@@ -57,6 +57,9 @@ class ProjectionRemote extends Component
     /** @var array<int, list<int>> */
     public array $excluded = [];
 
+    /** @var list<array<string, mixed>> */
+    public array $outline = [];
+
     public string $revision = '';
 
     public function mount(Screen $screen): void
@@ -91,6 +94,7 @@ class ProjectionRemote extends Component
         $this->geometry = $payload['geometry'];
         $this->entries = $payload['entries'];
         $this->excluded = $payload['excluded'];
+        $this->outline = $payload['outline'];
     }
 
     public function rendering(IlluminateView $view): void

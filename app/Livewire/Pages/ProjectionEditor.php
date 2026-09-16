@@ -10,9 +10,9 @@ use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Models\Projection;
 use App\Models\ProjectionSlide;
-use App\Services\MusicPlanScoreListService;
 use App\Services\PlanOutline;
 use App\Services\ProjectionRenderPayload;
+use App\Services\ProjectionScoreToggle;
 use App\Support\ProjectionSettingFields;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -407,56 +407,9 @@ class ProjectionEditor extends Component
     {
         $this->authorize('update', $this->projection);
 
-        $source = app(MusicPlanScoreListService::class)->sourcesFor([$scoreId], Auth::user())->get($scoreId);
+        app(ProjectionScoreToggle::class)->toggle($this->projection, Auth::user(), $scoreId, $assignmentId, $fileId);
 
-        if ($source === null) {
-            // Unreadable now — a recalled loan, an unpublished score. It cannot
-            // be added, but one already standing in the deck must still be
-            // removable.
-            $stale = $this->projection->entries()->where('score_id', $scoreId)->first();
-
-            if ($stale instanceof ProjectionSlide) {
-                $this->removeEntry($stale->id);
-            }
-
-            return;
-        }
-
-        if ($fileId !== null && ! isset($source['files'][$fileId])) {
-            return;
-        }
-
-        $existing = $this->projection->entries()
-            ->where('score_id', $scoreId)
-            ->get()
-            ->first(fn (ProjectionSlide $entry): bool => app(ProjectionRenderPayload::class)->fileOf($entry, $source)['file_id'] === ($fileId ?? $source['file_id']));
-
-        if ($existing instanceof ProjectionSlide) {
-            $this->removeEntry($existing->id);
-
-            return;
-        }
-
-        $assignment = $this->assignmentInPlan($assignmentId);
-
-        $order = $this->outlineIds();
-        $at = app(PlanOutline::class)->appendIndex(
-            $this->outline,
-            $assignment?->music_plan_slot_plan_id,
-            $assignment?->id,
-        );
-
-        $entry = $this->projection->entries()->create([
-            'score_id' => $scoreId,
-            'score_file_id' => $fileId,
-            'music_plan_slot_assignment_id' => $assignment?->id,
-            'music_plan_slot_plan_id' => $assignment?->music_plan_slot_plan_id,
-            'sequence' => (int) $this->projection->entries()->max('sequence') + 1,
-        ]);
-
-        array_splice($order, $at, 0, [$entry->id]);
-
-        $this->applyOrder($order);
+        $this->forgetEntries();
     }
 
     /**

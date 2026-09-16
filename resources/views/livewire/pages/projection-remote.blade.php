@@ -43,6 +43,7 @@ resources/js/projection-remote.js
         'geometry' => $geometry,
         'entries' => $entries,
         'excluded' => $excluded,
+        'outline' => $outline,
         'revision' => $revision,
         'title' => $title,
         // The screen's URL is the constant; the presentation's two are not,
@@ -67,9 +68,15 @@ resources/js/projection-remote.js
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
         'editUrl' => $projection === null ? null : route('projections.edit', ['projection' => $projection->id]),
+        // Add or remove one of a music's engravings from here, exactly as the
+        // editor's plan pane does — the deck stays the owner's own, so this is
+        // offered wherever the edit link already is.
+        'scoreToggleUrl' => $projection === null ? null : route('projections.score-toggle', ['projection' => $projection->id]),
         'skipText' => __('Leave this slide out of today\'s service'),
         'unskipText' => __('Show this slide in today\'s service'),
         'skippedText' => __('Left out'),
+        'addScoreText' => __('Add this to today\'s deck'),
+        'removeScoreText' => __('Take this out of today\'s deck'),
         // Asked before the screen is cleared. Here rather than on the button
         // itself, because Blade leaves a directive inside a component's
         // attribute uncompiled and Alpine is then handed an expression it
@@ -137,64 +144,157 @@ resources/js/projection-remote.js
         </div>
 
         <div data-scrolls class="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-2 py-2">
-            <template x-for="slot in outline" x-bind:key="slot.key">
+            <template x-for="band in outline" x-bind:key="band.key">
                 <div class="space-y-1">
                     {{-- The slot's name across the width, as in the editor: what
                          belongs to which part of the service is then told apart
-                         without reading. --}}
+                         without reading. Shown even where the deck has taken
+                         nothing from it yet — the plan gives every slot a place,
+                         and this is where a slot still waiting to be filled says
+                         so. --}}
                     <div
                         class="truncate rounded bg-zinc-200 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-                        x-show="slot.name"
-                        x-text="slot.name"
+                        x-show="band.name"
+                        x-text="band.name"
                     ></div>
 
-                    <template x-for="music in slot.musics" x-bind:key="music.key">
+                    <template x-if="band.blocks.length === 0">
+                        <div class="ms-1 text-[11px] italic text-zinc-400">{{ __('Nothing chosen yet') }}</div>
+                    </template>
+
+                    <template x-for="block in band.blocks" x-bind:key="block.key">
                         <div class="ms-1 space-y-0.5">
-                            <div class="flex items-center gap-1 text-xs font-medium" x-show="music.name">
-                                <flux:icon name="music" variant="micro" class="shrink-0 text-indigo-400" />
-                                <span class="min-w-0 truncate" x-text="music.name"></span>
-                            </div>
+                            <template x-if="block.kind === 'music'">
+                                <div class="space-y-0.5">
+                                    <div class="flex items-center gap-1 text-xs font-medium" x-show="block.name">
+                                        <flux:icon name="music" variant="micro" class="shrink-0 text-indigo-400" />
+                                        <span class="min-w-0 truncate" x-text="block.name"></span>
+                                    </div>
 
-                            {{-- One engraving of that music, named as the editor
-                                 names it — the score, the file chosen out of it,
-                                 the variation, and the opening notes beneath —
-                                 because a slot sung from three engravings of one
-                                 music is three rows that share every word of
-                                 their title. And how much of it today is being
-                                 shown: 3/5 is the whole answer to "which verses",
-                                 and it is the number that changes when a verse is
-                                 taken out in the column opposite. --}}
-                            <template x-for="row in music.rows" x-bind:key="row.id">
-                                <button
-                                    type="button"
-                                    class="block w-full rounded px-2 py-1 text-start text-xs"
-                                    x-on:click="goToEntry(row.id)"
-                                    x-bind:class="row.current
-                                        ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
-                                        : (row.shownCount === 0
-                                            ? 'text-zinc-400 line-through dark:text-zinc-600'
-                                            : 'hover:bg-zinc-200 dark:hover:bg-zinc-800')"
-                                >
-                                    <span class="flex items-center gap-1.5">
-                                        <span class="min-w-0 flex-1 truncate" x-bind:class="row.isText ? 'italic' : ''" x-text="rowName(row)"></span>
-                                        <span class="shrink-0 text-[10px] tabular-nums opacity-70" x-text="`${row.shownCount}/${row.slideCount}`"></span>
-                                    </span>
+                                    {{-- One engraving of that music, named as the
+                                         editor names it — the score, the file
+                                         chosen out of it, the variation, and the
+                                         opening notes beneath — because a slot
+                                         sung from three engravings of one music
+                                         is three rows that share every word of
+                                         their title. And how much of it today is
+                                         being shown: 3/5 is the whole answer to
+                                         "which verses", and it is the number that
+                                         changes when a verse is taken out in the
+                                         column opposite. --}}
+                                    <template x-for="row in block.rows" x-bind:key="row.id">
+                                        <div class="flex items-start gap-1">
+                                            <button
+                                                type="button"
+                                                class="block min-w-0 flex-1 rounded px-2 py-1 text-start text-xs"
+                                                x-on:click="goToEntry(row.id)"
+                                                x-bind:class="row.current
+                                                    ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                                                    : (row.shownCount === 0
+                                                        ? 'text-zinc-400 line-through dark:text-zinc-600'
+                                                        : 'hover:bg-zinc-200 dark:hover:bg-zinc-800')"
+                                            >
+                                                <span class="flex items-center gap-1.5">
+                                                    <span class="min-w-0 flex-1 truncate" x-bind:class="row.isText ? 'italic' : ''" x-text="rowName(row)"></span>
+                                                    <span class="shrink-0 text-[10px] tabular-nums opacity-70" x-text="`${row.shownCount}/${row.slideCount}`"></span>
+                                                </span>
 
-                                    <span class="block truncate text-[10px] opacity-60" x-show="row.variationName" x-text="row.variationName"></span>
+                                                <span class="block truncate text-[10px] opacity-60" x-show="row.variationName" x-text="row.variationName"></span>
 
-                                    {{-- The opening notes. Plain rather than the
-                                         editor's zoomable strip: this is read at a
-                                         glance during a service, and a dialog over
-                                         the remote is the last thing anybody wants
-                                         open while pressing Next. --}}
-                                    <img
-                                        class="mt-0.5 max-h-12 max-w-full rounded bg-white object-contain"
-                                        x-show="row.incipit"
-                                        x-bind:src="row.incipit"
-                                        alt=""
-                                        loading="lazy"
-                                    />
-                                </button>
+                                                {{-- The opening notes. Plain rather than the
+                                                     editor's zoomable strip: this is read at a
+                                                     glance during a service, and a dialog over
+                                                     the remote is the last thing anybody wants
+                                                     open while pressing Next. --}}
+                                                <img
+                                                    class="mt-0.5 max-h-12 max-w-full rounded bg-white object-contain"
+                                                    x-show="row.incipit"
+                                                    x-bind:src="row.incipit"
+                                                    alt=""
+                                                    loading="lazy"
+                                                />
+                                            </button>
+
+                                            {{-- Taking a whole engraving back out of today's
+                                                 deck — a text row has no score behind it and
+                                                 so nothing here to take out. --}}
+                                            <button
+                                                type="button"
+                                                class="shrink-0 rounded p-1 text-zinc-400 hover:text-red-500"
+                                                x-show="row.scoreId"
+                                                x-on:click="toggleScore(row.scoreId, row.assignmentId, row.fileId)"
+                                                x-bind:aria-label="removeScoreText"
+                                                :title="removeScoreText"
+                                            >
+                                                <flux:icon.minus-circle class="size-3.5" />
+                                            </button>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="block.rows.length === 0">
+                                        <div class="text-[10px] italic text-zinc-400">{{ __('Not sung from yet') }}</div>
+                                    </template>
+
+                                    {{-- What the music could still be sung from: every
+                                         other engraving the plan offers, one click from
+                                         standing beside the rows above it. --}}
+                                    <template x-for="offer in block.offers" x-bind:key="`offer-${offer.scoreId}-${offer.fileId ?? 0}`">
+                                        <button
+                                            type="button"
+                                            class="flex w-full items-center gap-1.5 rounded border border-dashed border-zinc-300 px-2 py-1 text-start text-[11px] text-zinc-400 disabled:opacity-40 dark:border-zinc-600"
+                                            x-on:click="toggleScore(offer.scoreId, block.assignmentId, offer.fileId)"
+                                            x-bind:disabled="offer.inBooklets === false"
+                                            x-bind:aria-label="addScoreText"
+                                            :title="addScoreText"
+                                        >
+                                            <flux:icon.plus class="size-3 shrink-0" />
+                                            <span class="min-w-0 flex-1 truncate" x-text="offer.title"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
+
+                            {{-- A row belonging to no music at all — a screen of
+                                 words, or a score chosen outside the plan. --}}
+                            <template x-if="block.kind === 'row'">
+                                <div class="flex items-start gap-1">
+                                    <button
+                                        type="button"
+                                        class="block min-w-0 flex-1 rounded px-2 py-1 text-start text-xs"
+                                        x-on:click="goToEntry(block.row.id)"
+                                        x-bind:class="block.row.current
+                                            ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                                            : (block.row.shownCount === 0
+                                                ? 'text-zinc-400 line-through dark:text-zinc-600'
+                                                : 'hover:bg-zinc-200 dark:hover:bg-zinc-800')"
+                                    >
+                                        <span class="flex items-center gap-1.5">
+                                            <span class="min-w-0 flex-1 truncate" x-bind:class="block.row.isText ? 'italic' : ''" x-text="rowName(block.row)"></span>
+                                            <span class="shrink-0 text-[10px] tabular-nums opacity-70" x-text="`${block.row.shownCount}/${block.row.slideCount}`"></span>
+                                        </span>
+
+                                        <span class="block truncate text-[10px] opacity-60" x-show="block.row.variationName" x-text="block.row.variationName"></span>
+
+                                        <img
+                                            class="mt-0.5 max-h-12 max-w-full rounded bg-white object-contain"
+                                            x-show="block.row.incipit"
+                                            x-bind:src="block.row.incipit"
+                                            alt=""
+                                            loading="lazy"
+                                        />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="shrink-0 rounded p-1 text-zinc-400 hover:text-red-500"
+                                        x-show="block.row.scoreId"
+                                        x-on:click="toggleScore(block.row.scoreId, block.row.assignmentId, block.row.fileId)"
+                                        x-bind:aria-label="removeScoreText"
+                                        :title="removeScoreText"
+                                    >
+                                        <flux:icon.minus-circle class="size-3.5" />
+                                    </button>
+                                </div>
                             </template>
                         </div>
                     </template>
@@ -564,88 +664,153 @@ resources/js/projection-remote.js
                 </button>
             </div>
 
-            <div class="min-h-0 flex-1 touch-pan-y space-y-1.5 overflow-y-auto px-3 py-3">
-                {{-- Each row named the way the cantor asked for it: the music,
-                     the score, the slot it stands in — never "slide 7", which
-                     is the one thing about a row that nobody is looking for. --}}
-                <template x-for="row in rows" x-bind:key="row.id">
-                    <div
-                        class="rounded-lg border px-3 py-2"
-                        x-bind:class="row.current
-                            ? 'border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-800'
-                            : 'border-zinc-200 dark:border-zinc-700'"
-                    >
-                        <button type="button" class="block w-full text-start" x-on:click="goToEntry(row.id); closeList()">
-                            <div class="truncate text-xs uppercase tracking-wide text-zinc-400" x-show="row.slot" x-text="row.slot"></div>
+            <div class="min-h-0 flex-1 touch-pan-y space-y-2 overflow-y-auto px-3 py-3">
+                {{-- Every slot the plan gives this service, whether or not the
+                     deck has taken anything from it yet — a slot nobody has
+                     touched still has a place here, said plainly rather than
+                     left for the cantor to wonder whether it was forgotten. --}}
+                <template x-for="band in outline" x-bind:key="band.key">
+                    <div class="space-y-1.5">
+                        <div class="truncate text-xs font-semibold uppercase tracking-wide text-zinc-400" x-show="band.name" x-text="band.name"></div>
 
-                            {{-- The music, then the engraving of it this row is:
-                                 the same two lines the editor's plan shows, so
-                                 that a row found here and a row found there are
-                                 recognisably the same row. --}}
-                            <div class="truncate text-sm font-medium" x-show="row.music" x-text="row.music"></div>
-                            <div
-                                class="truncate text-sm text-zinc-600 dark:text-zinc-300"
-                                x-bind:class="row.isText ? 'italic' : ''"
-                                {{-- A score that names itself after its music says it once. --}}
-                                x-show="rowName(row) && rowName(row) !== row.music"
-                                x-text="rowName(row)"
-                            ></div>
-                            <div class="truncate text-xs text-zinc-500" x-show="row.variationName" x-text="row.variationName"></div>
-                            <div class="truncate text-xs text-zinc-500" x-show="row.reference" x-text="row.reference"></div>
+                        <template x-if="band.blocks.length === 0">
+                            <div class="rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-sm italic text-zinc-400 dark:border-zinc-600">
+                                {{ __('Nothing chosen yet') }}
+                            </div>
+                        </template>
 
-                            <img
-                                class="mt-1 max-h-20 max-w-full rounded bg-white object-contain"
-                                x-show="row.incipit"
-                                x-bind:src="row.incipit"
-                                alt=""
-                                loading="lazy"
-                            />
-                        </button>
+                        <template x-for="block in band.blocks" x-bind:key="block.key">
+                            <div class="space-y-1.5">
+                                <div class="truncate text-sm font-medium text-zinc-500" x-show="block.kind === 'music' && block.name" x-text="block.name"></div>
 
-                        <div class="mt-1.5 flex flex-wrap gap-1">
-                            <template x-for="slide in row.slides" x-bind:key="slide.index">
-                                <div class="flex items-center">
-                                    {{-- A slide today's service shows: a number to jump to. --}}
+                                {{-- Each row named the way the cantor asked for it: the
+                                     score, the slot it stands in — never "slide 7", which
+                                     is the one thing about a row that nobody is looking
+                                     for. A lone row (a screen of words, a score chosen
+                                     outside the plan) is the same card without a music
+                                     heading above it. --}}
+                                <template x-for="row in (block.kind === 'music' ? block.rows : [block.row])" x-bind:key="row.id">
+                                    <div
+                                        class="rounded-lg border px-3 py-2"
+                                        x-bind:class="row.current
+                                            ? 'border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-800'
+                                            : 'border-zinc-200 dark:border-zinc-700'"
+                                    >
+                                        <div class="flex items-start gap-1">
+                                            <button type="button" class="block min-w-0 flex-1 text-start" x-on:click="goToEntry(row.id); closeList()">
+                                                <div class="truncate text-xs uppercase tracking-wide text-zinc-400" x-show="block.kind === 'row' && row.slot" x-text="row.slot"></div>
+
+                                                <div
+                                                    class="truncate text-sm text-zinc-600 dark:text-zinc-300"
+                                                    x-bind:class="row.isText ? 'italic' : ''"
+                                                    {{-- A score that names itself after its music says it once. --}}
+                                                    x-show="rowName(row) && rowName(row) !== block.name"
+                                                    x-text="rowName(row)"
+                                                ></div>
+                                                <div class="truncate text-xs text-zinc-500" x-show="row.variationName" x-text="row.variationName"></div>
+                                                <div class="truncate text-xs text-zinc-500" x-show="row.reference" x-text="row.reference"></div>
+
+                                                <img
+                                                    class="mt-1 max-h-20 max-w-full rounded bg-white object-contain"
+                                                    x-show="row.incipit"
+                                                    x-bind:src="row.incipit"
+                                                    alt=""
+                                                    loading="lazy"
+                                                />
+                                            </button>
+
+                                            {{-- Taking a whole engraving out of today's deck — a
+                                                 text row has no score behind it and nothing here
+                                                 to take out. --}}
+                                            <button
+                                                type="button"
+                                                class="shrink-0 rounded p-1 text-zinc-400"
+                                                x-show="row.scoreId"
+                                                x-on:click="toggleScore(row.scoreId, row.assignmentId, row.fileId)"
+                                                x-bind:aria-label="removeScoreText"
+                                            >
+                                                <flux:icon.minus-circle class="size-5" />
+                                            </button>
+                                        </div>
+
+                                        <div class="mt-1.5 flex flex-wrap gap-1">
+                                            <template x-for="slide in row.slides" x-bind:key="slide.index">
+                                                <div class="flex items-center">
+                                                    {{-- A slide today's service shows: a number to jump to. --}}
+                                                    <button
+                                                        type="button"
+                                                        class="min-w-8 rounded px-2 py-1 text-xs font-medium transition-colors"
+                                                        x-show="slide.shown"
+                                                        x-on:click="goToSlide(row.id, slide.index); closeList()"
+                                                        x-bind:class="slide.current
+                                                            ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                                                            : (slide.deviates
+                                                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+                                                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300')"
+                                                        x-text="slide.index + 1"
+                                                    ></button>
+
+                                                    {{-- One today leaves out — the deck's own
+                                                         arrangement, or a verse taken out from the
+                                                         pane beside this. Bringing it back is today's
+                                                         deviation and not an edit: the projection
+                                                         stays as its author arranged it, and the
+                                                         slide was engraved at load like every other,
+                                                         so this costs nothing. --}}
+                                                    <button
+                                                        type="button"
+                                                        class="min-w-8 rounded border border-dashed border-zinc-300 px-2 py-1 text-xs text-zinc-400 dark:border-zinc-600"
+                                                        x-show="!slide.shown"
+                                                        x-on:click="toggleReveal(row.id, slide.index)"
+                                                        x-bind:aria-label="'{{ __('Bring this verse back for today') }}'"
+                                                        x-text="slide.index + 1"
+                                                    ></button>
+
+                                                    {{-- And putting it away again. --}}
+                                                    <button
+                                                        type="button"
+                                                        class="px-1 text-xs text-amber-600 dark:text-amber-300"
+                                                        x-show="slide.shown && slide.deviates"
+                                                        x-on:click="toggleReveal(row.id, slide.index)"
+                                                        x-bind:aria-label="'{{ __('Leave this verse out again') }}'"
+                                                    >&times;</button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <template x-if="block.kind === 'music' && block.rows.length === 0">
+                                    <div class="rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-sm italic text-zinc-400 dark:border-zinc-600">
+                                        {{ __('Not sung from yet') }}
+                                    </div>
+                                </template>
+
+                                {{-- What the music could still be sung from: every
+                                     other engraving the plan offers, one tap from
+                                     standing beside the rows above it. --}}
+                                <template x-for="offer in (block.kind === 'music' ? block.offers : [])" x-bind:key="`offer-${offer.scoreId}-${offer.fileId ?? 0}`">
                                     <button
                                         type="button"
-                                        class="min-w-8 rounded px-2 py-1 text-xs font-medium transition-colors"
-                                        x-show="slide.shown"
-                                        x-on:click="goToSlide(row.id, slide.index); closeList()"
-                                        x-bind:class="slide.current
-                                            ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
-                                            : (slide.deviates
-                                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
-                                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300')"
-                                        x-text="slide.index + 1"
-                                    ></button>
-
-                                    {{-- One today leaves out — the deck's own
-                                         arrangement, or a verse taken out from the
-                                         pane beside this. Bringing it back is today's
-                                         deviation and not an edit: the projection
-                                         stays as its author arranged it, and the
-                                         slide was engraved at load like every other,
-                                         so this costs nothing. --}}
-                                    <button
-                                        type="button"
-                                        class="min-w-8 rounded border border-dashed border-zinc-300 px-2 py-1 text-xs text-zinc-400 dark:border-zinc-600"
-                                        x-show="!slide.shown"
-                                        x-on:click="toggleReveal(row.id, slide.index)"
-                                        x-bind:aria-label="'{{ __('Bring this verse back for today') }}'"
-                                        x-text="slide.index + 1"
-                                    ></button>
-
-                                    {{-- And putting it away again. --}}
-                                    <button
-                                        type="button"
-                                        class="px-1 text-xs text-amber-600 dark:text-amber-300"
-                                        x-show="slide.shown && slide.deviates"
-                                        x-on:click="toggleReveal(row.id, slide.index)"
-                                        x-bind:aria-label="'{{ __('Leave this verse out again') }}'"
-                                    >&times;</button>
-                                </div>
-                            </template>
-                        </div>
+                                        class="block w-full rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-start disabled:opacity-40 dark:border-zinc-600"
+                                        x-on:click="toggleScore(offer.scoreId, block.assignmentId, offer.fileId)"
+                                        x-bind:disabled="offer.inBooklets === false"
+                                    >
+                                        <span class="flex items-center gap-1.5 text-sm text-zinc-500">
+                                            <flux:icon.plus class="size-3.5 shrink-0" />
+                                            <span class="min-w-0 flex-1 truncate" x-text="offer.title"></span>
+                                        </span>
+                                        <img
+                                            class="mt-1 max-h-20 max-w-full rounded bg-white object-contain opacity-75"
+                                            x-show="offer.incipit"
+                                            x-bind:src="offer.incipit"
+                                            alt=""
+                                            loading="lazy"
+                                        />
+                                    </button>
+                                </template>
+                            </div>
+                        </template>
                     </div>
                 </template>
             </div>

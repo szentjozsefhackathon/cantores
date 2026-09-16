@@ -437,7 +437,7 @@ it('gives the laptop the plan, the service and the deck side by side', function 
     actingAs($user);
 
     Livewire::test(ProjectionRemote::class, ['screen' => $screen])
-        ->assertSeeHtml('x-for="slot in outline"')
+        ->assertSeeHtml('x-for="band in outline"')
         ->assertSeeHtml('x-ref="nextBox"')
         ->assertSeeHtml('x-ref="deck"');
 });
