@@ -7,7 +7,7 @@ changes.
 ## Browser caching
 
 A vendored file keeps one URL for its whole life, unlike Vite's content-hashed
-output, and Apache serves `public/js` with no `Cache-Control` at all — so a
+output, and the server hands out `public/js` with no `Cache-Control` at all — so a
 browser falls back to heuristic freshness and may reuse its copy for hours
 without ever revalidating. A patch that adds a *format directive* fails
 invisibly in that browser: abc2svg ignores a `%%` directive it does not know

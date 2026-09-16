@@ -7,8 +7,8 @@ namespace App\Support;
  *
  * Vite's own output is content-hashed, so a rebuilt bundle always arrives at a
  * new URL. The vendored scripts in `public/js` are not: they keep one stable
- * URL for their whole life, and Apache serves them with no `Cache-Control` at
- * all. A browser therefore falls back to heuristic freshness and will reuse its
+ * URL for their whole life, and the server hands them out with no
+ * `Cache-Control` at all. A browser therefore falls back to heuristic freshness and will reuse its
  * copy without revalidating — so a vendor patch applied here (see
  * `docs/vendor-patches.md`) can stay invisible in a browser that already holds
  * an outdated file, with no error to show for it.

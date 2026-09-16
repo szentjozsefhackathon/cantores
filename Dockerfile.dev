@@ -1,7 +1,21 @@
-ARG NODE_VERSION=22-alpine
-FROM node:${NODE_VERSION} AS node
+ARG FRANKENPHP_VERSION=1-php8.4
 
-FROM php:8.4-apache AS php
+# The same base as Dockerfile.prod, and deliberately so. Production moved to
+# FrankenPHP when it moved to Octane; leaving dev on php:8.4-apache would have
+# kept a second web server, a second vhost format and a second set of static-file
+# rules alive for no reason other than that they were already there.
+#
+# What dev does *not* copy from production is worker mode. The server below is
+# started with plain `frankenphp run` against a Caddyfile with no `worker` block,
+# so Laravel still boots per request and editing a file still takes effect on
+# refresh. See docker/frankenphp/Caddyfile.dev. When an Octane-only bug needs
+# reproducing — state surviving between requests is the one that matters — run
+# the stack with docker-compose.octane.yml, which swaps this container's command
+# for `octane:frankenphp --watch` against the production Caddyfile.
+#
+# The tag is major-pinned to match production; see Dockerfile.prod on why the ARG
+# is declared here at the top rather than inside the stage.
+FROM dunglas/frankenphp:${FRANKENPHP_VERSION} AS php
 WORKDIR /var/www/html
 ARG UID
 ARG GID
@@ -30,7 +44,6 @@ COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 # Add extensions not included in the base image
 COPY --from=mlocati/php-extension-installer:2.7.24 /usr/bin/install-php-extensions /usr/local/bin/
 RUN install-php-extensions gd gmp memcached redis pdo_pgsql pdo_mysql xdebug zip pcntl bcmath intl
-COPY docker/sites-available/000-default.conf.dev /etc/apache2/sites-available/000-default.conf
 
 RUN echo "xdebug.mode=debug,develop,profile" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && echo "xdebug.start_with_request=trigger" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
@@ -40,8 +53,6 @@ RUN echo "xdebug.mode=debug,develop,profile" >> /usr/local/etc/php/conf.d/docker
     && echo "xdebug.profiler_output_name=cachegrind.out.%p.%t" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && mkdir -p /tmp/xdebug-profiles && chmod 777 /tmp/xdebug-profiles
 
-RUN a2enmod rewrite headers
-
 RUN addgroup --gid $GID laravel && \
     adduser --uid $UID --gid $GID --disabled-password --gecos "" laravel && \
     echo 'laravel ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
@@ -50,10 +61,30 @@ RUN chown -R laravel:laravel .
 
 USER laravel
 
+# Put XDG back where XDG says it goes. The FrankenPHP base image points
+# XDG_DATA_HOME at /data and XDG_CONFIG_HOME at /config so that Caddy, running as
+# root in a single-purpose container, keeps its certificate store somewhere
+# predictable. This is not that container: it is a development environment where
+# an unprivileged user runs nvm, npm, gh, playwright and the Claude CLI, and
+# every one of those reads XDG too. Left alone, they all try to write into two
+# root-owned directories that exist for a TLS cache this container never even
+# populates — nvm's installer refuses outright, and the rest fail later and less
+# clearly. Setting the standard defaults fixes all of them at once, and sends
+# Caddy's own state to the laravel user's home along with everything else.
+ENV XDG_CONFIG_HOME=/home/laravel/.config
+ENV XDG_DATA_HOME=/home/laravel/.local/share
+
 ENV NVM_DIR /home/laravel/.nvm
 ENV PATH "/home/laravel/.local/bin:${PATH}"
 
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash \
+# The mkdir is not tidiness. nvm's installer refuses to run when NVM_DIR names a
+# directory that does not exist *and* does not match the default it would have
+# chosen — and its default is "${XDG_CONFIG_HOME}/nvm" whenever XDG_CONFIG_HOME
+# is set at all, which on this base image it now is (see the ENV above). Creating
+# the directory first settles the question rather than depending on how nvm
+# derives a path it is being told explicitly anyway.
+RUN mkdir -p $NVM_DIR \
+    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash \
     && . $NVM_DIR/nvm.sh \
     && nvm install 22 \
     && nvm use 22 \
@@ -67,3 +98,17 @@ ENV PLAYWRIGHT_MODULE=/home/laravel/.local/share/playwright/node_modules/playwri
 RUN . $NVM_DIR/nvm.sh \
     && npm install --prefix /home/laravel/.local/share/playwright playwright@${PLAYWRIGHT_VERSION} \
     && node ${PLAYWRIGHT_MODULE}/cli.js install --with-deps chromium
+
+# The server. ENTRYPOINT is cleared because the base image's entrypoint launches
+# FrankenPHP with its own arguments, and the Caddyfile wanted here is the dev one
+# out of the bind-mounted repo rather than the /etc/caddy/Caddyfile that entry
+# point expects — keeping it a repo file means the vhost can be edited without a
+# rebuild, which is what the Apache one it replaces effectively was too.
+#
+# --adapter is needed because Caddy picks its config adapter from the file name,
+# and `Caddyfile.dev` is not a name it recognises.
+#
+# Only the `app` service uses this CMD; composer, migrator, queue and the rest
+# override it with their own command in docker-compose.yml.
+ENTRYPOINT []
+CMD ["frankenphp", "run", "--adapter", "caddyfile", "--config", "/var/www/html/docker/frankenphp/Caddyfile.dev"]

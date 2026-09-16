@@ -1,0 +1,49 @@
+---
+# The opt-in Octane dev stack.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.octane.yml up app
+#
+# Normal dev (docker-compose.yml on its own) runs FrankenPHP in classic mode:
+# Laravel boots per request, an edit shows up on refresh, and a debugger attaches
+# the way it always did. That is the right default and should stay the default.
+#
+# What it cannot show you is the class of bug that exists only under Octane,
+# where the application object outlives the request: a singleton that quietly
+# remembers a user, a static property filled in on the first request and read on
+# the ten thousandth, a container binding that should have been `scoped`. Those
+# reach production and nowhere else, because production is the only place running
+# workers. This file is how to put dev there on purpose for an afternoon.
+#
+# It overrides nothing but the `app` command. Same image, same bind mount, same
+# database, same port — so the URL you already have keeps working.
+services:
+  app:
+    # The production Caddyfile, not Caddyfile.dev: reproducing an Octane bug
+    # means reproducing the server that has it, worker block and all. It is read
+    # out of the bind-mounted repo, so there is nothing to rebuild.
+    #
+    # --watch uses FrankenPHP's own native file watcher (Octane's frankenphp
+    # driver compiles config('octane.watch') into `watch` directives; it does not
+    # shell out to node and chokidar the way the Swoole and RoadRunner drivers
+    # do), so a PHP edit reloads the workers without a container restart. It is
+    # still a reload and not a fresh boot per request — that difference is the
+    # whole reason to be here.
+    #
+    # --workers is low on purpose. Production sizes its pool against the
+    # container's memory limit; here the number only needs to be greater than one
+    # so that per-worker state is visibly per-worker.
+    #
+    # `exec` so that php is PID 1 and gets the SIGTERM itself — see the long note
+    # in Dockerfile.prod; Ctrl-C hanging for thirty seconds is the symptom.
+    command:
+      - /bin/sh
+      - -c
+      - >
+        exec php artisan octane:frankenphp
+        --host=0.0.0.0
+        --port=8080
+        --workers=${OCTANE_WORKERS:-2}
+        --max-requests=${OCTANE_MAX_REQUESTS:-500}
+        --caddyfile=/var/www/html/docker/frankenphp/Caddyfile
+        --log-level=${OCTANE_LOG_LEVEL:-INFO}
+        --watch

@@ -1,0 +1,61 @@
+# What replaced docker/sites-available/000-default.conf.dev.
+#
+# The dev container serves the site with the same server production does —
+# FrankenPHP — but in *classic* mode: no `worker` block, so Laravel boots per
+# request exactly as mod_php made it. That is the point. Edit a file, refresh,
+# see it; no restart, no stale container held in a worker's memory. What is
+# gained over Apache is that everything around that boot — the static file
+# handling, try_files, the public/storage symlink, the security headers, the PHP
+# build itself — is now the same code path as docker/frankenphp/Caddyfile rather
+# than a second implementation of it that drifts.
+#
+# To run dev *with* Octane's worker mode instead, for the one class of bug that
+# only exists there (state surviving between requests), see
+# docker-compose.octane.yml. That path uses the production Caddyfile, not this
+# one.
+#
+# Unlike the production Caddyfile this file has no {$...} placeholders: nothing
+# fills them in here, because `frankenphp run` is invoked directly rather than
+# through `php artisan octane:frankenphp`. The values are written out.
+{
+	# No admin API. Octane needs one to inspect and stop the server it started;
+	# nothing here starts it that way, so the port is simply not opened.
+	admin off
+
+	# Traefik terminates TLS in production and nothing terminates it here. Left
+	# on, Caddy would try to provision a certificate for the site address.
+	auto_https off
+
+	frankenphp
+}
+
+# 8080, not 80: this container runs as the unprivileged `laravel` user so that
+# files it writes into the bind-mounted repo belong to the host user, and an
+# unprivileged process cannot bind a privileged port. docker-compose.yml maps
+# APP_EXTERNAL_PORT onto it, so nothing outside the container sees the number.
+:8080 {
+	# INFO gets one JSON line per request with a `duration` field in it, which
+	# is what the Apache CustomLog's %{ms}T was for.
+	log {
+		level INFO
+		format json
+	}
+
+	# The same two headers docker/frankenphp/Caddyfile sets in production, for
+	# the same reason: a projection wall and a remote may not be framed, and
+	# that is worth finding out about in dev rather than on the server.
+	header {
+		Content-Security-Policy "frame-ancestors 'none';"
+		-Server
+	}
+
+	route {
+		root * /var/www/html/public
+		encode zstd br gzip
+
+		php_server {
+			# Required for the public/storage/ symlink.
+			resolve_root_symlink
+		}
+	}
+}

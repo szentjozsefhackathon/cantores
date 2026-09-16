@@ -32,7 +32,9 @@ services:
     networks:
       - creshu-network
     ports:
-      - "${APP_EXTERNAL_PORT:-8080}:80"
+      # 8080 inside, because the dev server is now an unprivileged
+      # FrankenPHP rather than a root Apache; see docker/frankenphp/Caddyfile.dev.
+      - "${APP_EXTERNAL_PORT:-8080}:8080"
       - "${VITE_EXTERNAL_PORT:-5173}:${VITE_EXTERNAL_PORT:-5173}"
     depends_on:
       app_dev_prepopulate:

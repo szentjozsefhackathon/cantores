@@ -148,7 +148,31 @@ RUN mkdir -p /data /config && chown -R www-data:www-data /data /config
 
 # PHP settings
 RUN cp /usr/local/etc/php/php.ini-production /usr/local/etc/php/php.ini
-RUN echo "opcache.jit=tracing" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+
+# OPcache. php.ini-production ships every directive below commented out, which
+# means the compiled defaults apply: a 128M cache, an 8M interned-strings buffer,
+# 10000 accelerated files, and validate_timestamps=1. That default was sized for
+# mod_php stat-ing files on every request; nothing here does that any more.
+#
+# validate_timestamps=0 is the one that actually matters for Octane: with it on,
+# every worker still stats every included file on every request looking for an
+# edit, which is a filesystem syscall Octane exists to stop paying. There is
+# nothing here to detect — a deploy replaces the whole image and restarts the
+# container, it never edits a file underneath a running one.
+#
+# max_accelerated_files=20000 because this image's vendor/ alone holds more PHP
+# files than the 10000-file default table, and a full table falls back to
+# recompiling whatever does not fit rather than erroring, silently giving back
+# the win. interned_strings_buffer and memory_consumption are raised together
+# because Laravel's class-heavy autoloading generates enough distinct string
+# literals — namespaces, property names — to pressure the small default buffer
+# well before the bytecode cache itself fills up.
+RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+ && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+ && echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+ && echo "opcache.interned_strings_buffer=16" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+ && echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
+ && echo "opcache.jit=tracing" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini \
  && echo "opcache.jit_buffer_size=128M" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 
 # What `Header unset X-Powered-By` in the Apache vhost was doing, done at the
