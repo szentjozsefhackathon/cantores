@@ -241,14 +241,28 @@ resources/js/projection-remote.js
                                     <template x-for="offer in block.offers" x-bind:key="`offer-${offer.scoreId}-${offer.fileId ?? 0}`">
                                         <button
                                             type="button"
-                                            class="flex w-full items-center gap-1.5 rounded border border-dashed border-zinc-300 px-2 py-1 text-start text-[11px] text-zinc-400 disabled:opacity-40 dark:border-zinc-600"
+                                            class="block w-full rounded border border-dashed border-zinc-300 px-2 py-1 text-start text-[11px] text-zinc-400 disabled:opacity-40 dark:border-zinc-600"
                                             x-on:click="toggleScore(offer.scoreId, block.assignmentId, offer.fileId)"
                                             x-bind:disabled="offer.inBooklets === false"
                                             x-bind:aria-label="addScoreText"
                                             :title="addScoreText"
                                         >
-                                            <flux:icon.plus class="size-3 shrink-0" />
-                                            <span class="min-w-0 flex-1 truncate" x-text="offer.title"></span>
+                                            <span class="flex items-center gap-1.5">
+                                                <flux:icon.plus class="size-3 shrink-0" />
+                                                <span class="min-w-0 flex-1 truncate" x-text="offer.title"></span>
+                                            </span>
+
+                                            {{-- Greyed, same as the swipe list's: an offer is a
+                                                 score not yet in today's deck, and the incipit
+                                                 says so at a glance rather than only through the
+                                                 dashed border around it. --}}
+                                            <img
+                                                class="mt-0.5 max-h-12 max-w-full rounded bg-white object-contain opacity-50"
+                                                x-show="offer.incipitUrl"
+                                                x-bind:src="offer.incipitUrl"
+                                                alt=""
+                                                loading="lazy"
+                                            />
                                         </button>
                                     </template>
                                 </div>
@@ -801,9 +815,9 @@ resources/js/projection-remote.js
                                             <span class="min-w-0 flex-1 truncate" x-text="offer.title"></span>
                                         </span>
                                         <img
-                                            class="mt-1 max-h-20 max-w-full rounded bg-white object-contain opacity-75"
-                                            x-show="offer.incipit"
-                                            x-bind:src="offer.incipit"
+                                            class="mt-1 max-h-20 max-w-full rounded bg-white object-contain opacity-50"
+                                            x-show="offer.incipitUrl"
+                                            x-bind:src="offer.incipitUrl"
                                             alt=""
                                             loading="lazy"
                                         />
