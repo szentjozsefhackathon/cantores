@@ -122,7 +122,7 @@ resources/js/projection-presenter.js
         <div
             x-ref="stageBox"
             class="bg-white"
-            x-show="!waiting && !showingSplash"
+            x-show="!waiting && !opening"
             {{-- An object and not a string: a string binding is written with
                  setAttribute('style', …) and throws away the `display: none`
                  x-show put on this same element, and the fit is re-read every
@@ -149,11 +149,11 @@ resources/js/projection-presenter.js
             class="flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-8 text-center"
             x-bind:style="{ aspectRatio: aspectRatio, height: '100%', maxWidth: '100%', maxHeight: '100%', transform: fitTransform, transformOrigin: 'center' }"
         >
-            <div class="text-[7vmin] font-semibold leading-none tracking-tight text-white/90">Cantores.hu</div>
+            {{-- The deck's name, large: the one glance that says the right
+                 projection is loaded before anybody depends on it. --}}
+            <div class="max-w-[80%] truncate text-[7vmin] font-semibold leading-none tracking-tight text-white/90" x-text="title"></div>
 
-            {{-- The deck's name under it, small: the one glance that says the
-                 right projection is loaded before anybody depends on it. --}}
-            <div class="max-w-[80%] truncate text-[2.5vmin] text-white/40" x-text="title"></div>
+            <div class="text-[2.5vmin] text-white/60">Cantores.hu</div>
         </div>
     </div>
 
