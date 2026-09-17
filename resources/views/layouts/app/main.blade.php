@@ -188,6 +188,10 @@
                         </flux:menu>
                     </flux:dropdown>
                 </nav>
+
+                @auth
+                    <livewire:projection.remote-control-link />
+                @endauth
             @endif
         </header>
         {{ $slot }}

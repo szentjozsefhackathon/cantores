@@ -183,6 +183,8 @@
 
         <flux:spacer />
 
+        <livewire:projection.remote-control-link only="mobile" />
+
         <flux:dropdown position="top" align="end">
             <flux:profile
                 :initials="auth()->user()->initials()"
@@ -228,6 +230,8 @@
             </flux:menu>
         </flux:dropdown>
     </flux:header>
+
+    <livewire:projection.remote-control-link only="floating" />
 
     {{ $slot }}
 
