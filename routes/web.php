@@ -70,6 +70,7 @@ use App\Models\City;
 use App\Models\DirektoriumEdition;
 use App\Models\FirstName;
 use App\Models\User;
+use Illuminate\Routing\RedirectController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -380,9 +381,18 @@ Route::livewire('/plan-documents', PlanDocuments::class)
     ->middleware(['auth', 'verified'])
     ->name('plan-documents');
 
-// The two screens that list was made out of
-Route::redirect('/booklets', '/plan-documents');
-Route::redirect('/projections', '/plan-documents');
+// The two screens that list was made out of. Route::redirect() registers
+// under every HTTP verb (it's built on Router::any()), which shadows the POST
+// routes below it once routes are cached for production: the cached matcher
+// tries routes in registration order and stops at the first method match,
+// where the uncached array-based matcher instead lets a later same-method
+// registration win. Restricting these to GET keeps both matchers consistent.
+Route::get('/booklets', RedirectController::class)
+    ->defaults('destination', '/plan-documents')
+    ->defaults('status', 302);
+Route::get('/projections', RedirectController::class)
+    ->defaults('destination', '/plan-documents')
+    ->defaults('status', 302);
 
 // Booklets: a music plan's scores laid onto real A4 or A5 pages. The editor
 // chooses and arranges; the pages themselves are engraved in the browser and
