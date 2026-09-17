@@ -133,6 +133,16 @@ if [ "$ENV_CHECK" = "missing" ]; then
     echo "     scp -P $DEPLOY_PORT .env.prod $SSH_TARGET:$DEPLOY_REMOTE_PATH/"
 fi
 
+# The Mercure hub will not start safely without its keys: Caddy would read the
+# algorithm name as the key. Refuse here rather than find out from the wall.
+MERCURE_CHECK=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && grep -qE '^MERCURE_PUBLISHER_JWT_KEY=.+' .env.prod 2>/dev/null && grep -qE '^MERCURE_SUBSCRIBER_JWT_KEY=.+' .env.prod 2>/dev/null && echo 'ok' || echo 'missing'")
+
+if [ "$MERCURE_CHECK" != "ok" ]; then
+    echo "   ❌ MERCURE_PUBLISHER_JWT_KEY and MERCURE_SUBSCRIBER_JWT_KEY must be set in .env.prod on the server."
+    echo "   See .env.prod.dist; generate each with: openssl rand -base64 48"
+    exit 1
+fi
+
 # 5. Check for docker-compose.prod.yml on server
 echo "5. Ensuring docker-compose.prod.yml is up to date on server..."
 COMPOSE_CHECK=$($SSH_CMD "$SSH_TARGET" "cd $DEPLOY_REMOTE_PATH && if [ -f docker-compose.prod.yml ]; then echo 'exists'; else echo 'missing'; fi")

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { POLL_BACKOFF_MAX_MS, POLL_MS, poller, showClient, stateClient } from '../../resources/js/projection-follow.js';
+import { POLL_BACKOFF_MAX_MS, POLL_MS, PUSHED_POLL_MS, STREAM_RETRY_MS, poller, showClient, showStream, stateClient } from '../../resources/js/projection-follow.js';
 
 /*
  * The beat that both ends of a service keep.
@@ -270,4 +270,255 @@ test('says that a poll is a poll and not a page somebody opened', async () => {
         assert.equal(request.headers['X-CSRF-TOKEN'], 'token');
         assert.equal(request.headers['Content-Type'], 'application/json');
     }
+});
+
+/*
+ * ---------------------------------------------------------------
+ * Being told, rather than asking.
+ * ---------------------------------------------------------------
+ */
+
+test('asks at once when poked, and a poke during a read asks once more after it', async () => {
+    const time = clock();
+    const slow = held();
+    const beat = poller(slow.tick, { interval: PUSHED_POLL_MS, random: () => 0.5 });
+
+    beat.start();
+    assert.equal(slow.state.started, 1);
+
+    // Three nudges while the first read is still out are one more read, not three.
+    beat.poke();
+    beat.poke();
+    beat.poke();
+    slow.let_go();
+    await Promise.resolve();
+    await Promise.resolve();
+    await time.advance(0);
+
+    assert.equal(slow.state.started, 2);
+    assert.equal(slow.state.most, 1, 'never two at once');
+
+    // And a poke between reads does not wait out the fifteen seconds.
+    slow.let_go();
+    await Promise.resolve();
+    await Promise.resolve();
+    beat.poke();
+
+    assert.equal(slow.state.started, 3);
+
+    beat.stop();
+});
+
+test('changes pace as soon as the stream opens or closes', async () => {
+    const time = clock();
+    let pushed = false;
+    const beat = poller(() => {}, { interval: () => (pushed ? PUSHED_POLL_MS : POLL_MS), random: () => 0.5 });
+
+    beat.start();
+    await Promise.resolve();
+    assert.equal(time.pending, POLL_MS);
+
+    pushed = true;
+    await time.advance(POLL_MS);
+    assert.equal(time.pending, PUSHED_POLL_MS);
+
+    pushed = false;
+    beat.poke();
+    await Promise.resolve();
+    assert.equal(time.pending, POLL_MS);
+
+    beat.stop();
+});
+
+test('does nothing when poked after it was stopped', () => {
+    let beats = 0;
+    const beat = poller(() => { beats += 1; });
+
+    beat.poke();
+    assert.equal(beats, 0);
+});
+
+/** An EventSource the test drives by hand. */
+function fakeSource() {
+    const made = [];
+
+    class Source {
+        static CONNECTING = 0;
+
+        static OPEN = 1;
+
+        static CLOSED = 2;
+
+        constructor(url, init) {
+            this.url = url;
+            this.init = init;
+            this.readyState = Source.CONNECTING;
+            this.closed = false;
+            made.push(this);
+        }
+
+        close() {
+            this.closed = true;
+            this.readyState = Source.CLOSED;
+        }
+
+        open() {
+            this.readyState = Source.OPEN;
+            this.onopen?.();
+        }
+
+        message() {
+            this.onmessage?.({ data: 'changed' });
+        }
+
+        fail(readyState) {
+            this.readyState = readyState;
+            this.onerror?.();
+        }
+    }
+
+    return { Source, made };
+}
+
+/** A server that answers the subscription request with `grant`, counting the asks. */
+function grants(grant) {
+    const asked = [];
+
+    globalThis.fetch = (url, init) => {
+        asked.push({ url, ...init });
+
+        return Promise.resolve({ ok: grant !== null, json: () => Promise.resolve(grant) });
+    };
+
+    return asked;
+}
+
+const settle = async () => {
+    for (let i = 0; i < 5; i++) { await Promise.resolve(); }
+};
+
+test('listens on its own topic with the cookie, and passes the nudges on', async () => {
+    clock();
+    const asked = grants({ hubUrl: '/.well-known/mercure', topic: 'http://localhost/show/7' });
+    const { Source, made } = fakeSource();
+    const events = [];
+
+    const stream = showStream(
+        { streamUrl: '/show/stream', csrfToken: 'token', EventSource: Source },
+        { change: () => events.push('change'), open: (isOpen) => events.push(isOpen ? 'open' : 'closed') },
+    );
+
+    stream.start();
+    await settle();
+
+    assert.equal(asked.length, 1);
+    assert.equal(asked[0].method, 'POST');
+    assert.equal(made.length, 1);
+    assert.equal(made[0].url, '/.well-known/mercure?topic=http%3A%2F%2Flocalhost%2Fshow%2F7');
+    assert.equal(made[0].init.withCredentials, true);
+    assert.equal(stream.open, false);
+
+    made[0].open();
+    made[0].message();
+
+    assert.equal(stream.open, true);
+    assert.deepEqual(events, ['open', 'change']);
+
+    stream.stop();
+
+    assert.equal(made[0].closed, true);
+    assert.deepEqual(events, ['open', 'change', 'closed']);
+});
+
+test('lets the browser reconnect a blip by itself, and asks again when turned away', async () => {
+    const time = clock();
+    const asked = grants({ hubUrl: '/.well-known/mercure', topic: 't' });
+    const { Source, made } = fakeSource();
+    const events = [];
+
+    const stream = showStream(
+        { streamUrl: '/show/stream', csrfToken: 'token', EventSource: Source },
+        { open: (isOpen) => events.push(isOpen) },
+    );
+
+    stream.start();
+    await settle();
+    made[0].open();
+
+    // A blip: the browser is already reconnecting, and polling picks up the pace.
+    made[0].fail(Source.CONNECTING);
+    assert.equal(stream.open, false);
+    assert.equal(made.length, 1);
+    made[0].open();
+
+    // Turned away — the token lapsed. A new one is asked for after a wait.
+    made[0].fail(Source.CLOSED);
+    assert.equal(made[0].closed, true);
+
+    await time.advance(STREAM_RETRY_MS - 1);
+    assert.equal(asked.length, 1);
+
+    await time.advance(1);
+    await settle();
+
+    assert.equal(asked.length, 2);
+    assert.equal(made.length, 2);
+    assert.deepEqual(events, [true, false, true, false]);
+
+    stream.stop();
+});
+
+test('keeps polling and stops asking when the server has no hub', async () => {
+    const time = clock();
+    const asked = grants({ hubUrl: null, topic: null });
+    const { Source, made } = fakeSource();
+
+    const stream = showStream({ streamUrl: '/show/stream', csrfToken: 'token', EventSource: Source });
+
+    stream.start();
+    await settle();
+    await time.advance(STREAM_RETRY_MS * 100);
+
+    assert.equal(asked.length, 1);
+    assert.equal(made.length, 0);
+    assert.equal(stream.open, false);
+
+    stream.stop();
+});
+
+test('backs off asking for a stream the server will not give', async () => {
+    const time = clock();
+    const asked = grants(null);
+    const { Source } = fakeSource();
+
+    const stream = showStream({ streamUrl: '/show/stream', csrfToken: 'token', EventSource: Source });
+
+    stream.start();
+    await settle();
+
+    for (const wait of [STREAM_RETRY_MS, STREAM_RETRY_MS * 2, STREAM_RETRY_MS * 4]) {
+        assert.equal(time.pending, wait);
+        await time.advance(wait);
+        await settle();
+    }
+
+    assert.equal(asked.length, 4);
+
+    stream.stop();
+    await time.advance(STREAM_RETRY_MS * 100);
+    assert.equal(asked.length, 4, 'nothing after stopping');
+});
+
+test('does nothing in a browser without EventSource', async () => {
+    const asked = grants({ hubUrl: '/.well-known/mercure', topic: 't' });
+
+    const stream = showStream({ streamUrl: '/show/stream', csrfToken: 'token', EventSource: null });
+
+    // `null` falls back to the global, which node does not have before 22.
+    if (typeof globalThis.EventSource === 'function') { return; }
+
+    stream.start();
+    await settle();
+
+    assert.equal(asked.length, 0);
 });

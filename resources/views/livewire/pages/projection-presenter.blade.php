@@ -34,6 +34,8 @@ resources/js/projection-presenter.js
         'title' => $title,
         // Marked as the wall's, because only the wall's read is its heartbeat.
         'showUrl' => route('show.state', ['screen' => 1]),
+        // Where to ask to be told when the show moves, instead of asking.
+        'streamUrl' => route('show.stream'),
         // Where this screen's picture lands, baked in so that a wall lined
         // up last Sunday draws its first slide where it belongs rather than
         // centring it and jumping a second later.

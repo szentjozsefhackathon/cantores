@@ -27,6 +27,11 @@
 	auto_https off
 
 	frankenphp
+
+	# The Mercure hub's connections never close on their own, and Caddy waits
+	# for ever for open connections by default: without this, stopping the
+	# container with a wall open hangs until Docker kills it.
+	grace_period 2s
 }
 
 # 8080, not 80: this container runs as the unprivileged `laravel` user so that
@@ -52,6 +57,16 @@
 	route {
 		root * /var/www/html/public
 		encode zstd br gzip
+
+		# The same hub production runs; see docker/frankenphp/Caddyfile. The
+		# defaults are for this container only and match .env.example, so a
+		# fresh checkout pushes without being configured.
+		mercure {
+			transport local
+			publisher_jwt {$MERCURE_PUBLISHER_JWT_KEY:dev-only-mercure-publisher-key-change-me} HS256
+			subscriber_jwt {$MERCURE_SUBSCRIBER_JWT_KEY:dev-only-mercure-subscriber-key-change-me} HS256
+			heartbeat 30s
+		}
 
 		php_server {
 			# Required for the public/storage/ symlink.

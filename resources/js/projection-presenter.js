@@ -1,7 +1,7 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
 import { onPaper } from './slide-frame.js';
-import { HEARTBEAT_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, poller, showClient, shownExclusions, stateClient } from './projection-follow.js';
+import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, poller, showClient, showStream, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -293,6 +293,7 @@ onAlpineInit(() => {
         destroy() {
             clearTimeout(this._idleTimer);
             this._poll?.stop();
+            this._stream?.stop();
             this._heartbeat?.stop();
         },
 
@@ -526,7 +527,18 @@ onAlpineInit(() => {
          * a screen that was away while a deck went up must find it.
          */
         follow() {
-            this._poll = poller(() => this.pull());
+            // Once a second until the hub is listening, and then only as a
+            // safety net: the hub says when to ask.
+            this._poll = poller(() => this.pull(), {
+                interval: () => (this._stream?.open ? PUSHED_POLL_MS : POLL_MS),
+            });
+            this._stream = showStream(config, {
+                change: () => this._poll.poke(),
+                // Either way round, ask now: a stream just opened may have missed
+                // the move that happened while it connected, and one just lost
+                // must not leave the page waiting out a fifteen second beat.
+                open: () => this._poll.poke(),
+            });
             // The same shape, three times as slow, and allowed to drift three
             // times as far — which is still well inside the five minutes a
             // presentation is counted live for.
@@ -536,6 +548,7 @@ onAlpineInit(() => {
             });
 
             this._poll.start();
+            this._stream.start();
             this._heartbeat.start();
         },
 

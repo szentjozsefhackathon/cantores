@@ -132,6 +132,45 @@ Caddy unchanged and matches under any encoding, with or without the `W/`.
 Worth confirming once in production: the devtools network panel on `/remote`
 should show `304` on the state reads while nothing moves.
 
+### Mercure, as built
+
+Mercure was chosen: it is already inside the FrankenPHP binary, so there is no
+new container, no new route through Traefik and no new PHP dependency.
+
+**The hub says "something changed", never what.** The show's answer is per
+device (`isThisDevice`, which screens are live), and some of it moves with a
+clock rather than a save, so no one message could be the answer for every
+device. Instead `ShowStream` publishes a bare nudge to a private topic per
+person, and each device answers it with the `show.state` read it already makes.
+That read stays the only authority, and its authorization, conditional `304`
+and heartbeat are all unchanged.
+
+- **Publishing** is `ShowStreamObserver` on the saves that move an answer:
+  presentations, screens, device names and pairings to their person, and deck
+  edits to whoever has that deck live. A write that only moves `last_seen_at` is
+  ignored, so the wall's ten-second report publishes nothing. The call is
+  `defer()`red and named per person, so one request publishes at most once per
+  person, after the response. A hub that is down costs a log line.
+- **Subscribing** is `POST /show/stream`, which sets an HS256 token scoped to
+  that person's topic as an HttpOnly cookie on `/.well-known/mercure` (native
+  `EventSource` cannot send a header). It lasts an hour. When the hub turns a
+  device away, the client asks for a new one.
+- **The client** (`showStream()` in `projection-follow.js`) pokes the poller on
+  every message. While the stream is open, the poll slows from `POLL_MS` to
+  `PUSHED_POLL_MS` (15s) and stays as a safety net for clock-driven changes and
+  half-dead connections. When the stream closes, the poll is back to a second
+  at once. With the hub unconfigured, the endpoint says so and nothing changes.
+- **No Redis transport.** There is one app container and nothing to replay, so
+  `transport local` is enough. A second app container would need a shared
+  transport.
+- **`grace_period 25s`.** Caddy waits for ever by default for connections to
+  close on shutdown, and measured in dev, an open subscriber held a SIGTERM until
+  that subscriber left. Without the limit, every deploy would wait for Docker's
+  SIGKILL.
+
+Expected load while a service runs: one read per device every 15 seconds, plus
+one read per device each time the slide moves.
+
 ---
 
 ## 1. The cache gets its own Redis

@@ -21,6 +21,14 @@
 	# this container and from nowhere else.
 	admin {$CADDY_SERVER_ADMIN_HOST}:{$CADDY_SERVER_ADMIN_PORT}
 
+	# Caddy's default is to wait for ever for open connections on shutdown, and
+	# the Mercure hub's are open by design: every wall and remote holds one. Left
+	# alone, a deploy during a service waits until Docker gives up and kills the
+	# container. Just inside docker-compose.prod.yml's stop_grace_period, so an
+	# ordinary request in flight — a score export — still gets to finish, and
+	# the devices reconnect to the new container by themselves.
+	grace_period 25s
+
 	frankenphp {
 		worker {
 			file "{$APP_PUBLIC_PATH}/frankenphp-worker.php"
@@ -69,6 +77,32 @@
 
 		# Mercure configuration is injected here...
 		{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+		# The hub a wall and a remote listen on, so that they are told when the
+		# show moves instead of asking every second (app/Services/ShowStream.php).
+		# Written out here rather than through config('octane.mercure'), so the
+		# whole server is readable in this one file.
+		#
+		# The hub holds its connections in Go, not in a PHP worker, which is the
+		# reason it is here at all: a waiting request inside Octane would take a
+		# worker for as long as it waited.
+		#
+		# `local` keeps subscriptions and nothing else in this process's memory.
+		# There is one app container, and what is published is only "something
+		# changed" — a device that reconnects after a deploy asks the server
+		# anyway, so there is no history worth a Redis or a bolt file.
+		#
+		# Both keys are required, and deploy-prod.sh refuses to deploy without
+		# them: left empty, the directive would read "HS256" as the key.
+		#
+		# The heartbeat is well inside the 100 seconds Cloudflare lets an idle
+		# proxied connection live.
+		mercure {
+			transport local
+			publisher_jwt {$MERCURE_PUBLISHER_JWT_KEY} HS256
+			subscriber_jwt {$MERCURE_SUBSCRIBER_JWT_KEY} HS256
+			heartbeat 30s
+		}
 
 		php_server {
 			index frankenphp-worker.php

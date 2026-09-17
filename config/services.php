@@ -53,6 +53,22 @@ return [
         'timeout' => env('RSVG_CONVERT_TIMEOUT', 30),
     ],
 
+    /*
+     * The hub FrankenPHP serves at /.well-known/mercure, which tells a wall and
+     * a remote that the show has moved so they stop asking every second. Off
+     * until all three are set: without it the devices simply keep polling.
+     *
+     * The publish URL is the hub as the server reaches it, not as a browser
+     * does: localhost inside the app container, the app service's name from the
+     * queue container beside it. The keys must match the ones the Caddyfile
+     * hands the hub.
+     */
+    'mercure' => [
+        'publish_url' => env('MERCURE_PUBLISH_URL'),
+        'publisher_jwt_key' => env('MERCURE_PUBLISHER_JWT_KEY'),
+        'subscriber_jwt_key' => env('MERCURE_SUBSCRIBER_JWT_KEY'),
+    ],
+
     'musescore' => [
         'bin' => env('MUSESCORE_BIN', 'mscore-render'),
         'timeout' => env('MUSESCORE_TIMEOUT', 180),

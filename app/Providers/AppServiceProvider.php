@@ -6,13 +6,17 @@ use App\Listeners\UpdateLastLoginAt;
 use App\Models\Author;
 use App\Models\City;
 use App\Models\Collection;
+use App\Models\DeviceName;
+use App\Models\DevicePairing;
 use App\Models\ExternalLink;
 use App\Models\FirstName;
 use App\Models\Genre;
 use App\Models\Music;
+use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\ProjectionMusic;
 use App\Models\ProjectionSlide;
+use App\Models\Screen;
 use App\Models\User;
 use App\Observers\AuthorObserver;
 use App\Observers\CityObserver;
@@ -22,6 +26,7 @@ use App\Observers\FirstNameObserver;
 use App\Observers\GenreObserver;
 use App\Observers\MusicObserver;
 use App\Observers\ProjectionRevisionObserver;
+use App\Observers\ShowStreamObserver;
 use App\Observers\UserObserver;
 use App\Services\GenreContext;
 use App\Services\MuseScoreRenderer;
@@ -89,6 +94,10 @@ class AppServiceProvider extends ServiceProvider
         Projection::observe(ProjectionRevisionObserver::class);
         ProjectionSlide::observe(ProjectionRevisionObserver::class);
         ProjectionMusic::observe(ProjectionRevisionObserver::class);
+
+        foreach ([Presentation::class, Screen::class, DeviceName::class, DevicePairing::class, Projection::class, ProjectionSlide::class, ProjectionMusic::class] as $model) {
+            $model::observe(ShowStreamObserver::class);
+        }
 
         Event::listen(Login::class, UpdateLastLoginAt::class);
 

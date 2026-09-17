@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
-import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, poller, sameFit, showClient, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
+import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, PUSHED_POLL_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, poller, sameFit, showClient, showStream, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
 
 /**
  * The deck in the cantor's hand.
@@ -454,9 +454,18 @@ onAlpineInit(() => {
             this.syncFullscreen();
             this.watchWidth();
 
+            // Pushed when the hub is there, polled once a second when it is not;
+            // see the wall's follow() for why both ends pace it the same way.
             const listen = () => {
-                this._poll = poller(() => this.pull());
+                this._poll = poller(() => this.pull(), {
+                    interval: () => (this._stream?.open ? PUSHED_POLL_MS : POLL_MS),
+                });
+                this._stream = showStream(config, {
+                    change: () => this._poll.poke(),
+                    open: () => this._poll.poke(),
+                });
                 this._poll.start();
+                this._stream.start();
             };
 
             if (this.presentationId !== null) {
@@ -470,6 +479,7 @@ onAlpineInit(() => {
 
         destroy() {
             this._poll?.stop();
+            this._stream?.stop();
             clearTimeout(this._pressTimer);
             this._wide?.removeEventListener?.('change', this._onWide);
             document.body.style.overflow = this._bodyOverflow ?? '';

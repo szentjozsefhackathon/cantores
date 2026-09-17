@@ -41,6 +41,26 @@ export const LAST_SLIDE = 2147483647;
 /** How often both ends ask where the service is. Slides are not frames. */
 export const POLL_MS = 1000;
 
+/**
+ * How often they still ask while the hub is telling them when to.
+ *
+ * Not never, for two reasons. Some of what the answer says moves with a clock
+ * and not with a save — a wall that stopped being heard from, a deck whose score
+ * was corrected in another window — and nobody publishes a clock. And a stream
+ * can be dead without saying so: a phone that walked out of the wifi holds an
+ * open connection to nothing until the network notices. Fifteen seconds bounds
+ * both, at a fifteenth of the asking.
+ */
+export const PUSHED_POLL_MS = 15000;
+
+/**
+ * How long to wait before asking the hub again after it turned this device
+ * away, and how far that wait may stretch. Polling carries the service
+ * meanwhile, so there is no hurry.
+ */
+export const STREAM_RETRY_MS = 5000;
+export const STREAM_RETRY_MAX_MS = 300000;
+
 /** How often the wall says it is still there, when nothing has moved. */
 export const HEARTBEAT_MS = 10000;
 
@@ -78,20 +98,27 @@ export const POLL_BACKOFF_MAX_MS = 5000;
  * success, so that the rule of this file still holds: a failure is not an
  * event, and nothing is ever drawn over a deck to announce one.
  *
+ * The interval may be a function, asked afresh at every beat, so that a page
+ * whose stream opens or closes changes pace without being rebuilt.
+ *
  * @param {() => (boolean|void|Promise<boolean|void>)} tick
- * @param {{interval?: number, maxInterval?: number, random?: () => number}} options
+ * @param {{interval?: number|(() => number), maxInterval?: number, random?: () => number}} options
  */
 export function poller(tick, options = {}) {
-    const interval = options.interval ?? POLL_MS;
+    const intervalNow = typeof options.interval === 'function'
+        ? options.interval
+        : () => options.interval ?? POLL_MS;
     // Never below the interval, whatever was asked for: the ceiling is there to
     // make a struggling server asked *less* often, and a beat that is already
     // slower than the ceiling must not be sped up by failing.
-    const maxInterval = Math.max(interval, options.maxInterval ?? POLL_BACKOFF_MAX_MS);
+    const maxIntervalNow = () => Math.max(intervalNow(), options.maxInterval ?? POLL_BACKOFF_MAX_MS);
     const random = options.random ?? Math.random;
 
     let timer = null;
-    let wait = interval;
+    let wait = intervalNow();
     let running = false;
+    let inFlight = false;
+    let again = false;
 
     /** Give or take a quarter, so that a crowd does not return as a crowd. */
     const jittered = (ms) => Math.round(ms * (0.75 + (random() * 0.5)));
@@ -99,15 +126,29 @@ export function poller(tick, options = {}) {
     async function beat() {
         let ok = true;
 
+        inFlight = true;
+
         try {
             ok = await tick() !== false;
         } catch {
             ok = false;
         }
 
-        wait = ok ? interval : Math.min(maxInterval, wait * 2);
+        inFlight = false;
+        wait = ok ? intervalNow() : Math.min(maxIntervalNow(), wait * 2);
 
-        if (running) { timer = setTimeout(beat, ok ? wait : jittered(wait)); }
+        if (!running) { return; }
+
+        // A poke that arrived while this beat was out: its news may be newer
+        // than the answer that just landed, so it is asked about straight away.
+        if (again) {
+            again = false;
+            timer = setTimeout(beat, 0);
+
+            return;
+        }
+
+        timer = setTimeout(beat, ok ? wait : jittered(wait));
     }
 
     return {
@@ -122,8 +163,27 @@ export function poller(tick, options = {}) {
         /** Stop, whatever is in flight. Nothing lands after this. */
         stop() {
             running = false;
+            again = false;
             clearTimeout(timer);
             timer = null;
+        },
+
+        /**
+         * Ask now rather than on the next beat — something said the answer has
+         * moved. Still never two at once: a poke during a read asks once more
+         * when that read lands, and any number of pokes during it are one.
+         */
+        poke() {
+            if (!running) { return; }
+
+            if (inFlight) {
+                again = true;
+
+                return;
+            }
+
+            clearTimeout(timer);
+            beat();
         },
 
         /** How long the next wait would be — the backing off, made visible. */
@@ -183,6 +243,114 @@ export function jsonRequests(csrfToken) {
             return null;
         }
     }
+}
+
+/**
+ * Being told when the show moves, rather than asking every second.
+ *
+ * Only ever a nudge. What comes down the stream is "something changed", and
+ * the page answers it with the read it would have made anyway — so the stream
+ * can be late, lost or never opened, and the worst that costs is the polling
+ * this page did before it existed. That keeps the rule at the head of this
+ * file: a stream that dies is not an event either.
+ *
+ * The hub says who may listen with a cookie, which the server sets when asked.
+ * A browser reconnects by itself after a blip and keeps the cookie; when the
+ * hub turns it away instead — the token lapsed, the server was redeployed with
+ * new keys — the connection is closed for good, and a new token is asked for
+ * after a wait that grows the way the poller's does.
+ *
+ * `open` is called with true or false as listening starts and stops, which is
+ * the page's cue to change pace; `change` whenever the show moved.
+ *
+ * @param {{streamUrl: string, csrfToken: string, EventSource?: typeof EventSource}} config
+ * @param {{change?: () => void, open?: (isOpen: boolean) => void}} handlers
+ */
+export function showStream(config, handlers = {}) {
+    const http = jsonRequests(config.csrfToken);
+    const Source = config.EventSource ?? globalThis.EventSource;
+
+    let running = false;
+    let source = null;
+    let open = false;
+    let retryTimer = null;
+    let retryWait = STREAM_RETRY_MS;
+
+    const setOpen = (isOpen) => {
+        if (open === isOpen) { return; }
+
+        open = isOpen;
+        handlers.open?.(isOpen);
+    };
+
+    const retryLater = () => {
+        if (!running) { return; }
+
+        retryTimer = setTimeout(connect, retryWait);
+        retryWait = Math.min(STREAM_RETRY_MAX_MS, retryWait * 2);
+    };
+
+    async function connect() {
+        if (!running || !config.streamUrl || typeof Source !== 'function') { return; }
+
+        const grant = await http.post(config.streamUrl, {});
+
+        if (!running) { return; }
+
+        if (grant === null) {
+            retryLater();
+
+            return;
+        }
+
+        // The hub is switched off on this server: polling is all there is.
+        if (!grant.hubUrl || !grant.topic) { return; }
+
+        source = new Source(`${grant.hubUrl}?topic=${encodeURIComponent(grant.topic)}`, { withCredentials: true });
+
+        source.onopen = () => {
+            retryWait = STREAM_RETRY_MS;
+            setOpen(true);
+        };
+
+        source.onmessage = () => handlers.change?.();
+
+        source.onerror = () => {
+            setOpen(false);
+
+            // CONNECTING means the browser is already trying again by itself.
+            if (source?.readyState !== Source.CLOSED) { return; }
+
+            source.close();
+            source = null;
+            retryLater();
+        };
+    }
+
+    return {
+        /** Start listening. Starting twice is starting once. */
+        start() {
+            if (running) { return; }
+
+            running = true;
+            connect();
+        },
+
+        /** Stop listening and forget the connection. */
+        stop() {
+            running = false;
+            clearTimeout(retryTimer);
+            retryTimer = null;
+            source?.close();
+            source = null;
+            setOpen(false);
+        },
+
+        /** Whether the hub is telling this page when to ask. */
+        get open() {
+            return open;
+        },
+    };
 }
 
 /**

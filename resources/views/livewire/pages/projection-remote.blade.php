@@ -51,6 +51,8 @@ resources/js/projection-remote.js
         // only for whatever was up at mount, and afterwards come from the
         // show's own answer.
         'showUrl' => route('show.state'),
+        // Where to ask to be told when the show moves, instead of asking.
+        'streamUrl' => route('show.stream'),
         // The walls that are on, each with where its picture lands, so the
         // preview is lined up the way the wall is before the first poll.
         'screens' => $screens,

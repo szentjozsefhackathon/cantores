@@ -31,6 +31,7 @@ use App\Http\Controllers\ScorePdfExportController;
 use App\Http\Controllers\ScorePublicIncipitController;
 use App\Http\Controllers\ScreenFitController;
 use App\Http\Controllers\ShowStateController;
+use App\Http\Controllers\ShowStreamController;
 use App\Http\Controllers\SitemapController;
 use App\Livewire\Pages\AbcGuide;
 use App\Livewire\Pages\AretinoGuide;
@@ -460,6 +461,13 @@ Route::get('/show/state', [ShowStateController::class, 'show'])
 Route::post('/show/state', [ShowStateController::class, 'update'])
     ->middleware(['auth', 'verified', 'throttle:projection-poll'])
     ->name('show.state.store');
+
+// A subscription to the same show, pushed rather than polled: the hub says
+// "something changed" and the device makes the read above at once. Asked for
+// again whenever the hub turns a device away.
+Route::post('/show/stream', ShowStreamController::class)
+    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
+    ->name('show.stream');
 
 // Where the picture lands on one wall — the one write still addressed to a
 // device, because every projector is hung differently.

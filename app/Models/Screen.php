@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ShowStream;
 use App\Support\DeviceDescription;
 use Carbon\CarbonImmutable;
 use Database\Factories\ScreenFactory;
@@ -311,6 +312,7 @@ class Screen extends Model
         }
 
         $now = Carbon::now();
+        $wasPresenting = $this->last_seen_at?->gt(Carbon::now()->subSeconds(self::PRESENTING_SECONDS)) ?? false;
 
         $this->getConnection()
             ->table($this->getTable())
@@ -318,6 +320,12 @@ class Screen extends Model
             ->update(['last_seen_at' => $now]);
 
         $this->setAttribute('last_seen_at', $now)->syncOriginalAttribute('last_seen_at');
+
+        // Written past the model, so no observer hears it — but a wall coming
+        // back after a sleep is news to the remote, which lists it again.
+        if (! $wasPresenting) {
+            app(ShowStream::class)->changedFor($this->user_id);
+        }
     }
 
     public function isLive(): bool
