@@ -56,6 +56,23 @@ it('leaves the show where it is when this deck is already up', function () {
         ->and(Presentation::currentFor($user)->id)->toBe($running->id);
 });
 
+/*
+ * Sent from a row of its own, nested inside the plan-documents list, so
+ * putting a deck up has to say so out loud for that page's own "currently
+ * projecting" banner to catch up.
+ */
+it('announces that the show changed', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    Screen::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(SendToScreen::class, ['projection' => $projection])
+        ->call('putUp')
+        ->assertDispatched('presentation-changed');
+});
+
 it('refuses to put up somebody else\'s deck', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => User::factory()->create()->id]);

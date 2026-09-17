@@ -21,7 +21,7 @@
                 'text' => 'Ugyanabból az anyagból nyomtatható füzet — A4, A5, A6, montírozva, a zenészek kezébe.',
             ],
             [
-                'icon' => 'tv',
+                'icon' => 'presentation',
                 'title' => 'Vetítés',
                 'text' => 'És ugyanabból a kivetített kép, a saját képarányodra tördelve, távirányítóval.',
             ],

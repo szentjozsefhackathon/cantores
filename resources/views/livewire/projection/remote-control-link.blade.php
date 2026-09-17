@@ -9,7 +9,7 @@
                         wire:navigate
                         variant="primary"
                         size="sm"
-                        icon="presentation"
+                        icon="monitor-smartphone"
                         square
                         aria-label="{{ __('Remote control') }}" />
                 </flux:tooltip>
@@ -23,7 +23,7 @@
                         :href="route('projection-remote')"
                         wire:navigate
                         variant="primary"
-                        icon="presentation"
+                        icon="monitor-smartphone"
                         class="shadow-lg">
                         {{ __('Remote control') }}
                     </flux:button>

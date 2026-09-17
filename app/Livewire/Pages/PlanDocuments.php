@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -126,6 +127,19 @@ class PlanDocuments extends Component
     public function setNewType(string $type): void
     {
         $this->newType = $type === 'projection' ? 'projection' : 'booklet';
+    }
+
+    /**
+     * Catch up with a deck sent to the wall from one of this page's own rows.
+     *
+     * `send-to-screen` is a child component, so its own re-render never
+     * touches the "currently projecting" banner above it; this listener is
+     * what keeps that banner in step with the button a row below just pressed.
+     */
+    #[On('presentation-changed')]
+    public function refreshPresentation(): void
+    {
+        unset($this->currentPresentation, $this->recentProjections);
     }
 
     /**

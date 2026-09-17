@@ -199,7 +199,7 @@ resources/js/projection-presenter.js
          cannot say for it — that this screen is here and waiting to be given
          something. --}}
     <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center" x-show="waiting" x-cloak>
-        <flux:icon.tv class="size-10 text-white/30" />
+        <flux:icon.cast class="size-10 text-white/30" />
         <div class="text-lg text-white/70">{{ __('This screen is waiting for a deck.') }}</div>
         <div class="max-w-md text-sm text-white/40">
             {{ __('Choose one from the remote on your phone, and it will appear here.') }}

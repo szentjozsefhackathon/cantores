@@ -193,6 +193,27 @@ it('shows the title card again for the next deck put up after the show was taken
     expect(Presentation::putUp($user, $right)->splash)->toBe(Presentation::SPLASH_CARD);
 });
 
+/*
+ * "Put on screen" lives in a nested component, one row per deck, so the
+ * banner above the list has no way to notice a press there on its own — it
+ * has to be told.
+ */
+it('shows the new deck as current once the wall hears about it from a document row', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id, 'title' => 'Nagyterem 16:9']);
+
+    actingAs($user);
+
+    $component = Livewire::test(PlanDocuments::class)
+        ->assertDontSee(__('Currently projecting'));
+
+    Presentation::putUp($user, $projection);
+
+    $component->dispatch('presentation-changed')
+        ->assertSee(__('Currently projecting'))
+        ->assertSee('Nagyterem 16:9');
+});
+
 it('sends the two old list screens to the consolidated one', function () {
     actingAs(User::factory()->create());
 

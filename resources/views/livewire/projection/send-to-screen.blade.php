@@ -23,7 +23,7 @@
             <flux:button
                 size="{{ $compact ? 'xs' : 'sm' }}"
                 variant="ghost"
-                icon="tv"
+                icon="cast"
                 href="{{ $this->deckUrl() }}"
                 target="{{ \App\Livewire\Projection\SendToScreen::WINDOW }}"
                 :aria-label="__('Open a screen')"
@@ -40,7 +40,7 @@
             <flux:button
                 size="{{ $compact ? 'xs' : 'sm' }}"
                 variant="{{ $on ? 'filled' : 'ghost' }}"
-                icon="{{ $on ? 'check' : 'tv' }}"
+                icon="{{ $on ? 'check' : 'cast' }}"
                 wire:click="putUp"
                 :href="$this->opensWindow ? $this->deckUrl() : null"
                 :target="$this->opensWindow ? \App\Livewire\Projection\SendToScreen::WINDOW : null"

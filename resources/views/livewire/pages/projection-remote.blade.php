@@ -498,7 +498,7 @@ resources/js/projection-remote.js
                  can be put up from here first, and the laptop shows it when it
                  is opened. --}}
             <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center" x-show="waiting" x-cloak>
-                <flux:icon.tv class="size-8 text-zinc-500" />
+                <flux:icon.cast class="size-8 text-zinc-500" />
                 <div class="text-sm text-zinc-600 dark:text-zinc-300">
                     {{ __('Nothing is being projected') }}
                 </div>

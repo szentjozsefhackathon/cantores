@@ -111,6 +111,8 @@ class SendToScreen extends Component
         Presentation::putUp(Auth::user(), $this->projection);
 
         unset($this->screens, $this->isOnScreen, $this->opensWindow);
+
+        $this->dispatch('presentation-changed');
     }
 
     public function render(): IlluminateView

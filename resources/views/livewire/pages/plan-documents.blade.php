@@ -13,12 +13,17 @@
                  tab — this card is the only place this page would otherwise
                  say so, and it has no other way to learn a screen went live. --}}
             <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch" wire:poll.15s>
+                {{-- href always points at the real route, even with nothing live,
+                     so the tag stays <a> across a poll's re-render. Flipping it to
+                     null and back to a <button> was swapping the element itself
+                     out from under Flux's tooltip, leaving its position tracking
+                     anchored to a detached node in the top-left corner. --}}
                 <flux:tooltip :content="$this->currentPresentation ? __('See what the room is looking at.') : __('Nothing is being projected right now.')">
                     <flux:button
-                        :href="$this->currentPresentation ? route('projection-screen') : null"
+                        href="{{ route('projection-screen') }}"
                         wire:navigate
                         variant="{{ $this->currentPresentation ? 'primary' : 'ghost' }}"
-                        icon="tv"
+                        icon="cast"
                         class="w-full sm:w-auto {{ $this->currentPresentation ? '' : 'pointer-events-none opacity-50' }}"
                         :aria-disabled="$this->currentPresentation ? null : 'true'"
                     >
@@ -28,10 +33,10 @@
 
                 <flux:tooltip :content="$this->currentPresentation ? __('Drive the deck that is up right now.') : __('Nothing is being projected right now.')">
                     <flux:button
-                        :href="$this->currentPresentation ? route('projection-remote') : null"
+                        href="{{ route('projection-remote') }}"
                         wire:navigate
                         variant="{{ $this->currentPresentation ? 'primary' : 'ghost' }}"
-                        icon="presentation"
+                        icon="monitor-smartphone"
                         class="w-full sm:w-auto {{ $this->currentPresentation ? '' : 'pointer-events-none opacity-50' }}"
                         :aria-disabled="$this->currentPresentation ? null : 'true'"
                     >
@@ -40,7 +45,7 @@
                 </flux:tooltip>
 
                 @if($this->currentPresentation)
-                    <flux:callout variant="secondary" icon="tv" inline class="flex-1">
+                    <flux:callout variant="secondary" icon="cast" inline class="flex-1">
                         <flux:callout.heading>{{ __('Currently projecting') }}</flux:callout.heading>
                         <flux:callout.text>{{ $this->currentPresentation->projection->title }}</flux:callout.text>
                         <x-slot:actions>
