@@ -407,13 +407,15 @@ resources/js/projection-remote.js
                  lining up is holding this: the fit panel moves both pictures at
                  once, and it is guesswork unless they are the same picture. --}}
             <div
-                class="flex w-full max-h-full max-w-full flex-col items-center justify-center gap-2 overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-4 text-center lg:h-full lg:w-auto"
+                class="w-full max-h-full max-w-full overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-4 lg:h-full lg:w-auto"
                 x-bind:style="{ aspectRatio: aspectRatio, transform: fitTransform, transformOrigin: 'center' }"
                 x-show="showingSplash"
                 x-cloak
             >
-                <div class="text-2xl font-semibold leading-none tracking-tight text-white/90">Cantores.hu</div>
-                <div class="max-w-[80%] truncate text-xs text-white/40" x-text="title"></div>
+                <x-projection-splash-card
+                    title-class="text-2xl font-semibold leading-tight tracking-tight text-white/90"
+                    caption-class="text-xs text-white/60"
+                />
             </div>
 
             {{-- The thin bar over the letterbox. Everything that is not driving the

@@ -145,14 +145,12 @@ resources/js/projection-presenter.js
          hour somebody would otherwise walk over to check. --}}
     <div class="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden" x-show="showingSplash" x-cloak>
         <div
-            class="flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-8 text-center"
+            class="bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-8"
             x-bind:style="{ aspectRatio: aspectRatio, height: '100%', maxWidth: '100%', maxHeight: '100%', transform: fitTransform, transformOrigin: 'center' }"
         >
             {{-- The deck's name, large: the one glance that says the right
                  projection is loaded before anybody depends on it. --}}
-            <div class="max-w-[80%] truncate text-[7vmin] font-semibold leading-none tracking-tight text-white/90" x-text="title"></div>
-
-            <div class="text-[2.5vmin] text-white/60">Cantores.hu</div>
+            <x-projection-splash-card />
         </div>
     </div>
 
