@@ -55,6 +55,85 @@ exactly where it was.
 
 ---
 
+## Measured, 17 September 2026
+
+Octane is in production and Redis carries the sessions. The poll itself is
+unchanged: `POLL_MS` is still 1000 and both ends still ask. So before section 3
+was started, the one thing it said must be measured rather than assumed was
+measured — and it turned up a problem the section did not know it had.
+
+**The network holds a wait comfortably.** A `traefik/whoami` behind the
+production Traefik, asked to `?wait=`:
+
+| Path | Held | Result |
+|---|---|---|
+| Browser → Cloudflare → Traefik | 110s | `200` |
+| Server → Traefik directly | 95s | `200` |
+| Phone on a mobile network | 60s | answered |
+
+None of the layers between a phone and the container is the limit.
+
+**The worker is.** `config/octane.php` sets `max_execution_time` to 30, and on
+FrankenPHP that is wall-clock time: Octane's worker calls `set_time_limit()`
+per request, and a ZTS build times the thread, sleeping or not. A route that
+slept 40 seconds in dev died at 30.19s with *Maximum execution time of 30
+seconds exceeded*. A wait blocked on Redis would die the same way.
+
+**And the worker is the real objection, not the timeout.** Section 3 says that
+an event-driven runtime does not pin a process on a hanging request. FrankenPHP
+in worker mode is not that runtime: Go serves the connections, but each PHP
+request occupies a worker thread from start to finish, and a PHP thread blocked
+on `SUBSCRIBE` is blocked. A held read would take one of `OCTANE_WORKERS` for
+its whole hold — eight workers, eight devices following a service, nationwide.
+That is prefork's ceiling again, only lower.
+
+So section 3 as written is withdrawn. The idea survives — a published write
+reaching the wall as fast as the network carries it — but the waiting cannot
+happen inside a PHP worker. It needs something that holds connections without
+holding a thread:
+
+- **Mercure**, which is built into FrankenPHP. Laravel publishes on a write;
+  the hub, in Go, holds the Server-Sent Events connections. No new container,
+  though the Caddyfile gains a `mercure` block and the subscribers need a JWT.
+- **Reverb**, Laravel's own WebSocket server. Another long-running process and
+  another route through Traefik, but first-party and with Echo on the client.
+
+Either is a dependency to approve, and either keeps the rule of
+`projection-follow.js`: the poller stays as the fallback, and a dead push
+channel costs one beat of lag rather than the service. Until one of them is
+chosen, the step worth taking is the conditional read (step 4), which is done —
+see below.
+
+### The conditional read, as built
+
+Not quite as step 4 described it. The client does not send its version; the
+browser does the asking. Both hot reads — `show.state` and
+`presentations.state` — go through `NotModifiedWhenUnchanged`, which tags the
+body with an ETag and `Cache-Control: no-cache, private`. The browser's own
+cache then revalidates every `fetch` with `If-None-Match`, a quiet poll comes
+back as an empty `304`, and `fetch` hands the page the stored body with a `200`
+on it. Nothing in the JavaScript changed.
+
+Why not the version: the show's answer is not only the presentation's state. It
+carries the screens, and whether a screen is live is `last_seen_at` against a
+clock — it changes without anything being written. No version covers that, and
+a hash of the body covers everything. The price is that the answer is still
+built on every poll: this saves the wire, the compression and the client's
+parse, **not the queries**. The read is also the wall's heartbeat, so some of
+that work was never going to go away.
+
+The tag is **weak**, and that was measured on the dev FrankenPHP with the
+production Caddyfile. Caddy's `encode` appends the encoding to a strong tag
+(`"…-zstd"`) and removes it again from `If-None-Match` — but only from a strong
+one. Cloudflare weakens a strong tag whenever it touches compression, and
+`W/"…-zstd"` then matches nothing, silently, forever. A weak tag passes through
+Caddy unchanged and matches under any encoding, with or without the `W/`.
+
+Worth confirming once in production: the devtools network panel on `/remote`
+should show `304` on the state reads while nothing moves.
+
+---
+
 ## 1. The cache gets its own Redis
 
 Memcached goes. Not for speed — for two reasons that have nothing to do with it.
@@ -198,6 +277,10 @@ Not a list of fears — a list of greps, each of which is a real Octane hazard:
 ---
 
 ## 3. The poll becomes a wait
+
+> **Withdrawn as written** — see *Measured, 17 September 2026*. A held request
+> occupies a FrankenPHP worker for the whole hold; the waiting belongs in
+> Mercure or Reverb, not in PHP.
 
 With Octane in place, the second structural change becomes possible — and it is
 *only* possible with Octane in place, which is why it is third and not second.
@@ -354,17 +437,19 @@ Each step is shippable on its own and each is measurable before the next begins.
 2. **The opcache settings.** One `RUN` line in `Dockerfile.prod`. Re-measure.
 3. **`redis-cache`, and memcached out.** Self-contained, reversible, and it
    clears the deck for everything that wants Redis later.
-4. **The conditional read.** Client sends its version; server answers `304`.
-   The `ProjectionLoadTest` budget gains a case for the unchanged read costing
-   no Postgres queries at all.
+4. **The conditional read.** *Done, as a weak ETag rather than a version — see
+   above.* An unchanged read answers an empty `304`. It saves the wire, not the
+   queries; an unchanged read costing no Postgres at all waits on a version that
+   can cover the screens' liveness.
 5. **The ping.** Independent of all of the above and worth having regardless of
    which of them happen — it is the thing that makes the offline compromise
    workable in the field.
 6. **The poll routes off the session.** Its own step, its own tests.
 7. **Octane.** After the greps in section 2, and behind a dependency approval.
    The suite runs green on the Octane runtime before the image changes.
-8. **The long-poll.** Only once 7 is in production and the Cloudflare and Traefik
-   idle timeouts have been measured rather than assumed.
+8. **Push, not a long-poll.** The idle timeouts are measured and are not the
+   problem; the worker model is. Mercure or Reverb, behind a dependency
+   approval, with the poller kept as the fallback.
 
 New strings land in `lang/hu.json` as they are written, not afterwards.
 

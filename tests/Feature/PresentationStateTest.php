@@ -114,6 +114,28 @@ it('leaves the version alone when a heartbeat says nothing new', function () {
         ->and($beat->json('drawnRevision'))->toBe($projection->revision());
 });
 
+// A poll that finds the service where it left it is answered with nothing; a
+// write is always answered in full, because the writer needs the version back.
+it('answers an unchanged state with an empty 304, and a moved one in full', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $presentation = presentationFor($user, $projection);
+
+    actingAs($user);
+
+    $etag = getJson(route('presentations.state', $presentation))->assertOk()->headers->get('ETag');
+
+    getJson(route('presentations.state', $presentation), ['If-None-Match' => $etag])->assertStatus(304);
+
+    postJson(route('presentations.state.store', $presentation), ['blanked' => true], ['If-None-Match' => $etag])
+        ->assertOk()
+        ->assertHeaderMissing('ETag');
+
+    getJson(route('presentations.state', $presentation), ['If-None-Match' => $etag])
+        ->assertOk()
+        ->assertJsonPath('blanked', true);
+});
+
 // A service somebody else is running is not a thing this account may know exists.
 it('answers 404 for a presentation that is not yours', function () {
     $owner = User::factory()->create();

@@ -241,6 +241,67 @@ it('does not become the page the wall was last on', function () {
     expect(session('_previous.url'))->toBe(route('plan-documents'));
 });
 
+/*
+ * A quiet poll costs the wire nothing. The browser keeps the last answer and
+ * asks with its tag; an answer that has not moved comes back empty. The tag is
+ * weak because Cloudflare and Caddy both rewrite a strong one depending on the
+ * compression, so it has to match with or without the `W/` it left with.
+ */
+it('answers an unchanged show with an empty 304', function (bool $weakened) {
+    [$user] = runningService();
+
+    actingAs($user);
+
+    $etag = getJson(route('show.state'))->assertOk()->headers->get('ETag');
+
+    expect($etag)->toStartWith('W/');
+
+    $asked = $weakened ? $etag : substr($etag, 2);
+
+    $unchanged = getJson(route('show.state'), ['If-None-Match' => $asked]);
+
+    $unchanged->assertStatus(304);
+    expect($unchanged->getContent())->toBe('');
+})->with(['as sent' => true, 'stripped of W/' => false]);
+
+it('answers the show in full once the service has moved', function () {
+    [$user, , $presentation] = runningService();
+
+    actingAs($user);
+
+    $etag = getJson(route('show.state'))->headers->get('ETag');
+
+    $presentation->forceFill(['blanked' => true, 'version' => $presentation->version + 1])->save();
+
+    getJson(route('show.state'), ['If-None-Match' => $etag])
+        ->assertOk()
+        ->assertJsonPath('state.blanked', true);
+});
+
+/*
+ * The empty answer is still a heartbeat. The body was built, hashed and thrown
+ * away, and the wall's last_seen_at was written along the way — a wall that
+ * stopped counting as present because nothing on it had moved would drop out of
+ * the remote's list in the middle of a long homily.
+ */
+it('still takes the wall heartbeat when answering 304', function () {
+    [$user, $screen] = runningService();
+
+    $device = (string) Str::uuid();
+    $screen->forceFill(['device_id' => $device, 'last_seen_at' => Carbon::now()])->save();
+
+    actingAs($user);
+    withSession([DeviceId::COOKIE => $device]);
+
+    $etag = getJson(route('show.state', ['screen' => 1]))->headers->get('ETag');
+    $before = $screen->fresh()->last_seen_at;
+
+    Carbon::setTestNow(Carbon::now()->addSeconds(Screen::SEEN_EVERY_SECONDS + 1));
+    getJson(route('show.state', ['screen' => 1]), ['If-None-Match' => $etag])->assertStatus(304);
+
+    expect($screen->fresh()->last_seen_at->gt($before))->toBeTrue();
+});
+
 afterEach(function () {
     Carbon::setTestNow();
     Cache::flush();

@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\EnforcePairedDeviceSession;
+use App\Http\Middleware\EnsureVisitorIsHuman;
+use App\Http\Middleware\NotModifiedWhenUnchanged;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,13 +18,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->alias([
-            'admin' => \App\Http\Middleware\AdminMiddleware::class,
-            'human' => \App\Http\Middleware\EnsureVisitorIsHuman::class,
+            'admin' => AdminMiddleware::class,
+            'human' => EnsureVisitorIsHuman::class,
+            'not-modified' => NotModifiedWhenUnchanged::class,
         ]);
 
         // Appended, so it runs inside StartSession and can still reach the cookie
         // that session is about to be handed.
-        $middleware->appendToGroup('web', \App\Http\Middleware\EnforcePairedDeviceSession::class);
+        $middleware->appendToGroup('web', EnforcePairedDeviceSession::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

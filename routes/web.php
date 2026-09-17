@@ -454,7 +454,7 @@ Route::livewire('/present', ProjectionPresenter::class)
 // are one request rather than two. No screen in the address: every device of a
 // person's follows the same show.
 Route::get('/show/state', [ShowStateController::class, 'show'])
-    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
+    ->middleware(['auth', 'verified', 'throttle:projection-poll', 'not-modified'])
     ->name('show.state');
 
 Route::post('/show/state', [ShowStateController::class, 'update'])
@@ -474,7 +474,7 @@ Route::post('/screens/{screen}/fit', ScreenFitController::class)
 // the picture during a service, and polling the component would give that up.
 // These are polled about once a second from both ends while a Mass is going on.
 Route::get('/presentations/{presentation}/state', [PresentationStateController::class, 'show'])
-    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
+    ->middleware(['auth', 'verified', 'throttle:projection-poll', 'not-modified'])
     ->name('presentations.state');
 
 Route::post('/presentations/{presentation}/state', [PresentationStateController::class, 'update'])
