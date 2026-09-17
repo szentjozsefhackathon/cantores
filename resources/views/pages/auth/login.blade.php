@@ -64,17 +64,27 @@
             <flux:checkbox name="remember" :label="__('Remember me')" :checked="old('remember')" />
 
             <!-- Cloudflare Turnstile -->
-            <x-turnstile />
+            <x-turnstile data-callback="turnstileSolved" data-expired-callback="turnstileReset" data-error-callback="turnstileReset" />
             @error('cf-turnstile-response')
             <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
             @enderror
 
             <div class="flex items-center justify-end">
-                <flux:button variant="primary" type="submit" class="w-full" data-test="login-button">
+                <flux:button id="turnstile-submit" variant="primary" type="submit" class="w-full" data-test="login-button" disabled>
                     {{ __('Log in') }}
                 </flux:button>
             </div>
         </form>
+
+        <script>
+            window.turnstileSolved = function () {
+                document.getElementById('turnstile-submit').disabled = false;
+            };
+
+            window.turnstileReset = function () {
+                document.getElementById('turnstile-submit').disabled = true;
+            };
+        </script>
 
         <div class="text-center">
             <flux:link :href="route('qr-login')" wire:navigate class="text-sm" data-test="qr-login-link">

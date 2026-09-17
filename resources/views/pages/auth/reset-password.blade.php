@@ -43,16 +43,26 @@
             />
 
             <!-- Cloudflare Turnstile -->
-            <x-turnstile />
+            <x-turnstile data-callback="turnstileSolved" data-expired-callback="turnstileReset" data-error-callback="turnstileReset" />
             @error('cf-turnstile-response')
             <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
             @enderror
 
             <div class="flex items-center justify-end">
-                <flux:button type="submit" variant="primary" class="w-full" data-test="reset-password-button">
+                <flux:button id="turnstile-submit" type="submit" variant="primary" class="w-full" data-test="reset-password-button" disabled>
                     {{ __('Reset password') }}
                 </flux:button>
             </div>
         </form>
+
+        <script>
+            window.turnstileSolved = function () {
+                document.getElementById('turnstile-submit').disabled = false;
+            };
+
+            window.turnstileReset = function () {
+                document.getElementById('turnstile-submit').disabled = true;
+            };
+        </script>
     </div>
 </x-layouts::auth>

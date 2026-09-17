@@ -19,15 +19,25 @@
             />
 
             <!-- Cloudflare Turnstile -->
-            <x-turnstile />
+            <x-turnstile data-callback="turnstileSolved" data-expired-callback="turnstileReset" data-error-callback="turnstileReset" />
             @error('cf-turnstile-response')
             <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
             @enderror
 
-            <flux:button variant="primary" type="submit" class="w-full" data-test="email-password-reset-link-button">
+            <flux:button id="turnstile-submit" variant="primary" type="submit" class="w-full" data-test="email-password-reset-link-button" disabled>
                 {{ __('Email password reset link') }}
             </flux:button>
         </form>
+
+        <script>
+            window.turnstileSolved = function () {
+                document.getElementById('turnstile-submit').disabled = false;
+            };
+
+            window.turnstileReset = function () {
+                document.getElementById('turnstile-submit').disabled = true;
+            };
+        </script>
 
         <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-400">
             <span>{{ __('Or, return to') }}</span>

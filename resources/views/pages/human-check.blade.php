@@ -14,13 +14,17 @@
         <form method="POST" action="{{ route('human-check.store') }}" id="human-check-form" class="flex flex-col items-center gap-4">
             @csrf
 
-            <x-turnstile data-callback="humanCheckPassed" />
+            <x-turnstile
+                data-callback="humanCheckPassed"
+                data-expired-callback="humanCheckReset"
+                data-error-callback="humanCheckReset"
+            />
 
             @error('cf-turnstile-response')
                 <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
             @enderror
 
-            <flux:button variant="primary" type="submit" icon-trailing="arrow-right">
+            <flux:button id="human-check-submit" variant="primary" type="submit" icon-trailing="arrow-right" disabled>
                 {{ __('Continue') }}
             </flux:button>
         </form>
@@ -33,7 +37,12 @@
 
     <script>
         window.humanCheckPassed = function () {
+            document.getElementById('human-check-submit').disabled = false;
             document.getElementById('human-check-form').submit();
+        };
+
+        window.humanCheckReset = function () {
+            document.getElementById('human-check-submit').disabled = true;
         };
     </script>
 </x-layouts::shell>

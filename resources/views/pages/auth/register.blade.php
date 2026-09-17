@@ -71,7 +71,7 @@
                 viewable />
 
             <!-- Cloudflare Turnstile -->
-            <x-turnstile />
+            <x-turnstile data-callback="turnstileSolved" data-expired-callback="turnstileReset" data-error-callback="turnstileReset" />
             @error('cf-turnstile-response')
             <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
             @enderror
@@ -84,11 +84,21 @@
             </p>
 
             <div class="flex items-center justify-end">
-                <flux:button type="submit" variant="primary" class="w-full" data-test="register-user-button">
+                <flux:button id="turnstile-submit" type="submit" variant="primary" class="w-full" data-test="register-user-button" disabled>
                     {{ __('Create account') }}
                 </flux:button>
             </div>
         </form>
+
+        <script>
+            window.turnstileSolved = function () {
+                document.getElementById('turnstile-submit').disabled = false;
+            };
+
+            window.turnstileReset = function () {
+                document.getElementById('turnstile-submit').disabled = true;
+            };
+        </script>
 
         <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-600 dark:text-zinc-400">
             <span>{{ __('Already have an account?') }}</span>
