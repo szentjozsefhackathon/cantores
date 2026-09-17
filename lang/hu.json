@@ -1567,5 +1567,13 @@
     "Take the deck off every screen and end this projection?": "Leveszed a vetítést minden képernyőről, és lezárod?",
     "Nothing is being projected": "Most nincs vetítés",
     "Which screen": "Melyik képernyő",
+    "Opens a window with this deck on it, to drag onto the projector.": "Megnyit egy ablakot ezzel a diasorral, amit áthúzhatsz a kivetítőre.",
+    "Edit deck": "Vetítés szerkesztése",
+    "Currently projecting": "Éppen vetítve",
+    "Remove from screen": "Levétel a képernyőről",
+    "See what the room is looking at.": "Lásd, mit néz éppen a templom.",
+    "Nothing is being projected right now.": "Most nincs vetítés.",
+    "Drive the deck that is up right now.": "Irányítsd a most vetített diasort.",
+    "Take this deck off the screen and end the projection? Starting a new one afterwards will show the title card again, giving you time to line it up.": "Leveszed ezt a vetítést a képernyőről, és lezárod? Ha ezután újat indítasz, újra megjelenik a címkártya, hogy legyen időd felkészülni.",
     "Take the deck down": "Vetítés levétele"
 }
