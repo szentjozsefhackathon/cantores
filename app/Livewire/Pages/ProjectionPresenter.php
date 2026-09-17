@@ -6,6 +6,7 @@ use App\Models\DevicePairing;
 use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\Screen;
+use App\Services\PresentationState;
 use App\Services\ProjectionRenderPayload;
 use App\Support\DeviceId;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -88,6 +89,18 @@ class ProjectionPresenter extends Component
     public string $revision = '';
 
     /**
+     * Where the show stood when this page opened on it, so the first slide
+     * drawn is the one the service is on.
+     *
+     * Without it a reloaded wall draws the beginning of the deck and its first
+     * heartbeat — sent in the same moment as its first read — reports the
+     * beginning back as where the service is, taking every phone with it.
+     *
+     * @var array<string, mixed>|null
+     */
+    public ?array $state = null;
+
+    /**
      * Two ways in, one page.
      *
      * With a deck in the URL, the deck is put up as this person's show — on
@@ -130,6 +143,7 @@ class ProjectionPresenter extends Component
         // card if nothing was up.
         $this->presentation = Presentation::putUp(Auth::user(), $projection);
         $this->revision = $projection->revision();
+        $this->state = app(PresentationState::class)->answer($this->presentation);
 
         $payload = app(ProjectionRenderPayload::class)->for($projection, Auth::user());
 

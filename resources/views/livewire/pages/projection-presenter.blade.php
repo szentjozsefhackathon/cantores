@@ -43,6 +43,9 @@ resources/js/projection-presenter.js
         // first thing painted rather than something that arrives a second
         // later, over a slide the congregation has already read.
         'splash' => $presentation?->splash ?? \App\Models\Presentation::SPLASH_OFF,
+        // Where the service already is, so a reloaded wall draws the hymn and
+        // not the beginning — and never reports the beginning back.
+        'state' => $state,
         // What to tell the person at this keyboard while the opening is being
         // walked. Held in the bar, never over the picture.
         'cardHint' => __('The title card is on the screen. The next press blacks it out.'),

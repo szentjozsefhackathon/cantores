@@ -4,6 +4,7 @@ use App\Livewire\Pages\PlanDocuments;
 use App\Livewire\Pages\ProjectionPresenter;
 use App\Models\Presentation;
 use App\Models\Projection;
+use App\Models\ProjectionSlide;
 use App\Models\Screen;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -279,4 +280,29 @@ it('sends the old screen-addressed remote to the new one', function () {
 
     get('/remote/5')->assertRedirect('/remote');
     get('/remote/5/decks')->assertRedirect('/remote/decks');
+});
+
+/*
+ * Reloading the wall mid-service must land on the hymn. The page is handed where
+ * the show stands, so it never draws the beginning of the deck — and so never
+ * reports the beginning back to the phone with its first heartbeat.
+ */
+it('hands a reloaded wall the place the service has reached', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $entry = ProjectionSlide::factory()->create(['projection_id' => $projection->id]);
+
+    $running = Presentation::putUp($user, $projection);
+    $running->forceFill(['entry_id' => $entry->id, 'slide_index' => 2, 'splash' => Presentation::SPLASH_OFF, 'version' => 7])->save();
+
+    actingAs($user);
+
+    $state = Livewire::test(ProjectionPresenter::class, ['projection' => $projection])->get('state');
+
+    expect($state)->toMatchArray([
+        'version' => 7,
+        'entryId' => $entry->id,
+        'slideIndex' => 2,
+        'splash' => Presentation::SPLASH_OFF,
+    ]);
 });

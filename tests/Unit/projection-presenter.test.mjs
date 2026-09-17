@@ -412,3 +412,33 @@ test('the wall takes back an opening the server refused', async () => {
     assert.equal(deck.splash, 'off', 'the wall went on holding a card the room had stopped looking at');
     assert.equal(deck.appliedVersion, 9);
 });
+
+/*
+ * Ctrl+R mid-service. The page opens knowing where the show stands, and draws
+ * that slide — not the first one, which its first heartbeat would otherwise
+ * report as where the service is, sending the phone back to the beginning.
+ */
+test('a reloaded wall lands where the service already is', async () => {
+    const deck = registered.projectionPresenter({
+        presentationId: 1,
+        entries: [{ id: 1 }, { id: 2 }],
+        state: { version: 7, entryId: 2, slideIndex: 1, splash: 'off', blanked: false, reveals: {} },
+    });
+    deck.show = () => {};
+
+    let written = null;
+    deck._client = { write: (state) => { written = state; return Promise.resolve(null); } };
+
+    deck.land([
+        { entryId: 1, index: 0, svg: null },
+        { entryId: 2, index: 0, svg: null },
+        { entryId: 2, index: 1, svg: null },
+    ]);
+
+    assert.equal(deck.index, 2, 'the wall went back to the beginning of the deck');
+    assert.equal(deck.appliedVersion, 7);
+
+    await deck.report();
+
+    assert.deepEqual({ entryId: written.entryId, slideIndex: written.slideIndex }, { entryId: 2, slideIndex: 1 });
+});

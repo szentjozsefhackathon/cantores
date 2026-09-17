@@ -297,12 +297,28 @@ onAlpineInit(() => {
             this.busy = true;
 
             try {
-                this.paint(await renderDeck(this.entries, this.geometry), this.address());
+                this.land(await renderDeck(this.entries, this.geometry));
             } catch (e) {
                 console.error('[projection] could not draw the deck', e);
             } finally {
                 this.busy = false;
             }
+        },
+
+        /**
+         * The deck this page opened on, put up where the service already is.
+         *
+         * Read off the state baked into the page, not off the first poll: the
+         * heartbeat starts in the same moment as the poll, and a wall that drew
+         * the beginning while it waited would report the beginning as where the
+         * service is — and the phone, and sometimes the wall itself, would
+         * follow it there.
+         */
+        land(drawn) {
+            if (!config.state) { return this.paint(drawn, this.address()); }
+
+            this.drawn = drawn;
+            this.adopt(config.state);
         },
 
         /**
