@@ -90,8 +90,7 @@
                 </div>
 
                 <!-- Celebration assignment switching -->
-                <div class="pt-4 border-t border-neutral-200 dark:border-neutral-800">
-                    <flux:heading size="sm" class="text-neutral-600 dark:text-neutral-400 mb-2">Ünnep hozzárendelés módosítása</flux:heading>
+                <div class="">
                     <div class="flex flex-wrap gap-2">
                         @if($musicPlan->hasCustomCelebrations())
                         <flux:button
