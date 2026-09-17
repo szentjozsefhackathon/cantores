@@ -7,7 +7,7 @@
         "dev": "vite"
     },
     "dependencies": {
-        "@aretino-chant/core": "^0.25.0",
+        "@aretino-chant/core": "^0.26.1",
         "@aretino-chant/editor": "^0.8.2",
         "@aretino-chant/gabc2aretino": "^0.4.0",
         "@aretino-chant/guido2aretino": "^0.3.0",
