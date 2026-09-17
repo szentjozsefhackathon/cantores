@@ -150,6 +150,46 @@ export function paintSlide(svg, canvas, background) {
 }
 
 /**
+ * A slide as the wall shows it: on the paper the engines assume.
+ *
+ * The three engines draw black on nothing and leave the white to whatever is
+ * behind them. On the wall that cannot be the box the slide sits in — the box is
+ * sized in fractions of a pixel and the drawing in whole ones, so a box painted
+ * white shows a hairline of it beside a slide of words. The white is laid inside
+ * the drawing instead, under any ground of its own, so what shows through the
+ * rounding is the black stage.
+ *
+ * Only under a slide with no ground of its own. Two grounds on one fractional
+ * edge are each smoothed into the pixel they half cover, and the white under a
+ * black slide of words came through that pixel as a grey line. Crisp at the
+ * edge for the same reason: a score's white ends on a whole pixel, not a grey
+ * one.
+ */
+export function onPaper(svg) {
+    const slide = svg.cloneNode(true);
+    const { width, height } = viewBoxOf(slide);
+
+    if (!(width > 0) || !(height > 0) || hasGround(slide, width, height)) { return slide; }
+
+    paintSlide(slide, { width, height }, 'white');
+    slide.firstChild.setAttribute('shape-rendering', 'crispEdges');
+
+    return slide;
+}
+
+/** Whether a slide's first mark is a ground laid across the whole of it by paintSlide. */
+function hasGround(svg, width, height) {
+    const first = svg.firstChild;
+
+    return first?.nodeName?.toLowerCase() === 'rect'
+        && first.getAttribute('fill') !== null
+        && Number(first.getAttribute('x')) === 0
+        && Number(first.getAttribute('y')) === 0
+        && Number(first.getAttribute('width')) === width
+        && Number(first.getAttribute('height')) === height;
+}
+
+/**
  * A slide that engraved to nothing — a blank page rather than a broken one.
  * Still painted, where the slide has a ground: a verse that came to nothing is
  * a black screen among black screens, not a white flash.

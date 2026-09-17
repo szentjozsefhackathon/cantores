@@ -141,3 +141,23 @@ it('fades the wall out and brings it back instantly', function () {
         ->assertSeeHtml('transition: `opacity ${darkFadeMs}ms ease-in`')
         ->assertSeeHtml('opacity: dark ?');
 });
+
+/*
+ * The slide's box is exactly the slide's shape, whatever shape the window is. A
+ * box that filled the height and only capped its width came out taller than the
+ * slide in a narrow window, and a score stood on a white band where the room
+ * should see black. Nor is the box white: its size is fractional, and the white
+ * showed as a hairline beside the slide. The paper goes inside the slide.
+ */
+it('sizes the slide to its own shape rather than to the window', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionPresenter::class, ['projection' => $projection])
+        ->assertSeeHtml('width: `min(100vw, 100vh * (${aspectRatio}))`')
+        ->assertDontSeeHtml("height: '100%', maxWidth: '100%'")
+        ->assertDontSeeHtml('x-ref="stageBox"
+            class="bg-white"');
+});

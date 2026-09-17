@@ -108,7 +108,7 @@ resources/js/projection-presenter.js
         </div>
     </div>
 
-    {{-- The slide itself. The white box is the shape of the screen the deck was
+    {{-- The slide itself. The box is the shape of the screen the deck was
          built for, fitted into whatever shape the projector actually is — so a
          16:9 deck on a 4:3 beamer is letterboxed rather than stretched.
 
@@ -121,13 +121,12 @@ resources/js/projection-presenter.js
     <div class="absolute inset-0 flex items-center justify-center overflow-hidden">
         <div
             x-ref="stageBox"
-            class="bg-white"
             x-show="!waiting && !opening"
             {{-- An object and not a string: a string binding is written with
                  setAttribute('style', …) and throws away the `display: none`
                  x-show put on this same element, and the fit is re-read every
                  second — so the deck came back out from under the card. --}}
-            x-bind:style="{ aspectRatio: aspectRatio, height: '100%', maxWidth: '100%', maxHeight: '100%', transform: fitTransform, transformOrigin: 'center' }"
+            x-bind:style="{ aspectRatio: aspectRatio, width: `min(100vw, 100vh * (${aspectRatio}))`, transform: fitTransform, transformOrigin: 'center' }"
             wire:ignore
         ></div>
     </div>
@@ -147,7 +146,7 @@ resources/js/projection-presenter.js
     <div class="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden" x-show="showingSplash" x-cloak>
         <div
             class="bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-8"
-            x-bind:style="{ aspectRatio: aspectRatio, height: '100%', maxWidth: '100%', maxHeight: '100%', transform: fitTransform, transformOrigin: 'center' }"
+            x-bind:style="{ aspectRatio: aspectRatio, width: `min(100vw, 100vh * (${aspectRatio}))`, transform: fitTransform, transformOrigin: 'center' }"
         >
             {{-- The deck's name, large: the one glance that says the right
                  projection is loaded before anybody depends on it. --}}

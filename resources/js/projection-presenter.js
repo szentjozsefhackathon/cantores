@@ -1,5 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
+import { onPaper } from './slide-frame.js';
 import { HEARTBEAT_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, poller, showClient, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
@@ -370,7 +371,7 @@ onAlpineInit(() => {
 
             const slide = this.slides[this.index];
 
-            box.replaceChildren(slide ? slide.svg.cloneNode(true) : document.createComment('empty'));
+            box.replaceChildren(slide ? onPaper(slide.svg) : document.createComment('empty'));
         },
 
         go(index) {
