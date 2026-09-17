@@ -983,56 +983,41 @@ resources/js/projection-remote.js
          A music the plan does not have.
          ---------------------------------------------------------------
 
-         A bottom sheet with one field, because it is used a minute before
-         Mass or during it. What is picked goes to the end of the slot it was
-         asked for from, or to the end of the deck, and is moved into place
-         with Reorder — then its score is chosen from the offers like any
-         other music's. Above the plan sheet, since it is opened from there. --}}
-    <div class="fixed inset-0 z-30 flex items-end justify-center lg:items-center" x-show="addMusicOpen" x-cloak>
+         The same music search the editor uses — filters, collections, the
+         quick create — since it already lays itself out for a phone. What is
+         picked goes to the end of the slot it was asked for from, or to the
+         end of the deck, and is moved into place with Reorder — then its score
+         is chosen from the offers like any other music's. Above the plan sheet,
+         since it is opened from there. Lazy, so a service nobody adds music to
+         never loads it. --}}
+    <div
+        class="fixed inset-0 z-30 flex items-end justify-center lg:items-center"
+        x-show="addMusicOpen"
+        x-cloak
+        x-on:music-selected-remote.window="addMusic($event.detail.musicId)"
+    >
         <div class="absolute inset-0 bg-black/50" x-on:click="closeAddMusic()"></div>
 
         <div
             role="dialog"
             aria-modal="true"
-            class="relative flex max-h-[80vh] w-full max-w-md flex-col rounded-t-2xl bg-white shadow-xl lg:rounded-2xl dark:bg-zinc-900"
+            class="relative flex max-h-[90vh] w-full max-w-4xl flex-col rounded-t-2xl bg-white shadow-xl lg:rounded-2xl dark:bg-zinc-900"
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="translate-y-full lg:translate-y-0 lg:scale-95 lg:opacity-0"
             x-transition:enter-end="translate-y-0 lg:scale-100 lg:opacity-100"
         >
             <div class="flex shrink-0 items-center gap-2 border-b border-zinc-200 px-3 py-2 dark:border-zinc-700">
-                <span class="flex-1 text-sm font-medium">{{ __('Add music') }}</span>
+                <div class="min-w-0 flex-1">
+                    <div class="text-sm font-medium">{{ __('Add music') }}</div>
+                    <div class="text-xs text-zinc-500">{{ __('Only this projection holds it; the plan stays as it is.') }}</div>
+                </div>
                 <button type="button" class="rounded p-1" x-on:click="closeAddMusic()" aria-label="{{ __('Close') }}">
                     <flux:icon.x-mark class="size-5" />
                 </button>
             </div>
 
-            <div class="shrink-0 px-3 pt-3">
-                <input
-                    type="search"
-                    class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base select-text dark:border-zinc-600 dark:bg-zinc-800"
-                    x-model="musicQuery"
-                    x-on:input.debounce.300ms="searchMusic()"
-                    x-effect="addMusicOpen && $nextTick(() => $el.focus())"
-                    placeholder="{{ __('Title, or collection and number') }}"
-                    aria-label="{{ __('Search music') }}"
-                />
-                <p class="mt-1 text-xs text-zinc-500">{{ __('Only this projection holds it; the plan stays as it is.') }}</p>
-            </div>
-
-            <div class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-3">
-                <template x-for="music in musicResults" x-bind:key="music.id">
-                    <button
-                        type="button"
-                        class="block w-full rounded-lg border border-zinc-200 px-3 py-2 text-start active:bg-zinc-100 dark:border-zinc-700 dark:active:bg-zinc-800"
-                        x-on:click="addMusic(music.id)"
-                    >
-                        <span class="block truncate text-sm font-medium" x-text="music.title"></span>
-                        <span class="block truncate text-xs text-zinc-500" x-show="music.subtitle || music.reference" x-text="[music.subtitle, music.reference].filter(Boolean).join(' · ')"></span>
-                    </button>
-                </template>
-
-                <div class="py-2 text-center text-sm text-zinc-400" x-show="musicSearching">{{ __('Searching…') }}</div>
-                <div class="py-2 text-center text-sm text-zinc-400" x-show="!musicSearching && musicQuery.trim() !== '' && musicResults.length === 0">{{ __('No music found.') }}</div>
+            <div data-scrolls class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 select-text">
+                <livewire:music-search lazy selectable="true" source="-remote" wire:key="projection-remote-music-search" />
             </div>
         </div>
     </div>

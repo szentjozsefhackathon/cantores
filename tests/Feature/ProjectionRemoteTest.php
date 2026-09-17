@@ -418,6 +418,26 @@ it('gives the laptop the plan, the service and the deck side by side', function 
 });
 
 /*
+ * A music the plan does not have is looked for with the same search the editor
+ * uses, and what is picked there is handed to the remote's own add.
+ */
+it('adds music through the shared music search', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    showing($user, $projection);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionRemote::class)
+        ->assertSeeLivewire('music-search')
+        ->assertSeeHtml('x-on:music-selected-remote.window="addMusic($event.detail.musicId)"');
+
+    Livewire::test('music-search', ['selectable' => true, 'source' => '-remote'])
+        ->call('selectMusic', 42)
+        ->assertDispatched('music-selected-remote', musicId: 42);
+});
+
+/*
  * And the person reading ahead in the deck is the person who may want the deck
  * itself changed, so the editor is one link away rather than a search away — a
  * real link, opened in a tab of its own, because a button bound to an address

@@ -240,12 +240,8 @@ onAlpineInit(() => {
         /** Where a row, music or slot of this deck is moved. */
         moveUrl: config.moveUrl ?? null,
 
-        /**
-         * Where a music the plan does not have is added to this deck, and
-         * searched for first.
-         */
+        /** Where a music the plan does not have is added to this deck. */
         addedMusicsUrl: config.addedMusicsUrl ?? null,
-        musicSearchUrl: config.musicSearchUrl ?? null,
 
         /**
          * Whether the plan column shows arrows rather than going to what is
@@ -257,10 +253,6 @@ onAlpineInit(() => {
         /** The bottom sheet a music is searched for in, and the slot it is for. */
         addMusicOpen: false,
         addMusicSlotId: null,
-        musicQuery: '',
-        musicResults: [],
-        musicSearching: false,
-        _musicSearchAt: 0,
 
         removeAddedMusicText: config.removeAddedMusicText ?? '',
         addScoreText: config.addScoreText ?? '',
@@ -1339,7 +1331,7 @@ onAlpineInit(() => {
             // The panel that lines the picture up owns the whole screen while
             // it is open: a thumb dragged across an arrow there is aiming at
             // the arrow, not asking for the plan.
-            if (!start || !touch || start.scroller || this.fitOpen) { return; }
+            if (!start || !touch || start.scroller || this.fitOpen || this.addMusicOpen) { return; }
 
             const across = touch.clientX - start.x;
 
@@ -1666,7 +1658,6 @@ onAlpineInit(() => {
             this.scoreToggleUrl = answer.deckUrls?.scoreToggleUrl ?? null;
             this.moveUrl = answer.deckUrls?.moveUrl ?? null;
             this.addedMusicsUrl = answer.deckUrls?.addedMusicsUrl ?? null;
-            this.musicSearchUrl = answer.deckUrls?.musicSearchUrl ?? null;
             this.appliedVersion = 0;
             this.reveals = {};
             this.blanked = Boolean(answer.state?.blanked);
@@ -1761,37 +1752,11 @@ onAlpineInit(() => {
          */
         openAddMusic(slotId = null) {
             this.addMusicSlotId = slotId;
-            this.musicQuery = '';
-            this.musicResults = [];
             this.addMusicOpen = true;
         },
 
         closeAddMusic() {
             this.addMusicOpen = false;
-        },
-
-        async searchMusic() {
-            const query = this.musicQuery.trim();
-            const asked = Date.now();
-
-            this._musicSearchAt = asked;
-
-            if (!this.musicSearchUrl || query === '') {
-                this.musicResults = [];
-
-                return;
-            }
-
-            this.musicSearching = true;
-
-            const url = `${this.musicSearchUrl}?q=${encodeURIComponent(query)}`;
-            const answer = await this._scoreHttp.get(url);
-
-            // An answer to an older query is not the list for this one.
-            if (this._musicSearchAt !== asked) { return; }
-
-            this.musicSearching = false;
-            this.musicResults = answer?.musics ?? [];
         },
 
         async addMusic(musicId) {
