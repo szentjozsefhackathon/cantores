@@ -149,7 +149,7 @@ export function jsonRequests(csrfToken) {
      * the session's previous one on every plain GET, and `fetch` is a plain GET
      * as far as that check is concerned — so without this header a wall spends a
      * Mass telling its own session that the last page it was on was
-     * `/screens/5/state`, once a second. Two things follow from that, and both
+     * `/show/state`, once a second. Two things follow from that, and both
      * are wrong: the session is dirtied by every poll, which is what would stop
      * it ever being written conditionally; and anything that sends this person
      * back where they came from — a login, a form — sends them to a JSON
@@ -188,10 +188,10 @@ export function jsonRequests(csrfToken) {
 /**
  * A client for one presentation's state.
  *
- * Made rather than configured, because a screen outlives the decks put on it:
- * when a phone points the wall at something else, the URLs change under a page
- * that is not reloading, and the old client must be dropped whole rather than
- * edited. Its two URLs come from the screen's own answer, so nothing here has to
+ * Made rather than configured, because a page outlives the decks put up in the
+ * show: when a phone puts something else up, the URLs change under a page that
+ * is not reloading, and the old client must be dropped whole rather than
+ * edited. Its two URLs come from the show's own answer, so nothing here has to
  * know how a route is spelled.
  *
  * @param {{stateUrl: string, payloadUrl: string, csrfToken: string}} config
@@ -442,35 +442,50 @@ export function sameFit(one, other) {
 }
 
 /**
- * A client for a screen — what the room is looking at, rather than where in it
- * the service has got to.
+ * A client for a person's show — which deck is up, rather than where in it the
+ * service has got to.
  *
- * One read answers both: the screen's answer carries the presentation's state
- * nested inside it, so a wall polling once a second is polling once a second and
- * not twice. `presentationId` is the field everything turns on, and it changing
- * is the one event that makes a screen go black and engrave something else.
+ * One read answers both: the show's answer carries the presentation's state
+ * nested inside it, so a wall polling once a second is polling once a second
+ * and not twice. `presentationId` is the field everything turns on, and it
+ * changing is the one event that makes a page go black and engrave something
+ * else. The answer also lists the screens that are on, each with its own fit.
  *
- * @param {{screenUrl: string, csrfToken: string}} config
+ * @param {{showUrl: string, csrfToken: string}} config
  */
-export function screenClient(config) {
+export function showClient(config) {
     const http = jsonRequests(config.csrfToken);
 
     return {
-        /** What the screen is showing, or null if we could not find out. */
-        read: () => http.get(config.screenUrl),
+        /** The show, or null if we could not find out. */
+        read: () => http.get(config.showUrl),
 
         /**
-         * Put a deck on the screen, or — with null — take what is on it off and
-         * end the service. A screen is pointed twice a service; nothing about
-         * this call is on the hot path.
+         * Put a deck up on every screen, or — with null — take the show down
+         * and end the service. Twice a service; nothing about this call is on
+         * the hot path.
          */
-        point: (projectionId) => http.post(config.screenUrl, { projectionId }),
+        point: (projectionId) => http.post(config.showUrl, { projectionId }),
 
         /**
-         * Move the picture on the wall, without saying anything about what is
-         * on it. Pressed a dozen times while a beamer is lined up and never
-         * again during the service.
+         * Move the picture on one wall, without saying anything about what is
+         * on it. The one write still addressed to a device, because every
+         * projector is hung differently.
+         *
+         * @param {{fitUrl: string}} screen one of the answer's `screens`
          */
-        adjust: (fit) => http.post(config.screenUrl, { fit }),
+        adjust: (screen, fit) => http.post(screen.fitUrl, { fit }),
     };
+}
+
+/**
+ * This device's own fit, out of the show's answer — or null when this device is
+ * not among the screens, in which case whatever fit was already held stays.
+ *
+ * @param {{screens?: Array<{isThisDevice: boolean, fit: object}>}|null} answer
+ */
+export function ownFit(answer) {
+    const own = (answer?.screens ?? []).find((screen) => screen.isThisDevice);
+
+    return own ? fitFrom(own.fit) : null;
 }

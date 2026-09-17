@@ -22,10 +22,12 @@ use Illuminate\Support\Facades\Auth;
  * existence by a laptop opening a URL that named one: there was no address for
  * "the wall", so the remote had to guess which deck the room was seeing.
  *
- * With it, all three of the awkward answers become one. A screen showing nothing
- * is a state the phone can say out loud; a screen the phone points somewhere
- * else is how a deck is started and switched; and leaving the remote stops
- * meaning "fall out of the only page that knew anything".
+ * It points at nothing. A screen always shows its owner's show — the one
+ * presentation they have up — so which deck the wall displays follows from
+ * `user_id` alone, and the parish laptop a second cantor signs in on becomes
+ * their wall and stops being anybody else's. What is left here is what really
+ * is about the device: that it is there, what it is called, and where the
+ * picture lands on the projector it is plugged into.
  *
  * Nothing is paired to make one. Both devices already hold a session for the
  * same person — that is what the QR sign-in was for — so claiming a screen is
@@ -38,7 +40,6 @@ use Illuminate\Support\Facades\Auth;
  * @property int|null $device_pairing_id
  * @property string $session_id
  * @property string|null $user_agent
- * @property int|null $presentation_id
  * @property float $fit_scale
  * @property float $fit_x
  * @property float $fit_y
@@ -48,7 +49,6 @@ use Illuminate\Support\Facades\Auth;
  * @property-read User $user
  * @property-read DevicePairing|null $devicePairing
  * @property-read DeviceName|null $deviceName
- * @property-read Presentation|null $presentation
  *
  * @method static \Database\Factories\ScreenFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Screen live()
@@ -112,7 +112,6 @@ class Screen extends Model
         'device_pairing_id',
         'session_id',
         'user_agent',
-        'presentation_id',
         'fit_scale',
         'fit_x',
         'fit_y',
@@ -145,14 +144,6 @@ class Screen extends Model
     public function devicePairing(): BelongsTo
     {
         return $this->belongsTo(DevicePairing::class);
-    }
-
-    /**
-     * What the room is looking at, or nothing.
-     */
-    public function presentation(): BelongsTo
-    {
-        return $this->belongsTo(Presentation::class);
     }
 
     /**
@@ -243,43 +234,6 @@ class Screen extends Model
         ])->save();
 
         return $screen;
-    }
-
-    /**
-     * Put a deck on this screen, or take what is on it off.
-     *
-     * Clearing ends the presentation as well, because a screen showing nothing
-     * is the end of the service and there is no one left to say so: the laptop
-     * is across the building and the phone has just said it deliberately.
-     */
-    public function point(?Presentation $presentation): void
-    {
-        $previous = $this->presentation;
-
-        $this->forceFill([
-            'presentation_id' => $presentation?->getKey(),
-            'last_seen_at' => Carbon::now(),
-        ])->save();
-
-        if ($presentation === null && $previous instanceof Presentation) {
-            $previous->end();
-        }
-
-        $this->setRelation('presentation', $presentation);
-    }
-
-    /**
-     * What the room is looking at, once a presentation that has quietly ended is
-     * counted as nothing.
-     *
-     * The column is left alone rather than nulled here: a read is not the moment
-     * to write, and the next thing pointed at this screen overwrites it anyway.
-     */
-    public function showing(): ?Presentation
-    {
-        $presentation = $this->presentation;
-
-        return $presentation instanceof Presentation && $presentation->isLive() ? $presentation : null;
     }
 
     /**

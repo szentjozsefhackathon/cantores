@@ -26,14 +26,13 @@ resources/js/projection-presenter.js
         // so that no re-render can touch the picture mid-service, and polling
         // Livewire would give that up.
         //
-        // The screen's own URL is the one constant here; the presentation's two
-        // are not, because a screen outlives the decks put on it and the phone
-        // may point this one somewhere else mid-service. They are baked in only
-        // for the deck this page was opened on, and afterwards come from the
-        // screen's answer.
+        // The show's URL is the one constant here; the presentation's two are
+        // not, because a screen outlives the decks put up and the phone may put
+        // another one up mid-service. They are baked in only for the show this
+        // page opened on, and afterwards come from the show's answer.
         'revision' => $revision,
         'title' => $title,
-        'screenUrl' => route('screens.state', ['screen' => $screen->id]),
+        'showUrl' => route('show.state'),
         // Where this screen's picture lands, baked in so that a wall lined
         // up last Sunday draws its first slide where it belongs rather than
         // centring it and jumping a second later.
@@ -87,8 +86,8 @@ resources/js/projection-presenter.js
             </flux:button>
         @endif
 
-        {{-- The deck's title follows the screen, because the screen may be
-             pointed at another one without this page reloading. --}}
+        {{-- The deck's title follows the show, because a phone may put another
+             deck up without this page reloading. --}}
         <span class="truncate text-sm text-white/70" x-text="title || @js(__('Projection screen'))"></span>
 
         <div class="ms-auto flex items-center gap-2">

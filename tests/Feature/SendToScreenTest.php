@@ -18,70 +18,62 @@ use function Pest\Laravel\get;
  * The laptop's half of the two-screen Sunday: the projector is the second
  * display, and the window being worked in has to go on showing the music plan
  * and the slides while the room reads the deck. Present takes over this window;
- * this takes over the screen, and that is the whole difference under test.
+ * this puts the deck up as the show and stays where it is.
  */
 
-it('points the waiting screen at the deck without ending up showing it', function () {
+it('puts the deck up as the show without leaving the page', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
+    Screen::factory()->create(['user_id' => $user->id]);
 
     actingAs($user);
 
     Livewire::test(SendToScreen::class, ['projection' => $projection])
-        ->call('send', $screen->id)
-        ->assertHasNoErrors();
+        ->call('putUp')
+        ->assertHasNoErrors()
+        ->assertSee(__('On the screen'));
 
-    $screen->refresh();
-
-    expect($screen->showing()?->projection_id)->toBe($projection->id);
+    expect(Presentation::currentFor($user)?->projection_id)->toBe($projection->id);
 });
 
 /*
- * Joined rather than started afresh, everywhere a deck goes up: a laptop already
- * showing it and a window putting it there must land on the same row, or the two
- * follow different presentations and the remote drives the wrong one.
+ * Pressing it for the deck already up changes nothing: the service stays where
+ * it had got to.
  */
-it('joins the presentation the screen is already showing rather than starting a second', function () {
+it('leaves the show where it is when this deck is already up', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
+    Screen::factory()->create(['user_id' => $user->id]);
 
-    $running = Presentation::resumeFor($projection, $user, null);
-    $screen->point($running);
+    $running = Presentation::putUp($user, $projection);
 
     actingAs($user);
 
     Livewire::test(SendToScreen::class, ['projection' => $projection])
-        ->call('send', $screen->id);
+        ->call('putUp');
 
     expect(Presentation::query()->where('projection_id', $projection->id)->count())->toBe(1)
-        ->and($screen->refresh()->presentation_id)->toBe($running->id);
+        ->and(Presentation::currentFor($user)->id)->toBe($running->id);
 });
 
-/*
- * A screen somebody else is facing a room with is not a thing this account may
- * know exists — 404 rather than 403, as at the endpoints.
- */
-it('refuses a screen belonging to somebody else', function () {
+it('refuses to put up somebody else\'s deck', function () {
     $user = User::factory()->create();
-    $projection = Projection::factory()->create(['user_id' => $user->id]);
-    $theirs = Screen::factory()->create(['user_id' => User::factory()->create()->id]);
+    $projection = Projection::factory()->create(['user_id' => User::factory()->create()->id]);
 
     actingAs($user);
 
     Livewire::test(SendToScreen::class, ['projection' => $projection])
-        ->call('send', $theirs->id)
-        ->assertStatus(404);
+        ->call('putUp')
+        ->assertForbidden();
 
-    expect($theirs->refresh()->presentation_id)->toBeNull();
+    expect(Presentation::query()->count())->toBe(0);
 });
 
 /*
  * A closed tab ages out rather than depending on an event browsers do not
- * reliably give, so a screen nobody has heard from is not offered.
+ * reliably give, so a screen nobody has heard from does not count as on.
  */
-it('leaves a stale screen out of the list', function () {
+it('counts a stale screen as no screen', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
 
@@ -92,8 +84,9 @@ it('leaves a stale screen out of the list', function () {
 
     actingAs($user);
 
-    expect(Livewire::test(SendToScreen::class, ['projection' => $projection])->instance()->screens())
-        ->toBeEmpty();
+    Livewire::test(SendToScreen::class, ['projection' => $projection])
+        ->assertSee(__('Open a screen'))
+        ->assertDontSee(__('Put on screen'));
 });
 
 /*
@@ -101,32 +94,48 @@ it('leaves a stale screen out of the list', function () {
  * a laptop and the deck went up somewhere else — but it stops answering when
  * what it claims stops being true.
  */
-it('stops reporting the deck as sent once the screen is showing something else', function () {
+it('stops saying the deck is on the screen once another deck is up', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
     $other = Projection::factory()->create(['user_id' => $user->id]);
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
+    Screen::factory()->create(['user_id' => $user->id]);
 
     actingAs($user);
 
     $component = Livewire::test(SendToScreen::class, ['projection' => $projection])
-        ->call('send', $screen->id);
+        ->call('putUp');
 
-    expect($component->instance()->sentScreen())->not->toBeNull();
+    expect($component->instance()->isOnScreen())->toBeTrue();
 
-    $screen->refresh()->point(Presentation::resumeFor($other, $user, null));
+    Presentation::putUp($user, $other);
 
-    expect(Livewire::test(SendToScreen::class, ['projection' => $projection, 'sentScreenId' => $screen->id])
-        ->instance()->sentScreen())->toBeNull();
+    Livewire::test(SendToScreen::class, ['projection' => $projection])
+        ->assertSee(__('Put on screen'))
+        ->assertDontSee(__('On the screen'));
+});
+
+/*
+ * One button, and no list of screens to choose from: every screen shows the
+ * same show.
+ */
+it('offers one button however many screens are on', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    Screen::factory()->count(2)->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    Livewire::test(SendToScreen::class, ['projection' => $projection])
+        ->assertSee(__('Put on screen'))
+        ->assertDontSeeHtml('<ui-dropdown');
 });
 
 /*
  * The control has to be on the pages where decks are listed, not only inside the
  * remote — that is what makes the two-screen laptop a layout question rather
- * than a second mechanism. These render the real blade, including the Flux
- * dropdown, which the component tests above never reach.
+ * than a second mechanism.
  */
-it('offers the way to make a screen from the editor when none is waiting', function () {
+it('offers the way to make a screen from the editor when none is on', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
 
@@ -135,17 +144,12 @@ it('offers the way to make a screen from the editor when none is waiting', funct
     get(route('projections.edit', ['projection' => $projection]))
         ->assertOk()
         ->assertSee(__('Open a screen'))
-        ->assertDontSee(__('Send to screen'));
+        ->assertDontSee(__('Put on screen'));
 });
 
 /*
- * And it opens that screen on the deck whose button was pressed.
- *
- * Pressing a deck's own control and being handed an empty screen is a gesture
- * that has to be made twice — which is exactly what it looked like from the
- * document list: the window came up waiting, and only a second press put the
- * deck on it. Opening the presenter is itself claiming a screen, so naming the
- * deck in that URL is the whole of the difference.
+ * And it opens that screen on the deck whose button was pressed: opening the
+ * presenter on a deck puts that deck up, so one press is enough.
  */
 it('opens the new screen window on the deck rather than empty', function () {
     $user = User::factory()->create();
@@ -158,7 +162,7 @@ it('opens the new screen window on the deck rather than empty', function () {
         ->assertDontSee('href="'.route('projection-screen').'"', escape: false);
 });
 
-it('offers the waiting screen from the editor and from the document list', function () {
+it('offers the button from the editor and from the document list', function () {
     $user = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
     $projection = Projection::factory()->create(['user_id' => $user->id, 'music_plan_id' => $plan->id]);
@@ -168,11 +172,11 @@ it('offers the waiting screen from the editor and from the document list', funct
 
     get(route('projections.edit', ['projection' => $projection]))
         ->assertOk()
-        ->assertSee(__('Send to screen'));
+        ->assertSee(__('Put on screen'));
 
     Livewire::test(PlanDocuments::class)
         ->assertOk()
-        ->assertSee(__('Send to screen'));
+        ->assertSee(__('Put on screen'));
 });
 
 /*
@@ -184,7 +188,7 @@ it('offers the waiting screen from the editor and from the document list', funct
  * the window is this browser's own and can simply be opened again.
  */
 
-it('offers to open the screen window when the screen is this browser', function () {
+it('opens the screen window when the only screen is this browser', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
 
@@ -201,8 +205,8 @@ it('offers to open the screen window when the screen is this browser', function 
 });
 
 // Another machine has no window this browser can open, so the control stays
-// what it was: a button that points a deck and nothing more.
-it('only points the deck when the screen is somewhere else', function () {
+// a button that puts the deck up and nothing more.
+it('only puts the deck up when a screen is on somewhere else', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
 

@@ -8,7 +8,11 @@
                  there is something to be quiet about: a screen or a remote
                  with nothing live behind it opens onto an empty room, and
                  bootstrapping one is the slide deck's job, not this page's. --}}
-            <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+            {{-- Polls, slowly, because the icon that starts a projection opens
+                 the presenter in a separate window rather than navigating this
+                 tab — this card is the only place this page would otherwise
+                 say so, and it has no other way to learn a screen went live. --}}
+            <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch" wire:poll.15s>
                 <flux:tooltip :content="$this->currentPresentation ? __('See what the room is looking at.') : __('Nothing is being projected right now.')">
                     <flux:button
                         :href="$this->currentPresentation ? route('projection-screen') : null"
@@ -52,10 +56,11 @@
                                  the wrong aspect ratio, say — from the one page
                                  a cantor is looking at when they notice, rather
                                  than a trip to the remote or the wall itself.
-                                 The next deck put up afterwards opens on the
-                                 title card, the same as a screen opened fresh
-                                 would, so there is time to line the projector
-                                 up before the room sees anything. --}}
+                                 It comes off every screen at once, and the next
+                                 deck put up afterwards opens on the title card,
+                                 the same as a screen opened fresh would, so
+                                 there is time to line the projector up before
+                                 the room sees anything. --}}
                             <flux:button
                                 size="sm"
                                 variant="danger"
@@ -67,6 +72,26 @@
                             </flux:button>
                         </x-slot:actions>
                     </flux:callout>
+                @endif
+
+                {{-- Read off the presentation rows, so nothing is kept for it:
+                     the deck tried yesterday goes back up with one press. --}}
+                @if($this->recentProjections->isNotEmpty())
+                    <div class="flex w-full flex-wrap items-center gap-2">
+                        <flux:text size="sm">{{ __('Recently shown') }}</flux:text>
+
+                        @foreach($this->recentProjections as $recent)
+                            <flux:button
+                                size="xs"
+                                variant="{{ $this->currentPresentation?->projection_id === $recent->id ? 'filled' : 'ghost' }}"
+                                icon="presentation"
+                                wire:key="recent-projection-{{ $recent->id }}"
+                                wire:click="putUp({{ $recent->id }})"
+                            >
+                                {{ $recent->title }}
+                            </flux:button>
+                        @endforeach
+                    </div>
                 @endif
             </div>
 

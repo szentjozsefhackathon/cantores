@@ -3,7 +3,8 @@
 use App\Livewire\Pages\ProjectionPresenter;
 use App\Livewire\Pages\ProjectionRemote;
 use App\Livewire\Pages\ProjectionRemoteDecks;
-use App\Livewire\Pages\ProjectionRemoteList;
+use App\Livewire\Projection\ShowStatus;
+use App\Models\DeviceName;
 use App\Models\Music;
 use App\Models\Presentation;
 use App\Models\Projection;
@@ -21,11 +22,11 @@ use function Pest\Laravel\get;
  * The phone's half of the Sunday. Both devices are the same person already —
  * the laptop was signed in from this phone with the QR code — so there is
  * nothing to pair and no token to read across the room, and what is left to
- * check is that the phone reaches the *screen*, sees the same deck the wall
+ * check is that the phone reaches the *show*, sees the same deck the wall
  * sees, can put another one up, and cannot reach anybody else's.
  */
 
-it('starts a presentation and points the screen at it when a deck is opened on the laptop', function () {
+it('puts the deck up as the show when a deck is opened on the laptop', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
 
@@ -36,112 +37,71 @@ it('starts a presentation and points the screen at it when a deck is opened on t
     expect(Presentation::query()->live()->mine($user)->count())->toBe(1)
         ->and($presenter->get('presentation')->projection_id)->toBe($projection->id)
         ->and($presenter->get('revision'))->toBe($projection->revision())
-        ->and($presenter->get('screen')->presentation_id)->toBe($presenter->get('presentation')->id);
+        ->and(Presentation::currentFor($user)->id)->toBe($presenter->get('presentation')->id);
 });
 
 /*
- * One screen facing a room is the normal Sunday, and then there is nothing to
- * ask.
+ * There is nothing to choose before the controls: the phone opens straight onto
+ * them, whether or not a wall is on yet.
  */
-it('goes straight to the only screen', function () {
+it('opens straight onto the controls', function () {
     $user = User::factory()->create();
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
+    Screen::factory()->count(2)->create(['user_id' => $user->id]);
 
     actingAs($user);
 
     get(route('projection-remote'))
-        ->assertRedirect(route('projection-remote.control', ['screen' => $screen->id]));
+        ->assertOk()
+        ->assertSeeHtml('x-data="projectionRemote(');
 });
 
 /*
- * The sentence this page exists to be able to say. Before a screen was a thing
- * at all, a phone opened before the laptop was ready could only show an empty
- * list and leave the cantor guessing.
+ * The sentence the old list of screens existed to say, now a line on the
+ * remote: a phone opened before the laptop is ready says so, and still lets
+ * the show be set up.
  */
-it('says that no screen is waiting rather than showing an empty list', function () {
+it('says that no screen is connected rather than blocking anything', function () {
     $user = User::factory()->create();
     Screen::factory()->stale()->create(['user_id' => $user->id]);
 
     actingAs($user);
 
-    Livewire::test(ProjectionRemoteList::class)
+    Livewire::test(ShowStatus::class)
+        ->assertSee(__('No screen connected'));
+
+    get(route('projection-remote'))
         ->assertOk()
-        ->assertSee(__('No screen is waiting yet'));
+        ->assertSee(__('Choose a deck'));
 });
 
-// Only this person's own screens, and only the ones still there.
-it('lists only the live screens of the person holding the phone', function () {
-    $user = User::factory()->create();
-    $stranger = User::factory()->create();
-
-    $waiting = Screen::factory()->create(['user_id' => $user->id]);
-    Screen::factory()->create(['user_id' => $user->id]);
-    Screen::factory()->stale()->create(['user_id' => $user->id]);
-    Screen::factory()->create(['user_id' => $stranger->id]);
-
-    actingAs($user);
-
-    $listed = Livewire::test(ProjectionRemoteList::class)->instance()->screens();
-
-    expect($listed)->toHaveCount(2)
-        ->and($listed->pluck('id'))->toContain($waiting->id);
-});
-
-// The laptop showing the deck on the projector is the same device as the window
-// the remote is opened in, so leaving this browser out of the list left the one
-// screen a desktop has unaddressable. It is listed, and said to be this device.
-it('lists the screen this browser itself is', function () {
+// The live screens of the person holding the phone, other than the phone.
+it('says which screens the show is on', function () {
     $user = User::factory()->create();
 
-    $chapel = Screen::factory()->create(['user_id' => $user->id]);
     $church = Screen::factory()->create(['user_id' => $user->id]);
-    $here = Screen::factory()->create([
-        'user_id' => $user->id,
-        'device_id' => DeviceId::current(),
-    ]);
+    DeviceName::factory()->create(['user_id' => $user->id, 'device_id' => $church->device_id, 'name' => 'Parish laptop']);
+
+    $home = Screen::factory()->create(['user_id' => $user->id]);
+    DeviceName::factory()->create(['user_id' => $user->id, 'device_id' => $home->device_id, 'name' => 'Home laptop']);
+
+    $phone = Screen::factory()->create(['user_id' => $user->id, 'device_id' => DeviceId::current()]);
+    DeviceName::factory()->create(['user_id' => $user->id, 'device_id' => $phone->device_id, 'name' => 'My phone']);
+
+    $stale = Screen::factory()->stale()->create(['user_id' => $user->id]);
+    DeviceName::factory()->create(['user_id' => $user->id, 'device_id' => $stale->device_id, 'name' => 'Chapel']);
+
+    $theirs = Screen::factory()->create(['user_id' => User::factory()->create()->id]);
+    DeviceName::factory()->create(['user_id' => $theirs->user_id, 'device_id' => $theirs->device_id, 'name' => 'Stranger']);
 
     actingAs($user);
 
-    $component = Livewire::test(ProjectionRemoteList::class);
-
-    expect($component->instance()->screens()->pluck('id')->all())
-        ->toEqualCanonicalizing([$chapel->id, $church->id, $here->id]);
-
-    $component->assertSee(__('This device'));
-});
-
-// Listed, but never the screen somebody is thrown into: a phone that pressed
-// Present is a screen like any other, and driving itself is never what the
-// cantor reaching for the remote meant.
-it('does not enter this browser\'s own screen without asking', function () {
-    $user = User::factory()->create();
-
-    Screen::factory()->create([
-        'user_id' => $user->id,
-        'device_id' => DeviceId::current(),
-    ]);
-
-    actingAs($user);
-
-    Livewire::test(ProjectionRemoteList::class)
-        ->assertOk()
-        ->assertNoRedirect();
-});
-
-// And so the wall is still the one live screen, entered without asking.
-it('enters the only other screen without asking even when this browser is one too', function () {
-    $user = User::factory()->create();
-
-    $wall = Screen::factory()->create(['user_id' => $user->id]);
-    Screen::factory()->create([
-        'user_id' => $user->id,
-        'device_id' => DeviceId::current(),
-    ]);
-
-    actingAs($user);
-
-    Livewire::test(ProjectionRemoteList::class)
-        ->assertRedirect(route('projection-remote.control', ['screen' => $wall->id]));
+    Livewire::test(ShowStatus::class)
+        ->assertSee('Parish laptop')
+        ->assertSee('Home laptop')
+        ->assertDontSee('My phone')
+        ->assertDontSee('Chapel')
+        ->assertDontSee('Stranger')
+        ->assertDontSee(__('No screen connected'));
 });
 
 /*
@@ -163,11 +123,11 @@ it('hands the phone the same deck the wall is drawing', function () {
         'excluded_slides' => ['16/9' => [1]],
     ]);
 
-    $screen = screenShowing($user, $projection);
+    showing($user, $projection);
 
     actingAs($user);
 
-    $remote = Livewire::test(ProjectionRemote::class, ['screen' => $screen]);
+    $remote = Livewire::test(ProjectionRemote::class);
 
     expect($remote->get('entries'))->toHaveCount(1)
         ->and($remote->get('entries')[0]['content'])->toContain('F G A B')
@@ -177,16 +137,14 @@ it('hands the phone the same deck the wall is drawing', function () {
 });
 
 /*
- * A screen with nothing on it is a state the remote can now show, rather than a
- * page it cannot reach.
+ * No show is a state the remote shows, rather than a page it cannot reach.
  */
-it('opens on a screen that is showing nothing', function () {
+it('opens when nothing is up', function () {
     $user = User::factory()->create();
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
 
     actingAs($user);
 
-    $remote = Livewire::test(ProjectionRemote::class, ['screen' => $screen]);
+    $remote = Livewire::test(ProjectionRemote::class);
 
     expect($remote->get('presentation'))->toBeNull()
         ->and($remote->get('entries'))->toBe([]);
@@ -206,78 +164,75 @@ it('leaves out a score the phone may no longer read', function () {
         'score_id' => Score::factory()->abc()->create(['user_id' => $stranger->id])->id,
     ]);
 
-    $screen = screenShowing($user, $projection);
+    showing($user, $projection);
 
     actingAs($user);
 
-    expect(Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('entries'))->toBe([]);
-});
-
-it('refuses to drive somebody elses screen', function () {
-    $owner = User::factory()->create();
-    $stranger = User::factory()->create();
-    $screen = Screen::factory()->create(['user_id' => $owner->id]);
-
-    actingAs($stranger);
-
-    get(route('projection-remote.control', ['screen' => $screen]))->assertNotFound();
-    get(route('projection-remote.decks', ['screen' => $screen]))->assertNotFound();
+    expect(Livewire::test(ProjectionRemote::class)->get('entries'))->toBe([]);
 });
 
 /*
- * The step that was missing: the phone puts a deck up, rather than following one
- * the laptop had already chosen.
+ * The step that was missing: the phone puts a deck up, and every screen shows
+ * it.
  */
-it('puts a deck on the screen from the phone', function () {
+it('puts a deck up from the phone', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
 
     actingAs($user);
 
-    Livewire::test(ProjectionRemoteDecks::class, ['screen' => $screen])
+    Livewire::test(ProjectionRemoteDecks::class)
         ->call('present', $projection)
-        ->assertRedirect(route('projection-remote.control', ['screen' => $screen->id]));
+        ->assertRedirect(route('projection-remote'));
 
-    $screen->refresh();
-
-    expect($screen->showing())->not->toBeNull()
-        ->and($screen->showing()->projection_id)->toBe($projection->id);
+    expect(Presentation::currentFor($user)?->projection_id)->toBe($projection->id);
 });
 
 /*
- * Switching decks joins the presentation rather than starting a second, and ends
- * nothing: only clearing the screen ends a service.
+ * Switching decks ends the one that was up: a person has one show.
  */
-it('switches the screen to another deck', function () {
+it('switches the show to another deck', function () {
     $user = User::factory()->create();
     $first = Projection::factory()->create(['user_id' => $user->id]);
     $second = Projection::factory()->create(['user_id' => $user->id]);
-    $screen = screenShowing($user, $first);
+    $running = showing($user, $first);
 
     actingAs($user);
 
-    Livewire::test(ProjectionRemoteDecks::class, ['screen' => $screen])->call('present', $second);
+    Livewire::test(ProjectionRemoteDecks::class)->call('present', $second);
 
-    $screen->refresh();
-
-    expect($screen->showing()->projection_id)->toBe($second->id)
-        ->and(Presentation::query()->where('projection_id', $first->id)->first()->ended_at)->toBeNull();
+    expect(Presentation::currentFor($user)->projection_id)->toBe($second->id)
+        ->and($running->refresh()->ended_at)->not->toBeNull();
 });
 
-it('refuses to put somebody elses deck on the screen', function () {
+it('refuses to put somebody elses deck up', function () {
     $user = User::factory()->create();
     $stranger = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $stranger->id]);
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
 
     actingAs($user);
 
-    Livewire::test(ProjectionRemoteDecks::class, ['screen' => $screen])
+    Livewire::test(ProjectionRemoteDecks::class)
         ->call('present', $projection)
         ->assertForbidden();
 
-    expect($screen->refresh()->presentation_id)->toBeNull();
+    expect(Presentation::query()->count())->toBe(0);
+});
+
+it('offers the recently shown decks above the full list', function () {
+    $user = User::factory()->create();
+    $shown = Projection::factory()->create(['user_id' => $user->id, 'title' => 'Szentségimádás']);
+    Projection::factory()->create(['user_id' => $user->id, 'title' => 'Never shown']);
+
+    Presentation::putUp($user, $shown);
+    Presentation::takeDownFor($user);
+
+    actingAs($user);
+
+    $decks = Livewire::test(ProjectionRemoteDecks::class)
+        ->assertSeeInOrder([__('Recently shown'), 'Szentségimádás', __('All decks')]);
+
+    expect($decks->instance()->recents()->pluck('id')->all())->toBe([$shown->id]);
 });
 
 /*
@@ -308,11 +263,11 @@ it('names every row for the phone even when the deck prints no headings at all',
         'show_music_title' => false,
     ]);
 
-    $screen = screenShowing($user, $projection);
+    showing($user, $projection);
 
     actingAs($user);
 
-    $entry = Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('entries')[0];
+    $entry = Livewire::test(ProjectionRemote::class)->get('entries')[0];
 
     expect($entry['music'])->toBeNull()
         ->and($entry['label'])->toBe('Ave maris stella');
@@ -334,11 +289,11 @@ it('falls back to the score-s own title when there is no music behind it', funct
         'score_id' => $score->id,
     ]);
 
-    $screen = screenShowing($user, $projection);
+    showing($user, $projection);
 
     actingAs($user);
 
-    expect(Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('entries')[0]['label'])
+    expect(Livewire::test(ProjectionRemote::class)->get('entries')[0]['label'])
         ->toBe('Vasárnapi zsoltár');
 });
 
@@ -370,11 +325,11 @@ it('names the engraving a row is, and not only the music', function () {
         'show_variation' => false,
     ]);
 
-    $screen = screenShowing($user, $projection);
+    showing($user, $projection);
 
     actingAs($user);
 
-    $entry = Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('entries')[0];
+    $entry = Livewire::test(ProjectionRemote::class)->get('entries')[0];
 
     expect($entry['variation'])->toBeNull()
         ->and($entry['label'])->toBe('Veni Creator')
@@ -384,19 +339,15 @@ it('names the engraving a row is, and not only the music', function () {
 });
 
 /**
- * A screen with a deck already on it — the state the phone finds on a Sunday
- * when the laptop was started first.
+ * A show already up — the state the phone finds on a Sunday when the laptop was
+ * started first.
  */
-function screenShowing(User $user, Projection $projection): Screen
+function showing(User $user, Projection $projection): Presentation
 {
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
-
-    $screen->point(Presentation::factory()->create([
+    return Presentation::factory()->create([
         'projection_id' => $projection->id,
         'user_id' => $user->id,
-    ]));
-
-    return $screen;
+    ]);
 }
 
 /*
@@ -408,11 +359,10 @@ function screenShowing(User $user, Projection $projection): Screen
  */
 it('locks the thumb controls against a second press and lights them while they are locked', function () {
     $user = User::factory()->create();
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
 
     actingAs($user);
 
-    $remote = Livewire::test(ProjectionRemote::class, ['screen' => $screen]);
+    $remote = Livewire::test(ProjectionRemote::class);
 
     // Matched rather than compared, so that moving the three bands about the
     // page — which the two-pane desktop layout does — cannot fail a test about
@@ -432,11 +382,11 @@ it('locks the thumb controls against a second press and lights them while they a
 it('gives the laptop the plan, the service and the deck side by side', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
-    $screen = screenShowing($user, $projection);
+    showing($user, $projection);
 
     actingAs($user);
 
-    Livewire::test(ProjectionRemote::class, ['screen' => $screen])
+    Livewire::test(ProjectionRemote::class)
         ->assertSeeHtml('x-for="band in outline"')
         ->assertSeeHtml('x-ref="nextBox"')
         ->assertSeeHtml('x-ref="deck"');
@@ -451,11 +401,11 @@ it('gives the laptop the plan, the service and the deck side by side', function 
 it('offers a way into the deck’s own editor', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
-    $screen = screenShowing($user, $projection);
+    showing($user, $projection);
 
     actingAs($user);
 
-    Livewire::test(ProjectionRemote::class, ['screen' => $screen])
+    Livewire::test(ProjectionRemote::class)
         ->assertSeeHtml('<a href="'.route('projections.edit', ['projection' => $projection->id]).'"')
         // And the same address in the JSON payload, where a slash is escaped,
         // so a deck swapped under this window rebinds the link rather than
@@ -464,16 +414,15 @@ it('offers a way into the deck’s own editor', function () {
 });
 
 /*
- * And on a screen showing nothing there is no deck to edit, so the button has
+ * And with nothing up there is no deck to edit, so the button has
  * no address to offer and says nothing rather than guessing at one.
  */
-it('offers no editor for a screen showing nothing', function () {
+it('offers no editor when nothing is up', function () {
     $user = User::factory()->create();
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
 
     actingAs($user);
 
-    Livewire::test(ProjectionRemote::class, ['screen' => $screen])
+    Livewire::test(ProjectionRemote::class)
         ->assertSeeHtml('&quot;editUrl&quot;:null');
 });
 
@@ -491,13 +440,13 @@ it('offers no editor for a screen showing nothing', function () {
 it('leaves no Blade directive in the markup Alpine has to parse', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
-    $screen = screenShowing($user, $projection);
+    showing($user, $projection);
 
     actingAs($user);
 
-    $html = Livewire::test(ProjectionRemote::class, ['screen' => $screen])->html();
+    $html = Livewire::test(ProjectionRemote::class)->html();
 
     expect($html)->not->toContain('@js(')
         ->and($html)->toContain('confirm(clearText)')
-        ->and($html)->toContain('&quot;clearText&quot;:'.e(json_encode(__('Take the deck off the screen and end this projection?'))));
+        ->and($html)->toContain('&quot;clearText&quot;:'.e(json_encode(__('Take the deck off every screen and end this projection?'))));
 });

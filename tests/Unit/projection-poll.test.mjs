@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { POLL_BACKOFF_MAX_MS, POLL_MS, poller, screenClient, stateClient } from '../../resources/js/projection-follow.js';
+import { POLL_BACKOFF_MAX_MS, POLL_MS, poller, showClient, stateClient } from '../../resources/js/projection-follow.js';
 
 /*
  * The beat that both ends of a service keep.
@@ -248,16 +248,17 @@ test('says that a poll is a poll and not a page somebody opened', async () => {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     };
 
-    const screen = screenClient({ screenUrl: '/screens/5/state', csrfToken: 'token' });
+    const show = showClient({ showUrl: '/show/state', csrfToken: 'token' });
     const state = stateClient({ stateUrl: '/presentations/7/state', payloadUrl: '/presentations/7/payload', csrfToken: 'token' });
 
-    await screen.read();
+    await show.read();
     await state.read();
     await state.payload();
     await state.write({ entryId: 1, slideIndex: 0 });
-    await screen.point(3);
+    await show.point(3);
+    await show.adjust({ fitUrl: '/screens/5/fit' }, { scale: 1, x: 0, y: 0 });
 
-    assert.equal(sent.length, 5);
+    assert.equal(sent.length, 6);
 
     for (const request of sent) {
         assert.equal(request.headers['X-Requested-With'], 'XMLHttpRequest', `${request.url} did not say what it was`);

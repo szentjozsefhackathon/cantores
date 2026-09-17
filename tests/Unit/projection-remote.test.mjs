@@ -545,12 +545,18 @@ test('the sheet follows a move rather than an answer', () => {
  * see whether it has been fixed.
  */
 
-/** A remote whose screen writes are remembered rather than sent. */
+/** A wall as the show's answer lists it. */
+function wall(id, fit = { scale: 1, x: 0, y: 0 }, isThisDevice = false) {
+    return { id, label: `Screen ${id}`, fit, fitUrl: `/screens/${id}/fit`, isThisDevice };
+}
+
+/** A remote with one wall on, whose fit writes are remembered rather than sent. */
 function lining() {
     const deck = remote();
     const sent = [];
 
-    deck._screen = { adjust: (fit) => { sent.push(fit); return Promise.resolve(fit); } };
+    deck.screens = [wall(5)];
+    deck._show = { adjust: (screen, fit) => { sent.push({ screen: screen.id, ...fit }); return Promise.resolve(fit); } };
     deck.sent = sent;
 
     return deck;
@@ -565,7 +571,40 @@ test('the four arrows move the picture and tell the screen', () => {
     assert.ok(deck.fit.y > 0, 'the picture did not come down');
     assert.ok(deck.fit.x > 0, 'the picture did not go right');
     assert.equal(deck.sent.length, 2, 'the wall was not told');
-    assert.deepEqual(deck.sent.at(-1), deck.fit, 'the wall was told something other than what the phone shows');
+    assert.deepEqual(deck.sent.at(-1), { screen: 5, ...deck.fit }, 'the wall was told something other than what the phone shows');
+});
+
+/* The show is on every screen, but every projector is hung differently: the
+   panel lines up a wall, never the phone in the hand, and nothing when no wall
+   is on. */
+test('the panel lines up a wall and never this device', () => {
+    const deck = lining();
+
+    deck.screens = [wall(9, { scale: 1, x: 0, y: 0 }, true)];
+
+    assert.equal(deck.fitTarget, null);
+
+    deck.openFit();
+    deck.moveFit(1, 0);
+
+    assert.equal(deck.fitOpen, false, 'the panel opened with no wall to line up');
+    assert.equal(deck.sent.length, 0, 'a nudge was sent to nowhere');
+});
+
+/* Two walls on at once is the laptop at home left open. Then the chooser
+   decides, and the picture shown is the chosen wall's own. */
+test('a chosen wall is the one nudged, starting from where it has the picture', () => {
+    const deck = lining();
+
+    deck.screens = [wall(5), wall(6, { scale: 0.5, x: 0, y: 0.1 })];
+
+    deck.chooseFitScreen('6');
+
+    assert.equal(deck.fit.scale, 0.5, 'the panel showed the other wall\'s picture');
+
+    deck.moveFit(0, 1);
+
+    assert.deepEqual(deck.sent.map((one) => one.screen), [6]);
 });
 
 test('the zoom scales the picture and centring puts it back', () => {
@@ -639,10 +678,10 @@ test('a poll answered before the press does not undo the press', async () => {
 
     deck.presentationId = 1;
     deck.refresh = () => Promise.resolve();
-    deck._screen.read = () => Promise.resolve({
+    deck._show.read = () => Promise.resolve({
         presentationId: 1,
         title: 'Vasárnap',
-        fit: { scale: 1, x: 0, y: 0 },
+        screens: [wall(5)],
         state: { version: 0, revision: 'r', drawnRevision: 'r', endedAt: null },
     });
 
@@ -794,7 +833,7 @@ test('the phone walks the opening as the server says', async () => {
     let answer = null;
 
     deck.repaint = () => {};
-    deck._screen = { read: () => Promise.resolve(answer) };
+    deck._show = { read: () => Promise.resolve(answer) };
 
     const says = (version, splash) => {
         answer = {
@@ -842,7 +881,7 @@ test('the phone hears that the service was closed on the screen itself', async (
     const deck = remote();
 
     deck.repaint = () => {};
-    deck._screen = {
+    deck._show = {
         read: () => Promise.resolve({
             presentationId: 1,
             state: { version: 2, splash: 'off', blanked: false, reveals: {}, entryId: 1, slideIndex: 0, revision: 'a', drawnRevision: 'a', endedAt: '2026-09-15T10:00:00+00:00' },

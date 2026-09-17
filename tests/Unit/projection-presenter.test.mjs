@@ -201,13 +201,22 @@ test('a windowed screen is not thrown out of anything to type in', () => {
 /* The wall is the one device that cannot be lined up from where it stands: the
    laptop faces the room from somewhere else, and the person who can see whether
    the picture is where it belongs is at the organ holding a phone. So the fit is
-   read off the screen, and is a fact about the room rather than about the deck —
-   a screen still waiting for one is lined up as readily as a screen mid-hymn. */
+   read off this device's own entry among the show's screens, and is a fact
+   about the room rather than about the deck — a screen still waiting for one is
+   lined up as readily as a screen mid-hymn. */
 test('the wall takes the fit its screen was given', async () => {
     const deck = presenter(3);
 
     deck.presentationId = 1;
-    deck._screen = { read: () => Promise.resolve({ presentationId: 1, title: 'Vasárnap', fit: { scale: 0.8, x: 0, y: 0.1 }, state: null }) };
+    deck._show = { read: () => Promise.resolve({
+        presentationId: 1,
+        title: 'Vasárnap',
+        screens: [
+            { id: 4, isThisDevice: false, fit: { scale: 1.5, x: 0.3, y: 0 } },
+            { id: 5, isThisDevice: true, fit: { scale: 0.8, x: 0, y: 0.1 } },
+        ],
+        state: null,
+    }) };
 
     await deck.pull();
 
@@ -220,7 +229,7 @@ test('a fit that says nothing leaves the picture where the deck was fitted', asy
     const deck = presenter(3);
 
     deck.presentationId = 1;
-    deck._screen = { read: () => Promise.resolve({ presentationId: 1, state: null }) };
+    deck._show = { read: () => Promise.resolve({ presentationId: 1, screens: [], state: null }) };
 
     await deck.pull();
 

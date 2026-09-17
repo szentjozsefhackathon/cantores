@@ -4,8 +4,8 @@ namespace App\Livewire\Pages;
 
 use App\Models\Presentation;
 use App\Models\Projection;
-use App\Models\Screen;
 use App\Services\ProjectionRenderPayload;
+use App\Services\ShowState;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View as IlluminateView;
@@ -26,10 +26,12 @@ use Livewire\Component;
  * an arrangement of radios — no hotspot built by hand before every Mass, no
  * parish laptop pulled off the network it is actually allowed to use.
  *
- * What it is bound to is the *screen*, not the deck on it. That is what lets the
- * phone start a deck, swap it for another and take it off again, and it is also
- * what makes the page leaveable: the deck list is a page of its own, so going
- * back is navigation rather than a redirect into the row that was just left.
+ * What it is bound to is the person's *show*, not a screen and not a deck. Every
+ * device of theirs follows the same one, so there is nothing to choose before
+ * the controls: the phone opens straight onto them, puts a deck up, swaps it
+ * for another and takes it down again, and whatever wall is on shows it. The
+ * deck list is a page of its own, so going back is navigation rather than a
+ * redirect into the row that was just left.
  *
  * Like the presenter, it engraves whatever is up at mount and then talks JSON:
  * what the phone shows is what the wall shows, drawn from the same payload
@@ -39,9 +41,7 @@ use Livewire\Component;
  */
 class ProjectionRemote extends Component
 {
-    public Screen $screen;
-
-    /** What the screen is showing at mount, if anything. */
+    /** The show at mount, if there is one. */
     public ?Presentation $presentation = null;
 
     public ?Projection $projection = null;
@@ -62,15 +62,19 @@ class ProjectionRemote extends Component
 
     public string $revision = '';
 
-    public function mount(Screen $screen): void
+    /**
+     * The screens facing a room at mount, so the fit panel has somewhere to aim
+     * before the first poll answers.
+     *
+     * @var list<array<string, mixed>>
+     */
+    public array $screens = [];
+
+    public function mount(): void
     {
-        // 404 rather than 403, as at the endpoints: a screen somebody else is
-        // facing a room with is not a thing this account may know exists.
-        abort_unless(Gate::allows('view', $screen), 404);
+        $this->screens = ShowState::describe(ShowState::screensFor(Auth::user()));
 
-        $this->screen = $screen;
-
-        $presentation = $screen->showing();
+        $presentation = Presentation::currentFor(Auth::user());
 
         if (! $presentation instanceof Presentation) {
             $this->title = __('Remote');
@@ -79,9 +83,8 @@ class ProjectionRemote extends Component
         }
 
         // A deck that stopped being readable is not shown here either, and the
-        // phone then holds a screen it can drive but not draw — which is the
+        // phone then holds a show it can drive but not draw — which is the
         // honest answer, and the same one the wall gives.
-        abort_unless(Gate::allows('view', $presentation), 404);
         abort_unless(Gate::allows('view', $presentation->projection), 404);
 
         $this->presentation = $presentation;

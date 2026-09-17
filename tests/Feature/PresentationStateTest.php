@@ -327,7 +327,7 @@ it('ages a presentation out of the live scope on last_seen_at', function () {
     $user = User::factory()->create();
 
     $running = Presentation::factory()->create(['user_id' => $user->id]);
-    Presentation::factory()->stale()->create(['user_id' => $user->id]);
+    Presentation::factory()->stale()->create();
     Presentation::factory()->ended()->create(['user_id' => $user->id]);
 
     expect(Presentation::query()->live()->pluck('id')->all())->toBe([$running->id])
@@ -338,19 +338,19 @@ it('ages a presentation out of the live scope on last_seen_at', function () {
  * Two windows on one deck are one presentation, which is the whole mechanism
  * this feature is built out of: the phone is only a third client of the same row.
  */
-it('rejoins a running presentation rather than starting a second', function () {
+it('rejoins the show rather than starting a second when the same deck is put up', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
 
-    $first = Presentation::resumeFor($projection, $user);
-    $second = Presentation::resumeFor($projection, $user);
+    $first = Presentation::putUp($user, $projection);
+    $second = Presentation::putUp($user, $projection);
 
     expect($second->id)->toBe($first->id)
         ->and(Presentation::query()->where('projection_id', $projection->id)->count())->toBe(1);
 
     $first->end();
 
-    expect(Presentation::resumeFor($projection, $user)->id)->not->toBe($first->id);
+    expect(Presentation::putUp($user, $projection)->id)->not->toBe($first->id);
 });
 
 /*

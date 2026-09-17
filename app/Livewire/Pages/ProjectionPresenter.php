@@ -33,8 +33,8 @@ use Livewire\Component;
  * changed by accident.
  *
  * Where the service has got to is a different thing, and it is written — but not
- * through Livewire. The component starts or rejoins a Presentation at mount and
- * hands the browser two URLs; everything after that is Alpine talking JSON to
+ * through Livewire. The component puts the deck up as the person's show at
+ * mount and hands the browser its URLs; everything after that is Alpine talking JSON to
  * them. That keeps the promise the stage's `wire:ignore` makes: once the picture
  * is up, no component re-render can touch it.
  */
@@ -43,10 +43,9 @@ class ProjectionPresenter extends Component
     use AuthorizesRequests;
 
     /**
-     * The deck this page was opened on, where it was opened on one at all. A
-     * screen started bare shows whatever it is later pointed at, and then this
-     * stays null for the life of the page: what the room is looking at is
-     * `Screen::presentation`, read by the poll.
+     * The deck this page was opened on, where it was opened on one at all. Only
+     * the way back to the editor reads it: what the room is looking at is the
+     * person's show, read by the poll, and a phone may change it at any time.
      */
     public ?Projection $projection = null;
 
@@ -77,8 +76,8 @@ class ProjectionPresenter extends Component
     public Screen $screen;
 
     /**
-     * The running deck both devices agree on, where a deck was named in the URL.
-     * Null on a screen that is still waiting for one.
+     * The show this page opened on. Null on a screen that is still waiting for
+     * one.
      */
     public ?Presentation $presentation = null;
 
@@ -91,14 +90,14 @@ class ProjectionPresenter extends Component
     /**
      * Two ways in, one page.
      *
-     * With a deck in the URL — the laptop driven by hand — everything is as it
-     * was: the presentation is joined or started, the payload is engraved from
-     * the server's answer, and the first slide is up before anything is polled.
-     * That path is the fast one and stays exactly that.
+     * With a deck in the URL, the deck is put up as this person's show — on
+     * every device of theirs, not only this one, because Present means put it
+     * up — and engraved from the server's answer, so the first slide is up
+     * before anything is polled.
      *
-     * Without one, this is a screen waiting to be pointed somewhere. Nothing is
-     * engraved, because there is nothing yet to engrave; the poll finds the deck
-     * when a phone puts one on, and the page goes black while it draws it.
+     * Without one, this is a screen showing whatever the show is. Nothing is
+     * engraved at mount; the poll reads the deck, and the page goes black while
+     * it draws it.
      */
     public function mount(?Projection $projection = null): void
     {
@@ -116,7 +115,7 @@ class ProjectionPresenter extends Component
         // to authorize a projection that is not any projection.
         if (! $projection instanceof Projection || ! $projection->exists) {
             $this->title = __('Projection screen');
-            $this->presentation = $this->screen->showing();
+            $this->presentation = Presentation::currentFor(Auth::user());
 
             return;
         }
@@ -126,27 +125,10 @@ class ProjectionPresenter extends Component
         $this->projection = $projection;
         $this->title = $projection->title;
 
-        // Rejoining rather than starting afresh is what makes two windows on one
-        // deck follow each other — and the remote is only a third client of the
-        // same row.
-        // And asking for the title card, which is this page's to ask for: the
-        // window is opened here and then dragged onto the beamer, and what the
-        // room watches while that happens should not be the first slide of a
-        // hymn nobody is singing yet. A deck a phone points at a screen already
-        // on the wall asks for no such thing.
-        $presentation = Presentation::resumeFor(
-            $projection,
-            Auth::user(),
-            Session::get(DevicePairing::DEVICE_SESSION_KEY),
-            splash: Presentation::SPLASH_CARD,
-        );
-
-        // Opening a deck by hand is also a way of saying which deck this screen
-        // is showing, so the phone that picks the remote up afterwards finds it
-        // without anyone having to tell it twice.
-        $this->screen->point($presentation);
-
-        $this->presentation = $presentation;
+        // The deck already up is left exactly where it is, so reloading the wall
+        // mid-service lands on the hymn; anything else starts over, on the title
+        // card if nothing was up.
+        $this->presentation = Presentation::putUp(Auth::user(), $projection);
         $this->revision = $projection->revision();
 
         $payload = app(ProjectionRenderPayload::class)->for($projection, Auth::user());
@@ -165,15 +147,18 @@ class ProjectionPresenter extends Component
      */
     public function reload(): void
     {
-        // Nothing to re-read on a screen that is still waiting: the deck it is
-        // later pointed at arrives through the poll, already fresh.
-        if (! $this->projection instanceof Projection) {
+        // The show's deck and not the one in the URL: a phone may have put
+        // another one up since, and reading the old one again would paint it
+        // over the new. A screen showing nothing has nothing to re-read.
+        $presentation = Presentation::currentFor(Auth::user());
+
+        if (! $presentation instanceof Presentation) {
             return;
         }
 
-        $this->authorize('view', $this->projection);
+        $projection = $presentation->projection;
 
-        $projection = $this->projection->fresh();
+        $this->authorize('view', $projection);
 
         $this->title = $projection->title;
         $this->revision = $projection->revision();
@@ -186,6 +171,7 @@ class ProjectionPresenter extends Component
 
         $this->dispatch(
             'projection-updated',
+            presentationId: $presentation->id,
             payload: $this->entries,
             geometry: $this->geometry,
             excluded: $this->excluded,

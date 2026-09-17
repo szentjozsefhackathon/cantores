@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
-import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, poller, sameFit, screenClient, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
+import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, poller, sameFit, showClient, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
 
 /**
  * The deck in the cantor's hand.
@@ -33,11 +33,13 @@ import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, addressAt, fitFrom, fitTrans
  * too slow, the fallback is to label the deck and engrave only the current slide
  * and its successor — the rest of this would not change.
  *
- * What it follows is the *screen*, not the deck on it. A screen showing nothing
- * is a state this page can say out loud rather than an empty page, a deck put up
- * from somewhere else arrives without a reload, and taking the deck off is a
- * sentence the phone can say — which is what ends a service when the person
- * ending it is at the organ and the laptop is at the back of the church.
+ * What it follows is the person's *show*, not a screen and not a deck. Every
+ * device of theirs follows the same one, so nothing is chosen before the
+ * controls: no show is a state this page can say out loud rather than an empty
+ * page, a deck put up from somewhere else arrives without a reload, and taking
+ * the show down is a sentence the phone can say — which is what ends a service
+ * when the person ending it is at the organ and the laptop is at the back of
+ * the church.
  */
 
 
@@ -200,8 +202,20 @@ onAlpineInit(() => {
          * Sunday, and it is done from here because the person who can see the
          * wall is never the person at the laptop.
          */
-        fit: fitFrom(config.fit),
+        fit: fitFrom(null),
         fitOpen: false,
+
+        /**
+         * The screens that are on, as the show's answer lists them, and which
+         * of them the fit panel is lining up.
+         *
+         * The one choice left that really is about a device: every screen shows
+         * the same show, but every projector is hung differently. Nearly always
+         * there is one wall and nothing to choose; the chooser appears only when
+         * there are two, which is the laptop at home left open.
+         */
+        screens: config.screens ?? [],
+        fitScreenId: null,
 
         /**
          * Whether this is a laptop beside the projector rather than a phone.
@@ -338,11 +352,10 @@ onAlpineInit(() => {
         appliedVersion: 0,
 
         _client: null,
-        _screen: null,
+        _show: null,
         _poll: null,
         _fitAt: 0,
 
-        /** Whether the screen has anything on it at all. */
         /** Whether the title card is the picture on the wall — and so in the preview. */
         get showingSplash() {
             return this.splash === SPLASH_CARD && !this.waiting && !this.preparing;
@@ -399,6 +412,21 @@ onAlpineInit(() => {
             return fitTransform(this.fit);
         },
 
+        /** The screens other than this device — the walls the show is on. */
+        get screensElsewhere() {
+            return (this.screens ?? []).filter((screen) => !screen.isThisDevice);
+        },
+
+        /**
+         * The wall the fit panel lines up: the one chosen, or the one most
+         * recently heard from, or none when no wall is on.
+         */
+        get fitTarget() {
+            const walls = this.screensElsewhere;
+
+            return walls.find((screen) => screen.id === this.fitScreenId) ?? walls[0] ?? null;
+        },
+
         /** The scale as the panel says it: a percentage, not a multiplier. */
         get fitPercent() {
             return Math.round(this.fit.scale * 100);
@@ -410,7 +438,8 @@ onAlpineInit(() => {
         },
 
         init() {
-            this._screen = screenClient(config);
+            this._show = showClient(config);
+            this.fit = fitFrom(this.fitTarget?.fit);
             this._scoreHttp = jsonRequests(this.csrfToken);
             this.reorder = storedReorder();
 
@@ -1321,7 +1350,19 @@ onAlpineInit(() => {
          */
 
         openFit() {
+            if (this.fitTarget === null) { return; }
+
             this.fitOpen = true;
+        },
+
+        /**
+         * Aim the panel at another wall. Its picture is where that wall has it,
+         * not where the last one was left.
+         */
+        chooseFitScreen(id) {
+            this.fitScreenId = Number(id);
+            this.fit = fitFrom(this.fitTarget?.fit);
+            this._fitAt = 0;
         },
 
         closeFit() {
@@ -1354,10 +1395,18 @@ onAlpineInit(() => {
          * difference, so nothing accumulates a press that never landed.
          */
         putFit(fit) {
+            const target = this.fitTarget;
+
+            if (target === null) { return; }
+
             this.fit = fit;
             this._fitAt = Date.now();
 
-            this._screen.adjust(fit).catch(() => {});
+            // Held on the wall's own entry too, so choosing another wall and
+            // coming back does not show the picture where it was before.
+            target.fit = fit;
+
+            Promise.resolve(this._show.adjust(target, fit)).catch(() => {});
         },
 
         /**
@@ -1501,15 +1550,15 @@ onAlpineInit(() => {
         },
 
         /**
-         * One read of the screen — what is on it, and where in it the service
-         * has got to.
+         * One read of the show — which deck is up, where in it the service has
+         * got to, and which walls it is on.
          *
          * Both in one answer, so the phone asks once a second and not twice. A
          * failed read is not an event: the remote keeps showing what it last
          * knew, and the next poll tries again.
          */
         async pull() {
-            const answer = await this._screen.read();
+            const answer = await this._show.read();
 
             // A failed read is not an event here either: nothing is drawn to say
             // so, and saying `false` only asks the next beat to wait a little
@@ -1518,12 +1567,17 @@ onAlpineInit(() => {
 
             this.title = answer.title ?? '';
 
-            // The screen's own answer about where its picture lands — unless
+            // The wall's own answer about where its picture lands — unless
             // this phone has just moved it, in which case the answer in hand
             // was written before the press and saying so would undo it.
             if (Date.now() - this._fitAt > FIT_SETTLE_MS) {
-                this.fit = fitFrom(answer.fit);
+                this.screens = answer.screens ?? [];
+                this.fit = fitFrom(this.fitTarget?.fit);
             }
+
+            // And a panel whose wall has gone is closed, rather than left
+            // nudging nothing.
+            if (this.fitOpen && this.fitTarget === null) { this.fitOpen = false; }
 
             if ((answer.presentationId ?? null) !== this.presentationId) {
                 await this.followDeck(answer);
@@ -1559,8 +1613,8 @@ onAlpineInit(() => {
         },
 
         /**
-         * A different deck on the screen — put there from here, from the laptop,
-         * or from another phone.
+         * A different deck in the show — put up from here, from the laptop, or
+         * from another phone.
          *
          * The phone engraves it for itself, because what it shows is what the
          * room is looking at rather than a description of it. It is allowed to
@@ -1602,12 +1656,12 @@ onAlpineInit(() => {
 
         /*
          * ---------------------------------------------------------------
-         * What is on the screen at all.
+         * Whether there is a show at all.
          * ---------------------------------------------------------------
          */
 
         /**
-         * Take the deck off the screen and end the service.
+         * Take the show down, on every screen, and end the service.
          *
          * Deliberately not what the back arrow does. Leaving the remote means
          * this phone is done driving and the wall keeps what it has; stopping
@@ -1616,7 +1670,7 @@ onAlpineInit(() => {
          * only this one is worded as an ending.
          */
         async clearScreen() {
-            const answer = await this._screen.point(null);
+            const answer = await this._show.point(null);
 
             if (answer !== null) { await this.followDeck(answer); }
         },

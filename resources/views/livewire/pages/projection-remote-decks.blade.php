@@ -1,4 +1,4 @@
-{{-- Which deck to put on the screen.
+{{-- Which deck to put up.
 
      A page of its own rather than a panel of the remote, so that going back from
      the control page is ordinary navigation. The remote used to be impossible to
@@ -7,57 +7,33 @@
 <div class="py-6">
     <div class="mx-auto max-w-2xl px-4">
         <div class="mb-3 flex items-center gap-2">
-            <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ route('projection-remote.control', ['screen' => $screen->id]) }}" wire:navigate>
+            <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ route('projection-remote') }}" wire:navigate>
                 {{ __('Remote') }}
             </flux:button>
-
-            {{-- The phone's end of the same answer, and the end with a keyboard:
-                 the screen across the room can be named without walking to it.
-                 The name is the component's own, so a new one shows here as soon
-                 as it is saved. --}}
-            <div class="min-w-0 flex-1">
-                <livewire:projection.screen-settings :screen="$screen" :show-label="true" :key="'screen-settings-'.$screen->id" />
-            </div>
         </div>
 
         <flux:card class="p-4">
             <flux:heading size="xl">{{ __('Choose a deck') }}</flux:heading>
-            <flux:subheading>{{ __('It goes up on the screen the room is reading, and this phone drives it from there.') }}</flux:subheading>
+            <flux:subheading>{{ __('It goes up on every screen you have on, and this phone drives it from there.') }}</flux:subheading>
+
+            @if($this->recents->isNotEmpty())
+                <flux:heading size="sm" class="mt-5">{{ __('Recently shown') }}</flux:heading>
+
+                <div class="mt-2 space-y-2">
+                    @foreach($this->recents as $projection)
+                        @include('livewire.pages.projection-remote-decks.deck', ['projection' => $projection, 'key' => 'recent'])
+                    @endforeach
+                </div>
+            @endif
 
             @if($this->projections->isNotEmpty())
-                <div class="mt-5 space-y-2">
+                @if($this->recents->isNotEmpty())
+                    <flux:heading size="sm" class="mt-5">{{ __('All decks') }}</flux:heading>
+                @endif
+
+                <div @class(['space-y-2', 'mt-2' => $this->recents->isNotEmpty(), 'mt-5' => $this->recents->isEmpty()])>
                     @foreach($this->projections as $projection)
-                        @php($current = $this->showing?->projection_id === $projection->id)
-
-                        <button
-                            type="button"
-                            wire:key="projection-{{ $projection->id }}"
-                            wire:click="present({{ $projection->id }})"
-                            @class([
-                                'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-start',
-                                'border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-800' => $current,
-                                'border-zinc-200 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800' => ! $current,
-                            ])
-                        >
-                            <flux:icon.presentation class="size-5 shrink-0 text-zinc-400" />
-
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate font-medium">{{ $projection->title }}</div>
-                                <div class="text-xs text-zinc-500">{{ $projection->updated_at->diffForHumans() }}</div>
-                            </div>
-
-                            @if($current)
-                                <span class="shrink-0 text-xs font-medium text-zinc-500">{{ __('On the screen') }}</span>
-                            @endif
-
-                            {{-- The deck has to be engraved before the room can
-                                 see it, which is seconds rather than frames, so
-                                 the screen goes black while it happens. Said here
-                                 because the person tapping is the one person who
-                                 cannot see the screen. --}}
-                            <flux:icon.chevron-right class="size-5 shrink-0 text-zinc-400" wire:loading.remove wire:target="present({{ $projection->id }})" />
-                            <flux:icon.loading class="size-5 shrink-0 text-zinc-400" wire:loading wire:target="present({{ $projection->id }})" />
-                        </button>
+                        @include('livewire.pages.projection-remote-decks.deck', ['projection' => $projection, 'key' => 'all'])
                     @endforeach
                 </div>
             @else

@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
-import { HEARTBEAT_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, poller, screenClient, shownExclusions, stateClient } from './projection-follow.js';
+import { HEARTBEAT_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, poller, showClient, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -24,10 +24,11 @@ import { HEARTBEAT_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypin
  * every write swallows its failure. Losing the network costs the remote and
  * nothing else; the keyboard, and so the service, carries on.
  *
- * And it is a *screen* before it is any particular deck. The page can be opened
- * on a deck, which is the laptop driven by hand, or bare, which is the parish
- * laptop put in front of the room at the start of Mass and not touched again:
- * then it waits, and the deck arrives when a phone puts one on. Changing deck is
+ * And it is a *screen* before it is any particular deck: it shows its owner's
+ * show, whatever that is. The page can be opened on a deck, which puts that deck
+ * up, or bare, which is the parish laptop put in front of the room at the start
+ * of Mass and not touched again: then it waits, and the deck arrives when a
+ * phone puts one up. Changing deck is
  * the one thing here that is allowed to be slow — a deck has to be engraved
  * before it can be shown — and the screen goes black while it happens, because a
  * room watching the last hymn linger while the next is prepared is worse than a
@@ -95,7 +96,7 @@ onAlpineInit(() => {
         idle: false,
 
         /**
-         * What the room is looking at, as the screen says — and whether this
+         * What the room is looking at, as the show says — and whether this
          * page is still engraving it.
          *
          * `preparing` is not `blanked`. Blanking is an instruction the cantor
@@ -166,7 +167,7 @@ onAlpineInit(() => {
         _poll: null,
         _heartbeat: null,
         _client: null,
-        _screen: null,
+        _show: null,
         _refreshToken: 0,
 
         /**
@@ -195,7 +196,7 @@ onAlpineInit(() => {
             return this.fullscreen || this.idle;
         },
 
-        /** Whether this screen is waiting to be pointed at a deck at all. */
+        /** Whether there is no show for this screen to show at all. */
         get waiting() {
             return this.presentationId === null;
         },
@@ -264,7 +265,7 @@ onAlpineInit(() => {
         },
 
         init() {
-            this._screen = screenClient(config);
+            this._show = showClient(config);
 
             // A deck named in the URL was engraved by the server into this page,
             // so it goes up before anything is polled. A bare screen has nothing
@@ -342,6 +343,11 @@ onAlpineInit(() => {
          * projector — by hand, from the reload button.
          */
         applyUpdate(detail = {}) {
+            // Read for the show as it stood on the server, which a phone may
+            // since have moved on: a deck this page is no longer showing is not
+            // painted over the one it is.
+            if (detail.presentationId !== undefined && detail.presentationId !== this.presentationId) { return; }
+
             if (detail.payload) { this.entries = detail.payload; }
             if (detail.geometry) { this.geometry = detail.geometry; }
             if (detail.excluded !== undefined) { this.excluded = detail.excluded ?? {}; }
@@ -486,13 +492,13 @@ onAlpineInit(() => {
          */
 
         /**
-         * Start following the screen: what is on it, and where in it the service
-         * has got to.
+         * Start following the show: which deck is up, and where in it the
+         * service has got to.
          *
          * Both come back in one read, so a wall polls once a second and not
          * twice. Taking up whatever it says is the point — a reloaded tab
          * mid-service must land where the service is, not at the beginning, and
-         * a screen that was pointed at a deck while it was away must find it.
+         * a screen that was away while a deck went up must find it.
          */
         follow() {
             this._poll = poller(() => this.pull());
@@ -509,16 +515,16 @@ onAlpineInit(() => {
         },
 
         /**
-         * One read of the screen.
+         * One read of the show.
          *
          * Three different things can have moved, answered by three different
-         * fields. `presentationId` moves when a phone puts another deck on the
-         * screen, and the wall goes black and engraves it. `version` moves when
+         * fields. `presentationId` moves when a phone puts another deck up, and
+         * the wall goes black and engraves it. `version` moves when
          * someone presses space, and the screen swaps a slide. `revision` moves
          * when someone saves an edit, and the screen reads the same deck again.
          */
         async pull() {
-            const answer = await this._screen.read();
+            const answer = await this._show.read();
 
             // A failed read is not an event. Nothing is drawn over the deck and
             // nothing moves; the next beat tries again, a little later than this
@@ -531,7 +537,7 @@ onAlpineInit(() => {
             // about this screen and not about the deck: a picture lined up
             // while the wall was waiting is still lined up when a deck arrives
             // on it, and one nudged mid-hymn moves under the hymn.
-            this.fit = fitFrom(answer.fit);
+            this.fit = ownFit(answer) ?? this.fit;
 
             if ((answer.presentationId ?? null) !== this.presentationId) {
                 await this.showDeck(answer);
@@ -555,7 +561,7 @@ onAlpineInit(() => {
         },
 
         /**
-         * Another deck put on this screen from somewhere else.
+         * Another deck put up from somewhere else.
          *
          * The one slow thing this page is allowed to do, and the only place it
          * takes the picture down on purpose. Everything of the deck that was on
@@ -564,7 +570,7 @@ onAlpineInit(() => {
          * and the room looks at black until the new deck is engraved, which is
          * `preparing` and not `blanked`.
          *
-         * A screen pointed at nothing goes back to waiting: that is how a service
+         * A show taken down leaves the screen waiting: that is how a service
          * ends when the person who ends it is holding a phone at the organ.
          */
         async showDeck(answer) {
@@ -595,14 +601,13 @@ onAlpineInit(() => {
             try {
                 await this.reengrave(token, true);
 
-                // Where the service already is in the deck just put up — a deck
-                // handed from one screen to another mid-hymn lands on the hymn,
-                // not at its first slide.
+                // Where the service already is in the deck just put up — a
+                // wall opened mid-hymn lands on the hymn, not at its first slide.
                 if (token === this._refreshToken && answer.state) { this.adopt(answer.state); }
             } finally {
-                // Only if nothing has been pointed at this screen since: a
-                // cantor who taps twice must not be shown a deck that is on its
-                // way out by a swap that started first.
+                // Only if nothing else has been put up since: a cantor who taps
+                // twice must not be shown a deck that is on its way out by a
+                // swap that started first.
                 if (token === this._refreshToken) { this.preparing = false; }
             }
         },
@@ -644,8 +649,8 @@ onAlpineInit(() => {
          * the next heartbeat carries the same answer.
          */
         report() {
-            // A screen waiting to be pointed at something has nothing to say
-            // about where a service has got to. Not a failure: there is simply
+            // A screen waiting for a show has nothing to say about where a
+            // service has got to. Not a failure: there is simply
             // nothing to report, and the next beat is due at the usual time.
             if (this._client === null) { return; }
 

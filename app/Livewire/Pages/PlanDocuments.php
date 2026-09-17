@@ -6,9 +6,9 @@ use App\Models\Booklet;
 use App\Models\MusicPlan;
 use App\Models\Presentation;
 use App\Models\Projection;
-use App\Models\Screen;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -103,19 +103,24 @@ class PlanDocuments extends Component
     }
 
     /**
-     * The deck being shown live right now, on any screen this person has —
-     * so the same page that offers to bootstrap tomorrow's decks also says
-     * plainly whether today's is still up.
+     * This person's show, if one is up — so the same page that offers to
+     * bootstrap tomorrow's decks also says plainly whether today's is still up.
      */
     #[Computed]
     public function currentPresentation(): ?Presentation
     {
-        return Presentation::query()
-            ->live()
-            ->mine()
-            ->with('projection')
-            ->latest('last_seen_at')
-            ->first();
+        return Presentation::currentFor(Auth::user())?->load('projection');
+    }
+
+    /**
+     * The decks put up lately, so yesterday's is one tap from going back up.
+     *
+     * @return EloquentCollection<int, Projection>
+     */
+    #[Computed]
+    public function recentProjections(): EloquentCollection
+    {
+        return Presentation::recentFor(Auth::user());
     }
 
     public function setNewType(string $type): void
@@ -124,35 +129,39 @@ class PlanDocuments extends Component
     }
 
     /**
-     * Take the deck being shown right now off every screen showing it, and end
-     * the projection with it.
+     * Take the show down, on every screen at once.
      *
      * The fast way out of a deck started by mistake — the wrong aspect ratio,
      * say — from the one page a cantor is looking at when they notice, rather
-     * than a trip to the remote or the wall itself. Once the screen is empty
-     * again, the next deck put on it opens on the title card the same way a
-     * screen opened fresh would, because {@see Presentation::splashFor()} reads
-     * "nothing on the screen" off exactly what this leaves behind.
+     * than a trip to the remote or the wall itself. With nothing up any more,
+     * the next deck put up opens on the title card, the same way a screen
+     * opened fresh would.
      */
     public function removeFromScreen(): void
     {
-        $presentation = $this->currentPresentation;
-
-        if (! $presentation instanceof Presentation) {
+        if (! $this->currentPresentation instanceof Presentation) {
             return;
         }
 
-        $screens = Screen::query()->where('presentation_id', $presentation->getKey())->get();
-
-        if ($screens->isEmpty()) {
-            $presentation->end();
-        } else {
-            $screens->each(fn (Screen $screen) => $screen->point(null));
-        }
+        Presentation::takeDownFor(Auth::user());
 
         unset($this->currentPresentation);
 
         $this->dispatch('toast', message: __('Removed from the screen.'), type: 'success');
+    }
+
+    /**
+     * Put a recently shown deck back up.
+     */
+    public function putUp(int $projectionId): void
+    {
+        $projection = Projection::query()->findOrFail($projectionId);
+
+        $this->authorize('view', $projection);
+
+        Presentation::putUp(Auth::user(), $projection);
+
+        unset($this->currentPresentation, $this->recentProjections);
     }
 
     /**

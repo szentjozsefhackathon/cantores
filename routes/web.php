@@ -28,7 +28,8 @@ use App\Http\Controllers\ScoreLoanFilePageController;
 use App\Http\Controllers\ScoreLoanIncipitController;
 use App\Http\Controllers\ScorePdfExportController;
 use App\Http\Controllers\ScorePublicIncipitController;
-use App\Http\Controllers\ScreenStateController;
+use App\Http\Controllers\ScreenFitController;
+use App\Http\Controllers\ShowStateController;
 use App\Http\Controllers\SitemapController;
 use App\Livewire\Pages\AbcGuide;
 use App\Livewire\Pages\AretinoGuide;
@@ -56,7 +57,6 @@ use App\Livewire\Pages\ProjectionEditor;
 use App\Livewire\Pages\ProjectionPresenter;
 use App\Livewire\Pages\ProjectionRemote;
 use App\Livewire\Pages\ProjectionRemoteDecks;
-use App\Livewire\Pages\ProjectionRemoteList;
 use App\Livewire\Pages\PublicScores;
 use App\Livewire\Pages\PublicScoreView;
 use App\Livewire\Pages\QrLogin;
@@ -447,17 +447,24 @@ Route::livewire('/present', ProjectionPresenter::class)
     ->middleware(['auth', 'verified'])
     ->name('projection-screen');
 
-// What the room is looking at: read it, and point it somewhere else. The read is
-// polled about once a second by the wall and the phone alike, and carries the
-// presentation's own state nested inside, so that following the screen and
-// following the service are one request rather than two.
-Route::get('/screens/{screen}/state', [ScreenStateController::class, 'show'])
+// This person's show: read it, and put another deck up. The read is polled about
+// once a second by the wall and the phone alike, and carries the presentation's
+// own state nested inside, so that following the show and following the service
+// are one request rather than two. No screen in the address: every device of a
+// person's follows the same show.
+Route::get('/show/state', [ShowStateController::class, 'show'])
     ->middleware(['auth', 'verified', 'throttle:projection-poll'])
-    ->name('screens.state');
+    ->name('show.state');
 
-Route::post('/screens/{screen}/state', [ScreenStateController::class, 'update'])
+Route::post('/show/state', [ShowStateController::class, 'update'])
     ->middleware(['auth', 'verified', 'throttle:projection-poll'])
-    ->name('screens.state.store');
+    ->name('show.state.store');
+
+// Where the picture lands on one wall — the one write still addressed to a
+// device, because every projector is hung differently.
+Route::post('/screens/{screen}/fit', ScreenFitController::class)
+    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
+    ->name('screens.fit');
 
 // Where a running deck has got to, as the two devices driving it agree on it.
 //
@@ -478,24 +485,22 @@ Route::get('/presentations/{presentation}/payload', PresentationPayloadControlle
     ->middleware(['auth', 'verified', 'throttle:projection-payload'])
     ->name('presentations.payload');
 
-// The deck driven from a phone. The cantor is at the organ and the laptop is
+// The show driven from a phone. The cantor is at the organ and the laptop is
 // across the building, so the person who knows when to advance is never the
 // person whose hand is on the keyboard.
-Route::livewire('/remote', ProjectionRemoteList::class)
+Route::livewire('/remote', ProjectionRemote::class)
     ->middleware(['auth', 'verified'])
     ->name('projection-remote');
 
-Route::livewire('/remote/{screen}', ProjectionRemote::class)
-    ->middleware(['auth', 'verified'])
-    ->name('projection-remote.control');
-
-// Which deck to put on that screen. Its own page rather than a mode of the
-// control page, so that going back from the remote is ordinary navigation: a
-// list that redirected into the deck it had just come from is what made the
-// remote impossible to leave.
-Route::livewire('/remote/{screen}/decks', ProjectionRemoteDecks::class)
+// Which deck to put up. Its own page rather than a mode of the control page, so
+// that going back from it is ordinary navigation.
+Route::livewire('/remote/decks', ProjectionRemoteDecks::class)
     ->middleware(['auth', 'verified'])
     ->name('projection-remote.decks');
+
+// The remote used to be addressed to a screen, and phones keep bookmarks.
+Route::redirect('/remote/{screen}', '/remote')->whereNumber('screen');
+Route::redirect('/remote/{screen}/decks', '/remote/decks')->whereNumber('screen');
 
 Route::delete('/projections/{projection}', [ProjectionController::class, 'destroy'])
     ->middleware(['auth', 'verified'])

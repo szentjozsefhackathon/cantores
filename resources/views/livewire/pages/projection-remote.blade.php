@@ -46,15 +46,14 @@ resources/js/projection-remote.js
         'outline' => $outline,
         'revision' => $revision,
         'title' => $title,
-        // The screen's URL is the constant; the presentation's two are not,
-        // because the screen outlives the decks put on it. They are baked in
+        // The show's URL is the constant; the presentation's two are not,
+        // because the show outlives the decks put up in it. They are baked in
         // only for whatever was up at mount, and afterwards come from the
-        // screen's own answer.
-        'screenUrl' => route('screens.state', ['screen' => $screen->id]),
-        // Where this screen's picture lands, baked in so that a wall lined
-        // up last Sunday draws its first slide where it belongs rather than
-        // centring it and jumping a second later.
-        'fit' => $screen->fit(),
+        // show's own answer.
+        'showUrl' => route('show.state'),
+        // The walls that are on, each with where its picture lands, so the
+        // preview is lined up the way the wall is before the first poll.
+        'screens' => $screens,
         'presentationId' => $presentation?->id,
         // How far into its opening the service is, so that the preview under the
         // thumb is the same picture the room is looking at — which is the whole
@@ -74,8 +73,8 @@ resources/js/projection-remote.js
         'scoreToggleUrl' => $projection === null ? null : route('projections.score-toggle', ['projection' => $projection->id]),
         // And the rest of what the phone may change for good — moving things
         // into place, and a music the plan does not have. Rebound from the
-        // screen's answer whenever another deck is put up.
-        ...($projection === null ? [] : \App\Services\ScreenState::deckUrls($projection->id)),
+        // show's answer whenever another deck is put up.
+        ...($projection === null ? [] : \App\Services\ShowState::deckUrls($projection->id)),
         'removeAddedMusicText' => __('Remove this music and the scores chosen from it?'),
         'skipText' => __('Leave this slide out of today\'s service'),
         'unskipText' => __('Show this slide in today\'s service'),
@@ -86,7 +85,7 @@ resources/js/projection-remote.js
         // itself, because Blade leaves a directive inside a component's
         // attribute uncompiled and Alpine is then handed an expression it
         // cannot parse.
-        'clearText' => __('Take the deck off the screen and end this projection?'),
+        'clearText' => __('Take the deck off every screen and end this projection?'),
         'csrfToken' => csrf_token(),
     ]) }}"
     x-data="projectionRemote(JSON.parse($el.dataset.projectionConfig))"
@@ -420,11 +419,18 @@ resources/js/projection-remote.js
             {{-- The thin bar over the letterbox. Everything that is not driving the
                  service lives here, small and out of the thumb's way. --}}
             <div class="absolute inset-x-0 top-0 flex items-center gap-1 bg-gradient-to-b from-black/50 to-transparent px-2 py-1.5 text-white">
-                <a href="{{ route('projection-remote.decks', ['screen' => $screen->id]) }}" wire:navigate class="shrink-0 rounded p-1" aria-label="{{ __('Decks') }}">
+                <a href="{{ route('projection-remote.decks') }}" wire:navigate class="shrink-0 rounded p-1" aria-label="{{ __('Decks') }}">
                     <flux:icon.squares-2x2 class="size-5" />
                 </a>
 
                 <span class="min-w-0 flex-1 truncate text-xs text-white/80" x-text="title || @js(__('Remote'))"></span>
+
+                {{-- Where the show is on: the walls other than this device, or
+                     none. Nothing waits on it — the show can be set up from
+                     here before the laptop is on. --}}
+                <div class="min-w-0 max-w-[45%] shrink">
+                    <livewire:projection.show-status />
+                </div>
 
                 <span class="shrink-0 text-xs tabular-nums text-white/80" x-show="total > 0" x-cloak>
                     <span x-text="index + 1"></span>/<span x-text="total"></span>
@@ -438,8 +444,9 @@ resources/js/projection-remote.js
                      that the deck is not simply centred. --}}
                 <button
                     type="button"
-                    class="shrink-0 rounded p-1"
+                    class="shrink-0 rounded p-1 disabled:opacity-40"
                     x-on:click="openFit()"
+                    x-bind:disabled="fitTarget === null"
                     x-bind:class="fitIsNeutral ? '' : 'text-amber-300'"
                     aria-label="{{ __('Fit the picture to the screen') }}"
                 >
@@ -483,17 +490,20 @@ resources/js/projection-remote.js
                 </div>
             </div>
 
-            {{-- A screen with nothing on it. The page the phone could not show
-                 before, because it had no way to address a screen that was not
-                 already showing something. --}}
+            {{-- No show. Nothing is blocked by there being no wall yet: the deck
+                 can be put up from here first, and the laptop shows it when it
+                 is opened. --}}
             <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center" x-show="waiting" x-cloak>
                 <flux:icon.tv class="size-8 text-zinc-500" />
                 <div class="text-sm text-zinc-600 dark:text-zinc-300">
-                    {{ __('This screen is showing nothing') }}
+                    {{ __('Nothing is being projected') }}
                 </div>
-                <flux:button variant="primary" size="sm" icon="play" href="{{ route('projection-remote.decks', ['screen' => $screen->id]) }}" wire:navigate>
+                <flux:button variant="primary" size="sm" icon="play" href="{{ route('projection-remote.decks') }}" wire:navigate>
                     {{ __('Choose a deck') }}
                 </flux:button>
+                <div class="max-w-xs text-xs text-zinc-500" x-show="screensElsewhere.length === 0">
+                    {{ __('On the computer the room will be reading from, sign in and open the projection screen.') }}
+                </div>
             </div>
         </div>
 
@@ -647,6 +657,20 @@ resources/js/projection-remote.js
                     <flux:icon.x-mark class="size-5" />
                 </button>
             </div>
+
+            {{-- Which wall, only when there is a choice: two walls on at once is
+                 the laptop at home left open, and it is rare. --}}
+            <select
+                class="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+                x-show="screensElsewhere.length > 1"
+                x-on:change="chooseFitScreen($event.target.value)"
+                aria-label="{{ __('Which screen') }}"
+            >
+                <template x-for="screen in screensElsewhere" x-bind:key="screen.id">
+                    <option x-bind:value="screen.id" x-bind:selected="fitTarget && fitTarget.id === screen.id" x-text="screen.label"></option>
+                </template>
+            </select>
+            <p class="mt-1 truncate text-xs text-zinc-500" x-show="screensElsewhere.length === 1" x-text="fitTarget?.label"></p>
 
             {{-- The four directions, laid out as the directions they are: a
                  cross a thumb can hit without reading, with the way back to
@@ -946,7 +970,7 @@ resources/js/projection-remote.js
                     class="w-full"
                     x-on:click="confirm(clearText) && clearScreen()"
                 >
-                    {{ __('Clear the screen') }}
+                    {{ __('Take the deck down') }}
                 </flux:button>
             </div>
         </div>

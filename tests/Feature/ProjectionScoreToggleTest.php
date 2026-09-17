@@ -10,7 +10,6 @@ use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\ProjectionSlide;
 use App\Models\Score;
-use App\Models\Screen;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -88,12 +87,11 @@ it('offers the remote the music\'s other engraving, not the one already chosen',
     $user = User::factory()->create();
     [$projection, $assignment, , $second] = projectionWithAnUnchosenScore($user);
 
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
-    $screen->point(Presentation::factory()->create(['projection_id' => $projection->id, 'user_id' => $user->id]));
+    Presentation::factory()->create(['projection_id' => $projection->id, 'user_id' => $user->id]);
 
     actingAs($user);
 
-    $outline = Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('outline');
+    $outline = Livewire::test(ProjectionRemote::class)->get('outline');
     $music = musicNodeFor($outline, $assignment->id);
 
     expect($music)->not->toBeNull()
@@ -107,12 +105,11 @@ it('lists a slot the deck has taken nothing from at all', function () {
     MusicPlanSlotPlan::factory()->create(['music_plan_id' => $plan->id, 'music_plan_slot_id' => $slot->id]);
 
     $projection = Projection::factory()->create(['user_id' => $user->id, 'music_plan_id' => $plan->id]);
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
-    $screen->point(Presentation::factory()->create(['projection_id' => $projection->id, 'user_id' => $user->id]));
+    Presentation::factory()->create(['projection_id' => $projection->id, 'user_id' => $user->id]);
 
     actingAs($user);
 
-    $outline = Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('outline');
+    $outline = Livewire::test(ProjectionRemote::class)->get('outline');
 
     expect(collect($outline)->pluck('name'))->toContain('Recessional');
 });
@@ -130,12 +127,11 @@ it('lists a music the deck has not sung from, alongside its offers', function ()
     ]);
     $untouchedScore = Score::factory()->abc()->create(['user_id' => $user->id, 'music_id' => $untouched->id]);
 
-    $screen = Screen::factory()->create(['user_id' => $user->id]);
-    $screen->point(Presentation::factory()->create(['projection_id' => $projection->id, 'user_id' => $user->id]));
+    Presentation::factory()->create(['projection_id' => $projection->id, 'user_id' => $user->id]);
 
     actingAs($user);
 
-    $outline = Livewire::test(ProjectionRemote::class, ['screen' => $screen])->get('outline');
+    $outline = Livewire::test(ProjectionRemote::class)->get('outline');
     $music = musicNodeFor($outline, $untouchedAssignment->id);
 
     expect($music)->not->toBeNull()

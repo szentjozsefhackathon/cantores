@@ -30,7 +30,7 @@
             <div>
                 <flux:heading size="lg">{{ __('This screen') }}</flux:heading>
                 <flux:subheading>
-                    {{ __('What you call this device, and whether decks may be sent to it. Both are yours alone and stay with the device.') }}
+                    {{ __('What you call this device, and whether it is listed as a screen. Both are yours alone and stay with the device.') }}
                 </flux:subheading>
             </div>
 

@@ -21,7 +21,6 @@ class PresentationFactory extends Factory
         return [
             'projection_id' => Projection::factory(),
             'user_id' => User::factory(),
-            'device_pairing_id' => null,
             'entry_id' => null,
             'slide_index' => 0,
             'entry_sequence' => null,

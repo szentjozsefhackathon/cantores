@@ -1,13 +1,13 @@
 <?php
 
-use App\Livewire\Pages\ProjectionRemoteList;
 use App\Livewire\Projection\ScreenSettings;
-use App\Livewire\Projection\SendToScreen;
+use App\Livewire\Projection\ShowStatus;
 use App\Models\DeviceName;
 use App\Models\Presentation;
-use App\Models\Projection;
 use App\Models\Screen;
 use App\Models\User;
+use App\Services\ShowState;
+use App\Support\DeviceId;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 
@@ -148,7 +148,6 @@ it('will not let somebody name a screen that is not theirs', function () {
 
 it('stops offering a device its owner says is not a screen', function () {
     $user = User::factory()->create();
-    $projection = Projection::factory()->create(['user_id' => $user->id]);
 
     $church = Screen::factory()->create(['user_id' => $user->id]);
     $home = Screen::factory()->create(['user_id' => $user->id]);
@@ -160,30 +159,18 @@ it('stops offering a device its owner says is not a screen', function () {
         ->call('save')
         ->assertHasNoErrors();
 
-    $offered = Livewire::test(SendToScreen::class, ['projection' => $projection])
-        ->instance()
-        ->screens();
-
-    expect($offered->pluck('id')->all())->toBe([$church->id]);
-
-    Livewire::test(ProjectionRemoteList::class)
-        ->assertRedirect(route('projection-remote.control', ['screen' => $church->id]));
+    expect(ShowState::screensFor($user)->pluck('id')->all())->toBe([$church->id]);
 });
 
-// Saying so is also the deliberate way of walking away from a laptop, which
-// until now had no gesture at all.
-it('takes the deck off a device that has just said it is not a screen', function () {
+/*
+ * But saying so takes nothing off the wall. The show belongs to the person, and
+ * ending it here would end it on every screen they have — which is not what
+ * "the laptop at home is not a screen" means.
+ */
+it('leaves the show up when a device says it is not a screen', function () {
     $user = User::factory()->create();
-    $projection = Projection::factory()->create(['user_id' => $user->id]);
-    $presentation = Presentation::factory()->create([
-        'user_id' => $user->id,
-        'projection_id' => $projection->id,
-    ]);
-
-    $home = Screen::factory()->create([
-        'user_id' => $user->id,
-        'presentation_id' => $presentation->id,
-    ]);
+    $presentation = Presentation::factory()->create(['user_id' => $user->id]);
+    $home = Screen::factory()->create(['user_id' => $user->id]);
 
     actingAs($user);
 
@@ -191,13 +178,26 @@ it('takes the deck off a device that has just said it is not a screen', function
         ->set('offered', false)
         ->call('save');
 
-    expect($home->refresh()->presentation_id)->toBeNull()
-        ->and($presentation->refresh()->isLive())->toBeFalse();
+    expect($presentation->refresh()->isLive())->toBeTrue();
+});
+
+// Still, a wall needs its own fit back whatever it has been called.
+it('still gives a device that is not offered its own fit', function () {
+    $user = User::factory()->create();
+    $here = Screen::factory()->create(['user_id' => $user->id, 'device_id' => DeviceId::current()]);
+
+    DeviceName::factory()->notAScreen()->create([
+        'user_id' => $user->id,
+        'device_id' => $here->device_id,
+    ]);
+
+    actingAs($user);
+
+    expect(ShowState::screensFor($user)->pluck('id')->all())->toBe([$here->id]);
 });
 
 it('offers a device again when its owner changes their mind', function () {
     $user = User::factory()->create();
-    $projection = Projection::factory()->create(['user_id' => $user->id]);
     $screen = Screen::factory()->create(['user_id' => $user->id]);
 
     DeviceName::factory()->notAScreen()->create([
@@ -213,11 +213,7 @@ it('offers a device again when its owner changes their mind', function () {
         ->set('offered', true)
         ->call('save');
 
-    $offered = Livewire::test(SendToScreen::class, ['projection' => $projection])
-        ->instance()
-        ->screens();
-
-    expect($offered->pluck('id')->all())->toBe([$screen->id]);
+    expect(ShowState::screensFor($user)->pluck('id')->all())->toBe([$screen->id]);
 });
 
 // The presenter holds only its own screen and loads no labels, so the lazy path
@@ -277,9 +273,9 @@ it('leaves the name to the row that is already showing it', function () {
         ->assertDontSee('Parish laptop');
 });
 
-// The remote's list is the one page where the name is the row's title, inside
-// the link, so a rename there does have to reach the page around the pencil.
-it('reads the list again when a screen in it is renamed', function () {
+// The remote's status line is where the name is said inside a line of its own,
+// so a rename there does have to reach the line around the pencil.
+it('reads the status line again when a screen in it is renamed', function () {
     $user = User::factory()->create();
 
     $church = Screen::factory()->create(['user_id' => $user->id]);
@@ -287,7 +283,7 @@ it('reads the list again when a screen in it is renamed', function () {
 
     actingAs($user);
 
-    $list = Livewire::test(ProjectionRemoteList::class)
+    $status = Livewire::test(ShowStatus::class)
         ->assertDontSee('Parish laptop');
 
     DeviceName::factory()->create([
@@ -296,5 +292,5 @@ it('reads the list again when a screen in it is renamed', function () {
         'name' => 'Parish laptop',
     ]);
 
-    $list->dispatch('screen-renamed')->assertSee('Parish laptop');
+    $status->dispatch('screen-renamed')->assertSee('Parish laptop');
 });

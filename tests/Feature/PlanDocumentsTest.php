@@ -227,10 +227,24 @@ it('disables the projection screen and remote until something is actually live',
         ->assertDontSee('Currently projecting');
 });
 
+/*
+ * The icon that starts a projection opens the presenter in a separate
+ * window rather than navigating this tab, so this card has no other way
+ * to learn a screen went live — it has to poll for it.
+ */
+it('polls for a projection started from another window', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)
+        ->assertSeeHtml('wire:poll.15s');
+});
+
 it('enables the projection screen and remote, and names the live deck, once one is up', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id, 'title' => 'Nagyterem 16:9']);
-    Presentation::resumeFor($projection, $user);
+    Presentation::putUp($user, $projection);
 
     actingAs($user);
 
@@ -243,17 +257,16 @@ it('enables the projection screen and remote, and names the live deck, once one 
 });
 
 /*
- * The fast way out of a deck started by mistake: take it off every screen
- * showing it, and end it, from the one page a cantor is already looking at.
+ * The fast way out of a deck started by mistake: take the show down, from the
+ * one page a cantor is already looking at.
  */
-it('removes the live deck from every screen showing it and ends the projection', function () {
+it('takes the show down and ends the projection', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id, 'title' => 'Rossz oldalarány']);
-    $presentation = Presentation::resumeFor($projection, $user);
+    $presentation = Presentation::putUp($user, $projection);
 
-    $screen = Screen::factory()->create([
+    Screen::factory()->create([
         'user_id' => $user->id,
-        'presentation_id' => $presentation->id,
         'last_seen_at' => Carbon::now(),
     ]);
 
@@ -262,51 +275,28 @@ it('removes the live deck from every screen showing it and ends the projection',
     Livewire::test(PlanDocuments::class)->call('removeFromScreen');
 
     expect($presentation->fresh()->ended_at)->not->toBeNull()
-        ->and($screen->fresh()->presentation_id)->toBeNull();
+        ->and(Presentation::currentFor($user))->toBeNull();
 
     Livewire::test(PlanDocuments::class)
         ->assertDontSee(__('Currently projecting'));
 });
 
 /*
- * A live row with no screen left pointing at it is rare — a screen aged out or
- * was pointed elsewhere already — but the button still has to end the service
- * rather than do nothing.
+ * The deck put up next opens on the title card again, the same way a freshly
+ * opened wall would — this is what "Remove from screen" buys: time to line the
+ * projector up before the room sees the replacement.
  */
-it('ends the presentation directly when nothing is left pointing a screen at it', function () {
-    $user = User::factory()->create();
-    $projection = Projection::factory()->create(['user_id' => $user->id]);
-    $presentation = Presentation::resumeFor($projection, $user);
-
-    actingAs($user);
-
-    Livewire::test(PlanDocuments::class)->call('removeFromScreen');
-
-    expect($presentation->fresh()->ended_at)->not->toBeNull();
-});
-
-/*
- * The deck a screen shows next opens on the title card again, the same way a
- * freshly opened wall would — this is what "Remove from screen" buys: time to
- * line the projector up before the room sees the replacement.
- */
-it('shows the title card again for the next deck put on a screen just cleared', function () {
+it('shows the title card again for the next deck put up after the show was taken down', function () {
     $user = User::factory()->create();
     $wrong = Projection::factory()->create(['user_id' => $user->id]);
     $right = Projection::factory()->create(['user_id' => $user->id]);
-    $presentation = Presentation::resumeFor($wrong, $user);
-
-    $screen = Screen::factory()->create([
-        'user_id' => $user->id,
-        'presentation_id' => $presentation->id,
-        'last_seen_at' => Carbon::now(),
-    ]);
+    Presentation::putUp($user, $wrong);
 
     actingAs($user);
 
     Livewire::test(PlanDocuments::class)->call('removeFromScreen');
 
-    expect(Presentation::splashFor($screen->fresh()))->toBe(Presentation::SPLASH_CARD);
+    expect(Presentation::putUp($user, $right)->splash)->toBe(Presentation::SPLASH_CARD);
 });
 
 it('sends the two old list screens to the consolidated one', function () {

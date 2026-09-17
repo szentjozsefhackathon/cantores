@@ -54,8 +54,11 @@ class ScreenSettings extends Component
     public ?string $name = null;
 
     /**
-     * Whether to offer this device as somewhere a deck can be sent. Off is the
-     * laptop at home saying so, once.
+     * Whether to list this device as a screen the show is on, and as the one
+     * the fit panel lines up. Off is the laptop at home saying so, once.
+     *
+     * It takes nothing off the wall. The show is the person's, not the
+     * device's, and ending it here would end it on every screen they have.
      */
     public bool $offered = true;
 
@@ -104,14 +107,6 @@ class ScreenSettings extends Component
             'name' => $name === '' ? null : $name,
             'offered' => $this->offered,
         ])->save();
-
-        // A device that has just said it is not a screen is not to be left with
-        // the room's deck still on it. Clearing ends the presentation, as
-        // clearing always does — this is the deliberate version of walking away
-        // from a laptop, which until now had no gesture at all.
-        if (! $this->offered) {
-            $this->screen->point(null);
-        }
 
         $this->screen->setRelation('deviceName', $device);
 

@@ -5,9 +5,7 @@ use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\ProjectionSlide;
 use App\Models\Score;
-use App\Models\Screen;
 use App\Models\User;
-use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -177,7 +175,7 @@ it('leaves the card up for a heartbeat that only reports an address', function (
 });
 
 /*
- * A second window on a service already running joins the row rather than
+ * A second window opened on the deck already up joins the row rather than
  * starting one, so the card is not reopened over a hymn the room is singing.
  */
 it('does not put the card back when a second window joins a running service', function () {
@@ -198,53 +196,41 @@ it('does not put the card back when a second window joins a running service', fu
 });
 
 /*
- * The card belongs to a screen with nothing on it — the beamer is about to be
- * lined up against whatever goes up next, and that is as true of a bare screen
- * a phone points at a deck for the first time as it is of the wall's own
- * window. This is also what lets "Remove from screen" hand the projector back
- * a card to line up against: it leaves the screen exactly this empty.
+ * The card belongs to a show that was not up — the beamer is about to be lined
+ * up against whatever goes up next, and that is as true of a deck the phone
+ * puts up first as it is of the wall's own window. This is also what lets
+ * "Remove from screen" hand the projector back a card to line up against.
  */
-it('shows the opening for a deck pointed at an empty screen from the phone', function () {
+it('shows the opening for a deck put up from the phone when nothing was up', function () {
     $user = User::factory()->create();
     [$projection] = splashDeck($user);
 
-    $screen = Screen::factory()->create([
-        'user_id' => $user->id,
-        'last_seen_at' => Carbon::now(),
-    ]);
-
     actingAs($user);
 
-    postJson(route('screens.state.store', $screen), ['projectionId' => $projection->id])
+    postJson(route('show.state.store'), ['projectionId' => $projection->id])
         ->assertOk()
         ->assertJson(['state' => ['splash' => Presentation::SPLASH_CARD]]);
 });
 
 /*
- * A deck a phone puts on a screen that is already facing the room is not that:
- * the wall is already lined up, and an extra press mid-service — switching
- * from one deck to the next — buys nobody anything.
+ * A deck the phone puts up in place of one already facing the room is not that:
+ * the wall is already lined up, and an extra press mid-service — switching from
+ * one deck to the next — buys nobody anything.
  */
-it('shows no opening for a deck pointed at a screen already showing something', function () {
+it('shows no opening for a deck that replaces one already up', function () {
     $user = User::factory()->create();
     [$firstProjection] = splashDeck($user);
     [$secondProjection] = splashDeck($user);
 
-    $showing = Presentation::factory()->create([
+    Presentation::factory()->create([
         'projection_id' => $firstProjection->id,
         'user_id' => $user->id,
         'splash' => Presentation::SPLASH_OFF,
     ]);
 
-    $screen = Screen::factory()->create([
-        'user_id' => $user->id,
-        'presentation_id' => $showing->id,
-        'last_seen_at' => Carbon::now(),
-    ]);
-
     actingAs($user);
 
-    postJson(route('screens.state.store', $screen), ['projectionId' => $secondProjection->id])
+    postJson(route('show.state.store'), ['projectionId' => $secondProjection->id])
         ->assertOk()
         ->assertJson(['state' => ['splash' => Presentation::SPLASH_OFF]]);
 });

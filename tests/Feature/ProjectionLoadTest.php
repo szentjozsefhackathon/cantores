@@ -22,7 +22,7 @@ use function Pest\Laravel\withSession;
  *
  * Every other test of this feature asks whether the two devices agree; this one
  * asks what agreeing costs, because the answer is multiplied by every parish
- * running a service at the same hour. A wall and a phone each read the screen
+ * running a service at the same hour. A wall and a phone each read the show
  * about once a second for the length of a Mass, so a query added here is a
  * query added a hundred times a second, and a row written here is a row written
  * a hundred times a second for as long as anybody is singing.
@@ -60,35 +60,34 @@ function runningService(int $rows = 8): array
         'user_id' => $user->id,
         'device_id' => (string) Str::uuid(),
     ]);
-    $screen->point($presentation);
 
     return [$user, $screen, $presentation, $projection];
 }
 
 /*
- * The budget. Four reads, and not one of them a write: the screen, the
- * presentation on it, the deck it names, and the deck's rows. The join that
- * used to make a fifth is answered from the cache now.
+ * The budget. Five reads, and not one of them a write: the screens that are on
+ * and their names, the show, the deck it names, and the deck's rows. The join
+ * that used to make a sixth is answered from the cache now.
  */
-it('reads the screen within its query budget', function () {
-    [$user, $screen] = runningService();
+it('reads the show within its query budget', function () {
+    [$user] = runningService();
 
     actingAs($user);
 
     // The first read of a deck fills the revision cache; the budget is what
     // every read after it costs, which is what a Mass is made of.
-    getJson(route('screens.state', ['screen' => $screen]))->assertOk();
+    getJson(route('show.state'))->assertOk();
 
     $queries = [];
     DB::listen(function ($query) use (&$queries): void {
         $queries[] = $query->sql;
     });
 
-    getJson(route('screens.state', ['screen' => $screen]))->assertOk();
+    getJson(route('show.state'))->assertOk();
 
     $writes = array_filter($queries, fn (string $sql): bool => str_starts_with($sql, 'update'));
 
-    expect($queries)->toHaveCount(4)
+    expect($queries)->toHaveCount(5)
         ->and($writes)->toBeEmpty();
 });
 
@@ -111,7 +110,7 @@ it('does not write last_seen_at on every poll from the wall', function () {
     $before = $screen->fresh()->last_seen_at;
 
     Carbon::setTestNow(Carbon::now()->addSeconds(5));
-    getJson(route('screens.state', ['screen' => $screen]))->assertOk();
+    getJson(route('show.state'))->assertOk();
 
     expect($screen->fresh()->last_seen_at->equalTo($before))->toBeTrue();
 });
@@ -133,7 +132,7 @@ it('writes last_seen_at once the saved write would start to matter', function ()
     $before = $screen->fresh()->last_seen_at;
 
     Carbon::setTestNow(Carbon::now()->addSeconds(Screen::SEEN_EVERY_SECONDS + 1));
-    getJson(route('screens.state', ['screen' => $screen]))->assertOk();
+    getJson(route('show.state'))->assertOk();
 
     expect($screen->fresh()->last_seen_at->gt($before))->toBeTrue()
         ->and(Screen::SEEN_EVERY_SECONDS)->toBeLessThan(Screen::STALE_MINUTES * 60);
@@ -195,24 +194,24 @@ it('forgets the cached revision when the deck itself is saved', function () {
  * it do, since that form keys on the user and nothing else.
  */
 it('stops a client that is asking in a loop', function () {
-    [$user, $screen] = runningService();
+    [$user] = runningService();
 
     actingAs($user);
 
     RateLimiter::increment(md5('projection-poll'.$user->id), 60, 300);
 
-    getJson(route('screens.state', ['screen' => $screen]))->assertStatus(429);
+    getJson(route('show.state'))->assertStatus(429);
 });
 
 it('keeps the polling budget out of every other throttled route', function () {
-    [$user, $screen] = runningService();
+    [$user] = runningService();
 
     actingAs($user);
 
     // A Mass worth of polling, spent all at once.
     RateLimiter::increment(md5('projection-poll'.$user->id), 60, 299);
 
-    getJson(route('screens.state', ['screen' => $screen]))->assertOk();
+    getJson(route('show.state'))->assertOk();
 
     // The score export allows this same person twenty attempts a minute, under
     // its own inline `throttle:20,1`. That form keys on the user and nothing
@@ -227,16 +226,16 @@ it('keeps the polling budget out of every other throttled route', function () {
  * on every plain GET, and a `fetch` is a plain GET unless it says otherwise.
  * Left unsaid, a wall spends a Mass telling its own session that the last page
  * it was on was a JSON endpoint — once a second, dirtying the session every
- * time, and pointing every redirect-back at `/screens/5/state`.
+ * time, and pointing every redirect-back at `/show/state`.
  */
 it('does not become the page the wall was last on', function () {
-    [$user, $screen] = runningService();
+    [$user] = runningService();
 
     actingAs($user);
     withSession(['_previous' => ['url' => route('plan-documents')]]);
 
     // The header the two clients send; see jsonRequests() in projection-follow.js.
-    getJson(route('screens.state', ['screen' => $screen]), ['X-Requested-With' => 'XMLHttpRequest'])
+    getJson(route('show.state'), ['X-Requested-With' => 'XMLHttpRequest'])
         ->assertOk();
 
     expect(session('_previous.url'))->toBe(route('plan-documents'));

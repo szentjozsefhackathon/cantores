@@ -9,11 +9,13 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
- * One deck being shown, on one screen, once.
+ * One time a deck was put up.
  *
  * A Projection is what was arranged; a Presentation is that deck in front of a
  * congregation, and it exists for one reason: the person who knows when to
@@ -21,6 +23,11 @@ use Illuminate\Support\Facades\Auth;
  * else in the building. Both devices are already signed in as the same person,
  * so all that was missing was a place for them to agree on where the service has
  * got to. This row is that place, and both of them are its clients.
+ *
+ * A person has at most one un-ended row, and that row is their show: every
+ * device of theirs follows it, and a screen shows it because the screen is
+ * theirs, not because it points anywhere. The ended rows stay behind, and are
+ * what "recently shown" is read from.
  *
  * What it holds is an *address* — a row of the deck and a position within that
  * row — never an offset into an array. The presenter walks a filtered deck, and
@@ -31,7 +38,6 @@ use Illuminate\Support\Facades\Auth;
  * @property int $id
  * @property int $projection_id
  * @property int $user_id
- * @property int|null $device_pairing_id
  * @property int|null $entry_id
  * @property int $slide_index
  * @property int|null $entry_sequence
@@ -47,7 +53,6 @@ use Illuminate\Support\Facades\Auth;
  * @property CarbonImmutable|null $updated_at
  * @property-read Projection $projection
  * @property-read User $user
- * @property-read DevicePairing|null $devicePairing
  *
  * @method static \Database\Factories\PresentationFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Presentation live()
@@ -127,7 +132,6 @@ class Presentation extends Model
     protected $fillable = [
         'projection_id',
         'user_id',
-        'device_pairing_id',
         'entry_id',
         'slide_index',
         'entry_sequence',
@@ -166,61 +170,115 @@ class Presentation extends Model
     }
 
     /**
-     * Which borrowed screen is showing the deck, where one was signed in from a
-     * phone. Nothing here depends on it.
+     * Put a deck up as this person's show.
+     *
+     * A person has one show at a time, and every device of theirs follows it:
+     * the wall, the phone, the laptop's second window. So putting a deck up is
+     * not joining "this deck's presentation" but replacing whatever the show
+     * was — ended in the same transaction, and a new row started at the
+     * beginning of the deck.
+     *
+     * Unless the deck is already the show. Reloading the wall, pressing Present
+     * twice, or picking the deck that is already on the phone must change
+     * nothing, so that returns the row as it is, position and all.
+     *
+     * The title card comes up only when nothing was live: a deck replacing one
+     * mid-service goes straight to the deck, because the room is already
+     * looking at something and a card over it would read as the service
+     * stopping rather than moving on.
+     *
+     * Two of these racing — two devices pressing at once — are settled by the
+     * partial unique index on the un-ended row. The loser retries once, and on
+     * the retry it finds the winner's row and joins it or replaces it like any
+     * other.
      */
-    public function devicePairing(): BelongsTo
+    public static function putUp(User $user, Projection $projection): self
     {
-        return $this->belongsTo(DevicePairing::class);
+        try {
+            return self::putUpOnce($user, $projection);
+        } catch (UniqueConstraintViolationException) {
+            return self::putUpOnce($user, $projection);
+        }
+    }
+
+    private static function putUpOnce(User $user, Projection $projection): self
+    {
+        return DB::transaction(function () use ($user, $projection): self {
+            $current = self::query()
+                ->mine($user)
+                ->whereNull('ended_at')
+                ->lockForUpdate()
+                ->first();
+
+            $live = $current instanceof self && $current->isLive();
+
+            if ($live && $current->projection_id === $projection->getKey()) {
+                $current->touchLastSeen();
+
+                return $current;
+            }
+
+            $current?->end();
+
+            $now = Carbon::now();
+
+            return self::query()->create([
+                'projection_id' => $projection->getKey(),
+                'user_id' => $user->getKey(),
+                'entry_id' => null,
+                'slide_index' => 0,
+                'blanked' => false,
+                'splash' => $live ? self::SPLASH_OFF : self::SPLASH_CARD,
+                'version' => 1,
+                'started_at' => $now,
+                'last_seen_at' => $now,
+            ]);
+        });
     }
 
     /**
-     * The presentation a presenter opening this deck should join, or a new one.
-     *
-     * Joining rather than starting afresh is what makes two windows on one deck
-     * follow each other, which is the whole mechanism this feature is built out
-     * of — the remote is only a third client of the same row.
-     *
-     * `$splash` asks for the opening — the title card, then the dark, then the
-     * deck — and is asked for only by a presenter window opening a deck itself.
-     * It reaches the row only when one is created: a second window joining a
-     * service already under way must not put a card over the hymn the room is
-     * singing.
+     * This person's show, once one nobody has heard from for a while is counted
+     * as nothing — so a deck left up on Saturday does not come back on Sunday.
      */
-    public static function resumeFor(
-        Projection $projection,
-        User $user,
-        ?int $devicePairingId = null,
-        string $splash = self::SPLASH_OFF,
-    ): self {
-        $existing = self::query()
+    public static function currentFor(User $user): ?self
+    {
+        return self::query()
+            ->mine($user)
             ->live()
-            ->where('projection_id', $projection->getKey())
-            ->where('user_id', $user->getKey())
-            ->latest('last_seen_at')
             ->first();
+    }
 
-        if ($existing instanceof self) {
-            $existing->touchLastSeen();
+    /**
+     * Take the show down. The deliberate end of a service, from whichever
+     * device says so.
+     */
+    public static function takeDownFor(User $user): void
+    {
+        self::query()
+            ->mine($user)
+            ->whereNull('ended_at')
+            ->get()
+            ->each(fn (self $presentation) => $presentation->end());
+    }
 
-            return $existing;
-        }
-
-        $now = Carbon::now();
-
-        return self::query()->create([
-            'projection_id' => $projection->getKey(),
-            'user_id' => $user->getKey(),
-            'device_pairing_id' => $devicePairingId,
-            'entry_id' => null,
-            'slide_index' => 0,
-            'blanked' => false,
-            'splash' => $splash,
-
-            'version' => 1,
-            'started_at' => $now,
-            'last_seen_at' => $now,
-        ]);
+    /**
+     * The decks this person has put up lately, newest first and each once.
+     *
+     * Read off the presentation rows rather than stored: every deck put up
+     * leaves one behind, so the adoration deck tried yesterday is one tap away
+     * today without anything having been kept for the purpose.
+     *
+     * @return EloquentCollection<int, Projection>
+     */
+    public static function recentFor(User $user, int $limit = 3): EloquentCollection
+    {
+        return Projection::query()
+            ->mine($user)
+            ->whereHas('presentations', fn (Builder $presentations) => $presentations->mine($user))
+            ->withMax(['presentations as last_shown_at' => fn (Builder $presentations) => $presentations->mine($user)], 'started_at')
+            ->orderByDesc('last_shown_at')
+            ->limit($limit)
+            ->get();
     }
 
     /**
@@ -335,24 +393,6 @@ class Presentation extends Model
     }
 
     /**
-     * Whether a deck about to go up on this screen should open on the title
-     * card.
-     *
-     * The card belongs to a screen with nothing on it — the beamer is about to
-     * be lined up against whatever goes up, whether that is the first deck of
-     * the day or one put up straight after the last one was deliberately taken
-     * off. It does not belong to a deck simply replacing another mid-service,
-     * where the room is already looking at something and a card over it would
-     * read as the service stopping rather than moving on — so this reads
-     * "empty" off the screen itself rather than off which presentation row the
-     * deck happens to resolve to.
-     */
-    public static function splashFor(Screen $screen): string
-    {
-        return $screen->showing() === null ? self::SPLASH_CARD : self::SPLASH_OFF;
-    }
-
-    /**
      * Whichever of two openings is the further along, the row's own winning any
      * tie and anything unrecognisable.
      */
@@ -406,6 +446,23 @@ class Presentation extends Model
             ->update(['last_seen_at' => $now]);
 
         $this->setAttribute('last_seen_at', $now)->syncOriginalAttribute('last_seen_at');
+    }
+
+    /**
+     * Note that somebody is still following the show, at most once every
+     * `Screen::SEEN_EVERY_SECONDS`.
+     *
+     * The caller is the poll, and the column is read against a five minute
+     * window, so a write a second would be three hundred times more than
+     * anything asks for.
+     */
+    public function keepAlive(): void
+    {
+        if ($this->last_seen_at->gt(Carbon::now()->subSeconds(Screen::SEEN_EVERY_SECONDS))) {
+            return;
+        }
+
+        $this->touchLastSeen();
     }
 
     /**
