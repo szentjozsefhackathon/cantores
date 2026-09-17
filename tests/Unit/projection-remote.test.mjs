@@ -379,7 +379,30 @@ test('the next slide is not drawn for a phone', () => {
 
 /** A deck of two slots: one music sung two ways, and one sung once. */
 function plan() {
-    const component = registered.projectionRemote({ excluded: { 8: [0] } });
+    const component = registered.projectionRemote({
+        excluded: { 8: [0] },
+        outline: [
+            {
+                kind: 'slot', id: 1, name: 'Kezdőének', canMoveUp: false, canMoveDown: true,
+                children: [
+                    { kind: 'music', local: false, assignmentId: 100, addedMusicId: null, title: 'Veni Creator', canMoveUp: false, canMoveDown: false, offers: [],
+                        children: [
+                            { kind: 'entry', entryId: 7, canMoveUp: false, canMoveDown: false },
+                            { kind: 'entry', entryId: 8, canMoveUp: false, canMoveDown: false },
+                        ] },
+                ],
+            },
+            {
+                kind: 'slot', id: 2, name: 'Áldozás', canMoveUp: true, canMoveDown: false,
+                children: [
+                    { kind: 'music', local: false, assignmentId: 200, addedMusicId: null, title: 'Ave verum', canMoveUp: false, canMoveDown: false, offers: [],
+                        children: [
+                            { kind: 'entry', entryId: 9, canMoveUp: false, canMoveDown: false },
+                        ] },
+                ],
+            },
+        ],
+    });
 
     component.entries = [
         { id: 7, slotName: 'Kezdőének', label: 'Veni Creator', variation: 'I. tónus' },
@@ -409,24 +432,26 @@ test('the plan column groups the deck by slot and by music', () => {
     const outline = plan().outline;
 
     assert.deepEqual(outline.map((slot) => slot.name), ['Kezdőének', 'Áldozás']);
-    assert.deepEqual(outline[0].musics.map((music) => music.name), ['Veni Creator']);
 
-    const sung = outline[0].musics[0].rows;
+    const musics = outline[0].blocks.filter((block) => block.kind === 'music');
+    assert.deepEqual(musics.map((music) => music.name), ['Veni Creator']);
+
+    const sung = musics[0].rows;
 
     assert.deepEqual(sung.map((row) => row.variation), ['I. tónus', 'II. tónus']);
     assert.deepEqual(sung.map((row) => `${row.shownCount}/${row.slideCount}`), ['2/2', '0/1']);
 });
 
 /* A slot that comes round twice is two bands rather than one gathered from
-   both ends of the deck: the deck's order is the service's order, and that is
-   what the person reading the column is looking at. */
+   both ends of the deck: the plan's own order is the service's order, and
+   that is what the person reading the column is looking at. */
 test('the plan column keeps the service’s own order', () => {
     const deck = plan();
 
-    deck.entries = [
-        { id: 7, slotName: 'Kezdőének', label: 'Veni Creator' },
-        { id: 9, slotName: 'Áldozás', label: 'Ave verum' },
-        { id: 8, slotName: 'Kezdőének', label: 'Veni Creator' },
+    deck.outlineTree = [
+        deck.outlineTree[0],
+        deck.outlineTree[1],
+        { ...deck.outlineTree[0], id: 3 },
     ];
 
     assert.deepEqual(deck.outline.map((slot) => slot.name), ['Kezdőének', 'Áldozás', 'Kezdőének']);
@@ -436,12 +461,13 @@ test('the plan column keeps the service’s own order', () => {
    the whole of what the two columns have to say to each other. */
 test('the plan column counts what today’s service leaves out', () => {
     const deck = plan();
+    const musicIn = (slotIndex) => deck.outline[slotIndex].blocks.find((block) => block.kind === 'music');
 
-    assert.equal(deck.outline[1].musics[0].rows[0].shownCount, 1);
+    assert.equal(musicIn(1).rows[0].shownCount, 1);
 
     deck.toggleReveal(9, 0);
 
-    assert.equal(deck.outline[1].musics[0].rows[0].shownCount, 0);
+    assert.equal(musicIn(1).rows[0].shownCount, 0);
 });
 
 /* A slot's music is usually sung from one of several engravings of it, all
