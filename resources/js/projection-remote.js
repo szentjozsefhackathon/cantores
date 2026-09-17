@@ -412,9 +412,13 @@ onAlpineInit(() => {
             return fitTransform(this.fit);
         },
 
-        /** The screens other than this device — the walls the show is on. */
-        get screensElsewhere() {
-            return (this.screens ?? []).filter((screen) => !screen.isThisDevice);
+        /**
+         * The walls the show is on. This device is among them only while its
+         * own wall is up — the laptop with the remote in the other window —
+         * which the server has already decided.
+         */
+        get walls() {
+            return this.screens ?? [];
         },
 
         /**
@@ -422,7 +426,7 @@ onAlpineInit(() => {
          * recently heard from, or none when no wall is on.
          */
         get fitTarget() {
-            const walls = this.screensElsewhere;
+            const walls = this.walls;
 
             return walls.find((screen) => screen.id === this.fitScreenId) ?? walls[0] ?? null;
         },

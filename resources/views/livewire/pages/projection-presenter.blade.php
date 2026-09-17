@@ -32,7 +32,8 @@ resources/js/projection-presenter.js
         // page opened on, and afterwards come from the show's answer.
         'revision' => $revision,
         'title' => $title,
-        'showUrl' => route('show.state'),
+        // Marked as the wall's, because only the wall's read is its heartbeat.
+        'showUrl' => route('show.state', ['screen' => 1]),
         // Where this screen's picture lands, baked in so that a wall lined
         // up last Sunday draws its first slide where it belongs rather than
         // centring it and jumping a second later.

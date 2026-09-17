@@ -503,7 +503,7 @@ resources/js/projection-remote.js
                 <flux:button variant="primary" size="sm" icon="play" href="{{ route('projection-remote.decks') }}" wire:navigate>
                     {{ __('Choose a deck') }}
                 </flux:button>
-                <div class="max-w-xs text-xs text-zinc-500" x-show="screensElsewhere.length === 0">
+                <div class="max-w-xs text-xs text-zinc-500" x-show="walls.length === 0">
                     {{ __('On the computer the room will be reading from, sign in and open the projection screen.') }}
                 </div>
             </div>
@@ -664,15 +664,15 @@ resources/js/projection-remote.js
                  the laptop at home left open, and it is rare. --}}
             <select
                 class="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800"
-                x-show="screensElsewhere.length > 1"
+                x-show="walls.length > 1"
                 x-on:change="chooseFitScreen($event.target.value)"
                 aria-label="{{ __('Which screen') }}"
             >
-                <template x-for="screen in screensElsewhere" x-bind:key="screen.id">
+                <template x-for="screen in walls" x-bind:key="screen.id">
                     <option x-bind:value="screen.id" x-bind:selected="fitTarget && fitTarget.id === screen.id" x-text="screen.label"></option>
                 </template>
             </select>
-            <p class="mt-1 truncate text-xs text-zinc-500" x-show="screensElsewhere.length === 1" x-text="fitTarget?.label"></p>
+            <p class="mt-1 truncate text-xs text-zinc-500" x-show="walls.length === 1" x-text="fitTarget?.label"></p>
 
             {{-- The four directions, laid out as the directions they are: a
                  cross a thumb can hit without reading, with the way back to

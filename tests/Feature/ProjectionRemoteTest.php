@@ -13,6 +13,7 @@ use App\Models\Score;
 use App\Models\Screen;
 use App\Models\User;
 use App\Support\DeviceId;
+use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -74,7 +75,8 @@ it('says that no screen is connected rather than blocking anything', function ()
         ->assertSee(__('Choose a deck'));
 });
 
-// The live screens of the person holding the phone, other than the phone.
+// The live screens of the person holding the phone, other than a phone that
+// pressed Present a while ago and has since come back to the remote.
 it('says which screens the show is on', function () {
     $user = User::factory()->create();
 
@@ -84,7 +86,11 @@ it('says which screens the show is on', function () {
     $home = Screen::factory()->create(['user_id' => $user->id]);
     DeviceName::factory()->create(['user_id' => $user->id, 'device_id' => $home->device_id, 'name' => 'Home laptop']);
 
-    $phone = Screen::factory()->create(['user_id' => $user->id, 'device_id' => DeviceId::current()]);
+    $phone = Screen::factory()->create([
+        'user_id' => $user->id,
+        'device_id' => DeviceId::current(),
+        'last_seen_at' => Carbon::now()->subMinutes(2),
+    ]);
     DeviceName::factory()->create(['user_id' => $user->id, 'device_id' => $phone->device_id, 'name' => 'My phone']);
 
     $stale = Screen::factory()->stale()->create(['user_id' => $user->id]);
@@ -101,6 +107,23 @@ it('says which screens the show is on', function () {
         ->assertDontSee('My phone')
         ->assertDontSee('Chapel')
         ->assertDontSee('Stranger')
+        ->assertDontSee(__('No screen connected'));
+});
+
+/*
+ * A laptop with the wall in one window and the remote in the other: the wall is
+ * this very browser, and it is where the show is on.
+ */
+it('says the show is on this browser while its own wall is up', function () {
+    $user = User::factory()->create();
+
+    $laptop = Screen::factory()->create(['user_id' => $user->id, 'device_id' => DeviceId::current()]);
+    DeviceName::factory()->create(['user_id' => $user->id, 'device_id' => $laptop->device_id, 'name' => 'Parish laptop']);
+
+    actingAs($user);
+
+    Livewire::test(ShowStatus::class)
+        ->assertSee('Parish laptop')
         ->assertDontSee(__('No screen connected'));
 });
 

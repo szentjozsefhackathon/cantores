@@ -4,7 +4,6 @@ namespace App\Livewire\Projection;
 
 use App\Models\Screen;
 use App\Services\ShowState;
-use App\Support\DeviceId;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
@@ -27,18 +26,16 @@ use Livewire\Component;
 class ShowStatus extends Component
 {
     /**
-     * The screens showing the show, less this browser's own: a phone that
-     * pressed Present is a screen too, and saying the show is on the phone in
-     * the cantor's hand tells them nothing.
+     * The screens showing the show — this browser's own among them while its
+     * wall is up, because a laptop with the wall in one window and the remote in
+     * the other is exactly where the show is on.
      *
      * @return EloquentCollection<int, Screen>
      */
     #[Computed]
     public function screens(): EloquentCollection
     {
-        return ShowState::screensFor(Auth::user())
-            ->reject(fn (Screen $screen): bool => $screen->device_id === DeviceId::current())
-            ->values();
+        return ShowState::screensFor(Auth::user());
     }
 
     #[On('screen-renamed')]

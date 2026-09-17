@@ -1,7 +1,8 @@
 {{-- Where the show is on.
 
      Slowly polled, and only this line: the remote around it is never re-rendered.
-     A screen that is not offered is left out, and so is this device. --}}
+     A screen that is not offered is left out, and so is this device unless
+     its own wall is up. --}}
 <div class="flex min-w-0 items-center gap-1 text-xs" wire:poll.5s>
     @if($this->screens->isEmpty())
         <flux:icon.tv class="size-4 shrink-0 text-amber-300" />

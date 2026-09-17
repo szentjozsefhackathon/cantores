@@ -7,6 +7,7 @@ use App\Models\Screen;
 use App\Models\User;
 use App\Support\DeviceId;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Carbon;
 
 /**
  * What a person's show looks like to the devices following it.
@@ -87,6 +88,11 @@ class ShowState
      * device asking, because a wall still needs its own fit back whatever it
      * has been called.
      *
+     * The device asking counts only while its wall is actually up. A laptop
+     * with the wall in one window and the remote in the other is a screen, and
+     * the remote must say so; a phone that pressed Present a minute ago and
+     * came back is not.
+     *
      * @return EloquentCollection<int, Screen>
      */
     public static function screensFor(User $user): EloquentCollection
@@ -96,7 +102,11 @@ class ShowState
         return Screen::query()
             ->live()
             ->mine($user)
-            ->where(fn ($query) => $query->offered($user)->orWhere('device_id', $device))
+            ->where(fn ($query) => $query
+                ->where(fn ($others) => $others->where('device_id', '!=', $device)->offered($user))
+                ->orWhere(fn ($own) => $own
+                    ->where('device_id', $device)
+                    ->where('last_seen_at', '>', Carbon::now()->subSeconds(Screen::PRESENTING_SECONDS))))
             ->withDeviceName($user)
             ->latest('last_seen_at')
             ->get();

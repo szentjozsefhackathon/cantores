@@ -29,14 +29,20 @@ class ShowStateController extends Controller
     public function show(Request $request, ShowState $state): JsonResponse
     {
         $user = $request->user();
-        $screens = ShowState::screensFor($user);
 
-        // The read doubles as a screen's heartbeat, but only for the browser
-        // that *is* the screen. The phone reads this too, and a phone polling
-        // while a laptop has been closed must not keep the laptop looking alive.
-        $screens
-            ->first(fn (Screen $screen): bool => $screen->device_id === DeviceId::current())
-            ?->touchLastSeen();
+        // The read doubles as a screen's heartbeat, but only for the wall
+        // itself, which says so. The remote reads this too — from a phone, or
+        // from the very laptop the wall is on — and neither must keep a closed
+        // wall looking alive.
+        if ($request->boolean('screen')) {
+            Screen::query()
+                ->mine($user)
+                ->where('device_id', DeviceId::current())
+                ->first()
+                ?->touchLastSeen();
+        }
+
+        $screens = ShowState::screensFor($user);
 
         $presentation = Presentation::currentFor($user);
 

@@ -89,6 +89,19 @@ class Screen extends Model
     public const SEEN_EVERY_SECONDS = 30;
 
     /**
+     * How recently this browser's own screen must have been heard from to count
+     * as showing the show to the browser asking.
+     *
+     * Anybody else's screen gets the whole of STALE_MINUTES. This browser's own
+     * cannot: a phone that pressed Present and came back to the remote would say
+     * for five minutes that the show is on the phone in the cantor's hand. A
+     * laptop with the wall in one window and the remote in the other is heard
+     * from every SEEN_EVERY_SECONDS, so three of those is never missed by it,
+     * even with the wall's tab throttled in the background.
+     */
+    public const PRESENTING_SECONDS = self::SEEN_EVERY_SECONDS * 3;
+
+    /**
      * How far the picture on the wall may be pushed about.
      *
      * Wide enough for the square screen this exists for — a 1:1 deck on a 4:3

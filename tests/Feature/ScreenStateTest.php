@@ -237,10 +237,31 @@ it('is kept alive by the browser that is the screen', function () {
 
     actingAs($user);
 
-    getJson(route('show.state'))->assertOk();
+    getJson(route('show.state', ['screen' => 1]))->assertOk();
 
     expect($screen->refresh()->last_seen_at->diffInSeconds(Carbon::now()))->toBeLessThan(5)
         ->and($screen->isLive())->toBeTrue();
+});
+
+/*
+ * The remote reads the show from the very laptop the wall is on, too. Only the
+ * wall's own read is its heartbeat, or a closed wall would stay on for as long
+ * as the remote beside it was open.
+ */
+it('is not kept alive by the remote on the same browser', function () {
+    $user = User::factory()->create();
+    $screen = Screen::factory()->create([
+        'user_id' => $user->id,
+        'device_id' => DeviceId::current(),
+        'last_seen_at' => Carbon::now()->subMinutes(2),
+    ]);
+
+    actingAs($user);
+
+    $screens = getJson(route('show.state'))->assertOk()->json('screens');
+
+    expect($screen->refresh()->last_seen_at->diffInMinutes(Carbon::now()))->toBeGreaterThanOrEqual(1)
+        ->and($screens)->toBeEmpty();
 });
 
 /*

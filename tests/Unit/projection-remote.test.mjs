@@ -574,13 +574,22 @@ test('the four arrows move the picture and tell the screen', () => {
     assert.deepEqual(deck.sent.at(-1), { screen: 5, ...deck.fit }, 'the wall was told something other than what the phone shows');
 });
 
-/* The show is on every screen, but every projector is hung differently: the
-   panel lines up a wall, never the phone in the hand, and nothing when no wall
-   is on. */
-test('the panel lines up a wall and never this device', () => {
+/* The show is on every screen, but every projector is hung differently. The
+   server lists this device only while its own wall is up — the laptop with the
+   remote in the other window — so that wall is lined up like any other, and
+   nothing is when no wall is on. */
+test('the panel lines up this device when its own wall is up', () => {
     const deck = lining();
 
     deck.screens = [wall(9, { scale: 1, x: 0, y: 0 }, true)];
+
+    assert.equal(deck.fitTarget?.id, 9);
+});
+
+test('the panel lines up nothing when no wall is on', () => {
+    const deck = lining();
+
+    deck.screens = [];
 
     assert.equal(deck.fitTarget, null);
 

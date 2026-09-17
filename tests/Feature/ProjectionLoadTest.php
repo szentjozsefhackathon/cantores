@@ -110,7 +110,7 @@ it('does not write last_seen_at on every poll from the wall', function () {
     $before = $screen->fresh()->last_seen_at;
 
     Carbon::setTestNow(Carbon::now()->addSeconds(5));
-    getJson(route('show.state'))->assertOk();
+    getJson(route('show.state', ['screen' => 1]))->assertOk();
 
     expect($screen->fresh()->last_seen_at->equalTo($before))->toBeTrue();
 });
@@ -132,7 +132,7 @@ it('writes last_seen_at once the saved write would start to matter', function ()
     $before = $screen->fresh()->last_seen_at;
 
     Carbon::setTestNow(Carbon::now()->addSeconds(Screen::SEEN_EVERY_SECONDS + 1));
-    getJson(route('show.state'))->assertOk();
+    getJson(route('show.state', ['screen' => 1]))->assertOk();
 
     expect($screen->fresh()->last_seen_at->gt($before))->toBeTrue()
         ->and(Screen::SEEN_EVERY_SECONDS)->toBeLessThan(Screen::STALE_MINUTES * 60);
