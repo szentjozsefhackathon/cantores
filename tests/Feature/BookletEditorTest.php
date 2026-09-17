@@ -526,23 +526,34 @@ it('separates the row ordering controls from the icon-only score options', funct
     @$document->loadHTML($component->html());
     $xpath = new DOMXPath($document);
     $navButtons = $xpath->query('//*[@data-entry-nav]//button');
+    $addTextButtons = $xpath->query('//*[@data-entry-header]//button[@data-entry-add-text]');
     $optionButtons = $xpath->query('//*[@data-entry-options]//button');
 
-    expect($navButtons)->toHaveCount(4)
+    expect($navButtons)->toHaveCount(3)
+        ->and($addTextButtons)->toHaveCount(1)
         ->and($optionButtons)->toHaveCount(2);
 
+    // Moving a row and taking it out stand in a column down its left edge, before
+    // anything the row says of itself; words written under it stay in its header.
+    $card = $xpath->query('//*[@data-entry-card]')->item(0);
+    expect($card->getAttribute('class'))->toContain('flex')
+        ->and($xpath->query('./*[1][@data-entry-nav]', $card)->length)->toBe(1)
+        ->and($xpath->query('//*[@data-entry-nav]')->item(0)->getAttribute('class'))->toContain('flex-col');
+
     // Where a row stands in the list is the list's business — moving it, taking
-    // it out, and writing words under it all change the order — so those four are
+    // it out, and writing words under it all change the order — so those are
     // asked of the booklet; what the row prints is the row's own.
     foreach ($navButtons as $button) {
-        expect($button->getAttribute('wire:click'))->toMatch('/^\$parent\.(move|removeEntry|addText)\(/');
+        expect($button->getAttribute('wire:click'))->toMatch('/^\$parent\.(move|removeEntry)\(/');
     }
+
+    expect($addTextButtons->item(0)->getAttribute('wire:click'))->toStartWith('$parent.addText(');
 
     foreach ($optionButtons as $button) {
         expect($button->getAttribute('wire:click'))->not->toContain('$parent.');
     }
 
-    foreach ([...$navButtons, ...$optionButtons] as $button) {
+    foreach ([...$navButtons, ...$addTextButtons, ...$optionButtons] as $button) {
         expect(trim($button->textContent))->toBe('')
             ->and($button->getAttribute('aria-label'))->not->toBe('');
     }
@@ -565,11 +576,11 @@ it('separates the row ordering controls from the icon-only score options', funct
         ->toBe($before === 'true' ? 'false' : 'true');
 });
 
-// The slot's name, the music's own name and the variation each get an eye
-// switch set beside the name it governs — the first two in the plan, the last
-// on the row — so what reaches the printed page is turned on and off where it
-// is read rather than from a row of unlabelled icons.
-it('puts an eye switch beside each heading name it governs', function () {
+// The slot's name and the music's own name each get an eye switch set beside
+// the name they govern, and the variation is its own switch on the row, drawn
+// as the collections are — so what reaches the printed page is turned on and
+// off where it is read rather than from a row of unlabelled icons.
+it('puts a switch beside or on each heading name it governs', function () {
     $user = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
     $booklet = bookletFor($user, $plan);
@@ -603,7 +614,10 @@ it('puts an eye switch beside each heading name it governs', function () {
 
     expect($slotSwitch)->not->toBeNull()
         ->and($musicSwitch)->not->toBeNull()
-        ->and($variationSwitch)->not->toBeNull();
+        ->and($variationSwitch)->not->toBeNull()
+        ->and($variationSwitch->hasAttribute('data-entry-variation'))->toBeTrue()
+        ->and(trim($variationSwitch->textContent))->toBe($scores[0]->variation_name)
+        ->and($variationSwitch->getAttribute('class'))->toContain('border-dashed');
 
     // The slot and the music start shown, the variation hidden — and each says so.
     expect($slotSwitch->getAttribute('aria-pressed'))->toBe('true')
@@ -618,6 +632,44 @@ it('puts an eye switch beside each heading name it governs', function () {
 
     expect($payload[0]['slot'])->toBeNull()
         ->and($payload[0]['variation'])->toBe('Áldjad, én lelkem – orgonakíséret');
+});
+
+// Words are recognised by more than their first line: a collapsed paragraph shows
+// as many lines of itself as the column of buttons beside it is tall.
+it('previews several lines of the words on a collapsed text row', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $booklet->entries()->create(['text' => "# Bevezetés\nÁlljunk fel.\nA kántor <red>énekli</red> a verseket.", 'sequence' => 1]);
+
+    actingAs($user);
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.Livewire::test(BookletEditor::class, ['booklet' => $booklet])->html());
+    $preview = (new DOMXPath($document))->query('//*[@data-entry="text"]//*[@data-entry-text-preview]')->item(0);
+
+    expect($preview)->not->toBeNull()
+        ->and($preview->textContent)->toContain('Álljunk fel.')
+        ->and($preview->textContent)->toContain('A kántor énekli a verseket.')
+        ->and($preview->getAttribute('class'))->toContain('line-clamp-4')
+        ->and($preview->getAttribute('class'))->toContain('whitespace-pre-line');
+});
+
+it('marks adding music to a slot with a music-plus icon', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = bookletFor($user, $plan);
+    slotWithMusics($plan, 'Kezdőének', ['Áldjad, én lelkem']);
+
+    actingAs($user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])->html();
+    $slot = planSlotElements($html)[0];
+    $button = (new DOMXPath($slot->ownerDocument))
+        ->query('.//button[@aria-label="'.__('Add music to this slot, only in this booklet').'"]', $slot)
+        ->item(0);
+
+    expect($button)->not->toBeNull()
+        ->and($slot->ownerDocument->saveHTML($button))->toContain('d="M14 18h8"');
 });
 
 // The whole point of a row being a component of its own: the booklet around it can

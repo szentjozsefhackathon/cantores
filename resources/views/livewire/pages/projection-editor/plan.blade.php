@@ -203,7 +203,7 @@
                             {{-- A music the plan does not have, for this projection alone:
                                  added at the end of the slot. --}}
                             <flux:tooltip :content="__('Add music to this slot, only in this projection')">
-                                <flux:button size="sm" variant="ghost" icon="plus" :aria-label="__('Add music to this slot, only in this projection')" wire:click="startAddingMusic({{ $node['id'] }})" />
+                                <flux:button size="sm" variant="ghost" icon="music-plus" :aria-label="__('Add music to this slot, only in this projection')" wire:click="startAddingMusic({{ $node['id'] }})" />
                             </flux:tooltip>
                             @if($node['canMoveUp'] || $node['canMoveDown'])
                                 <flux:tooltip :content="__('Move this slot up')">

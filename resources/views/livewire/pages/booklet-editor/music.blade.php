@@ -34,10 +34,6 @@
                 @endif
             </span>
 
-            @if($local)
-                <flux:badge size="sm" color="amber" class="shrink-0">{{ __('Only in this booklet') }}</flux:badge>
-            @endif
-
             {{-- The music's own name is printed above it where a slot holds several,
                  beside the slot where it holds one. Either way this is the switch
                  that keeps it off the page, next to the name it governs. --}}
@@ -82,6 +78,11 @@
                          to keep the answer on: the reference is only told. --}}
                     <span data-plan-music-reference class="shrink-0 text-xs font-normal text-zinc-400 dark:text-zinc-500">{{ $music['reference'] }}</span>
                 @endif
+            @endif
+
+            {{-- Said last, after everything the title bar switches on and off. --}}
+            @if($local)
+                <flux:badge size="sm" color="amber" class="shrink-0">{{ __('Only in this booklet') }}</flux:badge>
             @endif
         </div>
 
