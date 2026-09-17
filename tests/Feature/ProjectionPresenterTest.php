@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Pages\ProjectionPresenter;
+use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\ProjectionSlide;
 use App\Models\Score;
@@ -8,6 +9,7 @@ use App\Models\User;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\get;
 
 /*
  * The presenter is the deck as the room sees it. It writes nothing — a deck is
@@ -31,9 +33,11 @@ it('hands the browser the same deck the editor arranged', function () {
         'score_id' => $score->id,
     ]);
 
+    Presentation::putUp($user, $projection);
+
     actingAs($user);
 
-    $presenter = Livewire::test(ProjectionPresenter::class, ['projection' => $projection]);
+    $presenter = Livewire::test(ProjectionPresenter::class);
 
     expect($presenter->get('geometry'))->toMatchArray(['ratio' => '16/9', 'aspectRatio' => '16/9'])
         ->and($presenter->get('entries'))->toHaveCount(1)
@@ -58,9 +62,11 @@ it('tells the projector which slides this service walks past', function () {
         'excluded_slides' => ['16/9' => [1, 3], '1/1' => [0]],
     ]);
 
+    Presentation::putUp($user, $projection);
+
     actingAs($user);
 
-    $presenter = Livewire::test(ProjectionPresenter::class, ['projection' => $projection]);
+    $presenter = Livewire::test(ProjectionPresenter::class);
 
     expect($presenter->get('excluded'))->toBe([$entry->id => [1, 3]]);
 
@@ -79,7 +85,7 @@ it('refuses to project somebody elses deck', function () {
 
     actingAs($stranger);
 
-    Livewire::test(ProjectionPresenter::class, ['projection' => $projection])->assertForbidden();
+    get(route('projections.present', ['projection' => $projection]))->assertForbidden();
 });
 
 /*
@@ -91,9 +97,11 @@ it('reads the deck again without being closed', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id, 'title' => 'Advent']);
 
+    Presentation::putUp($user, $projection);
+
     actingAs($user);
 
-    $presenter = Livewire::test(ProjectionPresenter::class, ['projection' => $projection])
+    $presenter = Livewire::test(ProjectionPresenter::class)
         ->assertSet('title', 'Advent');
 
     $projection->update(['title' => 'Advent 1.', 'ratio' => '4/3']);
@@ -119,9 +127,11 @@ it('leaves out a score the viewer can no longer read', function () {
         'score_id' => $theirs->id,
     ]);
 
+    Presentation::putUp($user, $projection);
+
     actingAs($user);
 
-    expect(Livewire::test(ProjectionPresenter::class, ['projection' => $projection])->get('entries'))
+    expect(Livewire::test(ProjectionPresenter::class)->get('entries'))
         ->toBe([]);
 });
 
@@ -135,9 +145,11 @@ it('fades the wall out and brings it back instantly', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
 
+    Presentation::putUp($user, $projection);
+
     actingAs($user);
 
-    Livewire::test(ProjectionPresenter::class, ['projection' => $projection])
+    Livewire::test(ProjectionPresenter::class)
         ->assertSeeHtml('transition: `opacity ${darkFadeMs}ms ease-in`')
         ->assertSeeHtml('opacity: dark ?');
 });
@@ -153,11 +165,49 @@ it('sizes the slide to its own shape rather than to the window', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
 
+    Presentation::putUp($user, $projection);
+
     actingAs($user);
 
-    Livewire::test(ProjectionPresenter::class, ['projection' => $projection])
+    Livewire::test(ProjectionPresenter::class)
         ->assertSeeHtml('width: `min(100vw, 100vh * (${aspectRatio}))`')
         ->assertDontSeeHtml("height: '100%', maxWidth: '100%'")
         ->assertDontSeeHtml('x-ref="stageBox"
             class="bg-white"');
+});
+
+/*
+ * Present is not a page of its own. There is one show at a time, so the wall
+ * has one address; a wall left on a deck's address would put that deck back
+ * over the next one every time it was reloaded.
+ */
+it('puts the deck up and sends the browser to the screen', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    get(route('projections.present', ['projection' => $projection]))
+        ->assertRedirect(route('projection-screen'));
+
+    expect(Presentation::currentFor($user)->projection_id)->toBe($projection->id);
+});
+
+it('opens the screen on the show where it stands, blank and all', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $entry = ProjectionSlide::factory()->create(['projection_id' => $projection->id]);
+
+    Presentation::putUp($user, $projection)
+        ->forceFill(['entry_id' => $entry->id, 'splash' => Presentation::SPLASH_OFF, 'blanked' => true])
+        ->save();
+
+    actingAs($user);
+
+    get(route('projection-screen'))
+        ->assertOk()
+        ->assertSeeHtml('style="opacity: 1"');
+
+    expect(Livewire::test(ProjectionPresenter::class)->get('state'))
+        ->toMatchArray(['entryId' => $entry->id, 'blanked' => true]);
 });

@@ -110,6 +110,26 @@ test('the screen is blanked and walked through behind the black', () => {
     assert.equal(deck.blanked, false);
 });
 
+/* The blank goes out only with the press that changed it: a slide moved a
+   moment before this phone heard of a B pressed on the wall must not light the
+   wall back up. */
+test('only the blank button reports the blank', () => {
+    const deck = registered.projectionRemote({});
+    const written = [];
+
+    deck.slides = Array.from({ length: 5 }, (unused, index) => ({ entryId: 1, index, svg: null }));
+    deck.total = 5;
+    deck.presentationId = 1;
+    deck.show = () => {};
+    deck._client = { write: (state) => { written.push(state); return Promise.resolve(null); } };
+
+    deck.onKey(press('ArrowRight'));
+    deck.onKey(press('b'));
+
+    assert.equal('blanked' in written[0], false, 'moving a slide reported the blank');
+    assert.equal(written[1].blanked, true);
+});
+
 /* The plan is a swipe on a phone and has no gesture on a laptop. Esc closes it
    where it is open, and otherwise belongs to the browser — it is how a
    full-screen window is left. */

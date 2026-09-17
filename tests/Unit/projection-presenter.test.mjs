@@ -442,3 +442,61 @@ test('a reloaded wall lands where the service already is', async () => {
 
     assert.deepEqual({ entryId: written.entryId, slideIndex: written.slideIndex }, { entryId: 2, slideIndex: 1 });
 });
+
+/*
+ * The next deck is put up during the sermon, to be shown when the sermon ends.
+ * Putting it up is preparation and not a cue: the wall stays black until B.
+ */
+test('a deck put up takes its blank from the server, not from the deck it replaced', async () => {
+    const deck = presenter();
+    deck.reengrave = async () => {};
+    deck.blanked = true;
+
+    await deck.showDeck({ presentationId: 2, state: { version: 1, entryId: null, slideIndex: 0, splash: 'off', blanked: false, reveals: {} } });
+
+    assert.equal(deck.blanked, false, 'a B pressed on the phone just before the swap was taken back');
+});
+
+test('a deck put up blanked on the server arrives blanked', async () => {
+    const deck = registered.projectionPresenter({});
+    deck.show = () => {};
+    deck.reengrave = async () => {};
+
+    await deck.showDeck({ presentationId: 2, state: { version: 1, entryId: null, slideIndex: 0, splash: 'off', blanked: true, reveals: {} } });
+
+    assert.equal(deck.blanked, true);
+});
+
+test('a show taken down does not leave its blank behind', async () => {
+    const deck = presenter();
+    deck.blanked = true;
+
+    await deck.showDeck({ presentationId: null, state: null });
+
+    assert.equal(deck.blanked, false);
+});
+
+test('a reloaded wall starts black when the show is blanked', () => {
+    const deck = registered.projectionPresenter({ state: { version: 3, entryId: 1, slideIndex: 0, splash: 'off', blanked: true, reveals: {} } });
+
+    assert.equal(deck.blanked, true, 'the wall showed the hidden slide before its first read');
+});
+
+/*
+ * The blank is changed by B and by nothing else. A slide or a heartbeat sent a
+ * moment before this screen heard of a B pressed on the phone must not carry
+ * the old blank back to the server with it.
+ */
+test('only a press of B reports the blank', async () => {
+    const deck = presenter();
+    const written = [];
+    deck._client = { write: (state) => { written.push(state); return Promise.resolve(null); } };
+
+    deck.next();
+    await deck.report();
+    deck.toggleBlank();
+
+    assert.equal('blanked' in written[0], false, 'moving a slide reported the blank');
+    assert.equal('blanked' in written[1], false, 'a heartbeat reported the blank');
+    assert.equal(written[2].blanked, true);
+});

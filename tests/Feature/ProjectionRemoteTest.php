@@ -33,7 +33,9 @@ it('puts the deck up as the show when a deck is opened on the laptop', function 
 
     actingAs($user);
 
-    $presenter = Livewire::test(ProjectionPresenter::class, ['projection' => $projection]);
+    get(route('projections.present', ['projection' => $projection]));
+
+    $presenter = Livewire::test(ProjectionPresenter::class);
 
     expect(Presentation::query()->live()->mine($user)->count())->toBe(1)
         ->and($presenter->get('presentation')->projection_id)->toBe($projection->id)

@@ -14,6 +14,7 @@ use App\Http\Controllers\ProjectionAddedMusicController;
 use App\Http\Controllers\ProjectionController;
 use App\Http\Controllers\ProjectionMoveController;
 use App\Http\Controllers\ProjectionMusicSearchController;
+use App\Http\Controllers\ProjectionPresentController;
 use App\Http\Controllers\ProjectionScorePageController;
 use App\Http\Controllers\ProjectionScoreToggleController;
 use App\Http\Controllers\PublicScoreDownloadController;
@@ -430,10 +431,10 @@ Route::livewire('/projections/{projection}/edit', ProjectionEditor::class)
     ->middleware(['auth', 'verified'])
     ->name('projections.edit');
 
-// The deck as the room sees it: one slide at a time, full screen, driven from
-// the keyboard. Its own page rather than a mode of the editor, so the person at
-// the keyboard can put it on the projector and nothing else.
-Route::livewire('/projections/{projection}/present', ProjectionPresenter::class)
+// Present: put the deck up as the show and go to the screen. Not a page of its
+// own — there is one show at a time, so there is one address for the wall, and a
+// reload of it can never put back a deck the phone has since replaced.
+Route::get('/projections/{projection}/present', ProjectionPresentController::class)
     ->middleware(['auth', 'verified'])
     ->name('projections.present');
 

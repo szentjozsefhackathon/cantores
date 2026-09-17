@@ -93,7 +93,15 @@ onAlpineInit(() => {
         total: 0,
 
         busy: true,
-        blanked: false,
+
+        /**
+         * Whether the cantor has put the wall out.
+         *
+         * Taken from the show the page was opened on, so that a reloaded wall
+         * starts black rather than showing the slide it was hiding for the
+         * second before the first read arrives.
+         */
+        blanked: Boolean(config.state?.blanked),
         idle: false,
 
         /**
@@ -425,7 +433,7 @@ onAlpineInit(() => {
             }
 
             this.show();
-            this.report();
+            this.report({ blank: true });
         },
 
         // A blanked screen goes on being moved through behind the black: the
@@ -463,13 +471,13 @@ onAlpineInit(() => {
                 this.splash = SPLASH_OFF;
                 this.blanked = false;
                 this.show();
-                this.report();
+                this.report({ blank: true });
 
                 return;
             }
 
             this.blanked = !this.blanked;
-            this.report();
+            this.report({ blank: true });
         },
 
         onKey(event) {
@@ -593,10 +601,13 @@ onAlpineInit(() => {
         async showDeck(answer) {
             const token = ++this._refreshToken;
 
+            // As the server has it: the new show carries over the blank of the
+            // one it replaced, and the next deck put up during the sermon stays
+            // behind the black until somebody presses B.
+            this.blanked = Boolean(answer.state?.blanked);
             this.presentationId = answer.presentationId ?? null;
             this.appliedVersion = 0;
             this.reveals = {};
-            this.blanked = false;
             // Taken up before the engraving rather than after it, because
             // engraving ends in a report: a card read off the answer a moment
             // later would be reported away before this screen had drawn it.
@@ -661,11 +672,16 @@ onAlpineInit(() => {
          * Say where this screen has put the service — and, with it, which deck
          * the room is actually looking at.
          *
+         * The blank travels only with the press that changed it. Every other
+         * report — a slide, a heartbeat, a deck finished drawing — can be sent
+         * a moment before this screen has heard of a B pressed on the phone,
+         * and carrying the blank along would take that press back.
+         *
          * Deliberately not awaited by anything that moves the picture: the
          * keystroke has already been applied. If it fails, it fails silently and
          * the next heartbeat carries the same answer.
          */
-        report() {
+        report({ blank = false } = {}) {
             // A screen waiting for a show has nothing to say about where a
             // service has got to. Not a failure: there is simply
             // nothing to report, and the next beat is due at the usual time.
@@ -674,7 +690,7 @@ onAlpineInit(() => {
             const address = this.address();
 
             return this._client
-                .write({ ...address, blanked: this.blanked, splash: this.splash, drawnRevision: this.drawnRevision })
+                .write({ ...address, ...(blank ? { blanked: this.blanked } : {}), splash: this.splash, drawnRevision: this.drawnRevision })
                 .then((state) => {
                     if (state === null) { return false; }
 

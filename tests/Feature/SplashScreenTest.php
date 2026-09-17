@@ -9,6 +9,7 @@ use App\Models\User;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\get;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 
@@ -42,9 +43,9 @@ it('opens a presenter window on the card rather than on the first slide', functi
 
     actingAs($user);
 
-    $presenter = Livewire::test(ProjectionPresenter::class, ['projection' => $projection]);
+    get(route('projections.present', ['projection' => $projection]));
 
-    expect($presenter->get('presentation')->splash)->toBe(Presentation::SPLASH_CARD);
+    expect(Livewire::test(ProjectionPresenter::class)->get('presentation')->splash)->toBe(Presentation::SPLASH_CARD);
 });
 
 /*
@@ -190,7 +191,7 @@ it('does not put the card back when a second window joins a running service', fu
 
     actingAs($user);
 
-    Livewire::test(ProjectionPresenter::class, ['projection' => $projection]);
+    get(route('projections.present', ['projection' => $projection]));
 
     expect($presentation->fresh()->splash)->toBe(Presentation::SPLASH_OFF);
 });

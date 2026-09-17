@@ -153,6 +153,26 @@ it('opens the title card on the first deck and not on one replacing it mid-servi
         ->and(Presentation::putUp($user, $second)->splash)->toBe(Presentation::SPLASH_OFF);
 });
 
+it('keeps a blanked wall blanked when another deck is put up', function () {
+    $user = User::factory()->create();
+    $first = Projection::factory()->create(['user_id' => $user->id]);
+    $second = Projection::factory()->create(['user_id' => $user->id]);
+
+    Presentation::putUp($user, $first)->update(['blanked' => true]);
+
+    expect(Presentation::putUp($user, $second)->blanked)->toBeTrue();
+});
+
+it('shows a replacing deck when the wall was not blanked', function () {
+    $user = User::factory()->create();
+    $first = Projection::factory()->create(['user_id' => $user->id]);
+    $second = Projection::factory()->create(['user_id' => $user->id]);
+
+    Presentation::putUp($user, $first);
+
+    expect(Presentation::putUp($user, $second)->blanked)->toBeFalse();
+});
+
 it('opens the title card again once the show has been taken down', function () {
     $user = User::factory()->create();
     $first = Projection::factory()->create(['user_id' => $user->id]);
@@ -190,7 +210,7 @@ it('changes the laptop\'s answer when Present is pressed on the phone', function
 
     actingAs($user);
 
-    Livewire::test(ProjectionPresenter::class, ['projection' => $pressed]);
+    get(route('projections.present', ['projection' => $pressed]));
 
     getJson(route('show.state'))
         ->assertOk()
@@ -297,7 +317,7 @@ it('hands a reloaded wall the place the service has reached', function () {
 
     actingAs($user);
 
-    $state = Livewire::test(ProjectionPresenter::class, ['projection' => $projection])->get('state');
+    $state = Livewire::test(ProjectionPresenter::class)->get('state');
 
     expect($state)->toMatchArray([
         'version' => 7,

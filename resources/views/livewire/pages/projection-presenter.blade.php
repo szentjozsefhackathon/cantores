@@ -80,15 +80,9 @@ resources/js/projection-presenter.js
         class="absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-gradient-to-b from-black/80 to-transparent px-4 py-3 transition-opacity duration-500"
         x-bind:class="controlsHidden ? 'pointer-events-none opacity-0' : 'opacity-100'"
     >
-        @if($projection !== null)
-            <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ route('projections.edit', ['projection' => $projection->id]) }}" class="!text-white">
-                {{ __('Back to the editor') }}
-            </flux:button>
-        @else
-            <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ route('plan-documents') }}" class="!text-white" wire:navigate>
-                {{ __('Booklets & Projections') }}
-            </flux:button>
-        @endif
+        <flux:button size="sm" variant="ghost" icon="arrow-left" href="{{ route('plan-documents') }}" class="!text-white" wire:navigate>
+            {{ __('Booklets & Projections') }}
+        </flux:button>
 
         {{-- The deck's title follows the show, because a phone may put another
              deck up without this page reloading. --}}
@@ -99,11 +93,11 @@ resources/js/projection-presenter.js
                 <span x-text="index + 1"></span> / <span x-text="total"></span>
             </span>
 
-            @if($projection !== null)
+            <div x-show="!waiting" x-cloak>
                 <flux:tooltip :content="__('Read the projection again')">
                     <flux:button size="sm" variant="ghost" icon="arrow-path" :aria-label="__('Read the projection again')" wire:click="reload" class="!text-white" />
                 </flux:tooltip>
-            @endif
+            </div>
 
             <flux:tooltip :content="__('Full screen')">
                 <flux:button size="sm" variant="ghost" icon="arrows-pointing-out" :aria-label="__('Full screen')" x-on:click="toggleFullscreen()" class="!text-white" />
@@ -167,7 +161,9 @@ resources/js/projection-presenter.js
          and is zero in every direction except the cantor blanking the wall. --}}
     <div
         class="pointer-events-none absolute inset-0 bg-black"
-        style="opacity: 0"
+        {{-- Painted black from the first frame when the wall already is, so that
+             a reload does not fade the black in over the slide it is hiding. --}}
+        style="opacity: {{ ($state['blanked'] ?? false) || $presentation?->splash === \App\Models\Presentation::SPLASH_DARK ? '1' : '0' }}"
         x-bind:style="{ opacity: dark ? '1' : '0', transition: `opacity ${darkFadeMs}ms ease-in` }"
     ></div>
 

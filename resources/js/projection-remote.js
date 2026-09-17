@@ -1055,7 +1055,7 @@ onAlpineInit(() => {
                 this.blanked = true;
             }
 
-            this.push();
+            this.push({ blank: true });
         },
 
         /**
@@ -1124,7 +1124,7 @@ onAlpineInit(() => {
                 this.blanked = !this.blanked;
             }
 
-            this.push();
+            this.push({ blank: true });
         },
 
         /** Jump to a row — its first slide that this service is being shown. */
@@ -1519,13 +1519,19 @@ onAlpineInit(() => {
          * ---------------------------------------------------------------
          */
 
-        /** What this phone has just done, sent after it has already been done. */
-        push() {
+        /**
+         * What this phone has just done, sent after it has already been done.
+         *
+         * The blank only with the press that changed it: a slide moved here a
+         * moment before this phone heard of a B pressed on the wall must not
+         * light the wall back up.
+         */
+        push({ blank = false } = {}) {
             // A screen with nothing on it has nowhere to put a tap.
             if (this._client === null) { return; }
 
             this._client
-                .write({ ...addressAt(this.slides, this.index), blanked: this.blanked, splash: this.splash, reveals: this.reveals })
+                .write({ ...addressAt(this.slides, this.index), ...(blank ? { blanked: this.blanked } : {}), splash: this.splash, reveals: this.reveals })
                 .then((state) => {
                     if (state === null) { return; }
 
@@ -1635,7 +1641,7 @@ onAlpineInit(() => {
             this.musicSearchUrl = answer.deckUrls?.musicSearchUrl ?? null;
             this.appliedVersion = 0;
             this.reveals = {};
-            this.blanked = false;
+            this.blanked = Boolean(answer.state?.blanked);
             this.splash = answer.state?.splash ?? SPLASH_OFF;
             this.ended = false;
 

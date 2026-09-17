@@ -187,6 +187,10 @@ class Presentation extends Model
      * looking at something and a card over it would read as the service
      * stopping rather than moving on.
      *
+     * A blanked wall stays blanked. Decks are put up ahead of the moment they
+     * are wanted, and only a press of B ever puts a picture back in front of
+     * the room.
+     *
      * Two of these racing — two devices pressing at once — are settled by the
      * partial unique index on the un-ended row. The loser retries once, and on
      * the retry it finds the winner's row and joins it or replaces it like any
@@ -227,7 +231,7 @@ class Presentation extends Model
                 'user_id' => $user->getKey(),
                 'entry_id' => null,
                 'slide_index' => 0,
-                'blanked' => false,
+                'blanked' => $live && $current->blanked,
                 'splash' => $live ? self::SPLASH_OFF : self::SPLASH_CARD,
                 'version' => 1,
                 'started_at' => $now,

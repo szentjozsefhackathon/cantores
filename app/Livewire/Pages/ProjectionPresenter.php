@@ -4,7 +4,6 @@ namespace App\Livewire\Pages;
 
 use App\Models\DevicePairing;
 use App\Models\Presentation;
-use App\Models\Projection;
 use App\Models\Screen;
 use App\Services\PresentationState;
 use App\Services\ProjectionRenderPayload;
@@ -34,21 +33,14 @@ use Livewire\Component;
  * changed by accident.
  *
  * Where the service has got to is a different thing, and it is written — but not
- * through Livewire. The component puts the deck up as the person's show at
- * mount and hands the browser its URLs; everything after that is Alpine talking JSON to
+ * through Livewire. The component hands the browser the person's show as it
+ * stands at mount, and its URLs; everything after that is Alpine talking JSON to
  * them. That keeps the promise the stage's `wire:ignore` makes: once the picture
  * is up, no component re-render can touch it.
  */
 class ProjectionPresenter extends Component
 {
     use AuthorizesRequests;
-
-    /**
-     * The deck this page was opened on, where it was opened on one at all. Only
-     * the way back to the editor reads it: what the room is looking at is the
-     * person's show, read by the poll, and a phone may change it at any time.
-     */
-    public ?Projection $projection = null;
 
     public string $title = '';
 
@@ -101,18 +93,16 @@ class ProjectionPresenter extends Component
     public ?array $state = null;
 
     /**
-     * Two ways in, one page.
+     * The screen, drawn with whatever the show is.
      *
-     * With a deck in the URL, the deck is put up as this person's show — on
-     * every device of theirs, not only this one, because Present means put it
-     * up — and engraved from the server's answer, so the first slide is up
-     * before anything is polled.
-     *
-     * Without one, this is a screen showing whatever the show is. Nothing is
-     * engraved at mount; the poll reads the deck, and the page goes black while
-     * it draws it.
+     * A show already up is engraved from the server's answer, where it stands —
+     * slide, opening and blank alike — so a reloaded wall paints the picture the
+     * room was already looking at, and its first heartbeat reports that picture
+     * and not the beginning of the deck. Without a show nothing is engraved; the
+     * poll reads the deck when one is put up, and the page goes black while it
+     * draws it.
      */
-    public function mount(?Projection $projection = null): void
+    public function mount(): void
     {
         $this->screen = Screen::claimFor(
             Auth::user(),
@@ -122,26 +112,18 @@ class ProjectionPresenter extends Component
             request()->userAgent(),
         );
 
-        // `exists` and not merely the type: an optional model parameter that the
-        // route did not bind is filled in by the container with a blank
-        // instance, not with null, so a screen opened bare would otherwise try
-        // to authorize a projection that is not any projection.
-        if (! $projection instanceof Projection || ! $projection->exists) {
-            $this->title = __('Projection screen');
-            $this->presentation = Presentation::currentFor(Auth::user());
+        $this->title = __('Projection screen');
+        $this->presentation = Presentation::currentFor(Auth::user());
 
+        if (! $this->presentation instanceof Presentation) {
             return;
         }
 
+        $projection = $this->presentation->projection;
+
         $this->authorize('view', $projection);
 
-        $this->projection = $projection;
         $this->title = $projection->title;
-
-        // The deck already up is left exactly where it is, so reloading the wall
-        // mid-service lands on the hymn; anything else starts over, on the title
-        // card if nothing was up.
-        $this->presentation = Presentation::putUp(Auth::user(), $projection);
         $this->revision = $projection->revision();
         $this->state = app(PresentationState::class)->answer($this->presentation);
 
@@ -161,9 +143,9 @@ class ProjectionPresenter extends Component
      */
     public function reload(): void
     {
-        // The show's deck and not the one in the URL: a phone may have put
-        // another one up since, and reading the old one again would paint it
-        // over the new. A screen showing nothing has nothing to re-read.
+        // The show's deck as it is now, not as it was at mount: a phone may
+        // have put another one up since. A screen showing nothing has nothing
+        // to re-read.
         $presentation = Presentation::currentFor(Auth::user());
 
         if (! $presentation instanceof Presentation) {
