@@ -294,3 +294,19 @@ it('reads the status line again when a screen in it is renamed', function () {
 
     $status->dispatch('screen-renamed')->assertSee('Parish laptop');
 });
+
+// The line no longer polls; the remote tells it when the walls have changed.
+it('reads the status line again when the remote finds the walls changed', function () {
+    $user = User::factory()->create();
+
+    actingAs($user);
+
+    $status = Livewire::test(ShowStatus::class)
+        ->assertSee(__('No screen connected'))
+        ->assertDontSeeHtml('wire:poll');
+
+    $church = Screen::factory()->create(['user_id' => $user->id]);
+    DeviceName::factory()->create(['user_id' => $user->id, 'device_id' => $church->device_id, 'name' => 'Parish laptop']);
+
+    $status->dispatch('show-screens-changed')->assertSee('Parish laptop');
+});

@@ -19,9 +19,10 @@ use Livewire\Component;
  * walls are showing it, with the pencil beside each for naming it, or that none
  * is, which is the half hour before Mass and the useful thing to say then.
  *
- * Its own small component, polling slowly, so that the remote around it — which
- * talks JSON so that no re-render can touch a picture the room is reading — is
- * never re-rendered for it.
+ * Its own small component, so that the remote around it — which talks JSON so
+ * that no re-render can touch a picture the room is reading — is never
+ * re-rendered for it. It does not poll: the remote's own read of the show
+ * already lists the walls, and says so when they change.
  */
 class ShowStatus extends Component
 {
@@ -39,6 +40,7 @@ class ShowStatus extends Component
     }
 
     #[On('screen-renamed')]
+    #[On('show-screens-changed')]
     public function screenRenamed(): void
     {
         unset($this->screens);

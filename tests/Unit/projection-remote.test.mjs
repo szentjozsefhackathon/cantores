@@ -1093,3 +1093,27 @@ test('the plan column draws the arrows the server allows', () => {
         { local: true, moveKind: 'added', moveId: 5, moves: { up: true, down: false } },
     );
 });
+
+/* The status line naming the walls no longer polls: the show read that already
+   lists them asks it again, and only when the walls it names have changed. */
+test('the status line is asked again only when the walls change', async () => {
+    const dispatched = [];
+
+    globalThis.window.Livewire = { dispatch: (name) => dispatched.push(name) };
+
+    const deck = remote();
+
+    deck._fitAt = 0;
+    deck.screens = [wall(5)];
+    deck._show = { read: () => Promise.resolve({ presentationId: 1, title: '', screens: [wall(5)], state: null }) };
+
+    await deck.pull();
+    assert.deepEqual(dispatched, [], 'an unchanged wall re-rendered the status line');
+
+    deck._show.read = () => Promise.resolve({ presentationId: 1, title: '', screens: [wall(5), wall(6)], state: null });
+
+    await deck.pull();
+    assert.deepEqual(dispatched, ['show-screens-changed']);
+
+    delete globalThis.window.Livewire;
+});

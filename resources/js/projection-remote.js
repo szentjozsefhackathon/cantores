@@ -1570,6 +1570,23 @@ onAlpineInit(() => {
         },
 
         /**
+         * Tells the status line when the walls it names have changed.
+         *
+         * The line is a Livewire component, and asking it on a timer of its
+         * own was a whole render every five seconds to say the same thing.
+         * This read already knows which walls are up — pushed when the hub is
+         * there — so the line is asked again only when they are not the ones
+         * it said last.
+         */
+        announceWalls(screens) {
+            const walls = (list) => JSON.stringify((list ?? []).map((screen) => [screen.id, screen.label]));
+
+            if (walls(screens) === walls(this.screens)) { return; }
+
+            window.Livewire?.dispatch?.('show-screens-changed');
+        },
+
+        /**
          * One read of the show — which deck is up, where in it the service has
          * got to, and which walls it is on.
          *
@@ -1591,6 +1608,7 @@ onAlpineInit(() => {
             // this phone has just moved it, in which case the answer in hand
             // was written before the press and saying so would undo it.
             if (Date.now() - this._fitAt > FIT_SETTLE_MS) {
+                this.announceWalls(answer.screens ?? []);
                 this.screens = answer.screens ?? [];
                 this.fit = fitFrom(this.fitTarget?.fit);
             }
