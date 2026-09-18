@@ -399,19 +399,18 @@ resources/js/booklet-editor.js
 
             {{-- The pages --}}
             <flux:card class="relative flex flex-col p-4 lg:h-full lg:min-h-0">
-                {{-- The badge sits in the heading row rather than above the
-                     sheets, so it stays put while the pages are scrolled. --}}
-                <div class="mb-3 flex items-center justify-between gap-2">
-                    <span
-                        class="flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                        role="status"
-                        x-show="busy"
-                        x-cloak
-                    >
-                        <flux:icon name="loading" variant="micro" />
-                        {{ __('Laying out…') }}
-                    </span>
-                </div>
+                {{-- The badge floats over the sheets instead of taking a row
+                     of its own, so showing and hiding it never moves the
+                     preview underneath. --}}
+                <span
+                    class="pointer-events-none absolute left-1/2 top-4 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 shadow-sm ring-1 ring-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-900"
+                    role="status"
+                    x-show="busy"
+                    x-cloak
+                >
+                    <flux:icon name="loading" variant="micro" />
+                    {{ __('Laying out…') }}
+                </span>
 
                 {{-- The negative margin gives the sheets' shadows room inside the
                      scroll box without narrowing them. --}}

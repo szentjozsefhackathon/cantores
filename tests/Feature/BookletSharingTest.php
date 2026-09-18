@@ -10,6 +10,7 @@ use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Models\ScorePublication;
 use App\Models\User;
+use App\Services\LoanAccessService;
 use App\Services\LoanKeepingService;
 use App\Services\ScoreFileStorage;
 use App\Support\BookletSettingFields;
@@ -187,7 +188,7 @@ it('reaches only the scores the booklet actually prints', function () {
     $unprinted = Score::factory()->abc()->create(['user_id' => $owner->id]);
     [, $loan] = sharedBooklet($owner, $printed);
 
-    $reached = app(App\Services\LoanAccessService::class)->scoreIdsFor($loan);
+    $reached = app(LoanAccessService::class)->scoreIdsFor($loan);
 
     expect($reached)->toContain($printed->id)
         ->and($reached)->not->toContain($unprinted->id);
@@ -205,11 +206,11 @@ it('stops passing on a borrowed score once the loan behind it is recalled', func
 
     [, $loan] = sharedBooklet($cantor, $score);
 
-    expect(app(App\Services\LoanAccessService::class)->scoreIdsFor($loan))->toContain($score->id);
+    expect(app(LoanAccessService::class)->scoreIdsFor($loan))->toContain($score->id);
 
     $behind->revoke();
 
-    expect(app(App\Services\LoanAccessService::class)->scoreIdsFor($loan))->not->toContain($score->id);
+    expect(app(LoanAccessService::class)->scoreIdsFor($loan))->not->toContain($score->id);
 });
 
 it('serves an uploaded system through the link, and refuses one the booklet does not print', function () {
@@ -302,6 +303,55 @@ it('offers no way to download the booklet it is reading', function () {
         ->assertOk()
         ->assertDontSee(route('booklets.export-pdf', ['booklet' => 1]))
         ->assertDontSee(__('Download PDF'));
+});
+
+// The bar's title cell is the one that flexes, so anything that appears in the
+// row beside it is taken out of the booklet's name — and the whole bar slides.
+it('keeps the toolbar spinner in the row whether or not it is spinning', function () {
+    $owner = User::factory()->create();
+    $score = Score::factory()->abc()->create(['user_id' => $owner->id]);
+    [, $loan] = sharedBooklet($owner, $score);
+
+    $html = get(route('booklet.loan', ['token' => $loan->token]))->assertOk()->getContent();
+
+    $document = new DOMDocument;
+    @$document->loadHTML($html);
+    $xpath = new DOMXPath($document);
+
+    $bar = $xpath->query('//*[contains(@class, "sticky")]')->item(0);
+    $spinner = $xpath->query('.//*[@role="status"]', $bar)->item(0);
+
+    expect($spinner)->not->toBeNull()
+        // Faded rather than removed: x-show would take its width back out of the row.
+        ->and($spinner->getAttribute('x-show'))->toBe('')
+        ->and($spinner->getAttribute('x-bind:class'))->toContain('opacity-0')
+        ->and($spinner->getAttribute('class'))->toContain('shrink-0');
+});
+
+// As in the editor: a notice that holds a block of its own pushes the booklet
+// down while it is there and pulls it back up the moment the pages are drawn.
+it('floats the laying-out notice over the pages rather than in the flow', function () {
+    $owner = User::factory()->create();
+    $score = Score::factory()->abc()->create(['user_id' => $owner->id]);
+    [, $loan] = sharedBooklet($owner, $score);
+
+    $html = get(route('booklet.loan', ['token' => $loan->token]))->assertOk()->getContent();
+
+    $document = new DOMDocument;
+    @$document->loadHTML($html);
+    $xpath = new DOMXPath($document);
+
+    $badge = $xpath->query('//*[@x-show="!ready"][contains(., "'.__('Laying out…').'")]')->item(0);
+
+    expect($badge)->not->toBeNull()
+        ->and($badge->getAttribute('class'))->toContain('absolute')
+        ->and($badge->getAttribute('class'))->toContain('pointer-events-none');
+
+    // An overlay needs something to be positioned against.
+    $anchor = $xpath->query('ancestor::*[contains(@class, "relative")][1]', $badge)->item(0);
+
+    expect($anchor)->not->toBeNull()
+        ->and($xpath->query('.//*[@x-ref="pages"]', $anchor)->length)->toBe(1);
 });
 
 // The reader's toolbar is not the editor's. A cantor at a desk is fitting a pile

@@ -125,11 +125,15 @@ resources/js/booklet-reader.js
                     x-on:click="resetAll()" />
             </flux:tooltip>
 
+            {{-- Kept in the row whether it is spinning or not. The title beside
+                 it is the flexible cell, so a spinner that appears takes its
+                 width out of the booklet's name and shunts the whole bar left
+                 every time a score is redrawn. --}}
             <span
-                class="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400"
+                class="flex w-4 shrink-0 items-center justify-center text-xs text-zinc-500 transition-opacity dark:text-zinc-400"
                 role="status"
-                x-show="busy"
-                x-cloak
+                x-bind:class="busy ? 'opacity-100' : 'opacity-0'"
+                x-bind:aria-hidden="busy ? 'false' : 'true'"
             >
                 <flux:icon name="loading" variant="micro" />
             </span>
@@ -139,7 +143,7 @@ resources/js/booklet-reader.js
     {{-- The padding is on the outside, so what the browser measures is the width
          a sheet actually gets — a column measured with its own padding inside it
          engraves every score a few millimetres wider than the page it lands on. --}}
-    <div class="mx-auto mt-4 max-w-3xl px-2">
+    <div class="relative mx-auto mt-4 max-w-3xl px-2">
     <div x-ref="pages">
             @forelse($entries as $entry)
                 @php
@@ -250,10 +254,19 @@ resources/js/booklet-reader.js
                     {{ __('This booklet is empty.') }}
                 </flux:text>
             @endforelse
-
-            <flux:text class="py-8 text-center text-sm text-zinc-500" x-show="!ready" x-cloak>
-                {{ __('Laying out…') }}
-            </flux:text>
         </div>
+
+        {{-- Over the sheets rather than under them, exactly as in the editor:
+             a notice that takes a block of its own moves the booklet the
+             moment it goes away. --}}
+        <span
+            class="pointer-events-none absolute left-1/2 top-4 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 shadow-sm ring-1 ring-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-900"
+            role="status"
+            x-show="!ready"
+            x-cloak
+        >
+            <flux:icon name="loading" variant="micro" />
+            {{ __('Laying out…') }}
+        </span>
     </div>
 </div>

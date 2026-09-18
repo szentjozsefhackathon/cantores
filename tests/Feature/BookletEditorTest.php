@@ -509,7 +509,11 @@ it('says the booklet is being laid out again from the moment a knob is touched',
 
     expect($pages->getAttribute('x-bind:class'))->toContain('busy')
         ->and($badge)->not->toBeNull()
-        ->and(trim($badge->textContent))->toContain(__('Laying out…'));
+        ->and(trim($badge->textContent))->toContain(__('Laying out…'))
+        // Over the sheets, not above them: a badge that takes a row of its own
+        // moves the whole preview each time the pages go stale.
+        ->and($badge->getAttribute('class'))->toContain('absolute')
+        ->and($badge->getAttribute('class'))->toContain('pointer-events-none');
 });
 
 it('separates the row ordering controls from the icon-only score options', function () {
