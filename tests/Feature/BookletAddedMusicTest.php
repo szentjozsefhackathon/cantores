@@ -223,3 +223,29 @@ it('refuses to preview a score the viewer may not read', function () {
         ->call('previewScore', $theirs->id)
         ->assertDontSeeHtml('data-offer-preview-modal');
 });
+
+// The split is a three-column grid — plan, handle, pages — and <ui-modal> is an
+// element the browser knows nothing about, so it is laid out like any other
+// inline box and takes a column of its own. Written between the panes, opening
+// the preview pushed the handle into the pages' column and the pages onto a
+// second row below the plan: the right column empty, the score at the foot of
+// the left one. So the modal stands outside the grid, and the grid keeps the
+// three children its columns are cut for.
+it('opens the offered preview without taking a column of the split', function () {
+    $booklet = bookletWithRoomForASong();
+    BookletMusic::factory()->create(['booklet_id' => $booklet->booklet->id, 'music_id' => $booklet->birthday->id]);
+
+    actingAs($booklet->user);
+
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet->booklet])
+        ->call('previewScore', $booklet->birthdayScore->id)
+        ->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+
+    expect($xpath->query('//*[@data-offer-preview-modal]')->length)->toBe(1)
+        ->and($xpath->query('//*[contains(@class, "booklet-split")]//*[@data-offer-preview-modal]')->length)->toBe(0)
+        ->and($xpath->query('//*[contains(@class, "booklet-split")]/*')->length)->toBe(3);
+});

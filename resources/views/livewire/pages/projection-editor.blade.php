@@ -147,6 +147,29 @@ resources/js/projection-editor.js
 
         <p class="mb-2 text-sm text-red-600 dark:text-red-400" x-show="message" x-cloak x-text="message"></p>
 
+        {{-- The look at a score the deck has not taken.
+
+             One modal for the whole pane rather than one per offered line: the
+             pane lists every engraving of every music in the service, and a
+             modal per line would be a hundred of them standing in the markup
+             for the one that is ever opened. A row of the deck carries its
+             own, because a row can answer for itself out of the payload the
+             browser already holds — this one has to be built.
+
+             It stands outside the split on purpose. <ui-modal> is an element
+             the browser knows nothing about, so it is laid out like any other
+             inline box — which inside the split's grid means a cell of its own,
+             taken from the three the columns are cut into. Written between the
+             panes, opening it pushed the handle into the preview's column and
+             the preview onto a second row below the plan: the right column
+             empty, the pages at the foot of the left one. Out here it has no
+             column to take. --}}
+        @if($showingScorePreview && $this->scorePreview !== null)
+            <flux:modal wire:model="showingScorePreview" class="w-full max-w-3xl" data-offer-preview-modal>
+                <x-score-preview :payload="$this->scorePreview" :title="$this->previewTitle" />
+            </flux:modal>
+        @endif
+
         <div
             class="projection-split grid gap-4 lg:min-h-0 lg:flex-1"
             wire:ignore.self
@@ -161,20 +184,6 @@ resources/js/projection-editor.js
             >
                 @include('livewire.pages.projection-editor.plan')
             </div>
-
-            {{-- The look at a score the deck has not taken.
-
-                 One modal for the whole pane rather than one per offered line:
-                 the pane lists every engraving of every music in the service,
-                 and a modal per line would be a hundred of them standing in the
-                 markup for the one that is ever opened. A row of the deck carries
-                 its own, because a row can answer for itself out of the payload
-                 the browser already holds — this one has to be built. --}}
-            @if($showingScorePreview && $this->scorePreview !== null)
-                <flux:modal wire:model="showingScorePreview" class="w-full max-w-3xl" data-offer-preview-modal>
-                    <x-score-preview :payload="$this->scorePreview" :title="$this->previewTitle" />
-                </flux:modal>
-            @endif
 
             {{-- The handle owns a grid column of its own, so dragging it moves
                  nothing but the boundary the two panes share. --}}

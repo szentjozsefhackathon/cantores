@@ -660,3 +660,25 @@ it('previews a score offered under a music, without putting it in the deck', fun
 
     expect($deck->projection->entries()->where('score_id', $deck->birthdayScore->id)->exists())->toBeFalse();
 });
+
+// The booklet's own trouble, in the deck's editor: see the test of the same name
+// in BookletAddedMusicTest. A modal written between the panes of the split takes
+// a grid column from them.
+it('opens the offered preview without taking a column of the split', function () {
+    $deck = deckWithRoomForASong();
+    ProjectionMusic::factory()->create(['projection_id' => $deck->projection->id, 'music_id' => $deck->birthday->id]);
+
+    actingAs($deck->user);
+
+    $html = Livewire::test(ProjectionEditor::class, ['projection' => $deck->projection])
+        ->call('previewScore', $deck->birthdayScore->id)
+        ->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+
+    expect($xpath->query('//*[@data-offer-preview-modal]')->length)->toBe(1)
+        ->and($xpath->query('//*[contains(@class, "projection-split")]//*[@data-offer-preview-modal]')->length)->toBe(0)
+        ->and($xpath->query('//*[contains(@class, "projection-split")]/*')->length)->toBe(3);
+});
