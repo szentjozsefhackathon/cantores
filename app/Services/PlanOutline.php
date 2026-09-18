@@ -54,12 +54,16 @@ class PlanOutline
      * The entries are handed in rather than read again — the editor already holds
      * them, and reads them once for everything it draws.
      *
+     * `$chosenFiles` says which uploaded file each row actually draws, keyed by
+     * row: a row that names no file draws the score's default one, and resolving
+     * that is the document's business rather than this one's. The scores are read
+     * straight off the rows, since a row names its own.
+     *
      * @param  Collection<int, PlanEntry>  $entries
-     * @param  list<int>  $chosenScoreIds
-     * @param  list<int>  $chosenFileIds
+     * @param  array<int, int>  $chosenFiles  file id, keyed by entry id
      * @return list<array<string, mixed>>
      */
-    public function for(PlanDocument $document, Collection $entries, array $chosenScoreIds = [], array $chosenFileIds = []): array
+    public function for(PlanDocument $document, Collection $entries, array $chosenFiles = []): array
     {
         $plan = $document->musicPlan;
         $viewer = Auth::user();
@@ -119,8 +123,7 @@ class PlanOutline
                 $container === 'root' ? null : $added->music_plan_slot_plan_id,
                 $byAdded[$added->id] ?? [],
                 $addedScores->get($added->music_id, collect())->all(),
-                $chosenScoreIds,
-                $chosenFileIds,
+                $chosenFiles,
                 $viewer,
             );
         }
@@ -138,7 +141,7 @@ class PlanOutline
         }
 
         foreach ($slots as $index => $slot) {
-            $node = $this->slotNode($slot, $index, $byMusic, $bySlot[$slot['id']] ?? [], $addedNodes['slot:'.$slot['id']] ?? [], $chosenScoreIds, $chosenFileIds);
+            $node = $this->slotNode($slot, $index, $byMusic, $bySlot[$slot['id']] ?? [], $addedNodes['slot:'.$slot['id']] ?? [], $chosenFiles);
 
             if ($node['weight'] > 0) {
                 $placed[] = ['sequence' => $node['sequence'], 'node' => $node];
@@ -477,17 +480,16 @@ class PlanOutline
      * @param  array<int, list<PlanEntry>>  $byMusic
      * @param  list<PlanEntry>  $texts
      * @param  list<array<string, mixed>>  $addedNodes  the document's own musics added in this slot
-     * @param  list<int>  $chosenScoreIds
-     * @param  list<int>  $chosenFileIds
+     * @param  array<int, int>  $chosenFiles
      * @return array<string, mixed>
      */
-    private function slotNode(array $slot, int $planIndex, array $byMusic, array $texts, array $addedNodes, array $chosenScoreIds, array $chosenFileIds): array
+    private function slotNode(array $slot, int $planIndex, array $byMusic, array $texts, array $addedNodes, array $chosenFiles): array
     {
         $placed = [];
         $unplaced = [];
 
         foreach (array_values($slot['assignments']) as $index => $assignment) {
-            $node = $this->musicNode($assignment, $slot['id'], $index, $byMusic[$assignment['id']] ?? [], $chosenScoreIds, $chosenFileIds);
+            $node = $this->musicNode($assignment, $slot['id'], $index, $byMusic[$assignment['id']] ?? [], $chosenFiles);
 
             if ($node['weight'] > 0) {
                 $placed[] = ['sequence' => $node['sequence'], 'node' => $node];
@@ -535,11 +537,10 @@ class PlanOutline
      *
      * @param  array<string, mixed>  $assignment
      * @param  list<PlanEntry>  $entries
-     * @param  list<int>  $chosenScoreIds
-     * @param  list<int>  $chosenFileIds
+     * @param  array<int, int>  $chosenFiles
      * @return array<string, mixed>
      */
-    private function musicNode(array $assignment, int $slotPlanId, int $planIndex, array $entries, array $chosenScoreIds, array $chosenFileIds): array
+    private function musicNode(array $assignment, int $slotPlanId, int $planIndex, array $entries, array $chosenFiles): array
     {
         $children = array_map(fn (PlanEntry $entry): array => $this->entryNode($entry), $entries);
         $headingEntry = $entries[0] ?? null;
@@ -555,7 +556,7 @@ class PlanOutline
             'title' => $assignment['music_title'],
             'reference' => $assignment['music_reference'],
             'children' => $children,
-            'offers' => $this->offers($assignment['scores'], $chosenScoreIds, $chosenFileIds),
+            'offers' => $this->offers($assignment['scores'], ...$this->taken($entries, $chosenFiles)),
             'weight' => count($children),
             'sequence' => $entries === [] ? PHP_INT_MAX : $entries[0]->sequence,
             // The row that speaks this music's own name, and whether it is: the
@@ -577,11 +578,10 @@ class PlanOutline
      *
      * @param  list<PlanEntry>  $entries
      * @param  list<array<string, mixed>>  $scores
-     * @param  list<int>  $chosenScoreIds
-     * @param  list<int>  $chosenFileIds
+     * @param  array<int, int>  $chosenFiles
      * @return array<string, mixed>
      */
-    private function addedMusicNode(PlanAddedMusic $added, ?int $slotPlanId, array $entries, array $scores, array $chosenScoreIds, array $chosenFileIds, ?User $viewer): array
+    private function addedMusicNode(PlanAddedMusic $added, ?int $slotPlanId, array $entries, array $scores, array $chosenFiles, ?User $viewer): array
     {
         $children = array_map(fn (PlanEntry $entry): array => $this->entryNode($entry), $entries);
         $headingEntry = $entries[0] ?? null;
@@ -597,7 +597,7 @@ class PlanOutline
             'title' => $added->music?->title,
             'reference' => $added->music?->collectionReference($viewer),
             'children' => $children,
-            'offers' => $this->offers($scores, $chosenScoreIds, $chosenFileIds),
+            'offers' => $this->offers($scores, ...$this->taken($entries, $chosenFiles)),
             'weight' => count($children),
             'sequence' => $entries === [] ? $added->sequence : $entries[0]->sequence,
             'placeholder' => $added->sequence,
@@ -646,13 +646,50 @@ class PlanOutline
     }
 
     /**
+     * What this one music has already taken — its own rows, and nobody else's.
+     *
+     * Asked per music rather than of the whole document, and that is the point.
+     * A service may sing the same music twice: the plan assigns it to two slots,
+     * or the document is given it twice as a music of its own. Weighed against
+     * everything the document holds, the second occurrence would find its only
+     * score already taken by the first and offer nothing at all — an "Add" button
+     * missing from a music that visibly has a score, and no way to put it on the
+     * page a second time.
+     *
+     * Which file a row draws is the document's answer, since a row naming no file
+     * draws the score's default one; it is handed in keyed by row, and only the
+     * rows of this music are read out of it.
+     *
+     * @param  list<PlanEntry>  $entries
+     * @param  array<int, int>  $chosenFiles  file id, keyed by entry id
+     * @return array{list<int>, list<int>} the score ids taken, and the file ids
+     */
+    private function taken(array $entries, array $chosenFiles): array
+    {
+        $scoreIds = [];
+        $fileIds = [];
+
+        foreach ($entries as $entry) {
+            if ($entry->score_id !== null) {
+                $scoreIds[] = $entry->score_id;
+            }
+
+            if (isset($chosenFiles[$entry->id])) {
+                $fileIds[] = $chosenFiles[$entry->id];
+            }
+        }
+
+        return [$scoreIds, $fileIds];
+    }
+
+    /**
      * What of this music's scores the booklet has not taken.
      *
      * An uploaded score holding several files is not one thing to take or leave —
      * the projection slide and the accompaniment are different music on the page —
      * so where there is a choice the score is only a label and each file is
-     * offered on its own line. A score every file of which is already in the
-     * booklet is not offered at all.
+     * offered on its own line. A score every file of which this music already
+     * prints is not offered at all.
      *
      * @param  list<array<string, mixed>>  $scores
      * @param  list<int>  $chosenScoreIds

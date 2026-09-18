@@ -4,6 +4,7 @@ import { SPLIT_DEFAULT, beginSplitDrag, clampSplitPercent } from './booklet-spli
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck, slideCounts } from './projection-deck.js';
 import { inheritedSlideSetting, resolveSlideSettings, fileSlideSettings, textSlideSettings } from './projection-settings.js';
 import { steppedValue, movesSetting } from './booklet-settings.js';
+import './score-preview.js';
 
 /**
  * Panes mid-scroll, keyed by the pane itself, so a second hover landing before
@@ -73,6 +74,12 @@ onAlpineInit(() => {
         return {
             geometry: config.geometry ?? {},
             entries: withPlainOverrides(config.entries),
+
+            /**
+             * The page the preview modal draws one score against, since a deck
+             * has none — see Booklet::previewGeometry().
+             */
+            previewGeometryBase: config.previewGeometry ?? {},
 
             /**
              * Which slides the service walks past, keyed by row.
@@ -376,6 +383,28 @@ onAlpineInit(() => {
             nudgeSplit(delta) { this.splitPercent = clampSplitPercent(this.splitPercent + delta); },
 
             resetSplit() { this.splitPercent = SPLIT_DEFAULT; },
+
+            /**
+             * One row handed to the preview modal beside it — see
+             * score-preview.js.
+             *
+             * The deck's own overrides are left behind, and that is not a
+             * simplification. They are written against a slide — a ratio, a
+             * screen's worth of type, a lyric size chosen for a room at the
+             * back — and the preview is a page of music. So the score is drawn
+             * with its author's settings and none of the deck's, which is also
+             * what makes this the same preview a booklet row opens.
+             */
+            previewEntry(entryId) {
+                const entry = this.entries.find((row) => row.id === entryId);
+
+                return entry ? { ...entry, override: {} } : null;
+            },
+
+            /** The default page, since a deck has no paper of its own. */
+            previewGeometry() {
+                return this.previewGeometryBase;
+            },
 
             /**
              * The settings one row is actually drawn with — recomputed on every

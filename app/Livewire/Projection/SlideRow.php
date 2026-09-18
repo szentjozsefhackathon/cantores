@@ -46,6 +46,9 @@ class SlideRow extends Component
 
     public bool $writing = false;
 
+    /** Whether the look at this row's score stands open in a modal. */
+    public bool $previewingScore = false;
+
     /** The Markdown of a text row while it is being written. */
     #[Validate('nullable|string|max:20000')]
     public string $text = '';
@@ -84,6 +87,19 @@ class SlideRow extends Component
         if ($this->writing) {
             $this->text = $this->entry->text ?? '';
         }
+    }
+
+    /**
+     * Open or close the look at this row's score.
+     *
+     * All this decides is whether the modal stands there. What it shows is read
+     * out of the editor's own payload in the browser — see score-preview.js —
+     * so the server is asked for nothing beyond this flag, and the preview can
+     * never show a score the editor has stopped showing.
+     */
+    public function togglePreview(): void
+    {
+        $this->previewingScore = ! $this->previewingScore;
     }
 
     public function updatedText(): void

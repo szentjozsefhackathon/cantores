@@ -738,7 +738,7 @@ it('opens the size panel on an uploaded score', function () {
  */
 
 /**
- * @return array{0: \App\Models\Score, 1: ScoreFile, 2: ScoreFile}
+ * @return array{0: Score, 1: ScoreFile, 2: ScoreFile}
  */
 function scoreWithTwoFiles(User $user): array
 {
@@ -831,13 +831,13 @@ it('ticks the default file for a row that names none', function () {
     $user = User::factory()->create();
     [$score, $slide] = scoreWithTwoFiles($user);
     $booklet = Booklet::factory()->create(['user_id' => $user->id]);
-    $booklet->entries()->create(['score_id' => $score->id, 'sequence' => 1]);
+    $entry = $booklet->entries()->create(['score_id' => $score->id, 'sequence' => 1]);
 
     actingAs($user);
 
     $editor = Livewire::test(BookletEditor::class, ['booklet' => $booklet])->instance();
 
-    expect($editor->chosenFileIds())->toBe([$slide->id]);
+    expect($editor->chosenFiles())->toBe([$entry->id => $slide->id]);
 
     // And toggling that same file takes the older row out rather than doubling it.
     Livewire::test(BookletEditor::class, ['booklet' => $booklet])

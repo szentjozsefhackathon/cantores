@@ -129,27 +129,7 @@ class BookletRenderPayload extends PlanRenderPayload
                         'kind' => 'file',
                         'fileId' => $file['file_id'],
                         'override' => self::overrideOf($entry, 'file'),
-                        'strips' => array_map(function (array $strip) use ($booklet, $file, $loan): array {
-                            if (isset($strip['rect'])) {
-                                return [
-                                    'pageUrl' => $this->pageUrl($booklet, $loan, (int) $file['file_id'], (int) $strip['page']),
-                                    // Named as well as addressed: the browser
-                                    // scopes a page's cairo ids by it, and the
-                                    // export placeholder carries it back so the
-                                    // server knows which page to inline.
-                                    'page' => $strip['page'],
-                                    'rect' => implode(' ', $strip['rect']),
-                                    'width' => $strip['width'],
-                                    'height' => $strip['height'],
-                                ];
-                            }
-
-                            return [
-                                'url' => $this->stripUrl($booklet, $loan, (int) $file['file_id'], (int) $strip['page'], (int) $strip['index']),
-                                'width' => $strip['width'],
-                                'height' => $strip['height'],
-                            ];
-                        }, $file['strips']),
+                        'strips' => $this->strips($booklet, $loan, $file),
                     ];
                 }
 
@@ -166,6 +146,99 @@ class BookletRenderPayload extends PlanRenderPayload
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * One score the booklet has not taken, shaped as a row so it can be drawn.
+     *
+     * What the plan pane's preview is handed. It is a row in every way that
+     * matters to the renderer — the same kinds, the same file URLs — and in no
+     * way that matters to the booklet: nothing is stored, nothing is sequenced,
+     * and it names no slot, because it is not in the service yet. A score with
+     * several uploaded files is previewed at the one the offered line means.
+     *
+     * The entitlement is asked afresh, exactly as it is for a row, so a score
+     * the viewer may not read cannot be looked at through the offer either.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function preview(Booklet $booklet, int $scoreId, ?int $fileId, ?User $viewer): ?array
+    {
+        $source = $this->scores->sourcesFor([$scoreId], $viewer)->get($scoreId);
+
+        if ($source === null) {
+            return null;
+        }
+
+        $common = [
+            'id' => 0,
+            'scoreId' => $scoreId,
+            'slot' => null,
+            'music' => null,
+            'reference' => null,
+            'variation' => null,
+            'startOnNewPage' => false,
+            'override' => [],
+        ];
+
+        if ($source['format'] === null) {
+            $file = self::fileFrom($source, $fileId);
+
+            return [
+                ...$common,
+                'kind' => 'file',
+                'fileId' => $file['file_id'],
+                'strips' => $this->strips($booklet, null, $file),
+            ];
+        }
+
+        return [
+            ...$common,
+            'kind' => 'score',
+            'format' => $source['format'],
+            'content' => $source['content'],
+            // Whole: which parts of it a row prints is a decision made on the
+            // row, and there is no row yet.
+            'sections' => null,
+            'settings' => $source['settings'],
+        ];
+    }
+
+    /**
+     * The systems of one uploaded file, addressed for whoever is drawing them.
+     *
+     * A vector-rendered file names its page once and each system as a rectangle
+     * onto it; a raster one names each system's own image. The browser tells
+     * them apart by which URL is present.
+     *
+     * By URL rather than inline, because this payload crosses the wire on every
+     * change.
+     *
+     * @param  array{file_id: int|null, strips: list<array<string, mixed>>}  $file
+     * @return list<array<string, mixed>>
+     */
+    private function strips(Booklet $booklet, ?Loan $loan, array $file): array
+    {
+        return array_map(function (array $strip) use ($booklet, $file, $loan): array {
+            if (isset($strip['rect'])) {
+                return [
+                    'pageUrl' => $this->pageUrl($booklet, $loan, (int) $file['file_id'], (int) $strip['page']),
+                    // Named as well as addressed: the browser scopes a page's
+                    // cairo ids by it, and the export placeholder carries it
+                    // back so the server knows which page to inline.
+                    'page' => $strip['page'],
+                    'rect' => implode(' ', $strip['rect']),
+                    'width' => $strip['width'],
+                    'height' => $strip['height'],
+                ];
+            }
+
+            return [
+                'url' => $this->stripUrl($booklet, $loan, (int) $file['file_id'], (int) $strip['page'], (int) $strip['index']),
+                'width' => $strip['width'],
+                'height' => $strip['height'],
+            ];
+        }, $file['strips']);
     }
 
     /**

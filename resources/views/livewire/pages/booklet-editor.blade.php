@@ -373,6 +373,20 @@ resources/js/booklet-editor.js
                 @include('livewire.pages.booklet-editor.plan')
             </div>
 
+            {{-- The look at a score the booklet has not taken.
+
+                 One modal for the whole pane rather than one per offered line:
+                 the pane lists every engraving of every music in the service,
+                 and a modal per line would be a hundred of them standing in the
+                 markup for the one that is ever opened. A row of the booklet carries
+                 its own, because a row can answer for itself out of the payload
+                 the browser already holds — this one has to be built. --}}
+            @if($showingScorePreview && $this->scorePreview !== null)
+                <flux:modal wire:model="showingScorePreview" class="w-full max-w-3xl" data-offer-preview-modal>
+                    <x-score-preview :payload="$this->scorePreview" :title="$this->previewTitle" />
+                </flux:modal>
+            @endif
+
             {{-- The handle owns a grid column of its own, so dragging it moves
                  nothing but the boundary the two panes share. Keyboard users move
                  it with the arrow keys; a double click puts it back. Where it

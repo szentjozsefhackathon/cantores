@@ -22,6 +22,9 @@ resources/js/projection-editor.js
         'geometry' => $this->geometry,
         'entries' => $this->renderPayload,
         'excluded' => $this->excluded,
+        // A deck has no paper, and the preview that shows one of its scores on
+        // its own is a page of music. See Booklet::previewGeometry().
+        'previewGeometry' => \App\Models\Booklet::previewGeometry(),
         'overflowText' => __('This slide is fuller than the screen — make it smaller, or split it with a %pagebreak.'),
         'skipText' => __('Leave this slide out of the projection'),
         'unskipText' => __('Show this slide again'),
@@ -158,6 +161,20 @@ resources/js/projection-editor.js
             >
                 @include('livewire.pages.projection-editor.plan')
             </div>
+
+            {{-- The look at a score the deck has not taken.
+
+                 One modal for the whole pane rather than one per offered line:
+                 the pane lists every engraving of every music in the service,
+                 and a modal per line would be a hundred of them standing in the
+                 markup for the one that is ever opened. A row of the deck carries
+                 its own, because a row can answer for itself out of the payload
+                 the browser already holds — this one has to be built. --}}
+            @if($showingScorePreview && $this->scorePreview !== null)
+                <flux:modal wire:model="showingScorePreview" class="w-full max-w-3xl" data-offer-preview-modal>
+                    <x-score-preview :payload="$this->scorePreview" :title="$this->previewTitle" />
+                </flux:modal>
+            @endif
 
             {{-- The handle owns a grid column of its own, so dragging it moves
                  nothing but the boundary the two panes share. --}}

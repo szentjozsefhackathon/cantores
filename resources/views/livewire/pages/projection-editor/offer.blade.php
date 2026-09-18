@@ -41,10 +41,24 @@
                     :src="$score['incipit_url']"
                     :alt="__('Incipit').' — '.$score['title']"
                     class="mt-1 max-w-full"
-                    imgClass="max-h-24 max-w-full rounded bg-white object-contain"
+                    imgClass="max-h-16 max-w-full rounded bg-white object-contain"
                 />
             @endif
         </div>
+
+        {{-- The same look a row of the deck offers, on a score it has not taken
+             yet: what a score actually is, before deciding to put it in. --}}
+        <flux:tooltip :content="__('Preview the score')">
+            <flux:button
+                size="sm"
+                variant="ghost"
+                icon="eye"
+                data-offer-preview
+                class="shrink-0"
+                :aria-label="__('Preview the score')"
+                wire:click="previewScore({{ $score['id'] }})"
+            />
+        </flux:tooltip>
 
         <flux:badge size="sm" color="zinc">{{ $score['format'] }}</flux:badge>
 
@@ -68,6 +82,18 @@
                 />
             </flux:tooltip>
             <span class="min-w-0 flex-1 truncate">{{ $file['name'] }}</span>
+
+            <flux:tooltip :content="__('Preview this file')">
+                <flux:button
+                    size="sm"
+                    variant="ghost"
+                    icon="eye"
+                    data-offer-preview
+                    class="shrink-0"
+                    :aria-label="__('Preview this file')"
+                    wire:click="previewScore({{ $score['id'] }}, {{ $file['id'] }})"
+                />
+            </flux:tooltip>
         </div>
     @endforeach
 </div>

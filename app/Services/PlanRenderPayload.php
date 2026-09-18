@@ -213,7 +213,19 @@ abstract class PlanRenderPayload
      */
     public function fileOf(PlanEntry $entry, array $source): array
     {
-        $chosen = $entry->score_file_id === null ? null : ($source['files'][$entry->score_file_id] ?? null);
+        return self::fileFrom($source, $entry->score_file_id);
+    }
+
+    /**
+     * The same answer for a file named by something other than a row — the line
+     * of an offered score, which has no row yet to name it.
+     *
+     * @param  array<string, mixed>  $source
+     * @return array{file_id: int|null, strips: list<array<string, mixed>>}
+     */
+    public static function fileFrom(array $source, ?int $fileId): array
+    {
+        $chosen = $fileId === null ? null : ($source['files'][$fileId] ?? null);
 
         return [
             'file_id' => $chosen['file_id'] ?? $source['file_id'],

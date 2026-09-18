@@ -563,3 +563,100 @@ it('leaves the wall on the slide it was showing when that row is moved', functio
     expect($presentation->fresh()->addressIn($deck->projection->entries()->get()))
         ->toBe(['entryId' => $deck->communionRow->id, 'slideIndex' => 1]);
 });
+
+// The deck's half of the same rule — see the booklet's twin of this test. The
+// tree is PlanOutline's for both, so a music the deck holds twice offers its one
+// engraving to each place it stands in.
+it('offers a music\'s score again where the deck holds that music twice', function () {
+    $deck = deckWithRoomForASong();
+
+    $first = ProjectionMusic::factory()->create(['projection_id' => $deck->projection->id, 'music_id' => $deck->birthday->id, 'sequence' => 1]);
+    $second = ProjectionMusic::factory()->create(['projection_id' => $deck->projection->id, 'music_id' => $deck->birthday->id, 'sequence' => 2]);
+
+    ProjectionSlide::factory()->create([
+        'projection_id' => $deck->projection->id,
+        'score_id' => $deck->birthdayScore->id,
+        'added_music_id' => $first->id,
+        'sequence' => 1,
+    ]);
+
+    actingAs($deck->user);
+
+    $outline = Livewire::test(ProjectionEditor::class, ['projection' => $deck->projection])->instance()->outline;
+
+    expect(offersUnder($outline, 'added:'.$first->id))->toBe([])
+        ->and(collect(offersUnder($outline, 'added:'.$second->id))->pluck('score.id')->all())
+        ->toBe([$deck->birthdayScore->id]);
+});
+
+// And the remote reads the very same tree, so what the editor offers is what the
+// phone driving the service offers.
+it('offers it again on the remote too', function () {
+    $deck = deckWithRoomForASong();
+
+    $first = ProjectionMusic::factory()->create(['projection_id' => $deck->projection->id, 'music_id' => $deck->birthday->id, 'sequence' => 1]);
+    $second = ProjectionMusic::factory()->create(['projection_id' => $deck->projection->id, 'music_id' => $deck->birthday->id, 'sequence' => 2]);
+
+    ProjectionSlide::factory()->create([
+        'projection_id' => $deck->projection->id,
+        'score_id' => $deck->birthdayScore->id,
+        'added_music_id' => $first->id,
+        'sequence' => 1,
+    ]);
+
+    // Signed in, because PlanOutline resolves what a music still offers against
+    // Auth::user() rather than the viewer handed to it — which on the remote's
+    // own endpoint are the same person.
+    actingAs($deck->user);
+
+    $payload = app(ProjectionRenderPayload::class);
+    $outline = $payload->outlineFor($deck->projection, $payload->entriesOf($deck->projection), $deck->user);
+
+    $offersOf = function (array $nodes, int $addedMusicId) use (&$offersOf): ?array {
+        foreach ($nodes as $node) {
+            if ($node['kind'] === 'entry') {
+                continue;
+            }
+
+            if (($node['addedMusicId'] ?? null) === $addedMusicId) {
+                return $node['offers'];
+            }
+
+            $found = $offersOf($node['children'], $addedMusicId);
+
+            if ($found !== null) {
+                return $found;
+            }
+        }
+
+        return null;
+    };
+
+    expect($offersOf($outline, $first->id))->toBe([])
+        ->and(collect($offersOf($outline, $second->id))->pluck('scoreId')->all())
+        ->toBe([$deck->birthdayScore->id]);
+});
+
+it('previews a score offered under a music, without putting it in the deck', function () {
+    $deck = deckWithRoomForASong();
+    ProjectionMusic::factory()->create(['projection_id' => $deck->projection->id, 'music_id' => $deck->birthday->id]);
+
+    actingAs($deck->user);
+
+    $editor = Livewire::test(ProjectionEditor::class, ['projection' => $deck->projection]);
+
+    $editor->assertDontSeeHtml('data-offer-preview-modal')
+        ->call('previewScore', $deck->birthdayScore->id)
+        ->assertSeeHtml('data-offer-preview-modal')
+        ->assertSeeHtml('data-score-preview-sheet');
+
+    expect($editor->instance()->scorePreview)
+        ->toMatchArray([
+            'kind' => 'score',
+            'scoreId' => $deck->birthdayScore->id,
+            'sections' => null,
+            'override' => [],
+        ]);
+
+    expect($deck->projection->entries()->where('score_id', $deck->birthdayScore->id)->exists())->toBeFalse();
+});

@@ -1392,6 +1392,62 @@ it('writes a paragraph of instructions inside the row it belongs to', function (
         ->toBe(1);
 });
 
+// The look at one row's score is the shared booklet's own engraving — see
+// resources/js/score-preview.js — asked for this row out of the payload the
+// editor already holds. So the modal carries nothing but the row's id: no
+// frame around the score's own page, and no second trip to the server.
+it('opens the shared score preview on the row, reading the row out of the editor', function () {
+    $user = User::factory()->create();
+    [, $entries] = bookletWithEntries($user, 1);
+
+    actingAs($user);
+
+    $component = Livewire::test(EntryRow::class, [
+        'entry' => $entries[0],
+        'scoreUrl' => 'https://example.test/scores/1/edit',
+    ]);
+
+    $component->assertDontSeeHtml('data-entry-preview-modal');
+
+    $component->call('togglePreview')
+        ->assertSeeHtml('data-entry-preview-modal')
+        ->assertSeeHtml('data-score-preview-sheet')
+        ->assertSeeHtml('scorePreview(previewEntry('.$entries[0]->id.'), previewGeometry())')
+        ->assertDontSeeHtml('<iframe');
+});
+
+// A paragraph has no score to look at, and the switch left over from one is
+// not a way to open an empty modal on it.
+it('opens no score preview on a text row', function () {
+    $user = User::factory()->create();
+    [$booklet] = bookletWithEntries($user, 1);
+
+    $text = BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => null,
+        'text' => 'Kyrie eleison',
+        'sequence' => 2,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(EntryRow::class, ['entry' => $text, 'scoreUrl' => 'https://example.test/scores/1/edit'])
+        ->call('togglePreview')
+        ->assertDontSeeHtml('data-entry-preview-modal');
+});
+
+it('shows no preview button or modal for a score it cannot read', function () {
+    $user = User::factory()->create();
+    [, $entries] = bookletWithEntries($user, 1);
+
+    actingAs($user);
+
+    Livewire::test(EntryRow::class, ['entry' => $entries[0], 'scoreUrl' => null])
+        ->assertDontSeeHtml('data-entry-preview')
+        ->call('togglePreview')
+        ->assertDontSeeHtml('data-entry-preview-modal');
+});
+
 // Half a line height is where stacked stanzas start to collide, so a booklet
 // cannot override its way below it — an older score stored as 0 comes back up.
 it('holds the lyric line spacing at its floor', function () {

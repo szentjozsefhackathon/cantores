@@ -5,6 +5,7 @@ import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacin
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
 import { fileSettings, movesSetting, resolveSettings, steppedValue, textSettings, withPlainOverrides } from './booklet-settings.js';
 import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
+import './score-preview.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
@@ -275,6 +276,25 @@ onAlpineInit(() => {
                     pageGeometry(this.geometry),
                     entry.override ?? {},
                 );
+            },
+
+            /**
+             * One row handed to the preview modal beside it — see
+             * score-preview.js.
+             *
+             * The row exactly as the booklet draws it, overrides and chosen
+             * sections and all, because the preview is of this row rather than
+             * of the score in the abstract. Only the paper is replaced: the
+             * reader's geometry has none, and that is the whole point of
+             * looking at a row this way.
+             */
+            previewEntry(entryId) {
+                return this.entries.find((candidate) => candidate.id === entryId) ?? null;
+            },
+
+            /** The booklet's own typography, for the preview to keep. */
+            previewGeometry() {
+                return this.geometry;
             },
 
             /**

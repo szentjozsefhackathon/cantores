@@ -1,6 +1,11 @@
 <?php
 
+use App\Http\Middleware\EnsureVisitorIsHuman;
+use App\Models\Collection;
+use App\Services\HumanVerificationService;
 use App\Services\SvgToPdfConverter;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,8 +18,8 @@ use App\Services\SvgToPdfConverter;
 |
 */
 
-pest()->extend(Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');
 
 /*
@@ -52,11 +57,11 @@ function something()
  * Put the session past the Turnstile gate that guards every lending link, the way
  * a guest does by answering the challenge once.
  *
- * @see \App\Http\Middleware\EnsureVisitorIsHuman
+ * @see EnsureVisitorIsHuman
  */
 function passHumanCheck(): void
 {
-    app(\App\Services\HumanVerificationService::class)->markVerified();
+    app(HumanVerificationService::class)->markVerified();
 }
 
 /**
@@ -75,6 +80,34 @@ function alpineDirectivesOf(string $html): array
     preg_match_all('/(x-[a-z-]+(?::[a-z._-]+)?)="([^"]*)"/', $root[0] ?? '', $found, PREG_SET_ORDER);
 
     return collect($found)->mapWithKeys(fn (array $one): array => [$one[1] => $one[2]])->all();
+}
+
+/**
+ * What one music of a plan outline still offers, found by its key — `music:12`
+ * for a music the plan assigns, `added:5` for one the document holds itself.
+ *
+ * @param  list<array<string, mixed>>  $nodes
+ * @return list<array<string, mixed>>|null
+ */
+function offersUnder(array $nodes, string $key): ?array
+{
+    foreach ($nodes as $node) {
+        if ($node['kind'] === 'entry') {
+            continue;
+        }
+
+        if ($node['key'] === $key) {
+            return $node['offers'];
+        }
+
+        $found = offersUnder($node['children'], $key);
+
+        if ($found !== null) {
+            return $found;
+        }
+    }
+
+    return null;
 }
 
 /**
@@ -189,6 +222,6 @@ function writeDecisionsCsv(array $rows): string
 function createSongbookCollections(): void
 {
     foreach (['SK', 'ZK', 'BK', 'JÉL', 'DÚR', 'SZTA', 'KÉK', 'TORG'] as $abbr) {
-        \App\Models\Collection::factory()->create(['abbreviation' => $abbr, 'is_private' => false]);
+        Collection::factory()->create(['abbreviation' => $abbr, 'is_private' => false]);
     }
 }

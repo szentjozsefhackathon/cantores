@@ -4,6 +4,7 @@ use App\Enums\ProjectionTextTheme;
 use App\Livewire\Pages\PlanDocuments;
 use App\Livewire\Pages\ProjectionEditor;
 use App\Livewire\Projection\SlideRow;
+use App\Models\Booklet;
 use App\Models\MusicPlan;
 use App\Models\Projection;
 use App\Models\ProjectionSlide;
@@ -723,6 +724,73 @@ it('tells the deck when a row changes what it shows', function () {
         ->assertDispatched('projection-entry-changed');
 
     expect($entry->fresh()->show_variation)->toBeTrue();
+});
+
+// The same look a booklet row opens — see resources/js/score-preview.js — and
+// the same markup, because a deck's row and a booklet's row are asking the same
+// question about the same score.
+it('opens the shared score preview on the row, reading the row out of the editor', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => Score::factory()->abc()->create(['user_id' => $user->id])->id,
+    ]);
+
+    actingAs($user);
+
+    $component = Livewire::test(SlideRow::class, [
+        'entry' => $entry,
+        'scoreUrl' => 'https://example.test/scores/1/edit',
+    ]);
+
+    $component->assertDontSeeHtml('data-entry-preview-modal');
+
+    $component->call('togglePreview')
+        ->assertSeeHtml('data-entry-preview-modal')
+        ->assertSeeHtml('data-score-preview-sheet')
+        ->assertSeeHtml('scorePreview(previewEntry('.$entry->id.'), previewGeometry())')
+        ->assertDontSeeHtml('<iframe');
+});
+
+// A deck has no paper of its own, so the page its scores are previewed against
+// travels with the payload rather than being invented in the browser.
+it('hands the editor the page one score is previewed against', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->assertSeeHtml('previewGeometry');
+
+    expect(Booklet::previewGeometry())
+        ->toMatchArray([
+            'pageWidthMm' => 148.0,
+            'pageHeightMm' => 210.0,
+            'marginMm' => 12.0,
+            'contentWidthMm' => 124.0,
+        ])
+        ->and(Booklet::previewGeometry()['lyricSizePt'])->toBeGreaterThan(0)
+        ->and(Booklet::previewGeometry()['staffHeightMm'])->toBeGreaterThan(0);
+});
+
+it('shows no preview button or modal for a score it cannot read', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => Score::factory()->abc()->create(['user_id' => $user->id])->id,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(SlideRow::class, ['entry' => $entry, 'scoreUrl' => null])
+        ->assertDontSeeHtml('data-entry-preview')
+        ->call('togglePreview')
+        ->assertDontSeeHtml('data-entry-preview-modal');
 });
 
 it('lists only the viewers own projections', function () {

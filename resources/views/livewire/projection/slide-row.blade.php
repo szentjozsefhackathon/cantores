@@ -139,6 +139,12 @@
                     <span class="flex-1"></span>
                 @endif
 
+                @if(! $entry->isText() && $scoreUrl)
+                    <flux:tooltip :content="__('Preview the score')">
+                        <flux:button size="sm" variant="ghost" icon="eye" data-entry-preview class="shrink-0" :aria-label="__('Preview the score')" wire:click="togglePreview" />
+                    </flux:tooltip>
+                @endif
+
                 {{-- Words written from here belong where this row belongs, and are
                      set directly beneath it — which is the deck's business rather
                      than this row's, like the column on the left. --}}
@@ -147,6 +153,16 @@
                     <flux:button size="sm" variant="ghost" icon="message-square-plus" data-entry-add-text class="shrink-0" :aria-label="$addLabel" wire:click="$parent.addText({{ $textArgs }})" />
                 </flux:tooltip>
             </div>
+
+            @if($previewingScore && ! $entry->isText() && $scoreUrl)
+                <flux:modal wire:model="previewingScore" class="w-full max-w-3xl" data-entry-preview-modal>
+                    <x-score-preview
+                        :entry-id="$entry->id"
+                        :title="$entry->score?->variationLabel()"
+                        :subtitle="$entry->scoreFile?->displayName()"
+                    />
+                </flux:modal>
+            @endif
 
             {{-- The same incipit the scores beneath it show, so a row in the deck
                  is recognised by its opening notes rather than by a title that
@@ -157,7 +173,7 @@
                     :src="$incipitUrl"
                     :alt="__('Incipit').' — '.$entry->score?->variationLabel()"
                     class="mt-1 ms-5 max-w-full"
-                    imgClass="max-h-24 max-w-full rounded bg-white object-contain"
+                    imgClass="max-h-16 max-w-full rounded bg-white object-contain"
                 />
             @endif
 

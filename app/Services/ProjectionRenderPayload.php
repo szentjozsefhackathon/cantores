@@ -79,20 +79,21 @@ class ProjectionRenderPayload extends PlanRenderPayload
      */
     public function outlineFor(Projection $projection, Collection $entries, ?User $viewer): array
     {
-        $chosenScoreIds = $entries->whereNotNull('score_id')->pluck('score_id')->all();
         $sources = $this->sourcesFor($entries, $viewer);
-        $chosenFileIds = $entries
-            ->whereNotNull('score_id')
-            ->map(function (ProjectionSlide $entry) use ($sources): ?int {
-                $source = $sources->get($entry->score_id);
 
-                return $source === null ? null : $this->fileOf($entry, $source)['file_id'];
+        // Keyed by row, because what the pane asks is what each music has
+        // already taken rather than what the deck holds — see PlanOutline::taken().
+        $chosenFiles = $entries
+            ->whereNotNull('score_id')
+            ->mapWithKeys(function (ProjectionSlide $entry) use ($sources): array {
+                $source = $sources->get($entry->score_id);
+                $fileId = $source === null ? null : $this->fileOf($entry, $source)['file_id'];
+
+                return $fileId === null ? [] : [$entry->id => $fileId];
             })
-            ->filter()
-            ->values()
             ->all();
 
-        return $this->slimOutline($this->outline->for($projection, $entries, $chosenScoreIds, $chosenFileIds));
+        return $this->slimOutline($this->outline->for($projection, $entries, $chosenFiles));
     }
 
     /**
@@ -390,6 +391,62 @@ class ProjectionRenderPayload extends PlanRenderPayload
                 'url' => $this->pageUrl($projection, (int) $file['file_id'], $page),
             ])
             ->all();
+    }
+
+    /**
+     * One score the deck has not taken, shaped as a row so it can be drawn.
+     *
+     * The deck's own twin of BookletRenderPayload::preview, and the same thing
+     * in every way that matters: a row to the renderer, nothing at all to the
+     * deck. An uploaded score travels as its pages here, as it does for a slide.
+     *
+     * The entitlement is asked afresh, exactly as it is for a row, so a score
+     * the viewer may not read cannot be looked at through the offer either.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function preview(Projection $projection, int $scoreId, ?int $fileId, ?User $viewer): ?array
+    {
+        $source = $this->scores->sourcesFor([$scoreId], $viewer)->get($scoreId);
+
+        if ($source === null) {
+            return null;
+        }
+
+        $common = [
+            'id' => 0,
+            'scoreId' => $scoreId,
+            'assignmentId' => null,
+            'addedMusicId' => null,
+            'slot' => null,
+            'music' => null,
+            'reference' => null,
+            'variation' => null,
+            'incipitUrl' => $source['incipit_url'] ?? null,
+            'override' => [],
+        ];
+
+        if ($source['format'] === null) {
+            $file = self::fileFrom($source, $fileId);
+
+            return [
+                ...$common,
+                'kind' => 'file',
+                'fileId' => $file['file_id'],
+                'pages' => $this->pagesOf($projection, $file),
+            ];
+        }
+
+        return [
+            ...$common,
+            'kind' => 'score',
+            'format' => $source['format'],
+            'content' => $source['content'],
+            // Whole: which parts of it a row shows is a decision made on the
+            // row, and there is no row yet.
+            'sections' => null,
+            'settings' => $source['settings'],
+        ];
     }
 
     /**

@@ -12,6 +12,8 @@ use App\Models\MusicPlanSlotPlan;
 use App\Models\Projection;
 use App\Models\ProjectionMusic;
 use App\Models\ProjectionSlide;
+use App\Models\Score;
+use App\Models\ScoreFile;
 use App\Services\PlanOrder;
 use App\Services\PlanOutline;
 use App\Services\PlanScoreToggle;
@@ -220,8 +222,7 @@ class ProjectionEditor extends Component
         return app(PlanOutline::class)->for(
             $this->projection,
             $this->entries,
-            $this->chosenScoreIds,
-            $this->chosenFileIds,
+            $this->chosenFiles,
         );
     }
 
@@ -288,17 +289,6 @@ class ProjectionEditor extends Component
     }
 
     /**
-     * The score ids already on the screen, for ticking the list.
-     *
-     * @return list<int>
-     */
-    #[Computed]
-    public function chosenScoreIds(): array
-    {
-        return $this->entries->whereNotNull('score_id')->pluck('score_id')->all();
-    }
-
-    /**
      * The typed source of each score in the deck, resolved once per render: both
      * the slides and the ticks in the list are drawn from it.
      *
@@ -311,26 +301,110 @@ class ProjectionEditor extends Component
     }
 
     /**
-     * The uploaded files already in the deck, for ticking a score that offers
-     * more than one of them.
+     * Which uploaded file each row of the deck actually draws, keyed by row.
      *
-     * @return list<int>
+     * Keyed rather than listed, because the question the plan pane asks is what
+     * *this music* has already taken — see PlanOutline::taken(). A music sung
+     * twice in one service has two places in the pane, and each of them must be
+     * able to take the same score.
+     *
+     * @return array<int, int>
      */
     #[Computed]
-    public function chosenFileIds(): array
+    public function chosenFiles(): array
     {
         $sources = $this->entrySources;
 
         return $this->entries
             ->whereNotNull('score_id')
-            ->map(function (ProjectionSlide $entry) use ($sources): ?int {
+            ->mapWithKeys(function (ProjectionSlide $entry) use ($sources): array {
                 $source = $sources->get($entry->score_id);
+                $fileId = $source === null ? null : app(ProjectionRenderPayload::class)->fileOf($entry, $source)['file_id'];
 
-                return $source === null ? null : app(ProjectionRenderPayload::class)->fileOf($entry, $source)['file_id'];
+                return $fileId === null ? [] : [$entry->id => $fileId];
             })
-            ->filter()
-            ->values()
             ->all();
+    }
+
+    /**
+     * The offered score being looked at, and which of its files.
+     *
+     * Null when nothing is open. A row of the deck carries its own preview and
+     * needs none of this — it is drawn straight out of the payload the browser
+     * already holds — but a score the deck has not taken is nowhere in that
+     * payload, so this is the one preview the server has to answer for.
+     */
+    public ?int $previewScoreId = null;
+
+    public ?int $previewFileId = null;
+
+    /**
+     * Whether that preview stands open — the modal's own switch, which it turns
+     * off itself when it is dismissed.
+     */
+    public bool $showingScorePreview = false;
+
+    /**
+     * Open the preview on a score the deck has not taken, or shut it.
+     *
+     * Pressing the same line again shuts it, which is what the eye beside it
+     * reads as. The score is not checked here: nothing is written, and what may
+     * be drawn is decided where it is built — see ProjectionRenderPayload::preview().
+     */
+    public function previewScore(int $scoreId, ?int $fileId = null): void
+    {
+        $same = $this->previewScoreId === $scoreId && $this->previewFileId === $fileId;
+
+        $this->previewScoreId = $same ? null : $scoreId;
+        $this->previewFileId = $same ? null : $fileId;
+        $this->showingScorePreview = ! $same;
+    }
+
+    /** Dismissed. What it was looking at goes with it. */
+    public function updatedShowingScorePreview(bool $open): void
+    {
+        if (! $open) {
+            $this->previewScoreId = null;
+            $this->previewFileId = null;
+        }
+    }
+
+    /**
+     * That score shaped as a row, for the same viewer the preview uses for a row
+     * that is already in the deck.
+     *
+     * @return array<string, mixed>|null
+     */
+    #[Computed]
+    public function scorePreview(): ?array
+    {
+        if ($this->previewScoreId === null) {
+            return null;
+        }
+
+        return app(ProjectionRenderPayload::class)->preview($this->projection, $this->previewScoreId, $this->previewFileId, Auth::user());
+    }
+
+    /**
+     * What that preview is called: the file's name where the offered line was a
+     * file, and the score's own otherwise — the same words the line itself says.
+     */
+    #[Computed]
+    public function previewTitle(): ?string
+    {
+        if ($this->previewScoreId === null) {
+            return null;
+        }
+
+        $score = Score::find($this->previewScoreId);
+
+        if (! $score instanceof Score) {
+            return null;
+        }
+
+        $file = $this->previewFileId === null ? null : $score->files->firstWhere('id', $this->previewFileId);
+
+        return $file instanceof ScoreFile ? $file->displayName() : $score->variationLabel();
     }
 
     /**
@@ -905,7 +979,7 @@ class ProjectionEditor extends Component
     private function forget(): void
     {
         $this->projection->unsetRelation('entries');
-        unset($this->entries, $this->entrySources, $this->renderPayload, $this->chosenScoreIds, $this->chosenFileIds, $this->headings, $this->outline, $this->excluded);
+        unset($this->entries, $this->entrySources, $this->renderPayload, $this->chosenFiles, $this->scorePreview, $this->headings, $this->outline, $this->excluded);
     }
 
     /**

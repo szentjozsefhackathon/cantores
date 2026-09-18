@@ -153,3 +153,73 @@ it('copies a booklet\'s own musics and remaps its rows', function () {
     expect($copy->entries()->where('score_id', $booklet->birthdayScore->id)->sole()->added_music_id)
         ->toBe($copy->addedMusics()->sole()->id);
 });
+
+// A music sung twice in one service is two places in the pane, and each of them
+// has to be able to take the same engraving. Weighed against the whole booklet —
+// as it once was — the second occurrence found its only score already taken by
+// the first and offered nothing at all, leaving a music that visibly has a score
+// saying it has none.
+it('offers a music\'s score again where the document holds that music twice', function () {
+    $booklet = bookletWithRoomForASong();
+
+    $first = BookletMusic::factory()->create(['booklet_id' => $booklet->booklet->id, 'music_id' => $booklet->birthday->id, 'sequence' => 1]);
+    $second = BookletMusic::factory()->create(['booklet_id' => $booklet->booklet->id, 'music_id' => $booklet->birthday->id, 'sequence' => 2]);
+
+    BookletScore::factory()->create([
+        'booklet_id' => $booklet->booklet->id,
+        'score_id' => $booklet->birthdayScore->id,
+        'added_music_id' => $first->id,
+        'sequence' => 1,
+    ]);
+
+    actingAs($booklet->user);
+
+    $outline = Livewire::test(BookletEditor::class, ['booklet' => $booklet->booklet])->instance()->outline;
+
+    expect(offersUnder($outline, 'added:'.$first->id))->toBe([])
+        ->and(collect(offersUnder($outline, 'added:'.$second->id))->pluck('score.id')->all())
+        ->toBe([$booklet->birthdayScore->id]);
+});
+
+// The look at a score the booklet has not taken. It is nowhere in the payload
+// the browser holds — that is only the rows — so this one preview is built by
+// the server, and built under the same entitlement a row's is.
+it('previews a score offered under a music, without putting it in the booklet', function () {
+    $booklet = bookletWithRoomForASong();
+    BookletMusic::factory()->create(['booklet_id' => $booklet->booklet->id, 'music_id' => $booklet->birthday->id]);
+
+    actingAs($booklet->user);
+
+    $editor = Livewire::test(BookletEditor::class, ['booklet' => $booklet->booklet]);
+
+    $editor->assertDontSeeHtml('data-offer-preview-modal')
+        ->call('previewScore', $booklet->birthdayScore->id)
+        ->assertSeeHtml('data-offer-preview-modal')
+        ->assertSeeHtml('data-score-preview-sheet');
+
+    expect($editor->instance()->scorePreview)
+        ->toMatchArray([
+            'kind' => 'score',
+            'scoreId' => $booklet->birthdayScore->id,
+            'format' => $booklet->birthdayScore->format->value,
+            'sections' => null,
+            'override' => [],
+        ]);
+
+    expect($booklet->booklet->entries()->where('score_id', $booklet->birthdayScore->id)->exists())->toBeFalse();
+
+    // And pressing the same eye again puts it away.
+    $editor->call('previewScore', $booklet->birthdayScore->id)
+        ->assertDontSeeHtml('data-offer-preview-modal');
+});
+
+it('refuses to preview a score the viewer may not read', function () {
+    $booklet = bookletWithRoomForASong();
+    $theirs = Score::factory()->abc()->create(['user_id' => User::factory()->create()->id]);
+
+    actingAs($booklet->user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet->booklet])
+        ->call('previewScore', $theirs->id)
+        ->assertDontSeeHtml('data-offer-preview-modal');
+});

@@ -207,6 +207,32 @@ class Booklet extends Model implements PlanDocument
     }
 
     /**
+     * The page one score is previewed against when there is no booklet to ask.
+     *
+     * A projection has no paper of its own — a deck is a screen — but the
+     * preview that shows one of its scores is the booklet reader's, and that
+     * reader derives a screen's shape from a page's proportions. So it borrows
+     * the booklet the application would have made: A5 portrait, in the default
+     * style.
+     *
+     * Only the proportions survive the trip. readerGeometry scales every
+     * millimetre here to the width the preview is actually given, so what is
+     * inherited is the relation between staff, lyric and heading — never a size
+     * on anybody's screen.
+     *
+     * @return array<string, mixed>
+     */
+    public static function previewGeometry(): array
+    {
+        return (new self)->forceFill([
+            'page_size' => BookletPageSize::A5->value,
+            'orientation' => BookletOrientation::Portrait->value,
+            'margin_mm' => 12.0,
+            ...BookletStyles::defaults(BookletStyles::DEFAULT),
+        ])->geometry();
+    }
+
+    /**
      * Which of the three typographies this booklet is set in.
      *
      * Read back off the face rather than stored: each style names a face of its
