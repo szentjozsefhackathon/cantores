@@ -48,7 +48,8 @@ resources/js/projection-editor.js
 
     <div class="mx-auto flex w-full max-w-[1600px] flex-col px-4 sm:px-6 lg:min-h-0 lg:flex-1 lg:px-8">
 
-        <x-plan-document-switcher :plan="$projection->musicPlan" :current="$projection" type="projection" />
+        <x-plan-document-switcher :plan="$projection->musicPlan" :current="$projection" type="projection"
+            :delete-confirm="__('Delete this projection? This cannot be undone.')" />
 
         {{-- The bar. Very short, and meant to be: a deck has a name and a shape,
              and everything else about how a slide looks was decided by whoever
@@ -210,12 +211,6 @@ resources/js/projection-editor.js
                     {{ __('Choose a score to see the slides.') }}
                 </flux:text>
             </flux:card>
-        </div>
-
-        <div class="mt-6 flex justify-end">
-            <flux:button variant="danger" icon="trash" wire:click="delete" wire:confirm="{{ __('Delete this projection? This cannot be undone.') }}">
-                {{ __('Delete') }}
-            </flux:button>
         </div>
     </div>
 </div>

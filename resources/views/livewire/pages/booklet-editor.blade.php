@@ -56,7 +56,8 @@ resources/js/booklet-editor.js
 
     <div class="mx-auto flex w-full max-w-[1600px] flex-col px-4 sm:px-6 lg:min-h-0 lg:flex-1 lg:px-8">
 
-        <x-plan-document-switcher :plan="$booklet->musicPlan" :current="$booklet" type="booklet" />
+        <x-plan-document-switcher :plan="$booklet->musicPlan" :current="$booklet" type="booklet"
+            :delete-confirm="__('Delete this booklet? This cannot be undone.')" />
 
         {{-- Geometry bar. Laid out as the score editor's setting toolbars are:
              every knob is its icon, and its name is in the tooltip, so a dozen
@@ -434,12 +435,6 @@ resources/js/booklet-editor.js
                     {{ __('Choose a score to see the pages.') }}
                 </flux:text>
             </flux:card>
-        </div>
-
-        <div class="mt-6 flex justify-end">
-            <flux:button variant="danger" icon="trash" wire:click="delete" wire:confirm="{{ __('Delete this booklet? This cannot be undone.') }}">
-                {{ __('Delete') }}
-            </flux:button>
         </div>
     </div>
 </div>

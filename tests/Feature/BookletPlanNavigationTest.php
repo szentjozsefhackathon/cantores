@@ -1,8 +1,10 @@
 <?php
 
 use App\Livewire\Pages\BookletEditor;
+use App\Livewire\Pages\ProjectionEditor;
 use App\Models\Booklet;
 use App\Models\MusicPlan;
+use App\Models\Projection;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -102,4 +104,61 @@ it('keeps someone elses booklet off a public plan', function () {
         ->assertOk()
         ->assertDontSeeHtml('href="'.route('booklets.edit', $booklet).'"')
         ->assertDontSee('Füzet megnyitása');
+});
+
+/**
+ * The toolbar at the top of an editor: one line with the plan, this
+ * document's siblings, the way to every document, and delete. A single
+ * sibling of a kind is its own button; more than one collapses into a
+ * dropdown so the line never wraps.
+ */
+it('offers the delete action and the all-documents link from the booklet editor toolbar', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $user->id, 'music_plan_id' => $plan->id]);
+
+    Livewire::actingAs($user)
+        ->test(BookletEditor::class, ['booklet' => $booklet])
+        ->assertSeeHtml('wire:confirm="Delete this booklet? This cannot be undone."')
+        ->assertSeeHtml('href="'.route('plan-documents').'"')
+        ->assertSee('Összes füzet és vetítés');
+});
+
+it('shows a single sibling booklet as its own button in the switcher', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $user->id, 'music_plan_id' => $plan->id]);
+    $sibling = Booklet::factory()->create(['user_id' => $user->id, 'music_plan_id' => $plan->id, 'title' => 'Kántorpéldány']);
+
+    Livewire::actingAs($user)
+        ->test(BookletEditor::class, ['booklet' => $booklet])
+        ->assertSeeHtml('href="'.route('booklets.edit', $sibling).'"')
+        ->assertSee('Kántorpéldány')
+        ->assertDontSee(__('Booklets'));
+});
+
+it('collapses several sibling booklets into a dropdown in the switcher', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $booklet = Booklet::factory()->create(['user_id' => $user->id, 'music_plan_id' => $plan->id]);
+    $first = Booklet::factory()->create(['user_id' => $user->id, 'music_plan_id' => $plan->id, 'title' => 'Kántorpéldány']);
+    $second = Booklet::factory()->create(['user_id' => $user->id, 'music_plan_id' => $plan->id, 'title' => 'Népnek']);
+
+    Livewire::actingAs($user)
+        ->test(BookletEditor::class, ['booklet' => $booklet])
+        ->assertSee(__('Booklets'))
+        ->assertSeeHtml('href="'.route('booklets.edit', $first).'"')
+        ->assertSeeHtml('href="'.route('booklets.edit', $second).'"');
+});
+
+it('offers the delete action and the all-documents link from the projection editor toolbar', function () {
+    $user = User::factory()->create();
+    $plan = MusicPlan::factory()->create(['user_id' => $user->id]);
+    $projection = Projection::factory()->create(['user_id' => $user->id, 'music_plan_id' => $plan->id]);
+
+    Livewire::actingAs($user)
+        ->test(ProjectionEditor::class, ['projection' => $projection])
+        ->assertSeeHtml('wire:confirm="Delete this projection? This cannot be undone."')
+        ->assertSeeHtml('href="'.route('plan-documents').'"')
+        ->assertSee('Összes füzet és vetítés');
 });
