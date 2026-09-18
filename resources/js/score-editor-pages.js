@@ -19,7 +19,7 @@ const KNOWN_CONDITIONAL_SUFFIXES = new Set(Object.values(CONDITIONAL_BLOCK_RATIO
  * header with a bare `%%`. ChordPro has no header at all: its directives travel
  * with the words they belong to, so a page carries whatever it was given.
  */
-const HEADER_END = {
+export const HEADER_END = {
     gabc: /^%%\s*$/,
     aretino: /^%%\s*$/,
     abc: /^K:/,
@@ -179,7 +179,7 @@ export function splitSoftSegments(pageSource) {
     return segments.map((segment) => segment.join('\n'));
 }
 
-function headerEndIndex(lines, format) {
+export function headerEndIndex(lines, format) {
     const pattern = HEADER_END[format];
 
     if (!pattern) { return -1; }

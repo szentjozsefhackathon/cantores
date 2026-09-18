@@ -3,6 +3,7 @@ import { renderAretinoSlide } from './score-editor-aretino.js';
 import { renderChordproSlides } from './score-editor-chordpro.js';
 import { renderGabcSlide } from './score-editor-gabc.js';
 import { splitPages } from './score-editor-pages.js';
+import { arrangeSections } from './score-sections.js';
 import { slideCanvas } from './slide-frame.js';
 import { slidePalette } from './slide-palette.js';
 
@@ -33,9 +34,16 @@ export { fitIntoBox, isSlideRatio, slideCanvas, slideRatios } from './slide-fram
  * suppressing the clef is a source edit rather than a directive, and its chord
  * symbols are written in Hungarian. All three happen before the split, because
  * a header inserted afterwards would land on the first page alone.
+ *
+ * A row that has chosen sections is arranged first, its chosen `%section`s
+ * strung together with a `%pagebreak` between each, so the split below never
+ * has to know sections exist — what it sees is a source with page breaks in
+ * it, exactly as it always has.
+ *
+ * @param {number[]|null} [sections] the row's chosen section references
  */
-export function ratioPageSources(format, content, settings, ratio) {
-    let source = content ?? '';
+export function ratioPageSources(format, content, settings, ratio, sections = null) {
+    let source = arrangeSections(content ?? '', format, sections, { separator: '%pagebreak' }).source;
 
     if (format === 'abc') {
         if (!/^X:/m.test(source)) { source = 'X:1\n' + source; }
@@ -113,11 +121,12 @@ export async function renderRatioPageSlides(format, pageSource, settings, ratio,
  *
  * @param {import('./slide-palette.js').SlidePalette} [palette] the deck's ink,
  *        for the one format that is words rather than an engraving
+ * @param {number[]|null} [sections] the row's chosen section references
  * @return {Promise<Array<{svg: SVGElement, overflows: boolean}>>}
  */
-export async function renderRatioPages(format, content, settings, ratio, palette) {
+export async function renderRatioPages(format, content, settings, ratio, palette, sections = null) {
     const pages = await Promise.all(
-        ratioPageSources(format, content, settings, ratio)
+        ratioPageSources(format, content, settings, ratio, sections)
             .map((page) => renderRatioPageSlides(format, page, settings, ratio, palette)),
     );
 

@@ -220,6 +220,16 @@ test('ABC gets its X line before the split, so every page has one', () => {
     }
 });
 
+// See plans/score-sections.md: a row's chosen sections are strung together
+// with a %pagebreak between each before anything else happens to the source,
+// so a row choosing the same section twice gets it twice, as its own page.
+test('a row choosing sections gives one page per chosen section, repeats included', () => {
+    const sectioned = 'X:1\nK:G\n%section 1\nA B|\n%section 2\nc d|\n';
+
+    assert.equal(ratioPageSources('abc', sectioned, {}, '16/9', [2, 1, 2]).length, 3);
+    assert.equal(ratioPageSources('abc', sectioned, {}, '16/9', null).length, 1);
+});
+
 test('suppressing the clef is a source edit, and the chords are read as Hungarian', () => {
     const [withClef] = ratioPageSources('abc', 'X:1\nK:F\n"H"F G|\n', {}, '16/9');
     const [noClef] = ratioPageSources('abc', 'X:1\nK:F\n"H"F G|\n', { abcNoClef: true }, '16/9');

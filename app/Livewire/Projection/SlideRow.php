@@ -5,6 +5,7 @@ namespace App\Livewire\Projection;
 use App\Models\ProjectionSlide;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
@@ -52,6 +53,17 @@ class SlideRow extends Component
     public function mount(): void
     {
         $this->text = $this->entry->text ?? '';
+    }
+
+    /**
+     * The deck chose this row's sections on our behalf, so our own copy of
+     * the entry — left untouched by the deck's own redraw, which is the
+     * whole point of being a component of our own — is out of date.
+     */
+    #[On('projection-entry-sections-changed.{entry.id}')]
+    public function refreshSections(): void
+    {
+        $this->entry->refresh();
     }
 
     /**

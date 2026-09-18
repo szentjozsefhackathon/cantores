@@ -1,6 +1,7 @@
 @php
     use App\Livewire\Pages\ProjectionEditor;
     use App\Support\ProjectionSettingFields;
+    use App\Support\ScoreSections;
     use Illuminate\Support\Arr;
     use Illuminate\Support\Js;
 
@@ -13,6 +14,18 @@
         $entry->id,
         $entry->added_music_id ?? 'null',
     ]);
+
+    // The chip editor stands only where the score actually has parts to
+    // choose from — see plans/score-sections.md.
+    $scoreSections = $entry->isText() ? [] : ScoreSections::list($entry->score?->content);
+    $sectionsByNumber = collect($scoreSections)->keyBy('n');
+
+    // A row set up against an earlier version of the score, told plainly
+    // rather than tracked: any change to the row clears it.
+    $scoreChanged = ! $entry->isText()
+        && $entry->score?->updated_at !== null
+        && $entry->updated_at !== null
+        && $entry->score->updated_at->gt($entry->updated_at);
 @endphp
 
 {{-- What the projection shows here.
@@ -90,6 +103,12 @@
                         @endif
                     </span>
 
+                    @if($scoreChanged)
+                        <flux:tooltip :content="__('The score has changed since')">
+                            <span data-entry-score-changed class="shrink-0 text-amber-500" aria-hidden="true">*</span>
+                        </flux:tooltip>
+                    @endif
+
                     {{-- The variation is the one heading line said against the row
                          rather than a slot or a music, so its switch rides here,
                          right after the title. Like the collections in the plan, the
@@ -140,6 +159,55 @@
                     class="mt-1 ms-5 max-w-full"
                     imgClass="max-h-24 max-w-full rounded bg-white object-contain"
                 />
+            @endif
+
+            {{-- A score's sections, chosen and ordered for this row alone — see
+                 plans/score-sections.md. Only offered where the score has any:
+                 one with no marker prints whole, exactly as it always has. --}}
+            @if(count($scoreSections) > 0)
+                <div data-entry-sections class="mt-2 flex flex-wrap items-center gap-1 border-t border-zinc-100 pt-2 dark:border-zinc-800">
+                    <flux:tooltip :content="__('Which parts of the score this row shows, and in what order')">
+                        <flux:icon name="list-bullet" variant="micro" class="shrink-0 text-zinc-400" />
+                    </flux:tooltip>
+
+                    @php $sectionCount = count($entry->sections ?? []); @endphp
+                    @forelse(($entry->sections ?? []) as $position => $reference)
+                        @php $section = $sectionsByNumber->get($reference); @endphp
+                        <span
+                            data-entry-section
+                            class="inline-flex shrink-0 items-center gap-0.5 rounded-md border px-1 py-0.5 text-xs
+                                {{ $section
+                                    ? 'border-blue-600 bg-blue-600/10 text-blue-700 dark:border-blue-400 dark:bg-blue-400/15 dark:text-blue-300'
+                                    : 'border-dashed border-amber-400 text-amber-500' }}"
+                        >
+                            <button type="button" {{ $position === 0 ? 'disabled' : '' }} wire:click="$parent.moveSection({{ $entry->id }}, {{ $position }}, -1)" aria-label="{{ __('Move up') }}" class="disabled:opacity-30">
+                                <flux:icon name="chevron-left" variant="micro" />
+                            </button>
+                            {{ $reference }}@if(($section['label'] ?? null)) &middot; {{ $section['label'] }}@endif
+                            <button type="button" {{ $position === $sectionCount - 1 ? 'disabled' : '' }} wire:click="$parent.moveSection({{ $entry->id }}, {{ $position }}, 1)" aria-label="{{ __('Move down') }}" class="disabled:opacity-30">
+                                <flux:icon name="chevron-right" variant="micro" />
+                            </button>
+                            <button type="button" wire:click="$parent.removeSection({{ $entry->id }}, {{ $position }})" aria-label="{{ __('Remove') }}">
+                                <flux:icon name="x-mark" variant="micro" />
+                            </button>
+                        </span>
+                    @empty
+                        <span class="text-xs italic text-zinc-400">{{ __('Whole score') }}</span>
+                    @endforelse
+
+                    <flux:dropdown>
+                        <flux:button size="sm" variant="ghost" icon="plus" :aria-label="__('Add a section')" />
+                        <flux:menu>
+                            @foreach($scoreSections as $section)
+                                <flux:menu.item wire:click="$parent.addSection({{ $entry->id }}, {{ $section['n'] }})">
+                                    {{ $section['n'] }}@if($section['label']) &middot; {{ $section['label'] }}@endif
+                                </flux:menu.item>
+                            @endforeach
+                            <flux:menu.separator />
+                            <flux:menu.item wire:click="$parent.clearSections({{ $entry->id }})">{{ __('All') }}</flux:menu.item>
+                        </flux:menu>
+                    </flux:dropdown>
+                </div>
             @endif
 
             <div data-entry-options class="mt-2 flex flex-wrap items-center gap-0.5 border-t border-zinc-100 pt-2 dark:border-zinc-800">

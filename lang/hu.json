@@ -1575,5 +1575,10 @@
     "Nothing is being projected right now.": "Most nincs vetítés.",
     "Drive the deck that is up right now.": "Irányítsd a most vetített diasort.",
     "Take this deck off the screen and end the projection? Starting a new one afterwards will show the title card again, giving you time to line it up.": "Leveszed ezt a vetítést a képernyőről, és lezárod? Ha ezután újat indítasz, újra megjelenik a címkártya, hogy legyen időd felkészülni.",
-    "Take the deck down": "Vetítés levétele"
+    "Take the deck down": "Vetítés levétele",
+    "The score has changed since": "A kotta azóta módosult",
+    "Whole score": "Teljes kotta",
+    "Add a section": "Szakasz hozzáadása",
+    "Which parts of the score this row prints, and in what order": "A kotta mely részeit nyomtatja ez a sor, és milyen sorrendben",
+    "Which parts of the score this row shows, and in what order": "A kotta mely részeit mutatja ez a sor, és milyen sorrendben"
 }

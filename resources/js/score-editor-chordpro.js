@@ -4,6 +4,7 @@ import { DEFAULT_LYRIC_SIZE_PT, DEFAULT_PAGE_WIDTH_MM, mmToPx, opticalLyricSizeP
 import { markupRuns, runsText } from './chordpro-markup.js';
 import { chordStringsOf, displayChord, displayChordsInHtml, displayChordsInText } from './chordpro-notation.js';
 import { splitSoftSegments } from './score-editor-pages.js';
+import { stripSectionMarkers } from './score-sections.js';
 import { packSoftPages } from './soft-pages.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
@@ -570,7 +571,9 @@ export function chordproMixin() {
             if (!container) { return; }
             container.innerHTML = '';
             this.hasPages = false;
-            const content = this.localContent;
+            // ChordPro has no comment character that hides a marker, unlike the
+            // three engraved formats: `%section` would otherwise be sung.
+            const content = stripSectionMarkers(this.localContent);
             if (!content || !content.trim()) { return; }
 
             if (this.isFixedRatio(this.chordproPageRatio)) {

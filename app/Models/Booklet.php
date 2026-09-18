@@ -291,6 +291,7 @@ class Booklet extends Model implements PlanDocument
                     'text' => $entry->text,
                     'sequence' => $entry->sequence,
                     'settings_override' => $entry->settings_override,
+                    'sections' => $entry->sections,
                     'start_on_new_page' => $entry->start_on_new_page,
                     'show_slot' => $entry->show_slot,
                     'show_variation' => $entry->show_variation,

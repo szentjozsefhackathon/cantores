@@ -332,6 +332,7 @@ class Projection extends Model implements PlanDocument
                     'sequence' => $entry->sequence,
                     'settings_override' => $entry->settings_override,
                     'excluded_slides' => $entry->excluded_slides,
+                    'sections' => $entry->sections,
                     'show_slot' => $entry->show_slot,
                     'show_music_title' => $entry->show_music_title,
                     'show_variation' => $entry->show_variation,

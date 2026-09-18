@@ -72,3 +72,5 @@
 | `%` | megjegyzés (sor végéig) |
 | `%%MIDI program 41` | MIDI / kiterjesztett parancs |
 | `+` | sorzáró folytatójel (hosszú sor tördelése) |
+| `%section` | szakasz kezdete; a füzetben és a vetítésben kiválasztható |
+| `%section Címke` | ugyanaz, névvel a szerkesztőben |

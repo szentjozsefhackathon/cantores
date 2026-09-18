@@ -65,3 +65,8 @@
 | `(Z)` | sorkizárt sortörés |
 | `(,)` | kis szóköz |
 | `(//)` | szóköz |
+
+| Egyéb | |
+|---|---|
+| `%section` | szakasz kezdete; a füzetben és a vetítésben kiválasztható |
+| `%section Címke` | ugyanaz, névvel a szerkesztőben |

@@ -26,6 +26,8 @@
 | Egyéb | |
 |---|---|
 | `#` | megjegyzés (sor elején, nem jelenik meg) |
+| `%section` | szakasz kezdete; a füzetben és a vetítésben kiválasztható; a sor magából a dalszövegből törlődik |
+| `%section Címke` | ugyanaz, névvel a szerkesztőben |
 
 | Vetítés | |
 |---|---|

@@ -78,3 +78,8 @@
 | `%title: Cím` | cím (középre, félkövéren), továbbiak: rubric, caption, indent |
 | `%option: lyricSize=12` | megjelenítő-beállítás a forrásból (soronként egy, ismételhető) |
 | `%%` | fejléc lezárása |
+
+| Egyéb | |
+|---|---|
+| `%section` | szakasz kezdete; a füzetben és a vetítésben kiválasztható |
+| `%section Címke` | ugyanaz, névvel a szerkesztőben |

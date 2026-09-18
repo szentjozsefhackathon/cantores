@@ -34,6 +34,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $text
  * @property int $sequence
  * @property array<string, mixed>|null $settings_override
+ * @property list<int>|null $sections
  * @property bool $start_on_new_page
  * @property bool $show_slot
  * @property bool $show_variation
@@ -73,6 +74,7 @@ class BookletScore extends Model implements PlanEntry
         'text',
         'sequence',
         'settings_override',
+        'sections',
         'start_on_new_page',
         'show_slot',
         'show_variation',
@@ -87,6 +89,7 @@ class BookletScore extends Model implements PlanEntry
     {
         return [
             'settings_override' => 'array',
+            'sections' => 'array',
             'start_on_new_page' => 'boolean',
             'show_slot' => 'boolean',
             'show_variation' => 'boolean',

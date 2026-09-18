@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Booklet;
+use App\Models\BookletScore;
 use App\Models\Score;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\BookletScore>
+ * @extends Factory<BookletScore>
  */
 class BookletScoreFactory extends Factory
 {
@@ -21,6 +22,7 @@ class BookletScoreFactory extends Factory
             'score_id' => Score::factory(),
             'sequence' => 0,
             'settings_override' => null,
+            'sections' => null,
             'start_on_new_page' => false,
             'show_slot' => true,
             'show_variation' => false,
@@ -37,6 +39,18 @@ class BookletScoreFactory extends Factory
         return $this->state(fn (): array => [
             'score_id' => null,
             'text' => $markdown,
+        ]);
+    }
+
+    /**
+     * This row prints only the given `%section` references, in order.
+     *
+     * @param  list<int>  $references
+     */
+    public function withSections(array $references): static
+    {
+        return $this->state(fn (): array => [
+            'sections' => $references,
         ]);
     }
 }

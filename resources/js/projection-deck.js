@@ -153,7 +153,7 @@ async function slidesOf(entry, ratio, palette, geometry) {
  */
 async function scoreSlides(entry, ratio, palette) {
     const settings = resolveSlideSettings(entry.format, entry.settings ?? {}, ratio, entry.override);
-    const pages = await renderRatioPages(entry.format, entry.content ?? '', settings, ratio, palette);
+    const pages = await renderRatioPages(entry.format, entry.content ?? '', settings, ratio, palette, entry.sections ?? null);
     const canvas = slideCanvas(entry.format, ratio);
     const heading = headingOf(entry);
 

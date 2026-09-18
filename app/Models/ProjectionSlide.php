@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $sequence
  * @property array<string, array<string, mixed>>|null $settings_override
  * @property array<string, list<int>>|null $excluded_slides
+ * @property list<int>|null $sections
  * @property bool $show_slot
  * @property bool $show_music_title
  * @property bool $show_variation
@@ -76,6 +77,7 @@ class ProjectionSlide extends Model implements PlanEntry
         'sequence',
         'settings_override',
         'excluded_slides',
+        'sections',
         'show_slot',
         'show_music_title',
         'show_variation',
@@ -90,6 +92,7 @@ class ProjectionSlide extends Model implements PlanEntry
         return [
             'settings_override' => 'array',
             'excluded_slides' => 'array',
+            'sections' => 'array',
             'show_slot' => 'boolean',
             'show_music_title' => 'boolean',
             'show_variation' => 'boolean',

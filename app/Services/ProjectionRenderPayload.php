@@ -299,6 +299,7 @@ class ProjectionRenderPayload extends PlanRenderPayload
                     'kind' => 'score',
                     'format' => $source['format'],
                     'content' => $source['content'],
+                    'sections' => $entry->sections,
                     // The score's whole settings column, not this ratio's slice
                     // of it: which slice is read is the deck's ratio, and the
                     // browser already knows that from the geometry.

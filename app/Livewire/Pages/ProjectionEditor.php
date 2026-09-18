@@ -17,6 +17,7 @@ use App\Services\PlanOutline;
 use App\Services\PlanScoreToggle;
 use App\Services\ProjectionRenderPayload;
 use App\Support\ProjectionSettingFields;
+use App\Support\ScoreSections;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
@@ -730,6 +731,119 @@ class ProjectionEditor extends Component
         $entry->update(['excluded_slides' => $excluded === [] ? null : $excluded]);
 
         $this->forgetEntries();
+    }
+
+    /**
+     * Add one of the score's own sections to this row, at the end — which is
+     * also how a refrain sung after every stanza is made: adding the same
+     * section again.
+     *
+     * A number the score does not have is refused rather than written, the
+     * same guard the editor's chip list already draws from ScoreSections.
+     */
+    public function addSection(int $entryId, int $sectionNumber): void
+    {
+        $this->authorize('update', $this->projection);
+
+        $entry = $this->projection->entries()->with('score')->find($entryId);
+
+        if (! $entry instanceof ProjectionSlide || $entry->score === null) {
+            return;
+        }
+
+        if (! ScoreSections::has($entry->score->content, $sectionNumber)) {
+            return;
+        }
+
+        $this->writeSections($entry, [...($entry->sections ?? []), $sectionNumber]);
+    }
+
+    /**
+     * Take one chosen reference back out, by its position in the row's own
+     * list — not by the section number, since a number may be chosen more
+     * than once.
+     */
+    public function removeSection(int $entryId, int $position): void
+    {
+        $this->authorize('update', $this->projection);
+
+        $entry = $this->projection->entries()->find($entryId);
+
+        if (! $entry instanceof ProjectionSlide || ! is_array($entry->sections)) {
+            return;
+        }
+
+        if (! array_key_exists($position, $entry->sections)) {
+            return;
+        }
+
+        $sections = $entry->sections;
+        unset($sections[$position]);
+
+        $this->writeSections($entry, array_values($sections));
+    }
+
+    /**
+     * Swap one chosen reference past the one beside it — the up/down arrows
+     * the rows already use for entries, not drag and drop.
+     */
+    public function moveSection(int $entryId, int $position, int $direction): void
+    {
+        $this->authorize('update', $this->projection);
+
+        $entry = $this->projection->entries()->find($entryId);
+
+        if (! $entry instanceof ProjectionSlide || ! is_array($entry->sections)) {
+            return;
+        }
+
+        $sections = $entry->sections;
+        $target = $position + $direction;
+
+        if (! array_key_exists($position, $sections) || ! array_key_exists($target, $sections)) {
+            return;
+        }
+
+        [$sections[$position], $sections[$target]] = [$sections[$target], $sections[$position]];
+
+        $this->writeSections($entry, $sections);
+    }
+
+    /** Back to the whole score, as written. */
+    public function clearSections(int $entryId): void
+    {
+        $this->authorize('update', $this->projection);
+
+        $entry = $this->projection->entries()->find($entryId);
+
+        if (! $entry instanceof ProjectionSlide) {
+            return;
+        }
+
+        $this->writeSections($entry, []);
+    }
+
+    /**
+     * Write a row's chosen sections back, clearing what it skips.
+     *
+     * The positions `excluded_slides` names are the row's slides in order —
+     * exactly what a change to `sections` just moved, so keeping them would
+     * hide whatever now happens to sit where a skipped one used to.
+     */
+    private function writeSections(ProjectionSlide $entry, array $sections): void
+    {
+        $entry->update([
+            'sections' => $sections === [] ? null : array_values($sections),
+            'excluded_slides' => null,
+        ]);
+
+        $this->forgetEntries();
+
+        // SlideRow keeps its own copy of the entry and is left alone when
+        // this component redraws — see its own docblock — so the chip list
+        // it draws from $entry->sections would otherwise go stale until the
+        // page is reloaded.
+        $this->dispatch("projection-entry-sections-changed.{$entry->id}");
     }
 
     /**

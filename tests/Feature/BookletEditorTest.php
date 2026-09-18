@@ -2809,3 +2809,118 @@ it('copies the booklet from the editor and goes straight to the copy', function 
         ->and($copy->title)->toBe(__(':title (copy)', ['title' => 'Zenekari füzet']))
         ->and($copy->entries()->count())->toBe(1);
 });
+
+/*
+ * See plans/score-sections.md. A row chooses which of a score's %section
+ * markers it prints, and in what order.
+ */
+it('adds, removes, moves and clears a rows chosen sections', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'content' => "X:1\nK:G\n%section 1\nA B|\n%section 2\nc d|\n%section Refrén\ne f|\n",
+    ]);
+
+    $entry = BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => $score->id,
+    ]);
+
+    actingAs($user);
+
+    $editor = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('addSection', $entry->id, 1)
+        ->call('addSection', $entry->id, 3)
+        ->call('addSection', $entry->id, 3)
+        ->assertDispatched("booklet-entry-sections-changed.{$entry->id}");
+
+    expect($entry->fresh()->sections)->toBe([1, 3, 3]);
+
+    $editor->call('moveSection', $entry->id, 0, 1);
+    expect($entry->fresh()->sections)->toBe([3, 1, 3]);
+
+    $editor->call('removeSection', $entry->id, 1);
+    expect($entry->fresh()->sections)->toBe([3, 3]);
+
+    $editor->call('clearSections', $entry->id);
+    expect($entry->fresh()->sections)->toBeNull();
+});
+
+it('refuses a section number the score does not have', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'content' => "X:1\nK:G\n%section 1\nA B|\n",
+    ]);
+
+    $entry = BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => $score->id,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('addSection', $entry->id, 5);
+
+    expect($entry->fresh()->sections)->toBeNull();
+});
+
+it('carries a rows sections through the render payload', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'content' => "X:1\nK:G\n%section 1\nA B|\n%section 2\nc d|\n",
+    ]);
+
+    $entry = BookletScore::factory()->withSections([2, 1])->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => $score->id,
+    ]);
+
+    actingAs($user);
+
+    $payload = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->get('renderPayload');
+
+    expect($payload[0]['sections'])->toBe([2, 1]);
+});
+
+it('refuses to change sections in somebody elses booklet', function () {
+    $owner = User::factory()->create();
+    $stranger = User::factory()->create();
+    $booklet = bookletFor($owner);
+    $score = Score::factory()->abc()->create([
+        'user_id' => $owner->id,
+        'content' => "X:1\nK:G\n%section 1\nA B|\n",
+    ]);
+
+    $entry = BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => $score->id,
+    ]);
+
+    actingAs($stranger);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])->assertForbidden();
+
+    expect($entry->fresh()->sections)->toBeNull();
+});
+
+it('copies a rows chosen sections when the booklet is duplicated', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    BookletScore::factory()->withSections([2, 1, 1])->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => $score->id,
+    ]);
+
+    $copy = $booklet->duplicate();
+
+    expect($copy->entries()->first()->sections)->toBe([2, 1, 1]);
+});

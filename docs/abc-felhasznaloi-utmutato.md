@@ -399,6 +399,33 @@ viselkednének. Ha több sorra van szükség, írj több egysoros blokkot egymá
 Papír és igazodó módban egyik blokk sem él, és a `%pagebreak` sorok is
 figyelmen kívül maradnak.
 
+## 13.5. Szakaszok: egy himnusz, bármelyik versszak
+
+Egy himnusznak több versszaka van, gyakran refrénnel. A `%section` sorral
+megjelölheted, hol kezdődik egy-egy rész, és a füzet vagy a vetítés soronként
+eldöntheti, melyik részeket kéri, milyen sorrendben — akár ismételve is, ha a
+refrén minden versszak után visszatér.
+
+```abc
+X:1
+T:Ki Jézus Szívét
+K:G
+%section 1
+...az első versszak kottája...
+%section 2
+...
+%section Refrén
+...
+```
+
+A szakaszokat a sorrendjük számozza (1, 2, 3, …); a `%section` utáni szöveg
+csak egy olvasható címke a szerkesztőnek, nem kell egyedinek lennie — egy
+himnuszban a `%section Refrén` nyugodtan állhat többször is. A jel a kotta
+minden formátumában megjegyzés, tehát semmit nem változtat a megjelenésen; a
+füzet és a vetítés szerkesztőjében jelenik meg mint választható rész.
+
+Egy `%section` nélküli kotta pontosan úgy viselkedik, mint eddig: a füzet és a
+vetítés a teljes kottát nyomtatja, illetve mutatja.
 
 ## 14. Gyakori hibák
 

@@ -5,6 +5,7 @@ namespace App\Livewire\Booklet;
 use App\Models\BookletScore;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
@@ -54,6 +55,17 @@ class EntryRow extends Component
     public function mount(): void
     {
         $this->text = $this->entry->text ?? '';
+    }
+
+    /**
+     * The booklet chose this row's sections on our behalf, so our own copy
+     * of the entry — left untouched by the booklet's own redraw, which is
+     * the whole point of being a component of our own — is out of date.
+     */
+    #[On('booklet-entry-sections-changed.{entry.id}')]
+    public function refreshSections(): void
+    {
+        $this->entry->refresh();
     }
 
     /**

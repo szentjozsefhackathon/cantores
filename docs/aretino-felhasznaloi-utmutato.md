@@ -1105,6 +1105,35 @@ meg a kottára kattintva a hozzá tartozó forrássort.
 egy több soros blokk további sorai a többi arányban is élő forrásként
 viselkednének. Ha több sorra van szükség, írj több egysoros blokkot egymás alá.
 
+### Szakaszok: egy himnusz, bármelyik versszak
+
+Egy himnusznak több versszaka van, gyakran refrénnel. A `%section` sorral
+megjelölheted, hol kezdődik egy-egy rész, és a füzet vagy a vetítés soronként
+eldöntheti, melyik részeket kéri, milyen sorrendben — akár ismételve is, ha a
+refrén minden versszak után visszatér:
+
+```
+name: Ki Jézus Szívét;
+%%
+%section 1
+...az első versszak kottája...
+%section 2
+...
+%section Refrén
+...
+```
+
+A szakaszokat a sorrendjük számozza (1, 2, 3, …); a `%section` utáni szöveg
+csak egy olvasható címke a szerkesztőnek, nem kell egyedinek lennie — egy
+himnuszban a `%section Refrén` nyugodtan állhat többször is. A jel megjegyzés
+marad, tehát semmit nem változtat a megjelenésen, és a forrás hosszát sem —
+ugyanúgy, ahogy a fenti feltételes blokkoké sem az, így a szerkesztő kattintásai
+továbbra is a helyes forrássorra mutatnak. A füzet és a vetítés szerkesztőjében
+jelenik meg mint választható rész.
+
+Egy `%section` nélküli kotta pontosan úgy viselkedik, mint eddig: a füzet és a
+vetítés a teljes kottát nyomtatja, illetve mutatja.
+
 ### Export
 
 A kotta SVG és PNG formátumban exportálható és képként másolható is. Így szöveg- és kiadványszerkesztőben akár professzionális nyomtatással is előállítható.

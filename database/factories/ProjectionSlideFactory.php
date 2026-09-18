@@ -23,6 +23,7 @@ class ProjectionSlideFactory extends Factory
             'sequence' => 0,
             'settings_override' => null,
             'excluded_slides' => null,
+            'sections' => null,
             'show_slot' => false,
             'show_music_title' => false,
             'show_variation' => false,
@@ -36,6 +37,18 @@ class ProjectionSlideFactory extends Factory
         return $this->state(fn (): array => [
             'score_id' => null,
             'text' => $markdown,
+        ]);
+    }
+
+    /**
+     * This row shows only the given `%section` references, in order.
+     *
+     * @param  list<int>  $references
+     */
+    public function withSections(array $references): static
+    {
+        return $this->state(fn (): array => [
+            'sections' => $references,
         ]);
     }
 }

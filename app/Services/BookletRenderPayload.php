@@ -158,6 +158,7 @@ class BookletRenderPayload extends PlanRenderPayload
                     'kind' => 'score',
                     'format' => $source['format'],
                     'content' => $source['content'],
+                    'sections' => $entry->sections,
                     'settings' => $source['settings'],
                     'override' => self::overrideOf($entry, $source['format']),
                 ];

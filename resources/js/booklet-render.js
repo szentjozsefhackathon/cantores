@@ -13,6 +13,7 @@ import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcMixin, hungarianChords
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { gabcMixin } from './score-editor-gabc.js';
+import { arrangeSections } from './score-sections.js';
 import { ensureFontsLoaded, injectWebFontsIntoSvg } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
 
@@ -627,7 +628,7 @@ function imageSvg(dataUri, width, height) {
  * @returns {Promise<Array<{height: number, svg: string, spaceBefore?: number, keepWithNext?: boolean}>>}
  */
 async function musicBlocks(format, entry, resolved, layoutWidthPx, geometry, host) {
-    const content = entry.content ?? '';
+    const content = arrangeSections(entry.content ?? '', format, entry.sections ?? null, { separator: '' }).source;
 
     if (content.trim() === '') {
         return [];

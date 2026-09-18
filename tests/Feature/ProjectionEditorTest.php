@@ -491,6 +491,124 @@ it('refuses to skip a slide in somebody elses deck', function () {
 });
 
 /*
+ * See plans/score-sections.md. A row chooses which of a score's %section
+ * markers it shows, and in what order — and a change to that list clears
+ * excluded_slides, since the positions it names have just moved.
+ */
+it('adds, removes, moves and clears a rows chosen sections', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'content' => "X:1\nK:G\n%section 1\nA B|\n%section 2\nc d|\n%section Refrén\ne f|\n",
+    ]);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+        'excluded_slides' => ['16/9' => [0]],
+    ]);
+
+    actingAs($user);
+
+    $editor = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('addSection', $entry->id, 1)
+        ->call('addSection', $entry->id, 3)
+        ->call('addSection', $entry->id, 3)
+        ->assertDispatched("projection-entry-sections-changed.{$entry->id}");
+
+    expect($entry->fresh()->sections)->toBe([1, 3, 3])
+        ->and($entry->fresh()->excluded_slides)->toBeNull();
+
+    $editor->call('moveSection', $entry->id, 0, 1);
+    expect($entry->fresh()->sections)->toBe([3, 1, 3]);
+
+    $editor->call('removeSection', $entry->id, 1);
+    expect($entry->fresh()->sections)->toBe([3, 3]);
+
+    $editor->call('clearSections', $entry->id);
+    expect($entry->fresh()->sections)->toBeNull();
+});
+
+it('refuses a section number the score does not have', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'content' => "X:1\nK:G\n%section 1\nA B|\n",
+    ]);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('addSection', $entry->id, 5);
+
+    expect($entry->fresh()->sections)->toBeNull();
+});
+
+it('carries a rows sections through the render payload', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $score = Score::factory()->abc()->create([
+        'user_id' => $user->id,
+        'content' => "X:1\nK:G\n%section 1\nA B|\n%section 2\nc d|\n",
+    ]);
+
+    $entry = ProjectionSlide::factory()->withSections([2, 1])->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+    ]);
+
+    actingAs($user);
+
+    $payload = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->get('renderPayload');
+
+    expect($payload[0]['sections'])->toBe([2, 1]);
+});
+
+it('refuses to change sections in somebody elses deck', function () {
+    $owner = User::factory()->create();
+    $stranger = User::factory()->create();
+    $projection = projectionFor($owner);
+    $score = Score::factory()->abc()->create([
+        'user_id' => $owner->id,
+        'content' => "X:1\nK:G\n%section 1\nA B|\n",
+    ]);
+
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+    ]);
+
+    actingAs($stranger);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])->assertForbidden();
+
+    expect($entry->fresh()->sections)->toBeNull();
+});
+
+it('copies a rows chosen sections when the deck is duplicated', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $score = Score::factory()->abc()->create(['user_id' => $user->id]);
+
+    ProjectionSlide::factory()->withSections([2, 1, 1])->create([
+        'projection_id' => $projection->id,
+        'score_id' => $score->id,
+    ]);
+
+    $copy = $projection->duplicate();
+
+    expect($copy->entries()->first()->sections)->toBe([2, 1, 1]);
+});
+
+/*
  * The two knobs that exist for a projector and for nothing else. A booklet
  * correctly refuses them — a hairline is right on paper — so a projection has to
  * offer them itself.
