@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Booklet\EntryRow;
 use App\Livewire\Pages\BookletEditor;
 use App\Models\Booklet;
 use App\Models\BookletMusic;
@@ -90,6 +91,23 @@ it('adds a music to a booklet without touching the plan, and prints its score un
 
     expect($headings[$booklet->plannedRow->id]['music'])->toBe('Ave verum')
         ->and($headings[$row->id]['music'])->toBe('Boldog születésnapot');
+});
+
+it('names a score under its own added music only in the group heading, not again in the row', function () {
+    $user = User::factory()->create();
+    $booklet = Booklet::factory()->create(['user_id' => $user->id]);
+    $music = Music::factory()->create(['user_id' => $user->id, 'title' => 'Boldog születésnapot']);
+    $added = BookletMusic::factory()->create(['booklet_id' => $booklet->id, 'music_id' => $music->id]);
+    $entry = BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => Score::factory()->abc()->create(['user_id' => $user->id, 'music_id' => $music->id])->id,
+        'added_music_id' => $added->id,
+    ]);
+
+    actingAs($user);
+
+    expect(Livewire::test(EntryRow::class, ['entry' => $entry])->html())
+        ->not->toContain($music->title);
 });
 
 it('moves and removes a booklet\'s own music', function () {

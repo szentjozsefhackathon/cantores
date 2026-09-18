@@ -79,9 +79,9 @@
                 @else
                     {{-- A score chosen outside the plan stands at the foot of the
                          pane with nothing above it to say what it is, so it names its
-                         own music. One chosen from the plan has the music's name a
-                         line above it already. --}}
-                    @php $music = $entry->assignment === null ? $entry->score?->music : null; @endphp
+                         own music. One chosen from the plan, or added under a local
+                         music group, has the music's name a line above it already. --}}
+                    @php $music = ($entry->assignment === null && $entry->added_music_id === null) ? $entry->score?->music : null; @endphp
                     @if($music)
                         <span class="inline-flex min-w-0 shrink items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
                             <flux:icon name="music" variant="micro" class="shrink-0 text-indigo-400" />

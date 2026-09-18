@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Pages\ProjectionEditor;
+use App\Livewire\Projection\SlideRow;
 use App\Models\Music;
 use App\Models\MusicPlan;
 use App\Models\MusicPlanSlot;
@@ -138,6 +139,21 @@ it('adds a music between slots at the end of the deck without touching the plan'
         ->and($added->music_plan_slot_plan_id)->toBeNull()
         ->and($added->sequence)->toBe(2)
         ->and(topLevelKeys($deck->projection))->toBe(['slot:'.$deck->gloria->id, 'slot:'.$deck->offertory->id, 'slot:'.$deck->communion->id, 'added:'.$added->id]);
+});
+
+it('names a score under its own added music only in the group heading, not again in the row', function () {
+    $deck = deckWithRoomForASong();
+    $added = ProjectionMusic::factory()->create(['projection_id' => $deck->projection->id, 'music_id' => $deck->birthday->id]);
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $deck->projection->id,
+        'score_id' => $deck->birthdayScore->id,
+        'added_music_id' => $added->id,
+    ]);
+
+    actingAs($deck->user);
+
+    expect(Livewire::test(SlideRow::class, ['entry' => $entry])->html())
+        ->not->toContain($deck->birthday->title);
 });
 
 it('offers adding a music to every slot, empty ones included', function () {
