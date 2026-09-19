@@ -3,51 +3,55 @@
 namespace App\Models;
 
 use App\Concerns\HasVisibilityScoping;
+use App\Facades\GenreContext;
 use App\Support\CacheKey;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Scout\Attributes\SearchUsingFullText;
 use Laravel\Scout\Searchable;
 use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Models\Audit;
 
 /**
  * @property int $id
  * @property string $title
  * @property string|null $custom_id
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property int|null $user_id
  * @property string|null $subtitle
  * @property bool $is_private
  * @property int|null $import_batch_number
  * @property string|null $titles
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Audit> $audits
  * @property-read int|null $audits_count
- * @property-read \App\Models\MusicRelation|\App\Models\MusicCollection|\App\Models\AuthorMusic|null $pivot
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Author> $authors
+ * @property-read MusicRelation|MusicCollection|AuthorMusic|null $pivot
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Author> $authors
  * @property-read int|null $authors_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Collection> $collections
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Collection> $collections
  * @property-read int|null $collections_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Genre> $genres
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Genre> $genres
  * @property-read int|null $genres_count
  * @property-read bool $is_verified
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicPlanSlotAssignments
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MusicPlanSlotAssignment> $musicPlanSlotAssignments
  * @property-read int|null $music_plan_slot_assignments_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Score> $scores
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Score> $scores
  * @property-read int|null $scores_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicRelation> $directMusicRelations
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MusicRelation> $directMusicRelations
  * @property-read int|null $direct_music_relations_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicRelation> $inverseMusicRelations
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MusicRelation> $inverseMusicRelations
  * @property-read int|null $inverse_music_relations_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicTag> $tags
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MusicTag> $tags
  * @property-read int|null $tags_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicUrl> $urls
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MusicUrl> $urls
  * @property-read int|null $urls_count
- * @property-read \App\Models\User|null $user
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicVerification> $verifications
+ * @property-read User|null $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MusicVerification> $verifications
  * @property-read int|null $verifications_count
  *
  * @method static \Database\Factories\MusicFactory factory($count = null, $state = [])
@@ -116,7 +120,7 @@ class Music extends Model implements Auditable
     /**
      * Get the user who owns this music.
      */
-    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
@@ -133,6 +137,14 @@ class Music extends Model implements Auditable
     }
 
     /**
+     * Get exceptional Diatár matches curated for this music.
+     */
+    public function diatarBindings(): HasMany
+    {
+        return $this->hasMany(DiatarMusicBinding::class);
+    }
+
+    /**
      * Get the collections that should be displayed for this music, filtered and ranked.
      *
      * Collections that are not visible to the given user, or that belong to a genre
@@ -140,7 +152,7 @@ class Music extends Model implements Auditable
      * contain the music). The remaining collections are ordered by editor-assigned
      * priority (lower first), then verified status, then size.
      *
-     * @return \Illuminate\Support\Collection<int, \App\Models\Collection>
+     * @return \Illuminate\Support\Collection<int, Collection>
      */
     public function displayCollections(?User $user = null): \Illuminate\Support\Collection
     {
@@ -153,7 +165,7 @@ class Music extends Model implements Auditable
             $collections->loadCount('music');
         }
 
-        $genreId = \App\Facades\GenreContext::getId();
+        $genreId = GenreContext::getId();
 
         return $collections
             ->filter(fn (Collection $collection) => $collection->isVisibleTo($user))
@@ -341,7 +353,7 @@ class Music extends Model implements Auditable
      */
     public function scopeForCurrentGenre($query)
     {
-        $genreId = \App\Facades\GenreContext::getId();
+        $genreId = GenreContext::getId();
 
         if ($genreId !== null) {
             // Filter by current genre (including music without genres)

@@ -298,6 +298,9 @@ new class extends Component
                     </form>
                     <x-music-plan-booklet-actions :plan="$musicPlan" />
                     <x-music-plan-projection-actions :plan="$musicPlan" />
+                    @if($isOwner && $isPublished)
+                        <livewire:diatar-export :music-plan="$musicPlan" />
+                    @endif
                 </div>
             </div>
         </flux:card>

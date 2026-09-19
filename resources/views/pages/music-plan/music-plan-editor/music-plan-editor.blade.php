@@ -259,6 +259,9 @@
                     </form>
                     <x-music-plan-booklet-actions :plan="$musicPlan" />
                     <x-music-plan-projection-actions :plan="$musicPlan" />
+                    @if($isPublished)
+                        <livewire:diatar-export :music-plan="$musicPlan" />
+                    @endif
                     <flux:button
                         variant="danger"
                         icon="trash"

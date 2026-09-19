@@ -69,6 +69,53 @@
         </div>
         <flux:error name="selectedGenres" />
 
+        <div class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+            <div>
+                <flux:heading size="sm">{{ __('Diatár sources') }}</flux:heading>
+                <flux:description>{{ __('Associate the DTX books that can represent this collection, then choose at most one default.') }}</flux:description>
+            </div>
+
+            <flux:input
+                wire:model.live.debounce.300ms="diatarSearch"
+                icon="magnifying-glass"
+                :placeholder="__('Search Diatár sources')"
+            />
+
+            <div class="max-h-52 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+                @forelse($this->diatarBooks() as $book)
+                    <label wire:key="diatar-book-{{ $book->id }}" class="flex cursor-pointer items-start gap-3 rounded-md p-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <flux:checkbox wire:model.live="selectedDiatarBookIds" value="{{ $book->id }}" />
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-sm font-medium">{{ $book->title }} — {{ $book->source_path }}</span>
+                            @if(! $book->available)
+                                <span class="block text-xs text-red-600 dark:text-red-400">
+                                    {{ __('Unavailable') }}: {{ $book->unavailable_reason }}
+                                </span>
+                            @elseif($book->short_name)
+                                <span class="block text-xs text-gray-500 dark:text-gray-400">{{ $book->short_name }}</span>
+                            @endif
+                        </span>
+                    </label>
+                @empty
+                    <flux:text class="p-2 text-sm text-gray-500">{{ __('No Diatár sources match the search.') }}</flux:text>
+                @endforelse
+            </div>
+            <flux:error name="selectedDiatarBookIds" />
+
+            <flux:field>
+                <flux:label>{{ __('Default Diatár source') }}</flux:label>
+                <flux:select wire:model="defaultDiatarBookId">
+                    <flux:select.option value="">{{ __('No default source') }}</flux:select.option>
+                    @foreach($this->diatarBooks()->whereIn('id', $selectedDiatarBookIds) as $book)
+                        <flux:select.option value="{{ $book->id }}" :disabled="! $book->available">
+                            {{ $book->title }} — {{ $book->source_path }}@if(! $book->available) ({{ __('Unavailable') }})@endif
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:error name="defaultDiatarBookId" />
+            </flux:field>
+        </div>
+
         @if($canUploadCover)
         <div class="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
             <flux:heading size="sm">{{ __('Cover Image') }}</flux:heading>

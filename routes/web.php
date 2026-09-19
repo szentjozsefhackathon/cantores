@@ -6,6 +6,7 @@ use App\Http\Controllers\BookletLoanStripController;
 use App\Http\Controllers\BookletPdfExportController;
 use App\Http\Controllers\BookletScorePageController;
 use App\Http\Controllers\BookletStripController;
+use App\Http\Controllers\DiatarExportController;
 use App\Http\Controllers\HumanCheckController;
 use App\Http\Controllers\MusicPlanController;
 use App\Http\Controllers\PresentationPayloadController;
@@ -157,6 +158,10 @@ Route::post('/music-plans', [MusicPlanController::class, 'store'])
 Route::post('/music-plans/{musicPlan}/copy', [MusicPlanController::class, 'copy'])
     ->middleware(['auth', 'verified'])
     ->name('music-plans.copy');
+
+Route::post('/music-plans/{musicPlan}/diatar-export', DiatarExportController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('music-plans.diatar-export');
 
 // Music plan editor - with optional parameter for existing plans
 Route::livewire('/music-plan/{musicPlan?}', 'pages::music-plan.music-plan-editor')

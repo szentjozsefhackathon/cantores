@@ -3,8 +3,11 @@
 namespace App\Livewire\Pages\Editor;
 
 use App\Models\Collection;
+use App\Models\DiatarBook;
 use App\Models\Genre;
 use App\Services\CollectionCoverService;
+use App\Services\Diatar\CollectionDiatarBookService;
+use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -33,6 +36,12 @@ class CollectionEditModal extends Component
     public int $priority = 100;
 
     public array $selectedGenres = [];
+
+    public array $selectedDiatarBookIds = [];
+
+    public ?int $defaultDiatarBookId = null;
+
+    public string $diatarSearch = '';
 
     public bool $canUploadCover = false;
 
@@ -63,6 +72,11 @@ class CollectionEditModal extends Component
         $this->isPrivate = $collection->is_private;
         $this->priority = $collection->priority;
         $this->selectedGenres = $collection->genres->pluck('id')->toArray();
+        $collection->load('diatarBooks');
+        $this->selectedDiatarBookIds = $collection->diatarBooks->modelKeys();
+        $this->defaultDiatarBookId = $collection->diatarBooks
+            ->first(fn (DiatarBook $book): bool => (bool) $book->pivot->is_default)?->id;
+        $this->diatarSearch = '';
         $this->canUploadCover = Gate::check('uploadCover', $collection);
         $this->canVerify = Gate::check('verify', $collection);
         $this->currentCoverUrl = $collection->coverUrl();
@@ -75,7 +89,7 @@ class CollectionEditModal extends Component
     /**
      * Save changes to the collection.
      */
-    public function update(): void
+    public function update(CollectionDiatarBookService $diatarBooks): void
     {
         $collection = Collection::findOrFail($this->collectionId);
         $this->authorize('update', $collection);
@@ -88,6 +102,9 @@ class CollectionEditModal extends Component
             'priority' => ['integer', 'min:0', 'max:65535'],
             'selectedGenres' => ['nullable', 'array'],
             'selectedGenres.*' => ['integer', Rule::exists('genres', 'id')],
+            'selectedDiatarBookIds' => ['array'],
+            'selectedDiatarBookIds.*' => ['integer', Rule::exists('diatar_books', 'id')],
+            'defaultDiatarBookId' => ['nullable', 'integer', Rule::exists('diatar_books', 'id')],
         ]);
 
         $attributes = [
@@ -102,9 +119,14 @@ class CollectionEditModal extends Component
         $collection->update($attributes);
 
         $collection->genres()->sync($validated['selectedGenres'] ?? []);
+        $diatarBooks->sync(
+            $collection,
+            $validated['selectedDiatarBookIds'] ?? [],
+            $validated['defaultDiatarBookId'] ?? null,
+        );
 
         $this->show = false;
-        $this->reset(['collectionId', 'title', 'abbreviation', 'author', 'isPrivate', 'priority', 'selectedGenres', 'canUploadCover', 'canVerify', 'currentCoverUrl', 'photo', 'photoLicense', 'cropAlign']);
+        $this->reset(['collectionId', 'title', 'abbreviation', 'author', 'isPrivate', 'priority', 'selectedGenres', 'selectedDiatarBookIds', 'defaultDiatarBookId', 'diatarSearch', 'canUploadCover', 'canVerify', 'currentCoverUrl', 'photo', 'photoLicense', 'cropAlign']);
         $this->dispatch('collection-updated');
         $this->dispatch('toast', message: __('Collection updated.'), type: 'success');
     }
@@ -169,7 +191,29 @@ class CollectionEditModal extends Component
         return Genre::allCached();
     }
 
-    public function render(): \Illuminate\Contracts\View\View
+    /**
+     * Get matching Diatár sources while retaining every currently selected source.
+     */
+    public function diatarBooks(): \Illuminate\Support\Collection
+    {
+        return DiatarBook::query()
+            ->when($this->diatarSearch !== '', function ($query): void {
+                $search = '%'.$this->diatarSearch.'%';
+                $query->where(function ($query) use ($search): void {
+                    $query->where('title', 'ilike', $search)
+                        ->orWhere('short_name', 'ilike', $search)
+                        ->orWhere('source_path', 'ilike', $search);
+                });
+            })
+            ->when($this->selectedDiatarBookIds !== [], fn ($query) => $query->orWhereIn('id', $this->selectedDiatarBookIds))
+            ->orderByDesc('available')
+            ->orderBy('source_order')
+            ->orderBy('title')
+            ->limit(100)
+            ->get();
+    }
+
+    public function render(): View
     {
         return view('livewire.pages.editor.collection-edit-modal');
     }

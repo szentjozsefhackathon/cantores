@@ -28,6 +28,9 @@
                 <flux:navlist.item :href="route('admin.music-plan-templates')" wire:navigate :current="request()->routeIs('admin.music-plan-templates')">
                     {{ __('Music Plan Templates') }}
                 </flux:navlist.item>
+                <flux:navlist.item :href="route('admin.diatar-catalog')" wire:navigate :current="request()->routeIs('admin.diatar-catalog')">
+                    Diatár katalógus
+                </flux:navlist.item>
             </flux:navlist.group>
 
             <flux:navlist.group :heading="__('Data Import')">

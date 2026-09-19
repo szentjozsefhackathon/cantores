@@ -3,34 +3,39 @@
 namespace App\Models;
 
 use App\Concerns\HasVisibilityScoping;
+use App\Facades\GenreContext;
 use App\Support\CacheKey;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Models\Audit;
 
 /**
  * @property int $id
  * @property string $title
  * @property string|null $abbreviation
  * @property string|null $author
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property int|null $user_id
  * @property bool $is_private
  * @property bool $is_verified
  * @property int $priority
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \OwenIt\Auditing\Models\Audit> $audits
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Audit> $audits
  * @property-read int|null $audits_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Genre> $genres
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Genre> $genres
  * @property-read int|null $genres_count
- * @property-read \App\Models\MusicCollection|null $pivot
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Music> $music
+ * @property-read MusicCollection|null $pivot
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Music> $music
  * @property-read int|null $music_count
- * @property-read \App\Models\User|null $user
+ * @property-read User|null $user
  *
  * @method static \Database\Factories\CollectionFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Collection forCurrentGenre()
@@ -125,7 +130,7 @@ class Collection extends Model implements Auditable
     /**
      * Get the user who owns this collection.
      */
-    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
@@ -151,6 +156,16 @@ class Collection extends Model implements Auditable
     }
 
     /**
+     * Get the Diatár books associated with this collection.
+     */
+    public function diatarBooks(): BelongsToMany
+    {
+        return $this->belongsToMany(DiatarBook::class, 'collection_diatar_book')
+            ->withPivot('is_default')
+            ->withTimestamps();
+    }
+
+    /**
      * Scope for searching by title or abbreviation.
      */
     public function scopeSearch($query, string $search): void
@@ -166,7 +181,7 @@ class Collection extends Model implements Auditable
      */
     public function scopeForCurrentGenre($query)
     {
-        $genreId = \App\Facades\GenreContext::getId();
+        $genreId = GenreContext::getId();
 
         if ($genreId !== null) {
             // Filter by current genre (including collections without genres)
@@ -187,7 +202,7 @@ class Collection extends Model implements Auditable
      * printed, and because the pair has to read as one word where several of
      * them stand side by side.
      */
-    public function shortReference(?\Illuminate\Database\Eloquent\Relations\Pivot $pivot = null): string
+    public function shortReference(?Pivot $pivot = null): string
     {
         $base = $this->abbreviation ?: Str::limit($this->title, 12, '...');
 
@@ -197,7 +212,7 @@ class Collection extends Model implements Auditable
     /**
      * Format the collection with pivot data for display.
      */
-    public function formatWithPivot(?\Illuminate\Database\Eloquent\Relations\Pivot $pivot = null): string
+    public function formatWithPivot(?Pivot $pivot = null): string
     {
         $base = $this->abbreviation ?: Str::limit($this->title, 12, '...');
 

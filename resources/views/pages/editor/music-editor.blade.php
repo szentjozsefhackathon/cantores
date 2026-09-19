@@ -989,6 +989,12 @@ new class extends Component
             </div>
         </flux:card>
 
+        @can('updateVerified', $music)
+            <flux:card class="mt-4 p-4 md:mt-6 md:p-5">
+                <livewire:diatar-music-binding-editor :music="$music" />
+            </flux:card>
+        @endcan
+
         <!-- Author Connections -->
         <flux:card class="p-4 md:p-5 mt-4 md:mt-6">
             <flux:heading size="md" class="md:size-lg flex items-center gap-2">
