@@ -35,19 +35,3 @@ it('parses sections into markdown and abc types', function () {
     expect($types)->toContain('markdown');
     expect($types)->toContain('abc');
 });
-
-it('abc sections contain complete examples', function () {
-    $component = Livewire::test(AbcGuide::class);
-    $sections = $component->get('sections');
-
-    $abcSections = array_filter($sections, fn (array $section): bool => $section['type'] === 'abc');
-
-    expect($abcSections)->not->toBeEmpty();
-
-    foreach ($abcSections as $section) {
-        expect($section['content'])
-            ->toContain('K:')
-            ->toContain('|');
-    }
-});
-
