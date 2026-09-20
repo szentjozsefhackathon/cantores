@@ -33,7 +33,7 @@ class ShowStreamObserver
      *
      * @var list<string>
      */
-    private const HEARTBEAT_COLUMNS = ['last_seen_at', 'updated_at'];
+    private const HEARTBEAT_COLUMNS = ['last_seen_at', 'applied_at', 'updated_at'];
 
     public function __construct(private ShowStream $stream) {}
 

@@ -1580,5 +1580,12 @@
     "Whole score": "Teljes kotta",
     "Add a section": "Szakasz hozzáadása",
     "Which parts of the score this row prints, and in what order": "A kotta mely részeit nyomtatja ez a sor, és milyen sorrendben",
-    "Which parts of the score this row shows, and in what order": "A kotta mely részeit mutatja ez a sor, és milyen sorrendben"
+    "Which parts of the score this row shows, and in what order": "A kotta mely részeit mutatja ez a sor, és milyen sorrendben",
+    "Sending": "Küldés",
+    "Waiting for screen": "Várakozás a képernyőre",
+    "Screen updated": "A képernyő frissült",
+    "Screen not responding": "A képernyő nem válaszol",
+    "Retry screen update": "Képernyőfrissítés újrapróbálása",
+    "The selected slide is not in this projection.": "A kiválasztott dia nem része ennek a vetítésnek.",
+    "This presentation state is no longer current.": "Ez a vetítési állapot már nem aktuális."
 }

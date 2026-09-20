@@ -260,3 +260,18 @@ it('does not let a hub that is down break the request that moved the show', func
 it('refuses a stream to a guest', function () {
     postJson(route('show.stream'))->assertUnauthorized();
 });
+
+it('republishes a resync nudge without changing the presentation version', function () {
+    $user = User::factory()->create();
+    [, , $presentation] = showingDeck($user);
+    $version = $presentation->version;
+
+    actingAs($user);
+
+    postJson(route('presentations.resync', $presentation))
+        ->assertAccepted()
+        ->assertJsonPath('version', $version);
+
+    expect($presentation->refresh()->version)->toBe($version)
+        ->and(publishedTopics())->toBe([app(ShowStream::class)->topicFor($user)]);
+});

@@ -77,6 +77,17 @@ class ShowStream
         defer(fn () => $this->publish($userId), "show-stream.user.{$userId}");
     }
 
+    /** Republish a nudge without changing the desired show. */
+    public function resync(Presentation $presentation): void
+    {
+        Log::info('Projection screen resync requested.', [
+            'presentation_id' => $presentation->id,
+            'version' => $presentation->version,
+        ]);
+
+        $this->changedFor($presentation->user_id);
+    }
+
     /**
      * A deck was edited: whoever is showing it now has to read it again.
      *

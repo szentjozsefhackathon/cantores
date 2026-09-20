@@ -2,12 +2,14 @@
 
 use App\Models\Loan;
 use App\Models\Presentation;
+use App\Models\PresentationSource;
 use App\Models\Projection;
 use App\Models\ProjectionSlide;
 use App\Models\ReceivedLoan;
 use App\Models\Score;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
@@ -421,4 +423,94 @@ it('reports drawn_revision behind revision until the wall has caught up', functi
     expect($caughtUp['drawnRevision'])->toBe($caughtUp['revision']);
 
     Carbon::setTestNow();
+});
+
+it('accepts an ordered partial command once and returns the complete canonical state', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => Score::factory()->abc()->create(['user_id' => $user->id])->id,
+    ]);
+    $presentation = presentationFor($user, $projection);
+    $sourceId = (string) Str::uuid();
+
+    actingAs($user);
+
+    $payload = [
+        'sourceId' => $sourceId,
+        'sequence' => 1,
+        'changes' => ['entryId' => $entry->id, 'slideIndex' => 3],
+    ];
+
+    postJson(route('presentations.state.store', $presentation), $payload)
+        ->assertOk()
+        ->assertJson([
+            'version' => 2,
+            'entryId' => $entry->id,
+            'slideIndex' => 3,
+            'blanked' => false,
+        ]);
+
+    postJson(route('presentations.state.store', $presentation), $payload)
+        ->assertOk()
+        ->assertJsonPath('version', 2);
+
+    expect($presentation->refresh()->version)->toBe(2)
+        ->and(PresentationSource::query()->where('source_id', $sourceId)->value('last_sequence'))->toBe(1);
+});
+
+it('rejects a delayed sequence after a newer command without changing state', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => Score::factory()->abc()->create(['user_id' => $user->id])->id,
+    ]);
+    $presentation = presentationFor($user, $projection);
+    $sourceId = (string) Str::uuid();
+
+    actingAs($user);
+
+    postJson(route('presentations.state.store', $presentation), [
+        'sourceId' => $sourceId,
+        'sequence' => 12,
+        'changes' => ['entryId' => $entry->id, 'slideIndex' => 4],
+    ])->assertOk()->assertJsonPath('version', 2);
+
+    postJson(route('presentations.state.store', $presentation), [
+        'sourceId' => $sourceId,
+        'sequence' => 11,
+        'changes' => ['entryId' => $entry->id, 'slideIndex' => 1],
+    ])->assertOk()->assertJsonPath('slideIndex', 4);
+
+    expect($presentation->refresh()->version)->toBe(2)
+        ->and($presentation->slide_index)->toBe(4);
+});
+
+it('combines independent partial commands from two sources under distinct versions', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    $entry = ProjectionSlide::factory()->create([
+        'projection_id' => $projection->id,
+        'score_id' => Score::factory()->abc()->create(['user_id' => $user->id])->id,
+    ]);
+    $presentation = presentationFor($user, $projection);
+
+    actingAs($user);
+
+    postJson(route('presentations.state.store', $presentation), [
+        'sourceId' => (string) Str::uuid(),
+        'sequence' => 1,
+        'changes' => ['entryId' => $entry->id, 'slideIndex' => 2],
+    ])->assertOk()->assertJsonPath('version', 2);
+
+    postJson(route('presentations.state.store', $presentation), [
+        'sourceId' => (string) Str::uuid(),
+        'sequence' => 1,
+        'changes' => ['blanked' => true],
+    ])->assertOk()
+        ->assertJsonPath('version', 3)
+        ->assertJsonPath('slideIndex', 2)
+        ->assertJsonPath('blanked', true);
 });

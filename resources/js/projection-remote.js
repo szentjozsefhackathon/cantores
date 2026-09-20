@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
-import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, PUSHED_POLL_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, poller, sameFit, showClient, showStream, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
+import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, poller, replayPendingState, sameFit, showClient, showStream, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
 
 /**
  * The deck in the cantor's hand.
@@ -342,8 +342,15 @@ onAlpineInit(() => {
         ownRevision: config.revision ?? '',
 
         appliedVersion: 0,
+        pendingCommands: [],
+        canonicalState: null,
+        resyncUrl: config.resyncUrl ?? null,
+        _committedAt: 0,
+        _autoResyncedVersion: 0,
+        _resyncTimer: null,
 
         _client: null,
+        _commands: null,
         _show: null,
         _poll: null,
         _fitAt: 0,
@@ -385,7 +392,37 @@ onAlpineInit(() => {
          * cantor twice over that the room cannot see them yet.
          */
         get wallBehind() {
-            return !this.preparing && !this.waiting && this.serverRevision !== this.wallRevision;
+            return false;
+        },
+
+        screenStatus(screen) {
+            if (this.pendingCommands.length > 0) {
+                return { kind: 'sending', label: config.sendingText ?? 'Sending' };
+            }
+
+            const exact = screen.appliedPresentationId === this.presentationId
+                && Number(screen.appliedVersion) === Number(this.canonicalState?.version ?? this.appliedVersion)
+                && screen.drawnRevision === this.serverRevision;
+            const appliedAt = Date.parse(screen.appliedAt ?? '');
+            const stale = (Number.isFinite(appliedAt) && Date.now() - appliedAt > 20000)
+                || (this._committedAt > 0 && Date.now() - this._committedAt > 10000);
+
+            if (exact && !stale) {
+                return { kind: 'updated', label: config.updatedText ?? 'Screen updated' };
+            }
+
+            return stale
+                ? { kind: 'stale', label: config.notRespondingText ?? 'Screen not responding' }
+                : { kind: 'waiting', label: config.waitingText ?? 'Waiting for screen' };
+        },
+
+        statusClass(screen) {
+            return {
+                sending: 'bg-blue-400 animate-pulse',
+                waiting: 'bg-amber-400',
+                updated: 'bg-emerald-400',
+                stale: 'bg-red-500',
+            }[this.screenStatus(screen).kind];
         },
 
         get aspectRatio() {
@@ -462,6 +499,7 @@ onAlpineInit(() => {
 
             if (this.presentationId !== null) {
                 this._client = stateClient(config);
+                this.configureCommands(config.stateUrl);
                 this.draw().then(listen);
             } else {
                 this.busy = false;
@@ -472,6 +510,8 @@ onAlpineInit(() => {
         destroy() {
             this._poll?.stop();
             this._stream?.stop();
+            this._commands?.stop();
+            clearTimeout(this._resyncTimer);
             clearTimeout(this._pressTimer);
             this._wide?.removeEventListener?.('change', this._onWide);
             document.body.style.overflow = this._bodyOverflow ?? '';
@@ -1512,7 +1552,7 @@ onAlpineInit(() => {
                 : addressAt(this.slides, this.index);
 
             this.repaint(address);
-            this.push();
+            this.push({ reveals: true });
         },
 
         /*
@@ -1528,12 +1568,25 @@ onAlpineInit(() => {
          * moment before this phone heard of a B pressed on the wall must not
          * light the wall back up.
          */
-        push({ blank = false } = {}) {
+        push({ blank = false, reveals = false } = {}) {
             // A screen with nothing on it has nowhere to put a tap.
             if (this._client === null) { return; }
 
+            const changes = {
+                ...(!blank ? addressAt(this.slides, this.index) : {}),
+                ...(blank ? { blanked: this.blanked } : {}),
+                splash: this.splash,
+                ...(reveals ? { reveals: this.reveals } : {}),
+            };
+
+            if (this._commands !== null) {
+                this._commands.write(changes);
+
+                return;
+            }
+
             this._client
-                .write({ ...addressAt(this.slides, this.index), ...(blank ? { blanked: this.blanked } : {}), splash: this.splash, reveals: this.reveals })
+                .write(changes)
                 .then((state) => {
                     if (state === null) { return; }
 
@@ -1541,6 +1594,61 @@ onAlpineInit(() => {
                     this.takeOpening(state.splash);
                 })
                 .catch(() => {});
+        },
+
+        configureCommands(stateUrl) {
+            this._commands?.stop();
+            this._commands = commandClient(
+                { ...config, stateUrl },
+                {
+                    change: (pending) => { this.pendingCommands = pending; },
+                    accepted: (command, state) => this.acceptCanonical(state),
+                },
+            );
+        },
+
+        acceptCanonical(state) {
+            if (!state || Number(state.version) < Number(this.canonicalState?.version ?? 0)) { return; }
+
+            const advanced = Number(state.version) > Number(this.canonicalState?.version ?? 0);
+            this.canonicalState = state;
+            this.appliedVersion = state.version;
+            this.reconcileState();
+
+            if (advanced) {
+                this._committedAt = Date.now();
+                this.scheduleAutomaticResync();
+            }
+        },
+
+        reconcileState() {
+            const desired = replayPendingState(this.canonicalState, this.pendingCommands);
+
+            if (!desired || desired.entryId === undefined) { return; }
+
+            this.reveals = desired.reveals ?? {};
+            this.blanked = Boolean(desired.blanked);
+            this.splash = desired.splash ?? SPLASH_OFF;
+            this.repaint({ entryId: desired.entryId, slideIndex: desired.slideIndex });
+        },
+
+        scheduleAutomaticResync() {
+            clearTimeout(this._resyncTimer);
+            const version = this.canonicalState?.version ?? 0;
+
+            this._resyncTimer = setTimeout(() => {
+                if (version === this._autoResyncedVersion || this.walls.every((screen) => this.screenStatus(screen).kind === 'updated')) { return; }
+
+                this._autoResyncedVersion = version;
+                this.retryScreenUpdate();
+            }, 3000);
+        },
+
+        async retryScreenUpdate() {
+            if (!this.resyncUrl) { return; }
+
+            await this._show.resync(this.resyncUrl);
+            this._poll?.poke();
         },
 
         /**
@@ -1620,7 +1728,7 @@ onAlpineInit(() => {
             if (state === null || state === undefined) { return; }
 
             this.serverRevision = state.revision ?? this.serverRevision;
-            this.wallRevision = state.drawnRevision ?? '';
+            this.wallRevision = (answer.screens ?? [])[0]?.drawnRevision ?? state.drawnRevision ?? '';
             this.ended = state.endedAt !== null && state.endedAt !== undefined;
 
             // The wall reports the deck it has actually finished engraving. On a
@@ -1629,13 +1737,7 @@ onAlpineInit(() => {
             // room seen my correction" one level down.
             this.preparing = this.wallRevision === '';
 
-            if (state.version > this.appliedVersion) {
-                this.appliedVersion = state.version;
-                this.reveals = state.reveals ?? {};
-                this.blanked = Boolean(state.blanked);
-                this.splash = state.splash ?? SPLASH_OFF;
-                this.repaint({ entryId: state.entryId, slideIndex: state.slideIndex });
-            }
+            if (state.version >= Number(this.canonicalState?.version ?? 0)) { this.acceptCanonical(state); }
 
             if (this.serverRevision !== this.ownRevision) {
                 this.refresh();
@@ -1659,12 +1761,16 @@ onAlpineInit(() => {
             this.moveUrl = answer.deckUrls?.moveUrl ?? null;
             this.addedMusicsUrl = answer.deckUrls?.addedMusicsUrl ?? null;
             this.appliedVersion = 0;
+            this.canonicalState = answer.state ?? null;
+            this.pendingCommands = [];
             this.reveals = {};
             this.blanked = Boolean(answer.state?.blanked);
             this.splash = answer.state?.splash ?? SPLASH_OFF;
             this.ended = false;
 
             if (this.presentationId === null) {
+                this._commands?.stop();
+                this._commands = null;
                 this._client = null;
                 this.preparing = false;
                 this.drawn = [];
@@ -1674,6 +1780,8 @@ onAlpineInit(() => {
             }
 
             this._client = stateClient({ ...config, stateUrl: answer.stateUrl, payloadUrl: answer.payloadUrl });
+            this.resyncUrl = answer.resyncUrl ?? null;
+            this.configureCommands(answer.stateUrl);
             this.preparing = true;
             this.index = 0;
             this.ownRevision = '';

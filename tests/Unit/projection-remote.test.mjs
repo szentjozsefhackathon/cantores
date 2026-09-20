@@ -646,6 +646,35 @@ test('the panel lines up nothing when no wall is on', () => {
     assert.equal(deck.sent.length, 0, 'a nudge was sent to nowhere');
 });
 
+test('screen delivery status distinguishes sending waiting updated and stale', () => {
+    const deck = remote();
+    const screen = {
+        ...wall(5),
+        appliedPresentationId: 1,
+        appliedVersion: 7,
+        drawnRevision: 'revision-1',
+        appliedAt: new Date().toISOString(),
+    };
+
+    deck.presentationId = 1;
+    deck.canonicalState = { version: 8 };
+    deck.appliedVersion = 8;
+    deck.serverRevision = 'revision-1';
+
+    assert.equal(deck.screenStatus(screen).kind, 'waiting');
+
+    deck.pendingCommands = [{ sequence: 1, changes: { blanked: true } }];
+    assert.equal(deck.screenStatus(screen).kind, 'sending');
+
+    deck.pendingCommands = [];
+    screen.appliedVersion = 8;
+    assert.equal(deck.screenStatus(screen).kind, 'updated');
+
+    screen.appliedVersion = 7;
+    screen.appliedAt = new Date(Date.now() - 30000).toISOString();
+    assert.equal(deck.screenStatus(screen).kind, 'stale');
+});
+
 /* Two walls on at once is the laptop at home left open. Then the chooser
    decides, and the picture shown is the chosen wall's own. */
 test('a chosen wall is the one nudged, starting from where it has the picture', () => {

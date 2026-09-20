@@ -9,6 +9,7 @@ use App\Http\Controllers\BookletStripController;
 use App\Http\Controllers\HumanCheckController;
 use App\Http\Controllers\MusicPlanController;
 use App\Http\Controllers\PresentationPayloadController;
+use App\Http\Controllers\PresentationResyncController;
 use App\Http\Controllers\PresentationStateController;
 use App\Http\Controllers\ProjectionAddedMusicController;
 use App\Http\Controllers\ProjectionController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\ScoreLoanFilePageController;
 use App\Http\Controllers\ScoreLoanIncipitController;
 use App\Http\Controllers\ScorePdfExportController;
 use App\Http\Controllers\ScorePublicIncipitController;
+use App\Http\Controllers\ScreenAcknowledgementController;
 use App\Http\Controllers\ScreenFitController;
 use App\Http\Controllers\ShowStateController;
 use App\Http\Controllers\ShowStreamController;
@@ -485,6 +487,10 @@ Route::post('/screens/{screen}/fit', ScreenFitController::class)
     ->middleware(['auth', 'verified', 'throttle:projection-poll'])
     ->name('screens.fit');
 
+Route::post('/screens/{screen}/ack', ScreenAcknowledgementController::class)
+    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
+    ->name('screens.ack');
+
 // Where a running deck has got to, as the two devices driving it agree on it.
 //
 // Plain JSON rather than a Livewire round trip: the presenter's stage is
@@ -498,6 +504,10 @@ Route::get('/presentations/{presentation}/state', [PresentationStateController::
 Route::post('/presentations/{presentation}/state', [PresentationStateController::class, 'update'])
     ->middleware(['auth', 'verified', 'throttle:projection-poll'])
     ->name('presentations.state.store');
+
+Route::post('/presentations/{presentation}/resync', PresentationResyncController::class)
+    ->middleware(['auth', 'verified', 'throttle:projection-resync'])
+    ->name('presentations.resync');
 
 // The deck itself, re-read when the state answer says it has moved underneath.
 Route::get('/presentations/{presentation}/payload', PresentationPayloadController::class)

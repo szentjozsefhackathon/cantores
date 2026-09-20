@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * One browser that is showing the room something.
@@ -44,12 +45,17 @@ use Illuminate\Support\Facades\Auth;
  * @property float $fit_scale
  * @property float $fit_x
  * @property float $fit_y
+ * @property int|null $applied_presentation_id
+ * @property int $applied_version
+ * @property string|null $drawn_revision
+ * @property CarbonImmutable|null $applied_at
  * @property CarbonImmutable $last_seen_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read User $user
  * @property-read DevicePairing|null $devicePairing
  * @property-read DeviceName|null $deviceName
+ * @property-read Presentation|null $appliedPresentation
  *
  * @method static \Database\Factories\ScreenFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Screen live()
@@ -129,6 +135,10 @@ class Screen extends Model
         'fit_scale',
         'fit_x',
         'fit_y',
+        'applied_presentation_id',
+        'applied_version',
+        'drawn_revision',
+        'applied_at',
         'last_seen_at',
     ];
 
@@ -139,6 +149,8 @@ class Screen extends Model
     {
         return [
             'last_seen_at' => 'datetime',
+            'applied_at' => 'datetime',
+            'applied_version' => 'integer',
             'fit_scale' => 'float',
             'fit_x' => 'float',
             'fit_y' => 'float',
@@ -148,6 +160,11 @@ class Screen extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function appliedPresentation(): BelongsTo
+    {
+        return $this->belongsTo(Presentation::class, 'applied_presentation_id');
     }
 
     /**
@@ -326,6 +343,36 @@ class Screen extends Model
         if (! $wasPresenting) {
             app(ShowStream::class)->changedFor($this->user_id);
         }
+    }
+
+    /** Record the immutable show snapshot this browser applied to its DOM. */
+    public function acknowledge(Presentation $presentation, int $version, ?string $drawnRevision): self
+    {
+        return DB::transaction(function () use ($presentation, $version, $drawnRevision): self {
+            $screen = self::query()->lockForUpdate()->findOrFail($this->getKey());
+            $isNewerPresentation = $screen->applied_presentation_id !== $presentation->getKey();
+            $isNewerVersion = $version > $screen->applied_version;
+            $isNewerRevision = $version === $screen->applied_version
+                && $drawnRevision !== null
+                && strcmp($drawnRevision, (string) $screen->drawn_revision) > 0;
+            $now = Carbon::now();
+            $attributes = [
+                'last_seen_at' => $now,
+                'applied_at' => $now,
+            ];
+
+            if ($isNewerPresentation || $isNewerVersion || $isNewerRevision) {
+                $attributes += [
+                    'applied_presentation_id' => $presentation->getKey(),
+                    'applied_version' => $version,
+                    'drawn_revision' => $drawnRevision,
+                ];
+            }
+
+            $screen->forceFill($attributes)->save();
+
+            return $screen;
+        });
     }
 
     public function isLive(): bool

@@ -51,7 +51,10 @@ export const POLL_MS = 1000;
  * open connection to nothing until the network notices. Fifteen seconds bounds
  * both, at a fifteenth of the asking.
  */
-export const PUSHED_POLL_MS = 15000;
+export const PUSHED_POLL_MS = 5000;
+
+/** A dead fetch must release the single-flight poller for the next beat. */
+export const REQUEST_TIMEOUT_MS = 8000;
 
 /**
  * How long to wait before asking the hub again after it turned this device
@@ -203,7 +206,7 @@ export function poller(tick, options = {}) {
  *
  * @param {string} csrfToken
  */
-export function jsonRequests(csrfToken) {
+export function jsonRequests(csrfToken, options = {}) {
     /*
      * `X-Requested-With` is not decoration. Laravel records the current URL as
      * the session's previous one on every plain GET, and `fetch` is a plain GET
@@ -233,16 +236,130 @@ export function jsonRequests(csrfToken) {
     };
 
     async function request(url, init) {
+        const Controller = options.AbortController ?? globalThis.AbortController;
+        const controller = typeof Controller === 'function' ? new Controller() : null;
+        const timeout = controller === null ? null : setTimeout(
+            () => controller.abort(),
+            options.timeoutMs ?? REQUEST_TIMEOUT_MS,
+        );
+
         try {
-            const response = await fetch(url, { credentials: 'same-origin', ...init });
+            const response = await (options.fetch ?? fetch)(url, {
+                credentials: 'same-origin',
+                ...init,
+                ...(controller === null ? {} : { signal: controller.signal }),
+            });
 
             if (!response.ok) { return null; }
 
             return await response.json();
         } catch {
             return null;
+        } finally {
+            if (timeout !== null) { clearTimeout(timeout); }
         }
     }
+}
+
+/**
+ * Deliver one tab's commands serially, retrying the head with the same identity.
+ *
+ * @param {{stateUrl: string, csrfToken: string, storage?: Storage, crypto?: Crypto, retryMs?: number, retryMaxMs?: number, random?: () => number}} config
+ * @param {{change?: (pending: Array<object>) => void, accepted?: (command: object, state: object) => void}} handlers
+ */
+export function commandClient(config, handlers = {}) {
+    const http = jsonRequests(config.csrfToken);
+    const storage = config.storage ?? globalThis.sessionStorage;
+    const random = config.random ?? Math.random;
+    const sourceKey = 'projection-command-source';
+    const sequenceKey = 'projection-command-sequence';
+    const uuid = () => (config.crypto ?? globalThis.crypto)?.randomUUID?.()
+        ?? '00000000-0000-4000-8000-'.concat(Math.floor(random() * 1e12).toString().padStart(12, '0'));
+
+    let sourceId = storage?.getItem?.(sourceKey) ?? uuid();
+    let sequence = Number(storage?.getItem?.(sequenceKey) ?? 0);
+    let queue = [];
+    let sending = false;
+    let stopped = false;
+    let retryWait = config.retryMs ?? 500;
+    let retryTimer = null;
+
+    storage?.setItem?.(sourceKey, sourceId);
+
+    const changed = () => handlers.change?.(queue.map(({ resolve, ...command }) => command));
+
+    async function drain() {
+        if (stopped || sending || queue.length === 0) { return; }
+
+        sending = true;
+        const command = queue[0];
+        const state = await http.post(config.stateUrl, {
+            sourceId,
+            sequence: command.sequence,
+            changes: command.changes,
+        });
+        sending = false;
+
+        if (stopped) { return; }
+
+        if (state === null) {
+            console.debug('[projection] retrying command', {
+                sourceId,
+                sequence: command.sequence,
+            });
+            const wait = Math.round(retryWait * (0.75 + random() * 0.5));
+            retryWait = Math.min(config.retryMaxMs ?? 5000, retryWait * 2);
+            retryTimer = setTimeout(drain, wait);
+
+            return;
+        }
+
+        retryWait = config.retryMs ?? 500;
+        queue.shift();
+        console.debug('[projection] command accepted', {
+            sourceId,
+            sequence: command.sequence,
+            version: state.version,
+        });
+        changed();
+        handlers.accepted?.(command, state);
+        command.resolve(state);
+        drain();
+    }
+
+    return {
+        write(changes) {
+            sequence += 1;
+            storage?.setItem?.(sequenceKey, String(sequence));
+
+            return new Promise((resolve) => {
+                queue.push({ sequence, changes: JSON.parse(JSON.stringify(changes)), resolve });
+                changed();
+                drain();
+            });
+        },
+
+        stop() {
+            stopped = true;
+            clearTimeout(retryTimer);
+        },
+
+        get pending() {
+            return queue.map(({ resolve, ...command }) => command);
+        },
+
+        get sourceId() {
+            return sourceId;
+        },
+    };
+}
+
+/** Overlay still-pending optimistic partial changes on the newest server state. */
+export function replayPendingState(canonical, pending) {
+    return (pending ?? []).reduce(
+        (state, command) => ({ ...state, ...(command.changes ?? command) }),
+        { ...(canonical ?? {}) },
+    );
 }
 
 /**
@@ -643,6 +760,12 @@ export function showClient(config) {
          * @param {{fitUrl: string}} screen one of the answer's `screens`
          */
         adjust: (screen, fit) => http.post(screen.fitUrl, { fit }),
+
+        /** Ask every device to confirm the unchanged authoritative state now. */
+        resync: (url) => http.post(url, {}),
+
+        /** Tell the server which immutable state this wall has rendered. */
+        acknowledge: (url, acknowledgement) => http.post(url, acknowledgement),
     };
 }
 

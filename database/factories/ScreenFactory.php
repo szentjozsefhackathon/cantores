@@ -26,6 +26,10 @@ class ScreenFactory extends Factory
             'device_pairing_id' => null,
             'session_id' => Str::random(40),
             'user_agent' => 'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0',
+            'applied_presentation_id' => null,
+            'applied_version' => 0,
+            'drawn_revision' => null,
+            'applied_at' => null,
             'last_seen_at' => Carbon::now(),
         ];
     }

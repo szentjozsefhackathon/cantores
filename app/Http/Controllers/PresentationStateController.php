@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\PresentationStateRequest;
 use App\Models\Presentation;
+use App\Services\PresentationCommand;
 use App\Services\PresentationState;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
@@ -40,6 +41,7 @@ class PresentationStateController extends Controller
      */
     public function update(
         PresentationStateRequest $request,
+        PresentationCommand $commands,
         PresentationState $state,
         Presentation $presentation,
     ): JsonResponse {
@@ -52,12 +54,14 @@ class PresentationStateController extends Controller
         }
 
         $reported = $request->state();
-        $entryId = $reported['entryId'] ?? null;
-
-        $presentation->applyState(
-            $reported,
-            $entryId === null ? null : $state->entriesOf($presentation)->firstWhere('id', $entryId),
-        );
+        $presentation = $request->isCommand()
+            ? $commands->apply(
+                $presentation,
+                $request->string('sourceId')->toString(),
+                $request->integer('sequence'),
+                $reported,
+            )
+            : $commands->applyLegacy($presentation, $reported);
 
         // Written outside applyState, because it is not part of where the
         // service is: it is this screen's honest answer to "have you finished

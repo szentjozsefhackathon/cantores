@@ -1,7 +1,7 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
 import { onPaper } from './slide-frame.js';
-import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, poller, showClient, showStream, shownExclusions, stateClient } from './projection-follow.js';
+import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, poller, replayPendingState, showClient, showStream, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -151,6 +151,8 @@ onAlpineInit(() => {
          * pressed space arrives just after it and sends the room back a slide.
          */
         appliedVersion: 0,
+        canonicalState: null,
+        pendingCommands: [],
 
         /**
          * Whether this page is the one the beamer is throwing.
@@ -176,6 +178,7 @@ onAlpineInit(() => {
         _poll: null,
         _heartbeat: null,
         _client: null,
+        _commands: null,
         _show: null,
         _refreshToken: 0,
 
@@ -281,6 +284,7 @@ onAlpineInit(() => {
             // to draw yet and simply starts listening.
             if (this.presentationId !== null) {
                 this._client = stateClient(config);
+                this.configureCommands(config.stateUrl);
                 this.draw().then(() => this.follow());
             } else {
                 this.busy = false;
@@ -295,6 +299,7 @@ onAlpineInit(() => {
             this._poll?.stop();
             this._stream?.stop();
             this._heartbeat?.stop();
+            this._commands?.stop();
         },
 
         /** What the browser has just done with full screen, however it was asked. */
@@ -542,7 +547,7 @@ onAlpineInit(() => {
             // The same shape, three times as slow, and allowed to drift three
             // times as far — which is still well inside the five minutes a
             // presentation is counted live for.
-            this._heartbeat = poller(() => this.report(), {
+            this._heartbeat = poller(() => this.acknowledgeRendered(), {
                 interval: HEARTBEAT_MS,
                 maxInterval: HEARTBEAT_MS * 3,
             });
@@ -589,9 +594,7 @@ onAlpineInit(() => {
 
             this.serverRevision = state.revision ?? this.serverRevision;
 
-            if (state.version > this.appliedVersion) {
-                this.adopt(state);
-            }
+            if (state.version >= Number(this.canonicalState?.version ?? 0)) { this.acceptCanonical(state); }
 
             if (this.serverRevision !== this.drawnRevision) {
                 this.refresh();
@@ -620,6 +623,8 @@ onAlpineInit(() => {
             this.blanked = Boolean(answer.state?.blanked);
             this.presentationId = answer.presentationId ?? null;
             this.appliedVersion = 0;
+            this.canonicalState = answer.state ?? null;
+            this.pendingCommands = [];
             this.reveals = {};
             // Taken up before the engraving rather than after it, because
             // engraving ends in a report: a card read off the answer a moment
@@ -629,6 +634,8 @@ onAlpineInit(() => {
             this.serverRevision = '';
 
             if (this.presentationId === null) {
+                this._commands?.stop();
+                this._commands = null;
                 this._client = null;
                 this.preparing = false;
                 this.paint([], { entryId: null, slideIndex: 0 });
@@ -637,6 +644,8 @@ onAlpineInit(() => {
             }
 
             this._client = stateClient({ ...config, stateUrl: answer.stateUrl, payloadUrl: answer.payloadUrl });
+            this._commands?.stop();
+            this.configureCommands(answer.stateUrl);
             this.preparing = true;
 
             try {
@@ -673,26 +682,55 @@ onAlpineInit(() => {
 
         /** Where somebody else has put the service. */
         adopt(state) {
-            this.appliedVersion = state.version;
-            this.reveals = state.reveals ?? {};
-            this.blanked = Boolean(state.blanked);
-            this.splash = state.splash ?? SPLASH_OFF;
+            this.acceptCanonical(state);
+        },
 
-            this.repaint({ entryId: state.entryId, slideIndex: state.slideIndex });
+        configureCommands(stateUrl) {
+            this._commands?.stop();
+            this._commands = commandClient(
+                { ...config, stateUrl },
+                {
+                    change: (pending) => { this.pendingCommands = pending; },
+                    accepted: (command, state) => this.commandAccepted(state),
+                },
+            );
+        },
+
+        acceptCanonical(state) {
+            if (!state || Number(state.version) < Number(this.canonicalState?.version ?? 0)) { return; }
+
+            this.canonicalState = state;
+            this.appliedVersion = state.version;
+            this.reconcileState();
+        },
+
+        reconcileState() {
+            const desired = replayPendingState(this.canonicalState, this.pendingCommands);
+
+            if (!desired || desired.entryId === undefined) { return; }
+
+            this.reveals = desired.reveals ?? {};
+            this.blanked = Boolean(desired.blanked);
+            this.splash = desired.splash ?? SPLASH_OFF;
+
+            this.repaint({ entryId: desired.entryId, slideIndex: desired.slideIndex });
+            this.acknowledgeRendered();
+        },
+
+        commandAccepted(state) {
+            this.acceptCanonical(state);
         },
 
         /**
-         * Say where this screen has put the service — and, with it, which deck
-         * the room is actually looking at.
+         * Send the explicit local keyboard command after applying it on-screen.
          *
          * The blank travels only with the press that changed it. Every other
          * report — a slide, a heartbeat, a deck finished drawing — can be sent
          * a moment before this screen has heard of a B pressed on the phone,
          * and carrying the blank along would take that press back.
          *
-         * Deliberately not awaited by anything that moves the picture: the
-         * keystroke has already been applied. If it fails, it fails silently and
-         * the next heartbeat carries the same answer.
+         * Deliberately not awaited by anything that moves the picture. The
+         * ordered client keeps a failed command at its head and retries it.
          */
         report({ blank = false } = {}) {
             // A screen waiting for a show has nothing to say about where a
@@ -701,9 +739,16 @@ onAlpineInit(() => {
             if (this._client === null) { return; }
 
             const address = this.address();
+            const changes = { ...(!blank ? address : {}), ...(blank ? { blanked: this.blanked } : {}), splash: this.splash };
 
+            if (this._commands !== null) {
+                return this._commands.write(changes).then(() => true);
+            }
+
+            // Compatibility for an already-open old bundle and the narrow unit
+            // harnesses that replace the state client directly.
             return this._client
-                .write({ ...address, ...(blank ? { blanked: this.blanked } : {}), splash: this.splash, drawnRevision: this.drawnRevision })
+                .write(changes)
                 .then((state) => {
                     if (state === null) { return false; }
 
@@ -713,6 +758,23 @@ onAlpineInit(() => {
                     return true;
                 })
                 .catch(() => false);
+        },
+
+        /** A heartbeat is evidence of rendered state, never desired state. */
+        async acknowledgeRendered() {
+            if (this.presentationId === null || !config.ackUrl || this.pendingCommands.length > 0 || this.serverRevision !== this.drawnRevision) {
+                return;
+            }
+
+            await new Promise((resolve) => (globalThis.requestAnimationFrame ?? ((done) => setTimeout(done, 0)))(resolve));
+
+            const acknowledgement = await this._show.acknowledge(config.ackUrl, {
+                presentationId: this.presentationId,
+                appliedVersion: this.appliedVersion,
+                drawnRevision: this.drawnRevision || null,
+            });
+
+            return acknowledgement === null ? false : true;
         },
 
         /**
@@ -766,7 +828,7 @@ onAlpineInit(() => {
 
             this.drawnRevision = payload.revision ?? this.drawnRevision;
             this.serverRevision = this.drawnRevision;
-            this.report();
+            this.acknowledgeRendered();
         },
 
         /**

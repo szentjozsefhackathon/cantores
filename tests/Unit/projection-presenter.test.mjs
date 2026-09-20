@@ -500,3 +500,33 @@ test('only a press of B reports the blank', async () => {
     assert.equal('blanked' in written[1], false, 'a heartbeat reported the blank');
     assert.equal(written[2].blanked, true);
 });
+
+test('the heartbeat acknowledges rendered state without reporting desired state', async () => {
+    const deck = registered.projectionPresenter({ ackUrl: '/screens/5/ack' });
+    const sent = [];
+
+    deck.presentationId = 9;
+    deck.appliedVersion = 12;
+    deck.serverRevision = 'revision-12';
+    deck.drawnRevision = 'revision-12';
+    deck._show = {
+        acknowledge: (url, body) => {
+            sent.push({ url, body });
+
+            return Promise.resolve({});
+        },
+    };
+
+    await deck.acknowledgeRendered();
+
+    assert.deepEqual(sent, [{
+        url: '/screens/5/ack',
+        body: {
+            presentationId: 9,
+            appliedVersion: 12,
+            drawnRevision: 'revision-12',
+        },
+    }]);
+    assert.equal('entryId' in sent[0].body, false);
+    assert.equal('blanked' in sent[0].body, false);
+});

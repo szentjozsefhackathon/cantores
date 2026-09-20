@@ -37,11 +37,12 @@ class ShowState
      *     projectionId: int|null,
      *     title: string|null,
      *     stateUrl: string|null,
+     *     resyncUrl: string|null,
      *     payloadUrl: string|null,
      *     editUrl: string|null,
      *     deckUrls: array<string, string>|null,
      *     state: array<string, mixed>|null,
-     *     screens: list<array{id: int, label: string, fit: array{scale: float, x: float, y: float}, fitUrl: string, isThisDevice: bool}>,
+     *     screens: list<array<string, mixed>>,
      * }
      */
     public function answer(User $user, ?Presentation $presentation, ?EloquentCollection $screens = null): array
@@ -54,6 +55,7 @@ class ShowState
                 'projectionId' => null,
                 'title' => null,
                 'stateUrl' => null,
+                'resyncUrl' => null,
                 'payloadUrl' => null,
                 'editUrl' => null,
                 'deckUrls' => null,
@@ -67,6 +69,7 @@ class ShowState
             'projectionId' => $presentation->projection_id,
             'title' => $presentation->projection->title,
             'stateUrl' => route('presentations.state', ['presentation' => $presentation->id]),
+            'resyncUrl' => route('presentations.resync', ['presentation' => $presentation->id]),
             'payloadUrl' => route('presentations.payload', ['presentation' => $presentation->id]),
             // Where the deck is changed for good rather than for today. The
             // remote's own pane offers it, and the deck in a show is swapped
@@ -114,7 +117,7 @@ class ShowState
 
     /**
      * @param  EloquentCollection<int, Screen>  $screens
-     * @return list<array{id: int, label: string, fit: array{scale: float, x: float, y: float}, fitUrl: string, isThisDevice: bool}>
+     * @return list<array<string, mixed>>
      */
     public static function describe(EloquentCollection $screens): array
     {
@@ -127,6 +130,10 @@ class ShowState
                 'fit' => $screen->fit(),
                 'fitUrl' => route('screens.fit', ['screen' => $screen->id]),
                 'isThisDevice' => $screen->device_id === $device,
+                'appliedPresentationId' => $screen->applied_presentation_id,
+                'appliedVersion' => $screen->applied_version,
+                'drawnRevision' => $screen->drawn_revision,
+                'appliedAt' => $screen->applied_at?->toIso8601String(),
             ])
             ->values()
             ->all();

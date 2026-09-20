@@ -32,7 +32,8 @@ resources/js/projection-presenter.js
         // page opened on, and afterwards come from the show's answer.
         'revision' => $revision,
         'title' => $title,
-        // Marked as the wall's, because only the wall's read is its heartbeat.
+        // A waiting screen has no presentation to acknowledge yet, so its show
+        // read remains the liveness heartbeat until a deck is put up.
         'showUrl' => route('show.state', ['screen' => 1]),
         // Where to ask to be told when the show moves, instead of asking.
         'streamUrl' => route('show.stream'),
@@ -40,6 +41,8 @@ resources/js/projection-presenter.js
         // up last Sunday draws its first slide where it belongs rather than
         // centring it and jumping a second later.
         'fit' => $screen->fit(),
+        'screenId' => $screen->id,
+        'ackUrl' => route('screens.ack', ['screen' => $screen->id]),
         'presentationId' => $presentation?->id,
         // How far into its opening the service is. Baked in so the card is the
         // first thing painted rather than something that arrives a second

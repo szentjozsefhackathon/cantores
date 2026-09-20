@@ -135,6 +135,9 @@ class AppServiceProvider extends ServiceProvider
         // cannot spend the budget the polling needs to keep a Mass following.
         RateLimiter::for('projection-payload', fn (Request $request): Limit => Limit::perMinute(60)
             ->by($this->projectionLimitKey($request)));
+
+        RateLimiter::for('projection-resync', fn (Request $request): Limit => Limit::perMinute(6)
+            ->by($this->projectionLimitKey($request).':'.(string) $request->route('presentation')));
     }
 
     /**

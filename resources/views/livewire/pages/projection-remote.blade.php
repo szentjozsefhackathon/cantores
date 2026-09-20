@@ -67,6 +67,7 @@ resources/js/projection-remote.js
         'cardHint' => __('Title card on the screen. Next blacks it out.'),
         'darkHint' => __('The screen is black. Next starts the deck, still black — B shows it.'),
         'stateUrl' => $presentation === null ? null : route('presentations.state', ['presentation' => $presentation->id]),
+        'resyncUrl' => $presentation === null ? null : route('presentations.resync', ['presentation' => $presentation->id]),
         'payloadUrl' => $presentation === null ? null : route('presentations.payload', ['presentation' => $presentation->id]),
         'editUrl' => $projection === null ? null : route('projections.edit', ['projection' => $projection->id]),
         // Add or remove one of a music's engravings from here, exactly as the
@@ -88,6 +89,10 @@ resources/js/projection-remote.js
         // attribute uncompiled and Alpine is then handed an expression it
         // cannot parse.
         'clearText' => __('Take the deck off every screen and end this projection?'),
+        'sendingText' => __('Sending'),
+        'waitingText' => __('Waiting for screen'),
+        'updatedText' => __('Screen updated'),
+        'notRespondingText' => __('Screen not responding'),
         'csrfToken' => csrf_token(),
     ]) }}"
     x-data="projectionRemote(JSON.parse($el.dataset.projectionConfig))"
@@ -472,9 +477,6 @@ resources/js/projection-remote.js
                  the foot of the picture rather than a stack of callouts, because
                  every pixel here was taken from the slide. --}}
             <div class="absolute inset-x-0 bottom-0 space-y-px px-2 pb-1 text-center text-xs" x-cloak>
-                <div class="rounded bg-amber-500/90 px-2 py-0.5 text-amber-950" x-show="wallBehind">
-                    {{ __('The screen is still catching up with the last change.') }}
-                </div>
                 {{-- What the room is looking at during the opening, and what the
                      next press will do about it. Louder than the rest of this
                      strip on purpose: it is the one state of the remote nobody

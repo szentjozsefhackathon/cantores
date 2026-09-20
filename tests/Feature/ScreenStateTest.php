@@ -292,3 +292,65 @@ it('shows the waiting screen when nothing is up', function () {
         ->assertOk()
         ->assertSee(__('This screen is waiting for a deck.'));
 });
+
+it('acknowledges rendered state only for this browser screen without moving the presentation', function () {
+    $user = User::factory()->create();
+    $presentation = Presentation::factory()->create(['user_id' => $user->id, 'version' => 7]);
+    $screen = Screen::factory()->create([
+        'user_id' => $user->id,
+        'device_id' => DeviceId::current(),
+    ]);
+    $revision = $presentation->projection->revision();
+
+    actingAs($user);
+
+    postJson(route('screens.ack', $screen), [
+        'presentationId' => $presentation->id,
+        'appliedVersion' => 7,
+        'drawnRevision' => $revision,
+    ])->assertOk()
+        ->assertJsonPath('presentationId', $presentation->id)
+        ->assertJsonPath('appliedVersion', 7)
+        ->assertJsonPath('drawnRevision', $revision);
+
+    expect($presentation->refresh()->version)->toBe(7)
+        ->and($screen->refresh()->applied_presentation_id)->toBe($presentation->id)
+        ->and($screen->applied_at)->not->toBeNull();
+
+    getJson(route('show.state'))
+        ->assertOk()
+        ->assertJsonPath('screens.0.appliedPresentationId', $presentation->id)
+        ->assertJsonPath('screens.0.appliedVersion', 7)
+        ->assertJsonPath('screens.0.drawnRevision', $revision);
+});
+
+it('answers 404 when one device acknowledges another device screen', function () {
+    $user = User::factory()->create();
+    $presentation = Presentation::factory()->create(['user_id' => $user->id]);
+    $screen = Screen::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    postJson(route('screens.ack', $screen), [
+        'presentationId' => $presentation->id,
+        'appliedVersion' => $presentation->version,
+        'drawnRevision' => $presentation->projection->revision(),
+    ])->assertNotFound();
+
+    expect($screen->refresh()->applied_presentation_id)->toBeNull();
+});
+
+it('keeps acknowledgements for two screens independent', function () {
+    $user = User::factory()->create();
+    $presentation = Presentation::factory()->create(['user_id' => $user->id, 'version' => 9]);
+    $first = Screen::factory()->create(['user_id' => $user->id]);
+    $second = Screen::factory()->create(['user_id' => $user->id]);
+
+    $first->acknowledge($presentation, 9, 'new-revision');
+    $second->acknowledge($presentation, 8, 'old-revision');
+
+    expect($first->refresh()->applied_version)->toBe(9)
+        ->and($first->drawn_revision)->toBe('new-revision')
+        ->and($second->refresh()->applied_version)->toBe(8)
+        ->and($second->drawn_revision)->toBe('old-revision');
+});

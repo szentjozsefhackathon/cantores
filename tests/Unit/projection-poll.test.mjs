@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { POLL_BACKOFF_MAX_MS, POLL_MS, PUSHED_POLL_MS, STREAM_RETRY_MS, poller, showClient, showStream, stateClient } from '../../resources/js/projection-follow.js';
+import { POLL_BACKOFF_MAX_MS, POLL_MS, PUSHED_POLL_MS, STREAM_RETRY_MS, commandClient, poller, replayPendingState, showClient, showStream, stateClient } from '../../resources/js/projection-follow.js';
 
 /*
  * The beat that both ends of a service keep.
@@ -336,6 +336,95 @@ test('does nothing when poked after it was stopped', () => {
 
     beat.poke();
     assert.equal(beats, 0);
+});
+
+test('delivers one source commands in gesture order', async () => {
+    const sent = [];
+    const answers = [];
+    const storage = new Map();
+    storage.getItem = storage.get.bind(storage);
+    storage.setItem = storage.set.bind(storage);
+
+    globalThis.fetch = (url, init) => new Promise((resolve) => {
+        sent.push(JSON.parse(init.body));
+        answers.push(resolve);
+    });
+
+    const client = commandClient({
+        stateUrl: '/presentations/1/state',
+        csrfToken: 'token',
+        storage,
+        crypto: { randomUUID: () => '11111111-1111-4111-8111-111111111111' },
+    });
+
+    const black = client.write({ blanked: true });
+    const next = client.write({ entryId: 2, slideIndex: 0 });
+
+    assert.equal(sent.length, 1, 'Next passed Black while Black was still in flight');
+    assert.equal(sent[0].sequence, 1);
+
+    answers.shift()({ ok: true, json: () => Promise.resolve({ version: 2, blanked: true }) });
+    await black;
+    await Promise.resolve();
+
+    assert.equal(sent.length, 2);
+    assert.equal(sent[1].sequence, 2);
+    assert.deepEqual(sent[1].changes, { entryId: 2, slideIndex: 0 });
+
+    answers.shift()({ ok: true, json: () => Promise.resolve({ version: 3 }) });
+    await next;
+    client.stop();
+});
+
+test('retries a failed command with the same source sequence', async () => {
+    const time = clock();
+    const sent = [];
+    let attempt = 0;
+
+    globalThis.fetch = (url, init) => {
+        sent.push(JSON.parse(init.body));
+        attempt += 1;
+
+        return Promise.resolve(attempt === 1
+            ? { ok: false, json: () => Promise.resolve({}) }
+            : { ok: true, json: () => Promise.resolve({ version: 2 }) });
+    };
+
+    const client = commandClient({
+        stateUrl: '/presentations/1/state',
+        csrfToken: 'token',
+        storage: null,
+        crypto: { randomUUID: () => '22222222-2222-4222-8222-222222222222' },
+        random: () => 0.5,
+    });
+
+    const delivered = client.write({ blanked: true });
+    await Promise.resolve();
+    await Promise.resolve();
+    await time.advance(500);
+    await delivered;
+
+    assert.equal(sent.length, 2);
+    assert.equal(sent[0].sourceId, sent[1].sourceId);
+    assert.equal(sent[0].sequence, sent[1].sequence);
+    client.stop();
+});
+
+test('replays pending optimistic changes over an older poll answer', () => {
+    const desired = replayPendingState(
+        { version: 4, entryId: 1, slideIndex: 0, blanked: false },
+        [
+            { sequence: 5, changes: { blanked: true } },
+            { sequence: 6, changes: { entryId: 2, slideIndex: 1 } },
+        ],
+    );
+
+    assert.deepEqual(desired, {
+        version: 4,
+        entryId: 2,
+        slideIndex: 1,
+        blanked: true,
+    });
 });
 
 /** An EventSource the test drives by hand. */

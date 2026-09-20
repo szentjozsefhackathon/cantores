@@ -10,10 +10,8 @@ use Illuminate\Validation\Rule;
 /**
  * Where the service has got to, as one of its devices reports it.
  *
- * Every field is optional, because the two things that write here write for
- * different reasons: the presenter reports a keystroke, and then goes on
- * reporting a heartbeat that carries nothing but the revision it has finished
- * drawing. A request that says nothing is a request that says "still here".
+ * New clients send an ordered command. The flat fields remain accepted for one
+ * deployment window so a presenter tab opened before a release keeps working.
  */
 class PresentationStateRequest extends FormRequest
 {
@@ -46,6 +44,18 @@ class PresentationStateRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'sourceId' => ['required_with:sequence,changes', 'uuid'],
+            'sequence' => ['required_with:sourceId,changes', 'integer', 'min:1'],
+            'changes' => ['required_with:sourceId,sequence', 'array'],
+            'changes.entryId' => ['sometimes', 'nullable', 'integer'],
+            'changes.slideIndex' => ['sometimes', 'integer', 'min:0'],
+            'changes.blanked' => ['sometimes', 'boolean'],
+            'changes.splash' => ['sometimes', 'string', Rule::in(array_keys(Presentation::SPLASH_ORDER))],
+            'changes.reveals' => ['sometimes', 'nullable', 'array'],
+            'changes.reveals.*' => ['array'],
+            'changes.reveals.*.*' => ['integer', 'min:0'],
+
+            // Compatibility with tabs opened on the previous bundle.
             'entryId' => ['sometimes', 'nullable', 'integer'],
             'slideIndex' => ['sometimes', 'integer', 'min:0'],
             'blanked' => ['sometimes', 'boolean'],
@@ -66,16 +76,17 @@ class PresentationStateRequest extends FormRequest
      */
     public function state(): array
     {
+        $prefix = $this->has('changes') ? 'changes.' : '';
         $state = [];
 
         foreach (['entryId', 'slideIndex', 'blanked', 'splash'] as $field) {
-            if ($this->has($field)) {
-                $state[$field] = $this->input($field);
+            if ($this->has($prefix.$field)) {
+                $state[$field] = $this->input($prefix.$field);
             }
         }
 
-        if ($this->has('reveals')) {
-            $state['reveals'] = collect($this->input('reveals') ?? [])
+        if ($this->has($prefix.'reveals')) {
+            $state['reveals'] = collect($this->input($prefix.'reveals') ?? [])
                 ->mapWithKeys(fn (array $slides, $entryId): array => [
                     (int) $entryId => array_values(array_unique(array_map(intval(...), $slides))),
                 ])
@@ -84,5 +95,10 @@ class PresentationStateRequest extends FormRequest
         }
 
         return $state;
+    }
+
+    public function isCommand(): bool
+    {
+        return $this->has('sourceId') && $this->has('sequence') && $this->has('changes');
     }
 }
