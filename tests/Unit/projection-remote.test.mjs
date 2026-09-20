@@ -670,7 +670,13 @@ test('screen delivery status distinguishes sending waiting updated and stale', (
     screen.appliedVersion = 8;
     assert.equal(deck.screenStatus(screen).kind, 'updated');
 
+    deck._committedAt = Date.now() - 30000;
+    assert.equal(deck.screenStatus(screen).kind, 'updated', 'an acknowledged command became stale as it aged');
+
     screen.appliedVersion = 7;
+    assert.equal(deck.screenStatus(screen).kind, 'stale');
+
+    deck._committedAt = 0;
     screen.appliedAt = new Date(Date.now() - 30000).toISOString();
     assert.equal(deck.screenStatus(screen).kind, 'stale');
 });

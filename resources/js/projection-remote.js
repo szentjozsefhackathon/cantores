@@ -405,7 +405,7 @@ onAlpineInit(() => {
                 && screen.drawnRevision === this.serverRevision;
             const appliedAt = Date.parse(screen.appliedAt ?? '');
             const stale = (Number.isFinite(appliedAt) && Date.now() - appliedAt > 20000)
-                || (this._committedAt > 0 && Date.now() - this._committedAt > 10000);
+                || (!exact && this._committedAt > 0 && Date.now() - this._committedAt > 10000);
 
             if (exact && !stale) {
                 return { kind: 'updated', label: config.updatedText ?? 'Screen updated' };
