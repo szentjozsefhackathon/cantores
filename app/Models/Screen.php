@@ -86,14 +86,28 @@ class Screen extends Model
     /**
      * How stale `last_seen_at` is allowed to get before it costs a write.
      *
-     * A tenth of the window it is read against, so a screen is never anywhere
-     * near being aged out by the saving, and a tenth of a second's worth of
-     * writes on the busiest Sunday this feature is built for.
+     * Far inside the window it is read against, so a screen is never anywhere
+     * near being aged out by the saving, and still a fifteenth of the asking.
+     *
+     * This is now the *only* thing that says a wall is still there. The
+     * acknowledgement used to say it too, every ten seconds, whether anything
+     * had happened or not; it is an event again, so the column it kept warm
+     * has to be warm enough on its own for the phone to notice a wall that
+     * stopped answering.
      *
      * @see \App\Http\Middleware\EnforcePairedDeviceSession, which does the
      * same thing to the same column for the same reason.
      */
-    public const SEEN_EVERY_SECONDS = 30;
+    public const SEEN_EVERY_SECONDS = 15;
+
+    /**
+     * How long a screen may say nothing before the remote calls it silent.
+     *
+     * Three heartbeats, so a wall is never called silent for missing one — and
+     * a wall that really has gone is named on the phone within a verse rather
+     * than within the five minutes it takes to age out of the list entirely.
+     */
+    public const SILENT_SECONDS = self::SEEN_EVERY_SECONDS * 3;
 
     /**
      * How recently this browser's own screen must have been heard from to count
@@ -103,10 +117,12 @@ class Screen extends Model
      * cannot: a phone that pressed Present and came back to the remote would say
      * for five minutes that the show is on the phone in the cantor's hand. A
      * laptop with the wall in one window and the remote in the other is heard
-     * from every SEEN_EVERY_SECONDS, so three of those is never missed by it,
-     * even with the wall's tab throttled in the background.
+     * from every SEEN_EVERY_SECONDS, and this is many of those — deliberately
+     * many, because a browser throttles the timers of a window that is behind
+     * another one, and a wall dropping out of its own remote's list would be a
+     * worse mistake than one lingering in it.
      */
-    public const PRESENTING_SECONDS = self::SEEN_EVERY_SECONDS * 3;
+    public const PRESENTING_SECONDS = 90;
 
     /**
      * How far the picture on the wall may be pushed about.
@@ -345,7 +361,19 @@ class Screen extends Model
         }
     }
 
-    /** Record the immutable show snapshot this browser applied to its DOM. */
+    /**
+     * Record the immutable show snapshot this browser applied to its DOM.
+     *
+     * An event and not a heartbeat. This used to be sent every ten seconds
+     * whether anything had been drawn or not, which put a locked write and a
+     * log line behind every wall in the country for as long as anybody was
+     * singing — to say, nearly always, that nothing had happened. The wall now
+     * sends it when what it has drawn stops matching what the show says it has
+     * drawn, so a quiet Mass costs nothing at all, and the liveness the
+     * heartbeat also carried is left to the poll that was making it anyway.
+     *
+     * @see Screen::touchLastSeen()
+     */
     public function acknowledge(Presentation $presentation, int $version, ?string $drawnRevision): self
     {
         return DB::transaction(function () use ($presentation, $version, $drawnRevision): self {
@@ -381,6 +409,50 @@ class Screen extends Model
         // short-circuit is the right answer for it: nothing was revoked.
         return $this->last_seen_at->gt(Carbon::now()->subMinutes(self::STALE_MINUTES))
             && $this->devicePairing?->revoked_at === null;
+    }
+
+    /**
+     * Whether this screen's own browser is actually showing the show right now,
+     * as against merely not having aged out yet.
+     *
+     * Only ever asked of the device doing the asking. Anybody else's screen is
+     * shown for the whole of STALE_MINUTES, because a phone cannot walk across
+     * the church to check; this browser's own cannot be, because a phone that
+     * pressed Present and came back would otherwise say for five minutes that
+     * the show is on the phone in the cantor's hand.
+     */
+    public function isPresenting(): bool
+    {
+        return $this->last_seen_at?->gt(Carbon::now()->subSeconds(self::PRESENTING_SECONDS)) === true;
+    }
+
+    /**
+     * Whether this screen has said anything lately.
+     *
+     * What the remote draws its "screen not responding" from. A wall says this
+     * by polling the show, which is the one thing a wall does whatever else is
+     * or is not happening — so unlike everything else about a screen, it is
+     * true of a wall sitting quietly through a long hymn.
+     */
+    public function isResponding(): bool
+    {
+        return $this->last_seen_at?->gt(Carbon::now()->subSeconds(self::SILENT_SECONDS)) === true;
+    }
+
+    /**
+     * Whether its owner is willing to be offered this device as a screen.
+     *
+     * Read off the name row already loaded rather than asked as a subquery,
+     * because the answer travels to the phone now: the show is described once
+     * per person and the same description reaches every device, so which
+     * screens a given device may see is decided where it is drawn.
+     *
+     * The absence of a row is the yes, so a device nobody has ever thought
+     * about behaves exactly as it did before there was anything to think about.
+     */
+    public function isOffered(): bool
+    {
+        return $this->deviceName?->offered ?? true;
     }
 
     public function describeDevice(): string

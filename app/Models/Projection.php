@@ -191,6 +191,43 @@ class Projection extends Model implements PlanDocument
     }
 
     /**
+     * The deck's rows in order, with only the two columns an address resolves
+     * against.
+     *
+     * The other join on the polling path, and the one that grew with the deck:
+     * every read of the show loaded every row of it to answer "which row is the
+     * service on, and do today's reveals still name rows that exist". A
+     * sixty-row deck paid sixty rows for that, twice a second, for the length
+     * of a Mass.
+     *
+     * It is cached beside the revision and forgotten by the same saves, because
+     * it is the same fact: a row added, removed or reordered is exactly what
+     * moves a revision, and nothing that leaves the revision alone can change
+     * this list.
+     *
+     * @see ProjectionRevisionObserver
+     *
+     * @return Collection<int, ProjectionSlide>
+     */
+    public function entryOrder(): Collection
+    {
+        return Cache::remember(
+            self::entryOrderKey($this->getKey()),
+            self::REVISION_TTL_SECONDS,
+            fn (): Collection => $this->entries()->get(['id', 'projection_id', 'sequence']),
+        );
+    }
+
+    /**
+     * Where that order is remembered. Forgotten by whoever forgets the
+     * revision, since the two answer to the same saves.
+     */
+    public static function entryOrderKey(int $projectionId): string
+    {
+        return CacheKey::forModel('projection', 'entry-order', ['id' => $projectionId]);
+    }
+
+    /**
      * Where a deck's revision is remembered between the polls asking for it.
      *
      * Public because forgetting it is somebody else's job: the two models whose

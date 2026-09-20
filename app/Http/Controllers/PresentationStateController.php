@@ -63,16 +63,6 @@ class PresentationStateController extends Controller
             )
             : $commands->applyLegacy($presentation, $reported);
 
-        // Written outside applyState, because it is not part of where the
-        // service is: it is this screen's honest answer to "have you finished
-        // drawing the edit yet", and a heartbeat that carries nothing else must
-        // not look like the deck moved.
-        $drawn = $request->input('drawnRevision');
-
-        if ($request->has('drawnRevision') && $drawn !== $presentation->drawn_revision) {
-            $presentation->forceFill(['drawn_revision' => $drawn])->save();
-        }
-
         return response()->json($state->answer($presentation));
     }
 

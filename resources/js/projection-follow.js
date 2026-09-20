@@ -48,8 +48,8 @@ export const POLL_MS = 1000;
  * and not with a save — a wall that stopped being heard from, a deck whose score
  * was corrected in another window — and nobody publishes a clock. And a stream
  * can be dead without saying so: a phone that walked out of the wifi holds an
- * open connection to nothing until the network notices. Fifteen seconds bounds
- * both, at a fifteenth of the asking.
+ * open connection to nothing until the network notices. Five seconds bounds
+ * both, at a fifth of the asking.
  */
 export const PUSHED_POLL_MS = 5000;
 
@@ -192,6 +192,19 @@ export function poller(tick, options = {}) {
         /** How long the next wait would be — the backing off, made visible. */
         get wait() {
             return wait;
+        },
+
+        /**
+         * Whether a read is out right now.
+         *
+         * Asked by a page that has just been *pushed* an answer: a read that
+         * left before the push landed may come back after it, carrying what the
+         * push has already superseded. The page lets the read win rather than
+         * racing it, because the read is a fresh look at the same thing and is
+         * a beat away at most.
+         */
+        get busy() {
+            return inFlight;
         },
     };
 }
@@ -363,13 +376,18 @@ export function replayPendingState(canonical, pending) {
 }
 
 /**
- * Being told when the show moves, rather than asking every second.
+ * Being told where the show is, rather than asking every second.
  *
- * Only ever a nudge. What comes down the stream is "something changed", and
- * the page answers it with the read it would have made anyway — so the stream
- * can be late, lost or never opened, and the worst that costs is the polling
- * this page did before it existed. That keeps the rule at the head of this
- * file: a stream that dies is not an event either.
+ * What comes down the stream is the show's own answer — the same description
+ * the read returns, because it is built for a person and not for a device — so
+ * a press of the space bar reaches every device without any of them going back
+ * to the server for it.
+ *
+ * It stays a thing the page can do without. A frame may be late, lost, or
+ * never arrive at all; some of what the answer says moves with a clock rather
+ * than with a save; and a page whose stream has quietly died is a page that
+ * simply polls. Nothing is ever learned only this way, which keeps the rule at
+ * the head of this file: a stream that dies is not an event either.
  *
  * The hub says who may listen with a cookie, which the server sets when asked.
  * A browser reconnects by itself after a blip and keeps the cookie; when the
@@ -378,7 +396,9 @@ export function replayPendingState(canonical, pending) {
  * after a wait that grows the way the poller's does.
  *
  * `open` is called with true or false as listening starts and stops, which is
- * the page's cue to change pace; `change` whenever the show moved.
+ * the page's cue to change pace; `change` whenever the show moved, with the
+ * frame's text — which a page passes to `pushedShow()` and falls back to a
+ * poll for when it turns out to say nothing it understands.
  *
  * @param {{streamUrl: string, csrfToken: string, EventSource?: typeof EventSource}} config
  * @param {{change?: () => void, open?: (isOpen: boolean) => void}} handlers
@@ -430,7 +450,7 @@ export function showStream(config, handlers = {}) {
             setOpen(true);
         };
 
-        source.onmessage = () => handlers.change?.();
+        source.onmessage = (event) => handlers.change?.(event?.data);
 
         source.onerror = () => {
             setOpen(false);
@@ -770,13 +790,88 @@ export function showClient(config) {
 }
 
 /**
- * This device's own fit, out of the show's answer — or null when this device is
- * not among the screens, in which case whatever fit was already held stays.
+ * The show's screens as *this* device should be shown them.
  *
- * @param {{screens?: Array<{isThisDevice: boolean, fit: object}>}|null} answer
+ * The answer is built for a person and not for a device — that is what lets the
+ * hub carry it — so the two questions that used to be settled on the server are
+ * settled here instead, against the flags each screen arrives with.
+ *
+ * A device its owner said is not a screen is left out, because it is no place
+ * to say the show is on nor to line a picture up; except when it is this
+ * device, which still needs its own fit back whatever it has been called. And
+ * this device counts only while its wall is actually up, so that a phone which
+ * pressed Present a minute ago and came back does not tell its holder that the
+ * show is on the phone in their hand.
+ *
+ * @see \App\Services\ShowState::screensFor(), which says the same thing in PHP
+ * @param {{screens?: Array<object>}|null} answer
+ * @param {string|null} deviceId this browser, as the server knows it
  */
-export function ownFit(answer) {
-    const own = (answer?.screens ?? []).find((screen) => screen.isThisDevice);
+export function screensFor(answer, deviceId) {
+    return (answer?.screens ?? [])
+        .map((screen) => ({ ...screen, isThisDevice: Boolean(deviceId) && screen.deviceId === deviceId }))
+        .filter((screen) => (screen.isThisDevice ? screen.presenting !== false : screen.offered !== false));
+}
+
+/**
+ * This device's own fit, out of the screens it was shown — or null when this
+ * device is not among them, in which case whatever fit was already held stays.
+ *
+ * @param {Array<{isThisDevice: boolean, fit: object}>} screens from screensFor()
+ */
+export function ownFit(screens) {
+    const own = (screens ?? []).find((screen) => screen.isThisDevice);
 
     return own ? fitFrom(own.fit) : null;
+}
+
+/**
+ * And this device's own screen row, which is where a wall reads back what the
+ * server thinks it has drawn.
+ *
+ * @param {Array<{isThisDevice: boolean}>} screens from screensFor()
+ */
+export function ownScreen(screens) {
+    return (screens ?? []).find((screen) => screen.isThisDevice) ?? null;
+}
+
+/**
+ * A frame off the stream, made into an answer — or null when it is not one.
+ *
+ * Null is for anything that does not parse into a stamped show: a server
+ * publishing the older bare nudge, a hub sending its own keep-alive. A page
+ * answers those by asking, exactly as it did before frames carried anything,
+ * which is why being late and being unreadable are told apart here rather than
+ * lumped together — a frame that merely arrived behind a newer one is nothing
+ * to go back to the server about.
+ *
+ * @param {string|undefined} data
+ * @return {{at: string, show: object}|null}
+ */
+export function pushedShow(data) {
+    let frame = null;
+
+    try {
+        frame = JSON.parse(data ?? '');
+    } catch {
+        return null;
+    }
+
+    if (!frame || typeof frame !== 'object' || !frame.show || typeof frame.show !== 'object') { return null; }
+
+    const at = String(frame.at ?? '');
+
+    return at === '' ? null : { at, show: frame.show };
+}
+
+/**
+ * Whether a frame is newer than the last one taken up.
+ *
+ * Two of them can overtake each other between the hub and a phone in a
+ * building, and a device that drew the later one must not then draw the
+ * earlier. The stamp is the server's own clock, which is the only clock both
+ * frames passed through.
+ */
+export function isNewerFrame(frame, since) {
+    return frame !== null && (since === null || since === undefined || frame.at > since);
 }

@@ -41,7 +41,10 @@ resources/js/projection-presenter.js
         // up last Sunday draws its first slide where it belongs rather than
         // centring it and jumping a second later.
         'fit' => $screen->fit(),
-        'screenId' => $screen->id,
+        // Which browser this is. The show is described for a person and not
+        // for a device, so the one device-shaped question left in it — which of
+        // these screens is the one I am — is answered here.
+        'deviceId' => \App\Support\DeviceId::current(),
         'ackUrl' => route('screens.ack', ['screen' => $screen->id]),
         'presentationId' => $presentation?->id,
         // How far into its opening the service is. Baked in so the card is the

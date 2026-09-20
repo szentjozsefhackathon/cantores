@@ -23,8 +23,11 @@ await import('../../resources/js/projection-remote.js');
  * already and going nowhere: nothing here touches the DOM or the wire, so what
  * is left is exactly what a key does to the service.
  */
+/** This browser, as the server knows it — the show names devices, not screens. */
+const THIS_DEVICE = 'device-here';
+
 function remote(total = 5) {
-    const component = registered.projectionRemote({});
+    const component = registered.projectionRemote({ deviceId: THIS_DEVICE });
 
     component.slides = Array.from({ length: total }, (unused, index) => ({ entryId: 1, index, svg: null }));
     component.total = total;
@@ -591,9 +594,19 @@ test('the sheet follows a move rather than an answer', () => {
  * see whether it has been fixed.
  */
 
-/** A wall as the show's answer lists it. */
+/** A wall as the show's answer lists it: named by device, and answering. */
 function wall(id, fit = { scale: 1, x: 0, y: 0 }, isThisDevice = false) {
-    return { id, label: `Screen ${id}`, fit, fitUrl: `/screens/${id}/fit`, isThisDevice };
+    return {
+        id,
+        deviceId: isThisDevice ? THIS_DEVICE : `device-${id}`,
+        label: `Screen ${id}`,
+        fit,
+        fitUrl: `/screens/${id}/fit`,
+        offered: true,
+        presenting: true,
+        responding: true,
+        isThisDevice,
+    };
 }
 
 /** A remote with one wall on, whose fit writes are remembered rather than sent. */
@@ -653,7 +666,6 @@ test('screen delivery status distinguishes sending waiting updated and stale', (
         appliedPresentationId: 1,
         appliedVersion: 7,
         drawnRevision: 'revision-1',
-        appliedAt: new Date().toISOString(),
     };
 
     deck.presentationId = 1;
@@ -676,8 +688,11 @@ test('screen delivery status distinguishes sending waiting updated and stale', (
     screen.appliedVersion = 7;
     assert.equal(deck.screenStatus(screen).kind, 'stale');
 
+    // A wall that has stopped answering the poll every wall makes, which is
+    // the other and worse silence: not behind, but gone.
     deck._committedAt = 0;
-    screen.appliedAt = new Date(Date.now() - 30000).toISOString();
+    screen.appliedVersion = 8;
+    screen.responding = false;
     assert.equal(deck.screenStatus(screen).kind, 'stale');
 });
 
@@ -958,7 +973,7 @@ test('the phone walks the opening as the server says', async () => {
 test('the phone can answer for its own state before it has been told anything', () => {
     const deck = registered.projectionRemote({ clearText: 'end it?' });
 
-    for (const field of ['ended', 'waiting', 'preparing', 'busy', 'blanked', 'wallBehind', 'opening', 'openingHint', 'showingSplash', 'total', 'index', 'clearText']) {
+    for (const field of ['ended', 'waiting', 'preparing', 'busy', 'blanked', 'opening', 'openingHint', 'showingSplash', 'total', 'index', 'clearText']) {
         assert.notEqual(deck[field], undefined, `the page reads ${field} and the phone cannot say what it is`);
     }
 
@@ -1151,4 +1166,80 @@ test('the status line is asked again only when the walls change', async () => {
     assert.deepEqual(dispatched, ['show-screens-changed']);
 
     delete globalThis.window.Livewire;
+});
+
+/*
+ * Whether a wall is still getting the deck onto the glass.
+ *
+ * A deck is often put up from the phone before the laptop is switched on, which
+ * this application goes out of its way to support — so no wall at all is not a
+ * wall preparing. Saying otherwise told the cantor for the whole of a Mass that
+ * a screen was preparing something, and took the card hint away with it.
+ */
+test('no wall on is not a wall preparing', async () => {
+    const deck = remote();
+
+    deck.presentationId = 1;
+    deck.ownRevision = 'a';
+    deck.repaint = () => {};
+    deck._show = { read: () => Promise.resolve({
+        presentationId: 1,
+        screens: [],
+        state: { version: 1, revision: 'a', entryId: 1, slideIndex: 0, blanked: false, splash: 'card', reveals: {}, endedAt: null },
+    }) };
+
+    await deck.pull();
+
+    assert.equal(deck.preparing, false, 'the phone said a screen was preparing the deck with no screen on');
+    assert.equal(deck.showingSplash, true, 'the card hint was suppressed by a wall that does not exist');
+});
+
+/* And with two beamers the room is not ready while either is still drawing —
+   the newest-heard-from wall is not the answer for both. */
+test('every wall is asked whether it has the deck, not the first of them', async () => {
+    const deck = remote();
+    const behind = { ...wall(6), appliedPresentationId: 1, appliedVersion: 1, drawnRevision: '' };
+    const drawn = { ...wall(5), appliedPresentationId: 1, appliedVersion: 1, drawnRevision: 'a' };
+
+    deck.presentationId = 1;
+    deck.ownRevision = 'a';
+    deck.repaint = () => {};
+    deck._show = { read: () => Promise.resolve({
+        presentationId: 1,
+        screens: [drawn, behind],
+        state: { version: 1, revision: 'a', entryId: 1, slideIndex: 0, blanked: false, splash: 'off', reveals: {}, endedAt: null },
+    }) };
+
+    await deck.pull();
+
+    assert.equal(deck.preparing, true, 'a wall still drawing was hidden behind one that had finished');
+
+    behind.drawnRevision = 'a';
+    await deck.pull();
+
+    assert.equal(deck.preparing, false);
+});
+
+/* The hub hands the phone the answer too — the same answer, and the same
+   refusal of a frame that arrives behind one already drawn. */
+test('the phone takes the show off the stream without reading it back', async () => {
+    const deck = remote();
+    let asked = 0;
+
+    deck.presentationId = 1;
+    deck.repaint = () => {};
+    deck._poll = { busy: false, poke: () => { asked += 1; } };
+
+    await deck.pushed(JSON.stringify({ at: '2', show: { presentationId: 1, title: 'Vasárnap', screens: [], state: null } }));
+
+    assert.equal(deck.title, 'Vasárnap');
+    assert.equal(asked, 0, 'the phone went back to the server for what it had just been handed');
+
+    await deck.pushed(JSON.stringify({ at: '1', show: { presentationId: 1, title: 'Előző', screens: [], state: null } }));
+
+    assert.equal(deck.title, 'Vasárnap', 'an overtaken frame was drawn over the newer one');
+
+    await deck.pushed('changed');
+
+    assert.equal(asked, 1, 'a frame that said nothing was not answered by asking');
 });

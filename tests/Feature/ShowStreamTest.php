@@ -19,10 +19,10 @@ use function Pest\Laravel\post;
 use function Pest\Laravel\postJson;
 
 /*
- * The hub only ever says "something changed", to one person. What there is to
- * check is that it says so when a device's answer would move, that the wall's
- * ten-second "still here" does not make it say so, and that a browser can only
- * listen to its own person.
+ * The hub carries one person's show to that person's devices. What there is to
+ * check is that it is sent when a device's answer would move, that a "still
+ * here" does not send it, that what is sent is the answer itself rather than a
+ * knock on the door, and that a browser can only listen to its own person.
  */
 
 const PUBLISH_URL = 'http://hub.test/.well-known/mercure';
@@ -123,6 +123,38 @@ it('tells the person when the service moves, privately and signed', function () 
             && $request['private'] === 'on'
             && claimsOf($token, 'publisher-key')['mercure']['publish'] === [$topic];
     });
+});
+
+/*
+ * And tells them *what* moved, rather than sending every device back to the
+ * server to find out. The answer belongs to the person and to none of their
+ * devices — which is exactly what makes it publishable — so the copy that goes
+ * down the hub is the copy a read would have returned.
+ */
+it('carries the show itself, stamped so that two frames cannot cross', function () {
+    $user = User::factory()->create();
+    [$projection, $entry, $presentation] = showingDeck($user);
+    $screen = Screen::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    postJson(route('presentations.state.store', $presentation), [
+        'entryId' => $entry->id,
+        'slideIndex' => 1,
+    ])->assertOk();
+
+    $frame = json_decode(Http::recorded()->first()[0]['data'], true);
+
+    expect($frame['at'])->toMatch('/^\d{20}$/')
+        ->and($frame['show']['presentationId'])->toBe($presentation->id)
+        ->and($frame['show']['title'])->toBe($projection->title)
+        ->and($frame['show']['state']['entryId'])->toBe($entry->id)
+        ->and($frame['show']['state']['slideIndex'])->toBe(1)
+        // Described for the person: every device of theirs, named by device,
+        // with what each browser needs to decide which it may be shown.
+        ->and($frame['show']['screens'][0]['id'])->toBe($screen->id)
+        ->and($frame['show']['screens'][0]['deviceId'])->toBe($screen->device_id)
+        ->and($frame['show']['screens'][0])->toHaveKeys(['offered', 'presenting', 'responding']);
 });
 
 it('says nothing when the wall only reports that it is still there', function () {

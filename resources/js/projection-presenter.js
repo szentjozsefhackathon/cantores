@@ -1,7 +1,7 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
 import { onPaper } from './slide-frame.js';
-import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, poller, replayPendingState, showClient, showStream, shownExclusions, stateClient } from './projection-follow.js';
+import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, ownScreen, isNewerFrame, poller, pushedShow, replayPendingState, screensFor, showClient, showStream, shownExclusions, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -176,11 +176,18 @@ onAlpineInit(() => {
 
         _idleTimer: null,
         _poll: null,
+        _stream: null,
         _heartbeat: null,
         _client: null,
         _commands: null,
         _show: null,
         _refreshToken: 0,
+
+        /** The newest frame this page has taken off the stream, by its stamp. */
+        _pushedAt: null,
+
+        /** What the server last said this wall had drawn. @see takeAcknowledgement */
+        _acknowledged: null,
 
         /**
          * Whether the bar and the key hints are out of sight.
@@ -533,20 +540,21 @@ onAlpineInit(() => {
          */
         follow() {
             // Once a second until the hub is listening, and then only as a
-            // safety net: the hub says when to ask.
+            // safety net: the hub sends the answer itself.
             this._poll = poller(() => this.pull(), {
                 interval: () => (this._stream?.open ? PUSHED_POLL_MS : POLL_MS),
             });
             this._stream = showStream(config, {
-                change: () => this._poll.poke(),
+                change: (data) => this.pushed(data),
                 // Either way round, ask now: a stream just opened may have missed
                 // the move that happened while it connected, and one just lost
-                // must not leave the page waiting out a fifteen second beat.
+                // must not leave the page waiting out a five second beat.
                 open: () => this._poll.poke(),
             });
-            // The same shape, three times as slow, and allowed to drift three
-            // times as far — which is still well inside the five minutes a
-            // presentation is counted live for.
+            // Not a heartbeat any more, and it sends nothing when there is
+            // nothing to say. What it is is the retry behind a report that
+            // failed to land: the screen's drawn state is reported when it
+            // changes, and this is what notices that the report never arrived.
             this._heartbeat = poller(() => this.acknowledgeRendered(), {
                 interval: HEARTBEAT_MS,
                 maxInterval: HEARTBEAT_MS * 3,
@@ -560,27 +568,78 @@ onAlpineInit(() => {
         /**
          * One read of the show.
          *
+         * A failed read is not an event. Nothing is drawn over the deck and
+         * nothing moves; the next beat tries again, a little later than this
+         * one did — which is the whole of what saying `false` here means.
+         */
+        async pull() {
+            const answer = await this._show.read();
+
+            if (answer === null) { return false; }
+
+            await this.apply(answer);
+        },
+
+        /**
+         * The same answer, handed to this page by the hub instead of fetched.
+         *
+         * A read already out is left to win. It was sent after the change that
+         * is being pushed as often as not, and letting the two race would mean
+         * drawing whichever happened to land second; the read is a beat away at
+         * most, so the page simply asks for one rather than arguing.
+         *
+         * Anything that does not parse as a show — an older server's bare
+         * nudge, the hub's own keep-alive — is answered by asking, exactly as
+         * this page did before frames carried anything.
+         */
+        pushed(data) {
+            if (this._poll?.busy) {
+                this._poll.poke();
+
+                return;
+            }
+
+            const frame = pushedShow(data);
+
+            if (frame === null) {
+                this._poll?.poke();
+
+                return;
+            }
+
+            // Late rather than unreadable: there is nothing to ask for, since
+            // what this frame would have said is already drawn.
+            if (!isNewerFrame(frame, this._pushedAt)) { return; }
+
+            this._pushedAt = frame.at;
+
+            return this.apply(frame.show);
+        },
+
+        /**
+         * The show, however it arrived.
+         *
          * Three different things can have moved, answered by three different
          * fields. `presentationId` moves when a phone puts another deck up, and
          * the wall goes black and engraves it. `version` moves when
          * someone presses space, and the screen swaps a slide. `revision` moves
          * when someone saves an edit, and the screen reads the same deck again.
          */
-        async pull() {
-            const answer = await this._show.read();
-
-            // A failed read is not an event. Nothing is drawn over the deck and
-            // nothing moves; the next beat tries again, a little later than this
-            // one did — which is the whole of what saying `false` here means.
-            if (answer === null) { return false; }
-
+        async apply(answer) {
             this.title = answer.title ?? '';
+
+            const screens = screensFor(answer, config.deviceId ?? null);
 
             // Taken up whatever else the answer says, because it is a fact
             // about this screen and not about the deck: a picture lined up
             // while the wall was waiting is still lined up when a deck arrives
             // on it, and one nudged mid-hymn moves under the hymn.
-            this.fit = ownFit(answer) ?? this.fit;
+            this.fit = ownFit(screens) ?? this.fit;
+
+            // And what the server has been told this wall has drawn, which is
+            // what makes the telling an event: there is nothing to report while
+            // this agrees with what is on the screen.
+            this.takeAcknowledgement(ownScreen(screens));
 
             if ((answer.presentationId ?? null) !== this.presentationId) {
                 await this.showDeck(answer);
@@ -760,21 +819,79 @@ onAlpineInit(() => {
                 .catch(() => false);
         },
 
-        /** A heartbeat is evidence of rendered state, never desired state. */
+        /**
+         * What the server last heard this wall had drawn.
+         *
+         * Held so that saying it again can be skipped. Read both from the
+         * show's own answer — this screen's row in it — and from the answer to
+         * a report, so a wall that has just reported does not report the same
+         * thing again on the next beat.
+         */
+        takeAcknowledgement(screen) {
+            if (!screen) { return; }
+
+            this._acknowledged = {
+                presentationId: screen.appliedPresentationId ?? null,
+                appliedVersion: Number(screen.appliedVersion ?? 0),
+                drawnRevision: screen.drawnRevision ?? '',
+            };
+        },
+
+        /**
+         * Say what is on the screen — but only when it is not what the server
+         * already says is on the screen.
+         *
+         * This was a heartbeat, sent every ten seconds whether anything had
+         * been drawn or not, and it was the one thing on the whole path that
+         * wrote a row for saying nothing. It is evidence of rendered state, and
+         * rendered state is an event: the drawing of a deck, the landing of a
+         * command, the catching up with an edit. A quiet hymn costs nothing.
+         *
+         * The wall is still heard from while it is quiet — every poll it makes
+         * says so — so the phone can still tell a wall that has stopped
+         * answering from one that simply has nothing new to report.
+         *
+         * @see \App\Models\Screen::acknowledge()
+         */
         async acknowledgeRendered() {
             if (this.presentationId === null || !config.ackUrl || this.pendingCommands.length > 0 || this.serverRevision !== this.drawnRevision) {
                 return;
             }
 
-            await new Promise((resolve) => (globalThis.requestAnimationFrame ?? ((done) => setTimeout(done, 0)))(resolve));
-
-            const acknowledgement = await this._show.acknowledge(config.ackUrl, {
+            const drawn = {
                 presentationId: this.presentationId,
                 appliedVersion: this.appliedVersion,
                 drawnRevision: this.drawnRevision || null,
+            };
+
+            if (this.alreadyAcknowledged(drawn)) { return; }
+
+            await new Promise((resolve) => (globalThis.requestAnimationFrame ?? ((done) => setTimeout(done, 0)))(resolve));
+
+            const acknowledgement = await this._show.acknowledge(config.ackUrl, drawn);
+
+            // Left unrecorded on a failure, which is the whole of the retry:
+            // the next beat of the slow poller finds them still disagreeing and
+            // says it again.
+            if (acknowledgement === null) { return false; }
+
+            this.takeAcknowledgement({
+                appliedPresentationId: acknowledgement.presentationId,
+                appliedVersion: acknowledgement.appliedVersion,
+                drawnRevision: acknowledgement.drawnRevision,
             });
 
-            return acknowledgement === null ? false : true;
+            return true;
+        },
+
+        /** Whether the server already has exactly this. */
+        alreadyAcknowledged(drawn) {
+            const known = this._acknowledged;
+
+            return known !== null
+                && known.presentationId === drawn.presentationId
+                && known.appliedVersion === Number(drawn.appliedVersion ?? 0)
+                && known.drawnRevision === (drawn.drawnRevision ?? '');
         },
 
         /**

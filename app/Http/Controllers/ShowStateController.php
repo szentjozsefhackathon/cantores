@@ -30,19 +30,33 @@ class ShowStateController extends Controller
     {
         $user = $request->user();
 
+        $screens = ShowState::allFor($user);
+
         // The read doubles as a screen's heartbeat, but only for the wall
         // itself, which says so. The remote reads this too — from a phone, or
         // from the very laptop the wall is on — and neither must keep a closed
         // wall looking alive.
+        //
+        // And it is the wall's own row out of the answer being built anyway,
+        // not a query of its own: a wall's poll asked for this row twice, once
+        // to keep it warm and once to read its fit back off it. The only
+        // browser this misses is one that has been away longer than the answer
+        // reaches back, which is a screen returning from sleep and not a Mass.
         if ($request->boolean('screen')) {
-            Screen::query()
-                ->mine($user)
-                ->where('device_id', DeviceId::current())
-                ->first()
-                ?->touchLastSeen();
-        }
+            $own = $screens->firstWhere('device_id', DeviceId::current());
 
-        $screens = ShowState::screensFor($user);
+            if ($own instanceof Screen) {
+                $own->touchLastSeen();
+            } else {
+                Screen::query()
+                    ->mine($user)
+                    ->where('device_id', DeviceId::current())
+                    ->first()
+                    ?->touchLastSeen();
+
+                $screens = ShowState::allFor($user);
+            }
+        }
 
         $presentation = Presentation::currentFor($user);
 

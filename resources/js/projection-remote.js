@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
-import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, poller, replayPendingState, sameFit, showClient, showStream, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
+import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, isNewerFrame, poller, pushedShow, replayPendingState, sameFit, screensFor, showClient, showStream, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
 
 /**
  * The deck in the cantor's hand.
@@ -214,7 +214,7 @@ onAlpineInit(() => {
          * there is one wall and nothing to choose; the chooser appears only when
          * there are two, which is the laptop at home left open.
          */
-        screens: config.screens ?? [],
+        screens: screensFor(config, config.deviceId ?? null),
         fitScreenId: null,
 
         /**
@@ -329,14 +329,14 @@ onAlpineInit(() => {
         splash: config.splash ?? SPLASH_OFF,
 
         /**
-         * The deck the server has, and the deck the wall has finished engraving.
+         * The deck the server has.
          *
-         * Two numbers rather than one, because "the edit is saved" and "the room
-         * can see it" are different answers and the phone is the only device in
-         * a position to say both.
+         * What each wall has finished engraving is not a second number here but
+         * a field on each of them, because a parish with two beamers has two
+         * answers to "can the room see my correction yet" and this page is the
+         * only device in a position to say both.
          */
         serverRevision: config.revision ?? '',
-        wallRevision: config.revision ?? '',
 
         /** And the deck this phone itself has finished engraving. */
         ownRevision: config.revision ?? '',
@@ -348,6 +348,9 @@ onAlpineInit(() => {
         _committedAt: 0,
         _autoResyncedVersion: 0,
         _resyncTimer: null,
+
+        /** The newest frame this page has taken off the stream, by its stamp. */
+        _pushedAt: null,
 
         _client: null,
         _commands: null,
@@ -385,16 +388,16 @@ onAlpineInit(() => {
         },
 
         /**
-         * Whether the wall is still catching up with the last edit.
+         * What to say about one wall.
          *
-         * Not while it is preparing a different deck: that is a bigger thing and
-         * has a sentence of its own, and saying both at once would tell the
-         * cantor twice over that the room cannot see them yet.
+         * Two different silences, and the difference matters to whoever is
+         * holding this. A wall that has said nothing at all is a laptop that
+         * has been shut or has lost the network, and `responding` — which the
+         * server answers off the poll every wall makes whatever else it is
+         * doing — is what names it. A wall that is answering but has not yet
+         * drawn what was pressed is merely behind, and that is measured from
+         * the press rather than from the wall.
          */
-        get wallBehind() {
-            return false;
-        },
-
         screenStatus(screen) {
             if (this.pendingCommands.length > 0) {
                 return { kind: 'sending', label: config.sendingText ?? 'Sending' };
@@ -403,8 +406,7 @@ onAlpineInit(() => {
             const exact = screen.appliedPresentationId === this.presentationId
                 && Number(screen.appliedVersion) === Number(this.canonicalState?.version ?? this.appliedVersion)
                 && screen.drawnRevision === this.serverRevision;
-            const appliedAt = Date.parse(screen.appliedAt ?? '');
-            const stale = (Number.isFinite(appliedAt) && Date.now() - appliedAt > 20000)
+            const stale = screen.responding === false
                 || (!exact && this._committedAt > 0 && Date.now() - this._committedAt > 10000);
 
             if (exact && !stale) {
@@ -490,7 +492,7 @@ onAlpineInit(() => {
                     interval: () => (this._stream?.open ? PUSHED_POLL_MS : POLL_MS),
                 });
                 this._stream = showStream(config, {
-                    change: () => this._poll.poke(),
+                    change: (data) => this.pushed(data),
                     open: () => this._poll.poke(),
                 });
                 this._poll.start();
@@ -1690,26 +1692,62 @@ onAlpineInit(() => {
          * One read of the show — which deck is up, where in it the service has
          * got to, and which walls it is on.
          *
-         * Both in one answer, so the phone asks once a second and not twice. A
-         * failed read is not an event: the remote keeps showing what it last
-         * knew, and the next poll tries again.
+         * All of it in one answer, so the phone asks once and not three times.
+         * A failed read is not an event: the remote keeps showing what it last
+         * knew, saying `false` only asks the next beat to wait a little longer
+         * than this one did, and nothing is drawn to announce it.
          */
         async pull() {
             const answer = await this._show.read();
 
-            // A failed read is not an event here either: nothing is drawn to say
-            // so, and saying `false` only asks the next beat to wait a little
-            // longer than this one did.
             if (answer === null) { return false; }
 
+            await this.apply(answer);
+        },
+
+        /**
+         * The same answer, handed to this page by the hub instead of fetched.
+         *
+         * A read already out is left to win rather than raced; anything that
+         * does not parse as a show is answered by asking for one. See the
+         * wall's `pushed()`, which does this for the same reasons.
+         */
+        pushed(data) {
+            if (this._poll?.busy) {
+                this._poll.poke();
+
+                return;
+            }
+
+            const frame = pushedShow(data);
+
+            if (frame === null) {
+                this._poll?.poke();
+
+                return;
+            }
+
+            // Late rather than unreadable: there is nothing to ask for, since
+            // what this frame would have said is already drawn.
+            if (!isNewerFrame(frame, this._pushedAt)) { return; }
+
+            this._pushedAt = frame.at;
+
+            return this.apply(frame.show);
+        },
+
+        /** The show, however it arrived. */
+        async apply(answer) {
             this.title = answer.title ?? '';
 
             // The wall's own answer about where its picture lands — unless
             // this phone has just moved it, in which case the answer in hand
             // was written before the press and saying so would undo it.
             if (Date.now() - this._fitAt > FIT_SETTLE_MS) {
-                this.announceWalls(answer.screens ?? []);
-                this.screens = answer.screens ?? [];
+                const screens = screensFor(answer, config.deviceId ?? null);
+
+                this.announceWalls(screens);
+                this.screens = screens;
                 this.fit = fitFrom(this.fitTarget?.fit);
             }
 
@@ -1728,20 +1766,34 @@ onAlpineInit(() => {
             if (state === null || state === undefined) { return; }
 
             this.serverRevision = state.revision ?? this.serverRevision;
-            this.wallRevision = (answer.screens ?? [])[0]?.drawnRevision ?? state.drawnRevision ?? '';
             this.ended = state.endedAt !== null && state.endedAt !== undefined;
-
-            // The wall reports the deck it has actually finished engraving. On a
-            // deck just put up it has none yet, which is exactly what "the screen
-            // is preparing" means, and it is the same field that answers "has the
-            // room seen my correction" one level down.
-            this.preparing = this.wallRevision === '';
+            this.preparing = this.wallsPreparing();
 
             if (state.version >= Number(this.canonicalState?.version ?? 0)) { this.acceptCanonical(state); }
 
             if (this.serverRevision !== this.ownRevision) {
                 this.refresh();
             }
+        },
+
+        /**
+         * Whether a wall is still getting this deck onto the glass.
+         *
+         * Each wall reports the deck it has actually finished engraving, and on
+         * one just pointed at a different deck it has none yet — which is
+         * exactly what "the screen is preparing" means. Every wall is asked,
+         * because a parish with two beamers is not ready while either is still
+         * drawing.
+         *
+         * And no wall at all is not a wall preparing. A deck is often put up
+         * from the phone before the laptop is switched on, which is a thing
+         * this application goes out of its way to support; telling the cantor
+         * for the whole of that time that a screen is preparing something was
+         * both untrue and the reason the card hint never appeared.
+         */
+        wallsPreparing() {
+            return this.walls.some((screen) => screen.appliedPresentationId !== this.presentationId
+                || !screen.drawnRevision);
         },
 
         /**
@@ -1786,7 +1838,6 @@ onAlpineInit(() => {
             this.index = 0;
             this.ownRevision = '';
             this.serverRevision = '';
-            this.wallRevision = '';
 
             await this.refresh();
         },

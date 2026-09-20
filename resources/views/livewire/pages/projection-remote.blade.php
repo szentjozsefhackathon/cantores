@@ -56,6 +56,10 @@ resources/js/projection-remote.js
         // The walls that are on, each with where its picture lands, so the
         // preview is lined up the way the wall is before the first poll.
         'screens' => $screens,
+        // Which browser this is, so that the laptop running the wall in one
+        // window and this page in the other still knows its own screen. The
+        // show's answer names no device; this is what it is read against.
+        'deviceId' => \App\Support\DeviceId::current(),
         'presentationId' => $presentation?->id,
         // How far into its opening the service is, so that the preview under the
         // thumb is the same picture the room is looking at — which is the whole

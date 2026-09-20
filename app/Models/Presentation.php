@@ -44,7 +44,6 @@ use Illuminate\Support\Facades\DB;
  * @property bool $blanked
  * @property string $splash
  * @property int $version
- * @property string|null $drawn_revision
  * @property array<int|string, list<int>>|null $reveals
  * @property CarbonImmutable $started_at
  * @property CarbonImmutable $last_seen_at
@@ -77,6 +76,17 @@ class Presentation extends Model
      * remote that says the service has ended while it is going on.
      */
     public const STALE_MINUTES = 5;
+
+    /**
+     * How stale `last_seen_at` is allowed to get before it costs a write.
+     *
+     * Its own number rather than the screen's, which it used to borrow. A
+     * screen's is set by how quickly a phone should be able to say a wall has
+     * gone quiet; this one answers to nothing but the five minutes above, and
+     * borrowing meant that tightening the first silently doubled the writes
+     * behind the second.
+     */
+    public const SEEN_EVERY_SECONDS = 30;
 
     /**
      * A slide index no deck reaches, meaning "as far as this row goes".
@@ -138,7 +148,6 @@ class Presentation extends Model
         'blanked',
         'splash',
         'version',
-        'drawn_revision',
         'reveals',
         'started_at',
         'last_seen_at',
@@ -454,7 +463,7 @@ class Presentation extends Model
 
     /**
      * Note that somebody is still following the show, at most once every
-     * `Screen::SEEN_EVERY_SECONDS`.
+     * `SEEN_EVERY_SECONDS`.
      *
      * The caller is the poll, and the column is read against a five minute
      * window, so a write a second would be three hundred times more than
@@ -462,7 +471,7 @@ class Presentation extends Model
      */
     public function keepAlive(): void
     {
-        if ($this->last_seen_at->gt(Carbon::now()->subSeconds(Screen::SEEN_EVERY_SECONDS))) {
+        if ($this->last_seen_at->gt(Carbon::now()->subSeconds(self::SEEN_EVERY_SECONDS))) {
             return;
         }
 

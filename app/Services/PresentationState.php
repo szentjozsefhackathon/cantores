@@ -43,7 +43,6 @@ class PresentationState
      *     splash: string,
      *     reveals: array<int, list<int>>,
      *     revision: string,
-     *     drawnRevision: string|null,
      *     endedAt: string|null,
      * }
      */
@@ -64,7 +63,6 @@ class PresentationState
             'splash' => $presentation->splash,
             'reveals' => $presentation->revealsIn($entries),
             'revision' => $projection->revision(),
-            'drawnRevision' => $presentation->drawn_revision,
             'endedAt' => $presentation->ended_at?->toIso8601String(),
         ];
     }
@@ -73,12 +71,14 @@ class PresentationState
      * The deck's rows, in order, with only the two columns an address is
      * resolved against.
      *
+     * Cached on the deck, beside its revision and forgotten by the same saves,
+     * because a poll that had to read every row of a deck to place one address
+     * was the one cost on this path that grew with the deck.
+     *
      * @return EloquentCollection<int, ProjectionSlide>
      */
     public function entriesOf(Presentation $presentation): EloquentCollection
     {
-        return $this->entries[$presentation->getKey()] ??= $presentation->projection
-            ->entries()
-            ->get(['id', 'projection_id', 'sequence']);
+        return $this->entries[$presentation->getKey()] ??= $presentation->projection->entryOrder();
     }
 }

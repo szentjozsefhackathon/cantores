@@ -7,7 +7,9 @@ use App\Models\Projection;
 use App\Models\ProjectionSlide;
 use App\Models\ReceivedLoan;
 use App\Models\Score;
+use App\Models\Screen;
 use App\Models\User;
+use App\Support\DeviceId;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -109,11 +111,9 @@ it('leaves the version alone when a heartbeat says nothing new', function () {
     $beat = postJson(route('presentations.state.store', $presentation), [
         'entryId' => $entry->id,
         'slideIndex' => 1,
-        'drawnRevision' => $projection->revision(),
     ]);
 
-    expect($beat->json('version'))->toBe($moved)
-        ->and($beat->json('drawnRevision'))->toBe($projection->revision());
+    expect($beat->json('version'))->toBe($moved);
 });
 
 // A poll that finds the service where it left it is answered with nothing; a
@@ -378,28 +378,36 @@ it('rejoins the show rather than starting a second when the same deck is put up'
 });
 
 /*
- * The honest answer to "is the room seeing my edit yet". The wall reports the
+ * The honest answer to "is the room seeing my edit yet". Each wall reports the
  * deck it has actually finished engraving, not the one it has heard of, so
  * between the save and the re-engraving the phone can say the wall is behind
  * instead of implying the room already sees what the phone sees.
+ *
+ * It is said per wall and not per show, which is the only place it can be said:
+ * a parish with two beamers has two answers, and one of them may be a laptop
+ * that has been shut. So it is the screen's own row that carries it, reported
+ * through the acknowledgement, and the show's answer carries only the revision
+ * the two are compared against.
  */
-it('reports drawn_revision behind revision until the wall has caught up', function () {
+it('reports each wall behind the revision until it has caught up', function () {
     $user = User::factory()->create();
     $projection = Projection::factory()->create(['user_id' => $user->id]);
     $score = Score::factory()->abc()->create(['user_id' => $user->id]);
-    $entry = ProjectionSlide::factory()->create([
+    ProjectionSlide::factory()->create([
         'projection_id' => $projection->id,
         'score_id' => $score->id,
     ]);
 
     $presentation = presentationFor($user, $projection);
+    $screen = Screen::factory()->create(['user_id' => $user->id, 'device_id' => DeviceId::current()]);
 
     actingAs($user);
 
-    // The wall has drawn the deck as it stood when it opened.
+    // The wall has drawn the deck as it stood when it opened, and says so.
     $atLoad = $projection->revision();
-    postJson(route('presentations.state.store', $presentation), [
-        'entryId' => $entry->id,
+    postJson(route('screens.ack', $screen), [
+        'presentationId' => $presentation->id,
+        'appliedVersion' => $presentation->version,
         'drawnRevision' => $atLoad,
     ])->assertOk();
 
@@ -407,20 +415,21 @@ it('reports drawn_revision behind revision until the wall has caught up', functi
     Carbon::setTestNow(Carbon::now()->addMinute());
     $score->forceFill(['content' => "X:1\nK:C\nc d e f|\n"])->save();
 
-    $behind = getJson(route('presentations.state', $presentation))->json();
+    $behind = getJson(route('show.state'))->json();
 
-    expect($behind['drawnRevision'])->toBe($atLoad)
-        ->and($behind['revision'])->not->toBe($atLoad);
+    expect($behind['screens'][0]['drawnRevision'])->toBe($atLoad)
+        ->and($behind['state']['revision'])->not->toBe($atLoad);
 
     // The wall reads the deck again, engraves it, and says so.
-    postJson(route('presentations.state.store', $presentation), [
-        'entryId' => $entry->id,
-        'drawnRevision' => $behind['revision'],
+    postJson(route('screens.ack', $screen), [
+        'presentationId' => $presentation->id,
+        'appliedVersion' => $presentation->version,
+        'drawnRevision' => $behind['state']['revision'],
     ])->assertOk();
 
-    $caughtUp = getJson(route('presentations.state', $presentation))->json();
+    $caughtUp = getJson(route('show.state'))->json();
 
-    expect($caughtUp['drawnRevision'])->toBe($caughtUp['revision']);
+    expect($caughtUp['screens'][0]['drawnRevision'])->toBe($caughtUp['state']['revision']);
 
     Carbon::setTestNow();
 });

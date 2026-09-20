@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
+use function Pest\Laravel\postJson;
 use function Pest\Laravel\withSession;
 
 /*
@@ -65,17 +66,19 @@ function runningService(int $rows = 8): array
 }
 
 /*
- * The budget. Five reads, and not one of them a write: the screens that are on
- * and their names, the show, the deck it names, and the deck's rows. The join
- * that used to make a sixth is answered from the cache now.
+ * The budget. Four reads, and not one of them a write: the screens that are on
+ * and their names, the show, and the deck it names. The join that dated the
+ * deck and the read that listed its rows are both answered from the cache now,
+ * which is also what takes the deck's *length* off this path — a sixty-row deck
+ * used to pay sixty rows twice a second for the length of a Mass.
  */
 it('reads the show within its query budget', function () {
     [$user] = runningService();
 
     actingAs($user);
 
-    // The first read of a deck fills the revision cache; the budget is what
-    // every read after it costs, which is what a Mass is made of.
+    // The first read of a deck fills the revision and row-order caches; the
+    // budget is what every read after it costs, which is what a Mass is made of.
     getJson(route('show.state'))->assertOk();
 
     $queries = [];
@@ -87,7 +90,73 @@ it('reads the show within its query budget', function () {
 
     $writes = array_filter($queries, fn (string $sql): bool => str_starts_with($sql, 'update'));
 
-    expect($queries)->toHaveCount(5)
+    expect($queries)->toHaveCount(4)
+        ->and($writes)->toBeEmpty();
+});
+
+/*
+ * And the wall's read, which is the other half of every service and was the one
+ * nobody was counting. It used to cost a query more than the phone's, to fetch
+ * the very row the answer was about to describe anyway.
+ */
+it('reads the show from the wall within the same budget', function () {
+    [$user, $screen] = runningService();
+
+    $device = (string) Str::uuid();
+    $screen->forceFill(['device_id' => $device, 'last_seen_at' => Carbon::now()])->save();
+
+    actingAs($user);
+    withSession([DeviceId::COOKIE => $device]);
+
+    getJson(route('show.state', ['screen' => 1]))->assertOk();
+
+    $queries = [];
+    DB::listen(function ($query) use (&$queries): void {
+        $queries[] = $query->sql;
+    });
+
+    getJson(route('show.state', ['screen' => 1]))->assertOk();
+
+    $writes = array_filter($queries, fn (string $sql): bool => str_starts_with($sql, 'update'));
+
+    expect($queries)->toHaveCount(4)
+        ->and($writes)->toBeEmpty();
+});
+
+/*
+ * A wall says what it has drawn when what it has drawn changes, and at no other
+ * time. This used to be a heartbeat — a locked write and a log line every ten
+ * seconds per wall, nearly always to say that nothing had happened — and it is
+ * the one thing on this path that writes a row at all.
+ */
+it('acknowledges the same rendered state only once', function () {
+    [$user, $screen, $presentation, $projection] = runningService();
+
+    $screen->forceFill(['device_id' => DeviceId::current()])->save();
+
+    actingAs($user);
+
+    $acknowledgement = [
+        'presentationId' => $presentation->id,
+        'appliedVersion' => $presentation->version,
+        'drawnRevision' => $projection->revision(),
+    ];
+
+    postJson(route('screens.ack', $screen), $acknowledgement)->assertOk();
+
+    $queries = [];
+    DB::listen(function ($query) use (&$queries): void {
+        $queries[] = $query->sql;
+    });
+
+    postJson(route('screens.ack', $screen), $acknowledgement)->assertOk();
+
+    $writes = array_filter($queries, fn (string $sql): bool => str_starts_with($sql, 'update'));
+
+    // Repeating itself is what the client no longer does; that it costs the
+    // server no more than the show it is acknowledging is what makes the
+    // client's retry cheap when it has to.
+    expect($queries)->toHaveCount(3)
         ->and($writes)->toBeEmpty();
 });
 
@@ -134,8 +203,13 @@ it('writes last_seen_at once the saved write would start to matter', function ()
     Carbon::setTestNow(Carbon::now()->addSeconds(Screen::SEEN_EVERY_SECONDS + 1));
     getJson(route('show.state', ['screen' => 1]))->assertOk();
 
+    // And often enough that the phone's "screen not responding" means it: the
+    // acknowledgement stopped being a heartbeat, so this is the only thing
+    // that says a wall is still there.
     expect($screen->fresh()->last_seen_at->gt($before))->toBeTrue()
-        ->and(Screen::SEEN_EVERY_SECONDS)->toBeLessThan(Screen::STALE_MINUTES * 60);
+        ->and(Screen::SEEN_EVERY_SECONDS)->toBeLessThan(Screen::STALE_MINUTES * 60)
+        ->and(Screen::SILENT_SECONDS)->toBeGreaterThanOrEqual(Screen::SEEN_EVERY_SECONDS * 3)
+        ->and(Screen::PRESENTING_SECONDS)->toBeGreaterThanOrEqual(Screen::SEEN_EVERY_SECONDS * 3);
 });
 
 /*

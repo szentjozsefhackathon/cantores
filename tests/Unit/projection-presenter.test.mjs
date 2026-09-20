@@ -23,8 +23,11 @@ await import('../../resources/js/projection-presenter.js');
  * With a presentation on it, because that is what having a deck means: a screen
  * with none is waiting, and a waiting screen keeps its bar.
  */
+/** This browser, as the server knows it — the show names devices, not screens. */
+const THIS_DEVICE = 'device-here';
+
 function presenter(total = 3) {
-    const component = registered.projectionPresenter({});
+    const component = registered.projectionPresenter({ deviceId: THIS_DEVICE });
 
     component.slides = Array.from({ length: total }, (unused, index) => ({ entryId: 1, index, svg: null }));
     component.total = total;
@@ -212,8 +215,8 @@ test('the wall takes the fit its screen was given', async () => {
         presentationId: 1,
         title: 'Vasárnap',
         screens: [
-            { id: 4, isThisDevice: false, fit: { scale: 1.5, x: 0.3, y: 0 } },
-            { id: 5, isThisDevice: true, fit: { scale: 0.8, x: 0, y: 0.1 } },
+            { id: 4, deviceId: 'device-elsewhere', fit: { scale: 1.5, x: 0.3, y: 0 } },
+            { id: 5, deviceId: THIS_DEVICE, fit: { scale: 0.8, x: 0, y: 0.1 } },
         ],
         state: null,
     }) };
@@ -501,8 +504,9 @@ test('only a press of B reports the blank', async () => {
     assert.equal(written[2].blanked, true);
 });
 
-test('the heartbeat acknowledges rendered state without reporting desired state', async () => {
-    const deck = registered.projectionPresenter({ ackUrl: '/screens/5/ack' });
+/** A wall with something drawn, whose reports are remembered rather than sent. */
+function reporting(answer = {}) {
+    const deck = registered.projectionPresenter({ ackUrl: '/screens/5/ack', deviceId: THIS_DEVICE });
     const sent = [];
 
     deck.presentationId = 9;
@@ -513,13 +517,25 @@ test('the heartbeat acknowledges rendered state without reporting desired state'
         acknowledge: (url, body) => {
             sent.push({ url, body });
 
-            return Promise.resolve({});
+            return Promise.resolve({
+                presentationId: body.presentationId,
+                appliedVersion: body.appliedVersion,
+                drawnRevision: body.drawnRevision,
+                ...answer,
+            });
         },
     };
+    deck.sent = sent;
+
+    return deck;
+}
+
+test('the wall says what it has drawn, and says nothing else with it', async () => {
+    const deck = reporting();
 
     await deck.acknowledgeRendered();
 
-    assert.deepEqual(sent, [{
+    assert.deepEqual(deck.sent, [{
         url: '/screens/5/ack',
         body: {
             presentationId: 9,
@@ -527,6 +543,114 @@ test('the heartbeat acknowledges rendered state without reporting desired state'
             drawnRevision: 'revision-12',
         },
     }]);
-    assert.equal('entryId' in sent[0].body, false);
-    assert.equal('blanked' in sent[0].body, false);
+    assert.equal('entryId' in deck.sent[0].body, false);
+    assert.equal('blanked' in deck.sent[0].body, false);
+});
+
+/* This was a heartbeat: a locked write and a log line every ten seconds per
+   wall in the country, nearly always to say that nothing had happened. What is
+   drawn on a wall is an event, and a quiet hymn is a thing nobody has to be
+   told about. */
+test('the wall says it once, and does not keep saying it', async () => {
+    const deck = reporting();
+
+    await deck.acknowledgeRendered();
+    await deck.acknowledgeRendered();
+    await deck.acknowledgeRendered();
+
+    assert.equal(deck.sent.length, 1, 'the wall reported the same picture again');
+
+    // The cantor presses space, and the wall draws the next slide.
+    deck.appliedVersion = 13;
+    await deck.acknowledgeRendered();
+
+    assert.equal(deck.sent.length, 2, 'a slide was drawn and nobody was told');
+    assert.equal(deck.sent[1].body.appliedVersion, 13);
+});
+
+/* And the show's own answer says what the server has already been told, so a
+   wall that reloads mid-hymn into a picture the server already knows about does
+   not report it back. */
+test('the wall says nothing the show already says it has drawn', async () => {
+    const deck = reporting();
+
+    await deck.apply({
+        presentationId: 9,
+        screens: [{
+            id: 5,
+            deviceId: THIS_DEVICE,
+            offered: true,
+            presenting: true,
+            responding: true,
+            appliedPresentationId: 9,
+            appliedVersion: 12,
+            drawnRevision: 'revision-12',
+        }],
+        state: null,
+    });
+
+    await deck.acknowledgeRendered();
+
+    assert.deepEqual(deck.sent, []);
+});
+
+/* A report that never landed is the one thing the slow beat is still for. */
+test('the wall says it again when the report did not land', async () => {
+    const deck = reporting();
+
+    deck._show.acknowledge = (url, body) => {
+        deck.sent.push({ url, body });
+
+        return Promise.resolve(null);
+    };
+
+    await deck.acknowledgeRendered();
+    await deck.acknowledgeRendered();
+
+    assert.equal(deck.sent.length, 2, 'a report that failed was never tried again');
+});
+
+/*
+ * The hub hands the wall the answer itself rather than knocking on the door.
+ * What arrives is what a read would have returned, so the wall takes it up the
+ * same way — and refuses a frame that arrives behind one it has already drawn,
+ * because two of them can overtake each other on the way to a building.
+ */
+test('the wall takes the show off the stream without reading it back', async () => {
+    const deck = presenter(3);
+    let reads = 0;
+
+    deck.presentationId = 1;
+    deck._show = { read: () => { reads += 1; return Promise.resolve(null); } };
+    deck._poll = { busy: false, poke: () => { reads += 1; } };
+
+    await deck.pushed(JSON.stringify({ at: '2', show: { presentationId: 1, title: 'Vasárnap', screens: [], state: null } }));
+
+    assert.equal(deck.title, 'Vasárnap');
+    assert.equal(reads, 0, 'the wall went back to the server for what it had just been handed');
+
+    await deck.pushed(JSON.stringify({ at: '1', show: { presentationId: 1, title: 'Előző', screens: [], state: null } }));
+
+    assert.equal(deck.title, 'Vasárnap', 'an overtaken frame was drawn over the newer one');
+});
+
+/* A read already out was very often sent after the change being pushed, so the
+   two are not raced: the read is a beat away at most and is left to win. */
+test('the wall lets a read that is already out win, and asks again for anything it cannot read', async () => {
+    const deck = presenter(3);
+    let poked = 0;
+
+    deck.presentationId = 1;
+    deck._poll = { busy: true, poke: () => { poked += 1; } };
+
+    await deck.pushed(JSON.stringify({ at: '2', show: { presentationId: 1, title: 'Vasárnap', screens: [], state: null } }));
+
+    assert.equal(deck.title, '', 'a pushed frame raced the read that was already out');
+    assert.equal(poked, 1);
+
+    // An older server's bare nudge, or the hub's own keep-alive.
+    deck._poll.busy = false;
+    await deck.pushed('changed');
+
+    assert.equal(poked, 2, 'a frame that said nothing was not answered by asking');
 });

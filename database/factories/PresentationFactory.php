@@ -27,7 +27,6 @@ class PresentationFactory extends Factory
             'blanked' => false,
             'splash' => Presentation::SPLASH_OFF,
             'version' => 1,
-            'drawn_revision' => null,
             'reveals' => null,
             'started_at' => Carbon::now(),
             'last_seen_at' => Carbon::now(),

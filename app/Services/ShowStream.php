@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Middleware\NotModifiedWhenUnchanged;
 use App\Models\Presentation;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
@@ -11,15 +12,21 @@ use Throwable;
 use function Illuminate\Support\defer;
 
 /**
- * Tells a person's devices that their show has moved, so they ask now rather
- * than on the next beat.
+ * Tells a person's devices where their show has got to, the moment it moves.
  *
- * A nudge and not the answer. What a wall and a remote are shown is worked out
- * per device — which screen is this one, which of them are still live, which
- * is read off a clock — and none of that can be said once for everyone. So what
- * travels through the hub is only "something changed", on a topic that belongs
- * to one person, and each device answers it with the read it already makes.
- * The read stays the authority; this only decides when it happens.
+ * It used to say only that something had changed, because what a wall and a
+ * remote were shown was worked out per device and none of it could be said
+ * once for everyone. It can be now: the show is described for a *person*, and
+ * the two device-shaped questions in it — which screen is this one, and which
+ * of them may this one see — are answered in the browser out of the flags each
+ * screen carries. So the answer itself travels, and a press of the space bar
+ * costs one publish instead of a read from every device that was listening.
+ *
+ * The read stays the authority all the same. A frame can be lost, late or
+ * never delivered, and some of what the answer says moves with a clock rather
+ * than with a save — a wall that stopped being heard from — so every device
+ * goes on asking, just far less often. Nothing here is ever the only way a
+ * device finds something out.
  *
  * Publishing is deferred to after the response and named per person, so a
  * deck edit that saves twenty rows is one message and not twenty, and a hub
@@ -125,6 +132,12 @@ class ShowStream
     private function publish(int $userId): void
     {
         try {
+            $user = User::query()->find($userId);
+
+            if (! $user instanceof User) {
+                return;
+            }
+
             Http::asForm()
                 ->withToken($this->jwt(
                     ['mercure' => ['publish' => [$this->topicFor($userId)]]],
@@ -133,7 +146,7 @@ class ShowStream
                 ->timeout(self::PUBLISH_TIMEOUT_SECONDS)
                 ->post((string) config('services.mercure.publish_url'), [
                     'topic' => $this->topicFor($userId),
-                    'data' => 'changed',
+                    'data' => $this->frame($user),
                     'private' => 'on',
                 ])
                 ->throw();
@@ -143,6 +156,27 @@ class ShowStream
                 'error' => $exception->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * The show as it stands, wrapped in the one thing a pushed copy needs that
+     * a fetched one does not: when it was said.
+     *
+     * Two frames can overtake each other between here and a phone, and a device
+     * that drew the later one must not then draw the earlier. A poll needs no
+     * such stamp — its answer is a fresh read by definition — and must not have
+     * one, because the polled body is compared with its own last version to
+     * decide whether to send it at all, and a clock in it would make every
+     * quiet poll a full answer.
+     *
+     * @see NotModifiedWhenUnchanged
+     */
+    private function frame(User $user): string
+    {
+        return json_encode([
+            'at' => now()->format('YmdHisu'),
+            'show' => app(ShowState::class)->forUser($user),
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
     }
 
     /**

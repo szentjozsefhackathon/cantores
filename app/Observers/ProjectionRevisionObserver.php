@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Forgets a deck's cached revision the moment the deck is edited.
+ * Forgets what is cached about a deck the moment the deck is edited.
  *
  * Projection::revision() is the one join on the polling path, and it is asked
  * about twice a second for every service going on. It is therefore cached — but
@@ -20,7 +20,11 @@ use Illuminate\Support\Facades\Cache;
  * name: a score corrected in another window, which belongs to every deck that
  * has it in a row.
  *
+ * The same save forgets the deck's row order, which is the other thing the
+ * polling path reads and the other thing only an edit can move.
+ *
  * @see Projection::revision()
+ * @see Projection::entryOrder()
  */
 class ProjectionRevisionObserver
 {
@@ -51,5 +55,6 @@ class ProjectionRevisionObserver
         }
 
         Cache::forget(Projection::revisionKey((int) $projectionId));
+        Cache::forget(Projection::entryOrderKey((int) $projectionId));
     }
 }

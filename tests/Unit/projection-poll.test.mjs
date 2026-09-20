@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { POLL_BACKOFF_MAX_MS, POLL_MS, PUSHED_POLL_MS, STREAM_RETRY_MS, commandClient, poller, replayPendingState, showClient, showStream, stateClient } from '../../resources/js/projection-follow.js';
+import { POLL_BACKOFF_MAX_MS, POLL_MS, PUSHED_POLL_MS, STREAM_RETRY_MS, commandClient, isNewerFrame, ownFit, poller, pushedShow, replayPendingState, screensFor, showClient, showStream, stateClient } from '../../resources/js/projection-follow.js';
 
 /*
  * The beat that both ends of a service keep.
@@ -456,8 +456,8 @@ function fakeSource() {
             this.onopen?.();
         }
 
-        message() {
-            this.onmessage?.({ data: 'changed' });
+        message(data = 'changed') {
+            this.onmessage?.({ data });
         }
 
         fail(readyState) {
@@ -494,7 +494,7 @@ test('listens on its own topic with the cookie, and passes the nudges on', async
 
     const stream = showStream(
         { streamUrl: '/show/stream', csrfToken: 'token', EventSource: Source },
-        { change: () => events.push('change'), open: (isOpen) => events.push(isOpen ? 'open' : 'closed') },
+        { change: (data) => events.push(data), open: (isOpen) => events.push(isOpen ? 'open' : 'closed') },
     );
 
     stream.start();
@@ -508,15 +508,15 @@ test('listens on its own topic with the cookie, and passes the nudges on', async
     assert.equal(stream.open, false);
 
     made[0].open();
-    made[0].message();
+    made[0].message('{"at":"1","show":{}}');
 
     assert.equal(stream.open, true);
-    assert.deepEqual(events, ['open', 'change']);
+    assert.deepEqual(events, ['open', '{"at":"1","show":{}}'], 'the frame did not reach the page whole');
 
     stream.stop();
 
     assert.equal(made[0].closed, true);
-    assert.deepEqual(events, ['open', 'change', 'closed']);
+    assert.deepEqual(events, ['open', '{"at":"1","show":{}}', 'closed']);
 });
 
 test('lets the browser reconnect a blip by itself, and asks again when turned away', async () => {
@@ -610,4 +610,81 @@ test('does nothing in a browser without EventSource', async () => {
     await settle();
 
     assert.equal(asked.length, 0);
+});
+
+/*
+ * ---------------------------------------------------------------
+ * The show, described for a person and read by a device.
+ * ---------------------------------------------------------------
+ *
+ * One description reaches every device of one person's, which is what lets the
+ * hub carry it instead of each device coming back for its own. The two
+ * questions that used to be settled on the server are settled here, against the
+ * flags each screen arrives with.
+ */
+
+/** A screen as the show's answer lists it. */
+function listed(id, deviceId, flags = {}) {
+    return { id, deviceId, fit: { scale: 1, x: 0, y: 0 }, offered: true, presenting: true, responding: true, ...flags };
+}
+
+test('a device keeps the screens it may be shown, and its own whatever it is called', () => {
+    const answer = {
+        screens: [
+            listed(1, 'wall'),
+            listed(2, 'laptop-at-home', { offered: false }),
+            listed(3, 'here', { offered: false }),
+        ],
+    };
+
+    const screens = screensFor(answer, 'here');
+
+    assert.deepEqual(screens.map((screen) => screen.id), [1, 3], 'a device its owner said is not a screen was drawn, or this device was dropped for being one');
+    assert.equal(screens.find((screen) => screen.id === 3).isThisDevice, true);
+    assert.equal(screens.find((screen) => screen.id === 1).isThisDevice, false);
+});
+
+/* A phone that pressed Present a minute ago and came back must not tell its
+   holder that the show is on the phone in their hand. */
+test('this device counts only while its own wall is actually up', () => {
+    const answer = { screens: [listed(9, 'here', { presenting: false })] };
+
+    assert.deepEqual(screensFor(answer, 'here'), []);
+    assert.equal(ownFit(screensFor(answer, 'here')), null, 'a fit was taken off a screen that is not up');
+
+    // Somebody else's, which is shown for the whole of the stale window: a
+    // phone cannot walk across the church to check.
+    assert.equal(screensFor({ screens: [listed(9, 'wall', { presenting: false })] }, 'here').length, 1);
+});
+
+test('a page with no device of its own is shown the screens anybody may see', () => {
+    const answer = { screens: [listed(1, 'wall'), listed(2, 'laptop-at-home', { offered: false })] };
+
+    assert.deepEqual(screensFor(answer, null).map((screen) => screen.id), [1]);
+});
+
+/*
+ * A frame off the stream. Two of them can overtake each other between the hub
+ * and a phone, and a page that drew the later one must not then draw the
+ * earlier; anything that is not a show at all — an older server's bare nudge,
+ * the hub's own keep-alive — is not one to draw either.
+ */
+test('takes a show off the stream, once and in order', () => {
+    assert.deepEqual(pushedShow('{"at":"20260920120000000001","show":{"presentationId":4}}'), {
+        at: '20260920120000000001',
+        show: { presentationId: 4 },
+    });
+
+    assert.equal(pushedShow('changed'), null, 'a bare nudge was mistaken for a show');
+    assert.equal(pushedShow(undefined), null);
+    assert.equal(pushedShow('{"at":"1"}'), null, 'a frame with no show in it was taken up');
+    assert.equal(pushedShow('{"show":{}}'), null, 'a frame with nothing to order it by was taken up');
+
+    // Late is not the same as unreadable, and is told apart from it because a
+    // frame that merely arrived behind a newer one is nothing to go back to
+    // the server about.
+    assert.equal(isNewerFrame(pushedShow('{"at":"2","show":{}}'), '3'), false, 'a frame older than the last one was taken up');
+    assert.equal(isNewerFrame(pushedShow('{"at":"3","show":{}}'), '3'), false, 'the same frame was taken up twice');
+    assert.equal(isNewerFrame(pushedShow('{"at":"4","show":{}}'), '3'), true);
+    assert.equal(isNewerFrame(pushedShow('{"at":"1","show":{}}'), null), true, 'the first frame of all was refused');
 });

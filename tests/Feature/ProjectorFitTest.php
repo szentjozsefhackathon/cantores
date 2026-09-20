@@ -91,7 +91,10 @@ it('gives the wall its own fit in the show answer', function () {
 
     actingAs($user);
 
-    $own = collect(getJson(route('show.state'))->json('screens'))->firstWhere('isThisDevice', true);
+    // The answer names devices rather than picking one out as this one: it is
+    // built for the person and read against this browser's own device id.
+    $own = collect(getJson(route('show.state'))->json('screens'))
+        ->firstWhere('deviceId', DeviceId::current());
 
     expect($own['id'])->toBe($wall->id)
         ->and($own['fit']['scale'])->toBe(0.75);

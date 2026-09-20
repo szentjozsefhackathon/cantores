@@ -60,7 +60,6 @@ class PresentationStateRequest extends FormRequest
             'slideIndex' => ['sometimes', 'integer', 'min:0'],
             'blanked' => ['sometimes', 'boolean'],
             'splash' => ['sometimes', 'string', Rule::in(array_keys(Presentation::SPLASH_ORDER))],
-            'drawnRevision' => ['sometimes', 'nullable', 'string', 'max:32'],
             'reveals' => ['sometimes', 'nullable', 'array'],
             'reveals.*' => ['array'],
             'reveals.*.*' => ['integer', 'min:0'],

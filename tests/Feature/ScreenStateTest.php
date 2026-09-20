@@ -6,6 +6,7 @@ use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\Screen;
 use App\Models\User;
+use App\Services\ShowState;
 use App\Support\DeviceId;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
@@ -186,8 +187,13 @@ it('refuses a write that does not say which deck', function () {
 /*
  * The screens that are on travel with the show: the remote says where it is on
  * and aims the fit panel from them, and the wall reads its own fit back.
+ *
+ * The answer belongs to the person and to none of their devices, which is what
+ * lets the hub carry it — so it names each screen's device rather than picking
+ * one out as this one, and each screen brings the two facts a browser needs to
+ * decide whether it may be shown it.
  */
-it('lists the live screens of the person asking, and says which one is this device', function () {
+it('lists the live screens of the person asking, and names the device each is', function () {
     $user = User::factory()->create();
 
     $wall = Screen::factory()->create(['user_id' => $user->id]);
@@ -200,10 +206,33 @@ it('lists the live screens of the person asking, and says which one is this devi
     $screens = collect(getJson(route('show.state'))->assertOk()->json('screens'))->keyBy('id');
 
     expect($screens->keys()->all())->toEqualCanonicalizing([$wall->id, $here->id])
-        ->and($screens[$wall->id]['isThisDevice'])->toBeFalse()
-        ->and($screens[$here->id]['isThisDevice'])->toBeTrue()
+        ->and($screens[$wall->id]['deviceId'])->toBe($wall->device_id)
+        ->and($screens[$here->id]['deviceId'])->toBe(DeviceId::current())
+        ->and($screens[$wall->id]['offered'])->toBeTrue()
+        ->and($screens[$wall->id]['presenting'])->toBeTrue()
+        ->and($screens[$wall->id]['responding'])->toBeTrue()
         ->and($screens[$wall->id]['label'])->toBe($wall->label())
         ->and($screens[$wall->id]['fitUrl'])->toBe(route('screens.fit', ['screen' => $wall->id]));
+});
+
+/*
+ * And a wall that has stopped answering says so as a fact rather than as a
+ * timestamp, because this body is compared with its own last version on every
+ * poll: a clock in it would make every quiet poll a full answer down the wire.
+ */
+it('says when a screen has stopped answering, without carrying a clock', function () {
+    $user = User::factory()->create();
+    $silent = Screen::factory()->create([
+        'user_id' => $user->id,
+        'last_seen_at' => Carbon::now()->subSeconds(Screen::SILENT_SECONDS + 5),
+    ]);
+
+    actingAs($user);
+
+    $screen = collect(getJson(route('show.state'))->assertOk()->json('screens'))->firstWhere('id', $silent->id);
+
+    expect($screen['responding'])->toBeFalse()
+        ->and($screen)->not->toHaveKey('appliedAt');
 });
 
 /*
@@ -258,10 +287,14 @@ it('is not kept alive by the remote on the same browser', function () {
 
     actingAs($user);
 
-    $screens = getJson(route('show.state'))->assertOk()->json('screens');
+    $screens = collect(getJson(route('show.state'))->assertOk()->json('screens'))->keyBy('id');
 
+    // Listed, because the answer is the same for every device of this
+    // person's — and listed as not presenting, which is what the browser on
+    // this device reads to leave it out of the walls it draws.
     expect($screen->refresh()->last_seen_at->diffInMinutes(Carbon::now()))->toBeGreaterThanOrEqual(1)
-        ->and($screens)->toBeEmpty();
+        ->and($screens[$screen->id]['presenting'])->toBeFalse()
+        ->and(ShowState::screensFor($user)->pluck('id')->all())->toBe([]);
 });
 
 /*
