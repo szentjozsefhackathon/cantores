@@ -1267,6 +1267,8 @@ onAlpineInit(() => {
                 End: () => this.moved('next', this.total - 1),
                 b: () => this.blank(),
                 B: () => this.blank(),
+                // What PowerPoint and its clickers send for a black screen.
+                '.': () => this.blank(),
                 f: () => this.toggleFullscreen(),
                 F: () => this.toggleFullscreen(),
                 l: () => this.toggleList(),

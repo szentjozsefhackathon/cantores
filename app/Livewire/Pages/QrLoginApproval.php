@@ -64,7 +64,9 @@ class QrLoginApproval extends Component
     }
 
     /**
-     * Hand the device the account signed in on this phone.
+     * Hand the device the account signed in on this phone, and carry the phone
+     * on to the remote: a screen signed in by QR is a screen about to be driven
+     * from the phone that let it in.
      */
     public function approve(): void
     {
@@ -79,6 +81,8 @@ class QrLoginApproval extends Component
         $pairing->approveFor(Auth::user());
 
         $this->approved = true;
+
+        $this->redirectRoute('projection-remote');
     }
 
     /**

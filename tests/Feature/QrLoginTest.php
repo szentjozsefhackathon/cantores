@@ -144,7 +144,8 @@ test('approving records the user and the moment', function () {
     Livewire::actingAs($user)
         ->test(QrLoginApproval::class, ['token' => $pairing->token])
         ->call('approve')
-        ->assertSet('approved', true);
+        ->assertSet('approved', true)
+        ->assertRedirect(route('projection-remote'));
 
     $pairing->refresh();
 

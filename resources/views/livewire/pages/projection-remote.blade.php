@@ -16,8 +16,8 @@ resources/js/projection-remote.js
      — slots, their music, what the deck took from each — with the way into the
      editor at the top of it, for the changes that are meant to last. In the
      middle the service itself: the slide the room is reading, the controls, and
-     the slide it is about to be on, the same size beneath them, because what
-     the cantor needs to see is not a thumbnail of the next verse but the next
+     the slide it is about to be on beneath them, readable, because what the
+     cantor needs to see is not a thumbnail of the next verse but the next
      verse. Down the right every slide in the deck, each with the editor's
      control for taking one out of today's service or putting one back.
 
@@ -26,9 +26,11 @@ resources/js/projection-remote.js
      for — the jump three verses on, made without reading — the deck pane does
      better with the whole deck in it.
 
-     The controls stay, at the size a mouse expects rather than the size a thumb
-     does: the hand that drives this window is already on a keyboard, and a pair
-     of buttons a third of the screen tall were sized for glass.
+     The controls stay large, because the laptop is often driven from across
+     the room with a mouse as well as from its keyboard — and each carries the
+     key that does the same, so the keyboard is learnt by looking at them. The
+     slide the room is reading takes two thirds of the column's height and the
+     next one the rest.
 
      It engraves the same payload the wall does through the same renderer, so
      what the phone shows is what the room is looking at rather than a
@@ -391,7 +393,7 @@ resources/js/projection-remote.js
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
 
         {{-- What the room is reading. --}}
-        <div class="relative order-1 flex h-1/2 shrink-0 items-center justify-center overflow-hidden bg-zinc-300 lg:h-auto lg:min-h-0 lg:flex-1 lg:shrink dark:bg-zinc-900">
+        <div class="relative order-1 flex h-1/2 shrink-0 items-center justify-center overflow-hidden bg-zinc-300 lg:h-auto lg:min-h-0 lg:flex-[2] lg:shrink dark:bg-zinc-900">
             <div
                 x-ref="currentBox"
                 class="w-full max-h-full max-w-full overflow-hidden bg-white lg:h-full lg:w-auto"
@@ -530,14 +532,13 @@ resources/js/projection-remote.js
         ></div>
 
         {{-- The thumb: 1 : 1 : 2 across the bottom quarter of the phone, and nothing
-             else. On a laptop the same three controls at the size a pointer expects,
-             directly under the slide rather than at the foot of the window — the
-             keyboard is what actually drives this end, and these are here to be
-             found rather than to be aimed at. --}}
-        <div class="order-3 flex h-1/4 shrink-0 items-stretch gap-2 px-2 pb-2 lg:order-2 lg:h-auto lg:items-center lg:justify-center lg:border-y lg:border-zinc-300 lg:py-2 dark:lg:border-zinc-800">
+             else. On a laptop the same three controls in the same proportions,
+             directly under the slide rather than at the foot of the window, each
+             naming the key that does what it does. --}}
+        <div class="order-3 flex h-1/4 shrink-0 items-stretch gap-2 px-2 pb-2 lg:order-2 lg:h-24 lg:border-y lg:border-zinc-300 lg:py-2 dark:lg:border-zinc-800">
             <button
                 type="button"
-                class="flex flex-1 items-center justify-center rounded-xl border transition-colors disabled:opacity-40 lg:flex-none lg:rounded-lg lg:px-4 lg:py-1.5"
+                class="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl border transition-colors disabled:opacity-40"
                 x-on:click="previous()"
                 x-bind:class="pressed === 'previous'
                     ? 'border-blue-500 bg-blue-600 text-white ring-4 ring-blue-400/50'
@@ -545,12 +546,13 @@ resources/js/projection-remote.js
                 x-bind:disabled="index === 0"
                 aria-label="{{ __('Previous slide') }}"
             >
-                <flux:icon.chevron-left class="size-8 lg:size-5" />
+                <flux:icon.chevron-left class="size-8" />
+                <span class="hidden text-xs opacity-60 lg:block" aria-hidden="true">← · PgUp</span>
             </button>
 
             <button
                 type="button"
-                class="flex flex-1 items-center justify-center rounded-xl border transition-colors lg:flex-none lg:rounded-lg lg:px-4 lg:py-1.5"
+                class="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl border transition-colors"
                 x-on:click="toggleBlank()"
                 x-bind:class="pressed === 'blank'
                     ? 'border-blue-500 bg-blue-600 text-white ring-4 ring-blue-400/50'
@@ -559,12 +561,13 @@ resources/js/projection-remote.js
                         : 'border-zinc-300 bg-white active:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:active:bg-zinc-800'"
                 aria-label="{{ __('Blank the screen') }}"
             >
-                <flux:icon.eye-slash class="size-7 lg:size-5" />
+                <flux:icon.eye-slash class="size-7" />
+                <span class="hidden text-xs opacity-60 lg:block" aria-hidden="true">B · .</span>
             </button>
 
             <button
                 type="button"
-                class="flex flex-[2] items-center justify-center rounded-xl border transition-colors disabled:opacity-40 lg:flex-none lg:rounded-lg lg:px-6 lg:py-1.5"
+                class="flex flex-[2] flex-col items-center justify-center gap-1 rounded-xl border transition-colors disabled:opacity-40"
                 x-on:click="next()"
                 x-bind:class="pressed === 'next'
                     ? 'border-blue-500 bg-blue-600 text-white ring-4 ring-blue-400/50'
@@ -575,12 +578,13 @@ resources/js/projection-remote.js
                 x-bind:disabled="!opening && index >= total - 1"
                 aria-label="{{ __('Next slide') }}"
             >
-                <flux:icon.chevron-right class="size-10 lg:size-5" />
+                <flux:icon.chevron-right class="size-10" />
+                <span class="hidden text-xs opacity-60 lg:block" aria-hidden="true">→ · {{ __('Space') }} · PgDn</span>
             </button>
         </div>
 
-        {{-- And what the room is about to be reading, the same size as what it
-             is reading now.
+        {{-- And what the room is about to be reading, in the third of the
+             column the slide on the wall leaves it.
 
              The laptop's alone, and the one thing the cantor at the keyboard
              actually wants under the controls: not a thumbnail of the next verse

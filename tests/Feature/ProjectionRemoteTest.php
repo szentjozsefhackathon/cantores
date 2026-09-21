@@ -433,7 +433,7 @@ it('locks the thumb controls against a second press and lights them while they a
  * The other window of the desktop arrangement: the deck on the projector, the
  * remote beside it. A laptop has room for three columns — the deck read as the
  * service it came from down the left, the service itself in the middle with the
- * next slide full size under the controls, and every slide of the deck down the
+ * next slide readable under the controls, and every slide of the deck down the
  * right — which a phone with one thumb free has not.
  */
 it('gives the laptop the plan, the service and the deck side by side', function () {
@@ -447,6 +447,24 @@ it('gives the laptop the plan, the service and the deck side by side', function 
         ->assertSeeHtml('x-for="band in outline"')
         ->assertSeeHtml('x-ref="nextBox"')
         ->assertSeeHtml('x-ref="deck"');
+});
+
+/*
+ * The laptop's controls are pressed with a mouse as often as with a key, so
+ * they are large, and each names the key that does the same.
+ */
+it('names the key behind each of the laptop controls', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    showing($user, $projection);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionRemote::class)
+        ->assertSeeHtml('lg:flex-[2]')
+        ->assertSee('← · PgUp')
+        ->assertSee('B · .')
+        ->assertSee('→ · '.__('Space').' · PgDn');
 });
 
 /*
