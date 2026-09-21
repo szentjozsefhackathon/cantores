@@ -613,6 +613,62 @@ test('the sheet follows a move rather than an answer', () => {
     assert.equal(scrolled.length, 2);
 });
 
+/** A pane on a phone, its strip remembering every time it was scrolled. */
+function phone() {
+    const deck = pane();
+    const scrolled = [];
+    const strip = fakeElement('div');
+
+    strip.scrollBy = (options) => scrolled.push(options);
+    deck.wide = false;
+    deck.$refs.strip = strip;
+    deck.buildStrip();
+    deck.show();
+
+    return { deck, strip, scrolled };
+}
+
+/* The poll answers twice a second with the same service. A strip re-cut on each
+   answer went back to its start and glided home again under the thumb. */
+test('the strip is not re-cut or re-scrolled by an answer that moves nothing', () => {
+    const { deck, strip, scrolled } = phone();
+    const thumbs = strip.children;
+
+    deck.repaint({ entryId: 7, slideIndex: 0 });
+    deck.repaint({ entryId: 7, slideIndex: 0 });
+
+    assert.equal(strip.children, thumbs, 'the strip was rebuilt for an answer that changed nothing');
+    assert.equal(scrolled.length, 1);
+
+    deck.repaint({ entryId: 7, slideIndex: 2 });
+
+    assert.equal(strip.children, thumbs);
+    assert.equal(scrolled.length, 2, 'a move did not bring what is next into view');
+    assert.equal(scrolled[1].behavior, 'smooth');
+});
+
+/* Nor is the laptop's sheet, whose place in a sixty-slide deck is the reader's. */
+test('the deck pane is not re-cut by an answer that moves nothing', () => {
+    const deck = pane();
+    const figures = deck.$refs.deck.children;
+
+    deck.repaint({ entryId: 7, slideIndex: 0 });
+
+    assert.equal(deck.$refs.deck.children, figures);
+
+    deck.toggleReveal(7, 1);
+
+    assert.notEqual(deck.$refs.deck.children, figures, 'a verse brought back left the sheet as it was');
+});
+
+/* A strip just re-cut is put where it belongs at once, not glided there from
+   its start. */
+test('a strip just re-cut is not animated from its start', () => {
+    const { scrolled } = phone();
+
+    assert.equal(scrolled[0].behavior, 'instant');
+});
+
 /*
  * ---------------------------------------------------------------
  * Where the picture lands on the wall.

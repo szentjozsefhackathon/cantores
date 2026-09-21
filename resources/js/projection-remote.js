@@ -275,6 +275,8 @@ onAlpineInit(() => {
         _stripFrom: 0,
         _stripTo: -1,
         _thumbs: [],
+        /** Which slide the strip was last scrolled to follow. */
+        _stripAt: null,
         _deckItems: [],
         /** Which slide the deck pane was last scrolled to follow. */
         _deckAt: null,
@@ -588,15 +590,26 @@ onAlpineInit(() => {
          * order it still remembers, so "the next row after it" can be
          * answered from where the row used to be rather than from a deck
          * that no longer has it at all.
+         *
+         * The two sheets are re-cut only when what is shown has changed. Every
+         * answer of the poll comes through here, and a sheet rebuilt twice a
+         * second is a sheet thrown back to its start under the thumb.
          */
         repaint(address, entries = this.entries) {
             const shown = shownExclusions(this.excluded, this.reveals);
+            const slides = this.drawn.filter((slide) => !isExcluded(slide, shown));
+            const unchanged = slides.length === this.slides.length
+                && slides.every((slide, at) => slide === this.slides[at]);
 
-            this.slides = this.drawn.filter((slide) => !isExcluded(slide, shown));
+            this.slides = slides;
             this.total = this.slides.length;
             this.index = indexOfAddress(this.slides, entries, address);
-            this.buildDeck();
-            this.buildStrip();
+
+            if (!unchanged) {
+                this.buildDeck();
+                this.buildStrip();
+            }
+
             this.show();
         },
 
@@ -658,6 +671,7 @@ onAlpineInit(() => {
             strip.replaceChildren(...thumbs);
             strip.scrollLeft = 0;
             strip.scrollTop = 0;
+            this._stripAt = null;
         },
 
         /** One slide of the strip: the picture, its number, and where it goes. */
@@ -686,6 +700,11 @@ onAlpineInit(() => {
         /**
          * The strip after a move: the window re-cut if the service has walked
          * near its edge, and scrolled so that what is *next* stands at the left.
+         *
+         * Only on a move, as with the sheet on the laptop: a strip that
+         * re-scrolled on every answer of the poll could not be scrolled by hand.
+         * And a strip just re-cut is put straight where it belongs rather than
+         * glided there from its start, which is a jump nobody asked to watch.
          */
         syncStrip() {
             const strip = this.$refs.strip;
@@ -697,6 +716,8 @@ onAlpineInit(() => {
 
             if (past || near) { this.buildStrip(); }
 
+            const fresh = this._stripAt === null;
+
             for (const { at, button } of this._thumbs) {
                 button.classList.toggle('border-zinc-900', at === this.index);
                 button.classList.toggle('dark:border-white', at === this.index);
@@ -707,14 +728,16 @@ onAlpineInit(() => {
             const found = this._thumbs.find((thumb) => thumb.at === this.index + 1)
                 ?? this._thumbs.find((thumb) => thumb.at === this.index);
 
-            if (!found) { return; }
+            if (!found || this._stripAt === this.index) { return; }
+
+            this._stripAt = this.index;
 
             // What is *next* is brought to the near edge rather than merely
             // into view: a thumbnail half off the end is a thumbnail nobody taps.
             const thumb = found.button.getBoundingClientRect();
             const box = strip.getBoundingClientRect();
 
-            strip.scrollBy({ left: thumb.left - box.left - 8, behavior: 'smooth' });
+            strip.scrollBy({ left: thumb.left - box.left - 8, behavior: fresh ? 'instant' : 'smooth' });
         },
 
         /*
