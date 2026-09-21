@@ -37,6 +37,24 @@ function presenter(total = 3) {
     return component;
 }
 
+test('page up and page down move the wall between songs, not slides', () => {
+    const deck = presenter();
+    deck.slides = [1, 1, 2, 2, 3].map((entryId, index) => ({ entryId, index, svg: null }));
+    deck.total = 5;
+    const press = (key) => deck.onKey({ key, preventDefault() {} });
+
+    deck.index = 1;
+    press('PageDown');
+    assert.equal(deck.index, 2);
+
+    press('PageDown');
+    assert.equal(deck.index, 4);
+
+    deck.index = 3;
+    press('PageUp');
+    assert.equal(deck.index, 0);
+});
+
 test('full screen is a picture, not a console', () => {
     const deck = presenter();
 

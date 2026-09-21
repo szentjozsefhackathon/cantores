@@ -1,7 +1,7 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
 import { onPaper } from './slide-frame.js';
-import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, ownScreen, isNewerFrame, poller, pushedShow, replayPendingState, screensFor, showClient, showStream, shownExclusions, stateClient } from './projection-follow.js';
+import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, ownScreen, isNewerFrame, poller, pushedShow, replayPendingState, screensFor, showClient, showStream, shownExclusions, songStartAt, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -469,6 +469,20 @@ onAlpineInit(() => {
             this.go(this.index - 1);
         },
 
+        /** The first slide of the next song — the opening is walked like Next. */
+        nextSong() {
+            if (this.opening) { return this.walkOpening(); }
+
+            this.go(songStartAt(this.slides, this.index, 'next'));
+        },
+
+        /** The first slide of the song before this one. */
+        previousSong() {
+            if (this.opening) { return this.walkOpening(); }
+
+            this.go(songStartAt(this.slides, this.index, 'previous'));
+        },
+
         /**
          * B during the opening.
          *
@@ -501,12 +515,12 @@ onAlpineInit(() => {
             const keys = {
                 ArrowRight: () => this.next(),
                 ArrowDown: () => this.next(),
-                PageDown: () => this.next(),
+                PageDown: () => this.nextSong(),
                 ' ': () => this.next(),
                 Enter: () => this.next(),
                 ArrowLeft: () => this.previous(),
                 ArrowUp: () => this.previous(),
-                PageUp: () => this.previous(),
+                PageUp: () => this.previousSong(),
                 Backspace: () => this.previous(),
                 Home: () => this.go(0),
                 End: () => this.go(this.total - 1),

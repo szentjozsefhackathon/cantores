@@ -535,6 +535,43 @@ export function addressAt(slides, at) {
 }
 
 /**
+ * The first slide of the song before or after the one at a position.
+ *
+ * A song is a row: one score, however many screens its page breaks cut it into.
+ * Backwards is the start of the row before this one, wherever in this one the
+ * service is, and holds at the very first slide; forwards is the start of the
+ * next row, and holds where it is when this row is the last.
+ *
+ * @param {Array<{entryId: number}>} slides the shown deck
+ * @param {number} at
+ * @param {'previous'|'next'} direction
+ * @return {number} a position in `slides`
+ */
+export function songStartAt(slides, at, direction) {
+    const here = slides[at];
+
+    if (!here) { return at; }
+
+    if (direction === 'next') {
+        const next = slides.findIndex((slide, index) => index > at && slide.entryId !== here.entryId);
+
+        return next === -1 ? at : next;
+    }
+
+    let start = at;
+
+    while (start > 0 && slides[start - 1].entryId === here.entryId) { start--; }
+
+    if (start === 0) { return 0; }
+
+    const previousSong = slides[start - 1].entryId;
+
+    while (start > 0 && slides[start - 1].entryId === previousSong) { start--; }
+
+    return start;
+}
+
+/**
  * Where an address lands in this deck — forgivingly.
  *
  * The server has already resolved *which row*, because only it knows what the

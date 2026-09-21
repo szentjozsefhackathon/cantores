@@ -547,7 +547,7 @@ resources/js/projection-remote.js
                 aria-label="{{ __('Previous slide') }}"
             >
                 <flux:icon.chevron-left class="size-8" />
-                <span class="hidden text-xs opacity-60 lg:block" aria-hidden="true">← · PgUp</span>
+                <span class="hidden text-xs opacity-60 lg:block" aria-hidden="true">←</span>
             </button>
 
             <button
@@ -579,7 +579,7 @@ resources/js/projection-remote.js
                 aria-label="{{ __('Next slide') }}"
             >
                 <flux:icon.chevron-right class="size-10" />
-                <span class="hidden text-xs opacity-60 lg:block" aria-hidden="true">→ · {{ __('Space') }} · PgDn</span>
+                <span class="hidden text-xs opacity-60 lg:block" aria-hidden="true">→ · {{ __('Space') }}</span>
             </button>
         </div>
 

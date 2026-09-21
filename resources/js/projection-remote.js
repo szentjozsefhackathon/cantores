@@ -1,6 +1,6 @@
 import { onAlpineInit } from './alpine-init.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
-import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, isNewerFrame, poller, pushedShow, replayPendingState, sameFit, screensFor, showClient, showStream, shownExclusions, stateClient, zoomedFit } from './projection-follow.js';
+import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, isNewerFrame, poller, pushedShow, replayPendingState, sameFit, screensFor, showClient, showStream, shownExclusions, songStartAt, stateClient, zoomedFit } from './projection-follow.js';
 
 /**
  * The deck in the cantor's hand.
@@ -1256,12 +1256,12 @@ onAlpineInit(() => {
             const keys = {
                 ArrowRight: () => this.moved('next', this.index + 1),
                 ArrowDown: () => this.moved('next', this.index + 1),
-                PageDown: () => this.moved('next', this.index + 1),
+                PageDown: () => this.moved('next', songStartAt(this.slides, this.index, 'next')),
                 ' ': () => this.moved('next', this.index + 1),
                 Enter: () => this.moved('next', this.index + 1),
                 ArrowLeft: () => this.moved('previous', this.index - 1),
                 ArrowUp: () => this.moved('previous', this.index - 1),
-                PageUp: () => this.moved('previous', this.index - 1),
+                PageUp: () => this.moved('previous', songStartAt(this.slides, this.index, 'previous')),
                 Backspace: () => this.moved('previous', this.index - 1),
                 Home: () => this.moved('previous', 0),
                 End: () => this.moved('next', this.total - 1),

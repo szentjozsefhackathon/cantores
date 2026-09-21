@@ -462,9 +462,11 @@ it('names the key behind each of the laptop controls', function () {
 
     Livewire::test(ProjectionRemote::class)
         ->assertSeeHtml('lg:flex-[2]')
-        ->assertSee('← · PgUp')
+        ->assertSeeHtml('aria-hidden="true">←</span>')
         ->assertSee('B · .')
-        ->assertSee('→ · '.__('Space').' · PgDn');
+        ->assertSee('→ · '.__('Space'))
+        ->assertDontSee('PgUp')
+        ->assertDontSee('PgDn');
 });
 
 /*

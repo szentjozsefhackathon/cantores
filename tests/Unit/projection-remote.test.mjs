@@ -46,14 +46,14 @@ function press(key) {
 test('the keys every display program taught the person at the laptop', () => {
     const deck = remote();
 
-    for (const key of [' ', 'ArrowRight', 'ArrowDown', 'PageDown', 'Enter']) {
+    for (const key of [' ', 'ArrowRight', 'ArrowDown', 'Enter']) {
         deck.index = 0;
         deck.onKey(press(key));
 
         assert.equal(deck.index, 1, `${key} did not advance the service`);
     }
 
-    for (const key of ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace']) {
+    for (const key of ['ArrowLeft', 'ArrowUp', 'Backspace']) {
         deck.index = 2;
         deck.onKey(press(key));
 
@@ -65,6 +65,36 @@ test('the keys every display program taught the person at the laptop', () => {
 
     deck.onKey(press('Home'));
     assert.equal(deck.index, 0);
+});
+
+/* Page Up and Page Down move a song at a time: the start of the next row, or of
+   the one before this, wherever in this one the service has got to. */
+test('page up and page down move between songs, not slides', () => {
+    const deck = remote();
+    deck.slides = [1, 1, 2, 2, 2, 3].map((entryId, index) => ({ entryId, index, svg: null }));
+    deck.total = 6;
+
+    deck.index = 0;
+    deck.onKey(press('PageDown'));
+    assert.equal(deck.index, 2);
+
+    deck.onKey(press('PageDown'));
+    assert.equal(deck.index, 5);
+
+    deck.onKey(press('PageDown'));
+    assert.equal(deck.index, 5, 'the last song has no song after it');
+
+    deck.index = 4;
+    deck.onKey(press('PageUp'));
+    assert.equal(deck.index, 0);
+
+    deck.index = 5;
+    deck.onKey(press('PageUp'));
+    assert.equal(deck.index, 2);
+
+    deck.index = 1;
+    deck.onKey(press('PageUp'));
+    assert.equal(deck.index, 0, 'the first song holds at its start');
 });
 
 /* The deck stops at both ends rather than running off them: a key held down at
