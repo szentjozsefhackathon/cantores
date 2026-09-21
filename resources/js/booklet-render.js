@@ -80,6 +80,16 @@ const REFERENCE_SIZE_FACTOR = 0.72;
 const PAGE_NUMBER_SIZE_FACTOR = 0.62;
 
 /**
+ * How far above the paper's edge the page number's baseline sits, at least.
+ *
+ * Office printers cannot ink the outer 4–6 mm of a sheet, and a PDF with
+ * anything drawn there is shrunk to fit by the print dialog — the whole booklet
+ * comes out at 96 % because of one digit. So the number keeps clear of that
+ * strip whatever the margin is, and only moves further in on a generous one.
+ */
+const PAGE_NUMBER_MIN_INSET_MM = 8;
+
+/**
  * A rubric is set at the lyric size, so a paragraph between two scores reads as
  * loudly as the lyrics beside it — times whatever the booklet's own text scale
  * says, and whatever the row says on top of that.
@@ -981,10 +991,12 @@ function composePage(page, geometry, pageNumber, pageCount) {
             leadingScale: geometry.leadingScale ?? 1,
         });
 
+        const baselineInset = Math.max(mmToPx(PAGE_NUMBER_MIN_INSET_MM), geometry.marginPx * 0.4);
+
         fragments.push(parseSvg(number.svg));
         placements.push({
             x: geometry.pageWidthPx / 2,
-            y: geometry.pageHeightPx - geometry.marginPx * 0.6,
+            y: geometry.pageHeightPx - baselineInset - number.height * 0.75,
             scale: 1,
         });
     }
