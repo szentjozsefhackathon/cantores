@@ -14,6 +14,7 @@ import {
     chordproPageMetrics,
     chordproSlidePages,
     parseChordproSong,
+    renderChordproIncipitSvg,
     stripMarkup,
 } from '../../resources/js/score-editor-chordpro.js';
 import { slidePalette } from '../../resources/js/slide-palette.js';
@@ -320,6 +321,56 @@ test('the mixin carries every export action the toolbars call', () => {
 
     ['chordproPageElement', 'copyChordproImage', 'exportChordproPng', 'exportChordproSvg', 'exportChordproPdf']
         .forEach((action) => assert.equal(typeof mixin[action], 'function', `${action} is missing`));
+});
+
+test('section markers are never printed by an export', async () => {
+    const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    let copied;
+    Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        value: { clipboard: { writeText: async (text) => { copied = text; } } },
+    });
+
+    try {
+        const editor = {
+            ...chordproMixin(),
+            localContent: '%section Verse\n[C]Alleluia\n\n%section Refrain\n[G]Amen',
+            chordproGermanNotation: false,
+            chordproTranspose: 0,
+            showCopyFeedback() {},
+        };
+
+        assert.equal(editor.chordproSource(), '[C]Alleluia\n\n[G]Amen');
+
+        await editor.copyChordproPlainText();
+
+        assert.match(copied, /Alleluia/);
+        assert.match(copied, /Amen/);
+        assert.doesNotMatch(copied, /%section|Verse|Refrain/);
+    } finally {
+        if (originalNavigator) {
+            Object.defineProperty(globalThis, 'navigator', originalNavigator);
+        } else {
+            delete globalThis.navigator;
+        }
+    }
+});
+
+test('an incipit does not open with a section marker', async () => {
+    const svg = await renderChordproIncipitSvg('%section Verse\n%section Refrain', {
+        german: false,
+        transpose: 0,
+        fontFamily: "'Merriweather'",
+    });
+
+    assert.equal(svg, null);
+});
+
+test('every preview and export reads the sheet without its section markers', () => {
+    const source = readFileSync(new URL('../../resources/js/score-editor-chordpro.js', import.meta.url), 'utf8');
+    const rawReads = [...source.matchAll(/this\.localContent/g)];
+
+    assert.equal(rawReads.length, 1, 'only chordproSource() may read the raw source');
 });
 
 for (const german of [false, true]) {

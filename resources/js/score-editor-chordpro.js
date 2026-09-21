@@ -201,13 +201,15 @@ function isSungLine(line) {
  *
  * Returns null when there is nothing sung to draw — an empty editor, or a file
  * of directives — so the caller leaves the score without a thumbnail rather
- * than storing a blank picture.
+ * than storing a blank picture. `%section` lines are taken out first, or the
+ * first marker would be the opening line.
  *
- * @param {string} content raw ChordPro
+ * @param {string} source raw ChordPro
  * @param {{german: boolean, transpose: number|string, fontFamily: string}} options
  * @returns {Promise<SVGElement|null>}
  */
-export async function renderChordproIncipitSvg(content, { german, transpose, fontFamily }) {
+export async function renderChordproIncipitSvg(source, { german, transpose, fontFamily }) {
+    const content = stripSectionMarkers(source);
     if (!content || !content.trim()) { return null; }
 
     const song = await parseChordproSong(content, { german, transpose, sanitize: false });
@@ -566,14 +568,23 @@ export function chordproMixin() {
             return displayChordsInHtml(html, this.chordproGermanNotation);
         },
 
+        /**
+         * The sheet as it is sung: the source without its `%section` lines.
+         *
+         * ChordPro has no comment character that hides a marker, unlike the
+         * three engraved formats, so every preview and export reads this
+         * rather than the raw source, or the markers would be printed.
+         */
+        chordproSource() {
+            return stripSectionMarkers(this.localContent);
+        },
+
         async renderChordproPreview() {
             const container = this.$refs.chordproPreview;
             if (!container) { return; }
             container.innerHTML = '';
             this.hasPages = false;
-            // ChordPro has no comment character that hides a marker, unlike the
-            // three engraved formats: `%section` would otherwise be sung.
-            const content = stripSectionMarkers(this.localContent);
+            const content = this.chordproSource();
             if (!content || !content.trim()) { return; }
 
             if (this.isFixedRatio(this.chordproPageRatio)) {
@@ -655,7 +666,7 @@ export function chordproMixin() {
          * the exports the engraved formats have always had.
          */
         async chordproPageElement() {
-            const svg = await renderChordproPageSvg(this.localContent, {
+            const svg = await renderChordproPageSvg(this.chordproSource(), {
                 german: this.chordproGermanNotation,
                 transpose: this.chordproTranspose,
                 fontFamily: this.chordproFontFamily,
@@ -712,7 +723,7 @@ export function chordproMixin() {
                 this.showCopyFeedback(this.clipboardNotSupported);
                 return;
             }
-            const content = this.localContent;
+            const content = this.chordproSource();
             if (!content || !content.trim()) { return; }
             try {
                 const ChordSheetJS = await loadChordSheetJS();
@@ -733,7 +744,7 @@ export function chordproMixin() {
                 this.showCopyFeedback(this.clipboardNotSupported);
                 return;
             }
-            const content = this.localContent;
+            const content = this.chordproSource();
             if (!content || !content.trim()) { return; }
             try {
                 const ChordSheetJS = await loadChordSheetJS();
@@ -771,7 +782,7 @@ sup,sub{font-size:0.7em;line-height:0;}
         },
 
         async exportChordproHtml() {
-            const content = this.localContent;
+            const content = this.chordproSource();
             if (!content || !content.trim()) { return; }
             try {
                 const ChordSheetJS = await loadChordSheetJS();
