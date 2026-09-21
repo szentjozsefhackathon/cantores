@@ -108,5 +108,7 @@
     "Skipped": "Skipped",
     "skipped": "skipped",
     "Changes here apply to this projection at this screen shape only. An uploaded page is fitted to the screen; make it smaller where that is too big.": "Changes here apply to this projection at this screen shape only. An uploaded page is fitted to the screen; make it smaller where that is too big.",
-    "Changes here apply to this projection at this screen shape only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead.": "Changes here apply to this projection at this screen shape only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead."
+    "Changes here apply to this projection at this screen shape only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead.": "Changes here apply to this projection at this screen shape only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead.",
+    "Last in a music plan: :date": "Last in a music plan: :date",
+    ":count day|:count days": ":count day|:count days"
 }

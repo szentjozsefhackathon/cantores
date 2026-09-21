@@ -36,6 +36,14 @@
                             <flux:badge size="sm" color="zinc">+{{ count($assignment['music_collections_overflow']) }}</flux:badge>
                         </flux:tooltip>
                     @endif
+                    @if(isset($assignment['last_used_days_ago']))
+                        <flux:tooltip content="{{ __('Last in a music plan: :date', ['date' => $assignment['last_used_date']]) }}">
+                            <span data-test="last-used" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                                <flux:icon name="clock" variant="micro" class="size-3" />
+                                {{ trans_choice(':count day|:count days', $assignment['last_used_days_ago'], ['count' => $assignment['last_used_days_ago']]) }}
+                            </span>
+                        </flux:tooltip>
+                    @endif
                     @foreach($assignment['music_tags'] as $tag)
                         <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                             <flux:icon :name="$tag['icon']" class="h-3 w-3" />

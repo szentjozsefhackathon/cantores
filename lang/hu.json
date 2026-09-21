@@ -1588,5 +1588,7 @@
     "Screen not responding": "A képernyő nem válaszol",
     "Retry screen update": "Képernyőfrissítés újrapróbálása",
     "The selected slide is not in this projection.": "A kiválasztott dia nem része ennek a vetítésnek.",
-    "This presentation state is no longer current.": "Ez a vetítési állapot már nem aktuális."
+    "This presentation state is no longer current.": "Ez a vetítési állapot már nem aktuális.",
+    "Last in a music plan: :date": "Utoljára énekrendben: :date",
+    ":count day|:count days": ":count nap|:count nap"
 }

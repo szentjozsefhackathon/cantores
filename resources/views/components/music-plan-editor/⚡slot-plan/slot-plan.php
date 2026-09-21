@@ -108,7 +108,7 @@ new class extends Component
 
     public function mount(): void
     {
-        $this->slotPlan->loadMissing('musicPlanSlot');
+        $this->slotPlan->loadMissing(['musicPlanSlot', 'musicPlan.celebration']);
         $this->loadAssignments();
     }
 
@@ -130,7 +130,12 @@ new class extends Component
             ->with(['music.collections', 'music.tags', 'music.genres', 'music.authors', 'music.urls', 'music.publicPreviewScores', 'flag', 'scopes'])
             ->get();
 
-        $this->assignments = $dbAssignments->map(function ($assignment) use ($user) {
+        $referenceDate = ($this->slotPlan->musicPlan->actual_date ?? now())->startOfDay();
+        $lastUsedDates = $user === null
+            ? collect()
+            : $this->slotPlan->musicPlan->lastUsedDatesFor($user, $dbAssignments->pluck('music_id'));
+
+        $this->assignments = $dbAssignments->map(function ($assignment) use ($user, $lastUsedDates, $referenceDate) {
             $this->flags[$assignment->id] = $assignment->flag?->id;
 
             $dbScopes = $assignment->scopes->map(function ($scope) {
@@ -160,6 +165,10 @@ new class extends Component
                 'notes' => $assignment->notes,
                 'scopes' => $mergedScopes,
                 'scope_label' => $assignment->scope_label,
+                'last_used_date' => $lastUsedDates->get($assignment->music_id)?->toDateString(),
+                'last_used_days_ago' => $lastUsedDates->has($assignment->music_id)
+                    ? (int) $lastUsedDates->get($assignment->music_id)->diffInDays($referenceDate)
+                    : null,
                 'music_collections' => $displayCollections->take(3)->map(fn ($c) => [
                     'abbreviation' => $c->abbreviation,
                     'title' => $c->title,

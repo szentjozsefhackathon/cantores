@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Concerns\HasLoans;
 use App\Concerns\HasVisibilityScoping;
+use App\Facades\GenreContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,34 +13,37 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property int $id
  * @property int $user_id
  * @property bool $is_private
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property int|null $genre_id
  * @property string|null $private_notes
  * @property string|null $share_token
  * @property int|null $celebration_id
- * @property-read \App\Models\Celebration|null $celebration
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlot> $customSlots
+ * @property-read Celebration|null $celebration
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MusicPlanSlot> $customSlots
  * @property-read int|null $custom_slots_count
- * @property-read \App\Models\Genre|null $genre
- * @property-read \Illuminate\Support\Carbon|null $actual_date
+ * @property-read Genre|null $genre
+ * @property-read Carbon|null $actual_date
  * @property-read string|null $celebration_name
  * @property-read string $day_name
  * @property-read string|null $setting
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Booklet> $booklets
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Booklet> $booklets
  * @property-read int|null $booklets_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Projection> $projections
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Projection> $projections
  * @property-read int|null $projections_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlotAssignment> $musicAssignments
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MusicPlanSlotAssignment> $musicAssignments
  * @property-read int|null $music_assignments_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlanSlot> $slots
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MusicPlanSlot> $slots
  * @property-read int|null $slots_count
- * @property-read \App\Models\User $user
+ * @property-read User $user
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|MusicPlan byGenre($genre)
  * @method static \Database\Factories\MusicPlanFactory factory($count = null, $state = [])
@@ -205,9 +210,9 @@ class MusicPlan extends Model
     /**
      * The musics assigned to this plan, in no particular order.
      *
-     * @return \Illuminate\Support\Collection<int, int>
+     * @return Collection<int, int>
      */
-    public function assignedMusicIds(): \Illuminate\Support\Collection
+    public function assignedMusicIds(): Collection
     {
         return $this->musicAssignments()->pluck('music_id')->unique()->filter()->values();
     }
@@ -223,7 +228,7 @@ class MusicPlan extends Model
      * from someone else and is passing on; LoanAccessService::scoresFor() adds those,
      * because whether they travel depends on how the plan is being read.
      *
-     * @return \Illuminate\Database\Eloquent\Builder<Score>
+     * @return Builder<Score>
      */
     public function ownScores(): Builder
     {
@@ -249,7 +254,7 @@ class MusicPlan extends Model
      */
     public function scopeForCurrentGenre($query)
     {
-        $genreId = \App\Facades\GenreContext::getId();
+        $genreId = GenreContext::getId();
 
         if ($genreId !== null) {
             // Show plans that belong to the current genre OR have no genre (belongs to all)
@@ -332,14 +337,14 @@ class MusicPlan extends Model
      * Get the first celebration's actual date.
      * This is a convenience method to access actual date from the first associated celebration.
      */
-    public function getActualDateAttribute(): ?\Illuminate\Support\Carbon
+    public function getActualDateAttribute(): ?Carbon
     {
         $date = $this->celebration?->actual_date;
         if ($date === null) {
             return null;
         }
 
-        return \Illuminate\Support\Carbon::parse($date);
+        return Carbon::parse($date);
     }
 
     /**
@@ -470,7 +475,7 @@ class MusicPlan extends Model
      */
     public function copy(?User $copier = null): self
     {
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($copier) {
+        return DB::transaction(function () use ($copier) {
             // Determine if this is a published plan being copied by a non-owner
             $isPublishedCopy = $copier && $copier->id !== $this->user_id && ! $this->is_private;
 
@@ -520,7 +525,7 @@ class MusicPlan extends Model
                 ]);
 
                 // Get the new pivot record ID directly from the database
-                $newPivotId = \Illuminate\Support\Facades\DB::table('music_plan_slot_plan')
+                $newPivotId = DB::table('music_plan_slot_plan')
                     ->where('music_plan_id', $newPlan->id)
                     ->where('music_plan_slot_id', $slotId)
                     ->value('id');
@@ -557,5 +562,37 @@ class MusicPlan extends Model
 
             return $newPlan;
         });
+    }
+
+    /**
+     * When the given user last had each of the given musics in one of their other plans.
+     *
+     * Only plans dated strictly before this plan's date count (or before today, when this
+     * plan has no date), so the answer reads as "how long ago did I last sing this".
+     *
+     * @param  iterable<int>  $musicIds
+     * @return Collection<int, Carbon> Last date by music ID
+     */
+    public function lastUsedDatesFor(User $user, iterable $musicIds): Collection
+    {
+        $musicIds = collect($musicIds)->filter()->unique()->values();
+        if ($musicIds->isEmpty()) {
+            return collect();
+        }
+
+        $referenceDate = ($this->actual_date ?? now())->toDateString();
+
+        return MusicPlanSlotAssignment::query()
+            ->join('music_plan_slot_plan', 'music_plan_slot_plan.id', '=', 'music_plan_slot_assignments.music_plan_slot_plan_id')
+            ->join('music_plans', 'music_plans.id', '=', 'music_plan_slot_plan.music_plan_id')
+            ->join('celebrations', 'celebrations.id', '=', 'music_plans.celebration_id')
+            ->where('music_plans.user_id', $user->id)
+            ->where('music_plans.id', '!=', $this->id)
+            ->where('celebrations.actual_date', '<', $referenceDate)
+            ->whereIn('music_plan_slot_assignments.music_id', $musicIds)
+            ->groupBy('music_plan_slot_assignments.music_id')
+            ->selectRaw('music_plan_slot_assignments.music_id, max(celebrations.actual_date) as last_used_date')
+            ->pluck('last_used_date', 'music_id')
+            ->map(fn ($date) => Carbon::parse($date));
     }
 }
