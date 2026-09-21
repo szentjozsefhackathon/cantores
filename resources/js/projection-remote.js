@@ -418,13 +418,37 @@ onAlpineInit(() => {
                 : { kind: 'waiting', label: config.waitingText ?? 'Waiting for screen' };
         },
 
-        statusClass(screen) {
+        /**
+         * The one thing to say about the walls, however many there are.
+         *
+         * Whoever is holding this has not got two questions to ask: either the
+         * room is looking at what was pressed or it is not. So the worst of the
+         * walls is the show's answer — the wall that is behind is the one worth
+         * hearing about, and the wall that is fine has nothing to say at all.
+         */
+        get showStatus() {
+            const statuses = this.walls.map((screen) => this.screenStatus(screen));
+
+            if (statuses.length === 0) { return null; }
+
+            return ['sending', 'stale', 'waiting', 'updated']
+                .map((kind) => statuses.find((status) => status.kind === kind))
+                .find(Boolean) ?? statuses[0];
+        },
+
+        /** The colour of that one light. */
+        get showStatusClass() {
             return {
                 sending: 'bg-blue-400 animate-pulse',
                 waiting: 'bg-amber-400',
                 updated: 'bg-emerald-400',
                 stale: 'bg-red-500',
-            }[this.screenStatus(screen).kind];
+            }[this.showStatus?.kind] ?? 'bg-zinc-400';
+        },
+
+        /** Whether pressing it again is worth offering, which only a wall behind is. */
+        get showNeedsRetry() {
+            return ['waiting', 'stale'].includes(this.showStatus?.kind);
         },
 
         get aspectRatio() {

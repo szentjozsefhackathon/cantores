@@ -113,6 +113,38 @@ it('says which screens the show is on', function () {
 });
 
 /*
+ * One light for the show, however many walls it is on: the cantor glancing down
+ * between verses has one question, so there is one answer, and it is a colour
+ * rather than a sentence. The words behind each colour are hovered and read
+ * aloud; the only thing that ever joins the light is the way to press it again,
+ * an icon to the left of it.
+ */
+it('says how the show is doing with one light and no words', function () {
+    $user = User::factory()->create();
+
+    $church = Screen::factory()->create(['user_id' => $user->id]);
+    DeviceName::factory()->create(['user_id' => $user->id, 'device_id' => $church->device_id, 'name' => 'Parish laptop']);
+
+    Screen::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    $html = Livewire::test(ShowStatus::class)->html();
+
+    expect(substr_count($html, 'x-bind:class="showStatusClass"'))->toBe(1)
+        ->and(substr_count($html, 'size-2 shrink-0 rounded-full'))->toBe(1)
+        ->and($html)->toContain('x-show="showNeedsRetry"');
+
+    // Nothing in the line is a word. What each colour means, what the retry does
+    // and which wall a pencil names are all said in attributes, so they are
+    // there to hover and to hear but never take a line of the phone.
+    expect($html)->not->toContain('x-text="showStatus?.label"')
+        ->and($html)->not->toContain('>'.__('Retry screen update').'<')
+        ->and($html)->not->toContain('>Parish laptop<')
+        ->and($html)->toContain('title="Parish laptop"');
+});
+
+/*
  * A laptop with the wall in one window and the remote in the other: the wall is
  * this very browser, and it is where the show is on.
  */
