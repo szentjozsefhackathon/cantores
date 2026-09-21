@@ -535,40 +535,54 @@ export function addressAt(slides, at) {
 }
 
 /**
- * The first slide of the song before or after the one at a position.
+ * The first slide of the music before or after the one at a position.
  *
- * A song is a row: one score, however many screens its page breaks cut it into.
- * Backwards is the start of the row before this one, wherever in this one the
+ * A music is one or more rows, a score each, however many screens their page
+ * breaks cut them into — the same music in two slots is two musics here. A row
+ * with no music — a screen of words put in by hand — stands on its own.
+ * Backwards is the start of the music before this one, wherever in this one the
  * service is, and holds at the very first slide; forwards is the start of the
- * next row, and holds where it is when this row is the last.
+ * next music, and holds where it is when this music is the last.
  *
  * @param {Array<{entryId: number}>} slides the shown deck
+ * @param {Array<{id: number, assignmentId?: ?number, addedMusicId?: ?number}>} entries the rows the slides came from
  * @param {number} at
  * @param {'previous'|'next'} direction
  * @return {number} a position in `slides`
  */
-export function songStartAt(slides, at, direction) {
-    const here = slides[at];
+export function musicStartAt(slides, entries, at, direction) {
+    if (!slides[at]) { return at; }
 
-    if (!here) { return at; }
+    const musics = new Map((entries ?? []).map((entry) => [entry.id, musicOf(entry)]));
+    const musicAt = (index) => musics.get(slides[index].entryId) ?? `row:${slides[index].entryId}`;
+    const here = musicAt(at);
 
     if (direction === 'next') {
-        const next = slides.findIndex((slide, index) => index > at && slide.entryId !== here.entryId);
+        const next = slides.findIndex((slide, index) => index > at && musicAt(index) !== here);
 
         return next === -1 ? at : next;
     }
 
     let start = at;
 
-    while (start > 0 && slides[start - 1].entryId === here.entryId) { start--; }
+    while (start > 0 && musicAt(start - 1) === here) { start--; }
 
     if (start === 0) { return 0; }
 
-    const previousSong = slides[start - 1].entryId;
+    const previousMusic = musicAt(start - 1);
 
-    while (start > 0 && slides[start - 1].entryId === previousSong) { start--; }
+    while (start > 0 && musicAt(start - 1) === previousMusic) { start--; }
 
     return start;
+}
+
+/** Which music a row belongs to: its slot assignment or added music, or the row itself where it has none. */
+function musicOf(entry) {
+    if (entry.assignmentId) { return `assignment:${entry.assignmentId}`; }
+
+    if (entry.addedMusicId) { return `added:${entry.addedMusicId}`; }
+
+    return `row:${entry.id}`;
 }
 
 /**

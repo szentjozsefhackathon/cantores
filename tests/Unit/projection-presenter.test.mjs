@@ -37,10 +37,11 @@ function presenter(total = 3) {
     return component;
 }
 
-test('page up and page down move the wall between songs, not slides', () => {
+test('page up and page down move the wall between musics, not slides', () => {
     const deck = presenter();
-    deck.slides = [1, 1, 2, 2, 3].map((entryId, index) => ({ entryId, index, svg: null }));
-    deck.total = 5;
+    deck.slides = [1, 1, 2, 2, 3, 4].map((entryId, index) => ({ entryId, index, svg: null }));
+    deck.entries = [{ id: 1, assignmentId: 9 }, { id: 2 }, { id: 3, assignmentId: 5 }, { id: 4, assignmentId: 5 }];
+    deck.total = 6;
     const press = (key) => deck.onKey({ key, preventDefault() {} });
 
     deck.index = 1;
@@ -50,9 +51,22 @@ test('page up and page down move the wall between songs, not slides', () => {
     press('PageDown');
     assert.equal(deck.index, 4);
 
+    press('PageDown');
+    assert.equal(deck.index, 4, 'the two scores of one music are one stop');
+
     deck.index = 3;
     press('PageUp');
     assert.equal(deck.index, 0);
+});
+
+test('the full stop blacks the wall, as a clicker sends it', () => {
+    const deck = presenter();
+
+    deck.onKey({ key: '.', preventDefault() {} });
+    assert.equal(deck.blanked, true);
+
+    deck.onKey({ key: '.', preventDefault() {} });
+    assert.equal(deck.blanked, false);
 });
 
 test('full screen is a picture, not a console', () => {

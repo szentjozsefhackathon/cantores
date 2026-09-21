@@ -1,7 +1,7 @@
 import { onAlpineInit } from './alpine-init.js';
 import { isExcluded, renderDeck } from './projection-deck.js';
 import { onPaper } from './slide-frame.js';
-import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, ownScreen, isNewerFrame, poller, pushedShow, replayPendingState, screensFor, showClient, showStream, shownExclusions, songStartAt, stateClient } from './projection-follow.js';
+import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, ownScreen, isNewerFrame, poller, pushedShow, replayPendingState, screensFor, showClient, showStream, shownExclusions, musicStartAt, stateClient } from './projection-follow.js';
 
 /**
  * The deck on the wall.
@@ -469,18 +469,18 @@ onAlpineInit(() => {
             this.go(this.index - 1);
         },
 
-        /** The first slide of the next song — the opening is walked like Next. */
-        nextSong() {
+        /** The first slide of the next music — the opening is walked like Next. */
+        nextMusic() {
             if (this.opening) { return this.walkOpening(); }
 
-            this.go(songStartAt(this.slides, this.index, 'next'));
+            this.go(musicStartAt(this.slides, this.entries, this.index, 'next'));
         },
 
-        /** The first slide of the song before this one. */
-        previousSong() {
+        /** The first slide of the music before this one. */
+        previousMusic() {
             if (this.opening) { return this.walkOpening(); }
 
-            this.go(songStartAt(this.slides, this.index, 'previous'));
+            this.go(musicStartAt(this.slides, this.entries, this.index, 'previous'));
         },
 
         /**
@@ -515,17 +515,19 @@ onAlpineInit(() => {
             const keys = {
                 ArrowRight: () => this.next(),
                 ArrowDown: () => this.next(),
-                PageDown: () => this.nextSong(),
+                PageDown: () => this.nextMusic(),
                 ' ': () => this.next(),
                 Enter: () => this.next(),
                 ArrowLeft: () => this.previous(),
                 ArrowUp: () => this.previous(),
-                PageUp: () => this.previousSong(),
+                PageUp: () => this.previousMusic(),
                 Backspace: () => this.previous(),
                 Home: () => this.go(0),
                 End: () => this.go(this.total - 1),
                 b: () => this.toggleBlank(),
                 B: () => this.toggleBlank(),
+                // What PowerPoint and its clickers send for a black screen.
+                '.': () => this.toggleBlank(),
                 f: () => this.toggleFullscreen(),
                 F: () => this.toggleFullscreen(),
             };

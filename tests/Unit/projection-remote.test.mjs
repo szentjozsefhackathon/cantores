@@ -67,11 +67,12 @@ test('the keys every display program taught the person at the laptop', () => {
     assert.equal(deck.index, 0);
 });
 
-/* Page Up and Page Down move a song at a time: the start of the next row, or of
+/* Page Up and Page Down move a music at a time: the start of the next one, or of
    the one before this, wherever in this one the service has got to. */
-test('page up and page down move between songs, not slides', () => {
+test('page up and page down move between musics, not slides', () => {
     const deck = remote();
     deck.slides = [1, 1, 2, 2, 2, 3].map((entryId, index) => ({ entryId, index, svg: null }));
+    deck.entries = [{ id: 1 }, { id: 2 }, { id: 3 }];
     deck.total = 6;
 
     deck.index = 0;
@@ -82,7 +83,7 @@ test('page up and page down move between songs, not slides', () => {
     assert.equal(deck.index, 5);
 
     deck.onKey(press('PageDown'));
-    assert.equal(deck.index, 5, 'the last song has no song after it');
+    assert.equal(deck.index, 5, 'the last music has none after it');
 
     deck.index = 4;
     deck.onKey(press('PageUp'));
@@ -94,7 +95,32 @@ test('page up and page down move between songs, not slides', () => {
 
     deck.index = 1;
     deck.onKey(press('PageUp'));
-    assert.equal(deck.index, 0, 'the first song holds at its start');
+    assert.equal(deck.index, 0, 'the first music holds at its start');
+});
+
+/* A music sung from two scores is two rows, and Page Down walks
+   past both of them rather than stopping at the second score. */
+test('page down treats the scores of one music as one', () => {
+    const deck = remote();
+    deck.slides = [10, 11, 11, 12, 13].map((entryId, index) => ({ entryId, index, svg: null }));
+    deck.entries = [
+        { id: 10, assignmentId: 7 },
+        { id: 11, assignmentId: 7 },
+        { id: 12, addedMusicId: 3 },
+        { id: 13 },
+    ];
+    deck.total = 5;
+
+    deck.index = 0;
+    deck.onKey(press('PageDown'));
+    assert.equal(deck.index, 3);
+
+    deck.onKey(press('PageDown'));
+    assert.equal(deck.index, 4);
+
+    deck.index = 3;
+    deck.onKey(press('PageUp'));
+    assert.equal(deck.index, 0);
 });
 
 /* The deck stops at both ends rather than running off them: a key held down at
