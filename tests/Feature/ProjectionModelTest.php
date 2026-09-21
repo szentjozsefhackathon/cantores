@@ -4,6 +4,7 @@ use App\Enums\ProjectionRatio;
 use App\Models\Celebration;
 use App\Models\MusicPlan;
 use App\Models\Projection;
+use App\Models\ProjectionMusic;
 use App\Models\ProjectionSlide;
 use App\Models\Score;
 use App\Models\User;
@@ -176,4 +177,37 @@ it('reaches its scores through the slides', function () {
     ]);
 
     expect($projection->scores()->pluck('scores.id')->all())->toBe([$score->id]);
+});
+
+/*
+ * The revision is the newest stamp in the deck, and a screen reports the
+ * revision it has drawn. Remove the newest row and the naive answer walks
+ * backwards, which leaves a screen that drew the higher one reporting
+ * something the deck will never again say — and so marked as not answering
+ * for the rest of the Mass. Taking a row out is an edit, and an edit is
+ * always now.
+ *
+ * @see \App\Models\Screen::acknowledge()
+ */
+it('never walks its revision backwards when a row is taken out', function () {
+    $projection = Projection::factory()->create();
+
+    $this->travel(1)->seconds();
+    $slide = ProjectionSlide::factory()->create(['projection_id' => $projection->id]);
+
+    $this->travel(1)->seconds();
+    $music = ProjectionMusic::factory()->create(['projection_id' => $projection->id]);
+
+    $withTheMusic = $projection->fresh()->revision();
+
+    $this->travel(1)->seconds();
+    $music->delete();
+    $withoutTheMusic = $projection->fresh()->revision();
+
+    $this->travel(1)->seconds();
+    $slide->delete();
+    $withoutTheSlide = $projection->fresh()->revision();
+
+    expect($withoutTheMusic)->toBeGreaterThan($withTheMusic)
+        ->and($withoutTheSlide)->toBeGreaterThan($withoutTheMusic);
 });

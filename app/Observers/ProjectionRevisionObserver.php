@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Projection;
 use App\Models\ProjectionMusic;
 use App\Models\ProjectionSlide;
+use App\Models\Screen;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
@@ -33,8 +34,28 @@ class ProjectionRevisionObserver
         $this->forget($model);
     }
 
+    /**
+     * A row taken out of a deck is the one edit the revision cannot see by
+     * itself.
+     *
+     * The revision is the newest stamp among the deck, its rows and their
+     * scores, so removing the newest of them moves it *backwards* — and a
+     * screen that has already drawn the higher one is then stuck for good,
+     * because nothing it can report of itself is newer than what the server
+     * remembers it drew. Stamping the deck instead is both true and monotonic:
+     * the deck did change, and it changed just now.
+     *
+     * The stamp goes in before the cache is forgotten, so no poll in between
+     * can cache the lower revision the deletion briefly leaves behind.
+     *
+     * @see Screen::acknowledge()
+     */
     public function deleted(Model $model): void
     {
+        if ($model instanceof ProjectionSlide || $model instanceof ProjectionMusic) {
+            $model->projection?->touch();
+        }
+
         $this->forget($model);
     }
 
