@@ -46,9 +46,9 @@ class ShowStream
      * How long a subscription is good for.
      *
      * Short, because it outlives a sign-out: a device that loses its session
-     * keeps hearing "something changed" until the token lapses. It carries
-     * nothing else, and a wall that is still signed in simply asks for another
-     * one when the hub turns it away.
+     * keeps receiving the person's show, frame by frame, until the token
+     * lapses. A wall that is still signed in simply asks for another one when
+     * the hub turns it away.
      */
     public const TOKEN_MINUTES = 60;
 

@@ -208,9 +208,21 @@ The endpoint accepts only the screen belonging to the authenticated user whose
 `device_id` is the current device. A phone cannot claim that a laptop rendered
 anything.
 
-This acknowledgement also refreshes `Screen.last_seen_at`. It is repeated every
-ten seconds as the presenter heartbeat, even when nothing changed. It never
-writes the presentation and never increments its version.
+This acknowledgement also refreshes `Screen.last_seen_at`. It never writes the
+presentation and never increments its version.
+
+It is an event, not a heartbeat. This plan first had it repeated every ten
+seconds whether anything had been drawn or not; that was a locked write and a
+log line per wall, nearly always saying nothing had happened. The presenter now
+reports only when what it has drawn differs from what the show says this screen
+last acknowledged — its own row in the `/show/state` answer, or the answer to
+its last report. A slow `HEARTBEAT_MS` beat remains only as the retry: it sends
+nothing while the two agree, and says it again when a report failed to land.
+
+Liveness is left to the read the wall makes anyway. A presenter read marked
+with `?screen=1` refreshes `last_seen_at`, and the answer describes each screen
+as `responding` (heard from within `SILENT_SECONDS`) rather than as a
+timestamp, so a quiet show keeps an unchanged body and its `304`.
 
 `appliedVersion` means that the presenter processed that immutable server
 snapshot and committed its corresponding DOM state. It cannot prove that the
@@ -238,14 +250,23 @@ adds:
   "appliedPresentationId": 12,
   "appliedVersion": 83,
   "drawnRevision": "2026-09-20T...",
-  "appliedAt": "2026-09-20T09:31:04Z"
+  "responding": true
 }
 ```
 
-Mercure stays a nudge rather than carrying state. Correctness must not depend on
-receiving every event. Its data may include `{presentationId, version, kind}` for
-diagnostics and to ignore obviously obsolete nudges, but every client still
-confirms with `/show/state`.
+Mercure carries the show itself. This plan first kept it a nudge, because the
+answer was still per device; once the show was described for a *person*, with
+the two device-shaped questions (which screen is this one, which may this one
+see) answered in the browser from flags on each screen, one frame fits every
+device. `ShowStream` publishes `{at, show}`, where `show` is exactly the
+`/show/state` answer and `at` is the server's clock, so a frame that overtook
+another is not drawn over it. A frame that arrives while a read is in flight
+yields to the read.
+
+Correctness still must not depend on receiving every frame. `/show/state` stays
+the authority: the fallback poll keeps running, anything that does not parse as
+a stamped show is answered with a read, and screen liveness, which moves with a
+clock rather than a save, is only ever learned from a read.
 
 The fallback while a stream is open moves from fifteen seconds to five. This is
 still an 80% reduction from the original one-second polling and bounds an
@@ -295,7 +316,7 @@ dot beside each live screen tells whether that screen has caught up:
   `drawnRevision === state.revision` for this presentation;
 - **grey — No live screen:** no presenter heartbeat is current;
 - **red — Screen not responding:** a live-listed screen remains behind beyond a
-  short threshold or its `appliedAt` has become stale.
+  short threshold after a commit, or it is no longer `responding`.
 
 With several screens, each gets its own dot. There is no ambiguous global green.
 The preview's main status may be green only when every offered live screen is
@@ -330,10 +351,11 @@ For one ordinary Next press:
 2. The ordered command queue POSTs `{sourceId, sequence, changes: address}`.
 3. The server locks the presentation, commits version `N + 1`, and responds.
 4. Remote stores the canonical response and shows amber for each screen behind.
-5. Mercure nudges the presenter; a missed nudge is bounded by fallback polling.
+5. Mercure pushes the new show to the presenter; a missed frame is bounded by
+   fallback polling.
 6. Presenter reads `N + 1`, swaps the slide locally, then acknowledges
    `appliedVersion: N + 1`.
-7. The acknowledgement publishes another nudge.
+7. The acknowledgement publishes the show again.
 8. Remote reads the screen status and turns that screen's dot green.
 
 Black follows exactly the same sequence. It is no longer a special fire-and-
@@ -349,13 +371,17 @@ forget field whose only evidence is the initiating phone's preview.
   it.
 - **Use `drawn_revision` as the acknowledgement.** It describes deck content,
   not position or Black, and one value cannot describe several screens.
-- **Put the full state in Mercure.** Screen liveness, device identity and fit are
-  still per-reader facts; an authoritative GET is needed anyway. Keeping push as
-  a nudge also keeps polling a valid fallback.
+- **Put the full state in Mercure.** Rejected at first, because screen liveness,
+  device identity and fit were per-reader facts. Later reversed: see *Reads and
+  push*. The part of the objection that still holds is that an authoritative GET
+  is needed anyway, so frames accelerate the read without replacing it.
 - **Send the complete remote snapshot on every action.** A stale Next would be
   able to undo Black from another device. Commands remain partial by dimension.
 - **Keep presenter state in the heartbeat.** A heartbeat is evidence of life,
   not user intent. Local presenter controls use explicit commands instead.
+- **Acknowledge on a clock.** Built first, then withdrawn: a periodic
+  acknowledgement writes every ten seconds per wall to say nothing changed.
+  Acknowledgement is sent on change, and liveness comes from the read.
 - **Build a permanent event-sourced presentation log.** Issue #44 needs ordered,
   idempotent delivery and per-screen acknowledgement, not historical replay. A
   per-source high-water mark is enough.
@@ -381,7 +407,7 @@ forget field whose only evidence is the initiating phone's preview.
 | `app/Http/Controllers/ScreenAcknowledgementController.php` | acknowledge only this device's screen |
 | `app/Http/Controllers/PresentationResyncController.php` | rate-limited republish without state mutation |
 | `resources/js/projection-follow.js` | timed requests, ordered command client, five-second pushed fallback |
-| `resources/js/projection-presenter.js` | explicit commands for keys; DOM/frame acknowledgement and acknowledgement heartbeat |
+| `resources/js/projection-presenter.js` | explicit commands for keys; DOM/frame acknowledgement, sent on change |
 | `resources/js/projection-remote.js` | canonical-plus-pending state, ordered delivery, per-screen sync status and resync |
 | `resources/views/livewire/pages/projection-presenter.blade.php` | pass `screenId` and acknowledgement URL |
 | `resources/views/livewire/pages/projection-remote.blade.php` | per-screen dots, status text and retry action |
@@ -405,8 +431,9 @@ production.
    and presenter keyboard actions onto it. Black retry and same-source ordering
    become effective here.
 4. Add the screen acknowledgement endpoint and change the presenter's periodic
-   report into an acknowledgement-only heartbeat. It no longer writes address,
-   splash or Black.
+   report into an acknowledgement. It no longer writes address, splash or
+   Black. (Later: it is sent only when the drawn state changes, and liveness
+   moves to the presenter's read; see *Applied state*.)
 5. Include per-screen applied state in `/show/state`; add the remote's
    canonical-plus-pending reconciliation and status dots.
 6. Add resync and reduce the pushed fallback after measuring the affected show
@@ -435,7 +462,7 @@ Feature coverage:
   one cannot make the other appear green.
 - A stale acknowledgement for the previous presentation does not make a screen
   green for the current one.
-- Resync publishes a nudge without changing the presentation version and is
+- Resync republishes the show without changing the presentation version and is
   throttled.
 - Compatibility requests from an already-open old client remain safe during the
   rollout window.
@@ -451,15 +478,18 @@ JavaScript coverage:
   optimistic change.
 - A newer command from another source is adopted after local pending commands
   have settled.
-- Presenter heartbeats contain acknowledgement fields only and cannot restore an
-  old address or Black value.
+- Presenter acknowledgements contain acknowledgement fields only and cannot
+  restore an old address or Black value.
+- The presenter sends nothing while its drawn state matches what the server
+  last heard, reports once when it changes, and repeats a report that failed.
 - The presenter acknowledges only after state application and a rendered frame;
   a failed re-engraving keeps the old revision acknowledged.
 - Blue means pending server acceptance, amber means committed but unacknowledged,
   green requires the exact presentation/version/revision, grey means no live
   screen and red means stale.
-- A stream nudge pokes the single-flight poller, a missed nudge is recovered by
-  the fallback, and a hung fetch is aborted so the next beat can run.
+- A newer stream frame is drawn, an older one is ignored, an unreadable one pokes
+  the single-flight poller, a missed frame is recovered by the fallback, and a
+  hung fetch is aborted so the next beat can run.
 
 Suggested focused commands as the phases land:
 
@@ -478,7 +508,7 @@ Manual failure test: open one presenter and two remotes, throttle and interrupt
 network traffic in each direction independently, then press Black and Next on
 one remote. That remote must react immediately. The other remote must show the
 server's canonical state. The presenter must never be moved backwards by its
-heartbeat. The status must stay blue or amber until the presenter applies the
+acknowledgement. The status must stay blue or amber until the presenter applies the
 state, turn green only after its acknowledgement, and recover through retry or
 fallback when one Mercure message is deliberately dropped.
 
@@ -489,10 +519,10 @@ logging deck content. Log acknowledgements with screen, presentation and applied
 version. These records make “the button did nothing” distinguishable as:
 
 - command never reached the server;
-- command committed but its nudge failed;
+- command committed but its publish failed;
 - presenter fetched but did not acknowledge;
 - presenter acknowledged a different version;
-- screen heartbeat stopped.
+- screen stopped reading.
 
 Add counters for command retries, stale/duplicate sequences, Mercure publish
 failures, acknowledgement lag and resync requests. The remote UI does not expose

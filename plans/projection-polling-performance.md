@@ -137,13 +137,20 @@ should show `304` on the state reads while nothing moves.
 Mercure was chosen: it is already inside the FrankenPHP binary, so there is no
 new container, no new route through Traefik and no new PHP dependency.
 
-**The hub says "something changed", never what.** The show's answer is per
-device (`isThisDevice`, which screens are live), and some of it moves with a
-clock rather than a save, so no one message could be the answer for every
-device. Instead `ShowStream` publishes a bare nudge to a private topic per
-person, and each device answers it with the `show.state` read it already makes.
-That read stays the only authority, and its authorization, conditional `304`
-and heartbeat are all unchanged.
+**The hub carries the show itself.** At first it said only "something changed":
+the answer was worked out per device (`isThisDevice`, which screens are live),
+so no one message could be the answer for every device. Since the show is
+described for a *person*, with each screen carrying the flags a browser needs to
+answer those two questions itself, one frame fits every device. `ShowStream`
+publishes `{at, show}` to a private topic per person — `show` is exactly what
+`ShowState::forUser()` returns to a read, `at` is the server's clock so that a
+frame which overtook another is not drawn over it. A press of the space bar is
+one publish instead of a read from every listening device.
+
+The `show.state` read stays the authority. A frame can be lost or late, and
+some of the answer moves with a clock rather than a save, so every device keeps
+asking, just less often. A frame the client cannot parse into a stamped show —
+the old bare nudge, a hub keep-alive — is answered with a read, as before.
 
 - **Publishing** is `ShowStreamObserver` on the saves that move an answer:
   presentations, screens, device names and pairings to their person, and deck
@@ -154,11 +161,14 @@ and heartbeat are all unchanged.
 - **Subscribing** is `POST /show/stream`, which sets an HS256 token scoped to
   that person's topic as an HttpOnly cookie on `/.well-known/mercure` (native
   `EventSource` cannot send a header). It lasts an hour. When the hub turns a
-  device away, the client asks for a new one.
-- **The client** (`showStream()` in `projection-follow.js`) pokes the poller on
-  every message. While the stream is open, the poll slows from `POLL_MS` to
-  `PUSHED_POLL_MS` (15s) and stays as a safety net for clock-driven changes and
-  half-dead connections. When the stream closes, the poll is back to a second
+  device away, the client asks for a new one. The token outlives a sign-out,
+  and since frames carry the show, a device that has lost its session goes on
+  receiving its contents until the token lapses.
+- **The client** (`showStream()` in `projection-follow.js`) hands every message
+  to `pushedShow()`, draws it when `isNewerFrame()` says so, and falls back to a
+  read when it is not a frame. While the stream is open, the poll slows from
+  `POLL_MS` to `PUSHED_POLL_MS` (5s) and stays as a safety net for clock-driven
+  changes and half-dead connections. When the stream closes, the poll is back to a second
   at once. With the hub unconfigured, the endpoint says so and nothing changes.
 - **No Redis transport.** There is one app container and nothing to replay, so
   `transport local` is enough. A second app container would need a shared
@@ -168,8 +178,8 @@ and heartbeat are all unchanged.
   that subscriber left. Without the limit, every deploy would wait for Docker's
   SIGKILL.
 
-Expected load while a service runs: one read per device every 15 seconds, plus
-one read per device each time the slide moves.
+Expected load while a service runs: one read per device every 5 seconds, plus
+one publish per person each time the slide moves.
 
 ---
 
