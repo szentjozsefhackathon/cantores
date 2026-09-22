@@ -2,7 +2,7 @@ import { ensureFontsLoaded } from './svg-fonts.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
 import { stackSvgs } from './svg-stack.js';
 import { diatarToAbc } from './diatar-to-abc.js';
-import { abcHitBoxAnnotator, concatMapped, hitBoxesAtOffset, insertUnmapped, mappedLines, replaceMapped, splitPagesMapped, trackSource, unmapped } from './abc-source-map.js';
+import { abcHitBoxAnnotator, concatMapped, editorDiagnostics, hitBoxesAtOffset, insertUnmapped, mappedLines, replaceMapped, splitPagesMapped, trackSource, unmapped } from './abc-source-map.js';
 import {
     DEFAULT_LYRIC_SIZE_PT,
     DEFAULT_PAGE_WIDTH_MM,
@@ -236,10 +236,15 @@ export function buildAbcPreamble(settings, pageWidth, scope = '1') {
  * since abc2svg counts a symbol's offset from the start of the text of its own
  * `tosvg` call.
  *
+ * abc2svg's warnings about a mapped source are added to `report.diagnostics`
+ * as ranges in `report.text`, the editor's text; the preamble's are the
+ * preview's own business and only go to the console.
+ *
  * @param {string|import('./abc-source-map.js').MappedSource} source
  * @param {string} [preamble]
+ * @param {{text: string, diagnostics: object[]}|null} [report]
  */
-export function renderAbcToSvgMarkup(source, preamble = '') {
+export function renderAbcToSvgMarkup(source, preamble = '', report = null) {
     if (typeof abc2svg === 'undefined' || !abc2svg.Abc) {
         console.error('[score-editor] abc2svg not loaded');
 
@@ -249,9 +254,16 @@ export function renderAbcToSvgMarkup(source, preamble = '') {
     const mapped = typeof source === 'string' ? null : source;
     const svgChunks = [];
     const errs = [];
+    const scoreErrors = [];
+    let engravingScore = false;
     const user = {
         img_out: (str) => svgChunks.push(str),
-        errmsg: (msg, l) => errs.push(`${msg} (line ${l})`),
+        errmsg: (msg, l, c) => {
+            errs.push(`${msg} (line ${l})`);
+            if (engravingScore) {
+                scoreErrors.push({ message: msg, line: l, col: c });
+            }
+        },
         read_file: () => null,
     };
     if (mapped) {
@@ -261,9 +273,13 @@ export function renderAbcToSvgMarkup(source, preamble = '') {
     if (preamble) {
         abc.tosvg('preamble', preamble);
     }
+    engravingScore = true;
     abc.tosvg('score', mapped ? mapped.text : source);
     if (errs.length) {
         console.warn('[score-editor] abc2svg warnings:', errs);
+    }
+    if (mapped && report) {
+        report.diagnostics.push(...editorDiagnostics(mapped, scoreErrors, report.text));
     }
 
     return svgChunks.join('\n');
@@ -351,15 +367,16 @@ let abcSlideSerial = 0;
  * @param {string|import('./abc-source-map.js').MappedSource} pageSource one page, preamble excluded; a mapped one gets hit boxes
  * @param {object} settings the resolved per-ratio settings bucket
  * @param {{width: number, height: number}} canvas
+ * @param {{text: string, diagnostics: object[]}|null} [report] see renderAbcToSvgMarkup
  */
-export async function renderAbcSlide(pageSource, settings, canvas) {
+export async function renderAbcSlide(pageSource, settings, canvas, report = null) {
     await ensureAbcFontsLoaded(settings);
 
     const scope = `s${++abcSlideSerial}`;
     const preamble = buildAbcPreamble(settings, canvas.width, scope);
     const markup = typeof pageSource === 'string'
         ? renderAbcToSvgMarkup(preamble + pageSource)
-        : renderAbcToSvgMarkup(pageSource, preamble);
+        : renderAbcToSvgMarkup(pageSource, preamble, report);
     const host = document.createElement('div');
     host.innerHTML = markup;
 
@@ -478,6 +495,7 @@ export function abcMixin() {
             this.$wire.format = 'abc';
             this.$wire.content = abc;
             this.localContent = abc;
+            this.syncAbcEditor();
             this.diatarSource = '';
             this.$flux.modal('diatar-import').close();
             this.$nextTick(() => this.scheduleRender());
@@ -495,6 +513,7 @@ export function abcMixin() {
             if (!content || !content.trim()) {
                 container.innerHTML = '';
                 this.hasPages = false;
+                this.setAbcDiagnostics([]);
                 return;
             }
             const settings = Object.fromEntries(this.abcFields.map(field => [field, this[field]]));
@@ -539,6 +558,7 @@ export function abcMixin() {
                     : canvas.width;
             const preamble = buildAbcPreamble(this, pageWidth);
             const pages = prepareAbcPreviewPages(content, ratio, this.abcNoClef);
+            const report = { text: content, diagnostics: [] };
             for (const [idx, pageContent] of pages.entries()) {
                 const pageEl = document.createElement('div');
                 if (isFixed) {
@@ -556,14 +576,14 @@ export function abcMixin() {
                     if (isFixed) {
                         // The slide itself is engraved by projection-render.js,
                         // which is the one copy of this a projection also draws.
-                        const { svg, overflows } = await renderAbcSlide(pageContent, this, canvas);
+                        const { svg, overflows } = await renderAbcSlide(pageContent, this, canvas, report);
                         pageEl.replaceChildren(svg);
                         if (overflows) {
                             this.appendClipWarning(pageEl);
                         }
                         this.hasPages = true;
                     } else {
-                        pageEl.innerHTML = renderAbcToSvgMarkup(pageContent, preamble);
+                        pageEl.innerHTML = renderAbcToSvgMarkup(pageContent, preamble, report);
                         const svgs = Array.from(pageEl.querySelectorAll('svg'));
                         svgs.forEach((svg) => ensureAbcSvgViewBox(svg, pageWidth));
                         svgs.forEach((svg, svgIdx) => {
@@ -586,32 +606,57 @@ export function abcMixin() {
                 }
                 this.addPageControls(pageEl, idx + 1, pages.length, 'abc', { fullscreen: isFixed, ratio });
             }
+            // A slide is awaited, and the text may have moved on meanwhile;
+            // the render that follows it brings its own warnings.
+            if (version === this._abcRenderVersion && this.localContent === content) {
+                this.setAbcDiagnostics(report.diagnostics);
+            }
             this.updateAbcHighlight();
+        },
+
+        _abcDiagnostics: [],
+
+        /**
+         * Underlines abc2svg's warnings in the editor. Every page repeats the
+         * header, so a warning about it comes once per page and is kept once.
+         */
+        setAbcDiagnostics(diagnostics) {
+            const seen = new Set();
+            this._abcDiagnostics = diagnostics.filter((diagnostic) => {
+                const key = `${diagnostic.from}:${diagnostic.to}:${diagnostic.message}`;
+                if (seen.has(key)) { return false; }
+                seen.add(key);
+                return true;
+            });
+            const editor = this.$refs.abcEditor;
+            if (editor && customElements.get('abc2svg-editor')) {
+                editor.diagnostics = this._abcDiagnostics;
+            }
         },
 
         /** Marks the symbol the editor's caret stands in. */
         updateAbcHighlight() {
             if (this.$wire.format !== 'abc') { return; }
             const container = this.$refs.abcPreview;
-            const textarea = this.$refs.contentTextarea;
-            if (!container || !textarea) { return; }
+            const selection = this.$refs.abcEditor?.selection;
+            if (!container || !selection) { return; }
             const boxes = container.querySelectorAll('.abcsym');
             boxes.forEach((box) => box.classList.remove('sel'));
             // While a render is pending the boxes still point into the text as
             // it was; marking one of them would point at the wrong note.
             if (this._abcRenderedContent !== this.localContent) { return; }
-            hitBoxesAtOffset(boxes, textarea.selectionStart).forEach((box) => box.classList.add('sel'));
+            hitBoxesAtOffset(boxes, selection.from).forEach((box) => box.classList.add('sel'));
         },
 
         /** Puts the editor's selection on the source of the clicked symbol. */
         handleAbcPreviewClick(event) {
             const box = event.target.closest?.('.abcsym');
-            const textarea = this.$refs.contentTextarea;
-            if (!box || !textarea) { return; }
+            const editor = this.$refs.abcEditor;
+            if (!box || typeof editor?.setSelection !== 'function') { return; }
             if (this._abcRenderedContent !== this.localContent) { return; }
-            textarea.focus({ preventScroll: true });
-            textarea.setSelectionRange(Number(box.dataset.start), Number(box.dataset.stop));
-            this.updateAbcHighlight();
+            editor.focus();
+            // Its selectionchange marks the note.
+            editor.setSelection(Number(box.dataset.start), Number(box.dataset.stop));
         },
     };
 }

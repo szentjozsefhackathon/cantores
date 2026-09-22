@@ -4,7 +4,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
-import { hitBoxesAtOffset, replaceMapped, splitPagesMapped, trackSource } from '../../resources/js/abc-source-map.js';
+import { editorDiagnostics, hitBoxesAtOffset, insertUnmapped, replaceMapped, splitPagesMapped, trackSource } from '../../resources/js/abc-source-map.js';
 import { removeEditorOnlySvgMarkup } from '../../resources/js/score-editor-export.js';
 import { buildAbcPreamble, abcMixin, hungarianChordsToAbc, prepareAbcPreviewPages, renderAbcToSvgMarkup } from '../../resources/js/score-editor-abc.js';
 
@@ -28,10 +28,22 @@ function boxedSource(markup, source) {
         .map(([, start, stop]) => source.slice(Number(start), Number(stop)));
 }
 
-function engrave(source, { ratio = 'paper', noClef = false, page = 0 } = {}) {
+function engrave(source, { ratio = 'paper', noClef = false, page = 0, report = null } = {}) {
     const preamble = buildAbcPreamble(abcMixin(), 642.52);
 
-    return renderAbcToSvgMarkup(prepareAbcPreviewPages(source, ratio, noClef)[page], preamble);
+    return renderAbcToSvgMarkup(prepareAbcPreviewPages(source, ratio, noClef)[page], preamble, report);
+}
+
+/** abc2svg's warnings about one page, as the editor text they underline. */
+function warnings(source, options = {}) {
+    const report = { text: source, diagnostics: [] };
+    engrave(source, { ...options, report });
+
+    return report.diagnostics.map((diagnostic) => ({
+        source: source.slice(diagnostic.from, diagnostic.to),
+        from: diagnostic.from,
+        message: diagnostic.message,
+    }));
 }
 
 test('a mapped text leaves every character pointing at itself', () => {
@@ -136,4 +148,59 @@ test('hit boxes are dropped from an exported score', () => {
     removeEditorOnlySvgMarkup(svg);
 
     assert.deepEqual(removed, ['.abcsym']);
+});
+
+test('abc2svg\'s line and column lead back to the editor through the origins', () => {
+    const editorText = 'K:C\nC Q|]';
+    const mapped = insertUnmapped(trackSource(editorText), 0, 'X:1\n');
+    const [diagnostic] = editorDiagnostics(mapped, [{ message: 'score:3:3 Error: Bad character \'Q\'', line: 2, col: 2 }], editorText);
+
+    assert.equal(editorText.slice(diagnostic.from, diagnostic.to), 'Q');
+    assert.equal(diagnostic.severity, 'error');
+    assert.equal(diagnostic.message, 'Bad character \'Q\'');
+});
+
+test('a warning on text the preview made up, or with no position, goes on the first line', () => {
+    const editorText = 'K:C\nCDE|]';
+    const mapped = insertUnmapped(trackSource(editorText), 0, 'X:1\n');
+    const diagnostics = editorDiagnostics(mapped, [
+        { message: 'Warning: about X:1', line: 0, col: 2 },
+        { message: 'Error: Unknown decoration \'foo\'', line: null, col: null },
+    ], editorText);
+
+    for (const diagnostic of diagnostics) {
+        assert.deepEqual([diagnostic.from, diagnostic.to], [0, 3]);
+    }
+});
+
+test('a warning is underlined in the editor text, past a chord rewrite', () => {
+    const source = 'K:C\nL:1/4\n"B"C "H"D Q|]';
+    const found = warnings(source);
+
+    assert.equal(found.length, 1, JSON.stringify(found));
+    assert.equal(found[0].source, 'Q');
+    assert.equal(found[0].from, source.indexOf('Q'));
+});
+
+test('a warning on a later page is underlined past the page break', () => {
+    const source = 'K:C\nL:1/4\nC D|]\n%pagebreak\nE Q|]\n';
+    const found = warnings(source, { ratio: '16/9', page: 1 });
+
+    assert.equal(found.length, 1, JSON.stringify(found));
+    assert.equal(found[0].from, source.indexOf('Q'));
+});
+
+test('the preamble\'s own warnings are not the editor\'s', () => {
+    const report = { text: 'K:C\nC|]', diagnostics: [] };
+    const logged = [];
+    const warn = console.warn;
+    console.warn = (...args) => logged.push(args);
+    try {
+        renderAbcToSvgMarkup(trackSource(report.text), '%%pagewidth abc\n', report);
+    } finally {
+        console.warn = warn;
+    }
+
+    assert.match(JSON.stringify(logged), /Bad value in %%pagewidth/);
+    assert.deepEqual(report.diagnostics, []);
 });

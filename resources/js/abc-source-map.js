@@ -1,3 +1,4 @@
+import { abcDiagnostics } from '@cantoreshu/abc2svg-editor/lint';
 import { PAGE_BREAK, SOFT_PAGE_BREAK, applyConditionalBlocks, headerEndIndex, splitPages } from './score-editor-pages.js';
 
 /**
@@ -240,4 +241,45 @@ export function hitBoxesAtOffset(boxes, index) {
     return best
         ? matches.filter((box) => Number(box.dataset.start) === best.start && Number(box.dataset.stop) === best.stop)
         : [];
+}
+
+/**
+ * The editor offset an offset in the mapped text stands for, or -1. The end of
+ * the text stands for just after the character before it.
+ */
+function editorOffsetAt(mapped, offset) {
+    if (offset < mapped.text.length) {
+        return mapped.origin[offset] ?? -1;
+    }
+    const last = offset > 0 ? mapped.origin[offset - 1] ?? -1 : -1;
+
+    return last >= 0 ? last + 1 : -1;
+}
+
+/**
+ * abc2svg's warnings for one engraving, as diagnostics in the editor's text.
+ *
+ * `errors` are what `user.errmsg(message, line, col)` was called with while
+ * `mapped.text` was engraved; abc2svg's (line, col) point into that text, and
+ * its origins lead back to the editor. A warning on a character the preview
+ * made up (`X:1`, `[K:clef=none]`), or without a position, goes on the
+ * editor's first line rather than being dropped.
+ *
+ * @param {MappedSource} mapped exactly the text handed to that `tosvg` call
+ * @param {Array<{message: string, line?: number, col?: number}>} errors
+ * @param {string} editorText
+ * @return {Array<{from: number, to: number, severity: string, message: string}>}
+ */
+export function editorDiagnostics(mapped, errors, editorText) {
+    const firstLineEnd = editorText.search(/\r?\n|$/);
+
+    return abcDiagnostics(mapped.text, errors).map((diagnostic) => {
+        const from = editorOffsetAt(mapped, diagnostic.from);
+        if (from < 0) {
+            return { ...diagnostic, from: 0, to: firstLineEnd };
+        }
+        const last = diagnostic.to > diagnostic.from ? editorOffsetAt(mapped, diagnostic.to - 1) : -1;
+
+        return { ...diagnostic, from, to: last >= from ? last + 1 : from };
+    });
 }

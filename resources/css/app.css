@@ -598,6 +598,68 @@ aretino-editor.score-editor-aretino-source {
     border-color: var(--color-zinc-700);
 }
 
+abc2svg-editor.score-editor-abc-source {
+    width: 100%;
+    height: clamp(14rem, 35vh, 22rem);
+    min-height: 12rem;
+    max-height: 80vh;
+    resize: vertical;
+    border: 1px solid var(--color-zinc-200);
+    border-radius: 0.5rem;
+    --abc-editor-font: var(--font-mono);
+    --abc-editor-font-size: 14px;
+    --abc-editor-background: #ffffff;
+    --abc-editor-foreground: var(--color-zinc-900);
+    --abc-editor-gutter-background: var(--color-zinc-50);
+    --abc-editor-gutter-foreground: var(--color-zinc-400);
+    --abc-editor-gutter-border: var(--color-zinc-200);
+    --abc-editor-active-line: rgb(59 130 246 / 0.06);
+    --abc-editor-selection: rgb(59 130 246 / 0.25);
+    --abc-editor-caret: var(--color-zinc-900);
+    --abc-editor-directive: var(--color-violet-600);
+    --abc-editor-directive-args: var(--color-zinc-500);
+    --abc-editor-comment: var(--color-zinc-400);
+    --abc-editor-field: var(--color-blue-700);
+    --abc-editor-text: var(--color-emerald-800);
+    --abc-editor-note: var(--color-zinc-900);
+    --abc-editor-length: var(--color-amber-700);
+    --abc-editor-bar: var(--color-blue-700);
+    --abc-editor-chord-symbol: var(--color-pink-700);
+    --abc-editor-decoration: var(--color-cyan-700);
+    --abc-editor-slur: var(--color-cyan-600);
+    --abc-editor-grace: var(--color-pink-800);
+    --abc-editor-chord: var(--color-pink-800);
+    --abc-editor-lyric-separator: var(--color-zinc-500);
+    --abc-editor-invalid: var(--color-red-600);
+}
+
+.dark abc2svg-editor.score-editor-abc-source {
+    border-color: var(--color-zinc-700);
+    --abc-editor-background: var(--color-zinc-900);
+    --abc-editor-foreground: var(--color-zinc-100);
+    --abc-editor-gutter-background: var(--color-zinc-800);
+    --abc-editor-gutter-foreground: var(--color-zinc-500);
+    --abc-editor-gutter-border: var(--color-zinc-700);
+    --abc-editor-active-line: rgb(255 255 255 / 0.04);
+    --abc-editor-selection: rgb(96 165 250 / 0.3);
+    --abc-editor-caret: var(--color-zinc-100);
+    --abc-editor-directive: var(--color-violet-300);
+    --abc-editor-directive-args: var(--color-zinc-400);
+    --abc-editor-comment: var(--color-zinc-500);
+    --abc-editor-field: var(--color-blue-300);
+    --abc-editor-text: var(--color-emerald-300);
+    --abc-editor-note: var(--color-zinc-100);
+    --abc-editor-length: var(--color-amber-300);
+    --abc-editor-bar: var(--color-blue-300);
+    --abc-editor-chord-symbol: var(--color-pink-300);
+    --abc-editor-decoration: var(--color-cyan-300);
+    --abc-editor-slur: var(--color-cyan-400);
+    --abc-editor-grace: var(--color-pink-300);
+    --abc-editor-chord: var(--color-pink-300);
+    --abc-editor-lyric-separator: var(--color-zinc-400);
+    --abc-editor-invalid: var(--color-red-400);
+}
+
 aretino-editor.score-editor-aretino-source::part(editor) {
     flex: 1 1 auto;
 }

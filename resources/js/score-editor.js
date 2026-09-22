@@ -56,6 +56,27 @@ function ensureAretinoEditor() {
     return aretinoEditorDefinitionPromise;
 }
 
+let abcEditorDefinitionPromise = null;
+
+/** Loads `<abc2svg-editor>`, which defines itself, once. */
+function ensureAbcEditor() {
+    if (customElements.get('abc2svg-editor')) {
+        return Promise.resolve();
+    }
+
+    if (!abcEditorDefinitionPromise) {
+        abcEditorDefinitionPromise = import('@cantoreshu/abc2svg-editor')
+            .then(() => customElements.whenDefined('abc2svg-editor'))
+            .catch((error) => {
+                abcEditorDefinitionPromise = null;
+                console.error('[score-editor] could not load ABC editor:', error);
+                throw error;
+            });
+    }
+
+    return abcEditorDefinitionPromise;
+}
+
 /** How long the editor stays quiet before an edit is written back. */
 const AUTOSAVE_IDLE_MS = 2000;
 
@@ -340,10 +361,28 @@ onAlpineInit(() => {
                 this.isContentUserModified = !!options.modified;
             }
             this.syncAretinoEditor();
+            this.syncAbcEditor();
             this.scheduleRender();
             if (this.$wire.format === 'aretino') {
                 this.updateAretinoHighlight();
             }
+        },
+
+        /** Puts `localContent` into the ABC editor, loading it first if need be. */
+        syncAbcEditor() {
+            if (this.$wire.format !== 'abc') { return; }
+            this.$nextTick(() => {
+                const editor = this.$refs.abcEditor;
+                if (!editor) { return; }
+                ensureAbcEditor().then(() => {
+                    if (this.$wire.format !== 'abc') { return; }
+                    if (editor.value !== this.localContent) {
+                        editor.value = this.localContent ?? '';
+                    }
+                    editor.diagnostics = this._abcDiagnostics;
+                    this.updateAbcHighlight();
+                }).catch(() => {});
+            });
         },
 
         syncAretinoEditor() {
@@ -388,6 +427,7 @@ onAlpineInit(() => {
             } else {
                 this.isContentUserModified = true;
                 this.syncAretinoEditor();
+                this.syncAbcEditor();
             }
             this.$watch('$wire.content', (val) => {
                 const content = String(val ?? '');
@@ -397,6 +437,7 @@ onAlpineInit(() => {
                 if (this._wireContentDirty) { return; }
                 this.localContent = content;
                 this.syncAretinoEditor();
+                this.syncAbcEditor();
                 this.scheduleRender();
             });
             this.$watch('$wire.format', (val) => {
@@ -404,6 +445,7 @@ onAlpineInit(() => {
                     this.fillMinimalExample();
                 }
                 this.syncAretinoEditor();
+                this.syncAbcEditor();
                 this.scheduleRender();
                 this.refreshIncipit();
             });
@@ -1047,8 +1089,10 @@ onAlpineInit(() => {
         },
 
         currentEditorContent() {
-            const editor = this.$refs.aretinoEditor;
-            if (this.$wire.format === 'aretino' && editor && 'value' in editor) {
+            const editor = this.$wire.format === 'aretino' ? this.$refs.aretinoEditor
+                : this.$wire.format === 'abc' && customElements.get('abc2svg-editor') ? this.$refs.abcEditor
+                    : null;
+            if (editor && 'value' in editor) {
                 return String(editor.value ?? '');
             }
 

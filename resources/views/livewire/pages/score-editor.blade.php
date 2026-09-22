@@ -517,7 +517,7 @@ resources/js/score-editor.js
 
                         {{-- Source editor --}}
                         <flux:field required x-bind:class="splitScreen ? 'flex-1 min-h-0 flex flex-col' : ''">
-                            <div x-show="$wire.format !== 'aretino'" x-cloak x-bind:class="splitScreen ? 'flex-1 min-h-0 flex flex-col' : ''">
+                            <div x-show="$wire.format !== 'aretino' && $wire.format !== 'abc'" x-cloak x-bind:class="splitScreen ? 'flex-1 min-h-0 flex flex-col' : ''">
                                 <flux:textarea
                                     wire:model="content"
                                     rows="10"
@@ -525,12 +525,21 @@ resources/js/score-editor.js
                                     :placeholder="__('Type the score here')"
                                     x-ref="contentTextarea"
                                     x-on:input="handleEditorContentInput($event.target.value)"
-                                    x-on:click="updateAretinoHighlight(); updateAbcHighlight()"
-                                    x-on:keyup="updateAretinoHighlight(); updateAbcHighlight()"
-                                    x-on:select="updateAretinoHighlight(); updateAbcHighlight()"
-                                    x-on:focus="updateAretinoHighlight(); updateAbcHighlight()" />
+                                    x-on:click="updateAretinoHighlight()"
+                                    x-on:keyup="updateAretinoHighlight()"
+                                    x-on:select="updateAretinoHighlight()"
+                                    x-on:focus="updateAretinoHighlight()" />
                             </div>
-                            <flux:text x-show="$wire.format === 'aretino'">Használd a <kbd>Ctrl</kbd>+<kbd>Space</kbd>-t az automatikus kiegészítéshez</flux:text>
+                            <flux:text x-show="$wire.format === 'aretino' || $wire.format === 'abc'">Használd a <kbd>Ctrl</kbd>+<kbd>Space</kbd>-t az automatikus kiegészítéshez</flux:text>
+                            <abc2svg-editor
+                                x-show="$wire.format === 'abc'"
+                                x-cloak
+                                x-ref="abcEditor"
+                                wire:ignore
+                                placeholder="{{ __('Type the score here') }}"
+                                :class="splitScreen ? 'score-editor-abc-source flex-1 min-h-0 split-screen' : 'score-editor-abc-source'"
+                                x-on:change="handleEditorContentInput($event.detail.value)"
+                                x-on:selectionchange="updateAbcHighlight()"></abc2svg-editor>
                             <aretino-editor
                                 preview="false"
                                 toolbar="true"
