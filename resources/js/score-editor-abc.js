@@ -224,7 +224,18 @@ export function buildAbcPreamble(settings, pageWidth, scope = '1') {
     const lyricFirstSkip = Number(settings.abcLyricFirstSkip ?? NaN);
     const lyricFirstSkipLine = Number.isFinite(lyricFirstSkip) && lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '';
 
-    return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}`;
+    return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}${abcHideChordsLine(settings)}`;
+}
+
+/**
+ * `%%pos gchord hidden` when the chord symbols are to be left out.
+ *
+ * A directive rather than a source edit, so the chords stay in the text for
+ * whoever turns them back on — and it drops the room above the staff they
+ * would have taken along with them, which blanking the symbols would not.
+ */
+export function abcHideChordsLine(settings) {
+    return settings?.abcHideChords ? '%%pos gchord hidden\n' : '';
 }
 
 /**
@@ -484,7 +495,8 @@ export function abcMixin() {
         // length. The default magnifies it; the paper underneath is unchanged.
         abcZoom: 120,
         abcTranspose: 0,
-        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose'],
+        abcHideChords: false,
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose', 'abcHideChords'],
 
         normalizeAbcPageWidth,
 

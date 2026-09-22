@@ -1544,6 +1544,19 @@ it('holds the lyric line spacing at its floor', function () {
         ->toBe(['abcLyricSkip' => 1.4]);
 });
 
+// Chord symbols are for the guitarist; a booklet printed for singers can leave
+// them out without anybody editing the score's source.
+it('lets a booklet hide an ABC scores chords', function () {
+    expect(collect(BookletSettingFields::panelFor('abc'))->firstWhere('key', 'abcHideChords'))
+        ->type->toBe('boolean')
+        ->and(BookletSettingFields::sanitize('abc', ['abcHideChords' => true]))
+        ->toBe(['abcHideChords' => true])
+        ->and(BookletSettingFields::sanitize('abc', ['abcHideChords' => 'false']))
+        ->toBe(['abcHideChords' => false])
+        ->and(BookletSettingFields::sanitize('gabc', ['abcHideChords' => true]))
+        ->toBe([]);
+});
+
 it('allows the staff to lyrics gap to reach zero', function () {
     expect(BookletSettingFields::sanitize('abc', ['abcLyricFirstSkip' => 0]))
         ->toBe(['abcLyricFirstSkip' => 0])

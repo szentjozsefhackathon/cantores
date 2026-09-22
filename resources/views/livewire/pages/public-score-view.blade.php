@@ -376,6 +376,13 @@ resources/js/score-editor.js
                                 <flux:input size="sm" type="number" x-model="abcTranspose" min="-11" max="11" step="1" class="w-16" />
                             </div>
 
+                            <div class="flex items-center gap-1">
+                                <flux:tooltip :content="__('Hide chords')">
+                                    <flux:icon name="guitar-off" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                </flux:tooltip>
+                                <flux:checkbox x-model="abcHideChords" />
+                            </div>
+
                             <div x-show="['16/9', '4/3', '1/1'].includes(abcPageRatio)" class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
 
                             <div x-show="['16/9', '4/3', '1/1'].includes(abcPageRatio)" class="flex items-center gap-1">

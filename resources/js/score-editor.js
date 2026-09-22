@@ -475,6 +475,7 @@ onAlpineInit(() => {
             this.$watch('abcStaffLineWidth', () => this.scheduleRender());
             this.$watch('abcZoom', () => this.scheduleRender());
             this.$watch('abcTranspose', () => this.scheduleRender());
+            this.$watch('abcHideChords', () => this.scheduleRender());
             this.$watch('abcPageRatio', (val, old) => { this.captureCurrentSettings('abc', old); this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('chordproPageRatio', (val, old) => { this.captureCurrentSettings('chordpro', old); this.applyRatioSettings('chordpro', val); this.$nextTick(() => this.scheduleRender()); });
             this.$watch('chordproFontSize', () => this.scheduleRender());
@@ -603,6 +604,7 @@ onAlpineInit(() => {
                         abcLyricFirstSkip: Number(this.abcLyricFirstSkip),
                         abcLyricSkip: Number(this.abcLyricSkip),
                         abcNoClef: !!this.abcNoClef,
+                        abcHideChords: !!this.abcHideChords,
                         abcStemWidth: Number(this.abcStemWidth),
                         abcStaffLineWidth: Number(this.abcStaffLineWidth),
                         abcZoom: Number(this.abcZoom),

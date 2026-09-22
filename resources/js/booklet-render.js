@@ -10,7 +10,7 @@ import { withAbcMeasuring } from './measuring-room.js';
 import { fileSettings, layoutWidthFor, resolveSettings, textSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
 import { enginesReady } from './music-engines.js';
-import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcMixin, hungarianChordsToAbc } from './score-editor-abc.js';
+import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcHideChordsLine, abcMixin, hungarianChordsToAbc } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
 import { gabcMixin } from './score-editor-gabc.js';
@@ -826,7 +826,8 @@ function abcBlocks(content, resolved, layoutWidthPx) {
         + '%%vocalspace 0\n'
         + (Number.isFinite(lyricFirstSkip) && lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '')
         + (lyricSkip >= ABC_LYRIC_SKIP_MIN ? `%%lyricskipfac ${lyricSkip}\n` : '')
-        + (transpose !== 0 ? `%%transpose ${transpose}\n` : '');
+        + (transpose !== 0 ? `%%transpose ${transpose}\n` : '')
+        + abcHideChordsLine(resolved);
 
     const chunks = [];
     const abc = new abc2svg.Abc({

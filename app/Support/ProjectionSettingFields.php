@@ -90,6 +90,7 @@ class ProjectionSettingFields
             'abcStemWidth' => ['type' => 'number', 'min' => 0.5, 'max' => 4, 'step' => 0.1, 'label' => 'Stem width', 'icon' => 'minus'],
             'abcStaffLineWidth' => ['type' => 'number', 'min' => 0.5, 'max' => 4, 'step' => 0.1, 'label' => 'Staff line width', 'icon' => 'equal'],
             'abcTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],
+            'abcHideChords' => ['type' => 'boolean', 'label' => 'Hide chords', 'icon' => 'guitar-off'],
         ],
         // An uploaded score reaches a screen as a picture of a page, already
         // fitted into the slide. This is the way down from there, for the scan

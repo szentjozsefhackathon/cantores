@@ -643,6 +643,12 @@ it('offers no face, and forgets one a slide was given', function () {
         ->toBe(['abcLyricSize' => 40.0]);
 });
 
+it('lets a slide hide an ABC scores chords', function () {
+    expect(ProjectionSettingFields::keysFor('abc'))->toContain('abcHideChords')
+        ->and(ProjectionSettingFields::sanitize('abc', ['abcHideChords' => true]))
+        ->toBe(['abcHideChords' => true]);
+});
+
 it('opens a panel of knobs with no face among them', function () {
     $user = User::factory()->create();
     $projection = projectionFor($user);

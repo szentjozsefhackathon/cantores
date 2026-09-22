@@ -173,7 +173,7 @@ resources/js/booklet-reader.js
                     @endif
 
                     @if($panel !== [])
-                        {{-- Two knobs at most, and both of them are steps rather
+                        {{-- A few knobs, and the numeric ones are steps rather
                              than numbers: a musician mid-piece presses "bigger"
                              until it is big enough, and never wants to know that
                              the lyric size behind it now reads 12.5. Width is the
@@ -183,6 +183,28 @@ resources/js/booklet-reader.js
                         <div class="border-b border-zinc-100 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800" x-show="open" x-cloak>
                             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 py-1 pl-2 pr-12">
                                 @foreach($panel as $field)
+                                    @if($field['role'] === 'toggle')
+                                        {{-- On or off, and nothing to step through. --}}
+                                        <div class="flex shrink-0 items-center gap-1 rounded-lg border border-zinc-200 px-2 py-1 dark:border-zinc-700">
+                                            <flux:tooltip :content="$field['label']">
+                                                <flux:icon
+                                                    :name="$field['icon']"
+                                                    variant="micro"
+                                                    class="shrink-0 text-zinc-500 dark:text-zinc-400"
+                                                    x-bind:class="isOverridden({{ $entry['id'] }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
+                                                />
+                                            </flux:tooltip>
+
+                                            <flux:switch
+                                                :aria-label="$field['label']"
+                                                x-bind:checked="!!settingsOf({{ $entry['id'] }})['{{ $field['key'] }}']"
+                                                x-on:change="setOverride({{ $entry['id'] }}, '{{ $field['key'] }}', $event.target.checked)"
+                                            />
+                                        </div>
+
+                                        @continue
+                                    @endif
+
                                     @php
                                         $down = $field['role'] === 'transpose' ? __('Down a semitone') : __('Smaller');
                                         $up = $field['role'] === 'transpose' ? __('Up a semitone') : __('Bigger');

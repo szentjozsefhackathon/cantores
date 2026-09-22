@@ -358,14 +358,14 @@ it('floats the laying-out notice over the pages rather than in the flow', functi
 // of scores onto A5; a musician is holding a phone at a music stand with one
 // hand, and everything about the page — its width, the face, the numbers behind
 // the knobs — is either the screen's business or settled once at the top.
-it('offers the reader two knobs on a score rather than the cantors whole panel', function () {
+it('offers the reader a few knobs on a score rather than the cantors whole panel', function () {
     $owner = User::factory()->create();
     $score = Score::factory()->abc()->create(['user_id' => $owner->id]);
     [, $loan] = sharedBooklet($owner, $score);
 
     $panels = Livewire::test(BookletLoanView::class, ['token' => $loan->token])->instance()->panels();
 
-    expect(array_column($panels['abc'], 'key'))->toBe(['abcLyricSize', 'abcTranspose'])
+    expect(array_column($panels['abc'], 'key'))->toBe(['abcLyricSize', 'abcTranspose', 'abcHideChords'])
         ->and(array_column($panels['gabc'], 'key'))->toBe(['lyricSize'])
         ->and(array_column($panels['chordpro'], 'key'))->toBe(['chordproFontSize', 'chordproTranspose'])
         ->and(array_column($panels['aretino'], 'key'))->toBe(['aretinoLyricSize'])
@@ -386,6 +386,8 @@ it('offers the reader two knobs on a score rather than the cantors whole panel',
         ->and(collect($panels['abc'])->firstWhere('key', 'abcTranspose'))
         ->role->toBe('transpose')
         ->step->toBe(1)
+        ->and(collect($panels['abc'])->firstWhere('key', 'abcHideChords'))
+        ->role->toBe('toggle')
         ->and(collect($panels['file'])->firstWhere('key', 'fileZoom'))
         ->step->toBe(0.05);
 });

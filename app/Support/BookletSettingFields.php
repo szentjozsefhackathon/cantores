@@ -84,6 +84,7 @@ class BookletSettingFields
             'abcLyricSkip' => ['type' => 'number', 'min' => 0.5, 'max' => 3, 'step' => 0.1, 'label' => 'Lyric line spacing', 'icon' => 'align-vertical-space-between'],
             'abcNoClef' => ['type' => 'boolean', 'label' => 'Hide clef', 'icon' => 'clef-none'],
             'abcTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],
+            'abcHideChords' => ['type' => 'boolean', 'label' => 'Hide chords', 'icon' => 'guitar-off'],
         ],
         // An uploaded score is a picture by the time it reaches a booklet, so
         // the only thing that can be done to it is scale it. It already arrives
@@ -138,6 +139,8 @@ class BookletSettingFields
      * singing: this one is set too small for my eyes, and this one is pitched
      * too high for my voice. Both are offered as a step rather than as a number:
      * a reader is nudging what they can see, not typing a value into a renderer.
+     * ABC adds a third, as a `toggle`: the singer who has no use for the
+     * guitarist's chord symbols over the staff can have them gone.
      *
      * A `size` carries no step of its own. Each format stores its type size in
      * whatever unit its engine takes — GABC in thirteenths of a pixel's worth of
@@ -157,6 +160,7 @@ class BookletSettingFields
         'abc' => [
             'abcLyricSize' => ['role' => 'size'],
             'abcTranspose' => ['role' => 'transpose', 'step' => 1],
+            'abcHideChords' => ['role' => 'toggle'],
         ],
         'aretino' => [
             'aretinoLyricSize' => ['role' => 'size'],
@@ -281,7 +285,7 @@ class BookletSettingFields
      * replaced client-side by half a point in the format's unit; see
      * READER_FIELDS.
      *
-     * @return list<array{key: string, role: string, type: string, min: float, max: float, step: float, label: string, icon: string}>
+     * @return list<array{key: string, role: string, type: string, min?: float, max?: float, step?: float, label: string, icon: string}>
      */
     public static function readerPanelFor(?string $format): array
     {
