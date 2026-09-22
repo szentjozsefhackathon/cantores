@@ -225,8 +225,11 @@ function deferredFontPreview(t) {
         },
     };
     globalThis.abc2svg = {
+        // One engraving per engraver, however many tosvg calls it takes: the
+        // preview hands the preamble over in a call of its own.
         Abc: class {
-            tosvg(name, source) { engraved.push(source); }
+            constructor() { this.engraving = engraved.push('') - 1; }
+            tosvg(name, source) { engraved[this.engraving] += source; }
         },
     };
     const component = {

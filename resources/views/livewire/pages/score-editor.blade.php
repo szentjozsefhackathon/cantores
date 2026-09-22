@@ -525,10 +525,10 @@ resources/js/score-editor.js
                                     :placeholder="__('Type the score here')"
                                     x-ref="contentTextarea"
                                     x-on:input="handleEditorContentInput($event.target.value)"
-                                    x-on:click="updateAretinoHighlight && updateAretinoHighlight()"
-                                    x-on:keyup="updateAretinoHighlight && updateAretinoHighlight()"
-                                    x-on:select="updateAretinoHighlight && updateAretinoHighlight()"
-                                    x-on:focus="updateAretinoHighlight && updateAretinoHighlight()" />
+                                    x-on:click="updateAretinoHighlight(); updateAbcHighlight()"
+                                    x-on:keyup="updateAretinoHighlight(); updateAbcHighlight()"
+                                    x-on:select="updateAretinoHighlight(); updateAbcHighlight()"
+                                    x-on:focus="updateAretinoHighlight(); updateAbcHighlight()" />
                             </div>
                             <flux:text x-show="$wire.format === 'aretino'">Használd a <kbd>Ctrl</kbd>+<kbd>Space</kbd>-t az automatikus kiegészítéshez</flux:text>
                             <aretino-editor
@@ -907,7 +907,7 @@ resources/js/score-editor.js
 
                         {{-- ABC Preview --}}
                         <div x-show="$wire.format === 'abc'" x-cloak class="mt-4">
-                            <div x-ref="abcPreview" class="min-h-16 space-y-4" wire:ignore></div>
+                            <div x-ref="abcPreview" class="min-h-16 space-y-4" wire:ignore x-on:click="handleAbcPreviewClick($event)"></div>
                         </div>
 
                         {{-- GABC Preview --}}

@@ -8,6 +8,7 @@ export function removeEditorOnlySvgMarkup(svgEl) {
         'aretino-cursor-bg',
         'aretino-cursor-line',
         'aretino-cursor-modbox',
+        'abcsym',
     ].forEach(className => {
         svgEl.querySelectorAll?.(`.${className}`).forEach(el => el.remove());
     });

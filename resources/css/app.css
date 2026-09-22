@@ -338,6 +338,11 @@ select:focus[data-flux-control] {
 .score-preview-page::-webkit-scrollbar-thumb { background-color: rgb(113 113 122 / 0.6); border-radius: 4px; }
 .score-preview-page::-webkit-scrollbar-thumb:hover { background-color: rgb(113 113 122 / 0.9); }
 
+/* ABC preview hit boxes: invisible over each symbol, a click selects its source (see abc-source-map.js) */
+.abcsym { fill: #000; fill-opacity: 0; cursor: pointer; }
+.abcsym:hover { fill: #6fb3e0; fill-opacity: 0.25; }
+.abcsym.sel { fill: #e08020; fill-opacity: 0.3; }
+
 /*
    Incipit teaser strips — a horizontally swipeable row of song cards. The browser does the
    scrolling and the snapping, so the strips carry no timer, no transform animation and no

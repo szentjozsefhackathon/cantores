@@ -2,6 +2,7 @@ import { ensureFontsLoaded } from './svg-fonts.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
 import { stackSvgs } from './svg-stack.js';
 import { diatarToAbc } from './diatar-to-abc.js';
+import { abcHitBoxAnnotator, concatMapped, hitBoxesAtOffset, insertUnmapped, mappedLines, replaceMapped, splitPagesMapped, trackSource, unmapped } from './abc-source-map.js';
 import {
     DEFAULT_LYRIC_SIZE_PT,
     DEFAULT_PAGE_WIDTH_MM,
@@ -128,27 +129,29 @@ export { ABC_RATIO_DEFAULTS };
  * @returns {string}
  */
 export function hungarianChordsToAbc(source) {
-    return source
-        .split('\n')
-        .map((line) => {
-            if (line.startsWith('%') || /^[A-Za-z][:+]/.test(line)) {
-                return line;
+    return hungarianChordsToAbcMapped(trackSource(source)).text;
+}
+
+/** hungarianChordsToAbc, keeping track of where each character came from. */
+export function hungarianChordsToAbcMapped(mapped) {
+    return concatMapped(...mappedLines(mapped).map((line) => {
+        if (line.text.startsWith('%') || /^[A-Za-z][:+]/.test(line.text)) {
+            return line;
+        }
+
+        return replaceMapped(line, /"([^"]*)"/g, (whole, inner) => {
+            if (!inner || /^[_^<>@]/.test(inner)) {
+                return whole;
             }
 
-            return line.replace(/"([^"]*)"/g, (whole, inner) => {
-                if (!inner || /^[_^<>@]/.test(inner)) {
-                    return whole;
-                }
+            const converted = inner
+                .split(/(;)/)
+                .map((part) => (part === ';' ? part : englishChordRoots(part)))
+                .join('');
 
-                const converted = inner
-                    .split(/(;)/)
-                    .map((part) => (part === ';' ? part : englishChordRoots(part)))
-                    .join('');
-
-                return `"${converted}"`;
-            });
-        })
-        .join('\n');
+            return `"${converted}"`;
+        });
+    }));
 }
 
 /** Rewrites the root and the slashed bass note of one chord symbol to English. */
@@ -224,14 +227,26 @@ export function buildAbcPreamble(settings, pageWidth, scope = '1') {
     return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}`;
 }
 
-/** Engraves an ABC source (preamble included) into SVG markup. */
-export function renderAbcToSvgMarkup(source) {
+/**
+ * Engraves an ABC source into SVG markup.
+ *
+ * The source carries its preamble, unless one is handed in separately. A
+ * mapped source is engraved with a hit box over every symbol pointing back at
+ * the editor's text (see abc-source-map.js); its preamble has to be separate,
+ * since abc2svg counts a symbol's offset from the start of the text of its own
+ * `tosvg` call.
+ *
+ * @param {string|import('./abc-source-map.js').MappedSource} source
+ * @param {string} [preamble]
+ */
+export function renderAbcToSvgMarkup(source, preamble = '') {
     if (typeof abc2svg === 'undefined' || !abc2svg.Abc) {
         console.error('[score-editor] abc2svg not loaded');
 
         return '';
     }
 
+    const mapped = typeof source === 'string' ? null : source;
     const svgChunks = [];
     const errs = [];
     const user = {
@@ -239,8 +254,14 @@ export function renderAbcToSvgMarkup(source) {
         errmsg: (msg, l) => errs.push(`${msg} (line ${l})`),
         read_file: () => null,
     };
+    if (mapped) {
+        user.anno_stop = abcHitBoxAnnotator(() => abc, mapped);
+    }
     const abc = new abc2svg.Abc(user);
-    abc.tosvg('score', source);
+    if (preamble) {
+        abc.tosvg('preamble', preamble);
+    }
+    abc.tosvg('score', mapped ? mapped.text : source);
     if (errs.length) {
         console.warn('[score-editor] abc2svg warnings:', errs);
     }
@@ -327,7 +348,7 @@ let abcSlideSerial = 0;
  * slide engraved before the face arrived therefore loses hyphens, which is what
  * a hard reload used to show until something forced a second render.
  *
- * @param {string} pageSource one page, preamble excluded
+ * @param {string|import('./abc-source-map.js').MappedSource} pageSource one page, preamble excluded; a mapped one gets hit boxes
  * @param {object} settings the resolved per-ratio settings bucket
  * @param {{width: number, height: number}} canvas
  */
@@ -335,7 +356,10 @@ export async function renderAbcSlide(pageSource, settings, canvas) {
     await ensureAbcFontsLoaded(settings);
 
     const scope = `s${++abcSlideSerial}`;
-    const markup = renderAbcToSvgMarkup(buildAbcPreamble(settings, canvas.width, scope) + pageSource);
+    const preamble = buildAbcPreamble(settings, canvas.width, scope);
+    const markup = typeof pageSource === 'string'
+        ? renderAbcToSvgMarkup(preamble + pageSource)
+        : renderAbcToSvgMarkup(pageSource, preamble);
     const host = document.createElement('div');
     host.innerHTML = markup;
 
@@ -371,6 +395,30 @@ export function applyAbcSvgStyle(svg, svgId, settings, onSlide = false) {
     style.textContent = `#${svgId}{color:#000!important;fill:#000!important}`;
     svg.appendChild(style);
     applyAbcStrokeWidths(svg, settings, onSlide);
+}
+
+/**
+ * The editor's text as the preview engraves it, page by page, each page still
+ * knowing which character of the editor every one of its own came from.
+ *
+ * @param {string} content the editor's text
+ * @param {string} ratio
+ * @param {boolean} noClef
+ * @return {import('./abc-source-map.js').MappedSource[]}
+ */
+export function prepareAbcPreviewPages(content, ratio, noClef = false) {
+    let mapped = trackSource(content);
+    if (!/^X:/m.test(mapped.text)) {
+        mapped = concatMapped(unmapped('X:1\n'), mapped);
+    }
+    if (noClef) {
+        const bar = /\|[|:\]]?/.exec(mapped.text);
+        if (bar) {
+            mapped = insertUnmapped(mapped, bar.index + bar[0].length, '[K:clef=none]');
+        }
+    }
+
+    return splitPagesMapped(hungarianChordsToAbcMapped(mapped), 'abc', ratio);
 }
 
 function round(value, places) {
@@ -436,12 +484,14 @@ export function abcMixin() {
         },
 
         _abcRenderVersion: 0,
+        // The text the preview's hit boxes point into.
+        _abcRenderedContent: null,
 
         async renderAbcPreview() {
             const version = ++this._abcRenderVersion;
             const container = this.$refs.abcPreview;
             if (!container) { return; }
-            let content = this.localContent;
+            const content = this.localContent;
             if (!content || !content.trim()) {
                 container.innerHTML = '';
                 this.hasPages = false;
@@ -454,18 +504,12 @@ export function abcMixin() {
                 || this.abcFields.some(field => this[field] !== settings[field])) { return; }
 
             container.innerHTML = '';
+            this._abcRenderedContent = content;
             this.hasPages = false;
             if (typeof abc2svg === 'undefined' || !abc2svg.Abc) {
                 console.error('[score-editor] abc2svg not loaded');
                 return;
             }
-            if (!/^X:/m.test(content)) {
-                content = 'X:1\n' + content;
-            }
-            if (this.abcNoClef) {
-                content = content.replace(/\|[|:\]]?/, '$&[K:clef=none]');
-            }
-            content = hungarianChordsToAbc(content);
             const ratio = this.abcPageRatio;
             const isFixed = this.isFixedRatio(ratio);
             const isResponsive = this.isResponsiveRatio(ratio);
@@ -494,7 +538,7 @@ export function abcMixin() {
                     ? paperPageWidth
                     : canvas.width;
             const preamble = buildAbcPreamble(this, pageWidth);
-            const pages = this.splitPages(content, 'abc', ratio);
+            const pages = prepareAbcPreviewPages(content, ratio, this.abcNoClef);
             for (const [idx, pageContent] of pages.entries()) {
                 const pageEl = document.createElement('div');
                 if (isFixed) {
@@ -519,7 +563,7 @@ export function abcMixin() {
                         }
                         this.hasPages = true;
                     } else {
-                        pageEl.innerHTML = renderAbcToSvgMarkup(preamble + pageContent);
+                        pageEl.innerHTML = renderAbcToSvgMarkup(pageContent, preamble);
                         const svgs = Array.from(pageEl.querySelectorAll('svg'));
                         svgs.forEach((svg) => ensureAbcSvgViewBox(svg, pageWidth));
                         svgs.forEach((svg, svgIdx) => {
@@ -542,6 +586,32 @@ export function abcMixin() {
                 }
                 this.addPageControls(pageEl, idx + 1, pages.length, 'abc', { fullscreen: isFixed, ratio });
             }
+            this.updateAbcHighlight();
+        },
+
+        /** Marks the symbol the editor's caret stands in. */
+        updateAbcHighlight() {
+            if (this.$wire.format !== 'abc') { return; }
+            const container = this.$refs.abcPreview;
+            const textarea = this.$refs.contentTextarea;
+            if (!container || !textarea) { return; }
+            const boxes = container.querySelectorAll('.abcsym');
+            boxes.forEach((box) => box.classList.remove('sel'));
+            // While a render is pending the boxes still point into the text as
+            // it was; marking one of them would point at the wrong note.
+            if (this._abcRenderedContent !== this.localContent) { return; }
+            hitBoxesAtOffset(boxes, textarea.selectionStart).forEach((box) => box.classList.add('sel'));
+        },
+
+        /** Puts the editor's selection on the source of the clicked symbol. */
+        handleAbcPreviewClick(event) {
+            const box = event.target.closest?.('.abcsym');
+            const textarea = this.$refs.contentTextarea;
+            if (!box || !textarea) { return; }
+            if (this._abcRenderedContent !== this.localContent) { return; }
+            textarea.focus({ preventScroll: true });
+            textarea.setSelectionRange(Number(box.dataset.start), Number(box.dataset.stop));
+            this.updateAbcHighlight();
         },
     };
 }
