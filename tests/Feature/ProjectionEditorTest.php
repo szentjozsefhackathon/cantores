@@ -643,10 +643,12 @@ it('offers no face, and forgets one a slide was given', function () {
         ->toBe(['abcLyricSize' => 40.0]);
 });
 
-it('lets a slide hide an ABC scores chords', function () {
+it('lets a slide hide an ABC scores or ChordPro sheets chords', function () {
     expect(ProjectionSettingFields::keysFor('abc'))->toContain('abcHideChords')
         ->and(ProjectionSettingFields::sanitize('abc', ['abcHideChords' => true]))
-        ->toBe(['abcHideChords' => true]);
+        ->toBe(['abcHideChords' => true])
+        ->and(ProjectionSettingFields::sanitize('chordpro', ['chordproHideChords' => true]))
+        ->toBe(['chordproHideChords' => true]);
 });
 
 it('opens a panel of knobs with no face among them', function () {

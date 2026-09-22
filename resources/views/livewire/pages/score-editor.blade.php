@@ -768,6 +768,13 @@ resources/js/score-editor.js
                                 <flux:switch x-model="chordproGermanNotation" />
                             </div>
 
+                            <div class="flex items-center gap-1">
+                                <flux:tooltip :content="__('Hide chords')">
+                                    <flux:icon name="guitar-off" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                </flux:tooltip>
+                                <flux:switch x-model="chordproHideChords" />
+                            </div>
+
                             <flux:tooltip :content="__('Reset to defaults')">
                                 <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
                             </flux:tooltip>

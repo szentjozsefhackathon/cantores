@@ -110,6 +110,7 @@ class BookletSettingFields
             'chordproColumns' => ['type' => 'number', 'min' => 1, 'max' => 4, 'step' => 1, 'label' => 'Columns', 'icon' => 'view-columns'],
             'chordproTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],
             'chordproGermanNotation' => ['type' => 'boolean', 'label' => 'German notation (H = B, B = B♭)', 'glyph' => 'H'],
+            'chordproHideChords' => ['type' => 'boolean', 'label' => 'Hide chords', 'icon' => 'guitar-off'],
         ],
         'aretino' => [
             'aretinoStaffWidth' => ['type' => 'number', 'min' => 30, 'max' => 800, 'step' => 1, 'label' => 'Layout width (mm)', 'icon' => 'ruler'],
@@ -139,8 +140,8 @@ class BookletSettingFields
      * singing: this one is set too small for my eyes, and this one is pitched
      * too high for my voice. Both are offered as a step rather than as a number:
      * a reader is nudging what they can see, not typing a value into a renderer.
-     * ABC adds a third, as a `toggle`: the singer who has no use for the
-     * guitarist's chord symbols over the staff can have them gone.
+     * ABC and ChordPro add a third, as a `toggle`: the singer who has no use for
+     * the guitarist's chord symbols can have them gone.
      *
      * A `size` carries no step of its own. Each format stores its type size in
      * whatever unit its engine takes — GABC in thirteenths of a pixel's worth of
@@ -168,6 +169,7 @@ class BookletSettingFields
         'chordpro' => [
             'chordproFontSize' => ['role' => 'size'],
             'chordproTranspose' => ['role' => 'transpose', 'step' => 1],
+            'chordproHideChords' => ['role' => 'toggle'],
         ],
         // A picture has no type in it to enlarge, only itself, so its size knob
         // is the one it already has, at a step of its own: half a point means

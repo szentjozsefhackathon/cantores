@@ -247,6 +247,13 @@ resources/js/score-editor.js
                             <flux:switch x-model="chordproGermanNotation" />
                         </div>
                     </flux:tooltip>
+
+                    <flux:tooltip :content="__('Hide chords')">
+                        <div class="flex items-center gap-1">
+                            <flux:icon name="guitar-off" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                            <flux:switch x-model="chordproHideChords" />
+                        </div>
+                    </flux:tooltip>
                 </div>
 
                 {{-- ABC Settings Toolbar --}}

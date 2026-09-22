@@ -367,7 +367,7 @@ it('offers the reader a few knobs on a score rather than the cantors whole panel
 
     expect(array_column($panels['abc'], 'key'))->toBe(['abcLyricSize', 'abcTranspose', 'abcHideChords'])
         ->and(array_column($panels['gabc'], 'key'))->toBe(['lyricSize'])
-        ->and(array_column($panels['chordpro'], 'key'))->toBe(['chordproFontSize', 'chordproTranspose'])
+        ->and(array_column($panels['chordpro'], 'key'))->toBe(['chordproFontSize', 'chordproTranspose', 'chordproHideChords'])
         ->and(array_column($panels['aretino'], 'key'))->toBe(['aretinoLyricSize'])
         ->and(array_column($panels['file'], 'key'))->toBe(['fileZoom']);
 
@@ -387,6 +387,8 @@ it('offers the reader a few knobs on a score rather than the cantors whole panel
         ->role->toBe('transpose')
         ->step->toBe(1)
         ->and(collect($panels['abc'])->firstWhere('key', 'abcHideChords'))
+        ->role->toBe('toggle')
+        ->and(collect($panels['chordpro'])->firstWhere('key', 'chordproHideChords'))
         ->role->toBe('toggle')
         ->and(collect($panels['file'])->firstWhere('key', 'fileZoom'))
         ->step->toBe(0.05);

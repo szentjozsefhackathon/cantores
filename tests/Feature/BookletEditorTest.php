@@ -1557,6 +1557,13 @@ it('lets a booklet hide an ABC scores chords', function () {
         ->toBe([]);
 });
 
+it('lets a booklet hide a ChordPro sheets chords', function () {
+    expect(collect(BookletSettingFields::panelFor('chordpro'))->firstWhere('key', 'chordproHideChords'))
+        ->type->toBe('boolean')
+        ->and(BookletSettingFields::sanitize('chordpro', ['chordproHideChords' => true]))
+        ->toBe(['chordproHideChords' => true]);
+});
+
 it('allows the staff to lyrics gap to reach zero', function () {
     expect(BookletSettingFields::sanitize('abc', ['abcLyricFirstSkip' => 0]))
         ->toBe(['abcLyricFirstSkip' => 0])

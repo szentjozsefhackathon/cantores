@@ -133,22 +133,52 @@ function sanitizeChordproContent(content) {
  * could never get right, since it never knew that A + 1 is B and not A#.
  *
  * @param {string} content raw ChordPro
- * @param {{german: boolean, transpose: number|string, sanitize?: boolean}} options
+ * @param {{german: boolean, transpose: number|string, sanitize?: boolean, hideChords?: boolean}} options
  *        `sanitize` guards the HTML paths, where everything but ChordPro's own
  *        `<i>`, `<b>` and `<u>` has to stop being markup before it reaches a
  *        browser. A caller that escapes what it draws — anything engraving to
- *        SVG — wants the text as written instead.
+ *        SVG — wants the text as written instead. `hideChords` leaves the words
+ *        alone; see withoutChords.
  */
-export async function parseChordproSong(content, { german, transpose, sanitize = true }) {
+export async function parseChordproSong(content, { german, transpose, sanitize = true, hideChords = false }) {
     const ChordSheetJS = await loadChordSheetJS();
     const song = new ChordSheetJS.ChordProParser().parse(
         sanitize ? sanitizeChordproContent(content) : content,
         german ? { notation: 'german' } : {},
     );
 
+    if (hideChords) {
+        return withoutChords(song, ChordSheetJS);
+    }
+
     const steps = Number(transpose) || 0;
 
     return steps === 0 ? song : song.transpose(steps);
+}
+
+/**
+ * A sheet for singers: the words, with every chord and annotation taken out.
+ *
+ * Done to the parsed song rather than the source, because a line of chords
+ * alone — an intro, an instrumental break — would otherwise be left behind as
+ * a blank line, and a blank line in ChordPro ends the verse. Such a line is
+ * dropped whole; a line with words in it keeps its spacing and loses only what
+ * stood over them. Section labels and comments stay: "Intro" still tells a
+ * singer to wait.
+ */
+export function withoutChords(song, ChordSheetJS) {
+    const isPair = (item) => item instanceof ChordSheetJS.ChordLyricsPair;
+    const isSung = (item) => isPair(item) && (item.lyrics ?? '').trim() !== '';
+
+    return song
+        .mapLines((line) => (
+            line.items.length > 0 && line.items.every(isPair) && !line.items.some(isSung) ? null : line
+        ))
+        .mapItems((item) => {
+            if (!isPair(item)) { return item; }
+
+            return (item.lyrics ?? '') === '' ? null : new ChordSheetJS.ChordLyricsPair('', item.lyrics, null);
+        });
 }
 
 /** How many lines of a sheet stand in for it as a thumbnail. */
@@ -317,13 +347,13 @@ export function chordproPageLayout(rows, metrics) {
  * Returns null when there is nothing sung to draw.
  *
  * @param {string} content raw ChordPro
- * @param {{german: boolean, transpose: number|string, fontFamily: string, fontSize: number, columns?: number|string, pageWidth?: number}} options
+ * @param {{german: boolean, transpose: number|string, hideChords?: boolean, fontFamily: string, fontSize: number, columns?: number|string, pageWidth?: number}} options
  * @returns {Promise<SVGElement|null>}
  */
-export async function renderChordproPageSvg(content, { german, transpose, fontFamily, fontSize, columns = 1, pageWidth = CHORDPRO_PAGE_WIDTH_PX }) {
+export async function renderChordproPageSvg(content, { german, transpose, hideChords = false, fontFamily, fontSize, columns = 1, pageWidth = CHORDPRO_PAGE_WIDTH_PX }) {
     if (!content || !content.trim()) { return null; }
 
-    const song = await parseChordproSong(content, { german, transpose, sanitize: false });
+    const song = await parseChordproSong(content, { german, transpose, hideChords, sanitize: false });
     const family = safeFontFamily(fontFamily);
     const metrics = chordproPageMetrics({ columns, fontSize, pageWidth });
 
@@ -418,10 +448,10 @@ export const CHORDPRO_RATIO_DEFAULTS = Object.fromEntries(
  * given, so the packing can be tested without a browser.
  *
  * @param {string} pageSource one entry from splitPages
- * @param {{german: boolean, transpose: number|string, fontFamily: string, fontSize: number, canvas: {width: number, height: number}, measure?: Function, palette?: import('./slide-palette.js').SlidePalette}} options
+ * @param {{german: boolean, transpose: number|string, hideChords?: boolean, fontFamily: string, fontSize: number, canvas: {width: number, height: number}, measure?: Function, palette?: import('./slide-palette.js').SlidePalette}} options
  * @returns {Promise<Array<import('./soft-pages.js').SoftPage>>}
  */
-export async function chordproSlidePages(pageSource, { german, transpose, fontFamily, fontSize, canvas, measure, palette = slidePalette() }) {
+export async function chordproSlidePages(pageSource, { german, transpose, hideChords = false, fontFamily, fontSize, canvas, measure, palette = slidePalette() }) {
     const family = safeFontFamily(fontFamily);
     const layout = {
         fontSize,
@@ -438,7 +468,7 @@ export async function chordproSlidePages(pageSource, { german, transpose, fontFa
     const rows = [];
 
     for (const segment of splitSoftSegments(pageSource)) {
-        const song = await parseChordproSong(segment, { german, transpose, sanitize: false });
+        const song = await parseChordproSong(segment, { german, transpose, hideChords, sanitize: false });
         const segmentRows = chordproRows(song.bodyParagraphs ?? song.paragraphs ?? [], layout);
 
         if (segmentRows.length === 0) {
@@ -493,6 +523,7 @@ export async function renderChordproSlides(pageSource, settings, canvas, palette
     const pages = await chordproSlidePages(pageSource, {
         german: settings.chordproGermanNotation,
         transpose: settings.chordproTranspose,
+        hideChords: !!settings.chordproHideChords,
         fontFamily,
         fontSize,
         canvas,
@@ -545,6 +576,7 @@ export function chordproMixin() {
         chordproColumns: 1,
         chordproTranspose: 0,
         chordproGermanNotation: true,
+        chordproHideChords: false,
         /**
          * The preview is text in a box rather than an engraving on a page, so
          * nothing about it is life size to begin with — and 9 pt of it on a
@@ -554,12 +586,13 @@ export function chordproMixin() {
          */
         chordproZoom: 120,
         chordproPageRatio: 'paper',
-        chordproFields: ['chordproFontSize', 'chordproFontFamily', 'chordproColumns', 'chordproTranspose', 'chordproGermanNotation', 'chordproZoom'],
+        chordproFields: ['chordproFontSize', 'chordproFontFamily', 'chordproColumns', 'chordproTranspose', 'chordproGermanNotation', 'chordproHideChords', 'chordproZoom'],
 
         parseChordpro(content) {
             return parseChordproSong(content, {
                 german: this.chordproGermanNotation,
                 transpose: this.chordproTranspose,
+                hideChords: !!this.chordproHideChords,
             });
         },
 
@@ -669,6 +702,7 @@ export function chordproMixin() {
             const svg = await renderChordproPageSvg(this.chordproSource(), {
                 german: this.chordproGermanNotation,
                 transpose: this.chordproTranspose,
+                hideChords: !!this.chordproHideChords,
                 fontFamily: this.chordproFontFamily,
                 fontSize: Number(this.chordproFontSize),
                 columns: this.chordproColumns,

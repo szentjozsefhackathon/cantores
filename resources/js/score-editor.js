@@ -484,6 +484,7 @@ onAlpineInit(() => {
             this.$watch('chordproColumns', () => this.scheduleRender());
             this.$watch('chordproTranspose', () => this.scheduleRender());
             this.$watch('chordproGermanNotation', () => this.scheduleRender());
+            this.$watch('chordproHideChords', () => this.scheduleRender());
             this.$watch('aretinoTextFont', () => this.scheduleRender());
             this.$watch('aretinoLyricSize', () => this.scheduleRender());
             this.$watch('aretinoStaffSize', () => this.scheduleRender());
@@ -620,6 +621,7 @@ onAlpineInit(() => {
                         chordproColumns: Number(this.chordproColumns),
                         chordproTranspose: Number(this.chordproTranspose),
                         chordproGermanNotation: !!this.chordproGermanNotation,
+                        chordproHideChords: !!this.chordproHideChords,
                         chordproZoom: Number(this.chordproZoom),
                     },
                     ratio: this.effectiveRatioKey(this.chordproPageRatio),

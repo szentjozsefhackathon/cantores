@@ -117,6 +117,7 @@ class ProjectionSettingFields
             'chordproColumns' => ['type' => 'number', 'min' => 1, 'max' => 2, 'step' => 1, 'label' => 'Columns', 'icon' => 'view-columns'],
             'chordproTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],
             'chordproGermanNotation' => ['type' => 'boolean', 'label' => 'German notation (H = B, B = B♭)', 'glyph' => 'H'],
+            'chordproHideChords' => ['type' => 'boolean', 'label' => 'Hide chords', 'icon' => 'guitar-off'],
         ],
         'aretino' => [
             'aretinoLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 4, 'max' => 120, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
