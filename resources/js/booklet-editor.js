@@ -18,7 +18,9 @@ import { gabcMixin } from './score-editor-gabc.js';
  * change — a page size, a lyric size, one score nudged wider — redraws the whole
  * thing, because a booklet flows and there is no such thing as re-rendering only
  * the score you touched: making one score two lines shorter moves everything
- * after it.
+ * after it. What is spared is the engraving: the renderer keeps every entry's
+ * blocks, so only the score that changed goes back through its engraver, and
+ * the rest are simply packed onto the pages again.
  */
 
 /**
@@ -145,7 +147,11 @@ onAlpineInit(() => {
                     return;
                 }
 
-                this.scheduleRender();
+                // Laid out at once rather than after the usual wait: that wait is
+                // for a knob still being turned, and a change that has already
+                // been to the server and back — through wire:model's own
+                // debounce — is a change somebody has finished making.
+                this.scheduleRender(0);
             },
 
             /** The handle between the plan and the pages was grabbed. */
@@ -178,11 +184,11 @@ onAlpineInit(() => {
              * the stretch in which the browser answers nothing: start it under a
              * finger going back for a second click and the click is what suffers.
              */
-            scheduleRender() {
+            scheduleRender(delay = renderDelayFor(this._lastRenderMs)) {
                 this.markBusy();
 
                 clearTimeout(this._renderTimer);
-                this._renderTimer = setTimeout(() => this.render(), renderDelayFor(this._lastRenderMs));
+                this._renderTimer = setTimeout(() => this.render(), delay);
             },
 
             async render() {

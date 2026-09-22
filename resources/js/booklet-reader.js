@@ -207,6 +207,12 @@ onAlpineInit(() => {
          * with its controls, and the engraving is dropped into it — rather than
          * the whole list being rebuilt — so that a score whose settings someone
          * is turning does not lose the panel they are turning them in.
+         *
+         * A slot already showing the drawing it is handed is left alone: the
+         * renderer hands back the very same element for an entry nothing
+         * happened to, so one score nudged repaints one slot rather than the
+         * whole booklet. The slot keeps note of what it shows, and a slot
+         * Livewire has put there since has no note, so it is painted.
          */
         paint(items) {
             const container = this.$refs.pages;
@@ -216,7 +222,9 @@ onAlpineInit(() => {
             items.forEach(({ id, svg }) => {
                 const slot = container.querySelector(`[data-reader-sheet="${id}"]`);
 
-                if (!slot) { return; }
+                if (!slot || slot._bookletDrawing === svg) { return; }
+
+                slot._bookletDrawing = svg;
 
                 const drawing = svg.cloneNode(true);
                 drawing.removeAttribute('width');

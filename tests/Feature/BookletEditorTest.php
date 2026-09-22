@@ -689,8 +689,53 @@ it('leaves the rows alone when the booklet around them is drawn again', function
 
     expect(substr_count($component->html(), 'data-entry-options'))->toBe(3);
 
-    expect(substr_count($component->set('marginMm', 15)->html(), 'data-entry-options'))
+    expect(substr_count($component->set('style', 'modern')->html(), 'data-entry-options'))
         ->toBe(0, 'the rows were built and sent all over again');
+});
+
+// A geometry knob changes nothing the component renders — the pages are drawn in
+// the browser — so the plan pane is not rendered and sent again, which was most of
+// what a margin nudge used to cost before the pages could even start redrawing.
+it('does not render the editor again for a geometry knob, yet still sends the booklet', function () {
+    $user = User::factory()->create();
+    [$booklet] = bookletWithEntries($user, 3);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->set('marginMm', 15)
+        ->assertHasNoErrors()
+        ->assertDispatched('booklet-updated');
+
+    expect($component->effects)->not->toHaveKey('html')
+        ->and($booklet->fresh()->margin_mm)->toEqual(15);
+});
+
+it('still renders a geometry knob that fails validation, so its error is shown', function () {
+    $user = User::factory()->create();
+    [$booklet] = bookletWithEntries($user, 1);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->set('marginMm', 500)
+        ->assertHasErrors('marginMm');
+
+    expect($component->effects)->toHaveKey('html');
+});
+
+it('does not render the editor again for a saved override, yet still sends the booklet', function () {
+    $user = User::factory()->create();
+    [$booklet, $entries] = bookletWithEntries($user, 2);
+
+    actingAs($user);
+
+    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('saveOverride', $entries->first()->id, ['abcPageScale' => 0.9])
+        ->assertDispatched('booklet-updated');
+
+    expect($component->effects)->not->toHaveKey('html')
+        ->and($entries->first()->fresh()->settings_override)->toBe(['abcPageScale' => 0.9]);
 });
 
 // A row keeps itself, but the pages are drawn from the whole booklet, which only

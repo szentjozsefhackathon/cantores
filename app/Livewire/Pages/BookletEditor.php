@@ -624,6 +624,18 @@ class BookletEditor extends Component
         $this->forgetEntries();
     }
 
+    /**
+     * A knob on the geometry bar was turned.
+     *
+     * Nothing this component renders depends on the geometry: the pages are
+     * drawn in the browser from the payload forgetEntries() dispatches, and the
+     * knobs themselves are bound with wire:model. So the view is not rendered
+     * again — it is the whole plan pane, a few hundred kilobytes that the
+     * browser would otherwise have to morph before it could start on the pages.
+     * The title is the exception, since the document switcher prints it. A
+     * value that fails validation throws before skipRender() and renders as
+     * usual, so its error is still shown.
+     */
     public function updated(string $property): void
     {
         if (! in_array($property, ['title', 'pageSize', 'orientation', 'marginMm', 'lyricSizePt', 'staffHeightMm', 'headingScale', 'textSizeScale', 'textLineHeight', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip'], true)) {
@@ -631,6 +643,10 @@ class BookletEditor extends Component
         }
 
         $this->saveGeometry();
+
+        if ($property !== 'title') {
+            $this->skipRender();
+        }
     }
 
     public function saveGeometry(): void
@@ -998,6 +1014,10 @@ class BookletEditor extends Component
      * Sanitised against BookletSettingFields rather than trusted: the bucket is
      * arbitrary JSON from a browser, and it is replayed into a renderer.
      *
+     * Renderless, for the same reason as a geometry knob: the panels answer
+     * from the browser's own copy of the overrides, and the pages are drawn
+     * from the payload that is dispatched.
+     *
      * @param  array<string, mixed>  $override
      */
     public function saveOverride(int $entryId, array $override): void
@@ -1015,6 +1035,8 @@ class BookletEditor extends Component
         $entry->update(['settings_override' => $clean === [] ? null : $clean]);
 
         $this->forgetEntries();
+
+        $this->skipRender();
     }
 
     /**

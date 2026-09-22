@@ -64,9 +64,10 @@ test('both booklet renderers wait for their faces before building a block', () =
     for (const fn of ['renderBooklet', 'renderBookletFlow']) {
         const body = render.slice(render.indexOf(`export async function ${fn}(`));
         const wait = body.indexOf('await ensureFontsLoaded(bookletFonts(entries, geometry)');
-        const build = body.indexOf('buildEntryBlocks(');
+        const build = body.indexOf('.blocksOf(');
 
         assert.ok(wait !== -1, `${fn} does not wait for its fonts`);
+        assert.ok(build !== -1, `${fn} builds no blocks`);
         assert.ok(wait < build, `${fn} builds blocks before the fonts are in`);
     }
 });

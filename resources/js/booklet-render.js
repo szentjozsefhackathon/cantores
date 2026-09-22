@@ -129,12 +129,16 @@ export async function renderBooklet(entries, rawGeometry, host) {
     await enginesReady();
     await ensureFontsLoaded(bookletFonts(entries, geometry), geometry.lyricSizePx);
 
+    const cache = entryCache.begin();
+
     for (const entry of entries) {
-        const built = await buildEntryBlocks(entry, geometry, host);
+        const built = await cache.blocksOf(entry, geometry, host);
 
         built.fonts.forEach((font) => fonts.add(font));
         built.blocks.forEach((block) => blocks.push({ ...block, entryId: entry.id }));
     }
+
+    cache.end();
 
     const pages = packPages(blocks, geometry.contentHeightPx)
         .map((page, index, all) => composePage(page, geometry, index + 1, all.length));
@@ -181,16 +185,83 @@ export async function renderBookletFlow(entries, rawGeometry, host) {
     await enginesReady();
     await ensureFontsLoaded(bookletFonts(entries, geometry), geometry.lyricSizePx);
 
+    const cache = entryCache.begin();
+
     for (const entry of entries) {
-        const built = await buildEntryBlocks(entry, geometry, host);
+        const built = await cache.blocksOf(entry, geometry, host);
 
         built.fonts.forEach((font) => fonts.add(font));
 
-        items.push({ id: entry.id, svg: composeFlowItem(built.blocks, geometry) });
+        // Composed once per engraving and handed back as the same element, so
+        // a reader can tell the drawings that moved from the ones that did not.
+        built.flowSvg ??= composeFlowItem(built.blocks, geometry);
+
+        items.push({ id: entry.id, svg: built.flowSvg });
     }
+
+    cache.end();
 
     return { items, fonts: Array.from(fonts) };
 }
+
+/**
+ * Every entry's blocks from the last render, kept for the next one.
+ *
+ * A booklet flows, so a change to one score can move every page after it — but
+ * it cannot change how any other score is engraved. An entry's blocks depend on
+ * nothing but the entry and the geometry, so the scores nobody touched are
+ * packed again from the blocks they already had, and only the one that moved is
+ * sent back through its engraver. That is the difference between a nudge
+ * costing one score's engraving and costing the whole booklet's.
+ *
+ * Keyed by the entry and the geometry as they stand, written down whole, so that
+ * anything that could change a block — a setting, a heading, the page width —
+ * is a different key. Only what the last render used is kept: a booklet is
+ * edited a knob at a time, and yesterday's engravings are never asked for again.
+ *
+ * Exported for testing, with the engraver and the parser handed in.
+ *
+ * @param {(entry: BookletEntry, geometry: object, host: HTMLElement) => Promise<{blocks: Array<object>, fonts: string[], complete?: boolean}>} build
+ * @param {(markup: string) => Element} parse
+ */
+export function createEntryCache(build, parse) {
+    let kept = new Map();
+
+    return {
+        begin() {
+            const used = new Map();
+
+            return {
+                async blocksOf(entry, geometry, host) {
+                    const key = JSON.stringify([entry, geometry]);
+                    let built = used.get(key) ?? kept.get(key);
+
+                    if (!built) {
+                        built = await build(entry, geometry, host);
+
+                        // Parsed once here rather than on every page it is
+                        // composed onto: stackSvgs copies what it is given.
+                        built.blocks.forEach((block) => { block.element = parse(block.svg); });
+                    }
+
+                    // A file whose systems did not all arrive is drawn with the
+                    // ones that did, and asked for again next time.
+                    if (built.complete !== false) {
+                        used.set(key, built);
+                    }
+
+                    return built;
+                },
+
+                end() {
+                    kept = used;
+                },
+            };
+        },
+    };
+}
+
+const entryCache = createEntryCache(buildEntryBlocks, parseSvg);
 
 /**
  * One entry's blocks, stacked down a drawing of their own exact height.
@@ -209,7 +280,7 @@ function composeFlowItem(blocks, geometry) {
     const placements = [];
 
     items.forEach(({ block, y }) => {
-        fragments.push(parseSvg(block.svg));
+        fragments.push(block.element ?? parseSvg(block.svg));
         placements.push({ x: geometry.marginPx, y: geometry.marginPx + y, scale: block.scale ?? 1 });
     });
 
@@ -451,6 +522,7 @@ export async function buildFileBlocks(entry, geometry) {
     }));
 
     const drawable = fetched.filter(Boolean);
+    const complete = drawable.length === fetched.length;
 
     stripPlacements(drawable, geometry, {
         afterHeading: blocks.length > 0,
@@ -467,7 +539,7 @@ export async function buildFileBlocks(entry, geometry) {
         });
     });
 
-    return { blocks, fonts: [geometry.textFont] };
+    return { blocks, fonts: [geometry.textFont], complete };
 }
 
 /**
@@ -973,7 +1045,7 @@ function composePage(page, geometry, pageNumber, pageCount) {
     const placements = [];
 
     page.items.forEach(({ block, y }) => {
-        fragments.push(parseSvg(block.svg));
+        fragments.push(block.element ?? parseSvg(block.svg));
         placements.push({
             x: geometry.marginPx,
             y: geometry.marginPx + y,
