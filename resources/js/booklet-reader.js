@@ -15,6 +15,7 @@ import {
 } from './booklet-reading.js';
 import { renderBookletFlow } from './booklet-render.js';
 import { fileSettings, movesSetting, readerStep, resolveSettings, steppedValue, travellingOverride } from './booklet-settings.js';
+import { measuringHost } from './measuring-room.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin } from './score-editor-chordpro.js';
@@ -163,7 +164,7 @@ onAlpineInit(() => {
             const startedAt = performance.now();
 
             try {
-                const { items } = await renderBookletFlow(this.readerEntries(), this.geometry(), this.$refs.measure);
+                const { items } = await renderBookletFlow(this.readerEntries(), this.geometry(), measuringHost());
 
                 if (token !== this._renderToken) { return; }
 

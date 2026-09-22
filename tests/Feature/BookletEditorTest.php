@@ -373,12 +373,10 @@ it('keeps the preview references in the booklet renderer component', function ()
     @$document->loadHTML($html);
     $xpath = new DOMXPath($document);
 
-    foreach (['measure', 'pages'] as $reference) {
-        $component = $xpath->query('//*[@x-ref="'.$reference.'"]/ancestor::*[@x-data][1]')->item(0);
+    $component = $xpath->query('//*[@x-ref="pages"]/ancestor::*[@x-data][1]')->item(0);
 
-        expect($component)->not->toBeNull()
-            ->and($component->getAttribute('x-data'))->toStartWith('bookletEditor(');
-    }
+    expect($component)->not->toBeNull()
+        ->and($component->getAttribute('x-data'))->toStartWith('bookletEditor(');
 });
 
 // The booklet's own geometry is read the way the score editor's toolbars are: a
@@ -462,6 +460,50 @@ it('sends the retyped name to the server on its own', function () {
         ->and($model->name)->toContain('.live')
         ->and($model->name)->toContain('.blur')
         ->and($model->value)->toBe('title');
+});
+
+// The typography knobs are drawn from the browser's own copy of the geometry the
+// moment they move, rather than after the save has been to the server and back.
+// That holds only for knobs the server hands over untouched, so every one tagged
+// must name a key of the geometry exactly as the server sends it — and the knobs
+// whose values the server works something out from must not be tagged at all.
+it('tags only the knobs the browser can lay out without the server', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+
+    $booklet = bookletFor($user);
+    $html = Livewire::test(BookletEditor::class, ['booklet' => $booklet])->html();
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+    $xpath = new DOMXPath($document);
+    $toolbar = $xpath->query('//*[@data-booklet-toolbar]')->item(0);
+
+    expect($toolbar->getAttribute('x-on:input'))->toContain('adoptGeometryKnob');
+
+    $tagged = [];
+
+    foreach ($xpath->query('.//*[@data-booklet-geometry]', $toolbar) as $knob) {
+        $key = $knob->getAttribute('data-booklet-geometry');
+        $input = $xpath->query('.//input', $knob)->item(0);
+
+        expect($input)->not->toBeNull($key.' has no field inside it');
+
+        $model = collect(iterator_to_array($input->attributes))
+            ->first(fn (DOMAttr $attribute): bool => str_starts_with($attribute->name, 'wire:model'));
+
+        expect($model?->value)->toBe($key)
+            ->and($booklet->geometry())->toHaveKey($key);
+
+        $tagged[] = $key;
+    }
+
+    expect($tagged)->toEqualCanonicalizing([
+        'lyricSizePt', 'staffHeightMm', 'headingScale', 'textSizeScale',
+        'textLineHeight', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip',
+    ]);
+
+    expect($xpath->query('.//*[@data-booklet-style]//select[@aria-label="'.__('Style').'"]', $toolbar)->length)->toBe(1);
 });
 
 it('says the booklet is being laid out again from the moment a knob is touched', function () {

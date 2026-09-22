@@ -9,6 +9,7 @@ import {
     readerGeometry,
 } from './booklet-reading.js';
 import { renderBookletFlow } from './booklet-render.js';
+import { measuringHost } from './measuring-room.js';
 
 /**
  * One score, looked at on its own, at the size of whatever is holding it.
@@ -141,7 +142,7 @@ onAlpineInit(() => {
             const startedAt = performance.now();
 
             try {
-                const { items } = await renderBookletFlow([this.entry], this.geometry(), this.$refs.measure);
+                const { items } = await renderBookletFlow([this.entry], this.geometry(), measuringHost());
 
                 if (token !== this._renderToken) { return; }
 

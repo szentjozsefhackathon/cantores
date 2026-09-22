@@ -50,10 +50,6 @@ resources/js/booklet-reader.js
     </script>
     <script src="{{ \App\Support\VendorAsset::url('js/abc2svg-1.js') }}"></script>
 
-    {{-- Off-screen but laid out: exsurge's chant lines are measured here, and a
-         display:none element has no measurable box. --}}
-    <div x-ref="measure" aria-hidden="true" class="pointer-events-none absolute -left-[10000px] top-0 w-[2400px] opacity-0"></div>
-
     {{-- The bar follows the reader down the booklet. On a music stand the thing
          you reach for mid-piece is the size, and a control that has scrolled off
          the top is a control that is not there. --}}

@@ -50,10 +50,6 @@ resources/js/booklet-editor.js
     </script>
     <script src="{{ \App\Support\VendorAsset::url('js/abc2svg-1.js') }}"></script>
 
-    {{-- Off-screen but laid out: exsurge's chant lines are measured here, and a
-         display:none element has no measurable box. --}}
-    <div x-ref="measure" aria-hidden="true" class="pointer-events-none absolute -left-[10000px] top-0 w-[2400px] opacity-0"></div>
-
     <div class="mx-auto flex w-full max-w-[1600px] flex-col px-4 sm:px-6 lg:min-h-0 lg:flex-1 lg:px-8">
 
         <x-plan-document-switcher :plan="$booklet->musicPlan" :current="$booklet" type="booklet"
@@ -66,7 +62,7 @@ resources/js/booklet-editor.js
         <div
             data-booklet-toolbar
             class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50"
-            x-on:input="markBusy($event)"
+            x-on:input="markBusy($event); adoptGeometryKnob($event)"
         >
             {{-- The one knob on this bar that leaves the pages exactly as they
                  were, so typing in it must not claim the booklet is being laid
@@ -83,7 +79,7 @@ resources/js/booklet-editor.js
                  someone choosing between Énekeskönyv and Graduále is choosing
                  what the booklet should feel like, rather than answering a
                  question about typefaces they did not come here to answer. --}}
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1" data-booklet-style>
                 <flux:tooltip :content="__('Style')">
                     <flux:icon name="type-outline" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
@@ -94,21 +90,21 @@ resources/js/booklet-editor.js
                 </flux:select>
             </div>
 
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1" data-booklet-geometry="lyricSizePt">
                 <flux:tooltip :content="__('Lyric size (pt)')">
                     <flux:icon name="a-large-small" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="lyricSizePt" :aria-label="__('Lyric size (pt)')" min="5" max="24" step="0.5" class="w-20! shrink-0" />
             </div>
 
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1" data-booklet-geometry="staffHeightMm">
                 <flux:tooltip :content="__('Staff height (mm)')">
                     <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="staffHeightMm" :aria-label="__('Staff height (mm)')" min="2" max="20" step="0.5" class="w-16!" />
             </div>
 
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1" data-booklet-geometry="headingScale">
                 <flux:tooltip :content="__('Heading size (×)')">
                     <flux:icon name="heading" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
@@ -119,14 +115,14 @@ resources/js/booklet-editor.js
                  beside the music, and how far apart its lines stand. Both are
                  factors of the booklet's own type, and a paragraph that wants
                  something else says so on its own row. --}}
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1" data-booklet-geometry="textSizeScale">
                 <flux:tooltip :content="__('Text size (×)')">
                     <flux:icon name="document-text" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textSizeScale" :aria-label="__('Text size (×)')" min="0.3" max="4" step="0.05" class="w-16!" />
             </div>
 
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1" data-booklet-geometry="textLineHeight">
                 <flux:tooltip :content="__('Text line spacing')">
                     <flux:icon name="align-vertical-space-between" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
@@ -166,21 +162,21 @@ resources/js/booklet-editor.js
                 <flux:separator vertical class="h-8" />
                 <span id="booklet-abc-settings" class="text-xs font-medium text-zinc-500 dark:text-zinc-400">ABC</span>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1" data-booklet-geometry="abcStaffSep">
                         <flux:tooltip :content="__('ABC staff separation')">
                             <flux:icon name="between-horizontal-start" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>
                         <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcStaffSep" :aria-label="__('ABC staff separation')" min="0" max="120" step="1" class="w-16!" />
                     </div>
 
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1" data-booklet-geometry="abcLyricFirstSkip">
                         <flux:tooltip :content="__('Staff to lyrics')">
                             <flux:icon name="align-vertical-space-around" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>
-                        <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricFirstSkip" :aria-label="__('Staff to lyrics')" min="0" max="3" step="0.1" class="w-16!" />
+                        <flux:input size="sm" type="number" wire:model.live.debounce.500ms="abcLyricFirstSkip" :aria-label="__('Staff to lyrics')" min="0.5" max="3" step="0.1" class="w-16!" />
                     </div>
 
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1" data-booklet-geometry="abcLyricSkip">
                         <flux:tooltip :content="__('Lyric line spacing')">
                             <flux:icon name="align-vertical-space-between" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                         </flux:tooltip>

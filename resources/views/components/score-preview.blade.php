@@ -91,8 +91,4 @@
     <flux:text x-show="failed" x-cloak class="mt-2 text-sm text-red-600 dark:text-red-400">
         {{ __('This score could not be drawn.') }}
     </flux:text>
-
-    {{-- Off-screen but laid out: exsurge's chant lines are measured here, and a
-         display:none element has no measurable box. --}}
-    <div x-ref="measure" aria-hidden="true" class="pointer-events-none absolute -left-[10000px] top-0 w-[2400px] opacity-0"></div>
 </div>

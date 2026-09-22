@@ -5,6 +5,7 @@ import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacin
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
 import { fileSettings, movesSetting, resolveSettings, steppedValue, textSettings, withPlainOverrides } from './booklet-settings.js';
 import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
+import { measuringHost } from './measuring-room.js';
 import './score-preview.js';
 import { abcMixin } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
@@ -80,6 +81,7 @@ onAlpineInit(() => {
             _renderToken: 0,
             _saveTimers: {},
             _pendingOverrides: {},
+            _pendingGeometry: {},
             _busy: null,
             _lastRenderMs: 0,
             _drawnSignature: null,
@@ -114,13 +116,62 @@ onAlpineInit(() => {
             },
 
             /**
+             * A typography knob moved, so the preview is laid out now rather than
+             * after the save.
+             *
+             * These knobs reach the renderer exactly as they are typed —
+             * Booklet::geometry() hands them over untouched, and every size worked
+             * out from them is worked out here, by pageGeometry() — so there is
+             * nothing to wait for the server for. Waiting was wire:model's half
+             * second and a round trip before the layout could even start. The
+             * save still goes as it did, and its answer describes the pages
+             * already drawn, so applyUpdate() only adopts it. The page size,
+             * orientation, margin and style are left to the round trip: the
+             * paper sizes and the styles live on the server.
+             *
+             * A value the field itself calls invalid is left to the server, which
+             * will say so, rather than drawn and then taken back.
+             */
+            adoptGeometryKnob(event) {
+                const input = event?.target;
+
+                if (input?.closest?.('[data-booklet-style]')) {
+                    this.forgetGeometryKnobs();
+
+                    return;
+                }
+
+                const key = input?.closest?.('[data-booklet-geometry]')?.dataset.bookletGeometry;
+
+                if (!key || input.value === '' || !input.validity?.valid) { return; }
+
+                const value = Number(input.value);
+
+                if (!Number.isFinite(value)) { return; }
+
+                this._pendingGeometry[key] = value;
+                this.geometry = { ...this.geometry, [key]: value };
+                this.scheduleRender();
+            },
+
+            /**
+             * A style was chosen: it sets every typography knob at once, so what
+             * was typed into them a moment ago is no longer what the booklet says.
+             */
+            forgetGeometryKnobs() {
+                this._pendingGeometry = {};
+            },
+
+            /**
              * A change came back from the server. The payload is pushed rather than
              * read, because it is a computed property with no client-side existence.
              *
              * A payload that left the server before the knob currently being turned
              * was saved carries the older value, so anything still waiting to be
              * sent is put back on top of it — otherwise the preview would flick back
-             * to where the score was a moment ago and then forward again.
+             * to where the score was a moment ago and then forward again. The same
+             * holds for a typography knob, until an answer arrives that carries
+             * the value it was turned to.
              *
              * Usually what comes back is the booklet already on screen: a knob was
              * turned, the preview redrew at once, and the save that followed a
@@ -139,6 +190,16 @@ onAlpineInit(() => {
                     const entry = this.entries.find((candidate) => String(candidate.id) === entryId);
 
                     if (entry) { entry.override = override; }
+                });
+
+                Object.entries(this._pendingGeometry).forEach(([key, value]) => {
+                    if (Number(this.geometry[key]) === value) {
+                        delete this._pendingGeometry[key];
+
+                        return;
+                    }
+
+                    this.geometry = { ...this.geometry, [key]: value };
                 });
 
                 if (layoutSignature(this.entries, this.geometry) === this._drawnSignature) {
@@ -203,7 +264,7 @@ onAlpineInit(() => {
                 const signature = layoutSignature(this.entries, this.geometry);
 
                 try {
-                    const { pages, fonts } = await renderBooklet(this.entries, this.geometry, this.$refs.measure);
+                    const { pages, fonts } = await renderBooklet(this.entries, this.geometry, measuringHost());
 
                     if (token !== this._renderToken) { return; }
 

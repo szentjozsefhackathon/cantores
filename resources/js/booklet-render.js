@@ -6,6 +6,7 @@ import { appendEntryRegions } from './booklet-hover.js';
 import { packPages } from './booklet-flow.js';
 import { mmToPx, pageGeometry, pxToMm } from './booklet-geometry.js';
 import { markdownRows } from './booklet-markdown.js';
+import { withAbcMeasuring } from './measuring-room.js';
 import { fileSettings, layoutWidthFor, resolveSettings, textSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
 import { enginesReady } from './music-engines.js';
@@ -833,7 +834,7 @@ function abcBlocks(content, resolved, layoutWidthPx) {
         errmsg: (msg, line) => console.warn(`[booklet] abc2svg: ${msg} (line ${line})`),
         read_file: () => null,
     });
-    abc.tosvg('booklet', preamble + source);
+    withAbcMeasuring(() => abc.tosvg('booklet', preamble + source));
 
     // Stem and staff-line widths are abc2svg's own: every chunk carries a copy
     // of the engine's stylesheet, and an inline SVG's <style> is global to the
