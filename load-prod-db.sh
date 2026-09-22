@@ -41,5 +41,11 @@ docker exec -i "$LOCAL_DB_CONTAINER" \
     < "$DUMP_FILE"
 echo "   Done"
 
+echo "3. Disabling MFA for user 1..."
+docker exec -i "$LOCAL_DB_CONTAINER" \
+    psql -U "$LOCAL_DB_USER" -d "$LOCAL_DB_NAME" \
+    -c "UPDATE users SET two_factor_secret = NULL, two_factor_recovery_codes = NULL, two_factor_confirmed_at = NULL WHERE id = 1;"
+echo "   Done"
+
 echo
 echo "=== Production database loaded successfully ==="
