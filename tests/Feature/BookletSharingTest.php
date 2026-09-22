@@ -429,6 +429,27 @@ it('offers one full screen for the whole booklet', function () {
         ->and(substr_count($html, 'aria-label="'.__('Adjust this score').'"'))->toBe(2);
 });
 
+// A landscape tablet is a music stand too, so the reader takes the screen's
+// whole width, and a score's one button sits over its corner rather than in a
+// heading row that says nothing the score does not.
+it('fills the width and lays the score button over the engraving', function () {
+    $owner = User::factory()->create();
+    $booklet = Booklet::factory()->create(['user_id' => $owner->id]);
+
+    BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => Score::factory()->abc()->create(['user_id' => $owner->id])->id,
+        'sequence' => 1,
+    ]);
+
+    $loan = Loan::factory()->of($booklet)->create();
+
+    $html = get(route('booklet.loan', ['token' => $loan->token]))->assertOk()->getContent();
+
+    expect($html)->not->toContain('max-w-3xl')
+        ->and($html)->toContain('absolute right-1 top-1 z-10');
+});
+
 it('takes its lending links with it when the booklet is deleted', function () {
     $owner = User::factory()->create();
     [$booklet, $loan] = sharedBooklet($owner);

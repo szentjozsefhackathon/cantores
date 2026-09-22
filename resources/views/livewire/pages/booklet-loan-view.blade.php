@@ -58,7 +58,7 @@ resources/js/booklet-reader.js
          you reach for mid-piece is the size, and a control that has scrolled off
          the top is a control that is not there. --}}
     <div class="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/95">
-        <div class="mx-auto flex max-w-3xl flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2">
             <div class="min-w-0 flex-1">
                 <div class="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ $title }}</div>
                 @if($ownerName !== '')
@@ -142,8 +142,10 @@ resources/js/booklet-reader.js
 
     {{-- The padding is on the outside, so what the browser measures is the width
          a sheet actually gets — a column measured with its own padding inside it
-         engraves every score a few millimetres wider than the page it lands on. --}}
-    <div class="relative mx-auto mt-4 max-w-3xl px-2">
+         engraves every score a few millimetres wider than the page it lands on.
+         No column cap either: a landscape tablet is as much a music stand as a
+         phone, and the booklet takes whatever width the screen has. --}}
+    <div class="relative mt-4 px-2">
     <div x-ref="pages">
             @forelse($entries as $entry)
                 @php
@@ -158,19 +160,21 @@ resources/js/booklet-reader.js
                      to carry its controls. --}}
                 <article
                     wire:key="reader-entry-{{ $entry['id'] }}"
-                    class="mb-4 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
+                    aria-label="{{ $name }}"
+                    class="relative mb-4 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700"
                     x-data="{ open: false }"
                 >
-                    <div class="flex items-center gap-1 border-b border-zinc-100 bg-zinc-50 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800">
-                        <span class="min-w-0 flex-1 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ $name }}</span>
-
-                        @if($panel !== [])
+                    {{-- Over the engraving's corner rather than in a row of its
+                         own: a heading that says only which slot this is spends a
+                         line of every score on something the score already shows. --}}
+                    @if($panel !== [])
+                        <div class="absolute right-1 top-1 z-10 rounded-lg bg-white/80 shadow-sm ring-1 ring-zinc-200 backdrop-blur dark:bg-zinc-800/80 dark:ring-zinc-700">
                             <flux:tooltip :content="__('Adjust this score')">
                                 <flux:button size="sm" variant="ghost" icon="adjustments-horizontal" :aria-label="__('Adjust this score')"
                                     x-on:click="open = !open" x-bind:aria-expanded="open ? 'true' : 'false'" />
                             </flux:tooltip>
-                        @endif
-                    </div>
+                        </div>
+                    @endif
 
                     @if($panel !== [])
                         {{-- Two knobs at most, and both of them are steps rather
@@ -181,7 +185,7 @@ resources/js/booklet-reader.js
                              above, and everything else in the editor's panel is
                              about a sheet of paper this reader is not holding. --}}
                         <div class="border-b border-zinc-100 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800" x-show="open" x-cloak>
-                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-1">
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 py-1 pl-2 pr-12">
                                 @foreach($panel as $field)
                                     @php
                                         $down = $field['role'] === 'transpose' ? __('Down a semitone') : __('Smaller');

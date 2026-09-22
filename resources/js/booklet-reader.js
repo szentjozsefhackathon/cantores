@@ -5,6 +5,7 @@ import {
     clampZoom,
     readReaderSettings,
     readerGeometry,
+    readerSizingWidth,
     styleForFont,
     writeReaderSettings,
     ZOOM_DEFAULT,
@@ -140,7 +141,11 @@ onAlpineInit(() => {
 
         /** The geometry this screen is drawing at, at this reader's size. */
         geometry() {
-            return readerGeometry(this.booklet, this._width || this.measuredWidth(), {
+            const width = this._width || this.measuredWidth();
+
+            return readerGeometry(this.booklet, width, {
+                sizedForScreen: true,
+                sizingWidthPx: readerSizingWidth(width, window.screen),
                 zoom: this.zoom,
                 style: this.style,
             }, this.styles);

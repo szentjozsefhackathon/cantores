@@ -37,9 +37,10 @@ export const ZOOM_STEP = 0.1;
  * One, meaning "the booklet's own proportions".
  *
  * The default is not a size in points but a likeness: at 1 the screen shows what
- * the printed page shows, scaled to whatever width it has, so a musician who has
- * seen the paper booklet recognises this one. Everything above and below is that
- * likeness deliberately given up in exchange for legibility.
+ * the printed page shows, in the proportions the cantor set, at the size
+ * READER_SCREEN_BOOST and READER_PROPORTION_MAX judge this screen wants — so a
+ * musician who has seen the paper booklet recognises this one and can sing from
+ * it without touching anything. Everything above and below is the reader's own.
  */
 export const ZOOM_DEFAULT = 1;
 
@@ -49,6 +50,49 @@ export function clampZoom(value) {
     if (!Number.isFinite(zoom)) { return ZOOM_DEFAULT; }
 
     return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(zoom * 100) / 100));
+}
+
+/**
+ * How much bigger than the paper's own proportions the booklet starts out.
+ *
+ * Sized strictly in proportion, a phone shows the booklet at about three
+ * quarters of A5 — correct, and too small to sing from at a music stand at
+ * arm's length. A phone's pixels are physically smaller than paper's
+ * millimetres, which is the part the proportion cannot know about, and this is
+ * the measured difference: at this, a phone in portrait shows the booklet at
+ * roughly the point sizes it was printed at.
+ */
+export const READER_SCREEN_BOOST = 1.4;
+
+/**
+ * The most the booklet's type is ever blown up by the screen alone.
+ *
+ * Half as big again as the printed page is already more than a tablet held at a
+ * music stand needs. A laptop's window is two and a half A5 pages wide, and a
+ * lyric sized in proportion to that is a headline. Past this the reader's own
+ * zoom is the only thing that makes it bigger.
+ */
+export const READER_PROPORTION_MAX = 1.5;
+
+/**
+ * The width the type is sized against, which is not the width it is set in.
+ *
+ * A device held in landscape is the same device with the same eyes above it, so
+ * the lyrics are sized for its shorter side and stay put when it is turned; what
+ * turning it changes is how much fits on a line. The column still has its say
+ * when it is the narrower of the two — a window split in half, a sidebar — or
+ * the type would be sized for room it does not have.
+ *
+ * @param {number} columnPx how wide the column holding the pages is
+ * @param {{width?: number, height?: number}} screen the device's screen, in CSS px
+ */
+export function readerSizingWidth(columnPx, screen = {}) {
+    const column = Number(columnPx) || 0;
+    const sides = [Number(screen?.width), Number(screen?.height)].filter((side) => side > 0);
+
+    if (sides.length === 0) { return column; }
+
+    return Math.min(column, ...sides);
 }
 
 /**
@@ -66,17 +110,32 @@ const UNBOUNDED_MM = 100000;
  *
  * @param {object} booklet Booklet::geometry() as the server sent it
  * @param {number} widthPx how wide the column holding the pages actually is
- * @param {{zoom?: number, style?: string|null}} settings the reader's own
+ * @param {{zoom?: number, style?: string|null, sizingWidthPx?: number, sizedForScreen?: boolean}}
+ *        settings the reader's own; the width the type is sized against when
+ *        that is not the column's (see readerSizingWidth); and whether this is
+ *        a screen being sung from, which is what the boost and the cap are for.
+ *        A preview of one score asks for the plain proportion instead: it is
+ *        there to show the editor the page they are making, not to be read from
+ *        at arm's length.
  * @param {object} styles BookletStyles::typographies() as the server sent it
  */
 export function readerGeometry(booklet, widthPx, settings = {}, styles = {}) {
     const pageWidthMm = Math.max(20, pxToMm(Number(widthPx) || 0));
     const contentWidthMm = Math.max(10, pageWidthMm - 2 * READER_MARGIN_MM);
 
-    // The whole point of the default: the type shrinks and grows with the width
-    // it is set in, so a narrow screen shows the booklet's own proportions
-    // rather than the booklet's own point sizes crammed into half the room.
-    const proportion = contentWidthMm / Math.max(1, Number(booklet.contentWidthMm) || 1);
+    // The whole point of the default: the type shrinks and grows with the
+    // screen, so a narrow one shows the booklet's own proportions rather than
+    // the booklet's own point sizes crammed into half the room. For a screen
+    // someone is singing from, that proportion is then lifted off the paper's
+    // own scale by the boost and capped, because a wide screen is not a reason
+    // for bigger letters.
+    const sizingWidthMm = Number(settings.sizingWidthPx) > 0
+        ? Math.max(10, pxToMm(Number(settings.sizingWidthPx)) - 2 * READER_MARGIN_MM)
+        : contentWidthMm;
+    const plain = sizingWidthMm / Math.max(1, Number(booklet.contentWidthMm) || 1);
+    const proportion = settings.sizedForScreen
+        ? Math.min(READER_PROPORTION_MAX, READER_SCREEN_BOOST * plain)
+        : plain;
     const scale = proportion * clampZoom(settings.zoom ?? ZOOM_DEFAULT);
 
     return {

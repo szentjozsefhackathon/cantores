@@ -6,7 +6,10 @@ import { mmToPx, pageGeometry } from '../../resources/js/booklet-geometry.js';
 import {
     clampZoom,
     READER_MARGIN_MM,
+    READER_PROPORTION_MAX,
+    READER_SCREEN_BOOST,
     readerGeometry,
+    readerSizingWidth,
     readReaderSettings,
     styleForFont,
     writeReaderSettings,
@@ -50,18 +53,71 @@ test('the screen decides the width, and the reader keeps the margin small', () =
     assert.ok(Math.abs(geometry.contentWidthMm - (geometry.pageWidthMm - 2 * READER_MARGIN_MM)) < 0.001);
 });
 
-test('at one, the phone shows the booklet\'s proportions rather than its point sizes', () => {
-    const geometry = readerGeometry(booklet, PHONE_PX);
-    const proportion = geometry.contentWidthMm / booklet.contentWidthMm;
+test('at one, the phone shows the booklet\'s proportions at a size it can be sung from', () => {
+    const geometry = readerGeometry(booklet, PHONE_PX, { sizedForScreen: true });
+    const proportion = READER_SCREEN_BOOST * geometry.contentWidthMm / booklet.contentWidthMm;
 
     assert.ok(Math.abs(geometry.lyricSizePt - booklet.lyricSizePt * proportion) < 0.001);
     assert.ok(Math.abs(geometry.staffHeightMm - booklet.staffHeightMm * proportion) < 0.001);
 
-    // Narrower than A5, so everything comes out smaller — but in step, which is
-    // what makes it the same booklet.
-    assert.ok(proportion < 1);
+    // Narrower than A5, and lifted off the paper's scale by the boost, so the
+    // phone lands near the printed point sizes — with the staves in step, which
+    // is what makes it the same booklet.
+    assert.ok(Math.abs(proportion - 1) < 0.15);
     assert.ok(Math.abs(
         geometry.lyricSizePt / geometry.staffHeightMm - booklet.lyricSizePt / booklet.staffHeightMm,
+    ) < 0.001);
+});
+
+test('turning the device changes the lines, not the size of the letters', () => {
+    const phone = { width: PHONE_PX, height: 844 };
+    const portrait = readerGeometry(booklet, PHONE_PX, { sizedForScreen: true, sizingWidthPx: readerSizingWidth(PHONE_PX, phone) });
+    const landscape = readerGeometry(booklet, 844, { sizedForScreen: true, sizingWidthPx: readerSizingWidth(844, { width: 844, height: PHONE_PX }) });
+
+    assert.equal(landscape.lyricSizePt, portrait.lyricSizePt);
+    assert.equal(landscape.staffHeightMm, portrait.staffHeightMm);
+    assert.ok(landscape.contentWidthMm > portrait.contentWidthMm);
+});
+
+test('a column narrower than the screen still sizes the type for the column', () => {
+    assert.equal(readerSizingWidth(500, { width: 1024, height: 768 }), 500);
+    assert.equal(readerSizingWidth(1024, { width: 1024, height: 768 }), 768);
+    // No screen to ask, as in a test or an odd browser: the column it is.
+    assert.equal(readerSizingWidth(700, {}), 700);
+    assert.equal(readerSizingWidth(700, undefined), 700);
+});
+
+test('a wide screen does not blow the type up past a readable size', () => {
+    const laptop = readerGeometry(booklet, 1400, { sizedForScreen: true, sizingWidthPx: 1400 });
+    const tablet = readerGeometry(booklet, 1024, { sizedForScreen: true, sizingWidthPx: 768 });
+
+    assert.ok(Math.abs(laptop.lyricSizePt - booklet.lyricSizePt * READER_PROPORTION_MAX) < 0.001);
+    assert.ok(Math.abs(tablet.lyricSizePt - booklet.lyricSizePt * READER_PROPORTION_MAX) < 0.001);
+
+    // The phone is under the cap, which is what makes it a cap on wide screens
+    // rather than one size for everybody.
+    assert.ok(readerGeometry(booklet, PHONE_PX, { sizedForScreen: true }).lyricSizePt < booklet.lyricSizePt * READER_PROPORTION_MAX);
+
+    // The cap is on the default only; the reader's own zoom goes on top of it.
+    const zoomed = readerGeometry(booklet, 1400, { sizedForScreen: true, sizingWidthPx: 1400, zoom: 2 });
+
+    assert.ok(Math.abs(zoomed.lyricSizePt - laptop.lyricSizePt * 2) < 0.001);
+});
+
+// The modal one score is looked at in is the editor checking their own page, so
+// it stays on the paper's proportions: the boost and the cap are about a phone
+// on a music stand, and nobody sings from the editor.
+test('a preview is sized in plain proportion, with no boost and no cap', () => {
+    const preview = readerGeometry(booklet, 1400);
+    const proportion = preview.contentWidthMm / booklet.contentWidthMm;
+
+    assert.ok(proportion > READER_PROPORTION_MAX);
+    assert.ok(Math.abs(preview.lyricSizePt - booklet.lyricSizePt * proportion) < 0.001);
+
+    const narrow = readerGeometry(booklet, PHONE_PX);
+
+    assert.ok(Math.abs(
+        narrow.lyricSizePt - booklet.lyricSizePt * narrow.contentWidthMm / booklet.contentWidthMm,
     ) < 0.001);
 });
 
