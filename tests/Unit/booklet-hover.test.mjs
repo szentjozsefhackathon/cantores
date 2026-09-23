@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { appendEntryRegions, entryRegions, highlightEntry } from '../../resources/js/booklet-hover.js';
+import {
+    appendEntryRegions, enableRegionHover, entryRegions, highlightEntry, hoveredRegionEntry, revealEntryRow, revealOffset,
+} from '../../resources/js/booklet-hover.js';
 import { packPages } from '../../resources/js/booklet-flow.js';
 
 const node = (attributes = {}, bounds = {}) => ({
@@ -65,4 +67,34 @@ test('visible scores, missing scores, repaints and unscrollable panes do not mov
     highlightEntry(container, 7, true);
     assert.deepEqual(scrolls, []);
     highlightEntry(null, 7, true);
+});
+
+test('preview clones answer the pointer while the exported originals stay inert', () => {
+    const regions = [node({ 'data-booklet-entry': '7', 'pointer-events': 'none' })];
+    enableRegionHover({ querySelectorAll: () => regions });
+    assert.equal(regions[0].attributes['pointer-events'], 'all');
+});
+
+test('a hover on a score region names its entry, and a gap names none', () => {
+    const region = node({ 'data-booklet-entry': '7' });
+    assert.equal(hoveredRegionEntry({ closest: () => region }), 7);
+    assert.equal(hoveredRegionEntry({ closest: () => null }), undefined);
+    assert.equal(hoveredRegionEntry(null), undefined);
+});
+
+test('hovering the preview scrolls the plan to the row only when it is out of view', () => {
+    const rows = { 7: node({}, { top: 500, bottom: 540 }), 8: node({}, { top: 150, bottom: 190 }) };
+    const pane = { scrollHeight: 1000, clientHeight: 300, scrollTop: 20,
+        getBoundingClientRect: () => ({ top: 100, bottom: 400 }),
+        querySelector: (selector) => rows[selector.match(/"(\d+)"/)[1]] ?? null };
+    const scrolls = [];
+    const scrollTo = (target, top) => scrolls.push([target, top]);
+    revealEntryRow(pane, 7, scrollTo);
+    revealEntryRow(pane, 8, scrollTo);
+    revealEntryRow(pane, 99, scrollTo);
+    revealEntryRow(pane, null, scrollTo);
+    revealEntryRow(null, 7, scrollTo);
+    assert.deepEqual(scrolls, [[pane, 404]]);
+    pane.clientHeight = 1000;
+    assert.equal(revealOffset(pane, rows[7]), null);
 });

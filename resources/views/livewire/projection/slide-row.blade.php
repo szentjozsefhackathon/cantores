@@ -37,6 +37,7 @@
      to it. The green edge is what marks it as being in the deck, since in the
      plan it stands among the scores that are not. --}}
 <li
+    data-entry-row="{{ $entry->id }}"
     x-on:mouseenter="hoverEntry({{ $entry->id }})"
     x-on:mouseleave="hoverEntry(null)"
     x-bind:class="{ 'projection-entry-hovered': hoveredEntryId === {{ $entry->id }} }"

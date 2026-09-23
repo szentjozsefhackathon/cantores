@@ -1,4 +1,5 @@
 import { onAlpineInit } from './alpine-init.js';
+import { revealEntryRow, revealOffset } from './booklet-hover.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { SPLIT_DEFAULT, beginSplitDrag, clampSplitPercent } from './booklet-split.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck, slideCounts } from './projection-deck.js';
@@ -350,6 +351,28 @@ onAlpineInit(() => {
             },
 
             /**
+             * The other way round: a slide pointed at on the contact sheet
+             * brings its row into view in the plan. The gaps between slides
+             * keep whatever was last pointed at, so crossing one does not jolt
+             * the plan.
+             */
+            hoverPreview(target) {
+                let entryId = null;
+
+                if (target !== null) {
+                    const figure = target.closest?.('[data-projection-entry]');
+                    if (!figure) { return; }
+                    entryId = Number(figure.dataset.projectionEntry);
+                }
+
+                if (this.hoveredEntryId === entryId) { return; }
+
+                this.hoveredEntryId = entryId;
+                this.highlight();
+                revealEntryRow(this.$root.querySelector('[data-projection-pane="plan"]'), entryId, scrollPaneTo);
+            },
+
+            /**
              * Paint the hovered slide, and — only when the hover just moved
              * there rather than this being a redraw's own housekeeping call —
              * bring it into view. The plan panel can be scrolled far from
@@ -376,13 +399,8 @@ onAlpineInit(() => {
                 // this element itself — `host` is sized to its content and
                 // never overflows, so scrolling it does nothing.
                 const pane = host.closest('[data-projection-pane="slides"]');
-                if (!pane || pane.scrollHeight <= pane.clientHeight) { return; }
-
-                const bounds = first.getBoundingClientRect();
-                const viewport = pane.getBoundingClientRect();
-                if (bounds.top >= viewport.top && bounds.bottom <= viewport.bottom) { return; }
-
-                scrollPaneTo(pane, pane.scrollTop + bounds.top - viewport.top - 16);
+                const top = revealOffset(pane, first);
+                if (top !== null) { scrollPaneTo(pane, top); }
             },
 
             markBusy(event = null) {

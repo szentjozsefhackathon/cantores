@@ -222,6 +222,8 @@ resources/js/projection-editor.js
 
                 <div
                     data-projection-pane="slides"
+                    x-on:mouseover="hoverPreview($event.target)"
+                    x-on:mouseleave="hoverPreview(null)"
                     class="lg:-mx-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:px-4"
                 >
                     {{-- Faded while the deck is being drawn again: a slide can be

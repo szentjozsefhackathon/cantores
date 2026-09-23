@@ -1,5 +1,5 @@
 import { onAlpineInit } from './alpine-init.js';
-import { highlightEntry } from './booklet-hover.js';
+import { enableRegionHover, highlightEntry, hoveredRegionEntry, revealEntryRow } from './booklet-hover.js';
 import { pageGeometry } from './booklet-geometry.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
@@ -290,6 +290,24 @@ onAlpineInit(() => {
                 highlightEntry(this.$refs.pages, entryId, true);
             },
 
+            /**
+             * The other way round: a score pointed at on a page brings its row
+             * into view in the plan. The gaps between scores keep whatever was
+             * last pointed at, so crossing a margin does not jolt the plan.
+             */
+            hoverPreview(target) {
+                const entryId = target === null ? null : hoveredRegionEntry(target);
+                if (entryId === undefined || this.hoveredEntryId === entryId) { return; }
+
+                this.hoveredEntryId = entryId;
+                highlightEntry(this.$refs.pages, entryId);
+                revealEntryRow(
+                    this.$root.querySelector('[data-booklet-pane="plan"]'),
+                    entryId,
+                    (pane, top) => pane.scrollTo({ top, behavior: 'instant' }),
+                );
+            },
+
             paint() {
                 const container = this.$refs.pages;
                 if (!container) { return; }
@@ -305,6 +323,7 @@ onAlpineInit(() => {
                     svg.style.width = '100%';
                     svg.style.height = 'auto';
                     svg.style.display = 'block';
+                    enableRegionHover(svg);
                     sheet.appendChild(svg);
                     container.appendChild(sheet);
                 });

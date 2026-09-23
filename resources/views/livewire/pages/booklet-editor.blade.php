@@ -436,6 +436,8 @@ resources/js/booklet-editor.js
                      scroll box without narrowing them. --}}
                 <div
                     data-booklet-pane="pages"
+                    x-on:mouseover="hoverPreview($event.target)"
+                    x-on:mouseleave="hoverPreview(null)"
                     class="lg:-mx-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:px-4"
                 >
                     {{-- Faded while the layout is being redone: a booklet can be
