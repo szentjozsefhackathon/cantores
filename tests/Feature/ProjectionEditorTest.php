@@ -249,6 +249,46 @@ it('hands the browser the score source and the whole settings column', function 
 });
 
 /*
+ * A score that does not fit is cut in the browser, at its `%pagebreak?`
+ * suggestions first and then between its staff systems. The payload's only job
+ * is to hand those suggestions over as written.
+ */
+it('hands a scores suggested page breaks to the browser untouched', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $source = "X:1\nK:F\nF G A B|\n%pagebreak169?\nc B A G|\n";
+
+    $score = Score::factory()->abc()->create(['user_id' => $user->id, 'content' => $source]);
+
+    actingAs($user);
+
+    $payload = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('toggleScore', $score->id)
+        ->get('renderPayload');
+
+    expect($payload[0]['content'])->toBe($source);
+});
+
+/*
+ * A slide the deck cut off on its own is pointed at in the contact sheet, with
+ * the words that tell the author a hand-placed break would cut it better. The
+ * sheet is drawn in the browser, so those words travel with the page.
+ */
+it('hands the browser the words for a slide that was split automatically', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    actingAs($user);
+    app()->setLocale('en');
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->assertSee('autoSplitLabel', false)
+        ->assertSee('Auto split')
+        ->assertSee('split here automatically')
+        ->assertSee(':marker');
+});
+
+/*
  * The override bucket is arbitrary JSON from a browser and is replayed into a
  * renderer, so it is sanitised rather than trusted — unknown keys dropped,
  * numbers clamped — and filed under the screen shape it was adjusted against.

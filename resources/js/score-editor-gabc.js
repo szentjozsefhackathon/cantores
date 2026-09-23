@@ -7,8 +7,12 @@ import {
     gabcStaffSizeForStaffHeight,
     mmToPx,
 } from './booklet-geometry.js';
+import { measuringHost } from './measuring-room.js';
+import { softSegmentSources, splitPages as splitRatioPages } from './score-editor-pages.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide, parseSvg } from './slide-frame.js';
+import { systemSlides } from './slide-systems.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
+import { sliceRenderedSvg } from './svg-slice.js';
 
 /**
  * The page a GABC score is laid out on, in the user units exsurge counts in —
@@ -106,14 +110,52 @@ export function renderGabcToSvgMarkup(source, settings, layoutWidth) {
  * exsurge is laid out at the canvas width and comes back however tall the chant
  * happened to be; the viewBox is then restated as the canvas, so a chant that
  * ran past the bottom is clipped rather than shrunk, and `overflows` says so.
+ * renderGabcSlides is what a projection asks, and cuts such a page instead.
  */
 export async function renderGabcSlide(pageSource, settings, canvas) {
     await ensureGabcFontsLoaded(settings);
 
-    const svg = parseSvg(await renderGabcToSvgMarkup(pageSource, settings, canvas.width));
+    return gabcWholeSlide(await renderGabcToSvgMarkup(pageSource, settings, canvas.width), canvas);
+}
+
+/**
+ * One page of a GABC chant engraved onto the projector slides it needs.
+ *
+ * A page that fits is the one slide renderGabcSlide draws. One that does not is
+ * cut at its `%pagebreak?` suggestions and then between its chant lines, which
+ * are lifted out of exsurge's single document the way the booklet lifts them —
+ * see slide-systems.js and svg-slice.js.
+ *
+ * @param {string} pageSource one page, suggestions left in
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
+ */
+export async function renderGabcSlides(pageSource, settings, canvas) {
+    await ensureGabcFontsLoaded(settings);
+
+    const cut = softSegmentSources(pageSource, 'gabc');
+    const whole = await renderGabcToSvgMarkup(cut.whole, settings, canvas.width);
+    const slide = gabcWholeSlide(whole, canvas);
+
+    if (!slide.overflows) { return [slide]; }
+
+    const markups = [];
+
+    if (cut.segments.length > 1) {
+        for (const segment of cut.segments) {
+            markups.push(await renderGabcToSvgMarkup(segment, settings, canvas.width));
+        }
+    } else {
+        markups.push(whole);
+    }
+
+    return systemSlides(markups.map((markup) => sliceRenderedSvg(markup, '.chantLine', measuringHost())), canvas);
+}
+
+function gabcWholeSlide(markup, canvas) {
+    const svg = parseSvg(markup);
 
     if (svg === null) {
-        return { svg: emptySlide(canvas), overflows: false };
+        return { svg: emptySlide(canvas), overflows: false, autoSplit: false };
     }
 
     const contentHeight = parseFloat(svg.getAttribute('height')) || 0;
@@ -122,6 +164,7 @@ export async function renderGabcSlide(pageSource, settings, canvas) {
     return {
         svg: frameSlide(svg, canvas),
         overflows: contentHeight > canvas.height + SLIDE_FIT_TOLERANCE,
+        autoSplit: false,
     };
 }
 
@@ -190,15 +233,28 @@ export function gabcMixin() {
             const layoutWidth = isResponsive
                 ? Math.max(200, Math.round(renderWidth / renderScale))
                 : canvas.width;
-            const pages = this.splitPages(content, 'gabc', ratio);
             await ensureGabcFontsLoaded(this);
+            if (isFixed) {
+                // The slides are engraved by renderGabcSlides above, the one copy
+                // of that code a projection also draws, so a page that does not
+                // fit comes to the same slides here as it will on the wall.
+                const slides = [];
+                for (const pageSource of splitRatioPages(content, 'gabc', ratio, true)) {
+                    try {
+                        slides.push(...await renderGabcSlides(pageSource, this, canvas));
+                    } catch (e) {
+                        console.error('[score-editor] exsurge error:', e);
+                    }
+                }
+                if (this.$refs.preview === container && this.localContent === content) {
+                    this.placePreviewSlides(container, slides, 'gabc', ratio);
+                }
+                return;
+            }
+            const pages = this.splitPages(content, 'gabc', ratio);
             const pageEls = pages.map((_, idx) => {
                 const pageEl = document.createElement('div');
-                if (isFixed) {
-                    this.applyProjectorFrame(pageEl, ratio);
-                    pageEl.style.maxWidth = '100%';
-                    pageEl.style.minWidth = '0';
-                } else if (isResponsive) {
+                if (isResponsive) {
                     pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
                     pageEl.style.width = '100%';
                     pageEl.style.maxWidth = '100%';
@@ -211,42 +267,31 @@ export function gabcMixin() {
             });
             pages.forEach((pageSource, idx) => {
                 const pageEl = pageEls[idx];
-                const engraved = isFixed
-                    // The slide is engraved by renderGabcSlide above, which is
-                    // the one copy of that code a projection also draws.
-                    ? renderGabcSlide(pageSource, this, canvas)
-                    : renderGabcToSvgMarkup(pageSource, this, layoutWidth).then((markup) => {
-                        const svg = parseSvg(markup);
-                        if (svg === null) { return { svg: null, overflows: false }; }
-                        const contentHeight = parseFloat(svg.getAttribute('height')) || 0;
-                        svg.setAttribute('viewBox', '0 0 ' + layoutWidth + ' ' + contentHeight);
-                        svg.setAttribute('width', '100%');
-                        svg.removeAttribute('height');
-                        svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
-                        svg.style.display = 'block';
-                        svg.style.overflow = 'hidden';
-                        svg.style.width = '100%';
-                        svg.style.maxWidth = 'none';
-                        return { svg, overflows: false };
-                    });
+                const engraved = renderGabcToSvgMarkup(pageSource, this, layoutWidth).then((markup) => {
+                    const svg = parseSvg(markup);
+                    if (svg === null) { return { svg: null }; }
+                    const contentHeight = parseFloat(svg.getAttribute('height')) || 0;
+                    svg.setAttribute('viewBox', '0 0 ' + layoutWidth + ' ' + contentHeight);
+                    svg.setAttribute('width', '100%');
+                    svg.removeAttribute('height');
+                    svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+                    svg.style.display = 'block';
+                    svg.style.overflow = 'hidden';
+                    svg.style.width = '100%';
+                    svg.style.maxWidth = 'none';
+                    return { svg };
+                });
 
-                engraved.then(({ svg, overflows }) => {
+                engraved.then(({ svg }) => {
                     if (svg !== null) {
-                        if (isFixed) {
-                            pageEl.replaceChildren(svg);
-                        } else {
-                            const zoomFrame = document.createElement('div');
-                            zoomFrame.style.width = renderWidth + 'px';
-                            zoomFrame.style.maxWidth = 'none';
-                            pageEl.replaceChildren(zoomFrame);
-                            zoomFrame.appendChild(svg);
-                        }
-                    }
-                    if (overflows) {
-                        this.appendClipWarning(pageEl);
+                        const zoomFrame = document.createElement('div');
+                        zoomFrame.style.width = renderWidth + 'px';
+                        zoomFrame.style.maxWidth = 'none';
+                        pageEl.replaceChildren(zoomFrame);
+                        zoomFrame.appendChild(svg);
                     }
                     this.hasPages = true;
-                    this.addPageControls(pageEl, idx + 1, pages.length, 'gabc', { fullscreen: isFixed, ratio });
+                    this.addPageControls(pageEl, idx + 1, pages.length, 'gabc', { fullscreen: false, ratio });
                 }).catch((e) => {
                     console.error('[score-editor] exsurge error:', e);
                 });

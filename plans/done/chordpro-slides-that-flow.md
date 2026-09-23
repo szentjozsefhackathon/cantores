@@ -207,7 +207,9 @@ right when the list is longer than the author's break count.
 
 - **`%pagebreak?` for ABC, GABC and Aretino.** The original reason stands
   unchanged: each engine reports overflow differently, and each would need its
-  layout re-run against the answer.
+  layout re-run against the answer. *Since:* done in
+  `plans/done/engraved-slides-that-flow.md`, by cutting between the staff
+  systems each engine already hands the booklet.
 - **Multi-column chord sheets on a slide.** `CHORDPRO_RATIO_DEFAULTS` already
   pins `chordproColumns: 1` for every projector ratio — "a second column on a
   projector is a second thing to find" — so a page's rows are packed down one

@@ -80,6 +80,12 @@
                 <flux:sidebar.item icon="list-music" :href="route('my-music-plans')" :current="request()->routeIs('my-music-plans')" wire:navigate>
                     Saját énekrendek
                 </flux:sidebar.item>
+                {{-- One entry for both: a booklet and a projection are the same
+                     service seen from opposite sides, and they are found
+                     together, by the service they were made for. --}}
+                <flux:sidebar.item icon="book-open" :href="route('plan-documents')" :current="request()->routeIs('plan-documents', 'booklets.*', 'projections.*', 'projection-screen', 'projection-remote', 'projection-remote.*')" wire:navigate>
+                    {{ __('Booklets & Projections') }}
+                </flux:sidebar.item>
             </flux:sidebar.group>
             <flux:sidebar.group heading="Énektár">
                 <flux:sidebar.item icon="music" :href="route('musics')" :current="request()->routeIs('musics')" wire:navigate>
@@ -104,12 +110,6 @@
                 </flux:sidebar.item>
                 <flux:sidebar.item icon="folder" :href="route('folders')" :current="request()->routeIs('folders', 'folders.*')" wire:navigate>
                     {{ __('My Folders') }}
-                </flux:sidebar.item>
-                {{-- One entry for both: a booklet and a projection are the same
-                     service seen from opposite sides, and they are found
-                     together, by the service they were made for. --}}
-                <flux:sidebar.item icon="book-open" :href="route('plan-documents')" :current="request()->routeIs('plan-documents', 'booklets.*', 'projections.*', 'projection-screen', 'projection-remote', 'projection-remote.*')" wire:navigate>
-                    {{ __('Booklets & Projections') }}
                 </flux:sidebar.item>
             </flux:sidebar.group>
             @if(auth()->check() && auth()->user()->isEditor)

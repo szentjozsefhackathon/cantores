@@ -1,5 +1,5 @@
 import { abcDiagnostics } from '@cantoreshu/abc2svg-editor/lint';
-import { PAGE_BREAK, SOFT_PAGE_BREAK, applyConditionalBlocks, headerEndIndex, splitPages } from './score-editor-pages.js';
+import { PAGE_BREAK, SOFT_PAGE_BREAK, applyConditionalBlocks, headerEndIndex, softSegmentRanges, splitPages } from './score-editor-pages.js';
 
 /**
  * Where each character of the text abc2svg engraves came from in the editor.
@@ -120,10 +120,11 @@ export function mappedLines(mapped) {
  * @param {MappedSource} mapped
  * @param {string} format
  * @param {string} ratio
+ * @param {boolean} [keepSoft] see splitPages
  * @return {MappedSource[]}
  */
-export function splitPagesMapped(mapped, format, ratio) {
-    const pages = splitPages(mapped.text, format, ratio);
+export function splitPagesMapped(mapped, format, ratio, keepSoft = format === 'chordpro') {
+    const pages = splitPages(mapped.text, format, ratio, keepSoft);
     const sourceLines = applyConditionalBlocks(mapped.text, ratio, format).split('\n');
     const lineStarts = [];
     let offset = 0;
@@ -171,6 +172,21 @@ export function splitPagesMapped(mapped, format, ratio) {
 
         return { text: page, origin };
     });
+}
+
+/**
+ * softSegmentSources, for a mapped text: the same cuts, each piece still knowing
+ * where its characters came from.
+ *
+ * @param {MappedSource} mapped one page from splitPagesMapped
+ * @param {string} format
+ * @return {{whole: MappedSource, segments: MappedSource[]}}
+ */
+export function softSegmentsMapped(mapped, format) {
+    const pick = (ranges) => concatMapped(...ranges.map(([from, to]) => sliceMapped(mapped, from, to)));
+    const { whole, segments } = softSegmentRanges(mapped.text, format);
+
+    return { whole: pick(whole), segments: segments.map(pick) };
 }
 
 /**

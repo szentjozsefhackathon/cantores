@@ -33,9 +33,12 @@ it('waits for the lyric face before engraving a slide', function (string $file, 
     expect($body)->toContain($wait)
         ->and(strpos($body, $wait))->toBeLessThan(strpos($body, $engine));
 })->with([
-    'abc' => ['score-editor-abc.js', 'renderAbcSlide', 'await ensureAbcFontsLoaded(settings);', 'renderAbcToSvgMarkup('],
+    'abc' => ['score-editor-abc.js', 'renderAbcSlide', 'await ensureAbcFontsLoaded(settings);', 'engraveAbcLines('],
+    'abc slides' => ['score-editor-abc.js', 'renderAbcSlides', 'await ensureAbcFontsLoaded(settings);', 'engraveAbcLines('],
     'gabc' => ['score-editor-gabc.js', 'renderGabcSlide', 'await ensureGabcFontsLoaded(settings);', 'renderGabcToSvgMarkup('],
-    'aretino' => ['score-editor-aretino.js', 'renderAretinoSlide', 'await ensureFontsLoaded(', 'renderAretino('],
+    'gabc slides' => ['score-editor-gabc.js', 'renderGabcSlides', 'await ensureGabcFontsLoaded(settings);', 'renderGabcToSvgMarkup('],
+    'aretino' => ['score-editor-aretino.js', 'renderAretinoSlide', 'await ensureFontsLoaded(', 'engraveAretinoSlide('],
+    'aretino slides' => ['score-editor-aretino.js', 'renderAretinoSlides', 'await ensureFontsLoaded(', 'engraveAretinoSlide('],
     'chordpro' => ['score-editor-chordpro.js', 'renderChordproSlides', 'await ensureFontsLoaded(', 'chordproSlidePages('],
 ]);
 
@@ -45,8 +48,9 @@ it('waits for the lyric face before engraving a slide', function (string $file, 
  */
 it('awaits every engraved slide through the projection dispatcher', function () {
     $callers = [
-        'score-editor-abc.js' => 'await renderAbcSlide(',
-        'score-editor-aretino.js' => 'await renderAretinoSlide(',
+        'score-editor-abc.js' => 'await renderAbcSlides(',
+        'score-editor-gabc.js' => 'await renderGabcSlides(',
+        'score-editor-aretino.js' => 'await renderAretinoSlides(',
     ];
 
     foreach ($callers as $file => $call) {
@@ -54,5 +58,6 @@ it('awaits every engraved slide through the projection dispatcher', function () 
     }
 
     expect(file_get_contents(resource_path('js/projection-render.js')))
-        ->toContain('export async function renderRatioPage(');
+        ->toContain('export async function renderRatioPage(')
+        ->toContain('export async function renderRatioPageSlides(');
 });

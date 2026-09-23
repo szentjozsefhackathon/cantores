@@ -5,7 +5,7 @@ import { markupRuns, runsText } from './chordpro-markup.js';
 import { chordStringsOf, displayChord, displayChordsInHtml, displayChordsInText } from './chordpro-notation.js';
 import { splitSoftSegments } from './score-editor-pages.js';
 import { stripSectionMarkers } from './score-sections.js';
-import { packSoftPages } from './soft-pages.js';
+import { packSoftPages, startsAtAutomaticCut } from './soft-pages.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide, paintSlide } from './slide-frame.js';
@@ -510,7 +510,7 @@ export async function chordproSlidePages(pageSource, { german, transpose, hideCh
  *
  * @param {import('./slide-palette.js').SlidePalette} [palette] the deck's ink; the dark theme where none is
  *        given, which is what the score editor's own slide preview gets
- * @returns {Promise<Array<{svg: SVGElement, overflows: boolean}>>} never empty
+ * @returns {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
  */
 export async function renderChordproSlides(pageSource, settings, canvas, palette = slidePalette()) {
     const fontFamily = safeFontFamily(settings.chordproFontFamily);
@@ -531,14 +531,14 @@ export async function renderChordproSlides(pageSource, settings, canvas, palette
     });
 
     if (pages.length === 0) {
-        return [{ svg: emptySlide(canvas, palette.background), overflows: false }];
+        return [{ svg: emptySlide(canvas, palette.background), overflows: false, autoSplit: false }];
     }
 
-    return pages.map((page) => chordproSlide(page, canvas, palette));
+    return pages.map((page, index) => chordproSlide(page, canvas, palette, startsAtAutomaticCut(page, index)));
 }
 
 /** One of those slides, its rows stacked down from the top margin. */
-function chordproSlide(page, canvas, palette) {
+function chordproSlide(page, canvas, palette, autoSplit) {
     const fragments = [];
     const placements = [];
     let y = 0;
@@ -558,6 +558,7 @@ function chordproSlide(page, canvas, palette) {
     return {
         svg: paintSlide(frameSlide(svg, canvas), canvas, palette?.background),
         overflows: page.height > canvas.height + SLIDE_FIT_TOLERANCE,
+        autoSplit,
     };
 }
 
@@ -676,19 +677,7 @@ export function chordproMixin() {
                 }
             }
 
-            slides.forEach(({ svg, overflows }, idx) => {
-                const pageEl = document.createElement('div');
-                this.applyProjectorFrame(pageEl, ratio);
-                container.appendChild(pageEl);
-                pageEl.replaceChildren(svg);
-
-                if (overflows) {
-                    this.appendClipWarning(pageEl);
-                }
-
-                this.hasPages = true;
-                this.addPageControls(pageEl, idx + 1, slides.length, 'chordpro', { fullscreen: true, ratio });
-            });
+            this.placePreviewSlides(container, slides, 'chordpro', ratio);
         },
 
         /**

@@ -353,6 +353,24 @@ képaránynál tör, a számozott változat csak a megadott aránynál.
 | `%pagebreak169` | 16:9 vetítésben |
 | `%pagebreak43` | 4:3 vetítésben |
 | `%pagebreak11` | 1:1 vetítésben |
+| `%pagebreak?` | javaslat: csak akkor kezd új diát, ha a kotta másképp nem férne ki |
+| `%pagebreak169?` | ugyanez, egyetlen képarányra (`43`, `11` ugyanígy) |
+
+Ha egy oldal így sem fér ki a diára, az alja nem vész el: ami nem fér ki, az a
+következő diára kerül. A vágás sorrendje mindig ez:
+
+1. a `%pagebreak` sorok — ezek mindig vágnak;
+2. ami így is hosszú, a saját `%pagebreak?` javaslatainál törik, és csak annyinál,
+   amennyi feltétlenül kell;
+3. ami még mindig nem fér ki, két kottasor között törik, minden diát megtöltve,
+   mielőtt a következő elkezdődne.
+
+Ha a szerkesztő maga vágott, a dia fölött kék tájékoztató jelzi, a vetítés
+szerkesztőjében pedig „Automatikus vágás” felirat a dia száma mellett. Ez nem
+hiba, csak jelzés: a gép a sorok végénél vág, nem a dallam tagolásánál, és egy
+kézzel beírt `%pagebreak169` (vagy a képarányhoz illő társa) oda teszi a törést,
+ahová a zene kívánja. Figyelmeztetés csak akkor marad, ha már egyetlen kottasor
+is magasabb a diánál — ott kisebb kottaméret a megoldás. Egy javaslatnál kezdődő új dián a cím nem ismétlődik.
 
 ```abc
 X:1

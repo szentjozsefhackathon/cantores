@@ -1,5 +1,5 @@
 import { onAlpineInit } from './alpine-init.js';
-import { splitPages as splitRatioPages } from './score-editor-pages.js';
+import { ratioSuffix, splitPages as splitRatioPages } from './score-editor-pages.js';
 import { slideCanvas } from './slide-frame.js';
 import { abcMixin, applyAbcStrokeWidths, applyAbcSvgStyle, buildAbcPreamble, ensureAbcFontsLoaded, ensureAbcSvgViewBox, hungarianChordsToAbc, normalizeAbcPageWidth, renderAbcToSvgMarkup } from './score-editor-abc.js';
 import { ensureGabcFontsLoaded, gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
@@ -188,6 +188,7 @@ onAlpineInit(() => {
         localContent: '',
         isContentUserModified: false,
         clippedWarningText: config.clippedWarningText ?? '',
+        autoSplitText: config.autoSplitText ?? '',
         clipboardNotSupported: config.clipboardNotSupported ?? '',
         imageCopied: config.imageCopied ?? '',
         failedToCopy: config.failedToCopy ?? '',
@@ -1175,6 +1176,62 @@ onAlpineInit(() => {
 
         splitPages(content, format, ratio) {
             return splitRatioPages(content, format, ratio);
+        },
+
+        /**
+         * A score's slides at a projector ratio, each in a frame the shape of
+         * the screen, with what the reader needs to know about each one.
+         *
+         * Every slide is drawn before any is placed, so the page controls can
+         * label a slide "3 / 7" with the number the reader will actually page
+         * through — a page that does not fit comes to more slides than the
+         * source has page breaks.
+         */
+        placePreviewSlides(container, slides, format, ratio) {
+            slides.forEach(({ svg, overflows, autoSplit }, idx) => {
+                if (autoSplit) {
+                    this.appendAutoSplitInfo(container, ratio);
+                }
+
+                const pageEl = document.createElement('div');
+                this.applyProjectorFrame(pageEl, ratio);
+                container.appendChild(pageEl);
+                pageEl.replaceChildren(svg);
+
+                if (overflows) {
+                    this.appendClipWarning(pageEl);
+                }
+
+                this.hasPages = true;
+                this.addPageControls(pageEl, idx + 1, slides.length, format, { fullscreen: true, ratio });
+            });
+        },
+
+        /**
+         * Said above a slide that was cut off on its own, because the score ran
+         * past the bottom of the one before it.
+         *
+         * Information rather than a warning: nothing is lost, but the cut falls
+         * wherever the systems happened to end, and a break written by hand for
+         * this ratio is how the author puts it where the music wants it. Pages
+         * that only read a score leave the text out and get nothing.
+         */
+        appendAutoSplitInfo(container, ratio) {
+            if (!this.autoSplitText) { return; }
+
+            const info = document.createElement('div');
+            info.className = 'mb-2 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200';
+            info.setAttribute('role', 'note');
+
+            const icon = document.createElement('span');
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = 'ⓘ';
+
+            const text = document.createElement('span');
+            text.textContent = this.autoSplitText.replace(':marker', `%pagebreak${ratioSuffix(ratio) ?? ''}`);
+
+            info.append(icon, text);
+            container.appendChild(info);
         },
 
         appendClipWarning(pageEl) {

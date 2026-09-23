@@ -1,17 +1,16 @@
 /**
  * Cutting a screen into the screens it actually needs.
  *
- * The counterpart of score-editor-pages.js, for everything whose height is known
- * here rather than reported by an engine. An engraved score is cut where its
- * author said and nowhere else, because an engraving that ran over would be a
- * wrong engraving; the rest is different — nobody writing a rubric or a chord
- * sheet counts lines against a 16:9 projector, and the answer to one that did
- * not fit used to be to set the whole thing smaller until it did, or to cut it
- * off at the bottom edge, which is how a screen ends up unreadable from the back
- * of the church or short of its last verse.
+ * The counterpart of score-editor-pages.js, for everything cut by its height
+ * rather than only where its author said. Nobody writing a rubric, a chord sheet
+ * or a hymn counts lines against a 16:9 projector, and the answer to one that
+ * did not fit used to be to set the whole thing smaller until it did, or to cut
+ * it off at the bottom edge, which is how a screen ends up unreadable from the
+ * back of the church or short of its last verse.
  *
- * Two callers, the same four tiers: a row of words (projection-deck.js) and a
- * chord sheet on a slide (score-editor-chordpro.js).
+ * Three callers, the same four tiers: a row of words (projection-deck.js), a
+ * chord sheet on a slide (score-editor-chordpro.js), and an engraved score cut
+ * between its staff systems (slide-systems.js).
  *
  * So the author is given breaks of two strengths and they are spent in order,
  * weakest reason last:
@@ -198,6 +197,24 @@ function cutAt(rows, strength) {
     }
 
     return runs.filter((run) => run.length > 0);
+}
+
+/**
+ * Whether a packed page begins where nobody asked for a cut.
+ *
+ * The first page begins where the source does. Any other begins either at a
+ * break the author wrote — `%pagebreak`, or a `%pagebreak?` the packer spent —
+ * which its first row carries, or at a cut the packer made on its own.
+ *
+ * @param {SoftPage} page
+ * @param {number} index its place in the list
+ */
+export function startsAtAutomaticCut(page, index) {
+    if (index === 0) { return false; }
+
+    const first = page.rows?.[0]?.breakBefore;
+
+    return first !== 'hard' && first !== 'soft';
 }
 
 /**

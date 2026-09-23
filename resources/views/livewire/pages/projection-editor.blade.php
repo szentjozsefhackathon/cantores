@@ -25,7 +25,9 @@ resources/js/projection-editor.js
         // A deck has no paper, and the preview that shows one of its scores on
         // its own is a page of music. See Booklet::previewGeometry().
         'previewGeometry' => \App\Models\Booklet::previewGeometry(),
-        'overflowText' => __('This slide is fuller than the screen — make it smaller, or split it with a %pagebreak.'),
+        'overflowText' => __('A single line of this score is taller than the screen — make it smaller.'),
+        'autoSplitLabel' => __('Auto split'),
+        'autoSplitText' => __('The score did not fit on the previous slide, so it was split here automatically. Put a :marker line in the score where you want it to break.'),
         'skipText' => __('Leave this slide out of the projection'),
         'unskipText' => __('Show this slide again'),
         'skippedText' => __('Skipped'),

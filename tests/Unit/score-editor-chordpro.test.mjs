@@ -18,6 +18,7 @@ import {
     stripMarkup,
 } from '../../resources/js/score-editor-chordpro.js';
 import { slidePalette } from '../../resources/js/slide-palette.js';
+import { startsAtAutomaticCut } from '../../resources/js/soft-pages.js';
 
 // Half the font size per character, as in booklet-chordpro's own tests: real
 // font metrics would make the arithmetic unreadable without testing anything
@@ -582,4 +583,20 @@ test('a lit room gets the same sheet in ink', async () => {
 
     assert.match(drawn, /fill="#000000"/);
     assert.match(drawn, /fill="#1d4ed8"/);
+});
+
+/*
+ * The editors point at a slide the sheet was cut into on its own, so the author
+ * can see where a `%pagebreak169` would have cut it better. A cut the author
+ * suggested is theirs, and is not pointed at.
+ */
+test('a cut at the author\'s suggestion is theirs, and a cut made anyway is automatic', async () => {
+    const suggested = await slidePages('[C]Egy\n%pagebreak?\n[G]Kettő\n', ROW + 10);
+    const unasked = await slidePages('[C]Egy\n\n[G]Kettő\n', ROW + 10);
+
+    assert.deepEqual(rowCounts(suggested), [1, 1]);
+    assert.deepEqual(suggested.map(startsAtAutomaticCut), [false, false]);
+
+    assert.deepEqual(rowCounts(unasked), [1, 1]);
+    assert.deepEqual(unasked.map(startsAtAutomaticCut), [false, true]);
 });

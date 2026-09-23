@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { opticalLyricSizePt, ptToPx } from '../../resources/js/booklet-geometry.js';
 import { CHORDPRO_RATIO_DEFAULTS, chordproMixin } from '../../resources/js/score-editor-chordpro.js';
-import { applyConditionalBlocks, splitPages } from '../../resources/js/score-editor-pages.js';
+import { applyConditionalBlocks, softSegmentSources, splitPages } from '../../resources/js/score-editor-pages.js';
 import { formatDefaults } from '../../resources/js/score-editor-settings.js';
 import { fitIntoBox, isSlideRatio, ratioPageSources, renderRatioPage, slideCanvas, slideRatios } from '../../resources/js/projection-render.js';
 
@@ -172,10 +172,11 @@ test('an engraved page is one slide and a chord sheet page is not asked to be', 
 
 /*
  * A suggestion cuts nothing here, because whether it is taken is not known until
- * the page has been laid out. ChordPro is the only format laid out in this
- * repository, so it is the only one given the chance to decide: its pages keep
- * the marker, spelled one way whatever suffix it was written with, and the three
- * engraved formats have it stripped as before.
+ * the page has been laid out. A chord sheet at a fixed ratio is only ever drawn
+ * as slides, so its pages always keep the marker, spelled one way whatever
+ * suffix it was written with. The engraved formats keep it only when the caller
+ * is about to draw slides and says so — an incipit or an export handed the
+ * marker would engrave it.
  */
 test('a suggested break is left in a chord sheet page and taken out of everything else', () => {
     const sheet = '[C]Első sor\n%pagebreak?\n[Am]Má-so-dik sor\n';
@@ -334,4 +335,46 @@ test('the block for this ratio is activated in a chord sheet too', () => {
     assert.ok(!out.includes('%['));
     assert.ok(!out.includes('%]'));
     assert.match(out, /\[G\]csak tizenhat kilencben/);
+});
+
+test('an engraved page keeps its suggestions only for a caller drawing slides', () => {
+    const chant = 'name: Teszt;\n%%\n(c4) A(f)ve(g)\n%pagebreak43?\n(c4) Ma(h)ri(g)a(f)\n';
+
+    assert.ok(!splitPages(chant, 'gabc', '4/3')[0].includes('pagebreak'), 'stripped by default');
+    assert.match(splitPages(chant, 'gabc', '4/3', true)[0], /\n%pagebreak\?\n/);
+    assert.ok(!splitPages(chant, 'gabc', '16/9', true)[0].includes('pagebreak'), 'another shape drops it');
+    assert.ok(!splitPages(chant, 'gabc', 'paper', true)[0].includes('pagebreak'), 'paper has no pages');
+
+    assert.match(ratioPageSources('gabc', chant, {}, '4/3')[0], /\n%pagebreak\?\n/, 'a projection keeps it');
+});
+
+/*
+ * The pieces a suggestion offers, and the page it leaves when it is not taken.
+ * Every piece after the first is a source of its own, so it carries the header
+ * again — an ABC piece without its K: line would not parse at all.
+ */
+test('a page cut at its suggestions gives each piece the header again', () => {
+    const page = 'X:1\nT:Teszt\nK:F\nF G|\n%pagebreak?\nA B|\n%pagebreak?\nc d|\n';
+    const { whole, segments } = softSegmentSources(page, 'abc');
+
+    assert.equal(whole, 'X:1\nT:Teszt\nK:F\nF G|\nA B|\nc d|\n');
+    assert.deepEqual(segments, [
+        'X:1\nT:Teszt\nK:F\nF G|\n',
+        'X:1\nT:Teszt\nK:F\nA B|\n',
+        'X:1\nT:Teszt\nK:F\nc d|\n',
+    ]);
+});
+
+test('a page with no suggestion is one piece, and itself', () => {
+    const page = 'name: Teszt;\n%%\n(c4) A(f)ve(g)\n';
+    const { whole, segments } = softSegmentSources(page, 'gabc');
+
+    assert.equal(whole, page);
+    assert.deepEqual(segments, [page]);
+});
+
+test('a format without a header cuts its pieces bare', () => {
+    const { segments } = softSegmentSources('c: f\nn: fg\n%pagebreak?\nn: hg\n', 'chordpro');
+
+    assert.deepEqual(segments, ['c: f\nn: fg\n', 'n: hg\n']);
 });

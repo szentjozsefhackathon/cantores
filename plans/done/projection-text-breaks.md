@@ -175,8 +175,9 @@ today and should not start.
 
   *Since:* ChordPro went first, because it turned out not to be one of the four —
   it is engraved here, a row at a time, so its overflow is known before anything
-  is drawn. See `plans/chordpro-slides-that-flow.md`; the three engraved formats
-  still wait for the reason given above.
+  is drawn. See `plans/chordpro-slides-that-flow.md`. The three engraved formats
+  followed once it turned out every engine can hand its music over one staff
+  system at a time — see `plans/done/engraved-slides-that-flow.md`.
 
 ## Verification
 

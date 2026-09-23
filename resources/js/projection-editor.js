@@ -3,6 +3,7 @@ import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacin
 import { SPLIT_DEFAULT, beginSplitDrag, clampSplitPercent } from './booklet-split.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck, slideCounts } from './projection-deck.js';
 import { inheritedSlideSetting, resolveSlideSettings, fileSlideSettings, textSlideSettings } from './projection-settings.js';
+import { ratioSuffix } from './score-editor-pages.js';
 import { steppedValue, movesSetting } from './booklet-settings.js';
 import './score-preview.js';
 
@@ -93,6 +94,8 @@ onAlpineInit(() => {
             excluded: plainExclusions(config.excluded),
 
             overflowText: config.overflowText ?? '',
+            autoSplitText: config.autoSplitText ?? '',
+            autoSplitLabel: config.autoSplitLabel ?? '',
             skipText: config.skipText ?? '',
             unskipText: config.unskipText ?? '',
             skippedText: config.skippedText ?? '',
@@ -243,6 +246,9 @@ onAlpineInit(() => {
                         number.title = this.overflowText ?? '';
                     }
                     caption.appendChild(number);
+                    if (slide.autoSplit && !skipped) {
+                        caption.appendChild(this.autoSplitNote());
+                    }
                     caption.appendChild(this.skipButton(slide, skipped));
 
                     figure.appendChild(caption);
@@ -277,6 +283,24 @@ onAlpineInit(() => {
                 button.addEventListener('click', () => this.toggleSkip(slide));
 
                 return button;
+            },
+
+            /**
+             * Said beside a slide the deck cut off on its own, because the score
+             * ran past the bottom of the one before it.
+             *
+             * Nothing is wrong with it — that is the point of the cut — but the
+             * packer only knows where the systems end, not where the phrase
+             * does, and a `%pagebreak169` in the score is how the author says so.
+             */
+            autoSplitNote() {
+                const note = document.createElement('span');
+
+                note.className = 'projection-slide-auto-split';
+                note.textContent = this.autoSplitLabel;
+                note.title = this.autoSplitText.replace(':marker', `%pagebreak${ratioSuffix(this.geometry.ratio) ?? ''}`);
+
+                return note;
             },
 
             isSkipped(slide) {

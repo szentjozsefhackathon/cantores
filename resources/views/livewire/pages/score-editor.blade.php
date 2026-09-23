@@ -5,6 +5,7 @@ resources/js/score-editor.js
 <div class="py-8" x-data="scoreEditor({
         scoreSettings: @js($settings ?: (object) []),
         clippedWarningText: @js(__('Content does not fit on page')),
+        autoSplitText: @js(__('The score did not fit on the previous slide, so it was split here automatically. Put a :marker line in the score where you want it to break.')),
         clipboardNotSupported: @js(__('Clipboard not supported in this browser')),
         imageCopied: @js(__('Image copied to clipboard')),
         failedToCopy: @js(__('Failed to copy image')),

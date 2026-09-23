@@ -1,8 +1,8 @@
-import { renderAbcSlide, hungarianChordsToAbc } from './score-editor-abc.js';
-import { renderAretinoSlide } from './score-editor-aretino.js';
+import { renderAbcSlide, renderAbcSlides, hungarianChordsToAbc } from './score-editor-abc.js';
+import { renderAretinoSlide, renderAretinoSlides } from './score-editor-aretino.js';
 import { renderChordproSlides } from './score-editor-chordpro.js';
-import { renderGabcSlide } from './score-editor-gabc.js';
-import { splitPages } from './score-editor-pages.js';
+import { renderGabcSlide, renderGabcSlides } from './score-editor-gabc.js';
+import { softSegmentSources, splitPages } from './score-editor-pages.js';
 import { arrangeSections } from './score-sections.js';
 import { slideCanvas } from './slide-frame.js';
 import { slidePalette } from './slide-palette.js';
@@ -51,21 +51,22 @@ export function ratioPageSources(format, content, settings, ratio, sections = nu
         source = hungarianChordsToAbc(source);
     }
 
-    return splitPages(source, format, ratio);
+    // The suggestions are left in: each renderer below decides whether to spend
+    // them, and takes them out of whatever it hands its engine.
+    return splitPages(source, format, ratio, true);
 }
 
 /**
- * Engrave one page of one score onto its slide.
+ * Engrave one page of one score onto exactly one slide.
  *
- * The three engraved formats only: ChordPro is not engraved by an engine and
- * does not answer one page with one slide, so it goes through
- * renderRatioPageSlides below.
+ * The three engraved formats only, and only where one slide is what is wanted
+ * whatever happens: a projection goes through renderRatioPageSlides below,
+ * which cuts a page that does not fit rather than clipping it.
  *
  * Comes back framed and ready to drop into a box of that ratio, and saying
  * whether the music fitted — each engine reports running out of room in its own
  * way, and each format's renderer knows which. Nothing here shrinks an
- * engraving to make it fit: that answer belongs to the author, who gives it
- * with a smaller size or another `%pagebreak`.
+ * engraving to make it fit.
  *
  * @param {string} format gabc | abc | aretino
  * @param {string} pageSource one entry from ratioPageSources()
@@ -80,40 +81,50 @@ export async function renderRatioPage(format, pageSource, settings, ratio) {
         throw new Error(`[projection] ${ratio} is not a slide ratio`);
     }
 
-    if (format === 'abc') { return renderAbcSlide(pageSource, settings, canvas); }
-    if (format === 'gabc') { return renderGabcSlide(pageSource, settings, canvas); }
-    if (format === 'aretino') { return renderAretinoSlide(pageSource, settings, canvas, ratio); }
+    const source = softSegmentSources(pageSource, format).whole;
+
+    if (format === 'abc') { return renderAbcSlide(source, settings, canvas); }
+    if (format === 'gabc') { return renderGabcSlide(source, settings, canvas); }
+    if (format === 'aretino') { return renderAretinoSlide(source, settings, canvas, ratio); }
 
     throw new Error(`[projection] ${format} cannot be engraved to a slide`);
 }
 
 /**
- * The slides one page comes to — which is one of them, except for ChordPro.
+ * The slides one page comes to.
  *
- * An engraved page is one slide by definition: it is the size its engine made
- * it, and running over is the author's business. A chord sheet is words, so a
- * page of it that will not fit is broken into as many slides as it needs rather
- * than cut off at the bottom edge — see renderChordproSlides.
+ * A page that fits is one slide, exactly as it has always been drawn. One that
+ * does not is not cut off at the bottom edge: the author's own answer is spent
+ * first — `%pagebreak`, then `%pagebreak?` — and whatever is still too tall is
+ * cut between staff systems, or for a chord sheet between its rows, into as
+ * many slides as it needs. See slide-systems.js and renderChordproSlides.
  *
- * The palette goes the same way, and no further: a chord sheet is words and
+ * A slide that begins at a cut nobody wrote carries `autoSplit`, so the editors
+ * can point at it: a `%pagebreak169` placed by hand usually cuts better. What is
+ * still `overflows` is the one case no cut can answer — a single system taller
+ * than the screen — and nothing here shrinks anything to make it fit.
+ *
+ * The palette goes to a chord sheet and no further: a chord sheet is words and
  * takes the deck's ink, and the three engines draw their own black on their own
  * white whatever the deck says.
  *
+ * @param {string} pageSource one entry from ratioPageSources(), suggestions left in
  * @param {import('./slide-palette.js').SlidePalette} [palette]
- * @return {Promise<Array<{svg: SVGElement, overflows: boolean}>>} never empty
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
  */
 export async function renderRatioPageSlides(format, pageSource, settings, ratio, palette) {
-    if (format !== 'chordpro') {
-        return [await renderRatioPage(format, pageSource, settings, ratio)];
-    }
-
     const canvas = slideCanvas(format, ratio);
 
     if (canvas === null) {
         throw new Error(`[projection] ${ratio} is not a slide ratio`);
     }
 
-    return renderChordproSlides(pageSource, settings, canvas, palette ?? slidePalette());
+    if (format === 'chordpro') { return renderChordproSlides(pageSource, settings, canvas, palette ?? slidePalette()); }
+    if (format === 'abc') { return renderAbcSlides(pageSource, settings, canvas); }
+    if (format === 'gabc') { return renderGabcSlides(pageSource, settings, canvas); }
+    if (format === 'aretino') { return renderAretinoSlides(pageSource, settings, canvas, ratio); }
+
+    throw new Error(`[projection] ${format} cannot be engraved to a slide`);
 }
 
 /**
@@ -122,7 +133,7 @@ export async function renderRatioPageSlides(format, pageSource, settings, ratio,
  * @param {import('./slide-palette.js').SlidePalette} [palette] the deck's ink,
  *        for the one format that is words rather than an engraving
  * @param {number[]|null} [sections] the row's chosen section references
- * @return {Promise<Array<{svg: SVGElement, overflows: boolean}>>}
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>}
  */
 export async function renderRatioPages(format, content, settings, ratio, palette, sections = null) {
     const pages = await Promise.all(

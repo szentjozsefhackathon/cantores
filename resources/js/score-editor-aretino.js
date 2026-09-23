@@ -1,5 +1,8 @@
-import { renderAretino } from '@aretino-chant/core';
+import { renderAretino, splitRowSVGs } from '@aretino-chant/core';
+import { softSegmentSources, splitPages as splitRatioPages } from './score-editor-pages.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, fitSlide, parseSvg, viewBoxOf } from './slide-frame.js';
+import { systemSlides } from './slide-systems.js';
+import { svgHeight } from './svg-slice.js';
 import { gabcToAretino } from '@aretino-chant/gabc2aretino';
 import { guidoToAretino, guidoTextToAretino } from '@aretino-chant/guido2aretino';
 
@@ -52,14 +55,18 @@ export function aretinoProjectorOptions(ratio) {
 /**
  * One page of an Aretino chant engraved onto one projector slide.
  *
- * Aretino is the one engine that is told the box it is drawing into, so it
- * reports having run out of room differently from the other two: handed a
- * canvas height it holds that height and *widens* the viewBox instead — 960
- * becomes 1236 and the slide is no longer 16:9. Nothing is lost, but the music
- * is then letterboxed down to fit the screen, which is the same bad news the
- * other engines deliver by clipping. So the overflow test here is the width,
- * and the engine's own viewBox is kept rather than restated: rewriting it to
- * the canvas would crop the very music that grew.
+ * Aretino is the one engine that is told the box it is drawing into, and it
+ * answers running out of room in two ways. Handed a canvas height it holds that
+ * height: a chant taller than the canvas is cut off at the bottom by its own
+ * viewBox, and that is measured here by engraving it once more without the
+ * height, which is the only way to see how tall it would have been. A word
+ * running past the right edge *widens* the viewBox instead — 960 becomes 1236
+ * and the slide is no longer 16:9 — so the music is letterboxed down to fit the
+ * screen, and the engine's own viewBox is kept rather than restated: rewriting
+ * it to the canvas would crop the very music that grew. Either is `overflows`.
+ *
+ * renderAretinoSlides is what a projection asks, and cuts a page that is too
+ * tall between its staff rows instead.
  *
  * The lyric face is waited for first, for the reason ensureFontsLoaded()
  * explains: Aretino places every syllable at a measured width, and a face the
@@ -68,26 +75,102 @@ export function aretinoProjectorOptions(ratio) {
 export async function renderAretinoSlide(pageSource, settings, canvas, ratio) {
     await ensureFontsLoaded([settings.aretinoTextFont], Number(settings.aretinoLyricSize));
 
-    const zoom = Number(settings.aretinoZoom) > 0 ? Number(settings.aretinoZoom) / 100 : 1;
+    const height = aretinoContentHeight(engraveAretinoSlide(pageSource, settings, ratio, false));
 
-    const svg = parseSvg(renderAretino(pageSource, {
-        ...aretinoProjectorOptions(ratio),
+    return aretinoWholeSlide(pageSource, settings, canvas, ratio, height);
+}
+
+/**
+ * One page of an Aretino chant engraved onto the projector slides it needs.
+ *
+ * A page that fits is the one slide renderAretinoSlide draws. One too tall for
+ * it is engraved again with a clef on every row, and cut at its `%pagebreak?`
+ * suggestions and then between its staff rows, which splitRowSVGs hands over
+ * one document apiece — see slide-systems.js.
+ *
+ * @param {string} pageSource one page, suggestions left in
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
+ */
+export async function renderAretinoSlides(pageSource, settings, canvas, ratio) {
+    await ensureFontsLoaded([settings.aretinoTextFont], Number(settings.aretinoLyricSize));
+
+    const cut = softSegmentSources(pageSource, 'aretino');
+    const free = engraveAretinoSlide(cut.whole, settings, ratio, false);
+    const height = aretinoContentHeight(free);
+
+    if (height <= canvas.height + SLIDE_FIT_TOLERANCE) {
+        return [aretinoWholeSlide(cut.whole, settings, canvas, ratio, height)];
+    }
+
+    // Cut between rows, any row may open a slide, and a slide that opens on a
+    // staff with no clef cannot be sung from. The clef the projector hides on a
+    // repeated row is therefore drawn on every row of a page that is cut, as
+    // abc2svg and exsurge draw theirs.
+    const everyClef = { ...settings, aretinoHideRepeatClef: false };
+    const markups = cut.segments.map((segment) => engraveAretinoSlide(segment, everyClef, ratio, false));
+
+    return systemSlides(markups.map((markup) => aretinoRows(markup)), canvas);
+}
+
+/**
+ * How tall an engraving made without a canvas height came to — what the rows
+ * need, before any canvas pads them out.
+ *
+ * Read off the marker the renderer leaves after its last row where there is
+ * one, since the viewBox also counts whatever it grew upwards by.
+ *
+ * @param {string} markup from renderAretino, without `canvasHeight`
+ */
+export function aretinoContentHeight(markup) {
+    const end = String(markup ?? '').match(/<!--\s*aretino-rows-end\s+(-?[\d.]+)\s*-->/);
+
+    if (end) { return parseFloat(end[1]); }
+
+    return svgHeight(String(markup ?? ''));
+}
+
+/**
+ * The Aretino engraving of one source at one projector ratio.
+ *
+ * @param {boolean} fixedHeight hold the canvas height, as a slide is drawn; or
+ *        let the chant be as tall as it is, as it is measured and cut
+ */
+export function engraveAretinoSlide(source, settings, ratio, fixedHeight) {
+    const zoom = Number(settings.aretinoZoom) > 0 ? Number(settings.aretinoZoom) / 100 : 1;
+    const { canvasHeight, ...projector } = aretinoProjectorOptions(ratio);
+
+    return renderAretino(source, {
+        ...projector,
+        ...(fixedHeight ? { canvasHeight } : {}),
         zoom,
         staffSpaceMm: Number(settings.aretinoStaffSize) / 4.0,
         lyricSize: Number(settings.aretinoLyricSize),
         textFont: settings.aretinoTextFont,
         staffGap: Number(settings.aretinoStaffGap),
         hideRepeatClef: !!settings.aretinoHideRepeatClef,
-    }));
+    });
+}
+
+function aretinoWholeSlide(pageSource, settings, canvas, ratio, contentHeight) {
+    const svg = parseSvg(engraveAretinoSlide(pageSource, settings, ratio, true));
 
     if (svg === null) {
-        return { svg: emptySlide(canvas), overflows: false };
+        return { svg: emptySlide(canvas), overflows: false, autoSplit: false };
     }
 
     return {
         svg: fitSlide(svg),
-        overflows: viewBoxOf(svg).width > canvas.width + SLIDE_FIT_TOLERANCE,
+        overflows: viewBoxOf(svg).width > canvas.width + SLIDE_FIT_TOLERANCE
+            || contentHeight > canvas.height + SLIDE_FIT_TOLERANCE,
+        autoSplit: false,
     };
+}
+
+/** An engraving's staff rows, as systems a slide can be cut between. */
+function aretinoRows(markup) {
+    const rows = splitRowSVGs(markup) ?? [markup];
+
+    return rows.map((row) => ({ svg: row, height: svgHeight(row) }));
 }
 
 export function aretinoMixin() {
@@ -159,22 +242,33 @@ export function aretinoMixin() {
             const isResponsive = ratio === 'responsive';
             const isFixedRatio = !isPaper && !isResponsive; // '16/9', '4/3', '1/1'
 
-            const pages = this.splitPages(content, 'aretino', ratio);
             const virtualCanvas = this.getVirtualCanvasSize('aretino');
             const zoom = Number(this.aretinoZoom) / 100;
+
+            if (isFixedRatio) {
+                // The slides are engraved by the one copy of that code a
+                // projection also draws, so a page that does not fit comes to
+                // the same slides here as it will on the wall.
+                const slides = [];
+                for (const pageSource of splitRatioPages(content, 'aretino', ratio, true)) {
+                    try {
+                        slides.push(...await renderAretinoSlides(pageSource, this, virtualCanvas, ratio));
+                    } catch (e) {
+                        console.error('[score-editor] aretino render error:', e);
+                    }
+                }
+                this.placePreviewSlides(container, slides, 'aretino', ratio);
+                this._aretinoPreviewDirty = false;
+                this.updateAretinoHighlight();
+                return;
+            }
+
+            const pages = this.splitPages(content, 'aretino', ratio);
 
             for (const [idx, pageSource] of pages.entries()) {
                 const pageEl = document.createElement('div');
 
-                if (isFixedRatio) {
-                    // Projector-screen frame: fixed aspect ratio, scales to container.
-                    pageEl.className = 'overflow-hidden bg-white';
-                    pageEl.style.aspectRatio = ratio;
-                    pageEl.style.width = '100%';
-                    pageEl.style.border = '8px solid #374151';
-                    pageEl.style.borderRadius = '4px';
-                    pageEl.style.boxShadow = '0 8px 32px rgba(0,0,0,0.45)';
-                } else if (isPaper) {
+                if (isPaper) {
                     pageEl.className = 'score-preview-page score-preview-paper overflow-auto';
                 } else {
                     pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
@@ -183,33 +277,23 @@ export function aretinoMixin() {
                 container.appendChild(pageEl);
 
                 try {
-                    if (isFixedRatio) {
-                        // The slide is engraved by the one copy of that code a
-                        // projection also draws.
-                        const { svg, overflows } = await renderAretinoSlide(pageSource, this, virtualCanvas, ratio);
-                        pageEl.replaceChildren(svg);
-                        if (overflows) {
-                            this.appendClipWarning(pageEl);
-                        }
-                    } else {
-                        const renderOpts = isPaper
-                            ? { widthMm: Number(this.aretinoStaffWidth) }
-                            : { width: container.clientWidth / zoom - 12 };
+                    const renderOpts = isPaper
+                        ? { widthMm: Number(this.aretinoStaffWidth) }
+                        : { width: container.clientWidth / zoom - 12 };
 
-                        pageEl.innerHTML = renderAretino(pageSource, {
-                            ...renderOpts,
-                            zoom: zoom,
-                            staffSpaceMm: Number(this.aretinoStaffSize) / 4.0,
-                            lyricSize: Number(this.aretinoLyricSize),
-                            textFont: this.aretinoTextFont,
-                            staffGap: Number(this.aretinoStaffGap),
-                            hideRepeatClef: !!this.aretinoHideRepeatClef,
-                        });
-                    }
+                    pageEl.innerHTML = renderAretino(pageSource, {
+                        ...renderOpts,
+                        zoom: zoom,
+                        staffSpaceMm: Number(this.aretinoStaffSize) / 4.0,
+                        lyricSize: Number(this.aretinoLyricSize),
+                        textFont: this.aretinoTextFont,
+                        staffGap: Number(this.aretinoStaffGap),
+                        hideRepeatClef: !!this.aretinoHideRepeatClef,
+                    });
                 } catch (e) {
                     console.error('[score-editor] aretino render error:', e);
                 }
-                this.addPageControls(pageEl, idx + 1, pages.length, 'aretino', { fullscreen: isFixedRatio, ratio });
+                this.addPageControls(pageEl, idx + 1, pages.length, 'aretino', { fullscreen: false, ratio });
             }
             this.hasPages = true;
             this._aretinoPreviewDirty = false;

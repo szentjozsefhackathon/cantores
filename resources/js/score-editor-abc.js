@@ -1,8 +1,10 @@
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
-import { stackSvgs } from './svg-stack.js';
+import { systemSlides } from './slide-systems.js';
+import { softSegmentSources } from './score-editor-pages.js';
+import { stackSvgs, viewBoxOf } from './svg-stack.js';
 import { diatarToAbc } from './diatar-to-abc.js';
-import { abcHitBoxAnnotator, concatMapped, editorDiagnostics, hitBoxesAtOffset, insertUnmapped, mappedLines, replaceMapped, splitPagesMapped, trackSource, unmapped } from './abc-source-map.js';
+import { abcHitBoxAnnotator, concatMapped, editorDiagnostics, hitBoxesAtOffset, insertUnmapped, mappedLines, replaceMapped, softSegmentsMapped, splitPagesMapped, trackSource, unmapped } from './abc-source-map.js';
 import {
     DEFAULT_LYRIC_SIZE_PT,
     DEFAULT_PAGE_WIDTH_MM,
@@ -365,8 +367,8 @@ let abcSlideSerial = 0;
  * abc2svg emits a document per music line, so a slide is the lines stacked and
  * then told they are a canvas. The viewBox is overwritten rather than grown:
  * the slide is the size it is, and music taller than it is clipped rather than
- * shrunk — a decision that belongs to the author, who answers it with a smaller
- * size or another `%pagebreak`, and is told about it by `overflows`.
+ * shrunk, and `overflows` says so. renderAbcSlides is what a projection asks,
+ * and cuts such a page between its lines instead.
  *
  * The lyric face is waited for first: abc2svg measures every syllable against
  * whatever face the browser holds at that moment, and the widths it gets decide
@@ -383,19 +385,76 @@ let abcSlideSerial = 0;
 export async function renderAbcSlide(pageSource, settings, canvas, report = null) {
     await ensureAbcFontsLoaded(settings);
 
+    return abcWholeSlide(engraveAbcLines(pageSource, settings, canvas, report), settings, canvas);
+}
+
+/**
+ * One page of an ABC score engraved onto the projector slides it needs.
+ *
+ * A page that fits is the one slide renderAbcSlide draws. One that does not is
+ * cut at its `%pagebreak?` suggestions and then between its music lines — see
+ * slide-systems.js. Only the page as a whole reports into `report`: the pieces
+ * are the same music again, and would underline every warning twice.
+ *
+ * @param {string|import('./abc-source-map.js').MappedSource} pageSource one page, suggestions left in
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
+ */
+export async function renderAbcSlides(pageSource, settings, canvas, report = null) {
+    await ensureAbcFontsLoaded(settings);
+
+    const cut = typeof pageSource === 'string'
+        ? softSegmentSources(pageSource, 'abc')
+        : softSegmentsMapped(pageSource, 'abc');
+    const whole = engraveAbcLines(cut.whole, settings, canvas, report);
+    const slide = abcWholeSlide(whole, settings, canvas);
+
+    if (!slide.overflows) { return [slide]; }
+
+    const segments = cut.segments.length > 1
+        ? cut.segments.map((segment, i) => abcSystemsOf(engraveAbcLines(segment, settings, canvas), i > 0))
+        : [abcSystemsOf(whole, false)];
+
+    return systemSlides(segments, canvas, (svg) => {
+        applyAbcSvgStyle(svg, `abc-slide-s${++abcSlideSerial}`, settings, true);
+
+        return svg;
+    });
+}
+
+/**
+ * Whether an abc2svg document draws a staff, or only words — the title and
+ * whatever else abc2svg sets above the music in a document of its own.
+ *
+ * Read with the definitions taken out: under `%%fullsvg` every document carries
+ * the staff's definition whether or not it uses it.
+ *
+ * @param {string} markup one document abc2svg emitted
+ */
+export function abcMarkupHasStaff(markup) {
+    const body = String(markup ?? '').replace(/<defs[\s\S]*?<\/defs>/g, '');
+
+    return /href="#stdef|class="slW"/.test(body);
+}
+
+/** The documents one source engraves to at the slide's width, one per music line. */
+function engraveAbcLines(source, settings, canvas, report = null) {
     const scope = `s${++abcSlideSerial}`;
     const preamble = buildAbcPreamble(settings, canvas.width, scope);
-    const markup = typeof pageSource === 'string'
-        ? renderAbcToSvgMarkup(preamble + pageSource)
-        : renderAbcToSvgMarkup(pageSource, preamble, report);
+    const markup = typeof source === 'string'
+        ? renderAbcToSvgMarkup(preamble + source)
+        : renderAbcToSvgMarkup(source, preamble, report);
     const host = document.createElement('div');
     host.innerHTML = markup;
 
     const fragments = Array.from(host.querySelectorAll('svg'));
     fragments.forEach((fragment) => ensureAbcSvgViewBox(fragment, canvas.width));
 
+    return fragments;
+}
+
+function abcWholeSlide(fragments, settings, canvas) {
     if (fragments.length === 0) {
-        return { svg: emptySlide(canvas), overflows: false };
+        return { svg: emptySlide(canvas), overflows: false, autoSplit: false };
     }
 
     // Nothing is hoisted into a sheet of the slide's own: `.sW` and `.slW` are
@@ -404,9 +463,33 @@ export async function renderAbcSlide(pageSource, settings, canvas, report = null
     // slide's stroke widths. They are written on the paths instead.
     const { svg, height } = stackSvgs(fragments);
 
-    applyAbcSvgStyle(svg, `abc-slide-${scope}`, settings, true);
+    applyAbcSvgStyle(svg, `abc-slide-s${++abcSlideSerial}`, settings, true);
 
-    return { svg: frameSlide(svg, canvas), overflows: height > canvas.height + SLIDE_FIT_TOLERANCE };
+    return { svg: frameSlide(svg, canvas), overflows: height > canvas.height + SLIDE_FIT_TOLERANCE, autoSplit: false };
+}
+
+/**
+ * A run of abc2svg's documents as systems a slide can be cut between.
+ *
+ * A document without a staff is a title, and is kept with the music under it.
+ * A piece after the first `%pagebreak?` carries the page's header again, title
+ * and all, so its own title is dropped: it names the hymn a second time on a
+ * slide that is still the same hymn.
+ *
+ * @param {SVGElement[]} fragments
+ * @param {boolean} continuation
+ * @return {import('./slide-systems.js').SlideSystem[]}
+ */
+function abcSystemsOf(fragments, continuation) {
+    const systems = fragments.map((svg) => ({
+        svg,
+        height: viewBoxOf(svg).h,
+        keepWithNext: !abcMarkupHasStaff(svg.outerHTML),
+    }));
+
+    const firstStaff = systems.findIndex((system) => !system.keepWithNext);
+
+    return continuation && firstStaff > 0 ? systems.slice(firstStaff) : systems;
 }
 
 /**
@@ -446,7 +529,9 @@ export function prepareAbcPreviewPages(content, ratio, noClef = false) {
         }
     }
 
-    return splitPagesMapped(hungarianChordsToAbcMapped(mapped), 'abc', ratio);
+    // The suggestions are left in for a fixed ratio's slides to spend, and
+    // stripped by splitPages everywhere else.
+    return splitPagesMapped(hungarianChordsToAbcMapped(mapped), 'abc', ratio, true);
 }
 
 function round(value, places) {
@@ -571,30 +656,32 @@ export function abcMixin() {
             const preamble = buildAbcPreamble(this, pageWidth);
             const pages = prepareAbcPreviewPages(content, ratio, this.abcNoClef);
             const report = { text: content, diagnostics: [] };
-            for (const [idx, pageContent] of pages.entries()) {
-                const pageEl = document.createElement('div');
-                if (isFixed) {
-                    this.applyProjectorFrame(pageEl, ratio);
-                } else if (isResponsive) {
-                    pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
-                    pageEl.style.width = '100%';
-                    pageEl.style.maxWidth = '100%';
-                    pageEl.style.minWidth = '0';
-                } else {
-                    pageEl.className = 'score-preview-page score-preview-paper overflow-auto';
+            if (isFixed) {
+                // The slides are engraved by the one copy of that code a
+                // projection also draws, so a page that does not fit comes to
+                // the same slides here as it will on the wall.
+                const slides = [];
+                for (const pageContent of pages) {
+                    try {
+                        slides.push(...await renderAbcSlides(pageContent, this, canvas, report));
+                    } catch (e) {
+                        console.error('[score-editor] abc2svg error:', e);
+                    }
                 }
-                container.appendChild(pageEl);
-                try {
-                    if (isFixed) {
-                        // The slide itself is engraved by projection-render.js,
-                        // which is the one copy of this a projection also draws.
-                        const { svg, overflows } = await renderAbcSlide(pageContent, this, canvas, report);
-                        pageEl.replaceChildren(svg);
-                        if (overflows) {
-                            this.appendClipWarning(pageEl);
-                        }
-                        this.hasPages = true;
+                this.placePreviewSlides(container, slides, 'abc', ratio);
+            } else {
+                for (const [idx, pageContent] of pages.entries()) {
+                    const pageEl = document.createElement('div');
+                    if (isResponsive) {
+                        pageEl.className = 'score-preview-page overflow-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-700';
+                        pageEl.style.width = '100%';
+                        pageEl.style.maxWidth = '100%';
+                        pageEl.style.minWidth = '0';
                     } else {
+                        pageEl.className = 'score-preview-page score-preview-paper overflow-auto';
+                    }
+                    container.appendChild(pageEl);
+                    try {
                         pageEl.innerHTML = renderAbcToSvgMarkup(pageContent, preamble, report);
                         const svgs = Array.from(pageEl.querySelectorAll('svg'));
                         svgs.forEach((svg) => ensureAbcSvgViewBox(svg, pageWidth));
@@ -612,11 +699,11 @@ export function abcMixin() {
                             svgs.forEach(svg => zoomFrame.appendChild(svg));
                         }
                         if (svgs.length > 0) { this.hasPages = true; }
+                    } catch (e) {
+                        console.error('[score-editor] abc2svg error:', e);
                     }
-                } catch (e) {
-                    console.error('[score-editor] abc2svg error:', e);
+                    this.addPageControls(pageEl, idx + 1, pages.length, 'abc', { fullscreen: false, ratio });
                 }
-                this.addPageControls(pageEl, idx + 1, pages.length, 'abc', { fullscreen: isFixed, ratio });
             }
             // A slide is awaited, and the text may have moved on meanwhile;
             // the render that follows it brings its own warnings.

@@ -55,7 +55,7 @@ export { slidePalette as textPalette } from './slide-palette.js';
  *
  * @param {Array<object>} entries the render payload's rows
  * @param {object} geometry from the payload — carries the ratio
- * @return {Promise<Array<{entryId: number, svg: SVGElement, overflows: boolean}>>}
+ * @return {Promise<Array<{entryId: number, svg: SVGElement, overflows: boolean, autoSplit?: boolean}>>}
  */
 export async function renderDeck(entries, geometry) {
     const ratio = geometry?.ratio;
@@ -140,8 +140,10 @@ async function slidesOf(entry, ratio, palette, geometry) {
 }
 
 /**
- * A score, cut where its author said to cut it — and, for a chord sheet,
- * wherever it has to be cut besides, since words flow and an engraving does not.
+ * A score, cut where its author said to cut it — and wherever it has to be cut
+ * besides: a chord sheet between its rows, an engraving between its staff
+ * systems. A slide that begins at one of those cuts says so with `autoSplit`,
+ * which the editor shows beside it.
  *
  * The deck's ink is handed down with it, for the same reason: a chord sheet is
  * words, and comes out white on black beside the screens of words it is sung
@@ -157,9 +159,10 @@ async function scoreSlides(entry, ratio, palette) {
     const canvas = slideCanvas(entry.format, ratio);
     const heading = headingOf(entry);
 
-    return pages.map(({ svg, overflows }, index) => ({
+    return pages.map(({ svg, overflows, autoSplit }, index) => ({
         svg: index === 0 && heading !== null ? withHeading(svg, canvas, heading) : svg,
         overflows,
+        autoSplit: !!autoSplit,
     }));
 }
 

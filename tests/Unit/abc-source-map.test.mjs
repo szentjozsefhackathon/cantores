@@ -4,9 +4,9 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
-import { editorDiagnostics, hitBoxesAtOffset, insertUnmapped, replaceMapped, splitPagesMapped, trackSource } from '../../resources/js/abc-source-map.js';
+import { editorDiagnostics, hitBoxesAtOffset, insertUnmapped, replaceMapped, softSegmentsMapped, splitPagesMapped, trackSource } from '../../resources/js/abc-source-map.js';
 import { removeEditorOnlySvgMarkup } from '../../resources/js/score-editor-export.js';
-import { buildAbcPreamble, abcMixin, hungarianChordsToAbc, prepareAbcPreviewPages, renderAbcToSvgMarkup } from '../../resources/js/score-editor-abc.js';
+import { abcMarkupHasStaff, buildAbcPreamble, abcMixin, hungarianChordsToAbc, prepareAbcPreviewPages, renderAbcToSvgMarkup } from '../../resources/js/score-editor-abc.js';
 
 /**
  * Clicking a note in the ABC preview lands on the characters that wrote it.
@@ -203,4 +203,42 @@ test('the preamble\'s own warnings are not the editor\'s', () => {
 
     assert.match(JSON.stringify(logged), /Bad value in %%pagewidth/);
     assert.deepEqual(report.diagnostics, []);
+});
+
+/*
+ * A page cut at its `%pagebreak?` is engraved piece by piece, and every piece
+ * after the first carries the header again. The notes in it must still point at
+ * the characters in the editor that wrote them, or a click on the second slide
+ * would land in the wrong place.
+ */
+test('a piece cut at a suggestion still points every note at the editor', () => {
+    const source = 'X:1\nK:C\nCDEF|\n%pagebreak?\nGABc|\n';
+    const [page] = prepareAbcPreviewPages(source, '16/9');
+    const { whole, segments } = softSegmentsMapped(page, 'abc');
+    const preamble = buildAbcPreamble(abcMixin(), 642.52);
+
+    assert.equal(whole.text, 'X:1\nK:C\nCDEF|\nGABc|\n');
+    assert.equal(segments.length, 2);
+    assert.equal(segments[1].text, 'X:1\nK:C\nGABc|\n');
+
+    const second = boxedSource(renderAbcToSvgMarkup(segments[1], preamble), source);
+
+    assert.ok(second.includes('G'), 'the second piece has its notes');
+    assert.ok(!second.includes('C'), 'and none of the first piece');
+});
+
+/*
+ * abc2svg sets a title in a document of its own, above the music. Cut between
+ * systems, that document must stay with the music under it, so it has to be
+ * told apart from a line of music — and under `%%fullsvg` every document carries
+ * the staff's definition whether it draws one or not.
+ */
+test('a title document is told apart from a line of music', () => {
+    const preamble = buildAbcPreamble(abcMixin(), 642.52, 'hs');
+    const markup = renderAbcToSvgMarkup(preamble + 'X:1\nT:Cím\nL:1/4\nK:C\nCDEF GABc|\ncBAG FEDC|\n');
+    const documents = markup.split(/(?=<svg[\s>])/).filter((chunk) => chunk.trim().startsWith('<svg'));
+
+    assert.ok(documents.length >= 3, `${documents.length} documents`);
+    assert.equal(abcMarkupHasStaff(documents[0]), false, 'the title');
+    documents.slice(1).forEach((document, i) => assert.equal(abcMarkupHasStaff(document), true, `line ${i + 1}`));
 });

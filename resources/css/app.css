@@ -471,11 +471,27 @@ select:focus[data-flux-control] {
 
 .projection-slide-skipped .projection-slide-number { font-style: italic; }
 
-/* A slide fuller than the screen. The engines do not shrink to fit — that is the
-   author's decision, made with a smaller size or another %pagebreak — so what is
-   shown here is what will be cut off in the room. */
+/* A slide fuller than the screen. A score that runs over is cut between its
+   systems, so what is left here is a single system taller than the screen — the
+   author's to answer with a smaller size — and it will be cut off in the room. */
 .projection-slide-overflows { color: rgb(185 28 28); font-weight: 500; }
 .projection-slide-overflows::after { content: " ⚠"; }
+
+/* A slide the deck cut off on its own. Information, not a fault: a hand-placed
+   %pagebreak169 would let the author choose where the cut falls. */
+.projection-slide-auto-split {
+    border-radius: 0.25rem;
+    padding: 0 0.375rem;
+    background-color: rgb(219 234 254);
+    color: rgb(29 78 216);
+    font-weight: 500;
+    cursor: help;
+}
+
+.dark .projection-slide-auto-split {
+    background-color: rgb(30 58 138);
+    color: rgb(191 219 254);
+}
 
 /* The row the pointer is over, answered in the slides beside it. */
 .projection-slide-hovered .projection-slide-box { border-color: rgb(59 130 246); }
