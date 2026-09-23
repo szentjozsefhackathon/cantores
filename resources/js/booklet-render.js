@@ -10,7 +10,7 @@ import { withAbcMeasuring } from './measuring-room.js';
 import { fileSettings, layoutWidthFor, resolveSettings, textSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
 import { enginesReady } from './music-engines.js';
-import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcHideChordsLine, abcMixin, hungarianChordsToAbc } from './score-editor-abc.js';
+import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcChordFontLine, abcHideChordsLine, abcMixin, hungarianChordsToAbc } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin, parseChordproSong } from './score-editor-chordpro.js';
 import { gabcMixin } from './score-editor-gabc.js';
@@ -823,6 +823,7 @@ function abcBlocks(content, resolved, layoutWidthPx) {
         + `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
         + '%%leftmargin 0px\n%%rightmargin 0px\n'
         + `%%pagescale ${pageScale}\n${vocalfont}\n`
+        + abcChordFontLine(resolved, font)
         + `%%notespacingfactor ${resolved.abcNoteSpacing}\n`
         + '%%musicspace 0\n%%topspace 0\n'
         + `%%staffsep ${resolved.abcStaffSep}\n`

@@ -1,5 +1,6 @@
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
+import { SLIDE_PALETTES } from './slide-palette.js';
 import { systemSlides } from './slide-systems.js';
 import { softSegmentSources } from './score-editor-pages.js';
 import { stackSvgs, viewBoxOf } from './svg-stack.js';
@@ -80,6 +81,9 @@ const ABC_RATIO_DEFAULTS = {
         abcStemWidth: 1.4,
         abcStaffLineWidth: 1,
         abcZoom: 100,
+        // Chords at the lyrics' full size widen every bar they sit over, and
+        // on a slide that is enough to push a line onto a second system.
+        abcChordSize: 0.8,
     },
     '4/3': {
         abcLyricFont: 'Barlow Condensed',
@@ -93,6 +97,9 @@ const ABC_RATIO_DEFAULTS = {
         abcStemWidth: 1.4,
         abcStaffLineWidth: 1,
         abcZoom: 100,
+        // Chords at the lyrics' full size widen every bar they sit over, and
+        // on a slide that is enough to push a line onto a second system.
+        abcChordSize: 0.8,
     },
     '1/1': {
         abcLyricFont: 'Barlow Condensed',
@@ -106,6 +113,9 @@ const ABC_RATIO_DEFAULTS = {
         abcStemWidth: 1.4,
         abcStaffLineWidth: 1,
         abcZoom: 100,
+        // Chords at the lyrics' full size widen every bar they sit over, and
+        // on a slide that is enough to push a line onto a second system.
+        abcChordSize: 0.8,
     },
 };
 
@@ -226,7 +236,37 @@ export function buildAbcPreamble(settings, pageWidth, scope = '1') {
     const lyricFirstSkip = Number(settings.abcLyricFirstSkip ?? NaN);
     const lyricFirstSkipLine = Number.isFinite(lyricFirstSkip) && lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '';
 
-    return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}${abcHideChordsLine(settings)}`;
+    return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n${abcChordFontLine(settings, fontName)}%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}${abcHideChordsLine(settings)}`;
+}
+
+/**
+ * The class every chord symbol is drawn with, for a slide to colour them by.
+ * abc2svg suffixes its own `f…` classes per engraving but leaves this one as
+ * written, so a rule scoped by the drawing's id is enough to reach it.
+ */
+export const ABC_CHORD_CLASS = 'abc-chord';
+
+/**
+ * The chord symbols' face: the lyrics' own family, bold, and as large as the
+ * lyrics times `abcChordSize` — what a chord sheet sets over its words.
+ *
+ * Left to itself abc2svg sets them in a regular sans-serif at 12 of its units,
+ * which grow and shrink with the staff while the lyrics are sized against it:
+ * a little smaller than the words on paper, and well under half their size on
+ * a slide, where the staff is small beside the type. The size here is stated
+ * the way `%%vocalfont`'s is, so the two stay in proportion at any staff
+ * height.
+ *
+ * @param {object} settings
+ * @param {string} fontName the lyric family, already quoted for a directive
+ */
+export function abcChordFontLine(settings, fontName) {
+    const pageScale = Number(settings.abcPageScale) > 0 ? Number(settings.abcPageScale) : 1;
+    const lyricSize = Number(settings.abcLyricSize) > 0 ? Number(settings.abcLyricSize) : 12;
+    const chordSize = Number(settings.abcChordSize) > 0 ? Number(settings.abcChordSize) : 1;
+    const size = Number((lyricSize * chordSize / pageScale * 3).toFixed(3));
+
+    return `%%gchordfont ${fontName} bold ${size} class=${ABC_CHORD_CLASS}\n`;
 }
 
 /**
@@ -499,11 +539,17 @@ function abcSystemsOf(fragments, continuation) {
  * content of a `<use>` however the selector is written. Stroke widths do not
  * survive that trip as a rule — see applyAbcStrokeWidths, which writes them on
  * the paths instead.
+ *
+ * On a slide the chord symbols take the chord colour a chord sheet's do, so
+ * the guitarist finds them across the room. The music is ink on paper whatever
+ * the deck's theme, so it is the light palette's chord colour; on paper they
+ * stay black, for the photocopier.
  */
 export function applyAbcSvgStyle(svg, svgId, settings, onSlide = false) {
     svg.id = svgId;
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `#${svgId}{color:#000!important;fill:#000!important}`;
+    style.textContent = `#${svgId}{color:#000!important;fill:#000!important}`
+        + (onSlide ? `#${svgId} .${ABC_CHORD_CLASS}{fill:${SLIDE_PALETTES.light.chord}}` : '');
     svg.appendChild(style);
     applyAbcStrokeWidths(svg, settings, onSlide);
 }
@@ -581,7 +627,10 @@ export function abcMixin() {
         abcZoom: 120,
         abcTranspose: 0,
         abcHideChords: false,
-        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose', 'abcHideChords'],
+        // The chord symbols' size as a multiple of the lyrics'; see
+        // abcChordFontLine.
+        abcChordSize: 1,
+        abcFields: ['abcLyricFont', 'abcLyricSize', 'abcLyricBold', 'abcPageRatio', 'abcPageScale', 'abcPageWidth', 'abcNoteSpacing', 'abcStaffSep', 'abcLyricFirstSkip', 'abcLyricSkip', 'abcNoClef', 'abcStemWidth', 'abcStaffLineWidth', 'abcZoom', 'abcTranspose', 'abcHideChords', 'abcChordSize'],
 
         normalizeAbcPageWidth,
 

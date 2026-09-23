@@ -1564,6 +1564,17 @@ it('lets a booklet hide a ChordPro sheets chords', function () {
         ->toBe(['chordproHideChords' => true]);
 });
 
+// A lead sheet wants its chords as large as the words; a booklet short of room
+// can take them down without touching the lyrics.
+it('lets a booklet size an ABC scores chords', function () {
+    expect(collect(BookletSettingFields::panelFor('abc'))->firstWhere('key', 'abcChordSize'))
+        ->type->toBe('number')
+        ->and(BookletSettingFields::sanitize('abc', ['abcChordSize' => 0.8]))
+        ->toBe(['abcChordSize' => 0.8])
+        ->and(BookletSettingFields::sanitize('abc', ['abcChordSize' => 9]))
+        ->toBe(['abcChordSize' => 2]);
+});
+
 it('allows the staff to lyrics gap to reach zero', function () {
     expect(BookletSettingFields::sanitize('abc', ['abcLyricFirstSkip' => 0]))
         ->toBe(['abcLyricFirstSkip' => 0])

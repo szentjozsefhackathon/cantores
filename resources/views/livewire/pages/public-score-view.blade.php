@@ -390,6 +390,13 @@ resources/js/score-editor.js
                                 <flux:checkbox x-model="abcHideChords" />
                             </div>
 
+                            <div class="flex items-center gap-1">
+                                <flux:tooltip :content="__('Chord size (× lyrics)')">
+                                    <flux:icon name="chord-size" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                </flux:tooltip>
+                                <flux:input size="sm" type="number" x-model="abcChordSize" min="0.3" max="2" step="0.05" class="w-16" />
+                            </div>
+
                             <div x-show="['16/9', '4/3', '1/1'].includes(abcPageRatio)" class="h-5 w-px shrink-0 bg-zinc-300 dark:bg-zinc-600"></div>
 
                             <div x-show="['16/9', '4/3', '1/1'].includes(abcPageRatio)" class="flex items-center gap-1">

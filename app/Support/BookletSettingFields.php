@@ -85,6 +85,7 @@ class BookletSettingFields
             'abcNoClef' => ['type' => 'boolean', 'label' => 'Hide clef', 'icon' => 'clef-none'],
             'abcTranspose' => ['type' => 'number', 'min' => -11, 'max' => 11, 'step' => 1, 'label' => 'Transpose', 'icon' => 'musical-note'],
             'abcHideChords' => ['type' => 'boolean', 'label' => 'Hide chords', 'icon' => 'guitar-off'],
+            'abcChordSize' => ['type' => 'number', 'min' => 0.3, 'max' => 2, 'step' => 0.05, 'label' => 'Chord size', 'icon' => 'chord-size'],
         ],
         // An uploaded score is a picture by the time it reaches a booklet, so
         // the only thing that can be done to it is scale it. It already arrives

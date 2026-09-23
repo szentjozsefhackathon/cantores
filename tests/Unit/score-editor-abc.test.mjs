@@ -3,7 +3,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-import { ABC_RATIO_DEFAULTS, ABC_PAGE_WIDTH_DEFAULT, abcMixin, abcStrokeWidths, applyAbcStrokeWidths, applyAbcSvgStyle, buildAbcPreamble, hungarianChordsToAbc, normalizeAbcPageWidth } from '../../resources/js/score-editor-abc.js';
+import { ABC_CHORD_CLASS, ABC_RATIO_DEFAULTS, ABC_PAGE_WIDTH_DEFAULT, abcMixin, abcStrokeWidths, applyAbcStrokeWidths, applyAbcSvgStyle, buildAbcPreamble, hungarianChordsToAbc, normalizeAbcPageWidth } from '../../resources/js/score-editor-abc.js';
 import { abcLyricSizeForPt, abcPageScaleForStaffHeight, DEFAULT_PAGE_WIDTH_MM, mmToPx, pxToMm, staffHeightMmForAbcPageScale } from '../../resources/js/booklet-geometry.js';
 
 test('normalizes ABC page width to the renderer-safe range', () => {
@@ -38,7 +38,31 @@ test('turns a settings bucket into abc2svg directives', () => {
     assert.match(preamble, /%%pagescale 3\.1\n/);
     assert.match(preamble, /%%vocalfont "Barlow Condensed" bold 30\n/);
     assert.match(preamble, /%%staffsep 15\n/);
+    assert.match(preamble, /%%gchordfont "Barlow Condensed" bold 30 class=abc-chord\n/);
     assert.match(preamble, /%%transpose -2\n$/);
+});
+
+// abc2svg's own chord face is a regular sans-serif at 12 of its units, which
+// on a slide came out well under half the size of the words under it. A chord
+// sheet sets its chords in the words' own face, bold, and as large.
+test('sets the chord symbols in the lyric face, bold, at a multiple of the lyric size', () => {
+    const settings = { abcLyricFont: 'Barlow Condensed', abcLyricSize: 31, abcPageScale: 3.1 };
+
+    assert.match(buildAbcPreamble({ ...settings, abcChordSize: 0.8 }, 1920),
+        /%%gchordfont "Barlow Condensed" bold 24 class=abc-chord\n/);
+    assert.match(buildAbcPreamble({ ...settings, abcChordSize: 0 }, 1920),
+        /%%gchordfont "Barlow Condensed" bold 30 class=abc-chord\n/);
+    assert.match(buildAbcPreamble({ abcLyricFont: 'Comic Sans; }', abcLyricSize: 0, abcPageScale: 0 }, 1700),
+        /%%gchordfont Alegreya bold 36 class=abc-chord\n/);
+});
+
+test('a slide sets its chords smaller than the lyrics, and paper as large', () => {
+    assert.equal(abcMixin().abcChordSize, 1);
+    assert.ok(abcMixin().abcFields.includes('abcChordSize'));
+
+    for (const ratio of ['16/9', '4/3', '1/1']) {
+        assert.equal(ABC_RATIO_DEFAULTS[ratio].abcChordSize, 0.8);
+    }
 });
 
 test('falls back to a safe font and scale for unusable settings', () => {
@@ -386,6 +410,29 @@ test('leaves the stroke widths out of the scoped stylesheet, which only carries 
     applyAbcSvgStyle(svg, 'abc-slide-s1', { abcStemWidth: 1.4, abcStaffLineWidth: 1 }, true);
 
     assert.equal(svg.id, 'abc-slide-s1');
-    assert.equal(svg.children[0].textContent, '#abc-slide-s1{color:#000!important;fill:#000!important}');
+    assert.equal(svg.children[0].textContent, '#abc-slide-s1{color:#000!important;fill:#000!important}#abc-slide-s1 .abc-chord{fill:#1d4ed8}');
     assert.deepEqual(staff.declarations, { 'stroke-width': '1' });
+});
+
+// The music is ink on paper whatever the deck's theme, so a slide's chords take
+// the light palette's chord colour; a page stays black for the photocopier.
+test('colours the chord symbols on a slide only', t => {
+    const previousDocument = globalThis.document;
+    t.after(() => { globalThis.document = previousDocument; });
+    globalThis.document = { createElementNS: () => ({ textContent: '' }) };
+
+    const paper = fakeSvgDocument([]);
+    applyAbcSvgStyle(paper, 'abc-svg-1', {});
+
+    assert.equal(paper.children[0].textContent, '#abc-svg-1{color:#000!important;fill:#000!important}');
+});
+
+test('draws every chord symbol with the class a slide colours it by, and no other text', () => {
+    const markup = renderedMarkup({ ...abcMixin(), ...ABC_RATIO_DEFAULTS['16/9'] }, 1920, 's1',
+        'X:1\nL:1/4\nK:G\n"G"G A "D7"B c |\nw: one two three four\n');
+    const chordTexts = [...markup.matchAll(new RegExp(`<text class="(f\\d+s1) ${ABC_CHORD_CLASS}"[^>]*>([^<]*)<`, 'g'))];
+
+    assert.deepEqual(chordTexts.map(match => match[2]), ['G', 'D7']);
+    assert.match(markup, new RegExp(`\\.${chordTexts[0][1]}\\{font:700 [\\d.]+px "Barlow Condensed"\\}`));
+    assert.equal(markup.match(new RegExp(ABC_CHORD_CLASS, 'g')).length, 2);
 });

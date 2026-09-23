@@ -691,6 +691,12 @@ it('lets a slide hide an ABC scores or ChordPro sheets chords', function () {
         ->toBe(['chordproHideChords' => true]);
 });
 
+it('lets a slide size an ABC scores chords', function () {
+    expect(ProjectionSettingFields::keysFor('abc'))->toContain('abcChordSize')
+        ->and(ProjectionSettingFields::sanitize('abc', ['abcChordSize' => 0.7]))
+        ->toBe(['abcChordSize' => 0.7]);
+});
+
 it('opens a panel of knobs with no face among them', function () {
     $user = User::factory()->create();
     $projection = projectionFor($user);

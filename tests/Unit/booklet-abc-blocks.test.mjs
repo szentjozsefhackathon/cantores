@@ -89,3 +89,27 @@ test('a score at another staff scale draws its own staff lines', async () => {
 
     assert.ok(staffWidth(small) > staffWidth(plain) * 1.9, 'a halved scale should double the staff length in the score’s own units');
 });
+
+// A booklet builds its own preamble, so it has to ask for the chord face too:
+// the lyrics' family, bold, at the lyric size times the score's chord size.
+test('a booklet sets the chord symbols in the lyric face, bold, sized from the lyrics', async () => {
+    const chordFont = (blocks) => {
+        const svg = blocks.map((block) => block.svg).join('');
+        const chordClass = svg.match(/<text class="(f\d+a\d+) abc-chord"/)[1];
+        const lyricFont = svg.match(/<text class="(f\d+a\d+)"[^>]*>la</)[1];
+        const sizeOf = (name) => Number(svg.match(new RegExp(`\\.${name}\\{font:(?:700 )?([\\d.]+)px`))[1]);
+
+        return {
+            face: svg.match(new RegExp(`\\.${chordClass}\\{font:([^}]*)\\}`))[1],
+            ratio: sizeOf(chordClass) / sizeOf(lyricFont),
+        };
+    };
+    const withChords = HYMN.replace('CDEF GABc|', '"C"CDEF "G7"GABc|');
+
+    const { blocks: plain } = await buildScoreBlocks(entry({ content: withChords }), geometry, null);
+    const { blocks: small } = await buildScoreBlocks(entry({ content: withChords, override: { abcChordSize: 0.5 } }), geometry, null);
+
+    assert.match(chordFont(plain).face, /^700 [\d.]+px Alegreya$/);
+    assert.ok(Math.abs(chordFont(plain).ratio - 1) < 0.01);
+    assert.ok(Math.abs(chordFont(small).ratio - 0.5) < 0.01);
+});
