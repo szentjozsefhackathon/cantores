@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ScoreFormat;
 use App\Livewire\Pages\ScoreEditor;
 use App\Livewire\Pages\Scores;
 use App\Livewire\Pages\ScoreView;
@@ -165,4 +166,38 @@ it('renders a links-only score on the read-only share page', function () {
     Livewire::test(ScoreView::class, ['token' => $loan->token])
         ->assertHasNoErrors()
         ->assertSee('https://drive.google.com/links-only');
+});
+
+it('stores the links-and-files switch at once on a blank score that already has a link', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->create(['user_id' => $user->id, 'format' => ScoreFormat::Abc, 'content' => '']);
+    ScoreUrl::query()->create(['score_id' => $score->id, 'url' => 'https://example.com/pdf']);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->call('selectLinksOnly');
+
+    expect($score->fresh()->format)->toBeNull();
+});
+
+it('stores the links-and-files switch when a link is added to a notation score', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->create(['user_id' => $user->id, 'format' => ScoreFormat::Abc, 'content' => "X:1\nK:C\nC|"]);
+
+    actingAs($user);
+
+    $component = Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->call('selectLinksOnly');
+
+    expect($score->fresh()->format)->toBe(ScoreFormat::Abc);
+
+    $component
+        ->set('newUrl', 'https://example.com/pdf')
+        ->call('addUrl')
+        ->assertHasNoErrors();
+
+    expect($score->fresh())
+        ->format->toBeNull()
+        ->content->toBeNull();
 });

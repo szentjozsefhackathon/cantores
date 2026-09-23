@@ -803,6 +803,8 @@ class ScoreEditor extends Component
 
         unset($this->scoreUrls);
 
+        $this->persistLinksOnly();
+
         $this->dispatch('score-url-added');
     }
 
@@ -918,6 +920,8 @@ class ScoreEditor extends Component
         $this->pendingFile = null;
         $this->fileLabel = '';
         $this->forgetFiles();
+
+        $this->persistLinksOnly();
 
         $this->dispatch('score-file-added');
         $this->dispatch('toast', message: __('File added.'), type: 'success');
@@ -1244,6 +1248,36 @@ class ScoreEditor extends Component
     public function selectLinksOnly(): void
     {
         $this->linksOnly = true;
+
+        if (trim($this->content) === '') {
+            $this->persistLinksOnly();
+        }
+    }
+
+    /**
+     * Store the links-only switch on an existing score once it has something
+     * to point at. Adding a link or a file while the switch is on is the user
+     * committing to it, so the notation is dropped just as the explicit save
+     * would drop it — otherwise the score would stay ABC under its new file.
+     */
+    private function persistLinksOnly(): void
+    {
+        if (! $this->score instanceof Score || ! $this->linksOnly || ! $this->hasAnyLink()) {
+            return;
+        }
+
+        $this->authorize('update', $this->score);
+
+        $this->score->update([
+            'format' => null,
+            'content' => null,
+            'settings' => null,
+            'public_preview' => false,
+        ]);
+
+        $this->content = '';
+        $this->settings = [];
+        $this->publicPreview = false;
     }
 
     /**

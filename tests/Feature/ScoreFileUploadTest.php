@@ -2,6 +2,7 @@
 
 use App\Enums\ScoreFileRenderStatus;
 use App\Enums\ScoreFileRights;
+use App\Enums\ScoreFormat;
 use App\Jobs\RenderScoreFileJob;
 use App\Livewire\Pages\ScoreEditor;
 use App\Models\Loan;
@@ -16,9 +17,11 @@ use App\Services\PdfPageRasterizer;
 use App\Services\PdfPageVectorizer;
 use App\Services\ScoreFileIncipitCropper;
 use App\Services\ScoreFileStorage;
+use App\Services\ScoreFileUploader;
 use App\Services\ScoreImageCompressor;
 use App\Services\ScorePageBander;
 use App\Services\ScoreStripCutter;
+use App\Services\ScoreVersionService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Js;
@@ -190,8 +193,8 @@ it('gives the score an incipit from the embedded thumbnail before rendering fini
     $upload = UploadedFile::fake()->createWithContent('veni.mscz', makeMscz());
 
     try {
-        app(\App\Services\ScoreFileUploader::class)->store($score, $upload, ScoreFileRights::OwnWork);
-    } catch (\Throwable) {
+        app(ScoreFileUploader::class)->store($score, $upload, ScoreFileRights::OwnWork);
+    } catch (Throwable) {
         // the sync render failure is asserted elsewhere
     }
 
@@ -709,7 +712,7 @@ it('keeps the bytes a published version was approved with when the file is repla
 
     app(ScoreFileStorage::class)->put($scoreFile->path, 'the approved source');
 
-    $version = app(\App\Services\ScoreVersionService::class)->snapshot($score->fresh());
+    $version = app(ScoreVersionService::class)->snapshot($score->fresh());
 
     expect($version->files->pluck('id')->all())->toBe([$scoreFile->id]);
 
@@ -884,4 +887,26 @@ it('keeps the add-file dialog open when the upload is rejected', function () {
         ->call('addFile')
         ->assertHasErrors('pendingFile')
         ->assertNotDispatched('score-file-added');
+});
+
+it('stores the links-and-files switch when a file is added to a notation score', function () {
+    Storage::fake('private');
+    fakeRenderer();
+    $score = Score::factory()->unattached()->create([
+        'format' => ScoreFormat::Abc,
+        'content' => "X:1\nK:C\nC|",
+    ]);
+
+    actingAs($score->user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->call('selectLinksOnly')
+        ->set('fileRights', ScoreFileRights::OwnWork->value)
+        ->set('pendingFile', UploadedFile::fake()->createWithContent('veni.mscz', makeMscz()))
+        ->call('addFile')
+        ->assertHasNoErrors();
+
+    expect($score->fresh())
+        ->format->toBeNull()
+        ->content->toBeNull();
 });
