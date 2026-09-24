@@ -2,9 +2,11 @@
 
 namespace App\Livewire\Projection;
 
+use App\Enums\ScoreFormat;
 use App\Models\ProjectionSlide;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -53,9 +55,16 @@ class SlideRow extends Component
     #[Validate('nullable|string|max:20000')]
     public string $text = '';
 
+    /**
+     * The notation those words are written in — one of the score formats — or
+     * null for Markdown.
+     */
+    public ?string $textFormat = null;
+
     public function mount(): void
     {
         $this->text = $this->entry->text ?? '';
+        $this->textFormat = $this->entry->text_format?->value;
     }
 
     /**
@@ -86,6 +95,7 @@ class SlideRow extends Component
 
         if ($this->writing) {
             $this->text = $this->entry->text ?? '';
+            $this->textFormat = $this->entry->text_format?->value;
         }
     }
 
@@ -112,6 +122,32 @@ class SlideRow extends Component
         }
 
         $this->entry->update(['text' => $this->text]);
+
+        $this->announceChange();
+    }
+
+    /**
+     * Write these words in another notation.
+     *
+     * What was adjusted goes with the old one: the knobs of Markdown and of
+     * each format are different knobs, and a size chosen for a paragraph means
+     * nothing to a staff.
+     */
+    public function updatedTextFormat(): void
+    {
+        $this->authorize('update', $this->entry->projection);
+        $this->validate(['textFormat' => ['nullable', Rule::enum(ScoreFormat::class)]]);
+
+        if (! $this->entry->isText()) {
+            return;
+        }
+
+        $this->textFormat = $this->textFormat ?: null;
+
+        $this->entry->update([
+            'text_format' => $this->textFormat,
+            'settings_override' => null,
+        ]);
 
         $this->announceChange();
     }

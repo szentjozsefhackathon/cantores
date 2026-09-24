@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ScoreFormat;
 use App\Models\Projection;
 use App\Models\ProjectionSlide;
 use App\Models\Score;
@@ -37,6 +38,16 @@ class ProjectionSlideFactory extends Factory
         return $this->state(fn (): array => [
             'score_id' => null,
             'text' => $markdown,
+        ]);
+    }
+
+    /** A few bars written straight into the deck rather than chosen from a score. */
+    public function notation(ScoreFormat $format, string $source): static
+    {
+        return $this->state(fn (): array => [
+            'score_id' => null,
+            'text' => $source,
+            'text_format' => $format,
         ]);
     }
 

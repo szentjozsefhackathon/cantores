@@ -1102,12 +1102,13 @@ class BookletEditor extends Component
      *
      * A score engraved from source answers to its format's; an uploaded one has
      * no format and answers to the single knob a picture has; a paragraph of
-     * words answers to the two the booklet would otherwise set for it.
+     * words answers to the two the booklet would otherwise set for it, and bars
+     * written straight into the booklet to the format they are written in.
      */
     public static function overrideFormat(BookletScore $entry): ?string
     {
         if ($entry->isText()) {
-            return 'text';
+            return $entry->text_format?->value ?? 'text';
         }
 
         return $entry->score?->format?->value ?? 'file';

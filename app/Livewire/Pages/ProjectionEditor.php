@@ -926,7 +926,7 @@ class ProjectionEditor extends Component
     public static function overrideFormat(ProjectionSlide $entry): ?string
     {
         if ($entry->isText()) {
-            return 'text';
+            return $entry->text_format?->value ?? 'text';
         }
 
         return $entry->score?->format?->value ?? 'file';

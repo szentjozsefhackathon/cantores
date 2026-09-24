@@ -236,6 +236,32 @@ class ProjectionRenderPayload extends PlanRenderPayload
             ->map(function (ProjectionSlide $entry) use ($projection, $sources, $headings): ?array {
                 $heading = $headings[$entry->id] ?? ['slot' => null, 'music' => null, 'reference' => null, 'variation' => null];
 
+                // Bars written straight into the deck are engraved exactly as a
+                // score in their format would be, cut by their own
+                // `%pagebreak`s: nothing downstream needs to know there is no
+                // score behind them. Nothing of a score's own layout stands
+                // under them, so the format's defaults for this shape do.
+                if ($entry->isText() && $entry->text_format !== null) {
+                    return [
+                        'id' => $entry->id,
+                        'scoreId' => null,
+                        'assignmentId' => $entry->music_plan_slot_assignment_id,
+                        'addedMusicId' => $entry->added_music_id,
+                        'slot' => $heading['slot'],
+                        'music' => $heading['music'],
+                        'reference' => $heading['reference'],
+                        'variation' => null,
+                        'incipitUrl' => null,
+                        ...$this->nameOf($entry),
+                        'kind' => 'score',
+                        'format' => $entry->text_format->value,
+                        'content' => $entry->text ?? '',
+                        'sections' => null,
+                        'settings' => [],
+                        'override' => self::overrideOf($entry, $entry->text_format->value, $projection->ratio->value),
+                    ];
+                }
+
                 if ($entry->isText()) {
                     return [
                         'id' => $entry->id,

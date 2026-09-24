@@ -78,6 +78,28 @@ class BookletRenderPayload extends PlanRenderPayload
             ->map(function (BookletScore $entry) use ($booklet, $sources, $headings, $loan): ?array {
                 $heading = $headings[$entry->id] ?? ['slot' => null, 'music' => null, 'reference' => null, 'variation' => null];
 
+                // Bars written straight into the booklet are engraved exactly
+                // as a score in their format would be: nothing downstream needs
+                // to know there is no score behind them. Nothing of a score's
+                // own layout stands under them, so the format's defaults do.
+                if ($entry->isText() && $entry->text_format !== null) {
+                    return [
+                        'id' => $entry->id,
+                        'scoreId' => null,
+                        'slot' => $heading['slot'],
+                        'music' => $heading['music'],
+                        'reference' => $heading['reference'],
+                        'variation' => null,
+                        'startOnNewPage' => $entry->start_on_new_page,
+                        'kind' => 'score',
+                        'format' => $entry->text_format->value,
+                        'content' => $entry->text ?? '',
+                        'sections' => null,
+                        'settings' => [],
+                        'override' => self::overrideOf($entry, $entry->text_format->value),
+                    ];
+                }
+
                 if ($entry->isText()) {
                     return [
                         'id' => $entry->id,

@@ -2,6 +2,7 @@
 
 namespace App\Contracts;
 
+use App\Enums\ScoreFormat;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Models\Score;
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $music_plan_slot_plan_id
  * @property int|null $added_music_id
  * @property string|null $text
+ * @property ScoreFormat|null $text_format
  * @property int $sequence
  * @property bool $show_slot
  * @property bool $show_music_title

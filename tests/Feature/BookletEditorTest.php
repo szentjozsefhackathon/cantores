@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ScoreFormat;
 use App\Livewire\Booklet\EntryRow;
 use App\Livewire\Pages\BookletEditor;
 use App\Livewire\Pages\PlanDocuments;
@@ -1866,6 +1867,113 @@ it('adds a paragraph of instructions and keeps its Markdown', function () {
         ->and($entry->text)->toContain('Álljunk fel')
         ->and(payloadOf($booklet)[0])
         ->toMatchArray(['kind' => 'text', 'id' => $entry->id]);
+});
+
+/*
+ * A response or a refrain sung once is not worth a score in the library, but it
+ * is music. Written into a text row in one of the score formats, it travels to
+ * the browser as a score in that format — nothing downstream need know there is
+ * no score behind it.
+ */
+it('writes a few bars straight into the booklet and engraves them as a score', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $source = "K:G\nG A B c | B A G2 |]\nw: Al-le-lu-ja, al-le-lu-ja!";
+
+    actingAs($user);
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])->call('addText');
+
+    $entry = $booklet->entries()->firstOrFail();
+
+    Livewire::test(EntryRow::class, ['entry' => $entry])
+        ->call('write')
+        ->set('textFormat', 'abc')
+        ->set('text', $source)
+        ->assertHasNoErrors()
+        ->assertSeeHtml('data-entry-text-format')
+        ->assertSee(__('Written in :format and engraved like a score in that format, without adding one to the library.', ['format' => 'ABC']));
+
+    $entry->refresh();
+
+    expect($entry->isText())->toBeTrue()
+        ->and($entry->text_format)->toBe(ScoreFormat::Abc)
+        ->and(BookletEditor::overrideFormat($entry))->toBe('abc')
+        ->and(payloadOf($booklet)[0])->toMatchArray([
+            'id' => $entry->id,
+            'kind' => 'score',
+            'scoreId' => null,
+            'format' => 'abc',
+            'content' => $source,
+            'sections' => null,
+            'settings' => [],
+        ]);
+});
+
+it('forgets a rows adjustments when its words change notation', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $entry = BookletScore::factory()->text('Álljunk fel.')->create([
+        'booklet_id' => $booklet->id,
+        'settings_override' => ['textSizeScale' => 0.8],
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(EntryRow::class, ['entry' => $entry])->set('textFormat', 'chordpro');
+
+    expect($entry->refresh()->text_format)->toBe(ScoreFormat::ChordPro)
+        ->and($entry->settings_override)->toBeNull();
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])
+        ->call('saveOverride', $entry->id, ['chordproFontSize' => 14, 'textSizeScale' => 0.8]);
+
+    expect($entry->refresh()->settings_override)->toBe(['chordproFontSize' => 14]);
+
+    Livewire::test(EntryRow::class, ['entry' => $entry])->set('textFormat', '');
+
+    expect($entry->refresh()->text_format)->toBeNull()
+        ->and(payloadOf($booklet)[0])->toMatchArray(['kind' => 'text', 'text' => 'Álljunk fel.']);
+});
+
+it('refuses a notation it has never heard of', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+    $entry = BookletScore::factory()->text()->create(['booklet_id' => $booklet->id]);
+
+    actingAs($user);
+
+    Livewire::test(EntryRow::class, ['entry' => $entry])
+        ->set('textFormat', 'midi')
+        ->assertHasErrors('textFormat');
+
+    expect($entry->refresh()->text_format)->toBeNull();
+});
+
+it('refuses to change the notation of somebody elses words', function () {
+    $owner = User::factory()->create();
+    $booklet = bookletFor($owner);
+    $entry = BookletScore::factory()->text()->create(['booklet_id' => $booklet->id]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(EntryRow::class, ['entry' => $entry])
+        ->set('textFormat', 'gabc')
+        ->assertForbidden();
+
+    expect($entry->refresh()->text_format)->toBeNull();
+});
+
+it('copies the notation of written bars when the booklet is duplicated', function () {
+    $user = User::factory()->create();
+    $booklet = bookletFor($user);
+
+    BookletScore::factory()->notation(ScoreFormat::Gabc, '(c4) A(f)men.(f) (::)')->create(['booklet_id' => $booklet->id]);
+
+    $copy = $booklet->duplicate()->entries()->firstOrFail();
+
+    expect($copy->text_format)->toBe(ScoreFormat::Gabc)
+        ->and($copy->text)->toBe('(c4) A(f)men.(f) (::)');
 });
 
 // The words a booklet opens with are almost always its name, so the paragraph

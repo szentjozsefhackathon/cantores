@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ProjectionTextTheme;
+use App\Enums\ScoreFormat;
 use App\Livewire\Pages\PlanDocuments;
 use App\Livewire\Pages\ProjectionEditor;
 use App\Livewire\Projection\SlideRow;
@@ -157,6 +158,53 @@ it('adds a screen of words', function () {
     $entry = $projection->entries()->firstOrFail();
 
     expect($entry->isText())->toBeTrue();
+});
+
+/*
+ * Bars written straight into the deck are cut and engraved exactly as a score
+ * in their format would be, so they reach the browser as one — at this deck's
+ * shape, with nothing of a score's own layout under them.
+ */
+it('writes a few bars straight into the deck and shows them as a score', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+    $source = "(g2) c e g a g.\nw: Sal-ve, Re-gí-na,";
+
+    actingAs($user);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])->call('addText');
+
+    $entry = $projection->entries()->firstOrFail();
+
+    Livewire::test(SlideRow::class, ['entry' => $entry])
+        ->set('textFormat', 'aretino')
+        ->set('text', $source)
+        ->assertHasNoErrors();
+
+    $entry->refresh();
+
+    $payload = Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->get('renderPayload');
+
+    expect($entry->text_format)->toBe(ScoreFormat::Aretino)
+        ->and(ProjectionEditor::overrideFormat($entry))->toBe('aretino')
+        ->and($payload[0])->toMatchArray([
+            'id' => $entry->id,
+            'kind' => 'score',
+            'scoreId' => null,
+            'format' => 'aretino',
+            'content' => $source,
+            'settings' => [],
+        ]);
+});
+
+it('copies the notation of written bars when the deck is duplicated', function () {
+    $user = User::factory()->create();
+    $projection = projectionFor($user);
+
+    ProjectionSlide::factory()->notation(ScoreFormat::ChordPro, '[G]Alleluja!')->create(['projection_id' => $projection->id]);
+
+    expect($projection->duplicate()->entries()->firstOrFail()->text_format)->toBe(ScoreFormat::ChordPro);
 });
 
 /*

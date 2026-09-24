@@ -1,4 +1,5 @@
 @php
+    use App\Enums\ScoreFormat;
     use App\Livewire\Pages\BookletEditor;
     use App\Support\BookletSettingFields;
     use App\Support\ScoreSections;
@@ -74,9 +75,9 @@
                 @if($entry->isText())
                     {{-- As much of the words as the three buttons beside them are
                          tall, so a paragraph is recognised without opening it. --}}
-                    <flux:icon name="document-text" variant="micro" class="mt-0.5 shrink-0 text-zinc-400" />
-                    <span data-entry-text-preview class="line-clamp-4 min-h-20 min-w-0 flex-1 whitespace-pre-line break-words italic text-zinc-600 dark:text-zinc-300">{{ trim(strip_tags($entry->text ?? '')) ?: __('Empty text') }}</span>
-                    <flux:badge size="sm" color="zinc" class="shrink-0">{{ __('Text') }}</flux:badge>
+                    <flux:icon :name="$entry->text_format ? 'music' : 'document-text'" variant="micro" class="mt-0.5 shrink-0 text-zinc-400" />
+                    <span data-entry-text-preview class="line-clamp-4 min-h-20 min-w-0 flex-1 whitespace-pre-line break-words text-zinc-600 dark:text-zinc-300 {{ $entry->text_format ? 'font-mono text-xs' : 'italic' }}">{{ trim(strip_tags($entry->text ?? '')) ?: __('Empty text') }}</span>
+                    <flux:badge size="sm" color="zinc" class="shrink-0">{{ $entry->text_format?->label() ?? __('Text') }}</flux:badge>
                 @else
                     {{-- A score chosen outside the plan stands at the foot of the
                          pane with nothing above it to say what it is, so it names its
@@ -288,14 +289,30 @@
                  talked about. --}}
             @if($entry->isText() && $writing)
                 <div class="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-700">
+                    {{-- Words need not be words: a response, a psalm tone, a refrain
+                         sung once is written here in one of the score formats and
+                         engraved as that score would be, without a score of its own
+                         in the library for a few bars. --}}
+                    <flux:select size="sm" class="mb-2 max-w-40" wire:model.live="textFormat" data-entry-text-format :aria-label="__('Written in')">
+                        <flux:select.option value="">{{ __('Markdown') }}</flux:select.option>
+                        @foreach(ScoreFormat::cases() as $format)
+                            <flux:select.option :value="$format->value">{{ $format->label() }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+
                     <flux:textarea
                         rows="6"
                         wire:model.live.debounce.600ms="text"
-                        :placeholder="__('Stand. The cantor sings the verses, **all** repeat the antiphon.')"
+                        :class="$entry->text_format ? 'font-mono' : ''"
+                        :placeholder="$entry->text_format?->example() ?? __('Stand. The cantor sings the verses, **all** repeat the antiphon.')"
                     />
 
                     <flux:text class="mt-2 text-xs text-zinc-500">
-                        {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote, <red>red</red>, <small>small</small>.') }}
+                        @if($entry->text_format)
+                            {{ __('Written in :format and engraved like a score in that format, without adding one to the library.', ['format' => $entry->text_format->label()]) }}
+                        @else
+                            {{ __('Markdown: # heading, **bold**, *italic*, - list, > quote, <red>red</red>, <small>small</small>.') }}
+                        @endif
                     </flux:text>
                 </div>
             @endif

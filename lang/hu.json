@@ -1620,5 +1620,8 @@
     "Name this link, e.g. “Band”": "Nevezd el a linket, pl. „Zenekar”",
     "Recall this link": "Link visszavonása",
     "Recall this link? Anyone still holding it will lose access.": "Visszavonod ezt a linket? Akinél még megvan, elveszíti a hozzáférést.",
-    "New link": "Új link"
+    "New link": "Új link",
+    "Markdown": "Markdown",
+    "Written in": "Írásmód",
+    "Written in :format and engraved like a score in that format, without adding one to the library.": ":format formátumban írva, és úgy szedve, mint egy ilyen kotta — anélkül, hogy a kottatárba kerülne."
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Contracts\PlanEntry;
+use App\Enums\ScoreFormat;
 use Carbon\CarbonImmutable;
 use Database\Factories\BookletScoreFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,7 +20,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * booklet the same score appears in.
  *
  * A row may also carry no score at all: a paragraph of instructions, written in
- * Markdown, that is set between the music.
+ * Markdown, that is set between the music — or a few bars written straight into
+ * the booklet in one of the score formats, named by `text_format`, and engraved
+ * as a score in that format would be.
  *
  * Every row also names the slot it stands in, whether or not it was chosen from
  * a music: that is what lets the editor show the booklet as the plan itself.
@@ -32,6 +35,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $music_plan_slot_plan_id
  * @property int|null $added_music_id
  * @property string|null $text
+ * @property ScoreFormat|null $text_format
  * @property int $sequence
  * @property array<string, mixed>|null $settings_override
  * @property list<int>|null $sections
@@ -72,6 +76,7 @@ class BookletScore extends Model implements PlanEntry
         'music_plan_slot_plan_id',
         'added_music_id',
         'text',
+        'text_format',
         'sequence',
         'settings_override',
         'sections',
@@ -88,6 +93,7 @@ class BookletScore extends Model implements PlanEntry
     protected function casts(): array
     {
         return [
+            'text_format' => ScoreFormat::class,
             'settings_override' => 'array',
             'sections' => 'array',
             'start_on_new_page' => 'boolean',

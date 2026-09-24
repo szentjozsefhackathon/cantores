@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ScoreFormat;
 use App\Models\Booklet;
 use App\Models\BookletScore;
 use App\Models\Score;
@@ -39,6 +40,19 @@ class BookletScoreFactory extends Factory
         return $this->state(fn (): array => [
             'score_id' => null,
             'text' => $markdown,
+        ]);
+    }
+
+    /**
+     * A few bars written straight into the booklet rather than chosen from a
+     * score.
+     */
+    public function notation(ScoreFormat $format, string $source): static
+    {
+        return $this->state(fn (): array => [
+            'score_id' => null,
+            'text' => $source,
+            'text_format' => $format,
         ]);
     }
 

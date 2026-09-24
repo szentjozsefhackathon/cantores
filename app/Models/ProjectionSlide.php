@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Contracts\PlanEntry;
+use App\Enums\ScoreFormat;
 use Carbon\CarbonImmutable;
 use Database\Factories\ProjectionSlideFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,7 +22,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * screen on Sunday.
  *
  * A row may carry no score at all: a few words set on a screen of their own
- * between the music.
+ * between the music — or a few bars written straight into the deck in one of the
+ * score formats, named by `text_format`, and engraved as a score in that format
+ * would be.
  *
  * Every row also names the slot it stands in, whether or not it was chosen from
  * a music: that is what lets the editor show the deck as the plan itself.
@@ -34,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $music_plan_slot_plan_id
  * @property int|null $added_music_id
  * @property string|null $text
+ * @property ScoreFormat|null $text_format
  * @property int $sequence
  * @property array<string, array<string, mixed>>|null $settings_override
  * @property array<string, list<int>>|null $excluded_slides
@@ -74,6 +78,7 @@ class ProjectionSlide extends Model implements PlanEntry
         'music_plan_slot_plan_id',
         'added_music_id',
         'text',
+        'text_format',
         'sequence',
         'settings_override',
         'excluded_slides',
@@ -90,6 +95,7 @@ class ProjectionSlide extends Model implements PlanEntry
     protected function casts(): array
     {
         return [
+            'text_format' => ScoreFormat::class,
             'settings_override' => 'array',
             'excluded_slides' => 'array',
             'sections' => 'array',

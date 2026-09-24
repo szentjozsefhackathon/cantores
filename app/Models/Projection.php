@@ -366,6 +366,7 @@ class Projection extends Model implements PlanDocument
                     'music_plan_slot_plan_id' => $entry->music_plan_slot_plan_id,
                     'added_music_id' => $musicIds[$entry->added_music_id] ?? null,
                     'text' => $entry->text,
+                    'text_format' => $entry->text_format,
                     'sequence' => $entry->sequence,
                     'settings_override' => $entry->settings_override,
                     'excluded_slides' => $entry->excluded_slides,
