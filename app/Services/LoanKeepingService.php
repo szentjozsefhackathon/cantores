@@ -227,7 +227,7 @@ class LoanKeepingService
         $receipts = ReceivedLoan::query()
             ->kept()
             ->where('user_id', $loan->user_id)
-            ->whereHas('loan', fn (Builder $query) => $query->live())
+            ->whereHas('loan', fn (Builder $query) => $query->live()->unrestricted())
             ->with('loan.lendable')
             ->get();
 

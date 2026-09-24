@@ -15,6 +15,7 @@ use App\Services\NotificationService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
@@ -216,6 +217,7 @@ class Loans extends Component
             ->mine(Auth::user())
             ->live()
             ->with('lendable')
+            ->withCount('recipients')
             ->latest('id')
             ->paginate(15, pageName: 'lentPage');
     }
@@ -270,7 +272,7 @@ class Loans extends Component
     /**
      * A label, an owner and an address for a kept loan.
      *
-     * @return array{type: string, title: string, owner: string, url: string|null, changed_at: \Illuminate\Support\Carbon|null}
+     * @return array{type: string, title: string, owner: string, url: string|null, changed_at: Carbon|null}
      */
     public function describeReceipt(ReceivedLoan $receipt): array
     {
@@ -367,12 +369,7 @@ class Loans extends Component
      */
     public function linkFor(Loan $loan): string
     {
-        return match (true) {
-            $loan->lendable instanceof Folder => route('folder.loan', ['token' => $loan->token]),
-            $loan->lendable instanceof MusicPlan => route('music-plan.loan', ['token' => $loan->token]),
-            $loan->lendable instanceof Booklet => route('booklet.loan', ['token' => $loan->token]),
-            default => route('score.loan', ['token' => $loan->token]),
-        };
+        return $loan->url();
     }
 
     /**

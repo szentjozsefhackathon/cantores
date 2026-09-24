@@ -2,9 +2,9 @@
 
 use App\Livewire\Pages\ScoreEditor;
 use App\Models\Folder;
+use App\Models\Loan;
 use App\Models\Score;
 use App\Models\ScorePublication;
-use App\Models\Loan;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -83,10 +83,16 @@ it('shows the secret-link badge as soon as one is generated', function () {
 
     actingAs($user);
 
-    Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->assertSee(__('Private — only you can see it'))
-        ->call('lendByLink')
-        ->assertSee(__('Shared with a secret link'))
-        ->call('recallLoan')
+    $editor = Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSee(__('Private — only you can see it'));
+
+    $loan = $score->lend($user);
+
+    $editor->dispatch('loans-changed')
+        ->assertSee(__('Shared with a secret link'));
+
+    $loan->revoke();
+
+    $editor->dispatch('loans-changed')
         ->assertSee(__('Private — only you can see it'));
 });

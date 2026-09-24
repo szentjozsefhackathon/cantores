@@ -1,10 +1,12 @@
 <?php
 
+use App\Livewire\LoanLinks;
 use App\Livewire\Pages\FolderEditor;
 use App\Livewire\Pages\FolderView;
 use App\Models\Folder;
 use App\Models\Loan;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -57,8 +59,8 @@ it('owner can generate a secret link', function () {
 
     expect($folder->loanToken())->toBeNull();
 
-    Livewire::test(FolderEditor::class, ['folder' => $folder])
-        ->call('lendByLink')
+    Livewire::test(LoanLinks::class, ['lendable' => $folder])
+        ->call('lend')
         ->assertHasNoErrors();
 
     expect($folder->fresh()->loanToken())->not->toBeNull()->toHaveLength(32);
@@ -69,24 +71,24 @@ it('secret link resolves to a valid URL after generation', function () {
     $folder = Folder::factory()->create(['user_id' => $user->id]);
     actingAs($user);
 
-    Livewire::test(FolderEditor::class, ['folder' => $folder])
-        ->call('lendByLink');
+    Livewire::test(LoanLinks::class, ['lendable' => $folder])
+        ->call('lend');
 
     $token = $folder->fresh()->loanToken();
     expect($token)->not->toBeNull();
 
-    \Illuminate\Support\Facades\Auth::logout();
+    Auth::logout();
     get(route('folder.loan', ['token' => $token]))->assertOk();
 });
 
 it('owner can delete the secret link', function () {
     $user = User::factory()->create();
     $folder = Folder::factory()->create(['user_id' => $user->id]);
-    Loan::factory()->of($folder)->create();
+    $loan = Loan::factory()->of($folder)->create();
     actingAs($user);
 
-    Livewire::test(FolderEditor::class, ['folder' => $folder])
-        ->call('recallLoan')
+    Livewire::test(LoanLinks::class, ['lendable' => $folder])
+        ->call('recall', $loan->id)
         ->assertHasNoErrors();
 
     expect($folder->fresh()->loanToken())->toBeNull();
@@ -95,11 +97,12 @@ it('owner can delete the secret link', function () {
 it('deleted secret link returns 404', function () {
     $user = User::factory()->create();
     $folder = Folder::factory()->create(['user_id' => $user->id]);
-    $token = Loan::factory()->of($folder)->create()->token;
+    $loan = Loan::factory()->of($folder)->create();
+    $token = $loan->token;
     actingAs($user);
 
-    Livewire::test(FolderEditor::class, ['folder' => $folder])
-        ->call('recallLoan');
+    Livewire::test(LoanLinks::class, ['lendable' => $folder])
+        ->call('recall', $loan->id);
 
     get(route('folder.loan', ['token' => $token]))->assertNotFound();
 });

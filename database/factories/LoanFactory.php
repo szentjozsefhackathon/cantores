@@ -3,15 +3,15 @@
 namespace Database\Factories;
 
 use App\Models\Folder;
+use App\Models\Loan;
 use App\Models\MusicPlan;
 use App\Models\Score;
-use App\Models\Loan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Loan>
+ * @extends Factory<Loan>
  */
 class LoanFactory extends Factory
 {
@@ -51,6 +51,21 @@ class LoanFactory extends Factory
     public function forMusicPlan(?MusicPlan $plan = null): static
     {
         return $this->of($plan ?? MusicPlan::factory()->create());
+    }
+
+    /**
+     * Open the loan only for the given people, besides the lender.
+     *
+     * @param  iterable<int, User>  $recipients
+     */
+    public function restrictedTo(iterable $recipients = []): static
+    {
+        return $this->state(['restricted' => true])
+            ->afterCreating(function (Loan $loan) use ($recipients): void {
+                foreach ($recipients as $recipient) {
+                    $loan->recipients()->attach($recipient);
+                }
+            });
     }
 
     public function revoked(): static

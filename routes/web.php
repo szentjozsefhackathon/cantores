@@ -51,6 +51,7 @@ use App\Livewire\Pages\FolderEditor;
 use App\Livewire\Pages\Folders;
 use App\Livewire\Pages\FolderView;
 use App\Livewire\Pages\LoanManager;
+use App\Livewire\Pages\LoanRecipients;
 use App\Livewire\Pages\Loans;
 use App\Livewire\Pages\MusicPlanLoanView;
 use App\Livewire\Pages\MusicView;
@@ -364,6 +365,11 @@ Route::livewire('/kolcsonzesek', Loans::class)
 Route::livewire('/kolcsonzesek/{loan}', LoanManager::class)
     ->middleware(['auth', 'verified'])
     ->name('loans.manage');
+
+// Who a loan opens for: anyone with the link, or only named people
+Route::livewire('/kolcsonzesek/{loan}/kinek', LoanRecipients::class)
+    ->middleware(['auth', 'verified'])
+    ->name('loans.recipients');
 
 // The screen was called /shared-links before lending got its own vocabulary
 Route::redirect('/shared-links', '/kolcsonzesek');

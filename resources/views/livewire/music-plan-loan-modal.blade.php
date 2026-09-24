@@ -31,40 +31,10 @@
         <div class="mb-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
             <flux:heading size="sm" class="mb-2">Kölcsönlink</flux:heading>
             <flux:text class="text-sm text-neutral-600 dark:text-neutral-400 mb-3">
-                A kölcsönlinkkel bárkinek kölcsönadhatod az énekrend teljes tartalmát – a privát énekekkel és kottákkal együtt. Aki megkapja, tovább is adhatja; a linket bármikor visszavonhatod.
+                A kölcsönlinkkel kölcsönadhatod az énekrend teljes tartalmát – a privát énekekkel és kottákkal együtt. Több linked is lehet egyszerre, mindegyiket külön visszavonhatod.
             </flux:text>
 
-            @if($loanLinkUrl)
-            <div class="flex flex-col gap-2">
-                <flux:input value="{{ $loanLinkUrl }}" readonly />
-                <div class="flex gap-2">
-                    <flux:button
-                        wire:click="$dispatch('copy-to-clipboard', '{{ $loanLinkUrl }}')"
-                        variant="outline"
-                        size="sm"
-                        icon="clipboard-copy">
-                        Link másolása
-                    </flux:button>
-                    <flux:button
-                        wire:click="recallLoan"
-                        variant="outline"
-                        color="red"
-                        size="sm"
-                        icon="trash">
-                        Link törlése
-                    </flux:button>
-                </div>
-            </div>
-            @else
-            <flux:button
-                wire:click="lendByLink"
-                variant="outline"
-                color="blue"
-                size="sm"
-                icon="link">
-                Kölcsönadás linkkel
-            </flux:button>
-            @endif
+            <livewire:loan-links :lendable="$this->musicPlan" :key="'loan-links-plan-'.$musicPlanId" />
         </div>
         @endif
 

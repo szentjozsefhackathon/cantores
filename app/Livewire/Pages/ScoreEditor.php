@@ -125,8 +125,6 @@ class ScoreEditor extends Component
 
     public bool $isSharedLink = false;
 
-    public ?string $loanLinkUrl = null;
-
     /** @var array<int> */
     public array $folderIds = [];
 
@@ -161,10 +159,6 @@ class ScoreEditor extends Component
             $this->content = $score->content ?? '';
             $this->settings = $score->settings ?? [];
             $this->publicPreview = (bool) $score->public_preview;
-            $loanToken = $score->loanToken();
-            $this->loanLinkUrl = $loanToken !== null
-                ? route('score.loan', ['token' => $loanToken])
-                : null;
             $this->folderIds = $score->folders()->pluck('folder_id')->toArray();
             $this->fillPublicationForm($score);
 
@@ -718,26 +712,6 @@ class ScoreEditor extends Component
         ];
     }
 
-    public function lendByLink(): void
-    {
-        abort_unless($this->score instanceof Score, 404);
-        $this->authorize('update', $this->score);
-
-        $loan = $this->score->mintLoan();
-
-        $this->loanLinkUrl = route('score.loan', ['token' => $loan->token]);
-    }
-
-    public function recallLoan(): void
-    {
-        abort_unless($this->score instanceof Score, 404);
-        $this->authorize('update', $this->score);
-
-        $this->score->revokeLoans();
-
-        $this->loanLinkUrl = null;
-    }
-
     public function toggleFolder(int $folderId): void
     {
         abort_unless($this->score instanceof Score, 404);
@@ -1101,6 +1075,21 @@ class ScoreEditor extends Component
                 'revoke_id' => $loan->id,
             ])
             ->values();
+    }
+
+    /**
+     * Whether any lending link of the score's own is open, for the header badge.
+     */
+    #[Computed]
+    public function isLentByLink(): bool
+    {
+        return $this->score instanceof Score && $this->score->liveLoans()->exists();
+    }
+
+    #[On('loans-changed')]
+    public function refreshLendingStatus(): void
+    {
+        unset($this->isLentByLink, $this->indirectLoans);
     }
 
     #[Renderless]

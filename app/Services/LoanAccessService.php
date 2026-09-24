@@ -9,8 +9,11 @@ use App\Models\MusicPlan;
 use App\Models\ReceivedLoan;
 use App\Models\Score;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Resolves lending links and decides what a link reaches.
@@ -39,6 +42,14 @@ class LoanAccessService
 
     /**
      * The live loan for a token, or null when the token is unknown, revoked or expired.
+     *
+     * A loan restricted to named people is refused to everyone else here, so every
+     * entry point inherits the check. A guest is sent to sign in, since they may
+     * well be on the list; a signed-in reader who is not is told so, rather than
+     * shown a 404 for a link they can see was real.
+     *
+     * @throws AuthenticationException
+     * @throws AuthorizationException
      */
     public function resolve(?string $token): ?Loan
     {
@@ -46,11 +57,21 @@ class LoanAccessService
             return null;
         }
 
-        return Loan::query()
+        $loan = Loan::query()
             ->live()
             ->with('lendable')
             ->where('token', $token)
             ->first();
+
+        if (! $loan instanceof Loan || $loan->admits(Auth::user())) {
+            return $loan;
+        }
+
+        if (! Auth::check()) {
+            throw new AuthenticationException;
+        }
+
+        throw new AuthorizationException(__('This loan was lent to named people only.'));
     }
 
     /**
@@ -122,6 +143,17 @@ class LoanAccessService
      * @return list<int>
      */
     public function keptScoreIds(User $user): array
+    {
+        return $this->keptScoreIdsFor($user->getKey(), [], forReading: true);
+    }
+
+    /**
+     * The borrowed scores a user may pass on in their own folders, plans and
+     * booklets: what they kept, less anything lent to them by name.
+     *
+     * @return list<int>
+     */
+    public function passableScoreIds(User $user): array
     {
         return $this->keptScoreIdsFor($user->getKey(), []);
     }
@@ -342,16 +374,25 @@ class LoanAccessService
     }
 
     /**
+     * What a user holds through kept loans.
+     *
+     * Read for the user themselves, a restricted loan counts while it still names
+     * them. Read for passing on — the default, because every container walk is
+     * one — a restricted loan never counts: it was lent to people, not to
+     * whoever those people lend to next.
+     *
      * @param  list<int>  $seenLoanIds
      * @return list<int>
      */
-    private function keptScoreIdsFor(int $userId, array $seenLoanIds): array
+    private function keptScoreIdsFor(int $userId, array $seenLoanIds, bool $forReading = false): array
     {
         /** @var Collection<int, ReceivedLoan> $receipts */
         $receipts = ReceivedLoan::query()
             ->kept()
             ->where('user_id', $userId)
-            ->whereHas('loan', fn (Builder $query) => $query->live())
+            ->whereHas('loan', fn (Builder $query) => $forReading
+                ? $query->live()->openTo($userId)
+                : $query->live()->unrestricted())
             ->with('loan.lendable')
             ->get();
 

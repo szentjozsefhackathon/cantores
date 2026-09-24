@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\LoanLinks;
 use App\Livewire\Pages\BookletEditor;
 use App\Livewire\Pages\BookletLoanView;
 use App\Livewire\Pages\Loans;
@@ -57,17 +58,15 @@ it('mints a link from the editor and recalls it again', function () {
 
     actingAs($user);
 
-    $component = Livewire::test(BookletEditor::class, ['booklet' => $booklet])
-        ->assertSet('shareUrl', null)
-        ->call('lendByLink');
+    $component = Livewire::test(LoanLinks::class, ['lendable' => $booklet])
+        ->call('lend');
 
-    $token = $booklet->fresh()->loanToken();
+    $loan = $booklet->liveLoans()->sole();
 
-    expect($token)->not->toBeNull();
+    $component->assertSee(route('booklet.loan', ['token' => $loan->token]));
 
-    $component->assertSet('shareUrl', route('booklet.loan', ['token' => $token]));
-
-    $component->call('recallLoan')->assertSet('shareUrl', null);
+    $component->call('recall', $loan->id)
+        ->assertDontSee(route('booklet.loan', ['token' => $loan->token]));
 
     expect($booklet->fresh()->loanToken())->toBeNull();
 });

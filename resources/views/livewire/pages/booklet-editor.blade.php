@@ -303,41 +303,15 @@ resources/js/booklet-editor.js
         {{-- Outside the geometry bar on purpose: a field typed into inside it
              would tell the preview it is being laid out again. --}}
         <flux:modal name="booklet-share" class="max-w-xl">
-            <div x-data="{ copied: false }">
+            <div>
                 <flux:heading size="lg">{{ __('Share with the band') }}</flux:heading>
 
                 <flux:text class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
                     {{ __('Anyone holding this link opens the booklet on their own phone — the booklet itself, not a copy of it, engraved to the width of their screen. They can set their own size and font without changing anything here, and they cannot download or edit it. Whatever you change is theirs on the next refresh.') }}
                 </flux:text>
 
-                <div class="mt-4" x-show="$wire.shareUrl" x-cloak>
-                    <div class="flex items-center gap-2">
-                        <flux:input readonly x-bind:value="$wire.shareUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
-                        <flux:tooltip :content="__('Copy link')">
-                            <flux:button
-                                icon="clipboard"
-                                variant="ghost"
-                                :aria-label="__('Copy link')"
-                                x-on:click="navigator.clipboard.writeText($wire.shareUrl).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
-                                x-bind:class="copied ? 'text-green-600' : ''"
-                            />
-                        </flux:tooltip>
-                        <flux:tooltip :content="__('Recall the link')">
-                            <flux:button
-                                icon="trash"
-                                variant="ghost"
-                                :aria-label="__('Recall the link')"
-                                wire:click="recallLoan"
-                                wire:confirm="{{ __('Recall this link? Anyone still holding it will lose the booklet.') }}"
-                            />
-                        </flux:tooltip>
-                    </div>
-                </div>
-
-                <div class="mt-4" x-show="!$wire.shareUrl">
-                    <flux:button variant="primary" icon="link" wire:click="lendByLink">
-                        {{ __('Create the link') }}
-                    </flux:button>
+                <div class="mt-4">
+                    <livewire:loan-links :lendable="$booklet" :key="'loan-links-booklet-'.$booklet->id" />
                 </div>
             </div>
         </flux:modal>

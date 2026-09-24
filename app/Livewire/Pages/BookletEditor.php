@@ -153,18 +153,6 @@ class BookletEditor extends Component
     public string $planSearch = '';
 
     /**
-     * The link the band reads this booklet on, when there is one.
-     *
-     * A booklet is made to be sung from, and the people singing from it are not
-     * at the printer. The link hands them the booklet itself rather than a copy
-     * of it — engraved afresh on each of their phones, at whatever size they can
-     * read — so a chord fixed here at the rehearsal is in their hands on the
-     * next refresh. It is read-only and it is recallable, like every other
-     * lending link on the site.
-     */
-    public ?string $shareUrl = null;
-
-    /**
      * Where a music picked in the search will be added: a slot's id, or null for
      * between slots. Only read while the search is open.
      */
@@ -194,37 +182,7 @@ class BookletEditor extends Component
         $this->abcLyricSkip = $booklet->abc_lyric_skip;
         $this->style = $booklet->style();
 
-        $this->shareUrl = $this->urlForToken($booklet->loanToken());
-
         $this->normalizeOrder();
-    }
-
-    /**
-     * Hand the booklet to the band.
-     *
-     * Nothing is copied and nothing is frozen: the link resolves to this booklet
-     * on every request, so what it opens is whatever the booklet says at the
-     * moment it is opened.
-     */
-    public function lendByLink(): void
-    {
-        $this->authorize('update', $this->booklet);
-
-        $this->shareUrl = $this->urlForToken($this->booklet->mintLoan()->token);
-    }
-
-    /**
-     * Take it back. The scores the booklet reaches were never minted onto
-     * anybody — they are derived from this loan on every request — so this closes
-     * the pages and the systems under them at once.
-     */
-    public function recallLoan(): void
-    {
-        $this->authorize('update', $this->booklet);
-
-        $this->booklet->revokeLoans();
-
-        $this->shareUrl = null;
     }
 
     /**
@@ -1163,11 +1121,6 @@ class BookletEditor extends Component
     public function render(): IlluminateView
     {
         return view('livewire.pages.booklet-editor');
-    }
-
-    private function urlForToken(?string $token): ?string
-    {
-        return $token === null ? null : route('booklet.loan', ['token' => $token]);
     }
 
     /**

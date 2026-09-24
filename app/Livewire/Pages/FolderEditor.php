@@ -7,7 +7,6 @@ use App\Models\Score;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
-use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 class FolderEditor extends Component
@@ -17,8 +16,6 @@ class FolderEditor extends Component
     public ?Folder $folder = null;
 
     public string $name = '';
-
-    public ?string $loanLinkUrl = null;
 
     /** @var array<int> */
     public array $scoreIds = [];
@@ -35,10 +32,6 @@ class FolderEditor extends Component
             $this->authorize('update', $folder);
             $this->folder = $folder;
             $this->name = $folder->name;
-            $loanToken = $folder->loanToken();
-            $this->loanLinkUrl = $loanToken !== null
-                ? route('folder.loan', ['token' => $loanToken])
-                : null;
             $this->scoreIds = $folder->scores()->pluck('scores.id')->toArray();
         } else {
             $this->authorize('create', Folder::class);
@@ -91,28 +84,6 @@ class FolderEditor extends Component
         if ($this->modalPage < $lastPage) {
             $this->modalPage++;
         }
-    }
-
-    #[Renderless]
-    public function lendByLink(): void
-    {
-        abort_unless($this->folder instanceof Folder, 404);
-        $this->authorize('update', $this->folder);
-
-        $loan = $this->folder->mintLoan();
-
-        $this->loanLinkUrl = route('folder.loan', ['token' => $loan->token]);
-    }
-
-    #[Renderless]
-    public function recallLoan(): void
-    {
-        abort_unless($this->folder instanceof Folder, 404);
-        $this->authorize('update', $this->folder);
-
-        $this->folder->revokeLoans();
-
-        $this->loanLinkUrl = null;
     }
 
     public function toggleScore(int $scoreId): void

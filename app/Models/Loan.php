@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
+use Database\Factories\LoanFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
@@ -29,31 +33,44 @@ use Illuminate\Support\Str;
  * @property string $token
  * @property string|null $label
  * @property bool $allow_download
- * @property \Carbon\CarbonImmutable|null $expires_at
- * @property \Carbon\CarbonImmutable|null $revoked_at
+ * @property bool $restricted
+ * @property CarbonImmutable|null $expires_at
+ * @property CarbonImmutable|null $revoked_at
  * @property int $open_count
- * @property \Carbon\CarbonImmutable|null $last_viewed_at
- * @property \Carbon\CarbonImmutable|null $contents_reviewed_at
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property CarbonImmutable|null $last_viewed_at
+ * @property CarbonImmutable|null $contents_reviewed_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property-read Model|\Eloquent $lendable
- * @property-read \App\Models\User $user
+ * @property-read User $user
+ * @property-read Collection<int, User> $recipients
  *
  * @method static \Database\Factories\LoanFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan live()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan mine(?\App\Models\User $user = null)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan openTo(int $userId)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan unrestricted()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Loan query()
  *
  * @mixin \Eloquent
  */
 class Loan extends Model
 {
-    /** @use HasFactory<\Database\Factories\LoanFactory> */
+    /** @use HasFactory<LoanFactory> */
     use HasFactory;
 
     public const TOKEN_LENGTH = 32;
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'restricted' => false,
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -67,6 +84,7 @@ class Loan extends Model
         'token',
         'label',
         'allow_download',
+        'restricted',
         'expires_at',
         'revoked_at',
         'last_viewed_at',
@@ -82,6 +100,7 @@ class Loan extends Model
     {
         return [
             'allow_download' => 'boolean',
+            'restricted' => 'boolean',
             'expires_at' => 'datetime',
             'revoked_at' => 'datetime',
             'last_viewed_at' => 'datetime',
@@ -116,12 +135,53 @@ class Loan extends Model
     }
 
     /**
+     * The people a restricted loan opens for, besides the lender.
+     */
+    public function recipients(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'loan_recipients')->withTimestamps();
+    }
+
+    /**
+     * Whether this loan lets the given reader in.
+     *
+     * An open loan admits anyone holding the link, signed in or not. A restricted
+     * one admits only the lender and the people named on it, and never a guest.
+     */
+    public function admits(?User $user): bool
+    {
+        if (! $this->restricted) {
+            return true;
+        }
+
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        return $user->getKey() === $this->user_id
+            || $this->recipients()->whereKey($user->getKey())->exists();
+    }
+
+    /**
      * Whether this loan opens a container — a folder or plan whose contents can be
      * excluded one by one — as opposed to a single score.
      */
     public function isContainer(): bool
     {
         return ! $this->lendable instanceof Score;
+    }
+
+    /**
+     * The address this loan is followed at.
+     */
+    public function url(): string
+    {
+        return match (true) {
+            $this->lendable instanceof Folder => route('folder.loan', ['token' => $this->token]),
+            $this->lendable instanceof MusicPlan => route('music-plan.loan', ['token' => $this->token]),
+            $this->lendable instanceof Booklet => route('booklet.loan', ['token' => $this->token]),
+            default => route('score.loan', ['token' => $this->token]),
+        };
     }
 
     /**
@@ -173,6 +233,32 @@ class Loan extends Model
             ->where(function (Builder $query): void {
                 $query->whereNull('expires_at')->orWhere('expires_at', '>', Carbon::now());
             });
+    }
+
+    /**
+     * Scope to loans the given user may open: open ones, their own, and restricted
+     * ones that name them.
+     *
+     * @param  Builder<Loan>  $query
+     */
+    public function scopeOpenTo(Builder $query, int $userId): void
+    {
+        $query->where(function (Builder $query) use ($userId): void {
+            $query->where('restricted', false)
+                ->orWhere('user_id', $userId)
+                ->orWhereHas('recipients', fn (Builder $recipients) => $recipients->whereKey($userId));
+        });
+    }
+
+    /**
+     * Scope to loans that are not restricted to named people — the only ones whose
+     * scores may travel on in a borrower's own folder, plan or booklet.
+     *
+     * @param  Builder<Loan>  $query
+     */
+    public function scopeUnrestricted(Builder $query): void
+    {
+        $query->where('restricted', false);
     }
 
     /**

@@ -7,6 +7,7 @@ use App\MusicUrlLabel;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class MusicPlanLoanModal extends Component
@@ -21,8 +22,6 @@ class MusicPlanLoanModal extends Component
 
     public bool $isOwner = false;
 
-    public ?string $loanLinkUrl = null;
-
     public function mount(MusicPlan $musicPlan): void
     {
         // Check authorization
@@ -32,12 +31,15 @@ class MusicPlanLoanModal extends Component
 
         $this->musicPlanId = $musicPlan->id;
         $this->isOwner = Auth::check() && Auth::id() === $musicPlan->user_id;
+    }
 
-        $token = $this->isOwner ? $musicPlan->loanToken() : null;
-
-        if ($token !== null) {
-            $this->loanLinkUrl = route('music-plan.loan', ['token' => $token]);
-        }
+    /**
+     * The plan, for the list of its lending links.
+     */
+    #[Computed]
+    public function musicPlan(): MusicPlan
+    {
+        return MusicPlan::query()->findOrFail($this->musicPlanId);
     }
 
     public function openModal(): void
@@ -54,31 +56,6 @@ class MusicPlanLoanModal extends Component
     public function copyToClipboard(): void
     {
         $this->dispatch('copy-to-clipboard', $this->shareText);
-    }
-
-    public function lendByLink(): void
-    {
-        $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
-        $this->authorize('update', $musicPlan);
-
-        $loan = $musicPlan->mintLoan();
-
-        $this->loanLinkUrl = route('music-plan.loan', ['token' => $loan->token]);
-    }
-
-    /**
-     * Revoking the plan's grant also revokes every score URL reached through it:
-     * that access is derived from this grant per request, never minted onto the
-     * scores themselves.
-     */
-    public function recallLoan(): void
-    {
-        $musicPlan = MusicPlan::findOrFail($this->musicPlanId);
-        $this->authorize('update', $musicPlan);
-
-        $musicPlan->revokeLoans();
-
-        $this->loanLinkUrl = null;
     }
 
     private function generateShareText(): string

@@ -1,10 +1,12 @@
 <?php
 
+use App\Livewire\LoanLinks;
 use App\Livewire\Pages\ScoreEditor;
 use App\Livewire\Pages\ScoreView;
 use App\Models\Loan;
 use App\Models\Score;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Js;
 use Livewire\Livewire;
 
@@ -75,8 +77,8 @@ it('owner can generate a secret link', function () {
 
     expect($score->loanToken())->toBeNull();
 
-    Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->call('lendByLink')
+    Livewire::test(LoanLinks::class, ['lendable' => $score])
+        ->call('lend')
         ->assertHasNoErrors();
 
     expect($score->fresh()->loanToken())->not->toBeNull()->toHaveLength(32);
@@ -87,39 +89,44 @@ it('secret link resolves to a valid URL after generation', function () {
     $score = Score::factory()->create(['user_id' => $user->id]);
     actingAs($user);
 
-    Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->call('lendByLink');
+    Livewire::test(LoanLinks::class, ['lendable' => $score])
+        ->call('lend');
 
     $token = $score->fresh()->loanToken();
     expect($token)->not->toBeNull();
 
     // Verify as guest (owner would be redirected to edit)
-    \Illuminate\Support\Facades\Auth::logout();
+    Auth::logout();
     get(route('score.loan', ['token' => $token]))->assertOk();
 });
 
-it('generating a secret link twice reuses the live grant', function () {
+it('generating a second link keeps the first one open', function () {
     $user = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $user->id]);
     actingAs($user);
 
-    Livewire::test(ScoreEditor::class, ['score' => $score])->call('lendByLink');
-    $first = $score->fresh()->loanToken();
+    Livewire::test(LoanLinks::class, ['lendable' => $score])->call('lend')->call('lend');
 
-    Livewire::test(ScoreEditor::class, ['score' => $score])->call('lendByLink');
+    $tokens = $score->liveLoans()->pluck('token');
 
-    expect($score->fresh()->loanToken())->toBe($first)
-        ->and($score->loans()->count())->toBe(1);
+    expect($tokens)->toHaveCount(2)
+        ->and($tokens->unique())->toHaveCount(2);
+
+    Auth::logout();
+
+    foreach ($tokens as $token) {
+        get(route('score.loan', ['token' => $token]))->assertOk();
+    }
 });
 
 it('owner can delete the secret link', function () {
     $user = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $user->id]);
-    Loan::factory()->of($score)->create();
+    $loan = Loan::factory()->of($score)->create();
     actingAs($user);
 
-    Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->call('recallLoan')
+    Livewire::test(LoanLinks::class, ['lendable' => $score])
+        ->call('recall', $loan->id)
         ->assertHasNoErrors();
 
     expect($score->fresh()->loanToken())->toBeNull();
@@ -128,11 +135,12 @@ it('owner can delete the secret link', function () {
 it('deleted secret link returns 404', function () {
     $user = User::factory()->create();
     $score = Score::factory()->create(['user_id' => $user->id]);
-    $token = Loan::factory()->of($score)->create()->token;
+    $loan = Loan::factory()->of($score)->create();
+    $token = $loan->token;
     actingAs($user);
 
-    Livewire::test(ScoreEditor::class, ['score' => $score])
-        ->call('recallLoan');
+    Livewire::test(LoanLinks::class, ['lendable' => $score])
+        ->call('recall', $loan->id);
 
     get(route('score.loan', ['token' => $token]))->assertNotFound();
 });

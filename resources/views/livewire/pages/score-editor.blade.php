@@ -64,7 +64,7 @@ resources/js/score-editor.js
                     @php($headerPublication = $this->publication)
                     @php($headerPublicationStatus = $headerPublication?->status)
                     <div class="mt-2 flex flex-wrap items-center gap-1.5">
-                        @if($loanLinkUrl)
+                        @if($this->isLentByLink)
                         <flux:badge size="sm" color="amber" icon="link">{{ __('Shared with a secret link') }}</flux:badge>
                         @endif
 
@@ -78,7 +78,7 @@ resources/js/score-editor.js
                         <flux:badge size="sm" color="blue" icon="clock">{{ __('Waiting for review by an editor') }}</flux:badge>
                         @endif
 
-                        @if(! $loanLinkUrl
+                        @if(! $this->isLentByLink
                             && $this->indirectLoans->isEmpty()
                             && $headerPublicationStatus !== \App\Enums\ScorePublicationStatus::Approved
                             && $headerPublicationStatus !== \App\Enums\ScorePublicationStatus::Submitted)
@@ -1102,36 +1102,12 @@ resources/js/score-editor.js
                         @endunless
 
                         @if($score && !$isGuest)
-                        <div class="border-t border-zinc-200 pt-4 dark:border-zinc-700" x-data="{ loanLinkCopied: false }">
-                            <div class="flex items-center justify-between gap-2">
-                                <flux:subheading class="font-medium">{{ __('Lending Link') }}</flux:subheading>
-                                <div class="flex min-w-0 flex-1 items-center gap-2" x-show="$wire.loanLinkUrl" x-cloak>
-                                    <flux:input readonly x-bind:value="$wire.loanLinkUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
-                                    <flux:button
-                                        icon="clipboard"
-                                        variant="ghost"
-                                        :title="__('Copy link')"
-                                        x-on:click="navigator.clipboard.writeText($wire.loanLinkUrl).then(() => { loanLinkCopied = true; setTimeout(() => loanLinkCopied = false, 2000) })"
-                                        x-bind:class="loanLinkCopied ? 'text-green-600' : ''" />
-                                    <flux:button
-                                        icon="trash"
-                                        variant="ghost"
-                                        :title="__('Recall the loan')"
-                                        wire:click="recallLoan"
-                                        wire:confirm="{{ __('Recall this loan? Anyone still holding the link will lose access.') }}" />
-                                </div>
-                                <div x-show="!$wire.loanLinkUrl">
-                                    <flux:button icon="link" variant="ghost" wire:click="lendByLink">
-                                        {{ __('Lend by link') }}
-                                    </flux:button>
-                                </div>
-                            </div>
-                            <flux:text class="mt-1 text-xs text-zinc-500" x-show="$wire.loanLinkUrl" x-cloak>
-                                {{ __('Whoever holds this link may read the score and keep it. Recall the link to close it for everyone.') }}
+                        <div class="border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                            <flux:subheading class="mb-1 font-medium">{{ __('Lending links') }}</flux:subheading>
+                            <flux:text class="mb-3 text-xs text-zinc-500">
+                                {{ __('Whoever holds a link may read the score and keep it. Recall a link to close it for everyone holding it.') }}
                             </flux:text>
-                            <flux:text class="mt-1 text-xs text-zinc-500" x-show="!$wire.loanLinkUrl">
-                                {{ __('Lend this score by link: whoever holds it may read it and keep it.') }}
-                            </flux:text>
+                            <livewire:loan-links :lendable="$score" :key="'loan-links-score-'.$score->id" />
 
                             @if($this->indirectLoans->isNotEmpty())
                             <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-900/20">

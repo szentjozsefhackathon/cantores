@@ -36,11 +36,24 @@
                                 {{ $described['title'] }}
                             @endif
                         </div>
+                        @if($loan->label)
+                            <div class="mt-0.5 text-sm text-zinc-600 dark:text-zinc-300">{{ $loan->label }}</div>
+                        @endif
                         <div class="mt-0.5 truncate font-mono text-xs text-zinc-500 dark:text-zinc-400">
                             {{ $this->linkFor($loan) }}
                         </div>
-                        @if($loan->isContainer())
-                            <div class="mt-1">
+                        <div class="mt-1 flex flex-wrap gap-1">
+                            <flux:button
+                                size="xs"
+                                variant="ghost"
+                                :icon="$loan->restricted ? 'lock-closed' : 'globe-alt'"
+                                :href="route('loans.recipients', ['loan' => $loan->id])"
+                                wire:navigate>
+                                {{ $loan->restricted
+                                    ? trans_choice('{0} Only you|[1,*] :count people only', $loan->recipients_count, ['count' => $loan->recipients_count])
+                                    : __('Anyone with the link') }}
+                            </flux:button>
+                            @if($loan->isContainer())
                                 <flux:button
                                     size="xs"
                                     variant="ghost"
@@ -49,8 +62,8 @@
                                     wire:navigate>
                                     {{ __(':count scores in this loan', ['count' => $this->reachedScoreCount($loan)]) }}
                                 </flux:button>
-                            </div>
-                        @endif
+                            @endif
+                        </div>
                     </flux:table.cell>
                     <flux:table.cell class="hidden sm:table-cell">
                         <flux:badge color="zinc" size="sm">{{ $described['type'] }}</flux:badge>

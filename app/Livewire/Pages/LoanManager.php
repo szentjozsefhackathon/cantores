@@ -10,6 +10,7 @@ use App\Models\Score;
 use App\Services\LoanAccessService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Computed;
@@ -52,10 +53,10 @@ class LoanManager extends Component
      * Read off the container rather than through LoanAccessService: the excluded
      * ones have to appear here to be put back.
      *
-     * @return \Illuminate\Support\Collection<int, Score>
+     * @return Collection<int, Score>
      */
     #[Computed]
-    public function candidates(): \Illuminate\Support\Collection
+    public function candidates(): Collection
     {
         $lendable = $this->loan?->lendable;
 
@@ -142,9 +143,9 @@ class LoanManager extends Component
      * The plan owner's own scores for the plan's musics, plus the ones they
      * borrowed and are passing on.
      *
-     * @return \Illuminate\Support\Collection<int, Score>
+     * @return Collection<int, Score>
      */
-    private function planCandidates(MusicPlan $plan): \Illuminate\Support\Collection
+    private function planCandidates(MusicPlan $plan): Collection
     {
         $musicIds = $plan->assignedMusicIds();
 
@@ -152,7 +153,7 @@ class LoanManager extends Component
             return collect();
         }
 
-        $keptIds = app(LoanAccessService::class)->keptScoreIds($plan->user);
+        $keptIds = app(LoanAccessService::class)->passableScoreIds($plan->user);
 
         return Score::query()
             ->whereIn('music_id', $musicIds)

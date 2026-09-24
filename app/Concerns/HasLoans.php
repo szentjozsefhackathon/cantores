@@ -4,13 +4,14 @@ namespace App\Concerns;
 
 use App\Models\Loan;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Auth;
 
 /**
  * Gives a model lending links. Applied to Score, Folder and MusicPlan.
  *
- * @mixin \Illuminate\Database\Eloquent\Model
+ * @mixin Model
  */
 trait HasLoans
 {
@@ -40,16 +41,13 @@ trait HasLoans
     }
 
     /**
-     * The live loan on this model, creating one if it does not exist yet.
+     * Hand out a new lending link, alongside any already live.
+     *
+     * A model may be lent several ways at once — a week-long link for a crowd
+     * beside a standing one for the band — and each is recalled on its own.
      */
-    public function mintLoan(?User $user = null, ?string $label = null): Loan
+    public function lend(?User $user = null, ?string $label = null): Loan
     {
-        $existing = $this->liveLoans()->latest('id')->first();
-
-        if ($existing instanceof Loan) {
-            return $existing;
-        }
-
         return $this->loans()->create([
             'user_id' => $user instanceof User ? $user->getKey() : Auth::id(),
             'token' => Loan::generateToken(),
@@ -68,7 +66,7 @@ trait HasLoans
     }
 
     /**
-     * The token of the current live loan, or null when the model is not lent.
+     * The token of the newest live loan, or null when the model is not lent.
      */
     public function loanToken(): ?string
     {

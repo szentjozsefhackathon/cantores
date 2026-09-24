@@ -157,37 +157,12 @@
             </flux:modal>
 
             {{-- Secret Link --}}
-            <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700"
-                 x-data="{ loanLinkCopied: false }">
-                <div class="flex items-center justify-between gap-2">
-                    <flux:subheading class="font-medium">{{ __('Lending Link') }}</flux:subheading>
-                    <div class="flex min-w-0 flex-1 items-center gap-2" x-show="$wire.loanLinkUrl" x-cloak>
-                        <flux:input readonly x-bind:value="$wire.loanLinkUrl ?? ''" class="min-w-0 flex-1 font-mono text-sm" />
-                        <flux:button
-                            icon="clipboard"
-                            variant="ghost"
-                            :title="__('Copy link')"
-                            x-on:click="navigator.clipboard.writeText($wire.loanLinkUrl).then(() => { loanLinkCopied = true; setTimeout(() => loanLinkCopied = false, 2000) })"
-                            x-bind:class="loanLinkCopied ? 'text-green-600' : ''" />
-                        <flux:button
-                            icon="trash"
-                            variant="ghost"
-                            :title="__('Recall the loan')"
-                            wire:click="recallLoan"
-                            wire:confirm="{{ __('Recall this loan? Anyone still holding the link will lose access.') }}" />
-                    </div>
-                    <div x-show="!$wire.loanLinkUrl">
-                        <flux:button icon="link" variant="ghost" wire:click="lendByLink">
-                            {{ __('Lend by link') }}
-                        </flux:button>
-                    </div>
-                </div>
-                <flux:text class="mt-1 text-xs text-zinc-500" x-show="$wire.loanLinkUrl" x-cloak>
-                    {{ __('Anyone with this link can view the folder contents (read-only). Delete the link to revoke access.') }}
+            <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                <flux:subheading class="mb-1 font-medium">{{ __('Lending links') }}</flux:subheading>
+                <flux:text class="mb-3 text-xs text-zinc-500">
+                    {{ __('A link opens every score in the folder, read-only. Keep several — say, one for a week and one for the band — and recall each on its own.') }}
                 </flux:text>
-                <flux:text class="mt-1 text-xs text-zinc-500" x-show="!$wire.loanLinkUrl">
-                    {{ __('Lend this folder by link: it opens every score inside it.') }}
-                </flux:text>
+                <livewire:loan-links :lendable="$folder" :key="'loan-links-folder-'.$folder->id" />
             </div>
 
             {{-- Delete --}}

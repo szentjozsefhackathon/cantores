@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\MusicPlanLoanModal;
+use App\Livewire\LoanLinks;
 use App\Livewire\Pages\MusicPlanLoanView;
 use App\Models\Loan;
 use App\Models\Music;
@@ -8,7 +8,9 @@ use App\Models\MusicPlan;
 use App\Models\MusicPlanSlotAssignment;
 use App\Models\MusicPlanSlotPlan;
 use App\Models\Score;
+use App\Models\ScorePublication;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -127,10 +129,10 @@ it('revoking the plan link revokes the score links reached through it', function
     get($scoreUrl)->assertOk();
 
     actingAs($owner);
-    Livewire::test(MusicPlanLoanModal::class, ['musicPlan' => $plan])
-        ->call('recallLoan');
+    Livewire::test(LoanLinks::class, ['lendable' => $plan])
+        ->call('recall', $loan->id);
 
-    \Illuminate\Support\Facades\Auth::logout();
+    Auth::logout();
 
     get($scoreUrl)->assertNotFound();
     Livewire::test(MusicPlanLoanView::class, ['token' => $loan->token])->assertNotFound();
@@ -223,8 +225,8 @@ it('owner can generate a plan secret link', function () {
 
     expect($plan->loanToken())->toBeNull();
 
-    Livewire::test(MusicPlanLoanModal::class, ['musicPlan' => $plan])
-        ->call('lendByLink')
+    Livewire::test(LoanLinks::class, ['lendable' => $plan])
+        ->call('lend')
         ->assertHasNoErrors();
 
     expect($plan->fresh()->loanToken())->not->toBeNull()->toHaveLength(32);
@@ -233,11 +235,11 @@ it('owner can generate a plan secret link', function () {
 it('owner can delete the plan secret link', function () {
     $owner = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
-    Loan::factory()->of($plan)->create();
+    $loan = Loan::factory()->of($plan)->create();
     actingAs($owner);
 
-    Livewire::test(MusicPlanLoanModal::class, ['musicPlan' => $plan])
-        ->call('recallLoan')
+    Livewire::test(LoanLinks::class, ['lendable' => $plan])
+        ->call('recall', $loan->id)
         ->assertHasNoErrors();
 
     expect($plan->fresh()->loanToken())->toBeNull();
@@ -246,11 +248,12 @@ it('owner can delete the plan secret link', function () {
 it('deleted plan secret link returns 404', function () {
     $owner = User::factory()->create();
     $plan = MusicPlan::factory()->create(['user_id' => $owner->id]);
-    $token = Loan::factory()->of($plan)->create()->token;
+    $loan = Loan::factory()->of($plan)->create();
+    $token = $loan->token;
     actingAs($owner);
 
-    Livewire::test(MusicPlanLoanModal::class, ['musicPlan' => $plan])
-        ->call('recallLoan');
+    Livewire::test(LoanLinks::class, ['lendable' => $plan])
+        ->call('recall', $loan->id);
 
     Livewire::test(MusicPlanLoanView::class, ['token' => $token])
         ->assertNotFound();
@@ -263,8 +266,8 @@ it('non-owner cannot generate a plan secret link', function () {
     $plan = MusicPlan::factory()->create(['user_id' => $owner->id, 'is_private' => false]);
     actingAs($other);
 
-    Livewire::test(MusicPlanLoanModal::class, ['musicPlan' => $plan])
-        ->call('lendByLink')
+    Livewire::test(LoanLinks::class, ['lendable' => $plan])
+        ->call('lend')
         ->assertForbidden();
 });
 
@@ -345,7 +348,7 @@ it('shows a published library score on the lending link', function () {
         'music_id' => $music->id,
         'title' => 'Szabad kotta',
     ]);
-    \App\Models\ScorePublication::factory()->of($published)->approved()->create();
+    ScorePublication::factory()->of($published)->approved()->create();
 
     $loan = Loan::factory()->of($plan)->create();
 
