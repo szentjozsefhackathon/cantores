@@ -298,6 +298,27 @@
                     </div>
                 @endif
             </div>
+            @if($borrowedScores->isNotEmpty())
+                <div data-borrowed-scores>
+                    <flux:heading level="2" size="sm" class="mb-3 text-neutral-600 dark:text-neutral-400">{{ __('Borrowed scores') }}</flux:heading>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        @foreach($borrowedScores as $borrowed)
+                            <x-score-card wire:key="borrowed-score-{{ $borrowed['score']->id }}"
+                                :score="$borrowed['score']"
+                                :href="$borrowed['url']"
+                                :incipit-src="$borrowed['incipit_url']">
+                                <x-slot:meta>
+                                    <x-score-format-badge :format="$borrowed['score']->format" />
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ $borrowed['score']->user?->displayName }}</span>
+                                    @if($borrowed['expires_at'])
+                                        <flux:badge color="amber" size="sm" icon="clock">{{ __('Until :date', ['date' => $borrowed['expires_at']]) }}</flux:badge>
+                                    @endif
+                                </x-slot:meta>
+                            </x-score-card>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         @endauth
         @if($musicPlans->isNotEmpty())
             <div>
