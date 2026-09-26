@@ -39,6 +39,16 @@ import { gabcMixin } from './score-editor-gabc.js';
 /** How long a screen has to stop changing size before it is laid out again. */
 const RESIZE_SETTLE_MS = 250;
 
+/**
+ * How long one score's own knob waits before it is drawn.
+ *
+ * The booklet's pacing is sized for changes that engrave everything — the zoom,
+ * the face — and a knob on one score is not one of them: the others come back
+ * out of the entry cache untouched, so the wait was the only slow part of a
+ * transposition, and it felt like a trip to the server there never was.
+ */
+const KNOB_RENDER_DELAY_MS = 16;
+
 onAlpineInit(() => {
     Alpine.data('bookletReader', (config = {}) => ({
         token: config.token ?? '',
@@ -152,11 +162,15 @@ onAlpineInit(() => {
             }, this.styles);
         },
 
-        scheduleRender() {
+        /**
+         * @param {number|null} delay a wait of the caller's own; left out, the
+         *   booklet's pacing decides from what the last layout cost
+         */
+        scheduleRender(delay = null) {
             this._busy?.start();
 
             clearTimeout(this._renderTimer);
-            this._renderTimer = setTimeout(() => this.render(), renderDelayFor(this._lastRenderMs));
+            this._renderTimer = setTimeout(() => this.render(), delay ?? renderDelayFor(this._lastRenderMs));
         },
 
         async render() {
@@ -332,7 +346,7 @@ onAlpineInit(() => {
             };
 
             this.remember();
-            this.scheduleRender();
+            this.scheduleRender(KNOB_RENDER_DELAY_MS);
         },
 
         resetOverride(entryId) {
@@ -341,7 +355,7 @@ onAlpineInit(() => {
             this.overrides = overrides;
 
             this.remember();
-            this.scheduleRender();
+            this.scheduleRender(KNOB_RENDER_DELAY_MS);
         },
 
         setZoom(value) {

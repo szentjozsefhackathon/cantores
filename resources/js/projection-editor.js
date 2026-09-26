@@ -63,6 +63,13 @@ function scrollPaneTo(pane, top, duration = 320) {
 
 const SAVE_DEBOUNCE_MS = 600;
 
+/**
+ * How long a knob waits before its row is drawn again. Only that row is: the
+ * rest come back out of the deck's slide cache, so the booklet's pacing — sized
+ * for a change that engraves everything — would be the slowest part of a nudge.
+ */
+const KNOB_RENDER_DELAY_MS = 16;
+
 onAlpineInit(() => {
     Alpine.data('projectionEditor', (config = {}) => {
         // Taken once in init() rather than read per call. `$wire` resolves to
@@ -128,6 +135,22 @@ onAlpineInit(() => {
             _saveTimers: {},
             _pendingOverrides: {},
 
+            /**
+             * Overrides sent and not yet answered, keyed by row, each with the
+             * number of the save that carries it. Until the answer lands, any
+             * payload the server pushes may predate it — another row's save,
+             * a skipped slide — and would put the knob back where it was.
+             */
+            _sendingOverrides: {},
+            _saveSequence: 0,
+
+            /**
+             * Saves go out one after another, never side by side: two in flight
+             * can be answered out of order, and the older answer then has the
+             * last word on the screen.
+             */
+            _saveQueue: Promise.resolve(),
+
             init() {
                 wire = this.$wire;
                 this._busy = createBusyFlag({ onChange: (busy) => { this.busy = busy; } });
@@ -155,11 +178,16 @@ onAlpineInit(() => {
                 if (detail.excluded !== undefined) { this.excluded = plainExclusions(detail.excluded); }
 
                 // A payload that left before the knob currently turning was
-                // saved carries the older value, so anything still pending is
-                // laid back on top.
-                Object.entries(this._pendingOverrides).forEach(([entryId, override]) => {
+                // saved carries the older value, so anything not yet confirmed
+                // — still waiting to be sent, or sent and not yet answered — is
+                // laid back on top, the newest last.
+                const unconfirmed = {};
+                Object.entries(this._sendingOverrides).forEach(([entryId, { override }]) => { unconfirmed[entryId] = override; });
+                Object.assign(unconfirmed, this._pendingOverrides);
+
+                Object.entries(unconfirmed).forEach(([entryId, override]) => {
                     const entry = this.entries.find((row) => String(row.id) === entryId);
-                    if (entry) { entry.override = override; }
+                    if (entry) { entry.override = { ...override }; }
                 });
 
                 if (layoutSignature(this.entries, this.geometry) === this._drawnSignature) {
@@ -175,10 +203,14 @@ onAlpineInit(() => {
                 this.scheduleRender();
             },
 
-            scheduleRender() {
+            /**
+             * @param {number|null} delay a wait of the caller's own; left out,
+             *   the pacing decides from what the last render cost
+             */
+            scheduleRender(delay = null) {
                 this.markBusy();
                 clearTimeout(this._renderTimer);
-                this._renderTimer = setTimeout(() => this.render(), renderDelayFor(this._lastRenderMs));
+                this._renderTimer = setTimeout(() => this.render(), delay ?? renderDelayFor(this._lastRenderMs));
             },
 
             async render() {
@@ -516,7 +548,7 @@ onAlpineInit(() => {
                 const override = { ...(entry.override ?? {}), [key]: value };
                 entry.override = override;
 
-                this.scheduleRender();
+                this.scheduleRender(KNOB_RENDER_DELAY_MS);
                 this.scheduleSave(entryId, override);
             },
 
@@ -534,32 +566,37 @@ onAlpineInit(() => {
 
                 if (!override) { return; }
 
-                try {
-                    wire.saveOverride(Number(entryId), override);
-                } catch (e) {
-                    console.error('[projection] could not save an override', e);
-                }
+                const sequence = ++this._saveSequence;
+                this._sendingOverrides[entryId] = { sequence, override };
+
+                this._saveQueue = this._saveQueue
+                    .then(() => wire.saveOverride(Number(entryId), override))
+                    .catch((e) => console.error('[projection] could not save an override', e))
+                    .finally(() => {
+                        // A newer save of the same row may already be queued
+                        // behind this one; its value is still unconfirmed.
+                        if (this._sendingOverrides[entryId]?.sequence === sequence) {
+                            delete this._sendingOverrides[entryId];
+                        }
+                    });
             },
 
             flushOverrides() {
                 Object.keys(this._pendingOverrides).forEach((id) => this.saveNow(id));
             },
 
+            /**
+             * An empty override, sent at once — through the same queue as every
+             * other save, so a nudge still in flight cannot land after it.
+             */
             resetOverride(entryId) {
                 const entry = this.entries.find((row) => row.id === entryId);
                 if (entry) { entry.override = {}; }
 
-                clearTimeout(this._saveTimers[entryId]);
-                delete this._saveTimers[entryId];
-                delete this._pendingOverrides[entryId];
+                this._pendingOverrides[entryId] = {};
+                this.saveNow(entryId);
 
-                this.scheduleRender();
-
-                try {
-                    wire.resetOverride(Number(entryId));
-                } catch (e) {
-                    console.error('[projection] could not reset an override', e);
-                }
+                this.scheduleRender(KNOB_RENDER_DELAY_MS);
             },
         };
     });

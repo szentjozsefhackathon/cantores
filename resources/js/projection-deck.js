@@ -8,6 +8,7 @@ import { slidePalette } from './slide-palette.js';
 import { packSoftPages } from './soft-pages.js';
 import { fitIntoBox, frameSlide, isSlideRatio, paintSlide, parseSvg, slideCanvas } from './slide-frame.js';
 import { stackSvgs } from './svg-stack.js';
+import { ensureFontsLoaded } from './svg-fonts.js';
 
 /**
  * A projection's rows turned into the slides that are actually projected.
@@ -68,12 +69,20 @@ export async function renderDeck(entries, geometry) {
     // are there.
     await enginesReady();
 
+    // Every engine measures its words against whatever face the browser holds
+    // right now, and bakes the answer into a drawing that is never measured
+    // again — so a deck opened cold engraved its first score in the fallback
+    // face, and kept it until the page was reloaded. See ensureFontsLoaded().
+    await ensureFontsLoaded(deckFonts(entries ?? [], ratio));
+
     const slides = [];
     const palette = slidePalette(geometry);
 
+    const cache = slideCache.begin(geometry);
+
     for (const entry of entries ?? []) {
         try {
-            const made = await slidesOf(entry, ratio, palette, geometry);
+            const made = await cache.slidesOf(entry, () => slidesOf(entry, ratio, palette, geometry));
 
             // The position within the row, which is what a slide left out of the
             // service is remembered by: the row is one thing chosen from the
@@ -84,8 +93,84 @@ export async function renderDeck(entries, geometry) {
         }
     }
 
+    cache.end();
+
     return slides;
 }
+
+/**
+ * The faces a deck is about to be measured in: each score's own lyric face at
+ * this ratio, and the one the headings and the screens of words are set in.
+ */
+function deckFonts(entries, ratio) {
+    const fonts = new Set([HEADING_FONT]);
+
+    for (const entry of entries) {
+        if (entry?.kind === 'text' || entry?.kind === 'file') { continue; }
+
+        const settings = resolveSlideSettings(entry.format, entry.settings ?? {}, ratio, entry.override);
+        const font = {
+            abc: settings.abcLyricFont,
+            gabc: settings.lyricFont,
+            chordpro: settings.chordproFontFamily,
+            aretino: settings.aretinoTextFont,
+        }[entry.format];
+
+        if (font) { fonts.add(font); }
+    }
+
+    return Array.from(fonts);
+}
+
+/**
+ * Every row's slides from the last render, kept for the next one.
+ *
+ * Unlike a booklet, a deck does not flow: every row starts on a screen of its
+ * own, so a knob turned on one score cannot move a single mark on any other.
+ * Engraving thirty of them again for one font size is the whole of what made the
+ * editor stall, and this is what spares it — only the row that changed goes back
+ * through its engraver.
+ *
+ * Keyed by the row and the geometry as they stand, written down whole, so a
+ * changed setting, heading or ratio is a different key. Only what the last
+ * render used is kept. Safe only because renderDeck waits for the faces first:
+ * a slide engraved in the fallback would otherwise be kept in it.
+ */
+function createSlideCache() {
+    let kept = new Map();
+
+    return {
+        begin(geometry) {
+            const used = new Map();
+            const geometryKey = JSON.stringify(geometry ?? {});
+
+            return {
+                async slidesOf(entry, draw) {
+                    const key = `${geometryKey}|${JSON.stringify(entry)}`;
+                    let made = used.get(key) ?? kept.get(key);
+
+                    if (!made) {
+                        made = await draw();
+
+                        // A scan whose pages did not all arrive is drawn with
+                        // the ones that did, and asked for again next time.
+                        if (made.incomplete) { return made; }
+                    }
+
+                    used.set(key, made);
+
+                    return made;
+                },
+
+                end() {
+                    kept = used;
+                },
+            };
+        },
+    };
+}
+
+const slideCache = createSlideCache();
 
 /**
  * Whether one slide is one the service walks past.
@@ -187,7 +272,7 @@ async function fileSlides(entry, ratio) {
         }
     }));
 
-    return drawn.filter(Boolean).map((page) => {
+    const slides = drawn.filter(Boolean).map((page) => {
         const fragment = parseSvg(page.markup);
 
         if (fragment === null) { return { svg: blankSlide(canvas), overflows: false }; }
@@ -206,6 +291,10 @@ async function fileSlides(entry, ratio) {
 
         return { svg: frameSlide(svg, canvas), overflows: false };
     });
+
+    slides.incomplete = slides.length < drawn.length;
+
+    return slides;
 }
 
 /**

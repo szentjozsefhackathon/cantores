@@ -86,6 +86,17 @@ const AUTOSAVE_INTERVAL_MS = 20000;
 /** How often an autosave may also redraw the incipit. */
 const AUTOSAVE_INCIPIT_MS = 60000;
 
+/**
+ * How long a settings change waits before it is drawn.
+ *
+ * The source waits longer, because it is typed a character at a time and half
+ * a note is not worth engraving. A knob is not: a transposition stepped once is
+ * the whole change, and waiting out the typing pause for it made every click
+ * look as though it had gone to the server and back. Long enough only to fold
+ * the digits of a number typed into a box into one render.
+ */
+const SETTINGS_RENDER_DELAY_MS = 120;
+
 /** How long the incipit's own render may take before the save goes on without it. */
 const INCIPIT_RENDER_TIMEOUT_MS = 8000;
 
@@ -450,51 +461,51 @@ onAlpineInit(() => {
                 this.scheduleRender();
                 this.refreshIncipit();
             });
-            this.$watch('lyricSize', () => this.scheduleRender());
-            this.$watch('staffSize', () => this.scheduleRender());
-            this.$watch('lyricFont', () => this.scheduleRender());
-            this.$watch('pageRatio', (val, old) => { this.captureCurrentSettings('gabc', old); this.applyRatioSettings('gabc', val); this.$nextTick(() => this.scheduleRender()); });
-            this.$watch('gabcLayoutWidth', () => this.scheduleRender());
-            this.$watch('dropCaps', () => this.scheduleRender());
-            this.$watch('minLyricWordSpacing', () => this.scheduleRender());
-            this.$watch('hyphenWidth', () => this.scheduleRender());
-            this.$watch('condensingTolerance', () => this.scheduleRender());
-            this.$watch('spaceBetweenSystems', () => this.scheduleRender());
-            this.$watch('minSpaceBelowStaff', () => this.scheduleRender());
-            this.$watch('zoom', () => this.scheduleRender());
-            this.$watch('abcLyricFont', () => this.scheduleRender());
-            this.$watch('abcLyricSize', () => this.scheduleRender());
-            this.$watch('abcLyricBold', () => this.scheduleRender());
-            this.$watch('abcNoteSpacing', () => this.scheduleRender());
-            this.$watch('abcStaffSep', () => this.scheduleRender());
-            this.$watch('abcLyricFirstSkip', () => this.scheduleRender());
-            this.$watch('abcLyricSkip', () => this.scheduleRender());
-            this.$watch('abcNoClef', () => this.scheduleRender());
-            this.$watch('abcPageScale', () => this.scheduleRender());
-            this.$watch('abcPageWidth', () => this.scheduleRender());
-            this.$watch('abcStemWidth', () => this.scheduleRender());
-            this.$watch('abcStaffLineWidth', () => this.scheduleRender());
-            this.$watch('abcZoom', () => this.scheduleRender());
-            this.$watch('abcTranspose', () => this.scheduleRender());
-            this.$watch('abcHideChords', () => this.scheduleRender());
-            this.$watch('abcChordSize', () => this.scheduleRender());
-            this.$watch('abcPageRatio', (val, old) => { this.captureCurrentSettings('abc', old); this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender()); });
-            this.$watch('chordproPageRatio', (val, old) => { this.captureCurrentSettings('chordpro', old); this.applyRatioSettings('chordpro', val); this.$nextTick(() => this.scheduleRender()); });
-            this.$watch('chordproFontSize', () => this.scheduleRender());
-            this.$watch('chordproZoom', () => this.scheduleRender());
-            this.$watch('chordproFontFamily', () => this.scheduleRender());
-            this.$watch('chordproColumns', () => this.scheduleRender());
-            this.$watch('chordproTranspose', () => this.scheduleRender());
-            this.$watch('chordproGermanNotation', () => this.scheduleRender());
-            this.$watch('chordproHideChords', () => this.scheduleRender());
-            this.$watch('aretinoTextFont', () => this.scheduleRender());
-            this.$watch('aretinoLyricSize', () => this.scheduleRender());
-            this.$watch('aretinoStaffSize', () => this.scheduleRender());
-            this.$watch('aretinoZoom', () => { this.syncAretinoEditor(); this.scheduleRender(); });
-            this.$watch('aretinoStaffWidth', () => this.scheduleRender());
-            this.$watch('aretinoStaffGap', () => this.scheduleRender());
-            this.$watch('aretinoHideRepeatClef', () => this.scheduleRender());
-            this.$watch('aretinoPageRatio', (val, old) => { this.captureCurrentSettings('aretino', old); this.applyRatioSettings('aretino', val); this.$nextTick(() => this.scheduleRender()); });
+            this.$watch('lyricSize', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('staffSize', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('lyricFont', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('pageRatio', (val, old) => { this.captureCurrentSettings('gabc', old); this.applyRatioSettings('gabc', val); this.$nextTick(() => this.scheduleRender(SETTINGS_RENDER_DELAY_MS)); });
+            this.$watch('gabcLayoutWidth', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('dropCaps', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('minLyricWordSpacing', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('hyphenWidth', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('condensingTolerance', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('spaceBetweenSystems', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('minSpaceBelowStaff', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('zoom', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcLyricFont', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcLyricSize', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcLyricBold', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcNoteSpacing', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcStaffSep', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcLyricFirstSkip', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcLyricSkip', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcNoClef', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcPageScale', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcPageWidth', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcStemWidth', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcStaffLineWidth', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcZoom', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcTranspose', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcHideChords', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcChordSize', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('abcPageRatio', (val, old) => { this.captureCurrentSettings('abc', old); this.applyRatioSettings('abc', val); this.$nextTick(() => this.scheduleRender(SETTINGS_RENDER_DELAY_MS)); });
+            this.$watch('chordproPageRatio', (val, old) => { this.captureCurrentSettings('chordpro', old); this.applyRatioSettings('chordpro', val); this.$nextTick(() => this.scheduleRender(SETTINGS_RENDER_DELAY_MS)); });
+            this.$watch('chordproFontSize', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('chordproZoom', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('chordproFontFamily', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('chordproColumns', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('chordproTranspose', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('chordproGermanNotation', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('chordproHideChords', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('aretinoTextFont', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('aretinoLyricSize', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('aretinoStaffSize', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('aretinoZoom', () => { this.syncAretinoEditor(); this.scheduleRender(SETTINGS_RENDER_DELAY_MS); });
+            this.$watch('aretinoStaffWidth', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('aretinoStaffGap', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('aretinoHideRepeatClef', () => this.scheduleRender(SETTINGS_RENDER_DELAY_MS));
+            this.$watch('aretinoPageRatio', (val, old) => { this.captureCurrentSettings('aretino', old); this.applyRatioSettings('aretino', val); this.$nextTick(() => this.scheduleRender(SETTINGS_RENDER_DELAY_MS)); });
             this.$nextTick(() => {
                 this.scheduleRender();
                 this.initResponsiveResizeObservers();
@@ -1608,7 +1619,11 @@ onAlpineInit(() => {
             }
         },
 
-        scheduleRender() {
+        /**
+         * @param {number|null} settingsDelay a settings change's shorter wait;
+         *   left out for an edit to the source, which keeps each format's own
+         */
+        scheduleRender(settingsDelay = null) {
             this._abcRenderVersion++;
             this.markDirty();
             clearTimeout(this.renderTimer);
@@ -1617,7 +1632,8 @@ onAlpineInit(() => {
             // until renderAretinoPreview rebuilds it, so the tooltip doesn't flash
             // onto the wrong row while typing (renderAretinoPreview clears this).
             if (format === 'aretino') { this._aretinoPreviewDirty = true; }
-            const delay = (format === 'aretino' || format === 'chordpro') ? 16 : 600;
+            const typingDelay = (format === 'aretino' || format === 'chordpro') ? 16 : 600;
+            const delay = settingsDelay === null ? typingDelay : Math.min(settingsDelay, typingDelay);
             this.renderTimer = setTimeout(() => this.renderPreview(), delay);
         },
 
