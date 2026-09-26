@@ -111,9 +111,13 @@ class BookletLoanView extends Component
         return $panels;
     }
 
+    /**
+     * Its own layout rather than the shell: the booklet may well be someone
+     * else's, so a signed in reader is not dropped into their own workspace.
+     */
     public function rendering(IlluminateView $view): void
     {
-        $view->layout('layouts::shell', [
+        $view->layout('layouts::reader', [
             'title' => $this->title,
             'noindex' => true,
         ]);

@@ -509,3 +509,26 @@ it('offers the reader the three styles rather than a list of faces', function ()
         'abcLyricSkip' => 0.8,
     ]);
 });
+
+it('reads a borrowed booklet outside the reader\'s own workspace', function () {
+    $owner = User::factory()->create();
+    [$booklet, $loan] = sharedBooklet($owner);
+
+    actingAs(User::factory()->create());
+
+    get(route('booklet.loan', ['token' => $loan->token]))
+        ->assertOk()
+        ->assertSee('data-reader-header', false)
+        ->assertSee(route('dashboard'), false)
+        ->assertDontSee('data-flux-sidebar', false);
+});
+
+it('gives a guest the booklet without any header', function () {
+    $owner = User::factory()->create();
+    [$booklet, $loan] = sharedBooklet($owner);
+
+    get(route('booklet.loan', ['token' => $loan->token]))
+        ->assertOk()
+        ->assertDontSee('data-reader-header', false)
+        ->assertDontSee('data-flux-sidebar', false);
+});

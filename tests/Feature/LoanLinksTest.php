@@ -81,3 +81,22 @@ it('does not reach a link lent from something else', function () {
 
     expect($other->fresh()->isLive())->toBeTrue();
 });
+
+/**
+ * The copy button reads the address from Alpine, so it has to be there as a
+ * JavaScript string — a Blade directive inside a Flux attribute is never
+ * compiled, and the button copied nothing. The address also opens in a tab.
+ */
+it('hands each link to the copy button and opens it in a new window', function () {
+    $owner = User::factory()->create();
+    $folder = Folder::factory()->create(['user_id' => $owner->id]);
+    $loan = Loan::factory()->of($folder)->create();
+
+    actingAs($owner);
+
+    Livewire::test(LoanLinks::class, ['lendable' => $folder])
+        ->assertDontSee('@js(', false)
+        ->assertSeeHtml('navigator.clipboard.writeText(url)')
+        ->assertSeeHtml('href="'.e($loan->url()).'"')
+        ->assertSeeHtml('target="_blank"');
+});

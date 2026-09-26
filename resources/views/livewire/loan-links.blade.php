@@ -3,7 +3,7 @@
         <div
             class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700"
             wire:key="loan-link-{{ $loan->id }}"
-            x-data="{ copied: false }">
+            x-data="{ copied: false, url: @js($loan->url()) }">
             <div class="flex items-center gap-2">
                 <flux:input
                     size="sm"
@@ -27,8 +27,16 @@
                     icon="clipboard"
                     variant="ghost"
                     :title="__('Copy link')"
-                    x-on:click="navigator.clipboard.writeText(@js($loan->url())).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
+                    x-on:click="navigator.clipboard.writeText(url).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
                     x-bind:class="copied ? 'text-green-600' : ''" />
+                <flux:button
+                    size="sm"
+                    icon="arrow-top-right-on-square"
+                    variant="ghost"
+                    :title="__('Open link in a new window')"
+                    :href="$loan->url()"
+                    target="_blank"
+                    rel="noopener" />
             </div>
 
             <div class="mt-2 flex flex-wrap gap-1">
