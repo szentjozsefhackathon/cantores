@@ -364,7 +364,7 @@ it('offers the reader a few knobs on a score rather than the cantors whole panel
 
     $panels = Livewire::test(BookletLoanView::class, ['token' => $loan->token])->instance()->panels();
 
-    expect(array_column($panels['abc'], 'key'))->toBe(['abcLyricSize', 'abcTranspose', 'abcHideChords'])
+    expect(array_column($panels['abc'], 'key'))->toBe(['abcLyricSize', 'abcTranspose', 'abcChordSize', 'abcHideChords'])
         ->and(array_column($panels['gabc'], 'key'))->toBe(['lyricSize'])
         ->and(array_column($panels['chordpro'], 'key'))->toBe(['chordproFontSize', 'chordproTranspose', 'chordproHideChords'])
         ->and(array_column($panels['aretino'], 'key'))->toBe(['aretinoLyricSize'])
@@ -385,6 +385,9 @@ it('offers the reader a few knobs on a score rather than the cantors whole panel
         ->and(collect($panels['abc'])->firstWhere('key', 'abcTranspose'))
         ->role->toBe('transpose')
         ->step->toBe(1)
+        ->and(collect($panels['abc'])->firstWhere('key', 'abcChordSize'))
+        ->role->toBe('size')
+        ->step->toBe(0.05)
         ->and(collect($panels['abc'])->firstWhere('key', 'abcHideChords'))
         ->role->toBe('toggle')
         ->and(collect($panels['chordpro'])->firstWhere('key', 'chordproHideChords'))

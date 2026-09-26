@@ -142,7 +142,8 @@ class BookletSettingFields
      * too high for my voice. Both are offered as a step rather than as a number:
      * a reader is nudging what they can see, not typing a value into a renderer.
      * ABC and ChordPro add a third, as a `toggle`: the singer who has no use for
-     * the guitarist's chord symbols can have them gone.
+     * the guitarist's chord symbols can have them gone. ABC adds a fourth for
+     * the guitarist, who wants them rather larger than the singer does.
      *
      * A `size` carries no step of its own. Each format stores its type size in
      * whatever unit its engine takes — GABC in thirteenths of a pixel's worth of
@@ -162,6 +163,10 @@ class BookletSettingFields
         'abc' => [
             'abcLyricSize' => ['role' => 'size'],
             'abcTranspose' => ['role' => 'transpose', 'step' => 1],
+            // A multiple of the lyric size rather than type in a unit of its
+            // own, so it keeps the editor's step: half a point means nothing to
+            // a factor.
+            'abcChordSize' => ['role' => 'size', 'step' => 0.05],
             'abcHideChords' => ['role' => 'toggle'],
         ],
         'aretino' => [
