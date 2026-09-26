@@ -212,6 +212,21 @@ test('a pairing cannot be claimed twice', function () {
     $this->assertGuest();
 });
 
+test('logging a paired laptop out keeps the owner remembered elsewhere', function () {
+    $user = User::factory()->create(['remember_token' => 'kept-by-the-computer-at-home']);
+
+    Livewire::test(QrLogin::class)->call('startPairing');
+    DevicePairing::query()->sole()->approveFor($user);
+
+    $this->get(route('qr-login.claim'))->assertRedirect(route('plan-documents'));
+
+    $this->post(route('logout'));
+
+    $this->assertGuest();
+
+    expect($user->fresh()->remember_token)->toBe('kept-by-the-computer-at-home');
+});
+
 test('an expired approval cannot be claimed', function () {
     $user = User::factory()->create();
 

@@ -98,6 +98,19 @@ test('a revoked pairing signs its browser out on the next request', function () 
     $this->assertGuest();
 });
 
+test('a revoked pairing leaves the owner remembered on other browsers', function () {
+    $this->user->forceFill(['remember_token' => 'kept-by-the-computer-at-home'])->save();
+
+    $pairing = DevicePairing::factory()->claimed($this->user)->revoked()->create();
+
+    $this->actingAs($this->user)
+        ->withSession([DevicePairing::DEVICE_SESSION_KEY => $pairing->id])
+        ->get(route('plan-documents'))
+        ->assertRedirect(route('home'));
+
+    expect($this->user->fresh()->remember_token)->toBe('kept-by-the-computer-at-home');
+});
+
 test('a paired session that browses refreshes last_seen_at', function () {
     $pairing = DevicePairing::factory()->claimed($this->user)->create([
         'last_seen_at' => now()->subHour(),

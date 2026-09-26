@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\QrLoginClaimController;
 use App\Models\DevicePairing;
 use Closure;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ use Symfony\Component\HttpFoundation\Response;
  * And `last_seen_at` is refreshed, at most once a minute, so the devices list
  * can say which screen is still in the building.
  *
- * @see \App\Http\Controllers\QrLoginClaimController
+ * @see QrLoginClaimController
  */
 class EnforcePairedDeviceSession
 {
@@ -49,7 +50,9 @@ class EnforcePairedDeviceSession
             ->find($request->session()->get(DevicePairing::DEVICE_SESSION_KEY));
 
         if ($pairing === null || ! $pairing->isLiveDevice()) {
-            Auth::logout();
+            // Only this browser: a revoked screen is no reason to sign its
+            // owner out of every other one they are remembered on.
+            Auth::logoutCurrentDevice();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 

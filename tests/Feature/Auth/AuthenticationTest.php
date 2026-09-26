@@ -108,6 +108,16 @@ test('users can logout', function () {
     $this->assertGuest();
 });
 
+test('an ordinary logout rotates the remember token', function () {
+    $user = User::factory()->create(['remember_token' => 'held-by-every-remembered-browser']);
+
+    $this->actingAs($user)->post(route('logout'))->assertRedirect(route('home'));
+
+    $this->assertGuest();
+
+    expect($user->fresh()->remember_token)->not->toBe('held-by-every-remembered-browser');
+});
+
 test('blocked users cannot authenticate', function () {
     $user = User::factory()->create(['blocked' => true]);
 

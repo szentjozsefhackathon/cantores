@@ -7,6 +7,7 @@ use App\Http\Controllers\BookletPdfExportController;
 use App\Http\Controllers\BookletScorePageController;
 use App\Http\Controllers\BookletStripController;
 use App\Http\Controllers\HumanCheckController;
+use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MusicPlanController;
 use App\Http\Controllers\PresentationPayloadController;
 use App\Http\Controllers\PresentationResyncController;
@@ -274,6 +275,12 @@ Route::get('/emberi-ellenorzes', [HumanCheckController::class, 'show'])
 Route::post('/emberi-ellenorzes', [HumanCheckController::class, 'store'])
     ->middleware('throttle:20,1')
     ->name('human-check.store');
+
+// Over Fortify's own, so signing a QR-paired screen out leaves the owner's
+// other browsers signed in.
+Route::post('/logout', LogoutController::class)
+    ->middleware('auth')
+    ->name('logout');
 
 // Signing a borrowed screen in from a phone. The laptop at the church is already
 // set up and belongs to nobody; typing an account into it in front of the
