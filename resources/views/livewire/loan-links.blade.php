@@ -24,11 +24,13 @@
                 <flux:input size="sm" readonly :value="$loan->url()" class="min-w-0 flex-1 font-mono text-xs" />
                 <flux:button
                     size="sm"
-                    icon="clipboard"
                     variant="ghost"
+                    square
                     :title="__('Copy link')"
-                    x-on:click="navigator.clipboard.writeText(url).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
-                    x-bind:class="copied ? 'text-green-600' : ''" />
+                    x-on:click="navigator.clipboard.writeText(url).then(() => { copied = true; setTimeout(() => copied = false, 2000) })">
+                    <flux:icon.clipboard variant="micro" x-show="!copied" />
+                    <flux:icon.check variant="micro" x-show="copied" style="display: none" class="text-green-600 dark:text-green-400" />
+                </flux:button>
                 <flux:button
                     size="sm"
                     icon="arrow-top-right-on-square"
