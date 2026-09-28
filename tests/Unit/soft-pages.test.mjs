@@ -92,9 +92,49 @@ test('a segment that overflows on its own falls through to its blocks', () => {
         row(100),
     ];
 
-    // Cutting at the suggestion leaves 100 and 300; the 300 is cut again, at its
-    // own block boundaries, because there is nothing else left to spend.
+    // The first screen holds a suggestion, so it is cut there; the 300 left is
+    // cut again, at its own block boundaries, because there is nothing else left
+    // to spend.
     assert.deepEqual(heights(packSoftPages(rows, 250)), [[100], [100, 100], [100]]);
+});
+
+test('the tail of an overflowing segment shares a screen with the next one', () => {
+    const rows = [
+        row(100),
+        row(100),
+        row(100),
+        row(100, { breakBefore: 'soft' }),
+    ];
+
+    // The suggestion lies past the first screen, so it is not reached for: the
+    // screen is filled, and what is left flows on with the piece after it.
+    assert.deepEqual(heights(packSoftPages(rows, 250)), [[100, 100], [100, 100]]);
+});
+
+test('a suggestion on the screen is the cut taken, however much more would fit', () => {
+    const rows = [
+        row(100),
+        row(100, { breakBefore: 'soft' }),
+        row(100),
+        row(100),
+    ];
+
+    const pages = packSoftPages(rows, 300);
+
+    assert.deepEqual(heights(pages), [[100], [100, 100, 100]]);
+    assert.equal(pages[1].rows[0].breakBefore, 'soft');
+});
+
+test('of several suggestions on one screen, the last is taken', () => {
+    const rows = [
+        row(100),
+        row(100, { breakBefore: 'soft' }),
+        row(100, { breakBefore: 'soft' }),
+        row(100),
+        row(100),
+    ];
+
+    assert.deepEqual(heights(packSoftPages(rows, 350)), [[100, 100], [100, 100, 100]]);
 });
 
 test('the space above a screens first row belongs to what it was cut from', () => {

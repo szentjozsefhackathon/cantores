@@ -19,19 +19,18 @@ import { stackSvgs } from './svg-stack.js';
  *      here is asked (splitPages).
  *   2. A page that fits is one slide, drawn exactly as it always was — the
  *      engine's own renderer answers it, not this.
- *   3. A page that does not fit is cut at its `%pagebreak?` suggestions, at as
- *      few as it takes.
- *   4. A piece that still does not fit is cut between systems, filling each
- *      slide before the next is started.
+ *   3. A page that does not fit is filled a slide at a time, and each slide is
+ *      cut at the last `%pagebreak?` on it — or, where it holds none, between
+ *      systems, as low as it can be.
  *
- * Below all four a single system taller than the screen is left as it is and
+ * Below all three a single system taller than the screen is left as it is and
  * `overflows` says so, which is the one case the author still has to answer —
  * with a smaller staff. Nothing is ever shrunk to fit.
  *
- * A slide that begins at a cut of (4) says so with `autoSplit`. The cut was the
- * packer's choice rather than the author's, and one of them usually lands
- * somewhere a `%pagebreak169` would have put better; the editors show it so the
- * author can see where.
+ * A slide that begins at a cut between systems says so with `autoSplit`. The
+ * cut was the packer's choice rather than the author's, and one of them
+ * usually lands somewhere a `%pagebreak169` would have put better; the editors
+ * show it so the author can see where.
  *
  * @typedef {object} SlideSystem
  * @property {SVGElement|string} svg one staff system, as the engine drew it

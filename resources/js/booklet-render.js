@@ -14,6 +14,7 @@ import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcChordFontLine, abcHide
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin, parseChordproSong } from './score-editor-chordpro.js';
 import { gabcMixin } from './score-editor-gabc.js';
+import { printedSource } from './score-editor-pages.js';
 import { arrangeSections } from './score-sections.js';
 import { ensureFontsLoaded, injectWebFontsIntoSvg } from './svg-fonts.js';
 import { sliceRenderedSvg, svgHeight } from './svg-slice.js';
@@ -899,7 +900,7 @@ async function chordproBlocks(content, resolved, layoutWidthPx, geometry) {
     // German note names are the parser's own business: `B` means B flat and `H`
     // means B natural throughout, so the chords the paragraphs carry are already
     // right, transposed or not. Only the spelling of the flat is ours to set.
-    const song = await parseChordproSong(content, {
+    const song = await parseChordproSong(printedSource(content, 'chordpro'), {
         german: !!resolved.chordproGermanNotation,
         transpose: resolved.chordproTranspose,
         hideChords: !!resolved.chordproHideChords,

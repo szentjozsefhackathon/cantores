@@ -8,36 +8,35 @@
  * it off at the bottom edge, which is how a screen ends up unreadable from the
  * back of the church or short of its last verse.
  *
- * Three callers, the same four tiers: a row of words (projection-deck.js), a
- * chord sheet on a slide (score-editor-chordpro.js), and an engraved score cut
- * between its staff systems (slide-systems.js).
+ * Three callers, the same rules: a row of words (projection-deck.js), a chord
+ * sheet on a slide (score-editor-chordpro.js), and an engraved score cut between
+ * its staff systems (slide-systems.js).
  *
- * So the author is given breaks of two strengths and they are spent in order,
- * weakest reason last:
+ * `%pagebreak` always cuts, and the rows become chunks. A chunk that fits is one
+ * screen, and its suggestions go unused. One that does not is filled a screen at
+ * a time, and each screen is cut in two steps:
  *
- *   1. `%pagebreak` always cuts. The rows become chunks.
- *   2. A chunk that fits is one screen, and its suggestions go unused.
- *   3. A chunk that does not fit is cut at its own `%pagebreak?` suggestions —
- *      and at as few of them as it takes, since the pieces are packed greedily
- *      afterwards.
- *   4. A piece that still does not fit is cut at its own boundaries — a
- *      paragraph, a heading, a verse — the way the booklet already flows prose
- *      across pages, with keepWithNext holding together whatever asked to be
- *      held together. A verse that would rather not be cut is cut anyway
- *      wherever keeping it whole would buy nothing but an empty half-screen,
- *      and a line longer than the screen is cut in the middle of itself sooner
- *      than hidden; see byBlocks.
+ *   1. Find how far it can be filled: the last place a cut may fall with
+ *      everything above it still on the screen.
+ *   2. Look back from there for a `%pagebreak?`. If the screen holds one, the
+ *      cut is made at the last of them; if not, it is made where (1) stopped.
  *
- * Below all four a single row taller than the screen is left over-tall and
- * handed back as it is: the caller sets it smaller, or says so. Nothing is ever
- * cut mid-sentence, because a screen ending mid-sentence is worse than a screen
- * set small.
+ * So a suggestion is taken only when a cut is needed on the screen it stands
+ * on, and one further down is never reached for early: whatever the cut leaves
+ * over flows on to the next screen, with the pieces after it.
  *
- * Nothing here touches the DOM or knows what a row is drawn as — a row is a
- * height and a few flags, which is what packPages already asks for.
- */
+ * Where (1) may stop depends on what the rows say about themselves. Rows with a
+ * line structure (`splitBefore`, which chord sheets and staff systems carry) may
+ * be cut between any two lines — a verse is cut sooner than left behind a
+ * half-empty screen — but not inside a wrapped line or under a section label
+ * unless nothing else will hold the screen. Rows without one (a row of words)
+ * are held together by keepWithNext, so a heading moves with its text. A row, or
+ * a group, taller than the screen on its own is handed back over-tall.
 
-import { packPages } from './booklet-flow.js';
+ * Nothing is ever cut mid-sentence where a screen can be set small instead, and
+ * nothing here touches the DOM or knows what a row is drawn as — a row is a
+ * height and a few flags.
+ */
 
 /**
  * @typedef {import('./booklet-flow.js').Block & {breakBefore?: 'hard'|'soft'}} SoftRow
@@ -62,121 +61,92 @@ export function packSoftPages(rows, boxHeight) {
 }
 
 /**
- * One chunk, on as few screens as its own breaks allow.
- *
- * The whole of the tier order is these four lines: fitting wins, then the
- * author's suggestions, then the paragraph boundaries, then nothing.
+ * One chunk, a screen at a time: filled as far as it goes, then cut at the last
+ * suggestion on it, if it has one.
  */
 function fit(chunk, boxHeight) {
-    if (stackHeight(chunk) <= boxHeight) { return [page(chunk)]; }
+    const kinds = cutKinds(chunk);
+    const pages = [];
 
-    const segments = cutAt(chunk, 'soft');
+    for (let start = 0; start < chunk.length;) {
+        const end = screenEnd(chunk, kinds, start, boxHeight);
 
-    if (segments.length > 1) {
-        return packed(segments.map(asBlock), boxHeight)
-            .flatMap((rowsOnPage) => rowsOnPage.length === 1
-                ? byBlocks(rowsOnPage[0], boxHeight)
-                : [page(rowsOnPage.flat())]);
+        pages.push(page(chunk.slice(start, end)));
+        start = end;
     }
 
-    return byBlocks(chunk, boxHeight);
+    return pages;
 }
 
 /**
- * The last cuts there are: at the rows themselves.
- *
- * Three attempts, each giving up something the one before it kept, and the
- * first that holds the screen wins:
- *
- *   a. keepWithNext as the rows asked for it — a heading with what it
- *      introduces, a verse with the rest of itself.
- *   b. at the line boundaries the rows point at with `splitBefore`: a verse is
- *      cut rather than moved whole to the next screen, but a line too long for
- *      the screen keeps its wrapped pieces together and a section label keeps
- *      the line it was written above.
- *   c. anywhere at all, which cuts a long line in the middle of itself.
- *
- * (a) gives way to (b) whenever (b) costs no more screens, which is the whole
- * of what keeping a verse whole is worth: a verse that does not fit in the room
- * left on this screen is moved to the next one entire, and the room it leaves
- * behind — a third of a screen, often enough for the first line of it — stays
- * empty for nothing. Where the two come to the same number of screens the one
- * that fills them wins; only a split that would actually cost a screen is
- * refused. What (b) still will not do is cut inside a line the screen wrapped
- * or between a label and its line, because those are not preferences.
- *
- * (c) is reached only by a single line of words taller than the screen on its
- * own — at which point the choice is between cutting a sentence and hiding the
- * end of it, and the reader is better served by the cut. Rows that say nothing
- * about `splitBefore` (a row of words from markdownRows) never leave (a): there
- * is no line structure there to fall back on, and the caller sets them smaller.
+ * Where the screen opening at `start` ends: the index of the first row it does
+ * not take.
  */
-function byBlocks(rows, boxHeight) {
-    if (stackHeight(rows) <= boxHeight) { return [page(rows)]; }
+function screenEnd(chunk, kinds, start, boxHeight) {
+    let height = 0;
+    let lastSoft = null;
+    let lastAuto = null;
+    let lastForced = null;
 
-    const whole = packed(glued(rows, (row) => row.keepWithNext === true), boxHeight);
+    for (let end = start + 1; end <= chunk.length; end++) {
+        const row = chunk[end - 1];
+        height += row.height + (end - 1 === start ? 0 : (row.spaceBefore ?? 0));
 
-    if (!rows.some((row) => typeof row.splitBefore === 'boolean')) {
-        return whole.map(page);
+        if (height > boxHeight) { break; }
+        if (end === chunk.length) { return end; }
+
+        if (kinds[end] === 'soft') { lastSoft = end; }
+        if (kinds[end] === 'soft' || kinds[end] === 'auto') { lastAuto = end; }
+        if (kinds[end] !== null) { lastForced = end; }
     }
 
-    const atLines = packed(glued(rows, () => false), boxHeight);
-    const best = holds(atLines, boxHeight) && (!holds(whole, boxHeight) || atLines.length <= whole.length)
-        ? atLines
-        : whole;
+    const cut = lastSoft ?? lastAuto ?? lastForced;
 
-    if (holds(best, boxHeight)) { return best.map(page); }
+    if (cut !== null) { return cut; }
 
-    const anywhere = packed(rows.map((row) => ({ ...row, breakBefore: false, keepWithNext: false, payload: row })), boxHeight);
+    // Nothing fits: the screen takes the first piece that cannot be cut, and
+    // runs over.
+    for (let end = start + 1; end < chunk.length; end++) {
+        if (kinds[end] !== null) { return end; }
+    }
 
-    return (holds(anywhere, boxHeight) ? anywhere : best).map(page);
-}
-
-/** Whether an attempt left every screen inside the room it has. */
-function holds(pages, boxHeight) {
-    return pages.every((rowsOnPage) => stackHeight(rowsOnPage) <= boxHeight);
+    return chunk.length;
 }
 
 /**
- * The rows as blocks packPages can take, with the glue this attempt asks for on
- * top of the glue it may not drop.
+ * What a cut above each row of a chunk would be, or null where none may fall.
  *
- * `splitBefore: false` is not a preference — it is a row that is half of
- * something: the continuation of a line too long for the screen, or the line a
- * section label was written above. Rows that say nothing about it are left to
- * `keep` alone.
+ * - `soft` — the author suggested it, and it may always be taken.
+ * - `auto` — a boundary the packer may choose: between two lines, two verses,
+ *   two paragraphs or two staff systems.
+ * - `forced` — a boundary that is half of something: the continuation of a line
+ *   too long for the screen, or the line a section label was written above
+ *   (`splitBefore: false`). Taken only when no other cut fits on the screen.
+ *
+ * Rows that say nothing about `splitBefore` — every row markdownRows writes —
+ * have no line structure to fall back on, so their keepWithNext is not a
+ * preference but the rule: a heading moves with its text, and a group taller
+ * than the screen is handed back whole for the caller to set smaller. Rows that
+ * do say are held together only by `splitBefore: false`; a verse's keepWithNext
+ * gives way, since a verse moved whole leaves the room above it empty.
+ *
+ * @param {SoftRow[]} rows
+ * @returns {Array<'soft'|'auto'|'forced'|null>} indexed like the rows; the
+ *          first entry is meaningless, since nothing stands above the first row
  */
-function glued(rows, keep) {
-    return rows.map((row, i) => ({
-        ...row,
-        breakBefore: false,
-        keepWithNext: i < rows.length - 1 && (keep(row) || rows[i + 1].splitBefore === false),
-        payload: row,
-    }));
-}
+function cutKinds(rows) {
+    const detailed = rows.some((row) => typeof row.splitBefore === 'boolean');
 
-/**
- * packPages, with the pages restated as the payloads that went in.
- *
- * @returns {Array<any[]>}
- */
-function packed(blocks, boxHeight) {
-    return packPages(blocks, boxHeight).map((packedPage) => packedPage.items.map((item) => item.block.payload));
-}
+    return rows.map((row, i) => {
+        if (i === 0) { return null; }
+        if (row.breakBefore === 'soft') { return 'soft'; }
 
-/**
- * A segment of a chunk, as something packPages can move whole.
- *
- * Its height is what it comes to standing alone; the gap its first row asked for
- * is carried separately, so two segments sharing a screen keep the space between
- * them and a segment opening one does not float down from the margin.
- */
-function asBlock(segment) {
-    return {
-        height: stackHeight(segment),
-        spaceBefore: segment[0]?.spaceBefore ?? 0,
-        payload: segment,
-    };
+        if (detailed) {
+            return row.splitBefore === false ? 'forced' : 'auto';
+        }
+
+        return rows[i - 1].keepWithNext === true ? null : 'auto';
+    });
 }
 
 /**

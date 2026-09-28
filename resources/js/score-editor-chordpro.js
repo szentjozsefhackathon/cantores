@@ -3,7 +3,7 @@ import { packColumns } from './booklet-flow.js';
 import { DEFAULT_LYRIC_SIZE_PT, DEFAULT_PAGE_WIDTH_MM, mmToPx, opticalLyricSizePt, ptToPx } from './booklet-geometry.js';
 import { markupRuns, runsText } from './chordpro-markup.js';
 import { chordStringsOf, displayChord, displayChordsInHtml, displayChordsInText } from './chordpro-notation.js';
-import { splitSoftSegments } from './score-editor-pages.js';
+import { printedSource, splitSoftSegments } from './score-editor-pages.js';
 import { stripSectionMarkers } from './score-sections.js';
 import { packSoftPages, startsAtAutomaticCut } from './soft-pages.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
@@ -231,15 +231,15 @@ function isSungLine(line) {
  *
  * Returns null when there is nothing sung to draw — an empty editor, or a file
  * of directives — so the caller leaves the score without a thumbnail rather
- * than storing a blank picture. `%section` lines are taken out first, or the
- * first marker would be the opening line.
+ * than storing a blank picture. `%section` and `%pagebreak` lines are taken
+ * out first, or the first marker would be the opening line.
  *
  * @param {string} source raw ChordPro
  * @param {{german: boolean, transpose: number|string, fontFamily: string}} options
  * @returns {Promise<SVGElement|null>}
  */
 export async function renderChordproIncipitSvg(source, { german, transpose, fontFamily }) {
-    const content = stripSectionMarkers(source);
+    const content = printedSource(stripSectionMarkers(source), 'chordpro');
     if (!content || !content.trim()) { return null; }
 
     const song = await parseChordproSong(content, { german, transpose, sanitize: false });
@@ -603,14 +603,18 @@ export function chordproMixin() {
         },
 
         /**
-         * The sheet as it is sung: the source without its `%section` lines.
+         * The sheet as it is sung: the source without its `%section` lines,
+         * and on paper without its `%pagebreak` lines and ratio blocks too.
          *
          * ChordPro has no comment character that hides a marker, unlike the
          * three engraved formats, so every preview and export reads this
-         * rather than the raw source, or the markers would be printed.
+         * rather than the raw source, or the markers would be printed. Only
+         * the slides keep their breaks, and cut at them.
          */
-        chordproSource() {
-            return stripSectionMarkers(this.localContent);
+        chordproSource({ keepPageBreaks = false } = {}) {
+            const content = stripSectionMarkers(this.localContent);
+
+            return keepPageBreaks ? content : printedSource(content, 'chordpro');
         },
 
         async renderChordproPreview() {
@@ -622,7 +626,7 @@ export function chordproMixin() {
             if (!content || !content.trim()) { return; }
 
             if (this.isFixedRatio(this.chordproPageRatio)) {
-                await this.renderChordproPreviewSlides(container, content);
+                await this.renderChordproPreviewSlides(container, this.chordproSource({ keepPageBreaks: true }));
                 return;
             }
 

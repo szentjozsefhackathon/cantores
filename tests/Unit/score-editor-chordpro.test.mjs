@@ -357,6 +357,50 @@ test('section markers are never printed by an export', async () => {
     }
 });
 
+test('page breaks and ratio blocks are never printed by an export', async () => {
+    const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    let copied;
+    Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        value: { clipboard: { writeText: async (text) => { copied = text; } } },
+    });
+
+    try {
+        const editor = {
+            ...chordproMixin(),
+            localContent: '[C]Alleluia\n%pagebreak?\n[G]Amen\n%pagebreak169\n%[169 [F]Csak vetítve\n%]\n[D]Vége',
+            chordproGermanNotation: false,
+            chordproTranspose: 0,
+            showCopyFeedback() {},
+        };
+
+        assert.equal(editor.chordproSource(), '[C]Alleluia\n[G]Amen\n\n[D]Vége');
+        assert.match(editor.chordproSource({ keepPageBreaks: true }), /%pagebreak\?\n/, 'a slide still cuts at them');
+
+        await editor.copyChordproPlainText();
+
+        assert.match(copied, /Alleluia/);
+        assert.match(copied, /Vége/);
+        assert.doesNotMatch(copied, /pagebreak|Csak vetítve|%/);
+    } finally {
+        if (originalNavigator) {
+            Object.defineProperty(globalThis, 'navigator', originalNavigator);
+        } else {
+            delete globalThis.navigator;
+        }
+    }
+});
+
+test('an incipit does not open with a page break', async () => {
+    const svg = await renderChordproIncipitSvg('%pagebreak?\n%pagebreak169', {
+        german: false,
+        transpose: 0,
+        fontFamily: "'Merriweather'",
+    });
+
+    assert.equal(svg, null);
+});
+
 test('an incipit does not open with a section marker', async () => {
     const svg = await renderChordproIncipitSvg('%section Verse\n%section Refrain', {
         german: false,
@@ -454,6 +498,20 @@ test('only as many suggestions are spent as the screen actually needs', async ()
     // Room for two of the three pieces: two slides, not one per suggestion.
     assert.deepEqual(rowCounts(await slidePages(sheet, ROW * 2 + GAP + 10)), [2, 1]);
     assert.deepEqual(rowCounts(await slidePages(sheet, ROW + 10)), [1, 1, 1]);
+});
+
+/*
+ * A suggestion is not reached for before it is needed. Here it stands after a
+ * three-line verse that no slide holds: the verse is cut where the slide is
+ * full, and its last line shares the next slide with the verse after the
+ * suggestion, rather than taking a slide alone.
+ */
+test('the rest of a verse too long for its slide flows on past a later suggestion', async () => {
+    const sheet = '[C]Egy\n[G]Két\n[Am]Há\n%pagebreak?\n[F]Négy\n';
+    const pages = await slidePages(sheet, ROW * 2 + GAP + 10);
+
+    assert.deepEqual(rowCounts(pages), [2, 2]);
+    assert.match(pages[1].rows[0].svg, /Há</);
 });
 
 /*

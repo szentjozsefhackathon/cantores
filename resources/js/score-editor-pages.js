@@ -154,6 +154,23 @@ export function splitPages(content, format, ratio, keepSoft = format === 'chordp
 }
 
 /**
+ * A source as it is printed rather than projected: one page, every break taken
+ * out and every ratio's block left out.
+ *
+ * What a paper preview, an export, an incipit and a booklet read. The engraved
+ * formats would be drawn the same without it, since `%` opens a comment in all
+ * three; ChordPro has no such luck, and would print a `%pagebreak?` as a line of
+ * lyrics.
+ *
+ * @param {string} content
+ * @param {string} format
+ * @return {string}
+ */
+export function printedSource(content, format) {
+    return splitPages(content, format, 'paper')[0];
+}
+
+/**
  * One page's source, cut at the suggestions splitPages left standing in it.
  *
  * The pieces a soft break offers, in order, whether or not any of them is
