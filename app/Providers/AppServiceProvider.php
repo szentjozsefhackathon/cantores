@@ -42,6 +42,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -80,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureVite();
 
         View::addNamespace('mail', resource_path('views/mail'));
 
@@ -163,6 +165,18 @@ class AppServiceProvider extends ServiceProvider
             ? Password::min(8)
                 ->uncompromised()
             : null
+        );
+    }
+
+    /**
+     * Vite preloads a stylesheet it also links in the same head, where the
+     * parser finds it just as early. The preload buys nothing, and the browser
+     * reports it as preloaded and never used.
+     */
+    protected function configureVite(): void
+    {
+        Vite::usePreloadTagAttributes(
+            fn (?string $src, string $url): array|false => str_ends_with(parse_url($url, PHP_URL_PATH) ?? '', '.css') ? false : [],
         );
     }
 }

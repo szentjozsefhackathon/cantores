@@ -14,7 +14,7 @@ resources/js/score-editor.js
                 </div>
             </div>
 
-<script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
+<script src="{{ \App\Support\VendorAsset::url('js/exsurge.min.js') }}"></script>
 <script src="{{ \App\Support\VendorAsset::url('js/abc2svg-1.js') }}"></script>
 
             @if($this->score->urls->isNotEmpty())

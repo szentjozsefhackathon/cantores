@@ -39,7 +39,7 @@ resources/js/projection-editor.js
          rather than bundled modules. Loaded exactly as the score editor and the
          booklet editor load them, including the off-screen span abc2svg measures
          text with — it must exist before the library runs. --}}
-    <script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
+    <script src="{{ \App\Support\VendorAsset::url('js/exsurge.min.js') }}"></script>
     <script>
         window.abc2svg = window.abc2svg || {};
         (function() {

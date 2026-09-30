@@ -113,7 +113,7 @@ resources/js/projection-remote.js
 >
     {{-- The two engines that draw two of the four formats are globals rather
          than bundled modules, and must be loaded before anything asks for them. --}}
-    <script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
+    <script src="{{ \App\Support\VendorAsset::url('js/exsurge.min.js') }}"></script>
     <script>
         window.abc2svg = window.abc2svg || {};
         (function() {

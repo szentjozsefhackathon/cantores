@@ -122,3 +122,18 @@ it('registers its Alpine component so that a navigate visit still gets it', func
             ->toBeFalse("{$source->getFilename()} listens for alpine:init, which a bundle loaded on a navigate visit never sees.");
     }
 });
+
+/*
+ * The stylesheet is linked in the same head, so preloading it as well gains
+ * nothing and has the browser warn that the preload went unused.
+ */
+it('links the stylesheet without also preloading it', function () {
+    $manifest = json_decode((string) file_get_contents(public_path('build/manifest.json')), true);
+    $stylesheet = $manifest['resources/js/app.js']['css'][0];
+
+    get(route('about'))
+        ->assertSuccessful()
+        ->assertSee('rel="stylesheet" href="'.asset('build/'.$stylesheet).'"', escape: false)
+        ->assertDontSee('rel="preload" as="style"', escape: false)
+        ->assertSee('rel="modulepreload"', escape: false);
+});

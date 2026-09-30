@@ -29,7 +29,7 @@ resources/js/score-editor.js
                 <x-score-license-badge :publication="$this->publication" />
             </div>
 
-<script src="https://cdn.jsdelivr.net/gh/bbloomf/exsurge@v1.22.1/dist/exsurge.min.js"></script>
+<script src="{{ \App\Support\VendorAsset::url('js/exsurge.min.js') }}"></script>
 <script src="{{ \App\Support\VendorAsset::url('js/abc2svg-1.js') }}"></script>
 
             {{-- The links as the approved version carries them: one added since is
