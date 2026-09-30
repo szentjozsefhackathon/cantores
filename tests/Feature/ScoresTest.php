@@ -82,6 +82,23 @@ it('only lists the authenticated users own scores', function () {
         ->assertDontSee('Not Mine');
 });
 
+it('lists the music above the score title and variation name', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create(['title' => 'Parent Hymn']);
+
+    Score::factory()->create([
+        'user_id' => $user->id,
+        'music_id' => $music->id,
+        'title' => 'Choir Arrangement',
+        'variation_name' => 'Fuvola',
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(Scores::class)
+        ->assertSeeInOrder(['Parent Hymn', 'Choir Arrangement', 'Fuvola']);
+});
+
 it('prevents editing another users score', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();

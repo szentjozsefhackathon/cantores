@@ -36,10 +36,20 @@
                         @foreach($scores as $score)
                             <flux:table.row wire:key="score-row-{{ $score->id }}">
                                 <flux:table.cell>
+                                    @if($score->music)
+                                        <div class="mb-1 flex items-center gap-1.5">
+                                            <flux:icon name="music" variant="micro" class="shrink-0 text-indigo-400" />
+                                            <a href="{{ route('music-view', $score->music) }}" wire:navigate class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                {{ $score->music->title }}
+                                            </a>
+                                        </div>
+                                    @endif
                                     <div class="flex flex-wrap items-center gap-1.5 font-medium">
+                                        <flux:icon name="file-music" variant="micro" class="shrink-0 text-zinc-400" />
                                         <a href="{{ route('scores.edit', ['score' => $score->id]) }}" wire:navigate class="hover:underline">
                                             {{ $score->title }}
                                         </a>
+                                        <x-score-variation-name :score="$score" />
                                         <x-score-format-badge :format="$score->format" />
                                         @if($score->live_shares_count > 0)
                                             <flux:icon name="link" size="sm" class="text-blue-500 dark:text-blue-400" :title="__('Secret link active')" />
@@ -55,13 +65,6 @@
                                         <x-incipit-image :src="$score->incipitUrl()" :alt="__('Incipit')"
                                             class="mt-1 max-w-[400px]"
                                             img-class="block h-auto max-h-20 w-auto max-w-full" />
-                                    @endif
-                                    @if($score->music)
-                                        <div class="mt-1">
-                                            <a href="{{ route('music-view', $score->music) }}" wire:navigate class="text-sm text-blue-600 hover:underline dark:text-blue-400">
-                                                {{ $score->music->title }}
-                                            </a>
-                                        </div>
                                     @endif
                                 </flux:table.cell>
                                 <flux:table.cell class="hidden sm:table-cell">
