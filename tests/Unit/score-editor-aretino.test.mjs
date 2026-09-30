@@ -102,3 +102,25 @@ test('a chant too tall for its slide comes apart into one system per staff row',
         assert.ok(height > 0 && height < 540, `a row ${height} tall fits a slide on its own`);
     });
 });
+
+/*
+ * The score editor hands over its Alpine component as the settings, and Alpine's
+ * proxy lists its keys without describing any of them — so a spread of it comes
+ * out empty. A page cut between rows was engraved from such a spread, with every
+ * size NaN, and the slide showed nothing but one flat drawn at font scale.
+ */
+function alpineLike(settings) {
+    return new Proxy({ objects: [settings] }, {
+        ownKeys: ({ objects }) => objects.flatMap((object) => Object.keys(object)),
+        has: ({ objects }, name) => objects.some((object) => name in object),
+        get: ({ objects }, name) => objects.find((object) => name in object)?.[name],
+    });
+}
+
+test('a page cut between rows is engraved from settings that cannot be spread', () => {
+    const settings = formatDefaults('aretino', '16/9').defaults;
+    const markup = engraveAretinoSlide('c: f\n' + ROW.repeat(8), alpineLike(settings), '16/9', false);
+
+    assert.ok(!/NaN/.test(markup), 'no coordinate is NaN');
+    assert.equal(markup, engraveAretinoSlide('c: f\n' + ROW.repeat(8), settings, '16/9', false));
+});

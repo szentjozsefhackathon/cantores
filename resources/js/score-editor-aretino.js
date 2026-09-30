@@ -84,9 +84,8 @@ export async function renderAretinoSlide(pageSource, settings, canvas, ratio) {
  * One page of an Aretino chant engraved onto the projector slides it needs.
  *
  * A page that fits is the one slide renderAretinoSlide draws. One too tall for
- * it is engraved again with a clef on every row, and cut at its `%pagebreak?`
- * suggestions and then between its staff rows, which splitRowSVGs hands over
- * one document apiece — see slide-systems.js.
+ * it is cut at its `%pagebreak?` suggestions and then between its staff rows,
+ * which splitRowSVGs hands over one document apiece — see slide-systems.js.
  *
  * @param {string} pageSource one page, suggestions left in
  * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
@@ -102,12 +101,10 @@ export async function renderAretinoSlides(pageSource, settings, canvas, ratio) {
         return [aretinoWholeSlide(cut.whole, settings, canvas, ratio, height)];
     }
 
-    // Cut between rows, any row may open a slide, and a slide that opens on a
-    // staff with no clef cannot be sung from. The clef the projector hides on a
-    // repeated row is therefore drawn on every row of a page that is cut, as
-    // abc2svg and exsurge draw theirs.
-    const everyClef = { ...settings, aretinoHideRepeatClef: false };
-    const markups = cut.segments.map((segment) => engraveAretinoSlide(segment, everyClef, ratio, false));
+    // A repeated clef stays hidden even where a slide opens on it: the engine
+    // spends its one clef on the first row, and has no way to be told where the
+    // slides begin.
+    const markups = cut.segments.map((segment) => engraveAretinoSlide(segment, settings, ratio, false));
 
     return systemSlides(markups.map((markup) => aretinoRows(markup)), canvas);
 }
@@ -131,6 +128,10 @@ export function aretinoContentHeight(markup) {
 
 /**
  * The Aretino engraving of one source at one projector ratio.
+ *
+ * The settings are read field by field, never spread: the score editor hands
+ * over its Alpine component, whose proxy lists its keys but describes none of
+ * them, so `{ ...settings }` comes out empty and every size in it NaN.
  *
  * @param {boolean} fixedHeight hold the canvas height, as a slide is drawn; or
  *        let the chant be as tall as it is, as it is measured and cut
