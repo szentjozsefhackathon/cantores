@@ -88,6 +88,7 @@ resources/js/score-editor.js
                     @endif
                 </div>
 
+                <div class="flex flex-col gap-2 md:items-end">
                 <div class="flex flex-wrap items-center gap-2">
                     @if(!$isGuest)
                         <span
@@ -112,37 +113,63 @@ resources/js/score-editor.js
                         @endif
                     @endif
                 </div>
+
+                @if(!$isGuest && $musicId)
+                <flux:field>
+                    <flux:checkbox
+                        wire:model="publicPreview"
+                        :label="__('Show incipit on public listings of the music')" />
+                    <flux:error name="publicPreview" />
+                </flux:field>
+                @endif
+                </div>
             </div>
 
 
+            @if(!$isGuest)
+            <flux:card class="my-4 space-y-3 p-4">
+                <div>
+                    <flux:heading size="lg">{{ __('Attach a music') }}</flux:heading>
+                    <flux:text class="text-sm">{{ __('Link this score to a music of the catalogue, so it appears there and its variations are listed together.') }}</flux:text>
+                </div>
+                <flux:field>
+                    <div class="flex items-center gap-2">
+                        <flux:input
+                            readonly
+                            :value="$this->selectedMusic ? $this->selectedMusic->title.($this->selectedMusic->subtitle ? ' — '.$this->selectedMusic->subtitle : '') : ''"
+                            :placeholder="__('No music attached')"
+                            class="flex-1" />
+                        <flux:button icon="magnifying-glass" x-on:click="$flux.modal('score-music-search').show()">
+                            {{ __('Browse') }}
+                        </flux:button>
+                        @if($musicId)
+                        <flux:button icon="x-mark" variant="ghost" wire:click="clearMusic" :title="__('Remove')" />
+                        @endif
+                    </div>
+                    <flux:error name="musicId" />
+                </flux:field>
+
+                <flux:modal name="score-music-search" class="max-w-4xl">
+                    <livewire:music-search lazy selectable="true" source=".score" wire:key="score-music-search" />
+                    <div class="mt-6 flex justify-end">
+                        <flux:button x-on:click="$flux.modal('score-music-search').close()" variant="outline">
+                            {{ __('Cancel') }}
+                        </flux:button>
+                    </div>
+                </flux:modal>
+            </flux:card>
+            @endif
+
             <div class="space-y-4">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div class="flex flex-col gap-4">
-                        <flux:field required>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:items-start">
+                        <flux:field required @class(['sm:col-span-2' => ! $musicId || $isGuest])>
                             <flux:label class="inline">{{ __('Score title') }}</flux:label>
                             <flux:input wire:model="title" x-on:input="markDirty()" :placeholder="__('Score title')" autofocus />
                             <flux:error name="title" />
                         </flux:field>
 
-                        @if(!$isGuest)
-                        <flux:field>
-                            <div class="flex items-center gap-2">
-                                <flux:input
-                                    readonly
-                                    :value="$this->selectedMusic ? $this->selectedMusic->title.($this->selectedMusic->subtitle ? ' — '.$this->selectedMusic->subtitle : '') : ''"
-                                    :placeholder="__('No music attached')"
-                                    class="flex-1" />
-                                <flux:button icon="magnifying-glass" x-on:click="$flux.modal('score-music-search').show()">
-                                    {{ __('Browse') }}
-                                </flux:button>
-                                @if($musicId)
-                                <flux:button icon="x-mark" variant="ghost" wire:click="clearMusic" :title="__('Remove')" />
-                                @endif
-                            </div>
-                            <flux:error name="musicId" />
-                        </flux:field>
-
-                        @if($musicId)
+                        @if(!$isGuest && $musicId)
                         <flux:field>
                             <flux:label class="inline">{{ __('Variation name') }}</flux:label>
                             <flux:input
@@ -153,16 +180,6 @@ resources/js/score-editor.js
                             <flux:description>{{ __('Tells this version apart from the other scores of the same music.') }}</flux:description>
                             <flux:error name="variationName" />
                         </flux:field>
-                        @endif
-
-                        <flux:modal name="score-music-search" class="max-w-4xl">
-                            <livewire:music-search lazy selectable="true" source=".score" wire:key="score-music-search" />
-                            <div class="mt-6 flex justify-end">
-                                <flux:button x-on:click="$flux.modal('score-music-search').close()" variant="outline">
-                                    {{ __('Cancel') }}
-                                </flux:button>
-                            </div>
-                        </flux:modal>
                         @endif
                     </div>
 
@@ -1537,17 +1554,6 @@ resources/js/score-editor.js
                             </div>
                         </div>
                     </flux:modal>
-                </div>
-                @endif
-
-                @if($musicId)
-                <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700" x-show="!splitScreen">
-                <flux:field>
-                    <flux:checkbox
-                        wire:model="publicPreview"
-                        :label="__('Show incipit on public listings of the music')" />
-                    <flux:error name="publicPreview" />
-                </flux:field>
                 </div>
                 @endif
 

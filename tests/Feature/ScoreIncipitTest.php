@@ -185,12 +185,12 @@ it('does not let a public incipit be cached past a revocation', function () {
 
 it('saves public_preview flag when saving a score with a music attached', function () {
     $user = User::factory()->create();
-    $music = \App\Models\Music::factory()->create();
+    $music = Music::factory()->create();
     actingAs($user);
 
     Livewire::test(ScoreEditor::class)
         ->set('title', 'Preview Score')
-        ->set('format', \App\Enums\ScoreFormat::Abc->value)
+        ->set('format', ScoreFormat::Abc->value)
         ->set('content', "X:1\nK:C\nC D E F|")
         ->set('musicId', $music->id)
         ->set('publicPreview', true)
@@ -257,7 +257,7 @@ it('does not set public_preview when no music is attached', function () {
 
     Livewire::test(ScoreEditor::class)
         ->set('title', 'No Music Score')
-        ->set('format', \App\Enums\ScoreFormat::Abc->value)
+        ->set('format', ScoreFormat::Abc->value)
         ->set('content', "X:1\nK:C\nC D E F|")
         ->set('publicPreview', true)
         ->call('save')
@@ -266,4 +266,21 @@ it('does not set public_preview when no music is attached', function () {
     $score = Score::query()->firstWhere('title', 'No Music Score');
     expect($score)->not->toBeNull();
     expect($score->public_preview)->toBeFalse();
+});
+
+it('lays out the music card before the title and the incipit checkbox under the save button', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+    $score = Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id]);
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSeeInOrder([
+            __('Save Score'),
+            __('Show incipit on public listings of the music'),
+            __('Attach a music'),
+            __('Score title'),
+            __('Variation name'),
+            __('Format'),
+        ]);
 });

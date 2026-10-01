@@ -1624,5 +1624,6 @@
     "New link": "Új link",
     "Markdown": "Markdown",
     "Written in": "Írásmód",
-    "Written in :format and engraved like a score in that format, without adding one to the library.": ":format formátumban írva, és úgy szedve, mint egy ilyen kotta — anélkül, hogy a kottatárba kerülne."
+    "Written in :format and engraved like a score in that format, without adding one to the library.": ":format formátumban írva, és úgy szedve, mint egy ilyen kotta — anélkül, hogy a kottatárba kerülne.",
+    "Link this score to a music of the catalogue, so it appears there and its variations are listed together.": "Kapcsold a kottát egy zeneműhöz a katalógusban: ott is megjelenik, és a változatai együtt láthatók."
 }
