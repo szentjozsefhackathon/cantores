@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { packSoftPages, stackHeight } from '../../resources/js/soft-pages.js';
+import { packAtStarts, packSoftPages, stackHeight } from '../../resources/js/soft-pages.js';
 
 /**
  * A laid-out row, as markdownRows() hands one over: a height, the gap it wants
@@ -172,4 +172,45 @@ test('a group that says nothing about its own cuts is moved whole', () => {
     );
 
     assert.deepEqual(heights(pages), [[100], [100, 100, 100]]);
+});
+
+/* Where each screen starts is written down, counted across the whole run and
+   across the author's own breaks, so another browser can make the same cuts. */
+test('every screen says which row it starts at', () => {
+    const pages = packSoftPages([row(100), row(100), row(100, { breakBefore: 'hard' }), row(100), row(100)], 150);
+
+    assert.deepEqual(pages.map((page) => page.start), [0, 1, 2, 3, 4]);
+    assert.deepEqual(packSoftPages([row(100), row(100), row(100)], 250).map((page) => page.start), [0, 2]);
+});
+
+/* The phone measures a pixel differently from the wall. Handed the wall's cuts,
+   it makes exactly those, whether or not its own measurement agrees. */
+test('cuts handed down are made instead of the packer\'s own', () => {
+    const rows = [row(100), row(100), row(100)];
+
+    assert.deepEqual(heights(packSoftPages(rows, 1000, [0, 2])), [[100, 100], [100]], 'fitted here, cut on the wall');
+    assert.deepEqual(heights(packSoftPages(rows, 150, [0])), [[100, 100, 100]], 'one screen on the wall, too tall here');
+    assert.deepEqual(packSoftPages(rows, 150, [0, 2]).map((page) => page.start), [0, 2]);
+});
+
+test('a cut handed down that was never made comes to the packer\'s own', () => {
+    const rows = [row(100), row(100), row(100)];
+
+    assert.deepEqual(heights(packSoftPages(rows, 150, [])), heights(packSoftPages(rows, 150)));
+    assert.deepEqual(heights(packSoftPages(rows, 150, null)), heights(packSoftPages(rows, 150)));
+});
+
+/* The count is what keeps the two agreeing on addresses, so it survives a phone
+   that wrapped a line differently and has fewer rows than the wall cut at. */
+test('as many screens as cuts, even past the rows this browser has', () => {
+    const pages = packAtStarts([row(100), row(100)], [0, 1, 4]);
+
+    assert.deepEqual(heights(pages), [[100], [100], []]);
+    assert.equal(pages[2].height, 0);
+});
+
+test('cuts out of order are never made backwards', () => {
+    const pages = packAtStarts([row(10), row(20), row(30)], [5, 2, 1]);
+
+    assert.deepEqual(heights(pages), [[10, 20], [], [30]]);
 });

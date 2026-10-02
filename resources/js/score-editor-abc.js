@@ -1,7 +1,7 @@
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
 import { SLIDE_PALETTES } from './slide-palette.js';
-import { systemSlides } from './slide-systems.js';
+import { staysWhole, systemSlides } from './slide-systems.js';
 import { softSegmentSources } from './score-editor-pages.js';
 import { stackSvgs, viewBoxOf } from './svg-stack.js';
 import { diatarToAbc } from './diatar-to-abc.js';
@@ -437,9 +437,10 @@ export async function renderAbcSlide(pageSource, settings, canvas, report = null
  * are the same music again, and would underline every warning twice.
  *
  * @param {string|import('./abc-source-map.js').MappedSource} pageSource one page, suggestions left in
- * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
+ * @param {number[]|null} [starts] the wall's cuts, made instead of this browser's — see packSystems
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean, start: number}>>} never empty
  */
-export async function renderAbcSlides(pageSource, settings, canvas, report = null) {
+export async function renderAbcSlides(pageSource, settings, canvas, report = null, starts = null) {
     await ensureAbcFontsLoaded(settings);
 
     const cut = typeof pageSource === 'string'
@@ -448,7 +449,7 @@ export async function renderAbcSlides(pageSource, settings, canvas, report = nul
     const whole = engraveAbcLines(cut.whole, settings, canvas, report);
     const slide = abcWholeSlide(whole, settings, canvas);
 
-    if (!slide.overflows) { return [slide]; }
+    if (staysWhole(starts, slide.overflows)) { return [{ ...slide, start: 0 }]; }
 
     const segments = cut.segments.length > 1
         ? cut.segments.map((segment, i) => abcSystemsOf(engraveAbcLines(segment, settings, canvas), i > 0))
@@ -458,7 +459,7 @@ export async function renderAbcSlides(pageSource, settings, canvas, report = nul
         applyAbcSvgStyle(svg, `abc-slide-s${++abcSlideSerial}`, settings, true);
 
         return svg;
-    });
+    }, starts);
 }
 
 /**

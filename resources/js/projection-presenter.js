@@ -1,5 +1,5 @@
 import { onAlpineInit } from './alpine-init.js';
-import { isExcluded, renderDeck } from './projection-deck.js';
+import { deckLayout, isExcluded, layoutSignature, renderDeck } from './projection-deck.js';
 import { onPaper } from './slide-frame.js';
 import { HEARTBEAT_MS, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, ownFit, ownScreen, isNewerFrame, poller, pushedShow, replayPendingState, screensFor, showClient, showStream, shownExclusions, musicStartAt, stateClient } from './projection-follow.js';
 
@@ -850,6 +850,7 @@ onAlpineInit(() => {
                 presentationId: screen.appliedPresentationId ?? null,
                 appliedVersion: Number(screen.appliedVersion ?? 0),
                 drawnRevision: screen.drawnRevision ?? '',
+                drawnLayout: layoutSignature(screen.drawnLayout),
             };
         },
 
@@ -874,10 +875,16 @@ onAlpineInit(() => {
                 return;
             }
 
+            // Where this wall cut each row into slides. The phone draws the
+            // same deck for itself, and two browsers measure the same words a
+            // pixel apart — so a page that is one slide here could be two
+            // there, and every address after it would name a different slide.
+            // The room sees this wall's cuts, so the phone is told them.
             const drawn = {
                 presentationId: this.presentationId,
                 appliedVersion: this.appliedVersion,
                 drawnRevision: this.drawnRevision || null,
+                drawnLayout: deckLayout(this.drawn),
             };
 
             if (this.alreadyAcknowledged(drawn)) { return; }
@@ -895,6 +902,7 @@ onAlpineInit(() => {
                 appliedPresentationId: acknowledgement.presentationId,
                 appliedVersion: acknowledgement.appliedVersion,
                 drawnRevision: acknowledgement.drawnRevision,
+                drawnLayout: acknowledgement.drawnLayout,
             });
 
             return true;
@@ -907,7 +915,8 @@ onAlpineInit(() => {
             return known !== null
                 && known.presentationId === drawn.presentationId
                 && known.appliedVersion === Number(drawn.appliedVersion ?? 0)
-                && known.drawnRevision === (drawn.drawnRevision ?? '');
+                && known.drawnRevision === (drawn.drawnRevision ?? '')
+                && known.drawnLayout === layoutSignature(drawn.drawnLayout);
         },
 
         /**

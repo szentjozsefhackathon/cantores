@@ -387,3 +387,99 @@ it('keeps acknowledgements for two screens independent', function () {
         ->and($second->refresh()->applied_version)->toBe(8)
         ->and($second->drawn_revision)->toBe('old-revision');
 });
+
+/*
+ * Every browser cuts the deck into slides for itself, and two browsers measure
+ * the same words a pixel apart. The wall's cuts are the ones the room sees, so
+ * the wall reports them and the phone is handed them to make its own from.
+ */
+it('keeps where the wall cut the deck and hands it to the remote', function () {
+    $user = User::factory()->create();
+    $presentation = Presentation::factory()->create(['user_id' => $user->id, 'version' => 7]);
+    $screen = Screen::factory()->create([
+        'user_id' => $user->id,
+        'device_id' => DeviceId::current(),
+    ]);
+    $revision = $presentation->projection->revision();
+    $layout = ['12' => [[0], [0, 4]], '15' => [[0, 3, 7]]];
+
+    actingAs($user);
+
+    postJson(route('screens.ack', $screen), [
+        'presentationId' => $presentation->id,
+        'appliedVersion' => 7,
+        'drawnRevision' => $revision,
+        'drawnLayout' => $layout,
+    ])->assertOk()
+        ->assertJsonPath('drawnLayout.12', [[0], [0, 4]])
+        ->assertJsonPath('drawnLayout.15', [[0, 3, 7]]);
+
+    expect($screen->refresh()->drawn_layout)->toBe([12 => [[0], [0, 4]], 15 => [[0, 3, 7]]]);
+
+    getJson(route('show.state'))
+        ->assertOk()
+        ->assertJsonPath('screens.0.drawnLayout.12', [[0], [0, 4]])
+        ->assertJsonPath('screens.0.drawnLayout.15', [[0, 3, 7]]);
+});
+
+it('takes the cuts of the deck already drawn, from a wall that reloaded onto it', function () {
+    $user = User::factory()->create();
+    $presentation = Presentation::factory()->create(['user_id' => $user->id, 'version' => 7]);
+    $screen = Screen::factory()->create(['user_id' => $user->id]);
+
+    $screen->acknowledge($presentation, 7, 'revision-a');
+    $screen->acknowledge($presentation, 7, 'revision-a', [3 => [[0, 2]]]);
+
+    expect($screen->refresh()->drawn_layout)->toBe([3 => [[0, 2]]]);
+});
+
+it('forgets the cuts of a deck the wall has moved on from', function () {
+    $user = User::factory()->create();
+    $presentation = Presentation::factory()->create(['user_id' => $user->id, 'version' => 8]);
+    $screen = Screen::factory()->create(['user_id' => $user->id]);
+
+    $screen->acknowledge($presentation, 7, 'revision-a', [3 => [[0, 2]]]);
+    $screen->acknowledge($presentation, 8, 'revision-b');
+
+    expect($screen->refresh()->drawn_revision)->toBe('revision-b')
+        ->and($screen->drawn_layout)->toBeNull();
+});
+
+it('does not pin cuts on a deck the wall has not drawn', function () {
+    $user = User::factory()->create();
+    $presentation = Presentation::factory()->create(['user_id' => $user->id, 'version' => 7]);
+    $screen = Screen::factory()->create(['user_id' => $user->id]);
+
+    $screen->acknowledge($presentation, 7, 'revision-b', [3 => [[0]]]);
+    $screen->acknowledge($presentation, 7, 'revision-a', [3 => [[0, 2]]]);
+
+    expect($screen->refresh()->drawn_revision)->toBe('revision-b')
+        ->and($screen->drawn_layout)->toBe([3 => [[0]]]);
+});
+
+it('refuses a layout that is not a list of starts', function () {
+    $user = User::factory()->create();
+    $presentation = Presentation::factory()->create(['user_id' => $user->id, 'version' => 7]);
+    $screen = Screen::factory()->create([
+        'user_id' => $user->id,
+        'device_id' => DeviceId::current(),
+    ]);
+
+    actingAs($user);
+
+    postJson(route('screens.ack', $screen), [
+        'presentationId' => $presentation->id,
+        'appliedVersion' => 7,
+        'drawnRevision' => 'revision-a',
+        'drawnLayout' => ['12' => [[-1]]],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['drawnLayout.12.0.0']);
+
+    postJson(route('screens.ack', $screen), [
+        'presentationId' => $presentation->id,
+        'appliedVersion' => 7,
+        'drawnRevision' => 'revision-a',
+        'drawnLayout' => ['12' => [[]]],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['drawnLayout.12.0']);
+});

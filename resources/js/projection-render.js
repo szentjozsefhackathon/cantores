@@ -108,21 +108,29 @@ export async function renderRatioPage(format, pageSource, settings, ratio) {
  * takes the deck's ink, and the three engines draw their own black on their own
  * white whatever the deck says.
  *
+ * `starts` are the cuts the wall made in this page, where a remote has been
+ * told them: each is the index of the system, or the chord sheet's row, that a
+ * slide begins at. Given, they are made instead of this browser's own, so the
+ * phone's slides are the wall's slides however differently the two measure.
+ * Every slide comes back saying where it starts, which is how the wall writes
+ * its cuts down in the first place.
+ *
  * @param {string} pageSource one entry from ratioPageSources(), suggestions left in
  * @param {import('./slide-palette.js').SlidePalette} [palette]
- * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
+ * @param {number[]|null} [starts]
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean, start: number}>>} never empty
  */
-export async function renderRatioPageSlides(format, pageSource, settings, ratio, palette) {
+export async function renderRatioPageSlides(format, pageSource, settings, ratio, palette, starts = null) {
     const canvas = slideCanvas(format, ratio);
 
     if (canvas === null) {
         throw new Error(`[projection] ${ratio} is not a slide ratio`);
     }
 
-    if (format === 'chordpro') { return renderChordproSlides(pageSource, settings, canvas, palette ?? slidePalette()); }
-    if (format === 'abc') { return renderAbcSlides(pageSource, settings, canvas); }
-    if (format === 'gabc') { return renderGabcSlides(pageSource, settings, canvas); }
-    if (format === 'aretino') { return renderAretinoSlides(pageSource, settings, canvas, ratio); }
+    if (format === 'chordpro') { return renderChordproSlides(pageSource, settings, canvas, palette ?? slidePalette(), starts); }
+    if (format === 'abc') { return renderAbcSlides(pageSource, settings, canvas, null, starts); }
+    if (format === 'gabc') { return renderGabcSlides(pageSource, settings, canvas, starts); }
+    if (format === 'aretino') { return renderAretinoSlides(pageSource, settings, canvas, ratio, starts); }
 
     throw new Error(`[projection] ${format} cannot be engraved to a slide`);
 }
@@ -133,13 +141,15 @@ export async function renderRatioPageSlides(format, pageSource, settings, ratio,
  * @param {import('./slide-palette.js').SlidePalette} [palette] the deck's ink,
  *        for the one format that is words rather than an engraving
  * @param {number[]|null} [sections] the row's chosen section references
- * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>}
+ * @param {Array<number[]>|null} [layout] the wall's cuts, one list of starts
+ *        per page — see renderRatioPageSlides
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean, page: number, start: number}>>}
  */
-export async function renderRatioPages(format, content, settings, ratio, palette, sections = null) {
+export async function renderRatioPages(format, content, settings, ratio, palette, sections = null, layout = null) {
     const pages = await Promise.all(
         ratioPageSources(format, content, settings, ratio, sections)
-            .map((page) => renderRatioPageSlides(format, page, settings, ratio, palette)),
+            .map((page, index) => renderRatioPageSlides(format, page, settings, ratio, palette, layout?.[index] ?? null)),
     );
 
-    return pages.flat();
+    return pages.flatMap((slides, page) => slides.map((slide) => ({ ...slide, page, start: slide.start ?? 0 })));
 }

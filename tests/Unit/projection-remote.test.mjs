@@ -1355,3 +1355,61 @@ test('the phone takes the show off the stream without reading it back', async ()
 
     assert.equal(asked, 1, 'a frame that said nothing was not answered by asking');
 });
+
+/*
+ * The wall and the phone each cut the deck into slides for themselves, and two
+ * browsers measure the same words a pixel apart. The wall writes its cuts down;
+ * the phone makes the same ones, so a slide's address names the same picture
+ * in the hand and on the glass.
+ */
+test('the phone cuts the deck where the wall that drew it cut it', () => {
+    const deck = remote();
+    const stale = { ...wall(6), appliedPresentationId: 1, drawnRevision: 'old', drawnLayout: { 3: [[0]] } };
+    const fresh = { ...wall(5), appliedPresentationId: 1, drawnRevision: 'a', drawnLayout: { 3: [[0, 4]] } };
+
+    deck.presentationId = 1;
+    deck.screens = [stale, fresh];
+
+    assert.deepEqual(deck.wallLayout('a'), { 3: [[0, 4]] }, 'a wall still on yesterday\'s deck was asked');
+    assert.equal(deck.wallLayout('b'), null, 'cuts were taken from a deck this phone is not drawing');
+    assert.equal(deck.wallLayout(''), null);
+
+    deck.screens = [{ ...fresh, appliedPresentationId: 2 }];
+    assert.equal(deck.wallLayout('a'), null, 'cuts were taken from another show');
+});
+
+test('of two walls, the one the fit panel is aimed at says where the cuts are', () => {
+    const deck = remote();
+
+    deck.presentationId = 1;
+    deck.screens = [
+        { ...wall(5), appliedPresentationId: 1, drawnRevision: 'a', drawnLayout: { 3: [[0]] } },
+        { ...wall(6), appliedPresentationId: 1, drawnRevision: 'a', drawnLayout: { 3: [[0, 2]] } },
+    ];
+    deck.fitScreenId = 6;
+
+    assert.deepEqual(deck.wallLayout('a'), { 3: [[0, 2]] });
+});
+
+/* The wall reports its cuts a moment after it has drawn; the phone, already
+   showing the same deck, re-cuts it then, and only then. */
+test('the phone re-cuts its deck once the wall says where it cut', async () => {
+    const deck = remote();
+    let recut = 0;
+    const answer = (drawnLayout) => ({
+        presentationId: 1,
+        screens: [{ ...wall(5), appliedPresentationId: 1, appliedVersion: 1, drawnRevision: 'a', drawnLayout }],
+        state: { version: 1, revision: 'a', entryId: 1, slideIndex: 0, blanked: false, splash: 'off', reveals: {}, endedAt: null },
+    });
+
+    deck.presentationId = 1;
+    deck.ownRevision = 'a';
+    deck.repaint = () => {};
+    deck.relayout = () => { recut += 1; deck.ownLayout = 'cut'; };
+
+    await deck.apply(answer(null));
+    assert.equal(recut, 0, 'the phone re-cut a deck no wall had said anything about');
+
+    await deck.apply(answer({ 1: [[0, 3]] }));
+    assert.equal(recut, 1, 'the wall said where it cut and the phone did not follow');
+});

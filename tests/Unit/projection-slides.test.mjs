@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { isExcluded, textPalette } from '../../resources/js/projection-deck.js';
+import { deckLayout, isExcluded, layoutSignature, textPalette } from '../../resources/js/projection-deck.js';
 import { textSlideSettings } from '../../resources/js/projection-settings.js';
 
 /*
@@ -100,4 +100,30 @@ test('a row wins over the deck, one key at a time', () => {
 
     assert.equal(resolved.textSizeScale, 1.5);
     assert.equal(resolved.textLineHeight, 2.2);
+});
+
+/* What the wall sends with its acknowledgement: for every row, one list per page
+   of the score, holding where each of its slides starts. */
+test('a drawn deck writes down where it cut each row', () => {
+    const layout = deckLayout([
+        { entryId: 3, index: 0, page: 0, start: 0 },
+        { entryId: 3, index: 1, page: 0, start: 4 },
+        { entryId: 3, index: 2, page: 1, start: 0 },
+        { entryId: 8, index: 0, page: 0, start: 0 },
+    ]);
+
+    assert.deepEqual(layout, { 3: [[0, 4], [0]], 8: [[0]] });
+    assert.deepEqual(deckLayout([]), {});
+});
+
+/* A layout read back out of a JSON column may have its keys in another order,
+   and must still be recognised as the one that was sent. */
+test('a layout is the same layout whatever order its rows arrive in', () => {
+    assert.equal(
+        layoutSignature({ 10: [[0]], 2: [[0, 3]] }),
+        layoutSignature({ 2: [[0, 3]], 10: [[0]] }),
+    );
+    assert.notEqual(layoutSignature({ 2: [[0, 3]] }), layoutSignature({ 2: [[0]] }));
+    assert.equal(layoutSignature(null), '');
+    assert.equal(layoutSignature([]), '');
 });

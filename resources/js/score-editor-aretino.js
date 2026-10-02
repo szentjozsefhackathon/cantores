@@ -1,7 +1,7 @@
 import { renderAretino, splitRowSVGs } from '@aretino-chant/core';
 import { softSegmentSources, splitPages as splitRatioPages } from './score-editor-pages.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, fitSlide, parseSvg, viewBoxOf } from './slide-frame.js';
-import { systemSlides } from './slide-systems.js';
+import { staysWhole, systemSlides } from './slide-systems.js';
 import { svgHeight } from './svg-slice.js';
 import { gabcToAretino } from '@aretino-chant/gabc2aretino';
 import { guidoToAretino, guidoTextToAretino } from '@aretino-chant/guido2aretino';
@@ -88,17 +88,18 @@ export async function renderAretinoSlide(pageSource, settings, canvas, ratio) {
  * which splitRowSVGs hands over one document apiece — see slide-systems.js.
  *
  * @param {string} pageSource one page, suggestions left in
- * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
+ * @param {number[]|null} [starts] the wall's cuts, made instead of this browser's — see packSystems
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean, start: number}>>} never empty
  */
-export async function renderAretinoSlides(pageSource, settings, canvas, ratio) {
+export async function renderAretinoSlides(pageSource, settings, canvas, ratio, starts = null) {
     await ensureFontsLoaded([settings.aretinoTextFont], Number(settings.aretinoLyricSize));
 
     const cut = softSegmentSources(pageSource, 'aretino');
     const free = engraveAretinoSlide(cut.whole, settings, ratio, false);
     const height = aretinoContentHeight(free);
 
-    if (height <= canvas.height + SLIDE_FIT_TOLERANCE) {
-        return [aretinoWholeSlide(cut.whole, settings, canvas, ratio, height)];
+    if (staysWhole(starts, height > canvas.height + SLIDE_FIT_TOLERANCE)) {
+        return [{ ...aretinoWholeSlide(cut.whole, settings, canvas, ratio, height), start: 0 }];
     }
 
     // A repeated clef stays hidden even where a slide opens on it: the engine
@@ -106,7 +107,7 @@ export async function renderAretinoSlides(pageSource, settings, canvas, ratio) {
     // slides begin.
     const markups = cut.segments.map((segment) => engraveAretinoSlide(segment, settings, ratio, false));
 
-    return systemSlides(markups.map((markup) => aretinoRows(markup)), canvas);
+    return systemSlides(markups.map((markup) => aretinoRows(markup)), canvas, undefined, starts);
 }
 
 /**

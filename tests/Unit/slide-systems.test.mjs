@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { packSystems } from '../../resources/js/slide-systems.js';
+import { packSystems, staysWhole } from '../../resources/js/slide-systems.js';
 import { startsAtAutomaticCut } from '../../resources/js/soft-pages.js';
 
 /*
@@ -95,4 +95,30 @@ test('a slide begun by a written break is not automatic; any other after the fir
     assert.equal(startsAtAutomaticCut({ rows: [{ breakBefore: 'soft' }] }, 1), false);
     assert.equal(startsAtAutomaticCut({ rows: [{ breakBefore: false }] }, 1), true);
     assert.equal(startsAtAutomaticCut({ rows: [{}] }, 1), true);
+});
+
+/* The cut is written down as the system a slide starts at, counted across the
+   page's `%pagebreak?` pieces, so the phone can cut the wall's way. */
+test('every slide says which system it starts at, across the pieces', () => {
+    const pages = packSystems([[system('a', 600), system('b', 600)], [system('c', 300), system('d', 600)]], 1080);
+
+    assert.deepEqual(names(pages), [['a'], ['b'], ['c', 'd']]);
+    assert.deepEqual(pages.map((page) => page.start), [0, 1, 2]);
+});
+
+test('the wall\'s cuts are made instead of this browser\'s', () => {
+    const pages = packSystems([[system('a', 300), system('b', 300), system('c', 300)]], 1080, [0, 2]);
+
+    assert.deepEqual(names(pages), [['a', 'b'], ['c']]);
+    assert.equal(pages[1].autoSplit, true);
+});
+
+/* Whole or cut is the wall's call where the wall made one, and this browser's
+   own measurement otherwise. */
+test('a page stays whole where the wall kept it whole, whatever it measures here', () => {
+    assert.equal(staysWhole([0], true), true);
+    assert.equal(staysWhole([0, 3], false), false);
+    assert.equal(staysWhole(null, false), true);
+    assert.equal(staysWhole(null, true), false);
+    assert.equal(staysWhole([], true), false);
 });
