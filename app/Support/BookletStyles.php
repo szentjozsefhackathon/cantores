@@ -62,7 +62,7 @@ class BookletStyles
             'columns' => [
                 'text_font' => 'Alegreya',
                 'lyric_size_pt' => 10.5,
-                'staff_height_mm' => 5.0,
+                'staff_height_mm' => 6.0,
                 'heading_scale' => 0.9,
                 'abc_staff_sep' => 25.0,
                 'abc_lyric_first_skip' => 1.4,
@@ -79,7 +79,7 @@ class BookletStyles
             'columns' => [
                 'text_font' => 'Merriweather',
                 'lyric_size_pt' => 10.5,
-                'staff_height_mm' => 5.0,
+                'staff_height_mm' => 6.0,
                 'heading_scale' => 0.9,
                 'abc_staff_sep' => 25.0,
                 'abc_lyric_first_skip' => 1.5,
@@ -96,7 +96,7 @@ class BookletStyles
             'columns' => [
                 'text_font' => 'EB Garamond',
                 'lyric_size_pt' => 10.5,
-                'staff_height_mm' => 5.0,
+                'staff_height_mm' => 6.0,
                 'heading_scale' => 0.9,
                 'abc_staff_sep' => 25.0,
                 'abc_lyric_first_skip' => 1.4,

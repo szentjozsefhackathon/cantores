@@ -1076,7 +1076,7 @@ it('saves how tightly ABC stacks throughout the booklet', function () {
         ->and($booklet->geometry())->toMatchArray(['abcStaffSep' => 18.0]);
 });
 
-// A print of an A5 booklet is what set these: 10.5pt lyrics over a 5 mm staff
+// A print of an A5 booklet is what set these: 10.5pt lyrics over a 6 mm staff
 // balance, and a heading at 0.9 stands over them without shouting.
 it('starts a booklet at the numbers a printed A5 booklet wanted', function () {
     // Created past the factory, so the columns answer with what the schema says.
@@ -1087,7 +1087,7 @@ it('starts a booklet at the numbers a printed A5 booklet wanted', function () {
 
     expect($booklet->geometry())->toMatchArray([
         'lyricSizePt' => 10.5,
-        'staffHeightMm' => 5.0,
+        'staffHeightMm' => 6.0,
         'headingScale' => 0.9,
         // The face every size in the application is quoted in; see
         // OPTICAL_X_HEIGHT in resources/js/booklet-geometry.js.

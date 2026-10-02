@@ -74,7 +74,7 @@ class BookletEditor extends Component
     public float $lyricSizePt = 10.5;
 
     #[Validate('required|numeric|min:2|max:20')]
-    public float $staffHeightMm = 5;
+    public float $staffHeightMm = 6;
 
     /**
      * The typography the whole booklet is set in.

@@ -4,12 +4,13 @@ namespace Database\Factories;
 
 use App\Enums\BookletOrientation;
 use App\Enums\BookletPageSize;
+use App\Models\Booklet;
 use App\Models\MusicPlan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Booklet>
+ * @extends Factory<Booklet>
  */
 class BookletFactory extends Factory
 {
@@ -26,7 +27,7 @@ class BookletFactory extends Factory
             'orientation' => BookletOrientation::Portrait,
             'margin_mm' => 12,
             'lyric_size_pt' => 10.5,
-            'staff_height_mm' => 5,
+            'staff_height_mm' => 6,
             'text_font' => 'Alegreya',
             'heading_scale' => 0.9,
             'text_size_scale' => 1.0,
