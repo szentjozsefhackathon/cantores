@@ -6,6 +6,11 @@ import {
     chordproFontSizeForPt,
     gabcLyricSizeForPt,
     gabcStaffSizeForStaffHeight,
+    ptForAbcLyricSize,
+    ptForChordproFontSize,
+    ptForGabcLyricSize,
+    staffHeightMmForAbcPageScale,
+    staffHeightMmForGabcStaffSize,
 } from './booklet-geometry.js';
 import { DEFAULT_LINE_HEIGHT } from './booklet-markdown.js';
 
@@ -338,6 +343,89 @@ export function steppedValue(current, field, direction) {
     const clamped = Math.min(Number(field.max), Math.max(Number(field.min), stepped));
 
     return Math.round(clamped * 1e4) / 1e4;
+}
+
+/**
+ * The booklet's computed size knobs, each with the way to and from the unit it
+ * is computed in — millimetres of staff or points of type — and the step a press
+ * moves it in that unit.
+ */
+const PHYSICAL_KNOB = {
+    abcPageScale: { toPhysical: staffHeightMmForAbcPageScale, fromPhysical: abcPageScaleForStaffHeight, step: 0.5 },
+    staffSize: { toPhysical: staffHeightMmForGabcStaffSize, fromPhysical: gabcStaffSizeForStaffHeight, step: 0.5 },
+    aretinoStaffSize: { toPhysical: Number, fromPhysical: aretinoStaffSizeForStaffHeight, step: 0.5 },
+    abcLyricSize: { toPhysical: ptForAbcLyricSize, fromPhysical: abcLyricSizeForPt, step: 0.5 },
+    lyricSize: { toPhysical: ptForGabcLyricSize, fromPhysical: gabcLyricSizeForPt, step: 0.5 },
+    aretinoLyricSize: { toPhysical: Number, fromPhysical: aretinoLyricSizeForPt, step: 0.5 },
+    chordproFontSize: { toPhysical: ptForChordproFontSize, fromPhysical: chordproFontSizeForPt, step: 0.5 },
+};
+
+/**
+ * One press of a booklet editor's size knob: half a millimetre of staff or half
+ * a point of type, counted from the size the booklet computed for the score.
+ *
+ * The booklet computes these sizes, so they sit off any grid of an engine's own:
+ * a 6 mm staff is an ABC scale of 0.9449, and 10.5pt lyrics come out at whatever
+ * the face's x-height makes of them. Snapped to a grid of 0.05, bigger took the
+ * ABC staff to 1 and smaller brought it back to 0.95 — a press and its undo left
+ * the score a hair larger than the booklet had it, and marked as adjusted. So
+ * the grid is laid from the booklet's own size instead: every press lands a
+ * whole number of steps from it, and walking back lands on it exactly.
+ *
+ * A knob with no unit behind it, or nothing to count from, steps as
+ * steppedValue() does.
+ *
+ * @param {number} current what the score is drawn at now
+ * @param {{key: string, min: number, max: number, step: number}} field from BookletSettingFields::panelFor
+ * @param {number} direction -1 or 1
+ * @param {number} [inherited] what the score would be drawn at without its override
+ */
+export function bookletSteppedValue(current, field, direction, inherited) {
+    const knob = PHYSICAL_KNOB[field.key];
+    const from = Number(current);
+    const anchor = Number(inherited);
+
+    if (!knob || !(from > 0) || !(anchor > 0)) {
+        return steppedValue(current, field, direction);
+    }
+
+    const origin = knob.toPhysical(anchor);
+    const offset = steppedValue(knob.toPhysical(from) - origin, {
+        min: knob.toPhysical(Number(field.min)) - origin,
+        max: knob.toPhysical(Number(field.max)) - origin,
+        step: knob.step,
+    }, direction);
+
+    if (offset === 0) {
+        return anchor;
+    }
+
+    return Math.min(Number(field.max), Math.max(Number(field.min), round(knob.fromPhysical(origin + offset), 4)));
+}
+
+/**
+ * How many of bookletSteppedValue()'s presses a size knob stands from the size
+ * the booklet computed — positive when bigger — so the panel can say "+2"
+ * rather than leave the cantor counting clicks.
+ *
+ * Rounded to whole presses: a score nudged before the booklet's own size moved
+ * stands a fraction off the grid, and the nearest press is what the next one
+ * will put it on. Zero for a knob with no unit behind it.
+ *
+ * @param {string} key
+ * @param {number} current what the score is drawn at now
+ * @param {number} inherited what the score would be drawn at without its override
+ */
+export function bookletStepCount(key, current, inherited) {
+    const knob = PHYSICAL_KNOB[key];
+    const from = Number(current);
+    const anchor = Number(inherited);
+
+    if (!knob || !(from > 0) || !(anchor > 0)) {
+        return 0;
+    }
+
+    return Math.round((knob.toPhysical(from) - knob.toPhysical(anchor)) / knob.step) || 0;
 }
 
 /**

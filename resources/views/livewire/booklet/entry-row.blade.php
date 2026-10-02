@@ -370,19 +370,42 @@
                                          it: bigger and smaller, and no number to read. --}}
                                     @php $knob = Js::from(Arr::only($field, ['key', 'min', 'max', 'step'])); @endphp
 
-                                    <flux:tooltip :content="__('Smaller')">
-                                        <flux:button size="sm" variant="ghost" icon="minus"
-                                            aria-label="{{ $field['label'] }}: {{ __('Smaller') }}"
-                                            x-on:click="nudgeOverride({{ $entry->id }}, {{ $knob }}, -1)"
-                                            x-bind:disabled="atLimit({{ $entry->id }}, {{ $knob }}, -1)" />
-                                    </flux:tooltip>
+                                    {{-- With no number to read, the count of presses is
+                                         the one thing worth showing: "+2" on bigger, "−1" on
+                                         smaller. Kept out of the morph whole, because the
+                                         server renders it empty and the count lives in the
+                                         browser. --}}
+                                    <div class="relative">
+                                        <flux:tooltip :content="__('Smaller')">
+                                            <flux:button size="sm" variant="ghost" icon="minus"
+                                                aria-label="{{ $field['label'] }}: {{ __('Smaller') }}"
+                                                x-on:click="nudgeOverride({{ $entry->id }}, {{ $knob }}, -1)"
+                                                x-bind:disabled="atLimit({{ $entry->id }}, {{ $knob }}, -1)" />
+                                        </flux:tooltip>
+                                        <span
+                                            wire:ignore
+                                            x-cloak
+                                            x-show="stepCount({{ $entry->id }}, '{{ $field['key'] }}') < 0"
+                                            x-text="'−' + Math.abs(stepCount({{ $entry->id }}, '{{ $field['key'] }}'))"
+                                            class="pointer-events-none absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-none text-white dark:bg-blue-500"
+                                        ></span>
+                                    </div>
 
-                                    <flux:tooltip :content="__('Bigger')">
-                                        <flux:button size="sm" variant="ghost" icon="plus"
-                                            aria-label="{{ $field['label'] }}: {{ __('Bigger') }}"
-                                            x-on:click="nudgeOverride({{ $entry->id }}, {{ $knob }}, 1)"
-                                            x-bind:disabled="atLimit({{ $entry->id }}, {{ $knob }}, 1)" />
-                                    </flux:tooltip>
+                                    <div class="relative">
+                                        <flux:tooltip :content="__('Bigger')">
+                                            <flux:button size="sm" variant="ghost" icon="plus"
+                                                aria-label="{{ $field['label'] }}: {{ __('Bigger') }}"
+                                                x-on:click="nudgeOverride({{ $entry->id }}, {{ $knob }}, 1)"
+                                                x-bind:disabled="atLimit({{ $entry->id }}, {{ $knob }}, 1)" />
+                                        </flux:tooltip>
+                                        <span
+                                            wire:ignore
+                                            x-cloak
+                                            x-show="stepCount({{ $entry->id }}, '{{ $field['key'] }}') > 0"
+                                            x-text="'+' + stepCount({{ $entry->id }}, '{{ $field['key'] }}')"
+                                            class="pointer-events-none absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-none text-white dark:bg-blue-500"
+                                        ></span>
+                                    </div>
                                 @elseif($field['type'] === 'number')
                                     <flux:input
                                         size="sm"

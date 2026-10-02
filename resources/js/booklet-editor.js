@@ -3,7 +3,7 @@ import { enableRegionHover, highlightEntry, hoveredRegionEntry, revealEntryRow }
 import { pageGeometry } from './booklet-geometry.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { renderBooklet, serializeBookletPages } from './booklet-render.js';
-import { fileSettings, movesSetting, resolveSettings, steppedValue, textSettings, withPlainOverrides } from './booklet-settings.js';
+import { bookletStepCount, bookletSteppedValue, fileSettings, movesSetting, resolveSettings, textSettings, withPlainOverrides } from './booklet-settings.js';
 import { beginSplitDrag, clampSplitPercent, SPLIT_DEFAULT } from './booklet-split.js';
 import { measuringHost } from './measuring-room.js';
 import './score-preview.js';
@@ -405,15 +405,32 @@ onAlpineInit(() => {
              * A knob offered as bigger and smaller, moved one step.
              *
              * Stepped from what the score is actually drawn at — the booklet's own
-             * computed size, unless this score has already been nudged — and onto
-             * the step's own grid, so a size the geometry left at 4.6667 becomes 5
-             * rather than 5.1667.
+             * computed size, unless this score has already been nudged — by half
+             * a millimetre of staff or half a point of type, counted from the
+             * size the booklet computed, so a press and its undo land back on it.
+             * See bookletSteppedValue().
              *
              * @param {object} field one entry of BookletSettingFields::panelFor
              * @param {number} direction -1 or 1
              */
             nudgeOverride(entryId, field, direction) {
-                this.setOverride(entryId, field.key, steppedValue(this.settingsOf(entryId)[field.key], field, direction));
+                const entry = this.entries.find((candidate) => candidate.id === entryId);
+                const inherited = entry ? this.inheritedSetting(entry, field.key) : undefined;
+
+                this.setOverride(entryId, field.key, bookletSteppedValue(this.settingsOf(entryId)[field.key], field, direction, inherited));
+            },
+
+            /**
+             * How many presses of bigger (positive) or smaller (negative) this
+             * score's knob stands from the booklet's own size, for the counter on
+             * the button that put it there.
+             */
+            stepCount(entryId, key) {
+                const entry = this.entries.find((candidate) => candidate.id === entryId);
+
+                if (!entry || !Object.prototype.hasOwnProperty.call(entry.override ?? {}, key)) { return 0; }
+
+                return bookletStepCount(key, this.settingsOf(entryId)[key], this.inheritedSetting(entry, key));
             },
 
             /** A knob at the end of its travel, so the button can say so. */

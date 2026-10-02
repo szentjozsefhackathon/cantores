@@ -7,8 +7,13 @@ import {
     chordproFontSizeForPt,
     gabcLyricSizeForPt,
     pageGeometry,
+    ptForAbcLyricSize,
+    ptForChordproFontSize,
+    ptForGabcLyricSize,
+    staffHeightMmForAbcPageScale,
+    staffHeightMmForGabcStaffSize,
 } from '../../resources/js/booklet-geometry.js';
-import { movesSetting, READER_SIZE_STEP_PT, readerStep, resolveSettings, steppedValue, textSettings, travellingOverride, unifiedSettings } from '../../resources/js/booklet-settings.js';
+import { bookletStepCount, bookletSteppedValue, movesSetting, READER_SIZE_STEP_PT, readerStep, resolveSettings, steppedValue, textSettings, travellingOverride, unifiedSettings } from '../../resources/js/booklet-settings.js';
 
 const rawGeometry = {
     pageWidthMm: 148,
@@ -147,6 +152,90 @@ test('a knob stepped by a share of itself moves by that share, and never by less
 
     // Nothing to take a share of: the step is what is left.
     assert.equal(steppedValue(0, lyricSize, 1), 2);
+});
+
+/*
+ * The booklet computes its sizes from a staff height and a type size, so in an
+ * engine's own unit they sit off that unit's grid — a 6 mm staff is an ABC scale
+ * of 0.9449. Stepped on the engine's grid, bigger and then smaller left the
+ * score at 0.95 rather than where the booklet had it.
+ */
+test('a booklet size knob pressed bigger then smaller lands back on the booklet\'s own size', () => {
+    const booklet = pageGeometry({ ...rawGeometry, staffHeightMm: 6, lyricSizePt: 10.5 });
+    // BookletSettingFields' step knobs, as the panel hands them over.
+    const knobs = {
+        abc: [
+            { key: 'abcPageScale', min: 0.2, max: 5, step: 0.05, toPhysical: staffHeightMmForAbcPageScale },
+            { key: 'abcLyricSize', min: 2, max: 60, step: 0.5, toPhysical: ptForAbcLyricSize },
+        ],
+        gabc: [
+            { key: 'staffSize', min: 10, max: 300, step: 1, toPhysical: staffHeightMmForGabcStaffSize },
+            { key: 'lyricSize', min: 1.5, max: 60, step: 0.5, toPhysical: ptForGabcLyricSize },
+        ],
+        aretino: [
+            { key: 'aretinoStaffSize', min: 1, max: 20, step: 0.5, toPhysical: Number },
+            { key: 'aretinoLyricSize', min: 4, max: 80, step: 0.5, toPhysical: Number },
+        ],
+        chordpro: [
+            { key: 'chordproFontSize', min: 6, max: 32, step: 0.5, toPhysical: ptForChordproFontSize },
+        ],
+    };
+
+    for (const [format, fields] of Object.entries(knobs)) {
+        const computed = resolveSettings(format, {}, {}, booklet, null);
+
+        for (const field of fields) {
+            const original = computed[field.key];
+            const step = (value, direction) => bookletSteppedValue(value, field, direction, original);
+            const bigger = step(original, 1);
+            const smaller = step(original, -1);
+
+            assert.equal(step(bigger, -1), original, `${field.key} up and down`);
+            assert.equal(step(smaller, 1), original, `${field.key} down and up`);
+            assert.equal(step(step(step(bigger, 1), -1), -1), original, `${field.key} up twice and down twice`);
+            assert.equal(movesSetting(step(bigger, -1), original), false);
+
+            // And a press is half a millimetre of staff or half a point of type.
+            assert.ok(Math.abs(field.toPhysical(bigger) - field.toPhysical(original) - 0.5) < 0.001, `${field.key} bigger`);
+            assert.ok(Math.abs(field.toPhysical(original) - field.toPhysical(smaller) - 0.5) < 0.001, `${field.key} smaller`);
+        }
+    }
+
+    // A score nudged off the booklet's grid — the booklet's staff has changed
+    // since — is put back on it by the next press.
+    const staffScale = knobs.abc[0];
+    const sixMm = resolveSettings('abc', {}, {}, booklet, null).abcPageScale;
+    assert.equal(bookletSteppedValue(1.03, staffScale, -1, sixMm), sixMm);
+
+    // The ends of the range still hold, in the engine's own unit.
+    assert.equal(bookletSteppedValue(5, staffScale, 1, sixMm), 5);
+    assert.equal(bookletSteppedValue(0.2, staffScale, -1, sixMm), 0.2);
+
+    // A knob with no unit behind it, or nothing to count from, keeps the
+    // engine's grid.
+    assert.equal(bookletSteppedValue(1.4, { key: 'abcNoteSpacing', min: 1, max: 3, step: 0.1 }, 1, 1.4), 1.5);
+    assert.equal(bookletSteppedValue(0.9449, staffScale, 1), 1);
+});
+
+test('a booklet size knob counts the presses it stands from the booklet\'s own size', () => {
+    const booklet = pageGeometry({ ...rawGeometry, staffHeightMm: 6, lyricSizePt: 10.5 });
+
+    for (const [format, field] of [
+        ['abc', { key: 'abcPageScale', min: 0.2, max: 5, step: 0.05 }],
+        ['abc', { key: 'abcLyricSize', min: 2, max: 60, step: 0.5 }],
+        ['gabc', { key: 'staffSize', min: 10, max: 300, step: 1 }],
+        ['aretino', { key: 'aretinoLyricSize', min: 4, max: 80, step: 0.5 }],
+    ]) {
+        const original = resolveSettings(format, {}, {}, booklet, null)[field.key];
+        const press = (value, direction) => bookletSteppedValue(value, field, direction, original);
+
+        assert.equal(bookletStepCount(field.key, original, original), 0);
+        assert.equal(bookletStepCount(field.key, press(press(original, 1), 1), original), 2, `${field.key} twice bigger`);
+        assert.equal(bookletStepCount(field.key, press(original, -1), original), -1, `${field.key} once smaller`);
+    }
+
+    // Nothing to count on a knob with no unit behind it.
+    assert.equal(bookletStepCount('abcNoteSpacing', 1.6, 1.4), 0);
 });
 
 test('one press of a reader\'s size knob is half a point of type, whatever drew the score', () => {
