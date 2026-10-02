@@ -1,5 +1,5 @@
 import { onAlpineInit } from './alpine-init.js';
-import { RESTORE_ICON, SKIP_ICON, isExcluded, layoutSignature, renderDeck } from './projection-deck.js';
+import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck } from './projection-deck.js';
 import { FIT_MOVE_STEP, FIT_NEUTRAL, FIT_ZOOM_STEP, POLL_MS, PUSHED_POLL_MS, addressAt, commandClient, fitFrom, fitTransform, indexOfAddress, isTypingTarget, jsonRequests, movedFit, isNewerFrame, poller, pushedShow, replayPendingState, sameFit, screensFor, showClient, showStream, shownExclusions, musicStartAt, stateClient, zoomedFit } from './projection-follow.js';
 
 /**
@@ -343,12 +343,6 @@ onAlpineInit(() => {
         /** And the deck this phone itself has finished engraving. */
         ownRevision: config.revision ?? '',
 
-        /**
-         * Which wall's cuts the deck in the hand was drawn with — the layout's
-         * signature, or empty where it was cut by this phone alone.
-         */
-        ownLayout: '',
-
         appliedVersion: 0,
         pendingCommands: [],
         canonicalState: null,
@@ -577,10 +571,7 @@ onAlpineInit(() => {
             this.busy = true;
 
             try {
-                const layout = this.wallLayout(this.ownRevision);
-
-                this.drawn = await renderDeck(this.entries, this.geometry, layout);
-                this.ownLayout = layoutSignature(layout);
+                this.drawn = await renderDeck(this.entries, this.geometry);
                 this.repaint(addressAt(this.slides, this.index));
             } catch (e) {
                 console.error('[remote] could not draw the deck', e);
@@ -1831,78 +1822,6 @@ onAlpineInit(() => {
 
             if (this.serverRevision !== this.ownRevision) {
                 this.refresh();
-
-                return;
-            }
-
-            if (layoutSignature(this.wallLayout(this.ownRevision)) !== this.ownLayout) {
-                this.relayout();
-            }
-        },
-
-        /**
-         * Where the wall cut the deck this phone has drawn, or null where no
-         * wall has drawn it yet.
-         *
-         * The room sees the wall's slides, and the wall and this phone each
-         * engrave the deck for themselves: two browsers that measure the same
-         * words a pixel apart can make one slide of a page on the projector and
-         * two of it here, and from then on every address the phone sends names
-         * a different slide on the wall. So the wall writes its cuts down when
-         * it acknowledges a deck, and the phone makes the same ones.
-         *
-         * Only a wall that has drawn this very revision is asked: a cut made in
-         * yesterday's version of a hymn says nothing about today's. Of two
-         * walls, the one the fit panel is aimed at, as everywhere else here.
-         *
-         * @param {string} revision the deck this phone is drawing
-         * @return {import('./projection-deck.js').DeckLayout|null}
-         */
-        wallLayout(revision) {
-            const fresh = (screen) => screen
-                && screen.appliedPresentationId === this.presentationId
-                && Boolean(revision)
-                && screen.drawnRevision === revision
-                && screen.drawnLayout
-                && typeof screen.drawnLayout === 'object';
-            const target = this.fitTarget;
-
-            if (fresh(target)) { return target.drawnLayout; }
-
-            return this.walls.find(fresh)?.drawnLayout ?? null;
-        },
-
-        /**
-         * The same deck drawn again at the wall's cuts, now that the wall has
-         * said what they are.
-         *
-         * Only the rows the wall cut differently are engraved again — the
-         * slide cache hands back every row this phone already cut the same
-         * way — and the slide being shown keeps its address across the swap.
-         */
-        async relayout() {
-            if (this._relayouting) { return; }
-
-            this._relayouting = true;
-
-            try {
-                const revision = this.ownRevision;
-                const layout = this.wallLayout(revision);
-                const drawn = await renderDeck(this.entries, this.geometry, layout);
-
-                // A newer deck landed while this one was being cut: it was
-                // drawn at the cuts that belong to it, and this is stale.
-                if (revision !== this.ownRevision) { return; }
-
-                const address = addressAt(this.slides, this.index);
-
-                this.drawn = drawn;
-                this.ownLayout = layoutSignature(layout);
-                this.repaint(address);
-            } catch (e) {
-                console.error('[remote] could not re-cut the deck', e);
-            } finally {
-                this._relayouting = false;
             }
         },
 
@@ -2103,8 +2022,7 @@ onAlpineInit(() => {
          * score just toggled have in common.
          */
         async applyPayload(payload) {
-            const layout = this.wallLayout(payload.revision ?? '');
-            const drawn = await renderDeck(payload.entries ?? [], payload.geometry ?? {}, layout);
+            const drawn = await renderDeck(payload.entries ?? [], payload.geometry ?? {});
 
             // Captured before the deck underneath changes: a row just taken out
             // of it is still in this order, so repaint can still say what used
@@ -2121,10 +2039,8 @@ onAlpineInit(() => {
             this.repaint(previousAddress, previousEntries);
 
             this.ownRevision = payload.revision ?? this.ownRevision;
-            this.ownLayout = layoutSignature(layout);
         },
 
         _refreshing: false,
-        _relayouting: false,
     }));
 });

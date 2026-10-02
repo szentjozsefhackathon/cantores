@@ -48,7 +48,6 @@ use Illuminate\Support\Facades\DB;
  * @property int|null $applied_presentation_id
  * @property int $applied_version
  * @property string|null $drawn_revision
- * @property array<int|string, list<list<int>>>|null $drawn_layout
  * @property CarbonImmutable|null $applied_at
  * @property CarbonImmutable $last_seen_at
  * @property CarbonImmutable|null $created_at
@@ -155,7 +154,6 @@ class Screen extends Model
         'applied_presentation_id',
         'applied_version',
         'drawn_revision',
-        'drawn_layout',
         'applied_at',
         'last_seen_at',
     ];
@@ -169,7 +167,6 @@ class Screen extends Model
             'last_seen_at' => 'datetime',
             'applied_at' => 'datetime',
             'applied_version' => 'integer',
-            'drawn_layout' => 'array',
             'fit_scale' => 'float',
             'fit_x' => 'float',
             'fit_y' => 'float',
@@ -375,19 +372,11 @@ class Screen extends Model
      * drawn, so a quiet Mass costs nothing at all, and the liveness the
      * heartbeat also carried is left to the poll that was making it anyway.
      *
-     * The layout travels with the revision it was cut from: where the wall cut
-     * each row into slides, which the phone makes its own cuts from. It is
-     * taken with a newer revision, and on its own for the revision already
-     * held — a wall reloaded onto the same deck reports the same picture, but
-     * may be the first to report its cuts.
-     *
-     * @param  array<int, list<list<int>>>|null  $drawnLayout
-     *
      * @see Screen::touchLastSeen()
      */
-    public function acknowledge(Presentation $presentation, int $version, ?string $drawnRevision, ?array $drawnLayout = null): self
+    public function acknowledge(Presentation $presentation, int $version, ?string $drawnRevision): self
     {
-        return DB::transaction(function () use ($presentation, $version, $drawnRevision, $drawnLayout): self {
+        return DB::transaction(function () use ($presentation, $version, $drawnRevision): self {
             $screen = self::query()->lockForUpdate()->findOrFail($this->getKey());
             $isNewerPresentation = $screen->applied_presentation_id !== $presentation->getKey();
             $isNewerVersion = $version > $screen->applied_version;
@@ -405,13 +394,7 @@ class Screen extends Model
                     'applied_presentation_id' => $presentation->getKey(),
                     'applied_version' => $version,
                     'drawn_revision' => $drawnRevision,
-                    'drawn_layout' => $drawnLayout,
                 ];
-            } elseif ($drawnLayout !== null
-                && $drawnRevision !== null
-                && $drawnRevision === $screen->drawn_revision
-                && $screen->applied_presentation_id === $presentation->getKey()) {
-                $attributes['drawn_layout'] = $drawnLayout;
             }
 
             $screen->forceFill($attributes)->save();

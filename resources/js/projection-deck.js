@@ -54,16 +54,11 @@ export { slidePalette as textPalette } from './slide-palette.js';
 /**
  * Every slide this deck comes to, in order.
  *
- * Where a wall has drawn the same deck, a remote hands its layout in and the
- * rows are cut where the wall cut them rather than where this browser would
- * have: see deckLayout. Rows the layout does not name are cut here as usual.
- *
  * @param {Array<object>} entries the render payload's rows
  * @param {object} geometry from the payload — carries the ratio
- * @param {DeckLayout|null} [layout] the wall's cuts, keyed by row
- * @return {Promise<Array<{entryId: number, index: number, page: number, start: number, svg: SVGElement, overflows: boolean, autoSplit?: boolean}>>}
+ * @return {Promise<Array<{entryId: number, svg: SVGElement, overflows: boolean, autoSplit?: boolean}>>}
  */
-export async function renderDeck(entries, geometry, layout = null) {
+export async function renderDeck(entries, geometry) {
     const ratio = geometry?.ratio;
 
     if (!isSlideRatio(ratio)) { return []; }
@@ -87,13 +82,12 @@ export async function renderDeck(entries, geometry, layout = null) {
 
     for (const entry of entries ?? []) {
         try {
-            const cuts = rowLayout(layout, entry.id);
-            const made = await cache.slidesOf(entry, cuts, () => slidesOf(entry, ratio, palette, geometry, cuts));
+            const made = await cache.slidesOf(entry, () => slidesOf(entry, ratio, palette, geometry));
 
             // The position within the row, which is what a slide left out of the
             // service is remembered by: the row is one thing chosen from the
             // plan, and its slides are however many its page breaks cut it into.
-            made.forEach((slide, index) => slides.push({ entryId: entry.id, index, ...slide, page: slide.page ?? 0, start: slide.start ?? index }));
+            made.forEach((slide, index) => slides.push({ entryId: entry.id, index, ...slide }));
         } catch (e) {
             console.error('[projection] could not draw a row', entry?.id, e);
         }
@@ -102,63 +96,6 @@ export async function renderDeck(entries, geometry, layout = null) {
     cache.end();
 
     return slides;
-}
-
-/**
- * Where a drawn deck cut its rows: for every row, one list per page of the
- * score, holding the index of the system — or row of words — each of its
- * slides starts at.
- *
- * The wall sends this with its acknowledgement, and the remote draws with it.
- * Slide counts alone would keep the two agreeing on addresses, but not on what
- * a thumbnail under the cantor's thumb shows; the starts keep both.
- *
- * @typedef {Object<string, Array<number[]>>} DeckLayout
- *
- * @param {Array<{entryId: number, page?: number, start?: number}>} drawn what renderDeck returned
- * @return {DeckLayout}
- */
-export function deckLayout(drawn) {
-    const layout = {};
-
-    for (const slide of drawn ?? []) {
-        const pages = (layout[slide.entryId] ??= []);
-        const page = Number(slide.page ?? 0);
-
-        while (pages.length <= page) { pages.push([]); }
-
-        pages[page].push(Number(slide.start ?? 0));
-    }
-
-    return layout;
-}
-
-/**
- * One layout written the same way however it travelled.
- *
- * The server keeps it in a JSON column, and a database is free to put an
- * object's keys back in whatever order it likes; this is what is compared, so
- * a layout read back is recognised as the one that was sent.
- *
- * @param {DeckLayout|null|undefined} layout
- * @return {string} empty for no layout at all
- */
-export function layoutSignature(layout) {
-    if (!layout || typeof layout !== 'object') { return ''; }
-
-    return Object.keys(layout)
-        .sort((a, b) => Number(a) - Number(b))
-        .map((entryId) => `${entryId}:${JSON.stringify(layout[entryId])}`)
-        .join('|');
-}
-
-/** One row's cuts out of a layout, or null where it names none that can be used. */
-function rowLayout(layout, entryId) {
-    const pages = layout?.[entryId] ?? layout?.[String(entryId)];
-
-    if (!Array.isArray(pages) || pages.length === 0) { return null; }
-
-    return pages.every((starts) => Array.isArray(starts) && starts.length > 0) ? pages : null;
 }
 
 /**
@@ -195,8 +132,7 @@ function deckFonts(entries, ratio) {
  * through its engraver.
  *
  * Keyed by the row and the geometry as they stand, written down whole, so a
- * changed setting, heading or ratio is a different key — and by the wall's
- * cuts, where a remote was handed any. Only what the last
+ * changed setting, heading or ratio is a different key. Only what the last
  * render used is kept. Safe only because renderDeck waits for the faces first:
  * a slide engraved in the fallback would otherwise be kept in it.
  */
@@ -209,18 +145,9 @@ function createSlideCache() {
             const geometryKey = JSON.stringify(geometry ?? {});
 
             return {
-                async slidesOf(entry, cuts, draw) {
-                    const natural = `${geometryKey}|${JSON.stringify(entry)}`;
-                    const key = cuts === null ? natural : `${natural}|${JSON.stringify(cuts)}`;
+                async slidesOf(entry, draw) {
+                    const key = `${geometryKey}|${JSON.stringify(entry)}`;
                     let made = used.get(key) ?? kept.get(key);
-
-                    // A wall that cut a row exactly where this browser did
-                    // costs nothing: the row this browser already drew is it.
-                    if (!made && cuts !== null) {
-                        const own = used.get(natural) ?? kept.get(natural);
-
-                        if (own && JSON.stringify(rowCuts(own)) === JSON.stringify(cuts)) { made = own; }
-                    }
 
                     if (!made) {
                         made = await draw();
@@ -244,11 +171,6 @@ function createSlideCache() {
 }
 
 const slideCache = createSlideCache();
-
-/** One row's slides as the cuts they were made at, in the shape deckLayout writes. */
-function rowCuts(slides) {
-    return deckLayout(slides.map((slide, index) => ({ entryId: 0, page: slide.page ?? 0, start: slide.start ?? index })))[0] ?? [];
-}
 
 /**
  * Whether one slide is one the service walks past.
@@ -295,11 +217,11 @@ export function slideCounts(slides) {
     return counts;
 }
 
-async function slidesOf(entry, ratio, palette, geometry, cuts = null) {
-    if (entry.kind === 'text') { return textSlides(entry, ratio, palette, geometry, cuts?.[0] ?? null); }
+async function slidesOf(entry, ratio, palette, geometry) {
+    if (entry.kind === 'text') { return textSlides(entry, ratio, palette, geometry); }
     if (entry.kind === 'file') { return await fileSlides(entry, ratio); }
 
-    return await scoreSlides(entry, ratio, palette, cuts);
+    return await scoreSlides(entry, ratio, palette);
 }
 
 /**
@@ -316,18 +238,16 @@ async function slidesOf(entry, ratio, palette, geometry, cuts = null) {
  * is one hymn, and repeating its name on every screen would say three times what
  * the congregation read once.
  */
-async function scoreSlides(entry, ratio, palette, cuts = null) {
+async function scoreSlides(entry, ratio, palette) {
     const settings = resolveSlideSettings(entry.format, entry.settings ?? {}, ratio, entry.override);
-    const pages = await renderRatioPages(entry.format, entry.content ?? '', settings, ratio, palette, entry.sections ?? null, cuts);
+    const pages = await renderRatioPages(entry.format, entry.content ?? '', settings, ratio, palette, entry.sections ?? null);
     const canvas = slideCanvas(entry.format, ratio);
     const heading = headingOf(entry);
 
-    return pages.map(({ svg, overflows, autoSplit, page, start }, index) => ({
+    return pages.map(({ svg, overflows, autoSplit }, index) => ({
         svg: index === 0 && heading !== null ? withHeading(svg, canvas, heading) : svg,
         overflows,
         autoSplit: !!autoSplit,
-        page,
-        start,
     }));
 }
 
@@ -395,7 +315,7 @@ async function fileSlides(entry, ratio) {
  * smaller is what is left when even a single paragraph will not hold, and a
  * screen that had to do it says so.
  */
-function textSlides(entry, ratio, palette, geometry, starts = null) {
+function textSlides(entry, ratio, palette, geometry) {
     const canvas = { ...TEXT_CANVAS[ratio] };
     const width = canvas.width * (1 - 2 * TEXT_MARGIN);
     const { textSizeScale, textLineHeight } = textSlideSettings(entry.override, geometry);
@@ -412,11 +332,11 @@ function textSlides(entry, ratio, palette, geometry, starts = null) {
         ratio,
     });
 
-    const pages = packSoftPages(rows, box, starts);
+    const pages = packSoftPages(rows, box);
 
-    if (pages.length === 0) { return [{ svg: blankSlide(canvas, palette.background), overflows: false, page: 0, start: 0 }]; }
+    if (pages.length === 0) { return [{ svg: blankSlide(canvas, palette.background), overflows: false }]; }
 
-    return pages.map((page) => ({ ...textSlide(page, canvas, palette, box), page: 0, start: page.start ?? 0 }));
+    return pages.map((page) => textSlide(page, canvas, palette, box));
 }
 
 /** One of those screens, stacked and centred on the canvas. */

@@ -45,14 +45,12 @@ class ScreenAcknowledgementController extends Controller
             $presentation,
             $request->integer('appliedVersion'),
             $request->input('drawnRevision'),
-            $request->drawnLayout(),
         );
 
         return response()->json([
             'presentationId' => $screen->applied_presentation_id,
             'appliedVersion' => $screen->applied_version,
             'drawnRevision' => $screen->drawn_revision,
-            'drawnLayout' => $screen->drawn_layout,
             'appliedAt' => $screen->applied_at?->toIso8601String(),
         ]);
     }

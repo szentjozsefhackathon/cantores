@@ -448,11 +448,10 @@ export const CHORDPRO_RATIO_DEFAULTS = Object.fromEntries(
  * given, so the packing can be tested without a browser.
  *
  * @param {string} pageSource one entry from splitPages
- * @param {{german: boolean, transpose: number|string, hideChords?: boolean, fontFamily: string, fontSize: number, canvas: {width: number, height: number}, measure?: Function, palette?: import('./slide-palette.js').SlidePalette, starts?: number[]|null}} options
- *        `starts` are the wall's cuts, made instead of this browser's — see packAtStarts
+ * @param {{german: boolean, transpose: number|string, hideChords?: boolean, fontFamily: string, fontSize: number, canvas: {width: number, height: number}, measure?: Function, palette?: import('./slide-palette.js').SlidePalette}} options
  * @returns {Promise<Array<import('./soft-pages.js').SoftPage>>}
  */
-export async function chordproSlidePages(pageSource, { german, transpose, hideChords = false, fontFamily, fontSize, canvas, measure, palette = slidePalette(), starts = null }) {
+export async function chordproSlidePages(pageSource, { german, transpose, hideChords = false, fontFamily, fontSize, canvas, measure, palette = slidePalette() }) {
     const family = safeFontFamily(fontFamily);
     const layout = {
         fontSize,
@@ -489,7 +488,7 @@ export async function chordproSlidePages(pageSource, { german, transpose, hideCh
         rows.push(...segmentRows);
     }
 
-    return packSoftPages(rows, canvas.height, starts);
+    return packSoftPages(rows, canvas.height);
 }
 
 /**
@@ -511,10 +510,9 @@ export async function chordproSlidePages(pageSource, { german, transpose, hideCh
  *
  * @param {import('./slide-palette.js').SlidePalette} [palette] the deck's ink; the dark theme where none is
  *        given, which is what the score editor's own slide preview gets
- * @param {number[]|null} [starts] the wall's cuts, made instead of this browser's — see packAtStarts
- * @returns {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean, start: number}>>} never empty
+ * @returns {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
  */
-export async function renderChordproSlides(pageSource, settings, canvas, palette = slidePalette(), starts = null) {
+export async function renderChordproSlides(pageSource, settings, canvas, palette = slidePalette()) {
     const fontFamily = safeFontFamily(settings.chordproFontFamily);
     const fontSize = Number(settings.chordproFontSize);
 
@@ -530,14 +528,13 @@ export async function renderChordproSlides(pageSource, settings, canvas, palette
         fontSize,
         canvas,
         palette,
-        starts,
     });
 
     if (pages.length === 0) {
-        return [{ svg: emptySlide(canvas, palette.background), overflows: false, autoSplit: false, start: 0 }];
+        return [{ svg: emptySlide(canvas, palette.background), overflows: false, autoSplit: false }];
     }
 
-    return pages.map((page, index) => ({ ...chordproSlide(page, canvas, palette, startsAtAutomaticCut(page, index)), start: page.start ?? 0 }));
+    return pages.map((page, index) => chordproSlide(page, canvas, palette, startsAtAutomaticCut(page, index)));
 }
 
 /** One of those slides, its rows stacked down from the top margin. */

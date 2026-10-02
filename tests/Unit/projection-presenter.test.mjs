@@ -573,7 +573,6 @@ test('the wall says what it has drawn, and says nothing else with it', async () 
             presentationId: 9,
             appliedVersion: 12,
             drawnRevision: 'revision-12',
-            drawnLayout: {},
         },
     }]);
     assert.equal('entryId' in deck.sent[0].body, false);
@@ -625,54 +624,6 @@ test('the wall says nothing the show already says it has drawn', async () => {
     await deck.acknowledgeRendered();
 
     assert.deepEqual(deck.sent, []);
-});
-
-/* Two browsers measure the same words a pixel apart, so the wall says where it
-   cut each row into slides, and the phone cuts the same way. */
-test('the wall says where it cut each row into slides', async () => {
-    const deck = reporting();
-
-    deck.drawn = [
-        { entryId: 4, index: 0, page: 0, start: 0 },
-        { entryId: 4, index: 1, page: 1, start: 0 },
-        { entryId: 4, index: 2, page: 1, start: 5 },
-        { entryId: 7, index: 0, page: 0, start: 0 },
-    ];
-
-    await deck.acknowledgeRendered();
-
-    assert.deepEqual(deck.sent[0].body.drawnLayout, { 4: [[0], [0, 5]], 7: [[0]] });
-});
-
-/* The same deck re-cut is a different picture on the wall, and the phone that
-   follows its cuts has to hear about it even though nothing else moved. */
-test('the wall says it again when it cut the same deck differently', async () => {
-    const deck = reporting({ drawnLayout: undefined });
-
-    deck._show.acknowledge = (url, body) => {
-        deck.sent.push({ url, body });
-
-        // Read back out of a JSON column, whose keys come back in whatever
-        // order the database keeps them.
-        const reordered = Object.fromEntries(Object.entries(body.drawnLayout).reverse());
-
-        return Promise.resolve({ ...body, drawnLayout: reordered });
-    };
-    deck.drawn = [{ entryId: 4, index: 0, page: 0, start: 0 }, { entryId: 9, index: 0, page: 0, start: 0 }];
-
-    await deck.acknowledgeRendered();
-    await deck.acknowledgeRendered();
-
-    assert.equal(deck.sent.length, 1, 'a layout read back in another order was taken for a new one');
-
-    deck.drawn = [
-        { entryId: 4, index: 0, page: 0, start: 0 },
-        { entryId: 4, index: 1, page: 0, start: 3 },
-        { entryId: 9, index: 0, page: 0, start: 0 },
-    ];
-    await deck.acknowledgeRendered();
-
-    assert.equal(deck.sent.length, 2, 'the wall re-cut a row and nobody was told');
 });
 
 /* A report that never landed is the one thing the slow beat is still for. */

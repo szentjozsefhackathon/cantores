@@ -204,9 +204,6 @@ class ShowState
                 'appliedPresentationId' => $screen->applied_presentation_id,
                 'appliedVersion' => $screen->applied_version,
                 'drawnRevision' => $screen->drawn_revision,
-                // Where that wall cut the deck into slides, which the remote
-                // makes its own cuts from — see Screen::acknowledge().
-                'drawnLayout' => $screen->drawn_layout,
             ])
             ->values()
             ->all();

@@ -41,7 +41,6 @@ import { stackSvgs } from './svg-stack.js';
  * @property {SlideSystem[]} systems
  * @property {number} height what the systems come to, stacked
  * @property {boolean} autoSplit whether it begins at a cut nobody wrote
- * @property {number} start the index of its first system, counted across every segment
  */
 
 /**
@@ -50,10 +49,9 @@ import { stackSvgs } from './svg-stack.js';
  *
  * @param {SlideSystem[][]} segments one list per `%pagebreak?` piece, in order
  * @param {number} boxHeight the room a slide has
- * @param {number[]|null} [starts] cuts made by another browser, made here instead
  * @return {SystemPage[]} never empty unless every segment is
  */
-export function packSystems(segments, boxHeight, starts = null) {
+export function packSystems(segments, boxHeight) {
     const rows = [];
 
     segments.forEach((systems, segmentIndex) => {
@@ -73,11 +71,10 @@ export function packSystems(segments, boxHeight, starts = null) {
         });
     });
 
-    return packSoftPages(rows, boxHeight, starts).map((page, i) => ({
+    return packSoftPages(rows, boxHeight).map((page, i) => ({
         systems: page.rows.map((row) => row.system),
         height: page.height,
         autoSplit: startsAtAutomaticCut(page, i),
-        start: page.start,
     }));
 }
 
@@ -93,7 +90,7 @@ export function packSystems(segments, boxHeight, starts = null) {
  *
  * @param {SystemPage} page
  * @param {{width: number, height: number}} canvas
- * @return {{svg: SVGElement, overflows: boolean, autoSplit: boolean, start: number}}
+ * @return {{svg: SVGElement, overflows: boolean, autoSplit: boolean}}
  */
 export function systemsSlide(page, canvas) {
     const fragments = page.systems.map((system) => (typeof system.svg === 'string' ? parseSvg(system.svg) : system.svg));
@@ -116,23 +113,7 @@ export function systemsSlide(page, canvas) {
         svg: fitSlide(svg),
         overflows: page.height > canvas.height + SLIDE_FIT_TOLERANCE || width > canvas.width + SLIDE_FIT_TOLERANCE,
         autoSplit: page.autoSplit,
-        start: page.start ?? 0,
     };
-}
-
-/**
- * Whether a page is drawn as the one slide its engine engraves whole.
- *
- * This browser's own measurement decides, unless another browser's cuts were
- * handed down: then the page is one slide exactly where the wall made it one,
- * even if it measures a pixel too tall here, and is cut wherever the wall cut
- * it, even if it would have fitted here.
- *
- * @param {number[]|null} starts see packSystems
- * @param {boolean} overflows whether the whole page ran over in this browser
- */
-export function staysWhole(starts, overflows) {
-    return Array.isArray(starts) && starts.length > 0 ? starts.length === 1 : !overflows;
 }
 
 /**
@@ -142,11 +123,10 @@ export function staysWhole(starts, overflows) {
  * @param {{width: number, height: number}} canvas
  * @param {(svg: SVGElement) => SVGElement} [finish] whatever the format does to
  *        a finished slide — ABC writes its ink and stroke widths on
- * @param {number[]|null} [starts] see packSystems
- * @return {Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean, start: number}>}
+ * @return {Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>}
  */
-export function systemSlides(segments, canvas, finish = (svg) => svg, starts = null) {
-    return packSystems(segments, canvas.height, starts).map((page) => {
+export function systemSlides(segments, canvas, finish = (svg) => svg) {
+    return packSystems(segments, canvas.height).map((page) => {
         const slide = systemsSlide(page, canvas);
 
         return { ...slide, svg: finish(slide.svg) };

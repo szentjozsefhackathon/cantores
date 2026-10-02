@@ -45,66 +45,19 @@
  * @typedef {object} SoftPage
  * @property {SoftRow[]} rows
  * @property {number} height what the rows come to, standing on their own
- * @property {number} [start] the index of its first row in the run it was cut from
  */
 
 /**
  * The screens one run of rows comes to at one shape.
  *
- * Every page says which row it starts at, counted across the whole run: that
- * index is the cut, written down so that a different browser can make the same
- * one. See packAtStarts.
- *
  * @param {SoftRow[]} rows laid out for this shape
  * @param {number} boxHeight the room a screen has
- * @param {number[]|null} [starts] cuts already decided elsewhere, which are
- *        made instead of any of this packer's own
  * @returns {SoftPage[]} never empty unless the rows are
  */
-export function packSoftPages(rows, boxHeight, starts = null) {
-    if (Array.isArray(starts) && starts.length > 0) { return packAtStarts(rows, starts); }
+export function packSoftPages(rows, boxHeight) {
     if (rows.length === 0) { return []; }
 
-    let start = 0;
-
-    return cutAt(rows, 'hard')
-        .flatMap((chunk) => fit(chunk, boxHeight))
-        .map((packed) => {
-            const placed = { ...packed, start };
-
-            start += packed.rows.length;
-
-            return placed;
-        });
-}
-
-/**
- * The same rows, cut exactly where another browser cut them.
- *
- * The wall is the one whose slides the room sees, so the cuts it made are the
- * ones every remote must make too: two browsers measure the same words a pixel
- * apart, and a page that is one slide on the projector must not be two on the
- * phone, or every address after it names a different slide on each.
- *
- * Exactly one page per start, whatever the rows come to here — the count is
- * the whole point. A start past the last row this browser has, which only a
- * line wrapped differently can cause, comes back as an empty page rather than
- * as no page at all.
- *
- * @param {SoftRow[]} rows laid out for this shape
- * @param {number[]} starts the first row of each page
- * @returns {SoftPage[]} as many as there are starts
- */
-export function packAtStarts(rows, starts) {
-    const cuts = [];
-
-    starts.forEach((start, i) => {
-        const at = i === 0 ? 0 : Math.min(Math.max(Math.trunc(Number(start)) || 0, cuts[i - 1]), rows.length);
-
-        cuts.push(at);
-    });
-
-    return cuts.map((start, i) => ({ ...page(rows.slice(start, cuts[i + 1] ?? rows.length)), start }));
+    return cutAt(rows, 'hard').flatMap((chunk) => fit(chunk, boxHeight));
 }
 
 /**

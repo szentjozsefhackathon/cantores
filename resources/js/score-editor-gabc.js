@@ -10,7 +10,7 @@ import {
 import { measuringHost } from './measuring-room.js';
 import { softSegmentSources, splitPages as splitRatioPages } from './score-editor-pages.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide, parseSvg } from './slide-frame.js';
-import { staysWhole, systemSlides } from './slide-systems.js';
+import { systemSlides } from './slide-systems.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { sliceRenderedSvg } from './svg-slice.js';
 
@@ -127,17 +127,16 @@ export async function renderGabcSlide(pageSource, settings, canvas) {
  * see slide-systems.js and svg-slice.js.
  *
  * @param {string} pageSource one page, suggestions left in
- * @param {number[]|null} [starts] the wall's cuts, made instead of this browser's — see packSystems
- * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean, start: number}>>} never empty
+ * @return {Promise<Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>>} never empty
  */
-export async function renderGabcSlides(pageSource, settings, canvas, starts = null) {
+export async function renderGabcSlides(pageSource, settings, canvas) {
     await ensureGabcFontsLoaded(settings);
 
     const cut = softSegmentSources(pageSource, 'gabc');
     const whole = await renderGabcToSvgMarkup(cut.whole, settings, canvas.width);
     const slide = gabcWholeSlide(whole, canvas);
 
-    if (staysWhole(starts, slide.overflows)) { return [{ ...slide, start: 0 }]; }
+    if (!slide.overflows) { return [slide]; }
 
     const markups = [];
 
@@ -149,7 +148,7 @@ export async function renderGabcSlides(pageSource, settings, canvas, starts = nu
         markups.push(whole);
     }
 
-    return systemSlides(markups.map((markup) => sliceRenderedSvg(markup, '.chantLine', measuringHost())), canvas, undefined, starts);
+    return systemSlides(markups.map((markup) => sliceRenderedSvg(markup, '.chantLine', measuringHost())), canvas);
 }
 
 function gabcWholeSlide(markup, canvas) {
