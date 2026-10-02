@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# Loads a pg_dump file into the local development database.
+# Loads a pg_dump file into the local development database, then replaces the
+# local incipits with production's (see pull-prod-incipits.sh) so they match the
+# restored score ids.
 # Usage: ./load-prod-db.sh <dump-file>
 
 set -e
@@ -46,6 +48,11 @@ docker exec -i "$LOCAL_DB_CONTAINER" \
     psql -U "$LOCAL_DB_USER" -d "$LOCAL_DB_NAME" \
     -c "UPDATE users SET two_factor_secret = NULL, two_factor_recovery_codes = NULL, two_factor_confirmed_at = NULL WHERE id = 1;"
 echo "   Done"
+
+echo "4. Pulling incipits from production..."
+if ! "$(dirname "$0")/pull-prod-incipits.sh" --force; then
+    echo "   Warning: incipits could not be pulled; run ./pull-prod-incipits.sh by hand."
+fi
 
 echo
 echo "=== Production database loaded successfully ==="
