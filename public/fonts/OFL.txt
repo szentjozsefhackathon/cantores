@@ -11,6 +11,12 @@ following font families, with their respective copyright notices:
   Barlow Condensed
     Copyright (c) The Barlow Project Authors (https://github.com/jpt/barlow)
 
+  Chord Accidentals (chord-accidentals.otf)
+    A Modified Version of Bravura: five of its accidentals, raised to sit on
+    a line of text. Bravura is Copyright (c) 2021, Steinberg Media
+    Technologies GmbH (http://www.steinberg.net/), with Reserved Font Name
+    "Bravura".
+
   EB Garamond
     Copyright (c) 2017 The EB Garamond Project Authors
     (https://github.com/octaviopardo/EBGaramond12)

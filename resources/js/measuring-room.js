@@ -25,6 +25,9 @@
  * in, and a relayout asked the browser for every syllable's width all over again.
  */
 
+import { tableAscent } from './font-ascents.js';
+import { MEASURE_REFERENCE_PX, referenceContext } from './reference-measure.js';
+
 /** Wide enough for any page the booklet is laid out at. */
 const ROOM_WIDTH_PX = 2400;
 
@@ -236,4 +239,183 @@ export function withAbcMeasuring(engrave) {
 
         noted.forEach((name) => fontOfClass.delete(name));
     }
+}
+
+/**
+ * One abc2svg engraving with its words measured at the reference size.
+ *
+ * abc2svg measures every word by writing it into a span and reading the span's
+ * clientWidth and clientHeight — whole pixels, at the size the word is set in,
+ * rounded by each browser its own way. A slide is cut from what that comes to,
+ * and every screen showing the deck must cut it the same way; so for as long as
+ * the engraving runs the span is stood in for by one that measures at the
+ * reference size, fractionally, and scales back. See reference-measure.js.
+ *
+ * Not inside the booklet's room, which has its own measurer for its own reasons
+ * and is left as it is.
+ *
+ * @template T
+ * @param {() => T} engrave
+ * @returns {T}
+ */
+export function withReferenceMeasuring(engrave) {
+    if (typeof abc2svg === 'undefined' || !abc2svg.el || typeof document === 'undefined' || abc2svg.el === measurer) {
+        return engrave();
+    }
+
+    const real = abc2svg.el;
+    const createElement = document.createElement;
+
+    abc2svg.el = referenceSpan(real);
+
+    // The fork hangs its first lyric line from each syllable's ink, which it
+    // asks of a canvas of its own making — rounded by the browser to 1/64 of
+    // the size, each system its own way. For as long as the engraving runs, a
+    // canvas it makes answers from the font files instead.
+    document.createElement = function (tagName, ...rest) {
+        const element = createElement.call(this, tagName, ...rest);
+
+        return String(tagName).toLowerCase() === 'canvas' ? withTableAscents(element) : element;
+    };
+
+    try {
+        return engrave();
+    } finally {
+        abc2svg.el = real;
+        document.createElement = createElement;
+    }
+}
+
+/**
+ * A canvas whose 2D context measures widths at the reference size and ink
+ * heights from the font files — see font-ascents.js — falling back to the
+ * browser for a face or a letter the table does not have.
+ *
+ * @param {HTMLCanvasElement} canvas
+ */
+function withTableAscents(canvas) {
+    const getContext = canvas.getContext.bind(canvas);
+
+    canvas.getContext = (type, ...rest) => {
+        const context = getContext(type, ...rest);
+
+        if (type !== '2d' || !context) { return context; }
+
+        const measuring = referenceContext(context);
+
+        return new Proxy(measuring, {
+            get(target, property) {
+                if (property !== 'measureText') { return Reflect.get(target, property); }
+
+                return (text) => {
+                    const metrics = target.measureText(text);
+                    const font = cssFontParts(target.font);
+                    const ascent = font === null ? null : tableAscent(text, font.size, font.family, font.bold, font.italic);
+
+                    return ascent === null ? metrics : { ...metrics, actualBoundingBoxAscent: ascent };
+                };
+            },
+            set(target, property, value) {
+                return Reflect.set(target, property, value);
+            },
+        });
+    };
+
+    return canvas;
+}
+
+/**
+ * A CSS font shorthand taken apart: whether it is bold or italic, its size in
+ * pixels and its family. Null for one that names no pixel size.
+ *
+ * @param {string} font
+ * @return {{bold: boolean, italic: boolean, size: number, family: string}|null}
+ */
+export function cssFontParts(font) {
+    const match = /^(.*?)(\d*\.?\d+)px(?:\s*\/\s*\S+)?\s+(.+)$/.exec(String(font ?? '').trim());
+
+    if (!match) { return null; }
+
+    const modifiers = match[1].toLowerCase().split(/\s+/).filter(Boolean);
+
+    return {
+        bold: modifiers.some((word) => word === 'bold' || word === 'bolder' || Number(word) >= 600),
+        italic: modifiers.some((word) => word === 'italic' || word === 'oblique'),
+        size: Number(match[2]),
+        family: match[3],
+    };
+}
+
+/**
+ * What abc2svg is handed in place of its span: the same span, asked at the
+ * reference size. The last answer is kept, since abc2svg reads the width and
+ * then the height of the same word.
+ *
+ * @param {HTMLElement} span
+ */
+function referenceSpan(span) {
+    let className = span.className;
+    let innerHTML = span.innerHTML;
+    let lastKey = null;
+    let lastSize = null;
+
+    function measure() {
+        const key = `${className}\u0000${innerHTML}`;
+
+        if (key !== lastKey) {
+            span.className = className;
+            span.innerHTML = innerHTML;
+            lastSize = sizeAtReference(span, innerHTML);
+            lastKey = key;
+        }
+
+        return lastSize;
+    }
+
+    return {
+        get parentElement() { return span.parentElement; },
+        get className() { return className; },
+        set className(value) { className = String(value); },
+        get innerHTML() { return innerHTML; },
+        set innerHTML(value) { innerHTML = String(value); },
+        get clientWidth() { return measure()[0]; },
+        get clientHeight() { return measure()[1]; },
+    };
+}
+
+/**
+ * A span's width and height as they would be at the reference size, scaled to
+ * the size it is set in.
+ *
+ * Plain words only. Markup inside the span may carry sizes of its own, which a
+ * size set on the span would not move, so it is measured as abc2svg always
+ * measured it.
+ *
+ * @param {HTMLElement} span
+ * @param {string} innerHTML
+ * @return {[number, number]}
+ */
+function sizeAtReference(span, innerHTML) {
+    const style = getComputedStyle(span);
+    const size = parseFloat(style.fontSize);
+
+    if (innerHTML.includes('<') || !(size > 0)) { return [span.clientWidth, span.clientHeight]; }
+
+    // A line height the page set in pixels would stay put while the letters
+    // grew; restated as a ratio, it grows with them.
+    const lineHeight = parseFloat(style.lineHeight);
+    const asked = { fontSize: span.style.fontSize, lineHeight: span.style.lineHeight };
+
+    if (lineHeight > 0) { span.style.lineHeight = String(lineHeight / size); }
+
+    span.style.fontSize = `${MEASURE_REFERENCE_PX}px`;
+
+    const box = span.getBoundingClientRect();
+
+    span.style.fontSize = asked.fontSize;
+    span.style.lineHeight = asked.lineHeight;
+
+    const scale = size / MEASURE_REFERENCE_PX;
+
+    return [box.width * scale, box.height * scale];
 }

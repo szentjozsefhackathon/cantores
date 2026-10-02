@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { configureChantContext, GABC_LAYOUT_WIDTH_DEFAULT, gabcMixin, normalizeGabcLayoutWidth } from '../../resources/js/score-editor-gabc.js';
+import { configureChantContext, GABC_LAYOUT_WIDTH_DEFAULT, gabcMixin, measuringAtReference, normalizeGabcLayoutWidth } from '../../resources/js/score-editor-gabc.js';
 import { ptForGabcLyricSize, staffHeightMmForGabcStaffSize } from '../../resources/js/booklet-geometry.js';
 
 function fakeChantContext() {
@@ -74,4 +74,26 @@ test('normalizes the GABC layout width to the renderer-safe range', () => {
 test('the layout width is a persisted per-score field', () => {
     assert.ok(gabcMixin().gabcFields.includes('gabcLayoutWidth'));
     assert.equal(gabcMixin().gabcLayoutWidth, GABC_LAYOUT_WIDTH_DEFAULT);
+});
+
+/* exsurge measures every syllable's ink on a canvas of its own, at the size it
+   is set in; for a slide that canvas is asked at the reference size, so every
+   screen cuts the deck at the same places. */
+test('exsurge measures a slide\'s words at the reference size', () => {
+    let font = '';
+    const canvas = {
+        get font() { return font; },
+        set font(value) { font = value; },
+        measureText: () => ({ width: font.startsWith('1000px') ? 431 : 13, actualBoundingBoxAscent: font.startsWith('1000px') ? 733 : 23 }),
+    };
+    const ctxt = { canvasCtxt: canvas, makeCanvasIfNeeded() {} };
+
+    measuringAtReference(ctxt);
+    ctxt.canvasCtxt.font = '30px serif';
+
+    const metrics = ctxt.canvasCtxt.measureText('Ky');
+
+    assert.ok(Math.abs(metrics.width - 12.93) < 1e-9);
+    assert.ok(Math.abs(metrics.actualBoundingBoxAscent - 21.99) < 1e-9);
+    assert.equal(ctxt.canvasCtxt.font, '30px serif');
 });

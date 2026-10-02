@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "fonts:ascents": "node resources/fonts/generate-ascents.mjs",
+        "fonts:accidentals": "node resources/fonts/generate-chord-accidentals.mjs"
     },
     "dependencies": {
         "@aretino-chant/core": "^0.28.0",
@@ -29,6 +31,8 @@
     "devDependencies": {
         "@tailwindcss/vite": "^4.1.18",
         "daisyui": "^5.5.18",
+        "fontkit": "^2.0.4",
+        "opentype.js": "^2.0.0",
         "tailwindcss": "^4.1.18"
     }
 }

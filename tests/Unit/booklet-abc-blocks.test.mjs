@@ -109,7 +109,7 @@ test('a booklet sets the chord symbols in the lyric face, bold, sized from the l
     const { blocks: plain } = await buildScoreBlocks(entry({ content: withChords }), geometry, null);
     const { blocks: small } = await buildScoreBlocks(entry({ content: withChords, override: { abcChordSize: 0.5 } }), geometry, null);
 
-    assert.match(chordFont(plain).face, /^700 [\d.]+px Alegreya$/);
+    assert.match(chordFont(plain).face, /^700 [\d.]+px Alegreya,"Chord Accidentals"$/);
     assert.ok(Math.abs(chordFont(plain).ratio - 1) < 0.01);
     assert.ok(Math.abs(chordFont(small).ratio - 0.5) < 0.01);
 });

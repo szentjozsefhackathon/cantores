@@ -6,6 +6,8 @@ import { svgHeight } from './svg-slice.js';
 import { gabcToAretino } from '@aretino-chant/gabc2aretino';
 import { guidoToAretino, guidoTextToAretino } from '@aretino-chant/guido2aretino';
 
+import { tableAscent } from './font-ascents.js';
+import { measuringContext } from './reference-measure.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { DEFAULT_LYRIC_SIZE_PT, DEFAULT_PAGE_WIDTH_MM, DEFAULT_STAFF_HEIGHT_MM, DEFAULT_TEXT_FONT } from './booklet-geometry.js';
 
@@ -154,59 +156,46 @@ export function engraveAretinoSlide(source, settings, ratio, fixedHeight) {
 }
 
 /**
- * The size every word on a slide is measured at, before it is scaled to the
- * size it is actually set in.
+ * Measurers for the engine that every screen answers alike — or none where
+ * there is no canvas to ask, which leaves the engine its own estimate.
  *
- * A browser reports a word's ink in whole pixels at the size it is asked
- * about. At a lyric's 67 px that rounding is two per cent of a letter's height,
- * and it rounds differently on different systems: the same Kyrie measured its
- * "ri" 49 px tall on Android and Linux and 48 px on Windows, and came to a page
- * three units shorter on Windows. Every lyric line hangs from that ascent, so a
- * page a few units short of the slide is one slide on one screen and two on the
- * next. Measured at a thousand pixels the rounding is under a tenth of a pixel
- * at the size set, and every screen engraving the same deck at the same ratio
- * cuts it into the same slides.
- */
-const MEASURE_REFERENCE_PX = 1000;
-
-let measureContext = null;
-
-/**
- * Measurers for the engine that ask about every word at MEASURE_REFERENCE_PX —
- * or none where there is no canvas to ask, which leaves the engine its own
- * estimate.
+ * Every lyric line hangs from the ink ascent of its syllables, and widths
+ * decide where a line ends, so these are what keep a page that nearly fills
+ * the slide one slide on every screen or two on every screen, never one here
+ * and two there. Widths are asked at the reference size (reference-measure.js);
+ * the ascent is read from the font files (font-ascents.js), since a browser
+ * rounds ink to 1/64 of the size whatever the size, and only asked of the
+ * browser for a face or a letter the table does not have.
  *
  * @return {{measureText?: Function, measureAscent?: Function}}
  */
 export function referenceMeasures() {
-    if (typeof document === 'undefined') { return {}; }
+    const context = measuringContext();
 
-    measureContext ??= document.createElement('canvas').getContext('2d');
-
-    if (!measureContext) { return {}; }
+    if (!context) { return {}; }
 
     const measure = (text, fontSize, fontFamily, bold, italic) => {
-        measureContext.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${MEASURE_REFERENCE_PX}px ${fontFamily}`;
+        context.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
 
-        return { metrics: measureContext.measureText(text), scale: Number(fontSize) / MEASURE_REFERENCE_PX };
+        return context.measureText(text);
     };
 
     return {
         measureText(text, fontSize, fontFamily, bold = false, italic = false) {
-            if (text === '') { return 0; }
-
-            const { metrics, scale } = measure(text, fontSize, fontFamily, bold, italic);
-
-            return metrics.width * scale;
+            return text === '' ? 0 : measure(text, fontSize, fontFamily, bold, italic).width;
         },
         measureAscent(text, fontSize, fontFamily, bold = false, italic = false) {
             if (text === '') { return 0; }
 
-            const { metrics, scale } = measure(text, fontSize, fontFamily, bold, italic);
+            const fromFont = tableAscent(text, fontSize, fontFamily, bold, italic);
+
+            if (fromFont !== null) { return fromFont; }
+
+            const metrics = measure(text, fontSize, fontFamily, bold, italic);
 
             // The engine's own order: the ink where the browser reports it,
             // and the face's ascent where it does not.
-            return (metrics.actualBoundingBoxAscent || metrics.fontBoundingBoxAscent || Number(fontSize)) * scale;
+            return metrics.actualBoundingBoxAscent || metrics.fontBoundingBoxAscent || Number(fontSize);
         },
     };
 }

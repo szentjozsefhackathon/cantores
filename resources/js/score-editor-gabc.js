@@ -8,6 +8,7 @@ import {
     mmToPx,
 } from './booklet-geometry.js';
 import { measuringHost } from './measuring-room.js';
+import { referenceContext } from './reference-measure.js';
 import { softSegmentSources, splitPages as splitRatioPages } from './score-editor-pages.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide, parseSvg } from './slide-frame.js';
 import { systemSlides } from './slide-systems.js';
@@ -80,13 +81,31 @@ export async function ensureGabcFontsLoaded(settings) {
 }
 
 /**
+ * An exsurge context whose words are measured at the reference size.
+ *
+ * exsurge measures every syllable on a canvas of its own, ink and all, at the
+ * size it is set in — and a browser rounds that ink to whole pixels, each system
+ * its own way, which is how one screen came to cut a page another kept whole.
+ * Its canvas is swapped for one that measures at the reference size and draws
+ * as before; see reference-measure.js. Done before any font is set, since
+ * setting one is the first thing that measures.
+ */
+export function measuringAtReference(ctxt) {
+    ctxt.makeCanvasIfNeeded?.();
+
+    if (ctxt.canvasCtxt) { ctxt.canvasCtxt = referenceContext(ctxt.canvasCtxt); }
+
+    return ctxt;
+}
+
+/**
  * Engraves one GABC page into SVG markup. exsurge lays out in two asynchronous
  * steps, which this wraps into a single promise.
  */
 export function renderGabcToSvgMarkup(source, settings, layoutWidth) {
     return new Promise((resolve, reject) => {
         try {
-            const ctxt = configureChantContext(new exsurge.ChantContext(), settings);
+            const ctxt = configureChantContext(measuringAtReference(new exsurge.ChantContext()), settings);
             const mappings = exsurge.Gabc.createMappingsFromSource(ctxt, source);
             const score = new exsurge.ChantScore(ctxt, mappings, !!settings.dropCaps);
             score.performLayoutAsync(ctxt, () => {

@@ -23,6 +23,7 @@ import { packColumns, packPages } from './booklet-flow.js';
 import { chordDisplayRuns } from './chordpro-notation.js';
 import { escapeXml, round } from './booklet-text.js';
 import { markupRuns, measureRuns, runBaselineShift, runFont, runsText, sliceRuns } from './chordpro-markup.js';
+import { measuringContext } from './reference-measure.js';
 
 /**
  * The ink a chord sheet is set in, where nobody says otherwise.
@@ -483,11 +484,12 @@ function svgDocument(body, width, height) {
 /**
  * A text measurer backed by a canvas, for the browser.
  *
- * The same font string the SVG will carry, so what is measured is what is drawn.
+ * The same font string the SVG will carry, so what is measured is what is drawn
+ * — measured at the reference size and scaled back, so a line that only just
+ * fits wraps the same way on every screen: see reference-measure.js.
  */
 export function canvasMeasurer(fontFamily, fontSize) {
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
+    const context = measuringContext();
 
     return (content, { bold = false, italic = false, fontSize: size = fontSize } = {}) => {
         context.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${size}px ${fontFamily}`;

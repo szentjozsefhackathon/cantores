@@ -5,6 +5,7 @@ import { systemSlides } from './slide-systems.js';
 import { softSegmentSources } from './score-editor-pages.js';
 import { stackSvgs, viewBoxOf } from './svg-stack.js';
 import { diatarToAbc } from './diatar-to-abc.js';
+import { withReferenceMeasuring } from './measuring-room.js';
 import { abcHitBoxAnnotator, concatMapped, editorDiagnostics, hitBoxesAtOffset, insertUnmapped, mappedLines, replaceMapped, softSegmentsMapped, splitPagesMapped, trackSource, unmapped } from './abc-source-map.js';
 import {
     DEFAULT_LYRIC_SIZE_PT,
@@ -202,7 +203,35 @@ function abcVocalFont(settings) {
 export async function ensureAbcFontsLoaded(settings) {
     const { family, size } = abcVocalFont(settings);
 
-    await ensureFontsLoaded([family], size);
+    await Promise.all([ensureFontsLoaded([family], size), ensureChordAccidentalsLoaded()]);
+}
+
+/**
+ * The face the accidentals in a chord symbol are drawn from, after the lyric
+ * family that draws the letters.
+ *
+ * abc2svg writes a chord's `#`, `b` and `=` as ♯ ♭ ♮ (and 𝄪 𝄫), which no text
+ * face served here has: each system drew them from a face of its own, Android's
+ * taller than the rest, and the same chord sheet came to a different height on
+ * every screen. Chord Accidentals is those five glyphs cut out of Bravura — see
+ * resources/fonts/generate-chord-accidentals.mjs.
+ */
+export const CHORD_ACCIDENTALS_FAMILY = '"Chord Accidentals"';
+
+let chordAccidentalsLoad = null;
+
+/**
+ * Its stylesheet entry names only those five characters, so the browser fetches
+ * it only once one of them is drawn — too late for the measuring, which asks
+ * first. It is asked for by name instead, once.
+ */
+function ensureChordAccidentalsLoaded() {
+    if (typeof document === 'undefined' || !document.fonts) { return Promise.resolve(); }
+
+    chordAccidentalsLoad ??= document.fonts.load(`16px ${CHORD_ACCIDENTALS_FAMILY}`, '\u266F\u266D\u266E\u{1D12A}\u{1D12B}')
+        .catch(() => { chordAccidentalsLoad = null; });
+
+    return chordAccidentalsLoad;
 }
 
 /**
@@ -255,7 +284,11 @@ export const ABC_CHORD_CLASS = 'abc-chord';
  * a little smaller than the words on paper, and well under half their size on
  * a slide, where the staff is small beside the type. The size here is stated
  * the way `%%vocalfont`'s is, so the two stay in proportion at any staff
- * height.
+ * height. The accidentals come from a face of their own — see
+ * CHORD_ACCIDENTALS_FAMILY.
+ *
+ * abc2svg keeps a family name with a quote in it exactly as written, so the
+ * list reaches its stylesheet as a list.
  *
  * @param {object} settings
  * @param {string} fontName the lyric family, already quoted for a directive
@@ -266,7 +299,7 @@ export function abcChordFontLine(settings, fontName) {
     const chordSize = Number(settings.abcChordSize) > 0 ? Number(settings.abcChordSize) : 1;
     const size = Number((lyricSize * chordSize / pageScale * 3).toFixed(3));
 
-    return `%%gchordfont ${fontName} bold ${size} class=${ABC_CHORD_CLASS}\n`;
+    return `%%gchordfont ${fontName},${CHORD_ACCIDENTALS_FAMILY} bold ${size} class=${ABC_CHORD_CLASS}\n`;
 }
 
 /**
@@ -323,11 +356,13 @@ export function renderAbcToSvgMarkup(source, preamble = '', report = null) {
         user.anno_stop = abcHitBoxAnnotator(() => abc, mapped);
     }
     const abc = new abc2svg.Abc(user);
-    if (preamble) {
-        abc.tosvg('preamble', preamble);
-    }
-    engravingScore = true;
-    abc.tosvg('score', mapped ? mapped.text : source);
+    withReferenceMeasuring(() => {
+        if (preamble) {
+            abc.tosvg('preamble', preamble);
+        }
+        engravingScore = true;
+        abc.tosvg('score', mapped ? mapped.text : source);
+    });
     if (errs.length) {
         console.warn('[score-editor] abc2svg warnings:', errs);
     }

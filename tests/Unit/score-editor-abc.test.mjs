@@ -38,7 +38,7 @@ test('turns a settings bucket into abc2svg directives', () => {
     assert.match(preamble, /%%pagescale 3\.1\n/);
     assert.match(preamble, /%%vocalfont "Barlow Condensed" bold 30\n/);
     assert.match(preamble, /%%staffsep 15\n/);
-    assert.match(preamble, /%%gchordfont "Barlow Condensed" bold 30 class=abc-chord\n/);
+    assert.match(preamble, /%%gchordfont "Barlow Condensed","Chord Accidentals" bold 30 class=abc-chord\n/);
     assert.match(preamble, /%%transpose -2\n$/);
 });
 
@@ -49,11 +49,11 @@ test('sets the chord symbols in the lyric face, bold, at a multiple of the lyric
     const settings = { abcLyricFont: 'Barlow Condensed', abcLyricSize: 31, abcPageScale: 3.1 };
 
     assert.match(buildAbcPreamble({ ...settings, abcChordSize: 0.8 }, 1920),
-        /%%gchordfont "Barlow Condensed" bold 24 class=abc-chord\n/);
+        /%%gchordfont "Barlow Condensed","Chord Accidentals" bold 24 class=abc-chord\n/);
     assert.match(buildAbcPreamble({ ...settings, abcChordSize: 0 }, 1920),
-        /%%gchordfont "Barlow Condensed" bold 30 class=abc-chord\n/);
+        /%%gchordfont "Barlow Condensed","Chord Accidentals" bold 30 class=abc-chord\n/);
     assert.match(buildAbcPreamble({ abcLyricFont: 'Comic Sans; }', abcLyricSize: 0, abcPageScale: 0 }, 1700),
-        /%%gchordfont Alegreya bold 36 class=abc-chord\n/);
+        /%%gchordfont Alegreya,"Chord Accidentals" bold 36 class=abc-chord\n/);
 });
 
 test('a slide sets its chords smaller than the lyrics, and paper as large', () => {
@@ -283,14 +283,24 @@ test('ABC waits for every font style and accented subset before engraving metric
     assert.equal(container.innerHTML, 'previous preview');
     assert.equal(component.hasPages, true);
     assert.deepEqual(engraved, []);
-    assert.equal(loads.length, 4);
-    assert.ok(loads.every(load => load.spec.includes('60px "Deferred Font"')));
-    assert.ok(loads.every(load => /[őű]/.test(load.text)));
 
-    loads.slice(0, 3).forEach(load => load.resolve([]));
+    // The chord accidentals' own face is asked for by the characters it has —
+    // and answered here once, since the page asks it only once.
+    const accidentals = loads.filter(load => load.spec.includes('"Chord Accidentals"'));
+    const lyrics = loads.filter(load => !accidentals.includes(load));
+
+    assert.equal(accidentals.length, 1);
+    assert.match(accidentals[0].text, /\u266F/);
+    accidentals[0].resolve([]);
+
+    assert.equal(lyrics.length, 4);
+    assert.ok(lyrics.every(load => load.spec.includes('60px "Deferred Font"')));
+    assert.ok(lyrics.every(load => /[őű]/.test(load.text)));
+
+    lyrics.slice(0, 3).forEach(load => load.resolve([]));
     await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(engraved, []);
-    loads[3].resolve([]);
+    lyrics[3].resolve([]);
     await render;
     assert.equal(engraved.length, 1);
     assert.match(engraved[0], /%%vocalfont "Deferred Font" 60/);
@@ -433,6 +443,6 @@ test('draws every chord symbol with the class a slide colours it by, and no othe
     const chordTexts = [...markup.matchAll(new RegExp(`<text class="(f\\d+s1) ${ABC_CHORD_CLASS}"[^>]*>([^<]*)<`, 'g'))];
 
     assert.deepEqual(chordTexts.map(match => match[2]), ['G', 'D7']);
-    assert.match(markup, new RegExp(`\\.${chordTexts[0][1]}\\{font:700 [\\d.]+px "Barlow Condensed"\\}`));
+    assert.match(markup, new RegExp(`\\.${chordTexts[0][1]}\\{font:700 [\\d.]+px "Barlow Condensed","Chord Accidentals"\\}`));
     assert.equal(markup.match(new RegExp(ABC_CHORD_CLASS, 'g')).length, 2);
 });
