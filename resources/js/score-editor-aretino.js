@@ -143,6 +143,7 @@ export function engraveAretinoSlide(source, settings, ratio, fixedHeight) {
     return renderAretino(source, {
         ...projector,
         ...(fixedHeight ? { canvasHeight } : {}),
+        ...referenceMeasures(),
         zoom,
         staffSpaceMm: Number(settings.aretinoStaffSize) / 4.0,
         lyricSize: Number(settings.aretinoLyricSize),
@@ -150,6 +151,64 @@ export function engraveAretinoSlide(source, settings, ratio, fixedHeight) {
         staffGap: Number(settings.aretinoStaffGap),
         hideRepeatClef: !!settings.aretinoHideRepeatClef,
     });
+}
+
+/**
+ * The size every word on a slide is measured at, before it is scaled to the
+ * size it is actually set in.
+ *
+ * A browser reports a word's ink in whole pixels at the size it is asked
+ * about. At a lyric's 67 px that rounding is two per cent of a letter's height,
+ * and it rounds differently on different systems: the same Kyrie measured its
+ * "ri" 49 px tall on Android and Linux and 48 px on Windows, and came to a page
+ * three units shorter on Windows. Every lyric line hangs from that ascent, so a
+ * page a few units short of the slide is one slide on one screen and two on the
+ * next. Measured at a thousand pixels the rounding is under a tenth of a pixel
+ * at the size set, and every screen engraving the same deck at the same ratio
+ * cuts it into the same slides.
+ */
+const MEASURE_REFERENCE_PX = 1000;
+
+let measureContext = null;
+
+/**
+ * Measurers for the engine that ask about every word at MEASURE_REFERENCE_PX —
+ * or none where there is no canvas to ask, which leaves the engine its own
+ * estimate.
+ *
+ * @return {{measureText?: Function, measureAscent?: Function}}
+ */
+export function referenceMeasures() {
+    if (typeof document === 'undefined') { return {}; }
+
+    measureContext ??= document.createElement('canvas').getContext('2d');
+
+    if (!measureContext) { return {}; }
+
+    const measure = (text, fontSize, fontFamily, bold, italic) => {
+        measureContext.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${MEASURE_REFERENCE_PX}px ${fontFamily}`;
+
+        return { metrics: measureContext.measureText(text), scale: Number(fontSize) / MEASURE_REFERENCE_PX };
+    };
+
+    return {
+        measureText(text, fontSize, fontFamily, bold = false, italic = false) {
+            if (text === '') { return 0; }
+
+            const { metrics, scale } = measure(text, fontSize, fontFamily, bold, italic);
+
+            return metrics.width * scale;
+        },
+        measureAscent(text, fontSize, fontFamily, bold = false, italic = false) {
+            if (text === '') { return 0; }
+
+            const { metrics, scale } = measure(text, fontSize, fontFamily, bold, italic);
+
+            // The engine's own order: the ink where the browser reports it,
+            // and the face's ascent where it does not.
+            return (metrics.actualBoundingBoxAscent || metrics.fontBoundingBoxAscent || Number(fontSize)) * scale;
+        },
+    };
 }
 
 function aretinoWholeSlide(pageSource, settings, canvas, ratio, contentHeight) {
