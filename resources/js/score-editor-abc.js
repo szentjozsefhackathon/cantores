@@ -1,4 +1,4 @@
-import { ensureFontsLoaded } from './svg-fonts.js';
+import { CHORD_ACCIDENTALS, ensureFontsLoaded } from './svg-fonts.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide } from './slide-frame.js';
 import { SLIDE_PALETTES } from './slide-palette.js';
 import { systemSlides } from './slide-systems.js';
@@ -216,7 +216,7 @@ export async function ensureAbcFontsLoaded(settings) {
  * every screen. Chord Accidentals is those five glyphs cut out of Bravura — see
  * resources/fonts/generate-chord-accidentals.mjs.
  */
-export const CHORD_ACCIDENTALS_FAMILY = '"Chord Accidentals"';
+export const CHORD_ACCIDENTALS_FAMILY = `"${CHORD_ACCIDENTALS.family}"`;
 
 let chordAccidentalsLoad = null;
 

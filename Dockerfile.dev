@@ -32,11 +32,17 @@ RUN apt-get update && \
 # Barlow Condensed) and the abc2svg music notation font must be
 # installed system-wide. The music font is referenced as family "music" in
 # abc2svg output; a fontconfig alias maps that onto the installed abc2svg.ttf
-# (internal family "abc2svg").
+# (internal family "abc2svg"). The ♯ ♭ ♮ abc2svg writes into a chord symbol
+# come from Chord Accidentals, which the chord font names after the lyric face
+# and which is generated into public/fonts (resources/fonts/
+# generate-chord-accidentals.mjs); its own fontconfig rule keeps the bold chord
+# font from thickening it.
 RUN apt-get install -y --no-install-recommends librsvg2-bin fontconfig
 COPY resources/fonts/lyric /usr/share/fonts/truetype/cantores
 COPY resources/fonts/music/abc2svg.ttf /usr/share/fonts/truetype/cantores/
+COPY public/fonts/chord-accidentals.otf /usr/share/fonts/opentype/cantores/
 COPY resources/fonts/music/99-abc2svg-music.conf /etc/fonts/conf.d/
+COPY resources/fonts/music/99-chord-accidentals.conf /etc/fonts/conf.d/
 RUN fc-cache -f
 
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer

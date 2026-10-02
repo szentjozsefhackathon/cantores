@@ -9,7 +9,7 @@
  * and a chord sheet that fitted on one screen ran over on the next. Bravura has
  * all five at those code points, but it is half a megabyte and an engraving
  * face, whose accidentals sit centred on the staff line, half below the
- * baseline; so the five are taken out of it and lifted by RAISE.
+ * baseline; so the five are taken out of it and lifted onto the baseline.
  *
  * Bravura is under the SIL Open Font License with the Reserved Font Name
  * "Bravura", so this Modified Version carries a name of its own, keeps Bravura's
@@ -37,22 +37,25 @@ const ACCIDENTALS = [
 ];
 
 /**
- * How far every accidental is lifted, in Bravura's thousandths of an em. Its
- * accidentals are centred on y = 0, the staff line they belong to; lifted by
- * this much a sharp stands on the baseline and reaches the capitals' height,
- * and the others keep their places beside it.
+ * Bravura centres its accidentals on y = 0, the staff line they belong to; on a
+ * line of text each is lifted until it stands on the baseline, as the letters
+ * beside it do. A sharp then reaches the capitals' height, and a flat or a
+ * natural a little short of it.
  */
-const RAISE = 350;
+function raiseOf(glyph) {
+    return -Math.round(glyph.bbox.minY);
+}
 
 /** Room either side, so a sharp does not touch the letter before or after it. */
 const SIDE_BEARING = 30;
 
 const bravura = fontkit.openSync(resolve(root, 'resources/fonts/Bravura.otf'));
 
-/** One Bravura glyph, lifted and moved right by its side bearing. */
+/** One Bravura glyph, lifted onto the baseline and moved right by its side bearing. */
 function liftedPath(glyph) {
     const path = new opentype.Path();
-    const at = (x, y) => [x + SIDE_BEARING, y + RAISE];
+    const raise = raiseOf(glyph);
+    const at = (x, y) => [x + SIDE_BEARING, y + raise];
 
     for (const { command, args } of glyph.path.commands) {
         if (command === 'moveTo') { path.moveTo(...at(args[0], args[1])); }

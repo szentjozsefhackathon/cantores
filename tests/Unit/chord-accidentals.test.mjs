@@ -18,12 +18,13 @@ test('every accidental abc2svg writes into a chord symbol is in the face', () =>
 });
 
 /* Bravura centres its accidentals on the staff line; a chord's stand on the
-   baseline and reach no higher than the line box the letters already make. */
+   baseline, as the letters beside them do, and reach no higher than the line
+   box the letters already make. */
 test('the accidentals sit on the baseline, inside the letters\' line', () => {
     for (const codePoint of [0x266F, 0x266D, 0x266E, 0x1D12A, 0x1D12B]) {
         const { minY, maxY } = font.glyphForCodePoint(codePoint).bbox;
 
-        assert.ok(minY >= 0, `U+${codePoint.toString(16)} hangs below the baseline`);
+        assert.equal(minY, 0, `U+${codePoint.toString(16)} does not stand on the baseline`);
         assert.ok(maxY <= font.ascent, `U+${codePoint.toString(16)} reaches above the face's ascender`);
     }
 

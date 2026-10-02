@@ -50,6 +50,24 @@ export const WEB_FONTS = {
     ],
 };
 
+/**
+ * The face the ♯ ♭ ♮ 𝄪 𝄫 of an abc2svg chord symbol are drawn from, named
+ * after the lyric family in the chord font (see score-editor-abc.js), and the
+ * five characters it holds. Kept apart from WEB_FONTS: it is no face a lyric is
+ * set in, and it is an OpenType file rather than a WOFF2 one.
+ */
+export const CHORD_ACCIDENTALS = {
+    family: 'Chord Accidentals',
+    style: 'normal',
+    weight: '100 900',
+    unicodeRange: 'U+266D-266F,U+1D12A-1D12B',
+    url: '/fonts/chord-accidentals.otf',
+    format: 'opentype',
+    mime: 'font/otf',
+};
+
+const CHORD_ACCIDENTAL_TEXT = /[\u266D-\u266F\u{1D12A}\u{1D12B}]/u;
+
 const fontBase64Cache = {};
 
 async function fetchFontBase64(url) {
@@ -124,6 +142,15 @@ export async function ensureFontsLoaded(fontValues, sizePx = 16) {
     await Promise.all(waits);
 }
 
+/** One face as an @font-face rule carrying the font itself. */
+function fontFaceRule(family, face, base64) {
+    const format = face.format ?? 'woff2';
+    const mime = face.mime ?? 'font/woff2';
+
+    return `@font-face{font-family:'${family}';font-style:${face.style};font-weight:${face.weight};`
+        + `unicode-range:${face.unicodeRange};src:url('data:${mime};base64,${base64}')format('${format}');}`;
+}
+
 export async function injectWebFontsIntoSvg(svgEl, fontValues) {
     const rules = [];
     const seenFamilies = new Set();
@@ -136,15 +163,24 @@ export async function injectWebFontsIntoSvg(svgEl, fontValues) {
         for (const d of descriptors) {
             try {
                 const b64 = await fetchFontBase64(d.url);
-                rules.push(
-                    `@font-face{font-family:'${family}';font-style:${d.style};font-weight:${d.weight};` +
-                    `unicode-range:${d.unicodeRange};src:url('data:font/woff2;base64,${b64}')format('woff2');}`
-                );
+                rules.push(fontFaceRule(family, d, b64));
             } catch (e) {
                 console.warn('[svg-fonts] could not embed font:', family, d.url, e);
             }
         }
     }
+
+    // A chord symbol's accidentals come from a face of their own, which the
+    // drawing names whatever lyric face it was asked to carry; left out, the
+    // reader's own fallback draws them, and draws them badly.
+    if (CHORD_ACCIDENTAL_TEXT.test(svgEl.textContent ?? '')) {
+        try {
+            rules.push(fontFaceRule(CHORD_ACCIDENTALS.family, CHORD_ACCIDENTALS, await fetchFontBase64(CHORD_ACCIDENTALS.url)));
+        } catch (e) {
+            console.warn('[svg-fonts] could not embed font:', CHORD_ACCIDENTALS.family, CHORD_ACCIDENTALS.url, e);
+        }
+    }
+
     if (!rules.length) { return; }
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
     style.textContent = rules.join('');
