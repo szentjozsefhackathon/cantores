@@ -109,3 +109,42 @@ test('an empty separator flows sections together without a forced break', () => 
     assert.ok(!source.includes('%pagebreak'));
     assert.equal(splitPages(source, 'abc', '16/9').length, 1);
 });
+
+/*
+ * A lead sheet is written verse by verse, and a blank line is where one ends:
+ * so every sung paragraph of a chord sheet is a section, marked or not, and a
+ * `%section` line only names the paragraph below it. The same sheet is read by
+ * tests/Unit/ScoreSectionsTest.php.
+ */
+const LEAD_SHEET = '{title: Teszt}\n{key: G}\n\n%section Verse 1\n1. [G]Hi this is an ordered\nverse with [D]multiple lines\n\n%section Chorus\nR. This is the [C]refrain\nvery long and [G]repeating\n\nVerse 2:\n2. [G]A label typed as lyrics\nnames nothing\n';
+
+test('every sung paragraph of a chord sheet is a section, and a marker names it', () => {
+    const { header, preamble, sections } = parseSections(LEAD_SHEET, 'chordpro');
+
+    assert.equal(header, '');
+    assert.equal(preamble, '{title: Teszt}\n{key: G}');
+    assert.deepEqual(sections.map((s) => [s.n, s.label]), [[1, 'Verse 1'], [2, 'Chorus'], [3, null]]);
+    assert.match(sections[2].body, /^Verse 2:\n2\. /);
+});
+
+test('a paragraph of directives alone travels with the verse after it', () => {
+    const sheet = '[C]Első\n\n{comment: Refrén}\n\n[G]Második\n\n{comment: Vége}\n';
+    const { sections } = parseSections(sheet, 'chordpro');
+
+    assert.equal(sections.length, 2);
+    assert.equal(sections[1].body, '{comment: Refrén}\n\n[G]Második\n\n{comment: Vége}');
+});
+
+test('a marker above several paragraphs names only the first of them', () => {
+    const { sections } = parseSections('%section Egy\n[C]Első\n\n[G]Második\n', 'chordpro');
+
+    assert.deepEqual(sections.map((s) => [s.n, s.label]), [[1, 'Egy'], [2, null]]);
+});
+
+test('chosen chord-sheet paragraphs stay paragraphs when flowed together', () => {
+    const { source } = arrangeSections(LEAD_SHEET, 'chordpro', [3, 1], {});
+
+    assert.ok(!source.includes('%section'));
+    assert.match(source, /names nothing\n\n1\. \[G\]Hi/);
+    assert.ok(!source.includes('refrain'));
+});

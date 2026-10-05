@@ -26,8 +26,8 @@
 | Egyéb | |
 |---|---|
 | `#` | megjegyzés (sor elején, nem jelenik meg) |
-| `%section` | szakasz kezdete; a füzetben és a vetítésben kiválasztható; a sor magából a dalszövegből törlődik |
-| `%section Címke` | ugyanaz, névvel a szerkesztőben |
+| üres sor | új szakasz: minden énekelt bekezdés külön szakasz, a füzetben és a vetítésben kiválasztható |
+| `%section Címke` | a közvetlenül alatta álló bekezdés neve a szerkesztőben; a sor magából a dalszövegből törlődik |
 
 | Vetítés | |
 |---|---|
@@ -48,8 +48,9 @@ következő diára kerül. A vágás sorrendje mindig ez:
 1. a `%pagebreak` sorok — ezek mindig vágnak;
 2. ami így is hosszú, a saját `%pagebreak?` javaslatainál törik, és csak annyinál,
    amennyi feltétlenül kell;
-3. ami még mindig nem fér ki, versszakhatáron törik. Egy versszak nem szakad
-   ketté, hacsak az egyben tartása nem kerülne egy egész diába;
+3. ami még mindig nem fér ki, versszakhatáron (üres sornál) törik. Egy versszak
+   csak akkor szakad ketté, ha egymagában sem fér el egy dián — ehhez nem kell
+   `%pagebreak?`-et írni a szakaszok közé;
 4. ha mégis ketté kell szakadnia, a leírt sorok határán szakad — egy sor tördelt
    darabjai együtt maradnak, és a szakaszfelirat a hozzá tartozó sorral.
 

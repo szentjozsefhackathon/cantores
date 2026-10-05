@@ -27,9 +27,14 @@
  *
  * Where (1) may stop depends on what the rows say about themselves. Rows with a
  * line structure (`splitBefore`, which chord sheets and staff systems carry) may
- * be cut between any two lines — a verse is cut sooner than left behind a
- * half-empty screen — but not inside a wrapped line or under a section label
- * unless nothing else will hold the screen. Rows without one (a row of words)
+ * be cut between any two lines, but not inside a wrapped line or under a section
+ * label unless nothing else will hold the screen. Where they also say where a
+ * paragraph starts (`startsParagraph`, which a chord sheet carries: a blank line
+ * in ChordPro is a new section), the screen ends between two paragraphs rather
+ * than inside one — a congregation reads a verse on one screen, and a screen
+ * left part empty costs nothing a cut mid-verse does not cost more. A paragraph
+ * is cut at its lines only when it is taller than a screen on its own, and then
+ * fills the screen it opens on. Rows without a line structure (a row of words)
  * are held together by keepWithNext, so a heading moves with its text. A row, or
  * a group, taller than the screen on its own is handed back over-tall.
 
@@ -85,6 +90,7 @@ function fit(chunk, boxHeight) {
 function screenEnd(chunk, kinds, start, boxHeight) {
     let height = 0;
     let lastSoft = null;
+    let lastVerse = null;
     let lastAuto = null;
     let lastForced = null;
 
@@ -96,11 +102,16 @@ function screenEnd(chunk, kinds, start, boxHeight) {
         if (end === chunk.length) { return end; }
 
         if (kinds[end] === 'soft') { lastSoft = end; }
-        if (kinds[end] === 'soft' || kinds[end] === 'auto') { lastAuto = end; }
+        if (kinds[end] === 'verse') { lastVerse = end; }
+        if (kinds[end] === 'soft' || kinds[end] === 'verse' || kinds[end] === 'auto') { lastAuto = end; }
         if (kinds[end] !== null) { lastForced = end; }
     }
 
-    const cut = lastSoft ?? lastAuto ?? lastForced;
+    // A verse pushed whole onto the next screen is only worth the room it leaves
+    // here if it then fits there; one taller than a screen is cut at its lines
+    // whatever happens, so this screen may as well be filled with its opening.
+    const verse = lastVerse !== null && paragraphFits(chunk, kinds, lastVerse, boxHeight) ? lastVerse : null;
+    const cut = lastSoft ?? verse ?? lastAuto ?? lastForced;
 
     if (cut !== null) { return cut; }
 
@@ -114,11 +125,31 @@ function screenEnd(chunk, kinds, start, boxHeight) {
 }
 
 /**
+ * Whether the paragraph opening at `from` — up to the next paragraph or
+ * suggestion — fits on a screen of its own.
+ */
+function paragraphFits(chunk, kinds, from, boxHeight) {
+    let height = 0;
+
+    for (let i = from; i < chunk.length; i++) {
+        if (i > from && (kinds[i] === 'verse' || kinds[i] === 'soft')) { break; }
+
+        height += chunk[i].height + (i === from ? 0 : (chunk[i].spaceBefore ?? 0));
+
+        if (height > boxHeight) { return false; }
+    }
+
+    return true;
+}
+
+/**
  * What a cut above each row of a chunk would be, or null where none may fall.
  *
  * - `soft` — the author suggested it, and it may always be taken.
- * - `auto` — a boundary the packer may choose: between two lines, two verses,
- *   two paragraphs or two staff systems.
+ * - `verse` — the boundary between two paragraphs of a chord sheet, preferred
+ *   to any line inside one.
+ * - `auto` — a boundary the packer may choose: between two lines, two
+ *   paragraphs of words or two staff systems.
  * - `forced` — a boundary that is half of something: the continuation of a line
  *   too long for the screen, or the line a section label was written above
  *   (`splitBefore: false`). Taken only when no other cut fits on the screen.
@@ -127,11 +158,12 @@ function screenEnd(chunk, kinds, start, boxHeight) {
  * have no line structure to fall back on, so their keepWithNext is not a
  * preference but the rule: a heading moves with its text, and a group taller
  * than the screen is handed back whole for the caller to set smaller. Rows that
- * do say are held together only by `splitBefore: false`; a verse's keepWithNext
- * gives way, since a verse moved whole leaves the room above it empty.
+ * do say are held together only by `splitBefore: false`; their keepWithNext
+ * gives way to the `verse` tier, which says the same thing as a preference the
+ * packer can still overrule for a verse taller than the screen.
  *
  * @param {SoftRow[]} rows
- * @returns {Array<'soft'|'auto'|'forced'|null>} indexed like the rows; the
+ * @returns {Array<'soft'|'verse'|'auto'|'forced'|null>} indexed like the rows; the
  *          first entry is meaningless, since nothing stands above the first row
  */
 function cutKinds(rows) {
@@ -142,7 +174,9 @@ function cutKinds(rows) {
         if (row.breakBefore === 'soft') { return 'soft'; }
 
         if (detailed) {
-            return row.splitBefore === false ? 'forced' : 'auto';
+            if (row.splitBefore === false) { return 'forced'; }
+
+            return row.startsParagraph === true ? 'verse' : 'auto';
         }
 
         return rows[i - 1].keepWithNext === true ? null : 'auto';

@@ -540,32 +540,40 @@ test('a single row taller than the screen comes back over-tall rather than cut',
 });
 
 /*
- * A verse is a preference, not a promise. Two verses of two lines on a screen
- * with room for three rows: keeping both verses whole costs two slides and half
- * an empty screen, so the second verse is cut at its own newline instead.
+ * A blank line is a new section, and a slide is cut there rather than inside
+ * one. Two verses of two lines on a screen with room for three rows: three
+ * slides of one verse each, not two slides with the second verse torn in half.
  */
-test('a verse is cut at a line boundary when keeping it whole would cost a slide', async () => {
+test('verses that fit a screen each are not cut at their lines to save a slide', async () => {
     const sheet = '[C]Egy\n[G]Két\n\n[Am]Há\n[F]Négy\n\n[C]Öt\n[G]Hat\n';
     const pages = await slidePages(sheet, ROW * 3 + GAP);
 
-    assert.deepEqual(rowCounts(pages), [3, 3]);
-    assert.match(pages[0].rows[2].svg, /Há</);
+    assert.deepEqual(rowCounts(pages), [2, 2, 2]);
+    assert.match(pages[1].rows[0].svg, /Há</);
 });
 
 /*
- * And cut at a line boundary just as readily when keeping it whole costs no
- * slide at all but leaves the screen above it a third empty — which is what a
- * congregation actually sees: the chorus alone on one screen, the verse that
- * would not quite fit alone on the next. Two slides either way, so the one that
- * fills them wins.
+ * And not to fill the screen either: the verse that would not quite fit opens
+ * the next screen, whole, rather than leaving its first line behind.
  */
-test('a verse is cut at a line boundary rather than leave the screen above it empty', async () => {
+test('a verse moves whole onto the next screen rather than leave a line behind', async () => {
     const sheet = '[C]Egy\n[G]Két\n\n[Am]Há\n[F]Négy\n';
     const pages = await slidePages(sheet, ROW * 3 + GAP + 10);
 
-    assert.deepEqual(rowCounts(pages), [3, 1]);
-    assert.match(pages[0].rows[2].svg, /Há</, 'the first line of the second verse fills the room left');
-    assert.match(pages[1].rows[0].svg, /Négy</);
+    assert.deepEqual(rowCounts(pages), [2, 2]);
+    assert.match(pages[1].rows[0].svg, /Há</, 'the second verse opens its own slide');
+});
+
+/*
+ * A verse taller than a screen is cut at its lines whatever happens, so the
+ * screen it opens on is filled rather than left with a verse boundary's gap.
+ */
+test('a verse taller than the screen fills the screen it opens on', async () => {
+    const sheet = '[C]Egy\n\n[Am]Há\n[F]Négy\n[C]Öt\n[G]Hat\n';
+    const pages = await slidePages(sheet, ROW * 3 + GAP);
+
+    assert.deepEqual(rowCounts(pages), [3, 2]);
+    assert.match(pages[0].rows[1].svg, /Há</, 'the long verse starts beside the short one');
 });
 
 /*

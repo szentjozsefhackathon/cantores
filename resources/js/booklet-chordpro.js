@@ -107,7 +107,7 @@ export function chordproBookletBlocks(paragraphs, options) {
  *        paragraph is short enough to be kept whole
  * @param {{text?: string, chord?: string, label?: string}} [options.palette] the
  *        ink; printed black, blue and grey where none is given
- * @returns {Array<{height: number, spaceBefore: number, keepWithNext: boolean, splitBefore: boolean, svg: string}>}
+ * @returns {Array<{height: number, spaceBefore: number, keepWithNext: boolean, splitBefore: boolean, startsParagraph: boolean, svg: string}>}
  */
 export function chordproRows(paragraphs, options) {
     const { fontSize, layoutWidth, contentHeight = Infinity } = options;
@@ -161,6 +161,9 @@ export function chordproRows(paragraphs, options) {
                 // whether a verse would rather not be cut; this says where the
                 // cut would fall if it is.
                 splitBefore: i === 0 || (startsLine === true && rows[i - 1]?.holdsNext !== true),
+                // A blank line in ChordPro starts a new section, and a slide
+                // would rather be cut here than anywhere inside one.
+                startsParagraph: i === 0,
             });
         });
     });

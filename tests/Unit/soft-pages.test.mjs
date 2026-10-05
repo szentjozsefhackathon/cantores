@@ -173,3 +173,44 @@ test('a group that says nothing about its own cuts is moved whole', () => {
 
     assert.deepEqual(heights(pages), [[100], [100, 100, 100]]);
 });
+
+/**
+ * A chord sheet's row: a line of a paragraph, which knows whether it opens one.
+ */
+const line = (height, startsParagraph = false, extra = {}) => row(height, { splitBefore: true, startsParagraph, ...extra });
+
+test('a screen ends between two paragraphs rather than inside one', () => {
+    const pages = packSoftPages([line(100, true), line(100), line(100, true), line(100)], 300);
+
+    assert.deepEqual(heights(pages), [[100, 100], [100, 100]]);
+});
+
+test('a paragraph taller than a screen is cut at its lines and fills the screen', () => {
+    const pages = packSoftPages([line(100, true), line(100, true), line(100), line(100), line(100)], 300);
+
+    assert.deepEqual(heights(pages), [[100, 100, 100], [100, 100]]);
+});
+
+test('a suggestion still beats a paragraph boundary further down', () => {
+    const pages = packSoftPages(
+        [line(100, true), line(100, false, { breakBefore: 'soft' }), line(100, true), line(100)],
+        350,
+    );
+
+    assert.deepEqual(heights(pages), [[100], [100, 100, 100]]);
+});
+
+test('a wrapped line is not cut while a paragraph boundary fits', () => {
+    const pages = packSoftPages(
+        [line(100, true), line(100, true), row(100, { splitBefore: false }), line(100)],
+        300,
+    );
+
+    assert.deepEqual(heights(pages), [[100], [100, 100, 100]]);
+});
+
+test('rows that say nothing of paragraphs are filled as before', () => {
+    const pages = packSoftPages([line(100), line(100), line(100), line(100)], 300);
+
+    assert.deepEqual(heights(pages), [[100, 100, 100], [100]]);
+});
