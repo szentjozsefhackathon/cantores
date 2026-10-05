@@ -466,20 +466,6 @@
                             />
                         </flux:tooltip>
 
-                        {{-- The quick way to a style: get one hymn right on the
-                             screen, then make it the rule for the format. --}}
-                        @if(in_array($panelFormat, ProjectionSettingFields::STYLED_FORMATS, true))
-                            <flux:tooltip :content="__('Make this the deck style for every :format score', ['format' => ScoreFormat::from($panelFormat)->label()])" x-show="!!geometry.style" x-cloak>
-                                <flux:button
-                                    size="sm"
-                                    variant="ghost"
-                                    icon="palette"
-                                    class="shrink-0"
-                                    :aria-label="__('Save to the deck style')"
-                                    x-on:click="saveToStyle({{ $entry->id }})"
-                                />
-                            </flux:tooltip>
-                        @endif
                     </div>
                 </div>
             @endif

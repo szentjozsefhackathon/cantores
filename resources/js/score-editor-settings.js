@@ -21,7 +21,7 @@ export function formatDefaults(format, ratio = 'paper') {
         const screenDefaults = {
             abc: ABC_RATIO_DEFAULTS[ratio],
             aretino: ARETINO_RATIO_DEFAULTS[ratio],
-            gabc: GABC_SCREEN_DEFAULTS,
+            gabc: GABC_SCREEN_DEFAULTS[ratio],
             chordpro: CHORDPRO_RATIO_DEFAULTS[ratio],
         };
         Object.assign(defaults, screenDefaults[format]);
@@ -43,14 +43,76 @@ export function incipitSettings(format) {
     return formatDefaults(format).defaults;
 }
 
-/** Restore the active layout without changing its ratio or other saved layouts. */
-export function resetFormatSettings(component, format) {
-    const { fields, defaults } = formatDefaults(format, component[RATIO_FIELDS[format]]);
-    const ratioFields = new Set(Object.values(RATIO_FIELDS));
+/** Preview magnifications: they say how large the editor shows a layout, not what it is. */
+const ZOOM_FIELDS = new Set(['zoom', 'abcZoom', 'aretinoZoom', 'chordproZoom']);
 
-    fields.forEach(field => {
-        if (field in defaults && !ratioFields.has(field)) {
-            component[field] = defaults[field];
+/**
+ * What a layout is reset to: the format's factory defaults for the ratio, and
+ * over them the person's own default for it where they saved one.
+ *
+ * @param {object|null} myBucket the person's saved default for this format and ratio
+ */
+export function defaultLayout(format, ratio, myBucket = null) {
+    const { fields, defaults } = formatDefaults(format, ratio);
+    const ratioFields = new Set(Object.values(RATIO_FIELDS));
+    const layout = {};
+
+    (fields ?? []).forEach(field => {
+        if (ratioFields.has(field)) { return; }
+        if (myBucket && field in myBucket) {
+            layout[field] = myBucket[field];
+        } else if (field in defaults) {
+            layout[field] = defaults[field];
         }
     });
+
+    return layout;
+}
+
+/** Restore the active layout without changing its ratio or other saved layouts. */
+export function resetFormatSettings(component, format, myBucket = null) {
+    Object.assign(component, defaultLayout(format, component[RATIO_FIELDS[format]], myBucket));
+}
+
+/**
+ * Which default a layout is sitting on: the person's own ('mine'), the
+ * factory's ('factory'), or neither ('custom').
+ *
+ * A new score opens on its author's saved default and an old one on whatever it
+ * was saved with, and the two defaults can look nearly alike, so the editor has
+ * to say which it is showing rather than leave it to be guessed from the numbers.
+ * Their own default wins a tie: one saved at the factory's values is still theirs.
+ *
+ * @param {object} current the layout's settings as the editor would save them
+ * @param {object|null} myBucket the person's saved default for this format and ratio
+ * @returns {'mine'|'factory'|'custom'}
+ */
+export function layoutSource(format, ratio, current, myBucket = null) {
+    const matches = layout => Object.entries(current ?? {}).every(([key, value]) => (
+        ZOOM_FIELDS.has(key) || !(key in layout) || sameSetting(value, layout[key])
+    ));
+
+    if (myBucket && matches(defaultLayout(format, ratio, myBucket))) { return 'mine'; }
+    if (matches(defaultLayout(format, ratio))) { return 'factory'; }
+
+    return 'custom';
+}
+
+/**
+ * Two values of one knob told apart as a person would: sizes converted from
+ * points come back with a different last decimal, and a face is the same face
+ * with or without the quotes one engine wants around it.
+ */
+function sameSetting(a, b) {
+    if (typeof a === 'boolean' || typeof b === 'boolean') { return !!a === !!b; }
+
+    const x = Number(a);
+    const y = Number(b);
+    if (a !== '' && b !== '' && a !== null && b !== null && Number.isFinite(x) && Number.isFinite(y)) {
+        return Math.abs(x - y) <= 1e-3 * Math.max(1, Math.abs(x), Math.abs(y));
+    }
+
+    const unquoted = value => String(value ?? '').replace(/^['"]|['"]$/g, '');
+
+    return unquoted(a) === unquoted(b);
 }

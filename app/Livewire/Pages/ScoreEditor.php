@@ -1295,6 +1295,7 @@ class ScoreEditor extends Component
             'editionFreeBefore' => ScorePublicationRules::editionFreeBefore(),
             'isSharedLink' => $this->isSharedLink,
             'isGuest' => ! Auth::check(),
+            'myDefaults' => Auth::user()?->score_settings ?? [],
         ]);
     }
 

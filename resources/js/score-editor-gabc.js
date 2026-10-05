@@ -193,12 +193,18 @@ function round(value, places) {
     return Math.round(value * factor) / factor;
 }
 
-/** Projector sizes retained for the unchanged 1920-pixel canvas. */
-export const GABC_SCREEN_DEFAULTS = {
-    lyricSize: 12,
-    staffSize: 80,
-    zoom: 90,
-};
+/**
+ * Projector sizes, on the slide canvas every format shares: ABC's lyric sizes,
+ * ratio for ratio — 80, 58.5 and 52 pt — with the staff keeping its proportion
+ * to the lyric: 80 units of staff at 16:9, as it always was, is about 26 mm.
+ */
+export const GABC_SCREEN_DEFAULTS = Object.fromEntries(
+    [['16/9', 80], ['4/3', 58.5], ['1/1', 52]].map(([ratio, pt]) => [ratio, {
+        lyricSize: round(gabcLyricSizeForPt(pt), 4),
+        staffSize: pt,
+        zoom: 90,
+    }]),
+);
 
 export function gabcMixin() {
     return {

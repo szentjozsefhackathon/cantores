@@ -1649,8 +1649,11 @@
     "Deck style": "Vetítés stílusa",
     "Changes here apply to this projection at this screen shape only — the score itself is untouched. Blue is changed in this deck; amber is the score's own layout where it differs from the deck style.": "Az itteni változtatások csak erre a vetítésre és erre a képarányra vonatkoznak — maga a kotta nem változik. Kék: ebben a vetítésben módosítva; borostyán: a kotta saját elrendezése, ahol eltér a vetítés stílusától.",
     "Undo the changes made in this deck": "Az ebben a vetítésben tett módosítások visszavonása",
-    "Make this the deck style for every :format score": "Legyen ez a vetítés stílusa minden :format kottára",
-    "Save to the deck style": "Mentés a vetítés stílusába",
     "You already have a style with this name.": "Már van ilyen nevű stílusod.",
-    ":name (copy :n)": ":name (másolat :n)"
+    ":name (copy :n)": ":name (másolat :n)",
+    "My default": "Saját alapértelmezett",
+    "Factory default": "Gyári alapértelmezett",
+    "Reset to my default": "Visszaállítás a saját alapértelmezettre",
+    "Reset to factory default": "Visszaállítás a gyári alapértelmezettre",
+    "Which defaults this layout is on": "Melyik alapértelmezett beállítás szerint áll ez az elrendezés"
 }

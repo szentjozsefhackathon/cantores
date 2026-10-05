@@ -135,8 +135,6 @@
     "Deck style": "Deck style",
     "Changes here apply to this projection at this screen shape only — the score itself is untouched. Blue is changed in this deck; amber is the score's own layout where it differs from the deck style.": "Changes here apply to this projection at this screen shape only — the score itself is untouched. Blue is changed in this deck; amber is the score's own layout where it differs from the deck style.",
     "Undo the changes made in this deck": "Undo the changes made in this deck",
-    "Make this the deck style for every :format score": "Make this the deck style for every :format score",
-    "Save to the deck style": "Save to the deck style",
     "You already have a style with this name.": "You already have a style with this name.",
     ":name (copy)": ":name (copy)",
     ":name (copy :n)": ":name (copy :n)",

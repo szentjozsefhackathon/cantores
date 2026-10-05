@@ -11,7 +11,9 @@ import {
     gabcStaffSizeForStaffHeight,
 } from '../../resources/js/booklet-geometry.js';
 import { gabcMixin } from '../../resources/js/score-editor-gabc.js';
-import { formatDefaults, incipitSettings, resetFormatSettings } from '../../resources/js/score-editor-settings.js';
+import { physicalKnob } from '../../resources/js/booklet-settings.js';
+import { slideCanvas } from '../../resources/js/slide-frame.js';
+import { defaultLayout, formatDefaults, incipitSettings, layoutSource, resetFormatSettings } from '../../resources/js/score-editor-settings.js';
 
 test('reports the fields and factory defaults of every format', () => {
     assert.equal(
@@ -53,7 +55,7 @@ test('hands out a fresh settings object each time', () => {
     assert.equal(incipitSettings('gabc').lyricSize, untouched);
 });
 
-for (const [ratio, lyricSize, staffScale] of [['16/9', 70, 19.5], ['4/3', 58.5, 14.5], ['1/1', 52, 13.5]]) {
+for (const [ratio, lyricSize, staffScale] of [['16/9', 80, 19.5], ['4/3', 58.5, 14.5], ['1/1', 52, 13.5]]) {
     test(`factory reset restores the ${ratio} projector layout without switching to paper`, () => {
         const component = {
             ...abcMixin(),
@@ -102,8 +104,8 @@ for (const ratio of ['16/9', '4/3', '1/1']) {
 
         assert.equal(component.aretinoPageRatio, ratio);
         assert.equal(component.aretinoTextFont, "'Barlow Condensed'");
-        assert.equal(component.aretinoLyricSize, 45);
-        assert.equal(component.aretinoStaffSize, 13);
+        assert.equal(component.aretinoLyricSize, { '16/9': 80, '4/3': 58.5, '1/1': 52 }[ratio]);
+        assert.equal(component.aretinoStaffSize, { '16/9': 26, '4/3': 19, '1/1': 17 }[ratio]);
         assert.equal(component.aretinoHideRepeatClef, true);
         assert.equal(component.aretinoStaffGap, 1);
         assert.equal(component.aretinoLyricSize, initial.aretinoLyricSize);
@@ -118,8 +120,8 @@ for (const ratio of ['16/9', '4/3', '1/1']) {
         resetFormatSettings(component, 'gabc');
 
         assert.equal(component.pageRatio, ratio);
-        assert.equal(component.lyricSize, 12);
-        assert.equal(component.staffSize, 80);
+        assert.equal(component.lyricSize, { '16/9': 24.6154, '4/3': 18, '1/1': 16 }[ratio]);
+        assert.equal(component.staffSize, { '16/9': 80, '4/3': 58.5, '1/1': 52 }[ratio]);
         assert.equal(component.lyricSize, initial.lyricSize);
         assert.equal(component.staffSize, initial.staffSize);
         assert.equal(component.dropCaps, false);
@@ -180,3 +182,61 @@ for (const ratio of ['paper', 'responsive', '16/9', '4/3', '1/1']) {
         }
     });
 }
+
+/*
+ * One number, one size. On every projector ratio every format opens at ABC's
+ * lyric size, each knob reads it back as that, and every format draws onto the
+ * same slide canvas — Aretino's half-size one and GABC's constant 1920-unit
+ * width made the same number a different size on the wall.
+ */
+for (const [ratio, pt] of [['16/9', 80], ['4/3', 58.5], ['1/1', 52]]) {
+    test(`every format opens a ${ratio} slide at ${pt} pt of lyric on the same canvas`, () => {
+        const lyricKeys = { abc: 'abcLyricSize', aretino: 'aretinoLyricSize', chordpro: 'chordproFontSize', gabc: 'lyricSize' };
+        const canvas = slideCanvas('abc', ratio);
+
+        for (const [format, key] of Object.entries(lyricKeys)) {
+            const shown = physicalKnob(key).toPhysical(formatDefaults(format, ratio).defaults[key]);
+
+            assert.ok(Math.abs(shown - pt) < 0.01, `${format} opens at ${shown} pt`);
+            assert.deepEqual(slideCanvas(format, ratio), canvas, format);
+        }
+
+        assert.equal(canvas.height, 1080);
+    });
+}
+
+/*
+ * A layout's own default and the factory's are told apart, so the editor can
+ * say which one it is showing and reset to either.
+ */
+test('a layout reads as the factory default, its owner\'s, or neither', () => {
+    const factory = defaultLayout('abc', '16/9');
+    const mine = { ...factory, abcLyricSize: abcLyricSizeForPt(60), abcLyricFont: 'Alegreya' };
+
+    assert.equal(layoutSource('abc', '16/9', factory), 'factory');
+    assert.equal(layoutSource('abc', '16/9', factory, mine), 'factory');
+    assert.equal(layoutSource('abc', '16/9', mine, mine), 'mine');
+    assert.equal(layoutSource('abc', '16/9', { ...mine, abcLyricSize: 9 }, mine), 'custom');
+    // A size that went through points and back, and a face in quotes, are the same.
+    assert.equal(layoutSource('abc', '16/9', { ...factory, abcLyricSize: factory.abcLyricSize + 0.00001, abcLyricFont: "'Barlow Condensed'" }), 'factory');
+    // The preview's magnification is not part of the layout.
+    assert.equal(layoutSource('abc', '16/9', { ...factory, abcZoom: 150 }), 'factory');
+    // One saved at the factory's values is still the person's own.
+    assert.equal(layoutSource('abc', '16/9', factory, factory), 'mine');
+});
+
+test('a layout resets to its owner\'s default or to the factory\'s', () => {
+    const mine = { aretinoLyricSize: 60, aretinoStaffSize: 20 };
+    const component = { ...formatDefaults('aretino', '16/9').defaults, aretinoPageRatio: '16/9', aretinoLyricSize: 33 };
+
+    resetFormatSettings(component, 'aretino', mine);
+
+    assert.equal(component.aretinoLyricSize, 60);
+    assert.equal(component.aretinoStaffSize, 20);
+    assert.equal(component.aretinoPageRatio, '16/9');
+
+    resetFormatSettings(component, 'aretino');
+
+    assert.equal(component.aretinoLyricSize, 80);
+    assert.equal(component.aretinoStaffSize, 26);
+});

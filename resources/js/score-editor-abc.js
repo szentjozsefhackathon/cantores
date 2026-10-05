@@ -72,7 +72,7 @@ export function normalizeAbcPageWidth(value) {
 const ABC_RATIO_DEFAULTS = {
     '16/9': {
         abcLyricFont: 'Barlow Condensed',
-        abcLyricSize: abcLyricSizeForPt(70),
+        abcLyricSize: abcLyricSizeForPt(80),
         abcLyricBold: false,
         abcPageScale: abcPageScaleForStaffHeight(19.5),
         abcPageWidth: 1920,

@@ -302,13 +302,33 @@ it('creates an unattached chordpro score', function () {
     ]);
 });
 
-it('renders reset to defaults button in each format toolbar', function () {
+it('offers a reset to either default and says which one a layout is on', function () {
     $user = User::factory()->create();
 
     actingAs($user);
 
     Livewire::test(ScoreEditor::class)
-        ->assertSeeHtml('resetToDefaults()');
+        ->assertSeeHtml("resetToDefaults('mine')")
+        ->assertSeeHtml("resetToDefaults('factory')")
+        ->assertSeeHtml('data-layout-source')
+        ->assertSee(__('Reset to my default'))
+        ->assertSee(__('Reset to factory default'));
+});
+
+it('hands the editor the person\'s own defaults for an existing score too', function () {
+    $user = User::factory()->create(['score_settings' => ['abc' => ['16/9' => ['abcLyricSize' => 31]]]]);
+    $score = Score::factory()->create(['user_id' => $user->id, 'settings' => ['abc' => ['16/9' => ['abcLyricSize' => 20]]]]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSeeHtml('data-my-defaults="'.e(json_encode(['abc' => ['16/9' => ['abcLyricSize' => 31]]])).'"');
+});
+
+it('offers a guest only the factory default', function () {
+    Livewire::test(ScoreEditor::class)
+        ->assertSeeHtml("resetToDefaults('factory')")
+        ->assertDontSeeHtml("resetToDefaults('mine')");
 });
 
 it('uses important width utilities for score editor numeric toolbar inputs', function () {

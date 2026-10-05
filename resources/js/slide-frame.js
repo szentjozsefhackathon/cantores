@@ -1,40 +1,28 @@
 /**
  * The shape of a projector slide, and the frame every engraving is put into.
  *
- * Format-blind on purpose. The three engines disagree about how large a slide
- * is — and they are all correct, because each author tuned their sizes against
- * the canvas their own editor drew — but they cannot be allowed to disagree
- * about its *shape*, or a score would come out a different slide from the one
- * beside it. So the canvases live here, in one table that can be read down and
- * checked, and the framing that turns an engraving into a slide lives here with
- * them.
+ * Format-blind on purpose. Every engine engraves a slide onto the same canvas,
+ * so a score cannot come out a different shape of slide from the one beside it,
+ * nor a point of its lyric a different height. The canvas lives here, in one
+ * table that can be read down and checked, and the framing that turns an
+ * engraving into a slide lives here with it.
  */
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
- * The canvas ABC engraves a slide onto, and the one anything without a projector
- * canvas of its own is laid into: a constant 1080 height, the width varying with
- * the ratio.
+ * The canvas every format engraves a slide onto: a constant 1080 height, the
+ * width varying with the ratio.
+ *
+ * Aretino used to work at half this scale, and GABC at a constant 1920 width
+ * that grew taller instead of narrower, so a point of either came out a
+ * different height from a point of ABC's on the same screen, and 80 typed into
+ * one was a different size from 80 typed into another.
  */
 const SLIDE_CANVAS = {
     '16/9': { width: 1920, height: 1080 },
     '4/3': { width: 1440, height: 1080 },
     '1/1': { width: 1080, height: 1080 },
-};
-
-/** Aretino works at half that scale throughout, which is why 45 pt is large there. */
-const ARETINO_CANVAS = {
-    '16/9': { width: 960, height: 540 },
-    '4/3': { width: 720, height: 540 },
-    '1/1': { width: 540, height: 540 },
-};
-
-/** GABC arrives at the same shapes from the other side: a constant 1920 width. */
-const GABC_CANVAS = {
-    '16/9': { width: 1920, height: 1080 },
-    '4/3': { width: 1920, height: 1440 },
-    '1/1': { width: 1920, height: 1920 },
 };
 
 /**
@@ -63,8 +51,6 @@ export function slideRatios() {
 export function slideCanvas(format, ratio) {
     if (!isSlideRatio(ratio)) { return null; }
 
-    if (format === 'aretino') { return { ...ARETINO_CANVAS[ratio] }; }
-    if (format === 'gabc') { return { ...GABC_CANVAS[ratio] }; }
 
     // ChordPro and an uploaded page are not engraved to a projector by any
     // editor, so they have no canvas of their own and are fitted into the

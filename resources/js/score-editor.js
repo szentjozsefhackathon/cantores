@@ -5,7 +5,7 @@ import { abcMixin, applyAbcStrokeWidths, applyAbcSvgStyle, buildAbcPreamble, ens
 import { ensureGabcFontsLoaded, gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin, renderChordproIncipitSvg } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
-import { formatDefaults, incipitSettings, resetFormatSettings } from './score-editor-settings.js';
+import { formatDefaults, incipitSettings, layoutSource, resetFormatSettings } from './score-editor-settings.js';
 import { applyPhysicalSvgSize, removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
 import { renderCurrentPreview } from './score-editor-render.js';
@@ -216,6 +216,8 @@ onAlpineInit(() => {
         fullscreenText: config.fullscreenText ?? '',
         renderTimer: null,
         scoreSettings: config.scoreSettings ?? {},
+        myDefaults: config.myDefaults ?? {},
+        layoutSourceLabels: config.layoutSourceLabels ?? {},
         tempSettings: {},
         copyFeedback: '',
         copyFeedbackTimer: null,
@@ -1199,12 +1201,33 @@ onAlpineInit(() => {
 
         saveAsDefault() {
             const c = this.collectSettings();
-            this.$wire.call('saveAsDefault', c.settings, c.ratio, this.$wire.format);
+            const format = this.$wire.format;
+            this.$wire.call('saveAsDefault', c.settings, c.ratio, format);
+            this.myDefaults = { ...this.myDefaults, [format]: { ...(this.myDefaults[format] ?? {}), [c.ratio]: c.settings } };
         },
 
-        resetToDefaults() {
+        /** The person's saved default for the open format at its ratio, or null. */
+        myDefaultBucket() {
             const format = this.$wire.format;
-            resetFormatSettings(this, format);
+
+            return this.readRatioBucket(this.myDefaults, format, this.effectiveRatioKey(this.ratioForFormat(format)));
+        },
+
+        /** Which default the open layout is on: 'mine', 'factory' or 'custom'. */
+        layoutSource() {
+            const format = this.$wire.format;
+
+            return layoutSource(format, this.ratioForFormat(format), this.collectSettings().settings, this.myDefaultBucket());
+        },
+
+        layoutSourceLabel() {
+            return this.layoutSourceLabels[this.layoutSource()] ?? '';
+        },
+
+        /** Back to the person's own default for this ratio, or with 'factory' to the format's. */
+        resetToDefaults(which = 'factory') {
+            const format = this.$wire.format;
+            resetFormatSettings(this, format, which === 'mine' ? this.myDefaultBucket() : null);
             this.captureCurrentSettings(format, this.ratioForFormat(format));
             this.$nextTick(() => this.scheduleRender());
         },

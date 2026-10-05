@@ -160,7 +160,7 @@ function renderedDimensions(settings, width) {
     return { width: Number(svg.match(/viewBox="0 0 (\d+)/)[1]), fontPx: fontPx * scale, staffPx: staffHeight * scale };
 }
 
-for (const [ratio, width, fontPx, staffPx] of [['16/9', 1920, 70 * 96 / 72, mmToPx(19.5)], ['4/3', 1440, 78, mmToPx(14.5)]]) {
+for (const [ratio, width, fontPx, staffPx] of [['16/9', 1920, 80 * 96 / 72, mmToPx(19.5)], ['4/3', 1440, 78, mmToPx(14.5)]]) {
     test(`${ratio} factory layout engraves at its screen dimensions`, () => {
         const actual = renderedDimensions({ ...abcMixin(), ...ABC_RATIO_DEFAULTS[ratio] }, width);
 

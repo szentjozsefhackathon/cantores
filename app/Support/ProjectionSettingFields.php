@@ -24,7 +24,7 @@ use App\Enums\ProjectionRatio;
  *   them and correctly leaves them out; a projection is the reason they exist.
  * - **The sizes run much larger.** A booklet's lyric size tops out where a page
  *   stops making sense. A slide's starts near where a page's ends: the ABC
- *   screen defaults are 70 points at 16:9.
+ *   screen defaults are 80 points at 16:9.
  * - **The layout widths are not here.** A booklet lets a score be laid out wider
  *   than the page and shrunk back, which is how a bad line break is killed. A
  *   slide has no such slack — the canvas *is* the width, and a score laid out
@@ -65,10 +65,10 @@ class ProjectionSettingFields
      */
     private const FIELDS = [
         'gabc' => [
-            // Stored in exsurge's own units — the screen default is 12, about
-            // four times what a booklet page asks for — and labelled in the
-            // points and millimetres the style editor shows them in, as every
-            // size knob below is.
+            // Stored in exsurge's own units — the 16:9 default of 80 points is
+            // about 24.6 of them, eight times what a booklet page asks for — and
+            // labelled in the points and millimetres the style editor shows
+            // them in, as every size knob below is.
             'lyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 80, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
             'staffSize' => ['type' => 'number', 'control' => 'step', 'min' => 10, 'max' => 400, 'step' => 5, 'percent' => 10, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
             'dropCaps' => ['type' => 'boolean', 'label' => 'Drop caps', 'icon' => 'text-initial'],
@@ -77,7 +77,7 @@ class ProjectionSettingFields
             'condensingTolerance' => ['type' => 'number', 'min' => 0, 'max' => 1, 'step' => 0.05, 'label' => 'Condensing tolerance', 'icon' => 'ruler-dimension-line'],
         ],
         'abc' => [
-            // 70 points of lyric at 16:9, so the ceiling has to be well past a
+            // 80 points of lyric at 16:9, so the ceiling has to be well past a
             // page's. The floor stays low enough to rescue a slide that has too
             // many verses on it.
             'abcLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 120, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
@@ -124,9 +124,12 @@ class ProjectionSettingFields
             'chordproGermanNotation' => ['type' => 'boolean', 'label' => 'German notation (H = B, B = B♭)', 'glyph' => 'H'],
             'chordproHideChords' => ['type' => 'boolean', 'label' => 'Hide chords', 'icon' => 'guitar-off'],
         ],
+        // On the same slide canvas as ABC. Sizes saved on the half-size canvas
+        // Aretino used to draw on were doubled to keep their look, so both
+        // ceilings are twice what they were.
         'aretino' => [
-            'aretinoLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 4, 'max' => 120, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
-            'aretinoStaffSize' => ['type' => 'number', 'control' => 'step', 'min' => 1, 'max' => 40, 'step' => 0.5, 'percent' => 10, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
+            'aretinoLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 4, 'max' => 240, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
+            'aretinoStaffSize' => ['type' => 'number', 'control' => 'step', 'min' => 1, 'max' => 80, 'step' => 0.5, 'percent' => 10, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
             'aretinoStaffGap' => ['type' => 'number', 'min' => 0, 'max' => 10, 'step' => 0.5, 'label' => 'Staff gap', 'icon' => 'between-horizontal-start'],
             'aretinoHideRepeatClef' => ['type' => 'boolean', 'label' => 'Hide repeated clef', 'icon' => 'clef-none'],
         ],

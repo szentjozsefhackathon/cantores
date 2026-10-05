@@ -3,8 +3,8 @@ import test from 'node:test';
 
 /*
  * A style editor speaks of sizes in the units the score editor does. A chord
- * sheet opens on a 16:9 screen at 62 pt there, and its style knob used to read
- * the same size as 82.88 — the px it is stored in — so a size copied from one
+ * sheet opens on a 16:9 screen at 80 pt there, and its style knob used to read
+ * the same size as 106.67 — the px it is stored in — so a size copied from one
  * editor to the other came out a quarter smaller.
  */
 
@@ -29,7 +29,7 @@ function styleEditor(settings = {}) {
 }
 
 test('a ChordPro size reads in points, the factory 16:9 size as the score editor shows it', () => {
-    assert.equal(styleEditor().shownValue('chordpro', 'chordproFontSize'), 62);
+    assert.equal(styleEditor().shownValue('chordpro', 'chordproFontSize'), 80);
 });
 
 test('a size typed in points is stored as the px the score editor stores for it', () => {
@@ -46,7 +46,7 @@ test('a press moves a size by a share of its points and lands on the half-point 
 
     component.nudge('chordpro', fontSize, 1);
 
-    assert.equal(component.shownValue('chordpro', 'chordproFontSize'), 68.5);
+    assert.equal(component.shownValue('chordpro', 'chordproFontSize'), 88);
 });
 
 test('the limits of a size are given in points too', () => {

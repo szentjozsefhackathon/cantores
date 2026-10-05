@@ -134,7 +134,7 @@ test('the preview opens magnified, because the sheet is set at printed size', ()
 });
 
 /*
- * A projector is not a page. The ratio defaults set 62 pt at 16:9 — larger than
+ * A projector is not a page. The ratio defaults set 80 pt at 16:9 — larger than
  * a paper toolbar's whole range — so the ceiling has to follow the ratio, or the
  * spinner argues with the size the editor itself chose. And a column is a page's
  * answer to a long sheet; a slide's answer is another slide, so the control that

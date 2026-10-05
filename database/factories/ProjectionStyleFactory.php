@@ -26,7 +26,7 @@ class ProjectionStyleFactory extends Factory
             'text_theme' => ProjectionTextTheme::Dark,
             'text_size_scale' => 1.0,
             'text_line_height' => 1.45,
-            'min_scale' => 0.85,
+            'min_scale' => 0.9,
         ];
     }
 

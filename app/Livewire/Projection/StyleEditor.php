@@ -51,7 +51,7 @@ class StyleEditor extends Component
     public float $textLineHeight = 1.45;
 
     /** The shrink allowance, as the percentage a slide may be set down to. */
-    public int $minPercent = 85;
+    public int $minPercent = 90;
 
     /**
      * What the style says per format, as stored.
@@ -115,7 +115,7 @@ class StyleEditor extends Component
             $this->textTheme = $this->projection->text_theme->value;
             $this->textSizeScale = $this->projection->text_size_scale;
             $this->textLineHeight = $this->projection->text_line_height;
-            $this->minPercent = 85;
+            $this->minPercent = 90;
             $this->settings = [];
         }
 

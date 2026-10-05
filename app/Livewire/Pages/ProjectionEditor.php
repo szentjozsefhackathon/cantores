@@ -286,52 +286,6 @@ class ProjectionEditor extends Component
     }
 
     /**
-     * Write how one slide is set into the deck's style, for its format.
-     *
-     * The way a style is most easily made: get one hymn right on the screen,
-     * then make it the rule for every score the style answers for. Only the
-     * style's own knobs are taken — a transposition is the hymn's, not the
-     * screen's.
-     *
-     * @param  array<string, mixed>  $values  the slide's settings as drawn
-     */
-    public function saveSlideToStyle(int $entryId, array $values): void
-    {
-        $this->authorize('update', $this->projection);
-
-        $style = $this->projection->style;
-
-        if (! $style instanceof ProjectionStyle) {
-            return;
-        }
-
-        $this->authorize('update', $style);
-
-        $entry = $this->projection->entries()->with('score')->find($entryId);
-
-        if (! $entry instanceof ProjectionSlide) {
-            return;
-        }
-
-        $format = self::overrideFormat($entry);
-        $taken = ProjectionSettingFields::sanitizeStyle([$format => $values]);
-
-        if ($taken === []) {
-            return;
-        }
-
-        $settings = $style->settings ?? [];
-        $settings[$format] = [...($settings[$format] ?? []), ...$taken[$format]];
-
-        $style->update(['settings' => $settings]);
-
-        $this->projection->unsetRelation('style');
-        unset($this->geometry);
-
-        $this->forgetEntries();
-    }
-
-    /**
      * Copy this deck, then go straight to the copy — the fast way to a 4:3
      * version of a 16:9 deck without leaving the editor to find it in the list.
      */

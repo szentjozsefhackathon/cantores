@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { opticalLyricSizePt, ptToPx } from '../../resources/js/booklet-geometry.js';
+import { ptToPx } from '../../resources/js/booklet-geometry.js';
 import { CHORDPRO_RATIO_DEFAULTS, chordproMixin } from '../../resources/js/score-editor-chordpro.js';
 import { applyConditionalBlocks, softSegmentSources, splitPages } from '../../resources/js/score-editor-pages.js';
 import { formatDefaults } from '../../resources/js/score-editor-settings.js';
@@ -62,8 +62,8 @@ test('a format without a canvas of its own is given the slide box', () => {
         assert.deepEqual(slideCanvas(format, '16/9'), { width: 1920, height: 1080 });
     }
 
-    assert.deepEqual(slideCanvas('aretino', '16/9'), { width: 960, height: 540 });
-    assert.deepEqual(slideCanvas('gabc', '4/3'), { width: 1920, height: 1440 });
+    assert.deepEqual(slideCanvas('aretino', '16/9'), { width: 1920, height: 1080 });
+    assert.deepEqual(slideCanvas('gabc', '4/3'), { width: 1440, height: 1080 });
     assert.deepEqual(slideCanvas('abc', '4/3'), { width: 1440, height: 1080 });
 });
 
@@ -271,13 +271,14 @@ test('a chord sheet has a layout of its own for every ratio', () => {
     }
 });
 
-// Sized against ABC's own per-ratio lyric sizes, so a chord sheet projected
-// after a hymn reads the same height rather than the same nominal size.
+// Sized at ABC's own per-ratio lyric sizes, in the same face and without a
+// correction ABC does not make either, so a chord sheet projected after a hymn
+// reads the same height and its knob the same number.
 test('the projected chord sheet is sized off the same points ABC uses', () => {
-    for (const [ratio, pt] of [['16/9', 70], ['4/3', 58.5], ['1/1', 52]]) {
+    for (const [ratio, pt] of [['16/9', 80], ['4/3', 58.5], ['1/1', 52]]) {
         assert.equal(
             CHORDPRO_RATIO_DEFAULTS[ratio].chordproFontSize,
-            Math.round(ptToPx(opticalLyricSizePt(pt, 'Barlow Condensed')) * 10000) / 10000,
+            Math.round(ptToPx(pt) * 10000) / 10000,
             ratio,
         );
     }

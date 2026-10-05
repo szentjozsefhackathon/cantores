@@ -602,16 +602,6 @@ onAlpineInit(() => {
                 this.scheduleRender(KNOB_RENDER_DELAY_MS);
             },
 
-            /** Make how this row is drawn the deck's style for its format. */
-            saveToStyle(entryId) {
-                this.flushOverrides();
-
-                const settings = { ...this.settingsOf(entryId) };
-                this._saveQueue = this._saveQueue
-                    .then(() => wire.saveSlideToStyle(Number(entryId), settings))
-                    .catch((e) => console.error('[projection] could not save to the style', e));
-            },
-
             atLimit(entryId, field, direction) {
                 const current = Number(this.settingsOf(entryId)[field.key]);
                 const next = steppedValue(current, field, direction);

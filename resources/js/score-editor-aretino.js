@@ -1,6 +1,6 @@
 import { renderAretino, splitRowSVGs } from '@aretino-chant/core';
 import { softSegmentSources, splitPages as splitRatioPages } from './score-editor-pages.js';
-import { SLIDE_FIT_TOLERANCE, emptySlide, fitSlide, parseSvg, viewBoxOf } from './slide-frame.js';
+import { SLIDE_FIT_TOLERANCE, emptySlide, fitSlide, parseSvg, slideCanvas, viewBoxOf } from './slide-frame.js';
 import { systemSlides } from './slide-systems.js';
 import { svgHeight } from './svg-slice.js';
 import { gabcToAretino } from '@aretino-chant/gabc2aretino';
@@ -28,28 +28,31 @@ export function buildAretinoFromGuido(notesSource, textSource) {
     return text.trim() === '' ? `${notes}\n` : `${notes}\nw: ${text}\n`;
 }
 
-// Fixed pixel canvas for each fixed-ratio (projector screen) mode.
-// All share the same height so switching ratio keeps the screen size constant.
-const ARETINO_SCREEN_CANVAS = {
-    '16/9': { width: 960, height: 540 },
-    '4/3':  { width: 720, height: 540 },
-    '1/1':  { width: 540, height: 540 },
+/**
+ * The same readable type, staff size and spacing on every projector ratio.
+ *
+ * ABC's lyric sizes, ratio for ratio — 80, 58.5 and 52 pt — with the staff
+ * keeping its proportion to the lyric.
+ */
+const ARETINO_SCREEN_SIZES = {
+    '16/9': { aretinoLyricSize: 80, aretinoStaffSize: 26 },
+    '4/3': { aretinoLyricSize: 58.5, aretinoStaffSize: 19 },
+    '1/1': { aretinoLyricSize: 52, aretinoStaffSize: 17 },
 };
 
-/** The same readable type, staff size and spacing on every projector ratio. */
 export const ARETINO_RATIO_DEFAULTS = Object.fromEntries(
-    Object.keys(ARETINO_SCREEN_CANVAS).map(ratio => [ratio, {
+    Object.entries(ARETINO_SCREEN_SIZES).map(([ratio, sizes]) => [ratio, {
         aretinoTextFont: "'Barlow Condensed'",
-        aretinoLyricSize: 45,
-        aretinoStaffSize: 13,
+        ...sizes,
         aretinoStaffGap: 1,
         aretinoZoom: 100,
         aretinoHideRepeatClef: true,
     }]),
 );
 
+/** The slide canvas every engraved format shares, at the dpi points are read at. */
 export function aretinoProjectorOptions(ratio) {
-    const canvas = ARETINO_SCREEN_CANVAS[ratio];
+    const canvas = slideCanvas('aretino', ratio);
 
     return { width: canvas.width, canvasHeight: canvas.height, dpi: 96 };
 }
@@ -62,7 +65,7 @@ export function aretinoProjectorOptions(ratio) {
  * height: a chant taller than the canvas is cut off at the bottom by its own
  * viewBox, and that is measured here by engraving it once more without the
  * height, which is the only way to see how tall it would have been. A word
- * running past the right edge *widens* the viewBox instead — 960 becomes 1236
+ * running past the right edge *widens* the viewBox instead — 1920 becomes 2472
  * and the slide is no longer 16:9 — so the music is letterboxed down to fit the
  * screen, and the engine's own viewBox is kept rather than restated: rewriting
  * it to the canvas would crop the very music that grew. Either is `overflows`.

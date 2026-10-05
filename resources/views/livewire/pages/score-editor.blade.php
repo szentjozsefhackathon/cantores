@@ -8,8 +8,15 @@ resources/js/score-editor.js
      x-data by building the whole editor again from those settings. --}}
 <div class="py-8"
     data-score-settings="{{ json_encode($settings ?: (object) []) }}"
+    data-my-defaults="{{ json_encode($myDefaults ?: (object) []) }}"
     x-data="scoreEditor({
         scoreSettings: JSON.parse($el.dataset.scoreSettings),
+        myDefaults: JSON.parse($el.dataset.myDefaults),
+        layoutSourceLabels: @js([
+            'mine' => __('My default'),
+            'factory' => __('Factory default'),
+            'custom' => __('Custom'),
+        ]),
         clippedWarningText: @js(__('Content does not fit on page')),
         autoSplitText: @js(__('The score did not fit on the previous slide, so it was split here automatically. Put a :marker line in the score where you want it to break.')),
         clipboardNotSupported: @js(__('Clipboard not supported in this browser')),
@@ -700,15 +707,7 @@ resources/js/score-editor.js
                                 <flux:input size="sm" type="number" x-model="condensingTolerance" min="0" max="1" step="0.05" class="w-16!" />
                             </div>
 
-                            <flux:tooltip :content="__('Reset to defaults')">
-                                <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
-                            </flux:tooltip>
-
-                            @if(!$isGuest)
-                            <flux:tooltip :content="__('Save as my default for this ratio')">
-                                <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
-                            </flux:tooltip>
-                            @endif
+                            <x-score-layout-defaults :is-guest="$isGuest" />
 
                         </div>
 
@@ -736,7 +735,7 @@ resources/js/score-editor.js
                                      is still px — see chordproFontSizePt.
 
                                      A projector is not a page: the ratio
-                                     defaults already set 62 pt at 16:9, so a
+                                     defaults already set 80 pt at 16:9, so a
                                      paper page's ceiling would put the toolbar
                                      below the size the editor itself chose. --}}
                                 <flux:input size="sm" type="number" x-model="chordproFontSizePt" min="6" x-bind:max="isFixedRatio(chordproPageRatio) ? 144 : 24" step="0.5" class="w-16!" />
@@ -799,15 +798,7 @@ resources/js/score-editor.js
                                 <flux:switch x-model="chordproHideChords" />
                             </div>
 
-                            <flux:tooltip :content="__('Reset to defaults')">
-                                <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
-                            </flux:tooltip>
-
-                            @if(!$isGuest)
-                            <flux:tooltip :content="__('Save as my default for this ratio')">
-                                <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
-                            </flux:tooltip>
-                            @endif
+                            <x-score-layout-defaults :is-guest="$isGuest" />
                         </div>
 
                         {{-- ABC Settings Toolbar --}}
@@ -947,15 +938,7 @@ resources/js/score-editor.js
                                 <flux:input size="sm" type="number" x-model="abcStaffLineWidth" min="0.1" max="3" step="0.1" class="w-16!" />
                             </div>
 
-                            <flux:tooltip :content="__('Reset to defaults')">
-                                <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
-                            </flux:tooltip>
-
-                            @if(!$isGuest)
-                            <flux:tooltip :content="__('Save as my default for this ratio')">
-                                <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
-                            </flux:tooltip>
-                            @endif
+                            <x-score-layout-defaults :is-guest="$isGuest" />
 
                         </div>
 
@@ -1002,7 +985,7 @@ resources/js/score-editor.js
                                 <flux:tooltip :content="__('Staff height (mm)')">
                                     <flux:icon name="list-chevrons-up-down" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                                 </flux:tooltip>
-                                <flux:input size="sm" type="number" x-model="aretinoStaffSize" min="1" max="40" step="0.5" class="w-16!" />
+                                <flux:input size="sm" type="number" x-model="aretinoStaffSize" min="1" max="80" step="0.5" class="w-16!" />
                             </div>
 
                             <div class="flex items-center gap-1">
@@ -1033,15 +1016,7 @@ resources/js/score-editor.js
                                 <flux:checkbox x-model="aretinoHideRepeatClef" />
                             </div>
 
-                            <flux:tooltip :content="__('Reset to defaults')">
-                                <flux:button icon="arrow-path" variant="ghost" x-on:click="resetToDefaults()" />
-                            </flux:tooltip>
-
-                            @if(!$isGuest)
-                            <flux:tooltip :content="__('Save as my default for this ratio')">
-                                <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
-                            </flux:tooltip>
-                            @endif
+                            <x-score-layout-defaults :is-guest="$isGuest" />
 
                             <flux:tooltip :content="__('Show source tooltip on hover')">
                                 <flux:button icon="eye" variant="ghost" x-on:click="svgHoverTooltip = !svgHoverTooltip; svgHoverTooltip ? $nextTick(() => { $refs.aretinoEditor?.focus(); updateAretinoHighlight(); }) : hideSvgHoverTooltip()" x-bind:class="svgHoverTooltip ? '!text-blue-600 dark:!text-blue-400' : ''" />

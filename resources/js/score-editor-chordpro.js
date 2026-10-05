@@ -408,15 +408,17 @@ function round(value, places) {
  * front of one reader; a congregation reads a condensed sans from across a nave,
  * which is the same choice ABC and Aretino already make for their own slides.
  *
- * The sizes are ABC's, ratio for ratio — 70, 58.5 and 52 points — put through
- * the optical correction the face needs, so a chord sheet projected after a hymn
- * comes out the same height of letter rather than the same nominal size. One
- * column always: a second column on a projector is a second thing to find.
+ * The sizes are ABC's, ratio for ratio — 80, 58.5 and 52 points — and in the
+ * same face, so the same number is the same height of letter. They used to go
+ * through the booklet's optical correction as well, which ABC's never did: the
+ * chord sheet opened at 62 pt beside a hymn at 70, and the knobs of two slides
+ * that looked alike read differently. One column always: a second column on a
+ * projector is a second thing to find.
  */
 export const CHORDPRO_RATIO_DEFAULTS = Object.fromEntries(
-    [['16/9', 70], ['4/3', 58.5], ['1/1', 52]].map(([ratio, pt]) => [ratio, {
+    [['16/9', 80], ['4/3', 58.5], ['1/1', 52]].map(([ratio, pt]) => [ratio, {
         chordproFontFamily: "'Barlow Condensed'",
-        chordproFontSize: round(ptToPx(opticalLyricSizePt(pt, 'Barlow Condensed')), 4),
+        chordproFontSize: round(ptToPx(pt), 4),
         chordproColumns: 1,
         chordproZoom: 100,
     }]),

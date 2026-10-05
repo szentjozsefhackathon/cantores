@@ -50,6 +50,20 @@ it('creates a style at the deck’s shape and puts the deck in it', function () 
     expect($projection->fresh()->projection_style_id)->toBe($style->id);
 });
 
+it('offers a new style a 90% shrink allowance', function () {
+    $user = User::factory()->create();
+    $projection = Projection::factory()->create(['user_id' => $user->id]);
+    actingAs($user);
+
+    Livewire::test(StyleEditor::class, ['projection' => $projection])
+        ->call('openEditor', null)
+        ->assertSet('minPercent', 90)
+        ->set('name', 'Alapértelmezett')
+        ->call('create');
+
+    expect(ProjectionStyle::query()->sole()->min_scale)->toBe(0.9);
+});
+
 it('keeps style names unique per cantor, but not across cantors', function () {
     $user = User::factory()->create();
     $other = User::factory()->create();
@@ -301,23 +315,6 @@ it('keeps a slide’s choice to follow the style through its own saves', functio
     $payload = app(ProjectionRenderPayload::class)->for($projection->fresh(), $user);
 
     expect($payload['entries'][0]['override'])->toMatchArray(['fromStyle' => true]);
-});
-
-it('writes how one slide is set into the deck’s style, its own knobs only', function () {
-    $user = User::factory()->create();
-    $style = ProjectionStyle::factory()->create(['user_id' => $user->id, 'settings' => ['abc' => ['abcStaffSep' => 20]]]);
-    $projection = Projection::factory()->withStyle($style)->create();
-    $slide = ProjectionSlide::factory()->create([
-        'projection_id' => $projection->id,
-        'score_id' => Score::factory()->create(['format' => ScoreFormat::Abc])->id,
-    ]);
-
-    actingAs($user);
-
-    Livewire::test(ProjectionEditor::class, ['projection' => $projection])
-        ->call('saveSlideToStyle', $slide->id, ['abcLyricSize' => 33, 'abcTranspose' => 2, 'slideMinScale' => 0.8]);
-
-    expect($style->fresh()->settings)->toEqual(['abc' => ['abcStaffSep' => 20, 'abcLyricSize' => 33]]);
 });
 
 it('names the knobs a style holds per format, leaving out what belongs to a piece', function () {
