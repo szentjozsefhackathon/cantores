@@ -167,7 +167,7 @@ export async function renderGabcSlides(pageSource, settings, canvas) {
         markups.push(whole);
     }
 
-    return systemSlides(markups.map((markup) => sliceRenderedSvg(markup, '.chantLine', measuringHost())), canvas);
+    return systemSlides(markups.map((markup) => sliceRenderedSvg(markup, '.chantLine', measuringHost())), canvas, undefined, Number(settings.slideMinScale) || 1);
 }
 
 function gabcWholeSlide(markup, canvas) {

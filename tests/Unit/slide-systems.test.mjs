@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { packSystems } from '../../resources/js/slide-systems.js';
+import { packSystems, packSystemsToFit } from '../../resources/js/slide-systems.js';
 import { startsAtAutomaticCut } from '../../resources/js/soft-pages.js';
 
 /*
@@ -95,4 +95,34 @@ test('a slide begun by a written break is not automatic; any other after the fir
     assert.equal(startsAtAutomaticCut({ rows: [{ breakBefore: 'soft' }] }, 1), false);
     assert.equal(startsAtAutomaticCut({ rows: [{ breakBefore: false }] }, 1), true);
     assert.equal(startsAtAutomaticCut({ rows: [{}] }, 1), true);
+});
+
+test('a page just too tall is set smaller onto one slide rather than cut', () => {
+    const pages = packSystemsToFit([[system('a', 400), system('b', 400), system('c', 400)]], 1080, 0.8);
+
+    assert.deepEqual(names(pages), [['a', 'b', 'c']]);
+    assert.equal(pages[0].scale, 0.9);
+});
+
+test('a page that would need more than the floor is cut at full size', () => {
+    const pages = packSystemsToFit([[system('a', 400), system('b', 400), system('c', 400)]], 1080, 0.95);
+
+    assert.deepEqual(names(pages), [['a', 'b'], ['c']]);
+    assert.deepEqual(pages.map((page) => page.scale), [1, 1]);
+});
+
+test('each slide is set only as small as it needs', () => {
+    const pages = packSystemsToFit([[system('a', 500), system('b', 500), system('c', 500), system('d', 500), system('e', 300)]], 1080, 0.8);
+
+    assert.deepEqual(names(pages), [['a', 'b'], ['c', 'd', 'e']]);
+    pages.forEach((page) => assert.ok(page.height * page.scale <= 1080 + 0.5, 'it fits'));
+    assert.equal(pages[0].scale, 1, 'the slide that fits as it is stays full size');
+    assert.ok(Math.abs(pages[1].scale - 1080 / 1300) < 1e-9, 'and the other is set just small enough');
+});
+
+test('a single system a little taller than the screen is set to fit rather than overrun', () => {
+    const pages = packSystemsToFit([[system('a', 1200)]], 1080, 0.8);
+
+    assert.equal(pages.length, 1);
+    assert.equal(pages[0].scale, 0.9);
 });

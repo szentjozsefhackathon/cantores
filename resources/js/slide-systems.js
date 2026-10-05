@@ -1,5 +1,5 @@
 import { SLIDE_FIT_TOLERANCE, fitSlide, parseSvg } from './slide-frame.js';
-import { packSoftPages, startsAtAutomaticCut } from './soft-pages.js';
+import { packSoftPages, shrinkToFit, startsAtAutomaticCut } from './soft-pages.js';
 import { stackSvgs } from './svg-stack.js';
 
 /**
@@ -23,9 +23,15 @@ import { stackSvgs } from './svg-stack.js';
  *      cut at the last `%pagebreak?` on it — or, where it holds none, between
  *      systems, as low as it can be.
  *
- * Below all three a single system taller than the screen is left as it is and
- * `overflows` says so, which is the one case the author still has to answer —
- * with a smaller staff. Nothing is ever shrunk to fit.
+ * Before any of that cuts a slide off for want of a few millimetres, a deck in
+ * a style may set the page a little smaller instead — never below the style's
+ * floor, and each slide only as much as it needs (see packSystemsToFit). Staves
+ * of slightly different sizes from one slide to the next go unnoticed in a
+ * nave; a second slide holding one line does not.
+ *
+ * Below all of it a single system taller than the screen, even at the floor, is
+ * left as it is and `overflows` says so, which is the one case the author still
+ * has to answer — with a smaller staff.
  *
  * A slide that begins at a cut between systems says so with `autoSplit`. The
  * cut was the packer's choice rather than the author's, and one of them
@@ -41,6 +47,7 @@ import { stackSvgs } from './svg-stack.js';
  * @property {SlideSystem[]} systems
  * @property {number} height what the systems come to, stacked
  * @property {boolean} autoSplit whether it begins at a cut nobody wrote
+ * @property {number} [scale] what it is drawn at, where it was set smaller
  */
 
 /**
@@ -79,8 +86,34 @@ export function packSystems(segments, boxHeight) {
 }
 
 /**
+ * The same, allowed to set the music smaller to save a slide.
+ *
+ * Packed as if the screen were taller by the scale, which is the same thing as
+ * the music being smaller; the scale is chosen by shrinkToFit, so it is only
+ * ever spent where it saves a slide. Each page is then drawn as small as it
+ * needs to fit and no smaller — a short last slide stays full size.
+ *
+ * @param {SlideSystem[][]} segments see packSystems
+ * @param {number} boxHeight the room a slide has
+ * @param {number} [minScale] the floor; 1 never shrinks
+ * @return {SystemPage[]}
+ */
+export function packSystemsToFit(segments, boxHeight, minScale = 1) {
+    const { pages, scale } = shrinkToFit((at) => {
+        const packed = packSystems(segments, boxHeight / at);
+
+        return { pages: packed, overflowing: packed.filter((page) => page.height > boxHeight / at + SLIDE_FIT_TOLERANCE).length };
+    }, minScale);
+
+    return pages.map((page) => ({
+        ...page,
+        scale: scale >= 1 || page.height <= 0 ? 1 : Math.min(1, Math.max(scale, boxHeight / page.height)),
+    }));
+}
+
+/**
  * One packed page drawn as a slide: its systems stacked down from the top, each
- * at the size it was engraved.
+ * at the size it was engraved, or all of them at the page's scale.
  *
  * Top-aligned for the reason fitSlide gives: two consecutive slides of one hymn
  * must not start their first staff at different heights. A system wider than
@@ -88,20 +121,24 @@ export function packSystems(segments, boxHeight) {
  * widens the slide with it, keeping its shape, so the slide is letterboxed the
  * way the engine's own renderer letterboxes it, rather than cut at the side.
  *
+ * A page set smaller is centred across the slide, so the room it gave up is
+ * shared by both sides rather than all left on the right.
+ *
  * @param {SystemPage} page
  * @param {{width: number, height: number}} canvas
  * @return {{svg: SVGElement, overflows: boolean, autoSplit: boolean}}
  */
 export function systemsSlide(page, canvas) {
+    const scale = Number(page.scale) > 0 ? Number(page.scale) : 1;
     const fragments = page.systems.map((system) => (typeof system.svg === 'string' ? parseSvg(system.svg) : system.svg));
-    const widths = fragments.map((fragment) => boxWidthOf(fragment));
+    const widths = fragments.map((fragment) => boxWidthOf(fragment) * scale);
     const width = Math.max(canvas.width, ...widths);
     const placements = [];
     let y = 0;
 
-    page.systems.forEach((system) => {
-        placements.push({ x: 0, y, scale: 1 });
-        y += system.height;
+    page.systems.forEach((system, i) => {
+        placements.push({ x: scale < 1 ? Math.max(0, (canvas.width - widths[i]) / 2) : 0, y, scale });
+        y += system.height * scale;
     });
 
     const { svg } = stackSvgs(fragments, {
@@ -111,7 +148,7 @@ export function systemsSlide(page, canvas) {
 
     return {
         svg: fitSlide(svg),
-        overflows: page.height > canvas.height + SLIDE_FIT_TOLERANCE || width > canvas.width + SLIDE_FIT_TOLERANCE,
+        overflows: page.height * scale > canvas.height + SLIDE_FIT_TOLERANCE || width > canvas.width + SLIDE_FIT_TOLERANCE,
         autoSplit: page.autoSplit,
     };
 }
@@ -123,10 +160,12 @@ export function systemsSlide(page, canvas) {
  * @param {{width: number, height: number}} canvas
  * @param {(svg: SVGElement) => SVGElement} [finish] whatever the format does to
  *        a finished slide — ABC writes its ink and stroke widths on
+ * @param {number} [minScale] how far the music may be set smaller to save a
+ *        slide — the style's `slideMinScale`; 1 never shrinks
  * @return {Array<{svg: SVGElement, overflows: boolean, autoSplit: boolean}>}
  */
-export function systemSlides(segments, canvas, finish = (svg) => svg) {
-    return packSystems(segments, canvas.height).map((page) => {
+export function systemSlides(segments, canvas, finish = (svg) => svg, minScale = 1) {
+    return packSystemsToFit(segments, canvas.height, minScale).map((page) => {
         const slide = systemsSlide(page, canvas);
 
         return { ...slide, svg: finish(slide.svg) };

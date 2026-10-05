@@ -666,3 +666,21 @@ test('a cut at the author\'s suggestion is theirs, and a cut made anyway is auto
     assert.deepEqual(rowCounts(unasked), [1, 1]);
     assert.deepEqual(unasked.map(startsAtAutomaticCut), [false, true]);
 });
+
+/*
+ * In a deck with a style, a sheet a little too tall for one slide is set a
+ * little smaller instead of leaving its last verse alone on a second one.
+ */
+test('a sheet just too tall for one slide is set smaller rather than cut, down to the floor', async () => {
+    const sheet = '[C]Egy\n[G]Két\n\n[Am]Há\n[F]Négy\n';
+    const height = (ROW * 4 + GAP) * 0.9;
+    const shrunk = await chordproSlidePages(sheet, {
+        german: true, transpose: 0, fontFamily: "'Merriweather'", fontSize: 40, canvas: { width: 1920, height }, measure, minScale: 0.85,
+    });
+
+    assert.deepEqual(rowCounts(shrunk), [4]);
+    assert.ok(shrunk[0].height <= height, 'and it fits');
+    assert.ok(shrunk[0].rows[0].height < ROW, 'set smaller than it was');
+
+    assert.deepEqual(rowCounts(await slidePages(sheet, height)), [2, 2], 'without a floor it is cut as before');
+});

@@ -100,9 +100,10 @@ export async function renderRatioPage(format, pageSource, settings, ratio) {
  * many slides as it needs. See slide-systems.js and renderChordproSlides.
  *
  * A slide that begins at a cut nobody wrote carries `autoSplit`, so the editors
- * can point at it: a `%pagebreak169` placed by hand usually cuts better. What is
- * still `overflows` is the one case no cut can answer — a single system taller
- * than the screen — and nothing here shrinks anything to make it fit.
+ * can point at it: a `%pagebreak169` placed by hand usually cuts better. In a
+ * deck with a style a page just too tall is first set a little smaller instead,
+ * down to the style's `slideMinScale`. What is still `overflows` is the one case
+ * no cut can answer — a single system taller than the screen even then.
  *
  * The palette goes to a chord sheet and no further: a chord sheet is words and
  * takes the deck's ink, and the three engines draw their own black on their own

@@ -204,6 +204,66 @@ function cutAt(rows, strength) {
 }
 
 /**
+ * How finely a slide is set smaller to save one: the sizes tried are 97.5%, 95%,
+ * 92.5% and so on, and never anything in between. A fixed grid rather than a
+ * search, so that every device showing the deck tries the same sizes and lands
+ * on the same slides.
+ */
+export const SHRINK_STEP = 0.025;
+
+/**
+ * Set a run smaller, as little as it takes, where that saves a slide.
+ *
+ * A slide just too tall for the screen used to become two, the second holding a
+ * line or two — which is the worst thing a congregation can be shown, and
+ * staves a little smaller from one slide to the next is a price nobody in the
+ * pews notices. So before anything is cut, the run is tried at the floor the
+ * style allows: if that comes to fewer slides (or fewer slides that overrun),
+ * the largest size on the grid that does as well is taken. If the floor saves
+ * nothing, nothing is shrunk at all.
+ *
+ * @template P
+ * @param {(scale: number) => {pages: P[], overflowing: number}} packAt the run
+ *        laid out and packed at a scale
+ * @param {number} minScale the floor, in (0, 1]; 1 never shrinks
+ * @returns {{pages: P[], scale: number}}
+ */
+export function shrinkToFit(packAt, minScale) {
+    const floor = Math.min(1, Math.max(0.5, Number(minScale) || 1));
+    const full = packAt(1);
+
+    if (floor >= 1 || (full.pages.length <= 1 && full.overflowing === 0)) {
+        return { pages: full.pages, scale: 1 };
+    }
+
+    const best = packAt(floor);
+
+    if (!fewer(best, full)) {
+        return { pages: full.pages, scale: 1 };
+    }
+
+    for (let step = 1; ; step++) {
+        const scale = Math.round((1 - step * SHRINK_STEP) * 1000) / 1000;
+
+        if (scale <= floor) { break; }
+
+        const tried = packAt(scale);
+
+        if (!fewer(best, tried)) {
+            return { pages: tried.pages, scale };
+        }
+    }
+
+    return { pages: best.pages, scale: floor };
+}
+
+/** Whether one packing comes to fewer slides than another, or fewer overrunning. */
+function fewer(a, b) {
+    return a.pages.length < b.pages.length
+        || (a.pages.length === b.pages.length && a.overflowing < b.overflowing);
+}
+
+/**
  * Whether a packed page begins where nobody asked for a cut.
  *
  * The first page begins where the source does. Any other begins either at a

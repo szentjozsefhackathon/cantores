@@ -3,9 +3,9 @@ import { markdownRows } from './booklet-markdown.js';
 import { textRowSvg } from './booklet-text.js';
 import { enginesReady } from './music-engines.js';
 import { renderRatioPages } from './projection-render.js';
-import { fileSlideSettings, resolveSlideSettings, textSlideSettings } from './projection-settings.js';
+import { fileSlideSettings, resolveSlideSettings, styleMinScale, textSlideSettings } from './projection-settings.js';
 import { slidePalette } from './slide-palette.js';
-import { packSoftPages } from './soft-pages.js';
+import { packSoftPages, shrinkToFit } from './soft-pages.js';
 import { fitIntoBox, frameSlide, isSlideRatio, paintSlide, parseSvg, slideCanvas } from './slide-frame.js';
 import { stackSvgs } from './svg-stack.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
@@ -313,9 +313,10 @@ async function fileSlides(entry, ratio) {
  *
  * The whole row is laid out once, at that size, and then cut into as many
  * screens as it needs — see packSoftPages, which spends the author's own
- * `%pagebreak` lines before it spends anything of its own. Setting the words
- * smaller is what is left when even a single paragraph will not hold, and a
- * screen that had to do it says so.
+ * `%pagebreak` lines before it spends anything of its own. In a deck with a
+ * style the words may first be set a little smaller where that saves a screen
+ * (see shrinkToFit). Setting them smaller still is what is left when even a
+ * single paragraph will not hold, and a screen that had to do it says so.
  */
 function textSlides(entry, ratio, palette, geometry) {
     const canvas = { ...TEXT_CANVAS[ratio] };
@@ -324,17 +325,23 @@ function textSlides(entry, ratio, palette, geometry) {
     const fontSize = canvas.height * TEXT_HEIGHT * textSizeScale;
     const box = canvas.height * (1 - 2 * TEXT_MARGIN);
 
-    const rows = markdownRows(entry.text ?? '', {
+    const rowsAt = (scale) => markdownRows(entry.text ?? '', {
         layoutWidth: width,
-        fontSize,
+        fontSize: fontSize * scale,
         fontFamily: HEADING_FONT,
         lineHeight: textLineHeight,
-        measure: canvasMeasurer(HEADING_FONT, fontSize),
+        measure: canvasMeasurer(HEADING_FONT, fontSize * scale),
         palette,
         ratio,
     });
 
-    const pages = packSoftPages(rows, box);
+    // In a style, words just too many for one screen are set a little smaller
+    // rather than spill a line onto another — down to the style's floor.
+    const { pages } = shrinkToFit((scale) => {
+        const packed = packSoftPages(rowsAt(scale), box);
+
+        return { pages: packed, overflowing: packed.filter((page) => page.height > box).length };
+    }, geometry?.style ? styleMinScale(geometry.style) : 1);
 
     if (pages.length === 0) { return [{ svg: blankSlide(canvas, palette.background), overflows: false }]; }
 
