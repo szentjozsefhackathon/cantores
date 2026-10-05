@@ -45,6 +45,16 @@ const LYRIC_LINE = 1.35;
 const CHORD_LINE = 1.25;
 const LABEL_LINE = 1.5;
 
+/** Where a chord's baseline falls in its band, as a fraction of the band. */
+const CHORD_BASELINE = 0.9;
+
+/**
+ * The line heights a layout is set in, unless it asks for its own.
+ *
+ * @type {{lyric: number, chord: number, chordBaseline: number}}
+ */
+export const DEFAULT_LINE_SPACING = Object.freeze({ lyric: LYRIC_LINE, chord: CHORD_LINE, chordBaseline: CHORD_BASELINE });
+
 /**
  * The air between two verses, as a multiple of the font size.
  *
@@ -103,6 +113,9 @@ export function chordproBookletBlocks(paragraphs, options) {
  * @param {(text: string, opts?: {bold?: boolean}) => number} options.measure
  * @param {(chord: string) => string} [options.spell] respells a rendered chord,
  *        for the notations chordsheetjs has no setting for
+ * @param {{lyric?: number, chord?: number, chordBaseline?: number}} [options.lineSpacing]
+ *        line heights as multiples of the font size, and where in the chord
+ *        line a chord stands; DEFAULT_LINE_SPACING where left out
  * @param {number} [options.contentHeight] page height, to decide whether a
  *        paragraph is short enough to be kept whole
  * @param {{text?: string, chord?: string, label?: string}} [options.palette] the
@@ -353,12 +366,13 @@ function chordLyricRow(columns, options) {
     // still has one.
     const hasChords = columns.some((column) => column.chord !== '' || column.annotation !== '');
     const hasLyrics = columns.some((column) => column.lyric.trim() !== '');
-    const chordHeight = hasChords ? fontSize * CHORD_LINE : 0;
+    const spacing = { ...DEFAULT_LINE_SPACING, ...options.lineSpacing };
+    const chordHeight = hasChords ? fontSize * spacing.chord : 0;
     // A line of chords alone — `||: [Am] [C] [G] :||` stripped of its bar lines,
     // an instrumental break — is a line of chords, not a line of silence with
     // chords over it. The empty lyric line below it is dropped, the way both the
     // reference implementation and the HTML preview drop it.
-    const lyricHeight = hasChords && !hasLyrics ? 0 : fontSize * LYRIC_LINE;
+    const lyricHeight = hasChords && !hasLyrics ? 0 : fontSize * spacing.lyric;
     const height = chordHeight + lyricHeight;
     const width = columns.reduce((total, column) => total + column.width, 0);
 
@@ -367,7 +381,7 @@ function chordLyricRow(columns, options) {
 
     columns.forEach((column) => {
         if (column.annotation !== '') {
-            parts.push(text(column.annotation, x, chordHeight * 0.8, {
+            parts.push(text(column.annotation, x, chordHeight * spacing.chordBaseline, {
                 fontFamily,
                 fontSize,
                 fill: palette.label,
@@ -379,7 +393,7 @@ function chordLyricRow(columns, options) {
             let chordX = x;
             chordDisplayRuns(column.chord).forEach((run) => {
                 const font = runFont(run, fontSize);
-                parts.push(text(run.text, chordX, chordHeight * 0.8 + runBaselineShift(run, fontSize), {
+                parts.push(text(run.text, chordX, chordHeight * spacing.chordBaseline + runBaselineShift(run, fontSize), {
                     fontFamily,
                     fontSize: font.fontSize,
                     fill: palette.chord,

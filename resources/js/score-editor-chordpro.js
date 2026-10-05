@@ -181,6 +181,15 @@ export function withoutChords(song, ChordSheetJS) {
         });
 }
 
+/**
+ * Tighter than a page, and with each chord hung low over its own words.
+ *
+ * A condensed sans set large needs less leading than a book face does, and
+ * tightening the lines alone leaves a chord nearer the line above than the one
+ * it belongs to.
+ */
+const SLIDE_LINE_SPACING = Object.freeze({ lyric: 1.15, chord: 1.1, chordBaseline: 0.95 });
+
 /** How many lines of a sheet stand in for it as a thumbnail. */
 const INCIPIT_ROWS = 3;
 
@@ -476,6 +485,7 @@ export async function chordproSlidePages(pageSource, { german, transpose, hideCh
             fontSize: size,
             fontFamily: family,
             palette,
+            lineSpacing: SLIDE_LINE_SPACING,
             layoutWidth: canvas.width,
             // A verse is kept whole when it fits the screen it has to fit, and
             // left free to break when it does not.
