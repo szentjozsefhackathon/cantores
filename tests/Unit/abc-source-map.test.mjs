@@ -249,6 +249,10 @@ test('the preamble leaves no side margin of ABC\'s own, as the booklet does not'
     assert.match(preamble, /%%leftmargin 0px\n%%rightmargin 0px\n/);
 });
 
+test('the preamble keeps a split word\'s hyphen off the start of the next line', () => {
+    assert.match(buildAbcPreamble(abcMixin(), 642.52), /^%%hyphencont 0$/m);
+});
+
 test('a hit box is transparent without any stylesheet', () => {
     const out = [];
     const abc = { out_svg: (s) => out.push(s), out_sxsy: (x, s, y) => out.push(x, s, y), sh: (h) => h };

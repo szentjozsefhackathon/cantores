@@ -14,6 +14,7 @@ test('prepares abc guide source with rendering preamble and X field', () => {
     const source = prepareAbcGuideSource("T:Példa\nM:2/4\nL:1/4\nK:C\nC D |]", 600);
 
     assert.match(source, /^%%fullsvg 1\n%%pagewidth 600px/m);
+    assert.match(source, /^%%hyphencont 0$/m);
     assert.match(source, /^X:1$/m);
     assert.match(source, /^T:Példa$/m);
 });

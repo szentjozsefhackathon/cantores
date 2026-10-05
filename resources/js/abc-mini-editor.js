@@ -31,6 +31,7 @@ export function prepareAbcGuideSource(content, pageWidth = DEFAULT_PAGE_WIDTH) {
         `%%pagewidth ${clampAbcGuidePageWidth(pageWidth)}px`,
         '%%leftmargin 12px',
         '%%rightmargin 12px',
+        '%%hyphencont 0',
         '%%topspace 0',
         '%%musicspace 4',
         '%%staffsep 42',

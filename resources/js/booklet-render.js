@@ -824,7 +824,7 @@ function abcBlocks(content, resolved, layoutWidthPx) {
 
     const preamble = `%%fullsvg a${++abcSerial}\n`
         + `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
-        + '%%leftmargin 0px\n%%rightmargin 0px\n'
+        + '%%leftmargin 0px\n%%rightmargin 0px\n%%hyphencont 0\n'
         + `%%pagescale ${pageScale}\n${vocalfont}\n`
         + abcChordFontLine(resolved, font)
         + `%%notespacingfactor ${resolved.abcNoteSpacing}\n`
