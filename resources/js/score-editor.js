@@ -232,6 +232,8 @@ onAlpineInit(() => {
         _autosaveTimer: null,
         _autosaveInterval: null,
         _autosaveIncipitAt: 0,
+        _incipitStale: false,
+        _incipitTimer: null,
         _autosaveFlush: null,
         exportingPdf: false,
         splitScreen: false,
@@ -525,10 +527,10 @@ onAlpineInit(() => {
             }, 1000);
             this._autosaveInterval = setInterval(() => this.runAutosave(), AUTOSAVE_INTERVAL_MS);
             this._autosaveFlush = () => {
-                if (document.visibilityState === 'hidden') { this.runAutosave(); }
+                if (document.visibilityState === 'hidden') { this.runAutosave({ force: this._incipitStale }); }
             };
             document.addEventListener('visibilitychange', this._autosaveFlush);
-            this._autosaveNavigating = () => this.runAutosave();
+            this._autosaveNavigating = () => this.runAutosave({ force: this._incipitStale });
             document.addEventListener('livewire:navigating', this._autosaveNavigating);
         },
 
@@ -558,6 +560,7 @@ onAlpineInit(() => {
             this._abcRenderVersion++;
             clearTimeout(this.renderTimer);
             clearTimeout(this._autosaveTimer);
+            clearTimeout(this._incipitTimer);
             clearInterval(this._autosaveInterval);
             if (this._autosaveFlush) {
                 document.removeEventListener('visibilitychange', this._autosaveFlush);
@@ -780,12 +783,15 @@ onAlpineInit(() => {
         },
 
         // The incipit costs a full SVG-to-PNG round trip, so a burst of typing
-        // does not redraw it; the explicit Save always does.
+        // does not redraw it; the explicit Save always does. An edit the
+        // throttle let through undrawn is not forgotten: a redraw is booked for
+        // when the throttle lets go, and leaving the page draws it at once.
         async runAutosave({ force = false } = {}) {
-            if (!this.autosaveEnabled || !this._autosaveDirty) { return; }
+            if (!this.autosaveEnabled) { return; }
+            if (!this._autosaveDirty && !(force && this._incipitStale)) { return; }
             if (this._autosaveRunning || this.savingScore) {
                 clearTimeout(this._autosaveTimer);
-                this._autosaveTimer = setTimeout(() => this.runAutosave(), 1000);
+                this._autosaveTimer = setTimeout(() => this.runAutosave({ force }), 1000);
                 return;
             }
 
@@ -799,9 +805,20 @@ onAlpineInit(() => {
                 const format = this.$wire.format;
                 this.captureCurrentSettings(format, this.ratioForFormat(format));
                 const allRatioSettings = Object.assign({}, this.tempSettings[format] || {});
-                const wantsIncipit = force || (Date.now() - this._autosaveIncipitAt > AUTOSAVE_INCIPIT_MS);
+                const sinceIncipit = Date.now() - this._autosaveIncipitAt;
+                const wantsIncipit = force || sinceIncipit > AUTOSAVE_INCIPIT_MS;
                 const incipit = wantsIncipit ? await this.generateIncipit().catch(() => null) : null;
                 if (incipit) { this._autosaveIncipitAt = Date.now(); }
+                this._incipitStale = !wantsIncipit;
+                if (wantsIncipit) {
+                    clearTimeout(this._incipitTimer);
+                    this._incipitTimer = null;
+                } else if (!this._incipitTimer) {
+                    this._incipitTimer = setTimeout(() => {
+                        this._incipitTimer = null;
+                        this.runAutosave({ force: true });
+                    }, AUTOSAVE_INCIPIT_MS - sinceIncipit);
+                }
                 await this.$wire.call('autosave', allRatioSettings, incipit);
                 this.autosaveState = 'saved';
             } catch (e) {
@@ -863,11 +880,16 @@ onAlpineInit(() => {
          * the old notation from the moment the format changes, and would stay
          * that way until the throttle lets go — or for good, if the new format
          * renders nothing from what is in the editor.
+         *
+         * What it draws is the old notation's text read as the new one — ABC
+         * set as ChordPro lyrics — so the throttle is left open: the next
+         * edit is usually the rewrite into the new syntax, and its autosave
+         * draws the incipit again.
          */
         async refreshIncipit() {
             if (!this.autosaveEnabled) { return; }
             const incipit = await this.generateIncipit().catch(() => null);
-            this._autosaveIncipitAt = Date.now();
+            this._autosaveIncipitAt = 0;
             try {
                 await this.$wire.call('replaceIncipit', incipit);
             } catch (e) {
