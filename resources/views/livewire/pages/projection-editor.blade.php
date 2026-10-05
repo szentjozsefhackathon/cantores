@@ -21,6 +21,7 @@ resources/js/projection-editor.js
     data-projection-config="{{ json_encode([
         'geometry' => $this->geometry,
         'entries' => $this->renderPayload,
+        'styleKeys' => \App\Support\ProjectionSettingFields::styleKeys(),
         'excluded' => $this->excluded,
         // A deck has no paper, and the preview that shows one of its scores on
         // its own is a page of music. See Booklet::previewGeometry().
@@ -56,9 +57,9 @@ resources/js/projection-editor.js
         <x-plan-document-switcher :plan="$projection->musicPlan" :current="$projection" type="projection"
             :delete-confirm="__('Delete this projection? This cannot be undone.')" />
 
-        {{-- The bar. Very short, and meant to be: a deck has a name and a shape,
-             and everything else about how a slide looks was decided by whoever
-             engraved the score, in the score editor, against this very canvas. --}}
+        {{-- The bar. A deck has a name, a style and a shape: the style is the
+             screen in the church it is for, and sets every score nobody has
+             laid out for that screen in the score editor. --}}
         <div
             data-projection-toolbar
             class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50"
@@ -75,17 +76,56 @@ resources/js/projection-editor.js
 
             <flux:separator vertical class="h-6" />
 
+            <div class="flex items-center gap-1" data-projection-style>
+                <flux:tooltip :content="__('Slide style')">
+                    <flux:icon name="palette" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
+                </flux:tooltip>
+                <flux:select size="sm" wire:model.live="styleId" :aria-label="__('Slide style')" class="w-52 text-xs">
+                    <flux:select.option value="">{{ __('Default style') }}</flux:select.option>
+                    @foreach($this->styles as $style)
+                        <flux:select.option :value="$style->id">{{ $style->label() }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+
+                @if($styleId !== null)
+                    <flux:tooltip :content="__('Edit this style')">
+                        <flux:button size="sm" variant="ghost" icon="pencil-square" :aria-label="__('Edit this style')"
+                            wire:click="$dispatch('open-projection-style-editor', { styleId: {{ $styleId }} })" />
+                    </flux:tooltip>
+                @endif
+
+                <flux:tooltip :content="__('New style')">
+                    <flux:button size="sm" variant="ghost" icon="plus" :aria-label="__('New style')"
+                        wire:click="$dispatch('open-projection-style-editor', { styleId: null })" />
+                </flux:tooltip>
+
+                {{-- The answer to a deck of borrowed scores, each laid out by
+                     somebody else for some other screen. --}}
+                <flux:dropdown>
+                    <flux:tooltip :content="__('Which layout the scores follow')">
+                        <flux:button size="sm" variant="ghost" icon="ellipsis-vertical" :aria-label="__('Which layout the scores follow')" />
+                    </flux:tooltip>
+                    <flux:menu>
+                        <flux:menu.item icon="palette" wire:click="followStyleEverywhere(true)">{{ __('Every score follows the deck style') }}</flux:menu.item>
+                        <flux:menu.item icon="musical-note" wire:click="followStyleEverywhere(false)">{{ __('Every score keeps its own layout') }}</flux:menu.item>
+                    </flux:menu>
+                </flux:dropdown>
+            </div>
+
             <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Screen shape')">
+                <flux:tooltip :content="$styleId !== null ? __('Set by the style') : __('Screen shape')">
                     <flux:icon name="proportions" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
-                <flux:select size="sm" wire:model.live="ratio" :aria-label="__('Screen shape')" class="w-28 text-xs">
+                <flux:select size="sm" wire:model.live="ratio" :aria-label="__('Screen shape')" class="w-28 text-xs" :disabled="$styleId !== null">
                     @foreach(ProjectionRatio::cases() as $case)
                         <flux:select.option value="{{ $case->value }}">{{ $case->label() }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </div>
 
+            {{-- A style says how its words are set, as it says everything else
+                 about the screen; a deck in none says it here. --}}
+            @if($styleId === null)
             {{-- How a screen of words is set — a text row, and a chord sheet,
                  which is words too. Engraved music is not offered: three engines
                  draw it in ink, and a staff reversed out of black is harder to
@@ -117,6 +157,7 @@ resources/js/projection-editor.js
                 </flux:tooltip>
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textLineHeight" :aria-label="__('Text line spacing')" min="0.8" max="3" step="0.05" class="w-16!" />
             </div>
+            @endif
 
             <div class="ms-auto flex items-center gap-2">
                 <span
@@ -243,4 +284,6 @@ resources/js/projection-editor.js
             </flux:card>
         </div>
     </div>
+
+    <livewire:projection.style-editor :projection="$projection" />
 </div>

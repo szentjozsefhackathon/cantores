@@ -12,6 +12,7 @@ use App\Models\MusicPlanSlotPlan;
 use App\Models\Projection;
 use App\Models\ProjectionMusic;
 use App\Models\ProjectionSlide;
+use App\Models\ProjectionStyle;
 use App\Models\Score;
 use App\Models\ScoreFile;
 use App\Services\PlanOrder;
@@ -42,11 +43,10 @@ use Livewire\Component;
  * both documents.
  *
  * What it owns is none of the drawing. Every slide is engraved in the browser
- * from the score itself, at the score author's own layout for this ratio, and cut
- * where that author put the page breaks — which is why the ratio is very nearly
- * the only setting here. A booklet has a page to describe and a pile of
- * differently-engraved scores to unify onto it; a projection has a screen shape
- * and scores already tuned for it.
+ * from the score itself and cut where that author put the page breaks. What the
+ * deck does say is which screen it is for: a shape, and a style
+ * (App\Models\ProjectionStyle) that sets every score its author has not laid
+ * out for that shape — and any slide told to follow the style instead.
  */
 class ProjectionEditor extends Component
 {
@@ -58,11 +58,16 @@ class ProjectionEditor extends Component
     public string $title = '';
 
     /**
-     * The shape of the screen, and very nearly the whole of this deck's
-     * geometry. Changing it does not restyle anything: it changes which of the
-     * score's own saved layouts is read, and which page breaks cut.
+     * The shape of the screen. Changing it changes which of the score's own
+     * saved layouts is read, and which page breaks cut. A deck in a style is at
+     * the style's shape, and the select is left alone while it is.
      */
     public string $ratio = '16/9';
+
+    /**
+     * The style the deck is shown in, or null for the factory defaults.
+     */
+    public ?int $styleId = null;
 
     /**
      * How this deck sets a screen of words.
@@ -124,6 +129,7 @@ class ProjectionEditor extends Component
         $this->projection = $projection;
         $this->title = $projection->title;
         $this->ratio = $projection->ratio->value;
+        $this->styleId = $projection->projection_style_id;
         $this->textTheme = $projection->text_theme->value;
         $this->textSizeScale = $projection->text_size_scale;
         $this->textLineHeight = $projection->text_line_height;
@@ -142,6 +148,7 @@ class ProjectionEditor extends Component
         return [
             'ratio' => ['required', 'string', Rule::in(array_keys(ProjectionRatio::options()))],
             'textTheme' => ['required', 'string', Rule::in(array_keys(ProjectionTextTheme::options()))],
+            'styleId' => ['nullable', 'integer', Rule::exists('projection_styles', 'id')->where('user_id', $this->projection->user_id)],
         ];
     }
 
@@ -158,7 +165,7 @@ class ProjectionEditor extends Component
      */
     public function updated(string $property): void
     {
-        if (! in_array($property, ['title', 'ratio', 'textTheme', 'textSizeScale', 'textLineHeight'], true)) {
+        if (! in_array($property, ['title', 'ratio', 'styleId', 'textTheme', 'textSizeScale', 'textLineHeight'], true)) {
             return;
         }
 
@@ -170,14 +177,155 @@ class ProjectionEditor extends Component
         $this->authorize('update', $this->projection);
         $this->validate();
 
+        $style = $this->styleId === null ? null : ProjectionStyle::query()->find($this->styleId);
+
+        if ($style instanceof ProjectionStyle) {
+            $this->ratio = $style->ratio->value;
+        }
+
         $this->projection->update([
             'title' => $this->title,
             'ratio' => ProjectionRatio::from($this->ratio),
+            'projection_style_id' => $style?->id,
             'text_theme' => ProjectionTextTheme::from($this->textTheme),
             'text_size_scale' => $this->textSizeScale,
             'text_line_height' => $this->textLineHeight,
         ]);
 
+        $this->projection->unsetRelation('style');
+        unset($this->geometry);
+
+        $this->forgetEntries();
+    }
+
+    /**
+     * The styles this deck's owner has, by name.
+     *
+     * @return Collection<int, ProjectionStyle>
+     */
+    #[Computed]
+    public function styles(): Collection
+    {
+        return ProjectionStyle::query()->mine($this->projection->user)->orderBy('name')->get();
+    }
+
+    /**
+     * A style was made or changed in the style editor beside the deck.
+     *
+     * A new one is put on the deck straight away — making a style from inside a
+     * deck is asking for this deck to be in it. A changed one is drawn again only
+     * if it is the one this deck is shown in.
+     */
+    #[On('projection-style-saved')]
+    public function styleSaved(int $styleId, bool $attach = false): void
+    {
+        unset($this->styles);
+
+        if ($attach) {
+            $this->styleId = $styleId;
+            $this->save();
+
+            return;
+        }
+
+        if ($this->projection->projection_style_id !== $styleId) {
+            return;
+        }
+
+        $this->projection->refresh();
+        $this->ratio = $this->projection->ratio->value;
+        unset($this->geometry);
+
+        $this->forgetEntries();
+    }
+
+    #[On('projection-style-deleted')]
+    public function styleDeleted(int $styleId): void
+    {
+        unset($this->styles);
+
+        if ($this->styleId !== $styleId) {
+            return;
+        }
+
+        $this->projection->refresh();
+        $this->styleId = null;
+        unset($this->geometry);
+
+        $this->forgetEntries();
+    }
+
+    /**
+     * Have every score in the deck follow the deck's style at this shape — or,
+     * turned off, go back to the layouts their authors saved.
+     *
+     * The answer to a deck of borrowed scores, each tuned by someone else for
+     * some other screen: one press instead of one per slide. What a slide was
+     * changed by hand in this deck is kept either way.
+     */
+    public function followStyleEverywhere(bool $follow): void
+    {
+        $this->authorize('update', $this->projection);
+
+        $ratio = $this->projection->ratio->value;
+
+        foreach ($this->projection->entries()->with('score')->get() as $entry) {
+            $format = self::overrideFormat($entry);
+
+            if (! in_array($format, ProjectionSettingFields::STYLED_FORMATS, true)) {
+                continue;
+            }
+
+            $bucket = [...($entry->overrideFor($ratio)), ProjectionSettingFields::FROM_STYLE => $follow];
+            $clean = ProjectionSettingFields::sanitizeByRatio($format, [...($entry->settings_override ?? []), $ratio => $bucket]);
+
+            $entry->update(['settings_override' => $clean === [] ? null : $clean]);
+        }
+
+        $this->forgetEntries();
+    }
+
+    /**
+     * Write how one slide is set into the deck's style, for its format.
+     *
+     * The way a style is most easily made: get one hymn right on the screen,
+     * then make it the rule for every score the style answers for. Only the
+     * style's own knobs are taken — a transposition is the hymn's, not the
+     * screen's.
+     *
+     * @param  array<string, mixed>  $values  the slide's settings as drawn
+     */
+    public function saveSlideToStyle(int $entryId, array $values): void
+    {
+        $this->authorize('update', $this->projection);
+
+        $style = $this->projection->style;
+
+        if (! $style instanceof ProjectionStyle) {
+            return;
+        }
+
+        $this->authorize('update', $style);
+
+        $entry = $this->projection->entries()->with('score')->find($entryId);
+
+        if (! $entry instanceof ProjectionSlide) {
+            return;
+        }
+
+        $format = self::overrideFormat($entry);
+        $taken = ProjectionSettingFields::sanitizeStyle([$format => $values]);
+
+        if ($taken === []) {
+            return;
+        }
+
+        $settings = $style->settings ?? [];
+        $settings[$format] = [...($settings[$format] ?? []), ...$taken[$format]];
+
+        $style->update(['settings' => $settings]);
+
+        $this->projection->unsetRelation('style');
         unset($this->geometry);
 
         $this->forgetEntries();
@@ -825,7 +973,7 @@ class ProjectionEditor extends Component
             return;
         }
 
-        if (! ScoreSections::has($entry->score->content, $sectionNumber)) {
+        if (! ScoreSections::has($entry->score->content, $sectionNumber, $entry->score->format)) {
             return;
         }
 
@@ -932,7 +1080,7 @@ class ProjectionEditor extends Component
         return $entry->score?->format?->value ?? 'file';
     }
 
-    /** Back to the score author's own layout — at this shape, not at all three. */
+    /** Undo what this deck changed on a slide — at this shape, not at all three. */
     public function resetOverride(int $entryId): void
     {
         $this->saveOverride($entryId, []);

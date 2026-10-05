@@ -540,32 +540,40 @@ test('a single row taller than the screen comes back over-tall rather than cut',
 });
 
 /*
- * A verse is a preference, not a promise. Two verses of two lines on a screen
- * with room for three rows: keeping both verses whole costs two slides and half
- * an empty screen, so the second verse is cut at its own newline instead.
+ * A blank line is a new section, and a slide is cut there rather than inside
+ * one. Two verses of two lines on a screen with room for three rows: three
+ * slides of one verse each, not two slides with the second verse torn in half.
  */
-test('a verse is cut at a line boundary when keeping it whole would cost a slide', async () => {
+test('verses that fit a screen each are not cut at their lines to save a slide', async () => {
     const sheet = '[C]Egy\n[G]Két\n\n[Am]Há\n[F]Négy\n\n[C]Öt\n[G]Hat\n';
     const pages = await slidePages(sheet, ROW * 3 + GAP);
 
-    assert.deepEqual(rowCounts(pages), [3, 3]);
-    assert.match(pages[0].rows[2].svg, /Há</);
+    assert.deepEqual(rowCounts(pages), [2, 2, 2]);
+    assert.match(pages[1].rows[0].svg, /Há</);
 });
 
 /*
- * And cut at a line boundary just as readily when keeping it whole costs no
- * slide at all but leaves the screen above it a third empty — which is what a
- * congregation actually sees: the chorus alone on one screen, the verse that
- * would not quite fit alone on the next. Two slides either way, so the one that
- * fills them wins.
+ * And not to fill the screen either: the verse that would not quite fit opens
+ * the next screen, whole, rather than leaving its first line behind.
  */
-test('a verse is cut at a line boundary rather than leave the screen above it empty', async () => {
+test('a verse moves whole onto the next screen rather than leave a line behind', async () => {
     const sheet = '[C]Egy\n[G]Két\n\n[Am]Há\n[F]Négy\n';
     const pages = await slidePages(sheet, ROW * 3 + GAP + 10);
 
-    assert.deepEqual(rowCounts(pages), [3, 1]);
-    assert.match(pages[0].rows[2].svg, /Há</, 'the first line of the second verse fills the room left');
-    assert.match(pages[1].rows[0].svg, /Négy</);
+    assert.deepEqual(rowCounts(pages), [2, 2]);
+    assert.match(pages[1].rows[0].svg, /Há</, 'the second verse opens its own slide');
+});
+
+/*
+ * A verse taller than a screen is cut at its lines whatever happens, so the
+ * screen it opens on is filled rather than left with a verse boundary's gap.
+ */
+test('a verse taller than the screen fills the screen it opens on', async () => {
+    const sheet = '[C]Egy\n\n[Am]Há\n[F]Négy\n[C]Öt\n[G]Hat\n';
+    const pages = await slidePages(sheet, ROW * 3 + GAP);
+
+    assert.deepEqual(rowCounts(pages), [3, 2]);
+    assert.match(pages[0].rows[1].svg, /Há</, 'the long verse starts beside the short one');
 });
 
 /*
@@ -646,15 +654,38 @@ test('a lit room gets the same sheet in ink', async () => {
 /*
  * The editors point at a slide the sheet was cut into on its own, so the author
  * can see where a `%pagebreak169` would have cut it better. A cut the author
- * suggested is theirs, and is not pointed at.
+ * suggested is theirs, and so is one between two verses — the blank line said
+ * so — and neither is pointed at. Only a verse cut in the middle is.
  */
-test('a cut at the author\'s suggestion is theirs, and a cut made anyway is automatic', async () => {
+test('a cut at a suggestion or between verses is the author\'s, and one inside a verse is automatic', async () => {
     const suggested = await slidePages('[C]Egy\n%pagebreak?\n[G]Kettő\n', ROW + 10);
-    const unasked = await slidePages('[C]Egy\n\n[G]Kettő\n', ROW + 10);
+    const verses = await slidePages('[C]Egy\n\n[G]Kettő\n', ROW + 10);
+    const inside = await slidePages('[C]Egy\n[G]Kettő\n', ROW + 10);
 
     assert.deepEqual(rowCounts(suggested), [1, 1]);
     assert.deepEqual(suggested.map(startsAtAutomaticCut), [false, false]);
 
-    assert.deepEqual(rowCounts(unasked), [1, 1]);
-    assert.deepEqual(unasked.map(startsAtAutomaticCut), [false, true]);
+    assert.deepEqual(rowCounts(verses), [1, 1]);
+    assert.deepEqual(verses.map(startsAtAutomaticCut), [false, false]);
+
+    assert.deepEqual(rowCounts(inside), [1, 1]);
+    assert.deepEqual(inside.map(startsAtAutomaticCut), [false, true]);
+});
+
+/*
+ * In a deck with a style, a sheet a little too tall for one slide is set a
+ * little smaller instead of leaving its last verse alone on a second one.
+ */
+test('a sheet just too tall for one slide is set smaller rather than cut, down to the floor', async () => {
+    const sheet = '[C]Egy\n[G]Két\n\n[Am]Há\n[F]Négy\n';
+    const height = (ROW * 4 + GAP) * 0.9;
+    const shrunk = await chordproSlidePages(sheet, {
+        german: true, transpose: 0, fontFamily: "'Merriweather'", fontSize: 40, canvas: { width: 1920, height }, measure, minScale: 0.85,
+    });
+
+    assert.deepEqual(rowCounts(shrunk), [4]);
+    assert.ok(shrunk[0].height <= height, 'and it fits');
+    assert.ok(shrunk[0].rows[0].height < ROW, 'set smaller than it was');
+
+    assert.deepEqual(rowCounts(await slidePages(sheet, height)), [2, 2], 'without a floor it is cut as before');
 });

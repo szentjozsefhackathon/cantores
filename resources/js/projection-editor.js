@@ -3,9 +3,10 @@ import { revealEntryRow, revealOffset } from './booklet-hover.js';
 import { createBusyFlag, layoutSignature, renderDelayFor } from './booklet-pacing.js';
 import { SPLIT_DEFAULT, beginSplitDrag, clampSplitPercent } from './booklet-split.js';
 import { RESTORE_ICON, SKIP_ICON, isExcluded, renderDeck, slideCounts } from './projection-deck.js';
-import { inheritedSlideSetting, resolveSlideSettings, fileSlideSettings, textSlideSettings } from './projection-settings.js';
+import { FROM_STYLE, divergingKeys, inheritedSlideSetting, resolveSlideSettings, fileSlideSettings, textSlideSettings } from './projection-settings.js';
 import { ratioSuffix } from './score-editor-pages.js';
 import { steppedValue, movesSetting } from './booklet-settings.js';
+import './projection-style-editor.js';
 import './score-preview.js';
 
 /**
@@ -83,6 +84,9 @@ onAlpineInit(() => {
         return {
             geometry: config.geometry ?? {},
             entries: withPlainOverrides(config.entries),
+
+            /** The knobs a style holds, per format — what a score can disagree with it on. */
+            styleKeys: config.styleKeys ?? {},
 
             /**
              * The page the preview modal draws one score against, since a deck
@@ -494,17 +498,17 @@ onAlpineInit(() => {
                 // size and leading are the whole of what there is to resolve.
                 if (entry.kind === 'text') { return textSlideSettings(entry.override, this.geometry); }
 
-                return resolveSlideSettings(entry.format, entry.settings ?? {}, this.geometry.ratio, entry.override);
+                return resolveSlideSettings(entry.format, entry.settings ?? {}, this.geometry.ratio, entry.override, this.geometry.style ?? null);
             },
 
             /**
-             * Whether a knob is showing something other than what the score's own
-             * author chose — "is it different", not "was it touched", so a knob
-             * stepped away and back is not marked.
+             * Whether a knob is showing something other than what it would show
+             * without this deck's hand on it — "is it different", not "was it
+             * touched", so a knob stepped away and back is not marked.
              */
             isOverridden(entryId, key) {
                 const entry = this.entries.find((row) => row.id === entryId);
-                if (!entry) { return false; }
+                if (!entry || key === FROM_STYLE) { return false; }
 
                 const override = entry.override ?? {};
                 if (!Object.prototype.hasOwnProperty.call(override, key)) { return false; }
@@ -516,7 +520,7 @@ onAlpineInit(() => {
                     ? fileSlideSettings({})[key]
                     : entry.kind === 'text'
                         ? textSlideSettings(without, this.geometry)[key]
-                        : inheritedSlideSetting(entry.format, entry.settings ?? {}, this.geometry.ratio, override, key);
+                        : inheritedSlideSetting(entry.format, entry.settings ?? {}, this.geometry.ratio, override, key, this.geometry.style ?? null);
 
                 return movesSetting(override[key], inherited);
             },
@@ -526,6 +530,56 @@ onAlpineInit(() => {
                 if (!entry) { return false; }
 
                 return Object.keys(entry.override ?? {}).some((key) => this.isOverridden(entryId, key));
+            },
+
+            /** Whether a row follows the deck's style rather than its score's own layout. */
+            followsStyle(entryId) {
+                return !!this.entries.find((row) => row.id === entryId)?.override?.[FROM_STYLE];
+            },
+
+            /**
+             * The knobs where the score's own layout for this shape differs from
+             * the deck's style — whatever the row is currently following, so the
+             * row can say what switching would change.
+             */
+            scoreDiverging(entryId) {
+                const entry = this.entries.find((row) => row.id === entryId);
+                const keys = this.styleKeys[entry?.format];
+
+                if (!entry || entry.kind !== 'score' || !keys) { return []; }
+
+                return divergingKeys(entry.format, entry.settings ?? {}, this.geometry.ratio, this.geometry.style ?? null, keys, movesSetting);
+            },
+
+            /** Whether a knob's value is the score's own, where it differs from the style. */
+            fromScore(entryId, key) {
+                return !this.followsStyle(entryId)
+                    && !this.isOverridden(entryId, key)
+                    && this.scoreDiverging(entryId).includes(key);
+            },
+
+            /** Have one row follow the deck's style, or go back to its score's layout. */
+            followStyle(entryId, follow) {
+                const entry = this.entries.find((row) => row.id === entryId);
+                if (!entry) { return; }
+
+                const { [FROM_STYLE]: _, ...changed } = entry.override ?? {};
+                const override = follow ? { ...changed, [FROM_STYLE]: true } : changed;
+                entry.override = override;
+
+                this._pendingOverrides[entryId] = override;
+                this.saveNow(entryId);
+                this.scheduleRender(KNOB_RENDER_DELAY_MS);
+            },
+
+            /** Make how this row is drawn the deck's style for its format. */
+            saveToStyle(entryId) {
+                this.flushOverrides();
+
+                const settings = { ...this.settingsOf(entryId) };
+                this._saveQueue = this._saveQueue
+                    .then(() => wire.saveSlideToStyle(Number(entryId), settings))
+                    .catch((e) => console.error('[projection] could not save to the style', e));
             },
 
             atLimit(entryId, field, direction) {
@@ -591,9 +645,12 @@ onAlpineInit(() => {
              */
             resetOverride(entryId) {
                 const entry = this.entries.find((row) => row.id === entryId);
-                if (entry) { entry.override = {}; }
+                // Whether the row follows the style is not a change made to it
+                // but a choice of what to start from, and outlives an undo.
+                const kept = entry?.override?.[FROM_STYLE] ? { [FROM_STYLE]: true } : {};
+                if (entry) { entry.override = kept; }
 
-                this._pendingOverrides[entryId] = {};
+                this._pendingOverrides[entryId] = { ...kept };
                 this.saveNow(entryId);
 
                 this.scheduleRender(KNOB_RENDER_DELAY_MS);

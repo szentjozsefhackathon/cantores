@@ -493,7 +493,7 @@ export async function renderAbcSlides(pageSource, settings, canvas, report = nul
         applyAbcSvgStyle(svg, `abc-slide-s${++abcSlideSerial}`, settings, true);
 
         return svg;
-    });
+    }, Number(settings.slideMinScale) || 1);
 }
 
 /**

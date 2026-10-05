@@ -16,6 +16,7 @@ use App\Models\Presentation;
 use App\Models\Projection;
 use App\Models\ProjectionMusic;
 use App\Models\ProjectionSlide;
+use App\Models\ProjectionStyle;
 use App\Models\Screen;
 use App\Models\User;
 use App\Observers\AuthorObserver;
@@ -26,6 +27,7 @@ use App\Observers\FirstNameObserver;
 use App\Observers\GenreObserver;
 use App\Observers\MusicObserver;
 use App\Observers\ProjectionRevisionObserver;
+use App\Observers\ProjectionStyleObserver;
 use App\Observers\ShowStreamObserver;
 use App\Observers\UserObserver;
 use App\Services\GenreContext;
@@ -96,6 +98,7 @@ class AppServiceProvider extends ServiceProvider
         Projection::observe(ProjectionRevisionObserver::class);
         ProjectionSlide::observe(ProjectionRevisionObserver::class);
         ProjectionMusic::observe(ProjectionRevisionObserver::class);
+        ProjectionStyle::observe(ProjectionStyleObserver::class);
 
         foreach ([Presentation::class, Screen::class, DeviceName::class, DevicePairing::class, Projection::class, ProjectionSlide::class, ProjectionMusic::class] as $model) {
             $model::observe(ShowStreamObserver::class);

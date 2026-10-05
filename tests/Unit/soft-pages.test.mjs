@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { packSoftPages, stackHeight } from '../../resources/js/soft-pages.js';
+import { SHRINK_STEP, packSoftPages, shrinkToFit, stackHeight } from '../../resources/js/soft-pages.js';
 
 /**
  * A laid-out row, as markdownRows() hands one over: a height, the gap it wants
@@ -172,4 +172,74 @@ test('a group that says nothing about its own cuts is moved whole', () => {
     );
 
     assert.deepEqual(heights(pages), [[100], [100, 100, 100]]);
+});
+
+/**
+ * A chord sheet's row: a line of a paragraph, which knows whether it opens one.
+ */
+const line = (height, startsParagraph = false, extra = {}) => row(height, { splitBefore: true, startsParagraph, ...extra });
+
+test('a screen ends between two paragraphs rather than inside one', () => {
+    const pages = packSoftPages([line(100, true), line(100), line(100, true), line(100)], 300);
+
+    assert.deepEqual(heights(pages), [[100, 100], [100, 100]]);
+});
+
+test('a paragraph taller than a screen is cut at its lines and fills the screen', () => {
+    const pages = packSoftPages([line(100, true), line(100, true), line(100), line(100), line(100)], 300);
+
+    assert.deepEqual(heights(pages), [[100, 100, 100], [100, 100]]);
+});
+
+test('a suggestion still beats a paragraph boundary further down', () => {
+    const pages = packSoftPages(
+        [line(100, true), line(100, false, { breakBefore: 'soft' }), line(100, true), line(100)],
+        350,
+    );
+
+    assert.deepEqual(heights(pages), [[100], [100, 100, 100]]);
+});
+
+test('a wrapped line is not cut while a paragraph boundary fits', () => {
+    const pages = packSoftPages(
+        [line(100, true), line(100, true), row(100, { splitBefore: false }), line(100)],
+        300,
+    );
+
+    assert.deepEqual(heights(pages), [[100], [100, 100, 100]]);
+});
+
+test('rows that say nothing of paragraphs are filled as before', () => {
+    const pages = packSoftPages([line(100), line(100), line(100), line(100)], 300);
+
+    assert.deepEqual(heights(pages), [[100, 100, 100], [100]]);
+});
+
+/**
+ * A run that packs onto one screen once it is set to `fits` of its size, and
+ * onto two before that — what a page a little too tall looks like to the search.
+ */
+const packedOnceAt = (fits) => (scale) => ({ pages: scale <= fits ? ['one'] : ['one', 'two'], overflowing: 0 });
+
+test('a run that already fits one screen is never set smaller', () => {
+    assert.deepEqual(shrinkToFit(() => ({ pages: ['one'], overflowing: 0 }), 0.8), { pages: ['one'], scale: 1 });
+});
+
+test('nothing is set smaller where even the floor saves no slide', () => {
+    assert.deepEqual(shrinkToFit(packedOnceAt(0.7), 0.8), { pages: ['one', 'two'], scale: 1 });
+});
+
+test('a run is set as little smaller as saves the slide, on the fixed grid', () => {
+    assert.deepEqual(shrinkToFit(packedOnceAt(0.93), 0.8), { pages: ['one'], scale: 0.925 });
+    assert.equal(SHRINK_STEP, 0.025);
+});
+
+test('without a floor below full size, nothing shrinks', () => {
+    assert.deepEqual(shrinkToFit(packedOnceAt(0.99), 1), { pages: ['one', 'two'], scale: 1 });
+});
+
+test('a screen that only overruns is set smaller until it does not', () => {
+    const packAt = (scale) => ({ pages: ['one'], overflowing: scale <= 0.9 ? 0 : 1 });
+
+    assert.deepEqual(shrinkToFit(packAt, 0.8), { pages: ['one'], scale: 0.9 });
 });

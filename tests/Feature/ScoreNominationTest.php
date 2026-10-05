@@ -113,7 +113,7 @@ it('asks for a music instead of hiding the offer when the score has none', funct
         ->test(ScoreEditor::class, ['score' => $score])
         ->assertSet('canNominate', false)
         ->assertSee(__('Attach this score to a music, and you can offer it to the public library.'))
-        ->assertSee(__('Attach a music'))
+        ->assertSeeHtml('data-nomination-attach-music')
         ->assertDontSee(__('Offer this score'));
 });
 
@@ -136,7 +136,7 @@ it('says why a private music keeps the score out of the library', function () {
         ->test(ScoreEditor::class, ['score' => $score])
         ->assertSet('canNominate', false)
         ->assertSee(__('The music this score belongs to is private, so the score cannot be offered to the public library.'))
-        ->assertDontSee(__('Attach a music'))
+        ->assertDontSeeHtml('data-nomination-attach-music')
         ->assertDontSee(__('Offer this score'));
 });
 

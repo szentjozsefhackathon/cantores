@@ -108,7 +108,7 @@ export async function renderAretinoSlides(pageSource, settings, canvas, ratio) {
     // slides begin.
     const markups = cut.segments.map((segment) => engraveAretinoSlide(segment, settings, ratio, false));
 
-    return systemSlides(markups.map((markup) => aretinoRows(markup)), canvas);
+    return systemSlides(markups.map((markup) => aretinoRows(markup)), canvas, undefined, Number(settings.slideMinScale) || 1);
 }
 
 /**

@@ -18,7 +18,7 @@
 
     // The chip editor stands only where the score actually has parts to
     // choose from — see plans/score-sections.md.
-    $scoreSections = $entry->isText() ? [] : ScoreSections::list($entry->score?->content);
+    $scoreSections = $entry->isText() ? [] : ScoreSections::list($entry->score?->content, $entry->score?->format);
     $sectionsByNumber = collect($scoreSections)->keyBy('n');
 
     // A row set up against an earlier version of the score, told plainly
@@ -201,7 +201,7 @@
                             <button type="button" {{ $position === 0 ? 'disabled' : '' }} wire:click="$parent.moveSection({{ $entry->id }}, {{ $position }}, -1)" aria-label="{{ __('Move up') }}" class="disabled:opacity-30">
                                 <flux:icon name="chevron-left" variant="micro" />
                             </button>
-                            {{ $reference }}@if(($section['label'] ?? null)) &middot; {{ $section['label'] }}@endif
+                            {{ $reference }}@if(($section['label'] ?? null)) &middot; {{ $section['label'] }}@elseif(($section['excerpt'] ?? '') !== '') &middot; {{ $section['excerpt'] }}@endif
                             <button type="button" {{ $position === $sectionCount - 1 ? 'disabled' : '' }} wire:click="$parent.moveSection({{ $entry->id }}, {{ $position }}, 1)" aria-label="{{ __('Move down') }}" class="disabled:opacity-30">
                                 <flux:icon name="chevron-right" variant="micro" />
                             </button>
@@ -218,7 +218,7 @@
                         <flux:menu>
                             @foreach($scoreSections as $section)
                                 <flux:menu.item wire:click="$parent.addSection({{ $entry->id }}, {{ $section['n'] }})">
-                                    {{ $section['n'] }}@if($section['label']) &middot; {{ $section['label'] }}@endif
+                                    {{ $section['n'] }}@if($section['label']) &middot; {{ $section['label'] }}@elseif($section['excerpt'] !== '') &middot; <span class="text-zinc-500">{{ $section['excerpt'] }}</span>@endif
                                 </flux:menu.item>
                             @endforeach
                             <flux:menu.separator />
@@ -253,6 +253,34 @@
                         >(−<span x-text="skippedOf({{ $entry->id }})"></span>)</span>
                     </span>
                 </flux:tooltip>
+
+                {{-- Which layout the slide follows, said only where it matters:
+                     where the score's own layout for this shape differs from the
+                     deck's style, or where the slide has been told to follow the
+                     style anyway. Amber is the score's own; changes made in this
+                     deck are blue, on the panel. --}}
+                @if(in_array(ProjectionEditor::overrideFormat($entry), ProjectionSettingFields::STYLED_FORMATS, true))
+                    <span
+                        data-entry-layout
+                        wire:ignore.self
+                        x-show="followsStyle({{ $entry->id }}) || scoreDiverging({{ $entry->id }}).length > 0"
+                        x-cloak
+                    >
+                        <flux:tooltip :content="__('The score has its own layout for this screen shape. Click to switch between it and the deck style.')">
+                            <button
+                                type="button"
+                                class="inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs"
+                                x-bind:class="followsStyle({{ $entry->id }})
+                                    ? 'border-violet-500 text-violet-700 dark:border-violet-400 dark:text-violet-300'
+                                    : 'border-amber-500 text-amber-700 dark:border-amber-400 dark:text-amber-300'"
+                                x-on:click="followStyle({{ $entry->id }}, !followsStyle({{ $entry->id }}))"
+                            >
+                                <span x-show="!followsStyle({{ $entry->id }})">{{ __('Score\'s own layout') }}</span>
+                                <span x-show="followsStyle({{ $entry->id }})" x-cloak>{{ __('Deck style') }}</span>
+                            </button>
+                        </flux:tooltip>
+                    </span>
+                @endif
 
                 @if($entry->isText())
                     <flux:tooltip :content="__('Edit this text')">
@@ -354,7 +382,7 @@
                         @elseif($panelFormat === 'file')
                             {{ __('Changes here apply to this projection at this screen shape only. An uploaded page is fitted to the screen; make it smaller where that is too big.') }}
                         @else
-                            {{ __('Changes here apply to this projection at this screen shape only — the score itself is untouched. Make the lyrics smaller where a slide is too full, or put a %pagebreak in the score to split it instead.') }}
+                            {{ __('Changes here apply to this projection at this screen shape only — the score itself is untouched. Blue is changed in this deck; amber is the score\'s own layout where it differs from the deck style.') }}
                         @endif
                     </flux:text>
 
@@ -372,7 +400,7 @@
                                         <span
                                             wire:ignore.self
                                             class="shrink-0 text-xs font-bold text-zinc-500 dark:text-zinc-400"
-                                            x-bind:class="isOverridden({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
+                                            x-bind:class="isOverridden({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : (fromScore({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-amber-600 dark:!text-amber-400' : '')"
                                         >{{ $field['glyph'] }}</span>
                                     @else
                                         <flux:icon
@@ -380,7 +408,7 @@
                                             variant="micro"
                                             wire:ignore.self
                                             class="shrink-0 text-zinc-500 dark:text-zinc-400"
-                                            x-bind:class="isOverridden({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : ''"
+                                            x-bind:class="isOverridden({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-blue-600 dark:!text-blue-400' : (fromScore({{ $entry->id }}, '{{ $field['key'] }}') ? '!text-amber-600 dark:!text-amber-400' : '')"
                                         />
                                     @endif
                                 </flux:tooltip>
@@ -427,16 +455,31 @@
                             </div>
                         @endforeach
 
-                        <flux:tooltip :content="__('Back to the scores own layout')">
+                        <flux:tooltip :content="__('Undo the changes made in this deck')">
                             <flux:button
                                 size="sm"
                                 variant="ghost"
                                 icon="arrow-path"
                                 class="shrink-0"
-                                :aria-label="__('Back to the scores own layout')"
+                                :aria-label="__('Undo the changes made in this deck')"
                                 x-on:click="resetOverride({{ $entry->id }})"
                             />
                         </flux:tooltip>
+
+                        {{-- The quick way to a style: get one hymn right on the
+                             screen, then make it the rule for the format. --}}
+                        @if(in_array($panelFormat, ProjectionSettingFields::STYLED_FORMATS, true))
+                            <flux:tooltip :content="__('Make this the deck style for every :format score', ['format' => ScoreFormat::from($panelFormat)->label()])" x-show="!!geometry.style" x-cloak>
+                                <flux:button
+                                    size="sm"
+                                    variant="ghost"
+                                    icon="palette"
+                                    class="shrink-0"
+                                    :aria-label="__('Save to the deck style')"
+                                    x-on:click="saveToStyle({{ $entry->id }})"
+                                />
+                            </flux:tooltip>
+                        @endif
                     </div>
                 </div>
             @endif

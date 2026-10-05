@@ -18,7 +18,7 @@
 
     // The chip editor stands only where the score actually has parts to
     // choose from — see plans/score-sections.md.
-    $scoreSections = $entry->isText() ? [] : ScoreSections::list($entry->score?->content);
+    $scoreSections = $entry->isText() ? [] : ScoreSections::list($entry->score?->content, $entry->score?->format);
     $sectionsByNumber = collect($scoreSections)->keyBy('n');
 
     // A row set up against an earlier version of the score, told plainly
@@ -201,7 +201,7 @@
                             <button type="button" {{ $position === 0 ? 'disabled' : '' }} wire:click="$parent.moveSection({{ $entry->id }}, {{ $position }}, -1)" aria-label="{{ __('Move up') }}" class="disabled:opacity-30">
                                 <flux:icon name="chevron-left" variant="micro" />
                             </button>
-                            {{ $reference }}@if(($section['label'] ?? null)) &middot; {{ $section['label'] }}@endif
+                            {{ $reference }}@if(($section['label'] ?? null)) &middot; {{ $section['label'] }}@elseif(($section['excerpt'] ?? '') !== '') &middot; {{ $section['excerpt'] }}@endif
                             <button type="button" {{ $position === $sectionCount - 1 ? 'disabled' : '' }} wire:click="$parent.moveSection({{ $entry->id }}, {{ $position }}, 1)" aria-label="{{ __('Move down') }}" class="disabled:opacity-30">
                                 <flux:icon name="chevron-right" variant="micro" />
                             </button>
@@ -218,7 +218,7 @@
                         <flux:menu>
                             @foreach($scoreSections as $section)
                                 <flux:menu.item wire:click="$parent.addSection({{ $entry->id }}, {{ $section['n'] }})">
-                                    {{ $section['n'] }}@if($section['label']) &middot; {{ $section['label'] }}@endif
+                                    {{ $section['n'] }}@if($section['label']) &middot; {{ $section['label'] }}@elseif($section['excerpt'] !== '') &middot; <span class="text-zinc-500">{{ $section['excerpt'] }}</span>@endif
                                 </flux:menu.item>
                             @endforeach
                             <flux:menu.separator />

@@ -35,16 +35,18 @@ use Illuminate\Support\Facades\DB;
  * correction made on Thursday is on the screen on Sunday — the same live
  * reference a booklet keeps.
  *
- * It unifies almost nothing, which is the difference that matters. A booklet has
- * to impose one size on scores engraved for different nominal pages, because it
- * puts them on one real sheet. A projection does not: the author of each score
- * has already chosen how it should look at 16:9, 4:3 and 1:1, in the score
- * editor, against the very canvas this engraves onto. So the deck chooses the
- * shape, and the scores are shown as their authors set them.
+ * What it unifies is the screen, not the scores. A deck may be shown in a style
+ * (ProjectionStyle) — how everything is set for one screen in one church — and
+ * the style answers for every score that has not been laid out for this ratio
+ * in the score editor: the borrowed one, the one never projected before. A
+ * score that has been is shown as its author set it, against the very canvas
+ * this engraves onto, unless a slide is told to follow the style instead. A
+ * deck in no style is set in the factory defaults.
  *
  * @property int $id
  * @property int $user_id
  * @property int|null $music_plan_id
+ * @property int|null $projection_style_id
  * @property string $title
  * @property ProjectionRatio $ratio
  * @property ProjectionTextTheme $text_theme
@@ -54,6 +56,7 @@ use Illuminate\Support\Facades\DB;
  * @property CarbonImmutable|null $updated_at
  * @property-read User $user
  * @property-read MusicPlan|null $musicPlan
+ * @property-read ProjectionStyle|null $style
  * @property-read Collection<int, ProjectionSlide> $entries
  * @property-read int|null $entries_count
  * @property-read Collection<int, ProjectionMusic> $addedMusics
@@ -96,6 +99,7 @@ class Projection extends Model implements PlanDocument
         'music_plan_id',
         'title',
         'ratio',
+        'projection_style_id',
         'text_theme',
         'text_size_scale',
         'text_line_height',
@@ -122,6 +126,16 @@ class Projection extends Model implements PlanDocument
     public function musicPlan(): BelongsTo
     {
         return $this->belongsTo(MusicPlan::class);
+    }
+
+    /**
+     * The screen this deck is set for, if anyone has said.
+     *
+     * @return BelongsTo<ProjectionStyle, $this>
+     */
+    public function style(): BelongsTo
+    {
+        return $this->belongsTo(ProjectionStyle::class, 'projection_style_id');
     }
 
     /**
@@ -278,27 +292,33 @@ class Projection extends Model implements PlanDocument
     /**
      * Everything the browser renderer needs to lay this projection out.
      *
-     * Short, and meant to stay short. Anything that would belong here is either
-     * the score's own answer for this ratio or the one thing a slide may
-     * override, and neither is the deck's to state.
+     * The shape, how screens of words are set, and the style, if the deck is in
+     * one. Every device showing the deck reads this same answer, which is what
+     * keeps the wall and the phone cutting it into the same slides.
+     *
+     * A style owns the words' theme and sizes as it owns everything else about
+     * the screen; the deck's own columns are what a deck in no style is set in,
+     * and are kept for the day the style is taken off it.
      *
      * @return array<string, mixed>
      */
     public function geometry(): array
     {
+        $style = $this->style;
+        $theme = $style instanceof ProjectionStyle ? $style->text_theme : $this->text_theme;
+
         return [
             'ratio' => $this->ratio->value,
             'aspectRatio' => $this->ratio->css(),
-            // The one thing the deck does say about how something looks, and it
-            // says it about words alone: see App\Enums\ProjectionTextTheme.
-            'textTheme' => $this->text_theme->value,
-            'textPalette' => $this->text_theme->palette(),
+            // How a screen of words looks: see App\Enums\ProjectionTextTheme.
+            'textTheme' => $theme->value,
+            'textPalette' => $theme->palette(),
             // And how large those words are set, as a factor of the size the
             // slide computes from its own height, with the leading they are
-            // stacked at. The one other thing the deck says about a look, and
-            // it says it about words alone for the same reason the theme does.
-            'textSizeScale' => $this->text_size_scale,
-            'textLineHeight' => $this->text_line_height,
+            // stacked at.
+            'textSizeScale' => $style instanceof ProjectionStyle ? $style->text_size_scale : $this->text_size_scale,
+            'textLineHeight' => $style instanceof ProjectionStyle ? $style->text_line_height : $this->text_line_height,
+            'style' => $style?->geometry(),
         ];
     }
 
@@ -343,6 +363,7 @@ class Projection extends Model implements PlanDocument
                 'music_plan_id' => $this->music_plan_id,
                 'title' => __(':title (copy)', ['title' => $this->title]),
                 'ratio' => $this->ratio,
+                'projection_style_id' => $this->projection_style_id,
                 'text_theme' => $this->text_theme,
                 'text_size_scale' => $this->text_size_scale,
                 'text_line_height' => $this->text_line_height,

@@ -5,7 +5,7 @@ import { markupRuns, runsText } from './chordpro-markup.js';
 import { chordStringsOf, displayChord, displayChordsInHtml, displayChordsInText } from './chordpro-notation.js';
 import { printedSource, splitSoftSegments } from './score-editor-pages.js';
 import { stripSectionMarkers } from './score-sections.js';
-import { packSoftPages, startsAtAutomaticCut } from './soft-pages.js';
+import { packSoftPages, shrinkToFit, startsAtAutomaticCut } from './soft-pages.js';
 import { ensureFontsLoaded } from './svg-fonts.js';
 import { stackSvgs } from './svg-stack.js';
 import { SLIDE_FIT_TOLERANCE, emptySlide, frameSlide, paintSlide } from './slide-frame.js';
@@ -444,51 +444,76 @@ export const CHORDPRO_RATIO_DEFAULTS = Object.fromEntries(
  * before that default is honoured as one column on a screen rather than setting
  * a congregation two things to find.
  *
+ * A deck in a style may set the whole page a little smaller rather than cut it:
+ * the rows are laid out again at a smaller size — wrapping again, since the
+ * lines grow shorter too — down to `minScale`, and the largest size that saves a
+ * slide is kept (see shrinkToFit). The page is set at one size throughout, so a
+ * verse never changes size from one screen to the next.
+ *
  * Pure but for the parser: widths come from an injected `measure` where one is
- * given, so the packing can be tested without a browser.
+ * given, so the packing can be tested without a browser. An injected measure
+ * answers at `fontSize`, and is scaled with the type.
  *
  * @param {string} pageSource one entry from splitPages
- * @param {{german: boolean, transpose: number|string, hideChords?: boolean, fontFamily: string, fontSize: number, canvas: {width: number, height: number}, measure?: Function, palette?: import('./slide-palette.js').SlidePalette}} options
+ * @param {{german: boolean, transpose: number|string, hideChords?: boolean, fontFamily: string, fontSize: number, canvas: {width: number, height: number}, measure?: Function, palette?: import('./slide-palette.js').SlidePalette, minScale?: number}} options
  * @returns {Promise<Array<import('./soft-pages.js').SoftPage>>}
  */
-export async function chordproSlidePages(pageSource, { german, transpose, hideChords = false, fontFamily, fontSize, canvas, measure, palette = slidePalette() }) {
+export async function chordproSlidePages(pageSource, { german, transpose, hideChords = false, fontFamily, fontSize, canvas, measure, palette = slidePalette(), minScale = 1 }) {
     const family = safeFontFamily(fontFamily);
-    const layout = {
-        fontSize,
-        fontFamily: family,
-        palette,
-        layoutWidth: canvas.width,
-        // A verse is kept whole when it fits the screen it has to fit, and left
-        // free to break when it does not.
-        contentHeight: canvas.height,
-        measure: measure ?? canvasMeasurer(family, fontSize),
-        spell: (chord) => displayChord(chord, german),
-    };
-
-    const rows = [];
+    const paragraphs = [];
 
     for (const segment of splitSoftSegments(pageSource)) {
         const song = await parseChordproSong(segment, { german, transpose, hideChords, sanitize: false });
-        const segmentRows = chordproRows(song.bodyParagraphs ?? song.paragraphs ?? [], layout);
 
-        if (segmentRows.length === 0) {
-            continue;
-        }
-
-        if (rows.length > 0) {
-            // Laid out alone, a piece begins flush against nothing; put back the
-            // air a verse boundary would have had, for the case where the cut is
-            // not taken and the two end up on one screen after all.
-            rows.push({ ...segmentRows[0], breakBefore: 'soft', spaceBefore: fontSize * PARAGRAPH_GAP });
-            rows.push(...segmentRows.slice(1));
-
-            continue;
-        }
-
-        rows.push(...segmentRows);
+        paragraphs.push(song.bodyParagraphs ?? song.paragraphs ?? []);
     }
 
-    return packSoftPages(rows, canvas.height);
+    const rowsAt = (scale) => {
+        const size = fontSize * scale;
+        const layout = {
+            fontSize: size,
+            fontFamily: family,
+            palette,
+            layoutWidth: canvas.width,
+            // A verse is kept whole when it fits the screen it has to fit, and
+            // left free to break when it does not.
+            contentHeight: canvas.height,
+            measure: measure
+                ? (text, opts) => measure(text, opts) * scale
+                : canvasMeasurer(family, size),
+            spell: (chord) => displayChord(chord, german),
+        };
+
+        const rows = [];
+
+        for (const segmentParagraphs of paragraphs) {
+            const segmentRows = chordproRows(segmentParagraphs, layout);
+
+            if (segmentRows.length === 0) {
+                continue;
+            }
+
+            if (rows.length > 0) {
+                // Laid out alone, a piece begins flush against nothing; put back
+                // the air a verse boundary would have had, for the case where the
+                // cut is not taken and the two end up on one screen after all.
+                rows.push({ ...segmentRows[0], breakBefore: 'soft', spaceBefore: size * PARAGRAPH_GAP });
+                rows.push(...segmentRows.slice(1));
+
+                continue;
+            }
+
+            rows.push(...segmentRows);
+        }
+
+        return rows;
+    };
+
+    return shrinkToFit((scale) => {
+        const pages = packSoftPages(rowsAt(scale), canvas.height);
+
+        return { pages, overflowing: pages.filter((page) => page.height > canvas.height + SLIDE_FIT_TOLERANCE).length };
+    }, minScale).pages;
 }
 
 /**
@@ -528,6 +553,7 @@ export async function renderChordproSlides(pageSource, settings, canvas, palette
         fontSize,
         canvas,
         palette,
+        minScale: Number(settings.slideMinScale) || 1,
     });
 
     if (pages.length === 0) {

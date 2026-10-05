@@ -27,9 +27,14 @@
  *
  * Where (1) may stop depends on what the rows say about themselves. Rows with a
  * line structure (`splitBefore`, which chord sheets and staff systems carry) may
- * be cut between any two lines — a verse is cut sooner than left behind a
- * half-empty screen — but not inside a wrapped line or under a section label
- * unless nothing else will hold the screen. Rows without one (a row of words)
+ * be cut between any two lines, but not inside a wrapped line or under a section
+ * label unless nothing else will hold the screen. Where they also say where a
+ * paragraph starts (`startsParagraph`, which a chord sheet carries: a blank line
+ * in ChordPro is a new section), the screen ends between two paragraphs rather
+ * than inside one — a congregation reads a verse on one screen, and a screen
+ * left part empty costs nothing a cut mid-verse does not cost more. A paragraph
+ * is cut at its lines only when it is taller than a screen on its own, and then
+ * fills the screen it opens on. Rows without a line structure (a row of words)
  * are held together by keepWithNext, so a heading moves with its text. A row, or
  * a group, taller than the screen on its own is handed back over-tall.
 
@@ -85,6 +90,7 @@ function fit(chunk, boxHeight) {
 function screenEnd(chunk, kinds, start, boxHeight) {
     let height = 0;
     let lastSoft = null;
+    let lastVerse = null;
     let lastAuto = null;
     let lastForced = null;
 
@@ -96,11 +102,16 @@ function screenEnd(chunk, kinds, start, boxHeight) {
         if (end === chunk.length) { return end; }
 
         if (kinds[end] === 'soft') { lastSoft = end; }
-        if (kinds[end] === 'soft' || kinds[end] === 'auto') { lastAuto = end; }
+        if (kinds[end] === 'verse') { lastVerse = end; }
+        if (kinds[end] === 'soft' || kinds[end] === 'verse' || kinds[end] === 'auto') { lastAuto = end; }
         if (kinds[end] !== null) { lastForced = end; }
     }
 
-    const cut = lastSoft ?? lastAuto ?? lastForced;
+    // A verse pushed whole onto the next screen is only worth the room it leaves
+    // here if it then fits there; one taller than a screen is cut at its lines
+    // whatever happens, so this screen may as well be filled with its opening.
+    const verse = lastVerse !== null && paragraphFits(chunk, kinds, lastVerse, boxHeight) ? lastVerse : null;
+    const cut = lastSoft ?? verse ?? lastAuto ?? lastForced;
 
     if (cut !== null) { return cut; }
 
@@ -114,11 +125,31 @@ function screenEnd(chunk, kinds, start, boxHeight) {
 }
 
 /**
+ * Whether the paragraph opening at `from` — up to the next paragraph or
+ * suggestion — fits on a screen of its own.
+ */
+function paragraphFits(chunk, kinds, from, boxHeight) {
+    let height = 0;
+
+    for (let i = from; i < chunk.length; i++) {
+        if (i > from && (kinds[i] === 'verse' || kinds[i] === 'soft')) { break; }
+
+        height += chunk[i].height + (i === from ? 0 : (chunk[i].spaceBefore ?? 0));
+
+        if (height > boxHeight) { return false; }
+    }
+
+    return true;
+}
+
+/**
  * What a cut above each row of a chunk would be, or null where none may fall.
  *
  * - `soft` — the author suggested it, and it may always be taken.
- * - `auto` — a boundary the packer may choose: between two lines, two verses,
- *   two paragraphs or two staff systems.
+ * - `verse` — the boundary between two paragraphs of a chord sheet, preferred
+ *   to any line inside one.
+ * - `auto` — a boundary the packer may choose: between two lines, two
+ *   paragraphs of words or two staff systems.
  * - `forced` — a boundary that is half of something: the continuation of a line
  *   too long for the screen, or the line a section label was written above
  *   (`splitBefore: false`). Taken only when no other cut fits on the screen.
@@ -127,11 +158,12 @@ function screenEnd(chunk, kinds, start, boxHeight) {
  * have no line structure to fall back on, so their keepWithNext is not a
  * preference but the rule: a heading moves with its text, and a group taller
  * than the screen is handed back whole for the caller to set smaller. Rows that
- * do say are held together only by `splitBefore: false`; a verse's keepWithNext
- * gives way, since a verse moved whole leaves the room above it empty.
+ * do say are held together only by `splitBefore: false`; their keepWithNext
+ * gives way to the `verse` tier, which says the same thing as a preference the
+ * packer can still overrule for a verse taller than the screen.
  *
  * @param {SoftRow[]} rows
- * @returns {Array<'soft'|'auto'|'forced'|null>} indexed like the rows; the
+ * @returns {Array<'soft'|'verse'|'auto'|'forced'|null>} indexed like the rows; the
  *          first entry is meaningless, since nothing stands above the first row
  */
 function cutKinds(rows) {
@@ -142,7 +174,9 @@ function cutKinds(rows) {
         if (row.breakBefore === 'soft') { return 'soft'; }
 
         if (detailed) {
-            return row.splitBefore === false ? 'forced' : 'auto';
+            if (row.splitBefore === false) { return 'forced'; }
+
+            return row.startsParagraph === true ? 'verse' : 'auto';
         }
 
         return rows[i - 1].keepWithNext === true ? null : 'auto';
@@ -170,11 +204,74 @@ function cutAt(rows, strength) {
 }
 
 /**
+ * How finely a slide is set smaller to save one: the sizes tried are 97.5%, 95%,
+ * 92.5% and so on, and never anything in between. A fixed grid rather than a
+ * search, so that every device showing the deck tries the same sizes and lands
+ * on the same slides.
+ */
+export const SHRINK_STEP = 0.025;
+
+/**
+ * Set a run smaller, as little as it takes, where that saves a slide.
+ *
+ * A slide just too tall for the screen used to become two, the second holding a
+ * line or two — which is the worst thing a congregation can be shown, and
+ * staves a little smaller from one slide to the next is a price nobody in the
+ * pews notices. So before anything is cut, the run is tried at the floor the
+ * style allows: if that comes to fewer slides (or fewer slides that overrun),
+ * the largest size on the grid that does as well is taken. If the floor saves
+ * nothing, nothing is shrunk at all.
+ *
+ * @template P
+ * @param {(scale: number) => {pages: P[], overflowing: number}} packAt the run
+ *        laid out and packed at a scale
+ * @param {number} minScale the floor, in (0, 1]; 1 never shrinks
+ * @returns {{pages: P[], scale: number}}
+ */
+export function shrinkToFit(packAt, minScale) {
+    const floor = Math.min(1, Math.max(0.5, Number(minScale) || 1));
+    const full = packAt(1);
+
+    if (floor >= 1 || (full.pages.length <= 1 && full.overflowing === 0)) {
+        return { pages: full.pages, scale: 1 };
+    }
+
+    const best = packAt(floor);
+
+    if (!fewer(best, full)) {
+        return { pages: full.pages, scale: 1 };
+    }
+
+    for (let step = 1; ; step++) {
+        const scale = Math.round((1 - step * SHRINK_STEP) * 1000) / 1000;
+
+        if (scale <= floor) { break; }
+
+        const tried = packAt(scale);
+
+        if (!fewer(best, tried)) {
+            return { pages: tried.pages, scale };
+        }
+    }
+
+    return { pages: best.pages, scale: floor };
+}
+
+/** Whether one packing comes to fewer slides than another, or fewer overrunning. */
+function fewer(a, b) {
+    return a.pages.length < b.pages.length
+        || (a.pages.length === b.pages.length && a.overflowing < b.overflowing);
+}
+
+/**
  * Whether a packed page begins where nobody asked for a cut.
  *
  * The first page begins where the source does. Any other begins either at a
  * break the author wrote — `%pagebreak`, or a `%pagebreak?` the packer spent —
- * which its first row carries, or at a cut the packer made on its own.
+ * which its first row carries, or at a cut the packer made on its own. A cut
+ * between two paragraphs of a chord sheet is one the author wrote too: the
+ * blank line between two verses is where a lead sheet says one ends, and a
+ * slide opening on a new verse needs no marker to be put right.
  *
  * @param {SoftPage} page
  * @param {number} index its place in the list
@@ -182,9 +279,9 @@ function cutAt(rows, strength) {
 export function startsAtAutomaticCut(page, index) {
     if (index === 0) { return false; }
 
-    const first = page.rows?.[0]?.breakBefore;
+    const first = page.rows?.[0];
 
-    return first !== 'hard' && first !== 'soft';
+    return first?.breakBefore !== 'hard' && first?.breakBefore !== 'soft' && first?.startsParagraph !== true;
 }
 
 /**

@@ -4,27 +4,31 @@ import { formatDefaults } from './score-editor-settings.js';
 /**
  * How a score gets its render settings inside a projection.
  *
- * Three layers, one fewer than a booklet has, and the missing one is the point:
+ * Four layers, read in this order, each overruling the one before:
  *
  *   1. the format's factory defaults *for this ratio* — the screen defaults, not
  *      the paper ones
- *   2. what the score's author chose for this ratio, in the score editor
- *   3. the slide's own override, which is whatever a person changed by hand
+ *   2. the deck's style — how everything is set for this one screen in this
+ *      one church (App\Models\ProjectionStyle)
+ *   3. what the score's author chose for this ratio, in the score editor
+ *   4. the slide's own override, which is whatever a person changed by hand in
+ *      this deck
  *
- * A booklet has a third layer between 2 and 3 where it imposes its own size,
- * width and face on every score, because it puts scores engraved for different
- * nominal pages onto one real sheet and they would otherwise come out at
- * different sizes. A projection has no such layer and must not grow one. Its
- * scores were each tuned by their author against this very canvas — the score
- * editor's 16:9 preview is engraved at exactly the size this renders at — so
- * imposing a deck-wide size would overrule the only person who has actually
- * looked at the thing on a screen.
+ * The order is the opposite of a booklet's, and the difference is the point. A
+ * booklet puts scores engraved for different nominal pages onto one real sheet,
+ * so it has to impose its sizes over theirs. A score laid out for 16:9 in the
+ * score editor was laid out against this very canvas, by someone deciding which
+ * line goes on which slide and how large; the style answers for every score
+ * nobody has decided that for — the borrowed one, the one never projected — and
+ * never undoes a decision somebody made.
  *
- * What is left for layer 3 is the narrow, real case the booklet's layer 4 also
- * serves: the borrowed score that does not quite fit, adjusted here because the
- * score is not this cantor's to edit, and because next month's deck at another
- * ratio needs different numbers anyway.
+ * Layer 3 can still be set aside, a slide at a time: a slide whose override says
+ * `fromStyle` follows the style instead of the score's layout. That is how the
+ * borrowed score tuned for somebody else's screen is brought into line.
  */
+
+/** The key a slide's override carries when it follows the style. */
+export const FROM_STYLE = 'fromStyle';
 
 /**
  * The score's own settings for one projector ratio.
@@ -34,28 +38,57 @@ import { formatDefaults } from './score-editor-settings.js';
  *
  * There is deliberately no fall-back to the paper bucket. A score that has never
  * been opened at 16:9 has no 16:9 bucket, and the right answer then is the
- * format's screen defaults — large condensed type on a wide canvas — not the
- * author's page layout, which would put 11-point lyrics on a projector. This is
- * the same rule the score editor itself follows when it opens a ratio for the
- * first time.
+ * style, or the format's screen defaults — large condensed type on a wide
+ * canvas — not the author's page layout, which would put 11-point lyrics on a
+ * projector. This is the same rule the score editor itself follows when it opens
+ * a ratio for the first time.
  */
 export function ratioBucket(scoreSettings, format, ratio) {
     return { ...(scoreSettings?.[format]?.[ratio] ?? {}) };
 }
 
+/** What the deck's style says about one format; nothing for a deck in none. */
+export function styleBucket(style, format) {
+    return { ...(style?.settings?.[format] ?? {}) };
+}
+
+/**
+ * What a slide of this format looks like before its score has a say: the
+ * factory defaults with the style over them.
+ */
+export function styledDefaults(format, ratio, style = null) {
+    return { ...formatDefaults(format, ratio).defaults, ...styleBucket(style, format) };
+}
+
+/** How far a slide in this style may be set smaller to save a slide. */
+export function styleMinScale(style) {
+    const scale = Number(style?.minScale);
+
+    return Number.isFinite(scale) && scale > 0 ? Math.min(1, Math.max(0.5, scale)) : 1;
+}
+
 /**
  * The settings one slide is actually engraved with.
+ *
+ * `slideMinScale` rides along for the slide renderers, which may set a slide that
+ * is just too tall a little smaller rather than cut it in two. It is not a knob
+ * and nothing stores it: it is the style's, and 1 — never smaller — for a deck in
+ * no style.
  *
  * @param {string} format gabc | abc | aretino | chordpro
  * @param {object} scoreSettings the score's whole settings column
  * @param {string} ratio 16/9 | 4/3 | 1/1
  * @param {object} [override] the slide's own bucket
+ * @param {object|null} [style] the deck's style, as Projection::geometry() hands it over
  */
-export function resolveSlideSettings(format, scoreSettings, ratio, override) {
+export function resolveSlideSettings(format, scoreSettings, ratio, override, style = null) {
+    const { [FROM_STYLE]: fromStyle, ...changed } = override ?? {};
+
     return {
-        ...formatDefaults(format, ratio).defaults,
-        ...ratioBucket(scoreSettings, format, ratio),
-        ...(override ?? {}),
+        ...styledDefaults(format, ratio, style),
+        ...(fromStyle ? {} : ratioBucket(scoreSettings, format, ratio)),
+        ...changed,
+        slideMinScale: styleMinScale(style),
     };
 }
 
@@ -64,11 +97,31 @@ export function resolveSlideSettings(format, scoreSettings, ratio, override) {
  * never been touched. This is how the panel tells "changed it" from "set it to
  * what it already was".
  */
-export function inheritedSlideSetting(format, scoreSettings, ratio, override, key) {
+export function inheritedSlideSetting(format, scoreSettings, ratio, override, key, style = null) {
     const without = { ...(override ?? {}) };
     delete without[key];
 
-    return resolveSlideSettings(format, scoreSettings, ratio, without)[key];
+    return resolveSlideSettings(format, scoreSettings, ratio, without, style)[key];
+}
+
+/**
+ * The keys where the score's own layout for this ratio says something other than
+ * the style would — the second of the two ways a slide can differ from the rest
+ * of the deck, beside the changes made to it by hand.
+ *
+ * Only the knobs a style speaks to are compared: a score's transposition is not
+ * a disagreement with a screen.
+ *
+ * @param {string[]} keys the knobs a style holds for this format
+ * @param {(a: *, b: *) => boolean} differs how two values are told apart
+ */
+export function divergingKeys(format, scoreSettings, ratio, style, keys, differs) {
+    const bucket = ratioBucket(scoreSettings, format, ratio);
+    const styled = styledDefaults(format, ratio, style);
+
+    return (keys ?? []).filter((key) => (
+        Object.prototype.hasOwnProperty.call(bucket, key) && differs(bucket[key], styled[key])
+    ));
 }
 
 /**

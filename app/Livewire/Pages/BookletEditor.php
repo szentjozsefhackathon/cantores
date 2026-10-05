@@ -1012,7 +1012,7 @@ class BookletEditor extends Component
             return;
         }
 
-        if (! ScoreSections::has($entry->score->content, $sectionNumber)) {
+        if (! ScoreSections::has($entry->score->content, $sectionNumber, $entry->score->format)) {
             return;
         }
 
