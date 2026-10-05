@@ -456,13 +456,13 @@ for (const german of [false, true]) {
  * A chord sheet on a slide flows; it does not clip.
  *
  * The rows below are all the same height by construction — one chord line and
- * one lyric line, 1.25 and 1.35 of the 40 px size — so a screen's capacity can
+ * one lyric line, 1.1 and 1.15 of the 40 px size — so a screen's capacity can
  * be written as a number of rows and the tier order read straight off the
  * result. What is being tested is which cuts get spent, and in what order.
  */
 
 /** One chord-and-lyric row, and the air a verse boundary asks for. */
-const ROW = 40 * (1.25 + 1.35);
+const ROW = 40 * (1.1 + 1.15);
 const GAP = 40 * 0.9;
 
 const slidePages = (sheet, height, width = 1920) => chordproSlidePages(sheet, {
@@ -688,4 +688,19 @@ test('a sheet just too tall for one slide is set smaller rather than cut, down t
     assert.ok(shrunk[0].rows[0].height < ROW, 'set smaller than it was');
 
     assert.deepEqual(rowCounts(await slidePages(sheet, height)), [2, 2], 'without a floor it is cut as before');
+});
+
+test('a slide leaves a capital\'s accent room above the first lyric line', async () => {
+    const pages = await chordproSlidePages('Üdvözlégy\n', {
+        german: true,
+        transpose: 0,
+        fontFamily: "'Merriweather'",
+        fontSize: 100,
+        canvas: { width: 1920, height: 1080 },
+        measure,
+    });
+
+    const baseline = Number(pages[0].rows[0].svg.match(/<text[^>]* y="([\d.]+)"/)[1]);
+
+    assert.ok(baseline >= 95, `baseline ${baseline} leaves under 0.95 em above it`);
 });

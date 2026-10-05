@@ -427,8 +427,12 @@ select:focus[data-flux-control] {
 
 .projection-slide { margin: 0; }
 
+/* content-box, so the aspect ratio is the slide's own: set on the border box it
+   leaves the drawing a ratio short of the slide, and strips of the white ground
+   show beside it. */
 .projection-slide-box {
-    width: 100%;
+    box-sizing: content-box;
+    width: calc(100% - 12px);
     overflow: hidden;
     background: #ffffff;
     border: 6px solid #374151;

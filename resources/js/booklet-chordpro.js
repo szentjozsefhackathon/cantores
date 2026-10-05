@@ -48,12 +48,15 @@ const LABEL_LINE = 1.5;
 /** Where a chord's baseline falls in its band, as a fraction of the band. */
 const CHORD_BASELINE = 0.9;
 
+/** Where a lyric's baseline falls in its line, as a fraction of the line. */
+const LYRIC_BASELINE = 0.78;
+
 /**
  * The line heights a layout is set in, unless it asks for its own.
  *
- * @type {{lyric: number, chord: number, chordBaseline: number}}
+ * @type {{lyric: number, chord: number, chordBaseline: number, lyricBaseline: number}}
  */
-export const DEFAULT_LINE_SPACING = Object.freeze({ lyric: LYRIC_LINE, chord: CHORD_LINE, chordBaseline: CHORD_BASELINE });
+export const DEFAULT_LINE_SPACING = Object.freeze({ lyric: LYRIC_LINE, chord: CHORD_LINE, chordBaseline: CHORD_BASELINE, lyricBaseline: LYRIC_BASELINE });
 
 /**
  * The air between two verses, as a multiple of the font size.
@@ -113,7 +116,7 @@ export function chordproBookletBlocks(paragraphs, options) {
  * @param {(text: string, opts?: {bold?: boolean}) => number} options.measure
  * @param {(chord: string) => string} [options.spell] respells a rendered chord,
  *        for the notations chordsheetjs has no setting for
- * @param {{lyric?: number, chord?: number, chordBaseline?: number}} [options.lineSpacing]
+ * @param {{lyric?: number, chord?: number, chordBaseline?: number, lyricBaseline?: number}} [options.lineSpacing]
  *        line heights as multiples of the font size, and where in the chord
  *        line a chord stands; DEFAULT_LINE_SPACING where left out
  * @param {number} [options.contentHeight] page height, to decide whether a
@@ -404,7 +407,7 @@ function chordLyricRow(columns, options) {
         }
 
         let lyricX = x;
-        const baseline = chordHeight + lyricHeight * 0.78;
+        const baseline = chordHeight + lyricHeight * spacing.lyricBaseline;
 
         (lyricHeight === 0 ? [] : column.runs).forEach((run) => {
             if (run.text === '') {

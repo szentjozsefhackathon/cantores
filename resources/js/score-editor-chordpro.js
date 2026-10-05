@@ -186,9 +186,10 @@ export function withoutChords(song, ChordSheetJS) {
  *
  * A condensed sans set large needs less leading than a book face does, and
  * tightening the lines alone leaves a chord nearer the line above than the one
- * it belongs to.
+ * it belongs to. The lyric sits lower in its shorter line too, so the accent on
+ * a capital at the top of a slide still has room above it.
  */
-const SLIDE_LINE_SPACING = Object.freeze({ lyric: 1.15, chord: 1.1, chordBaseline: 0.95 });
+const SLIDE_LINE_SPACING = Object.freeze({ lyric: 1.15, chord: 1.1, chordBaseline: 0.95, lyricBaseline: 0.85 });
 
 /** How many lines of a sheet stand in for it as a thumbnail. */
 const INCIPIT_ROWS = 3;
