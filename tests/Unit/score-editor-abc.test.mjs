@@ -348,7 +348,7 @@ test('responsive ABC lays the music out across the whole container, not just a p
     loads.forEach(load => load.resolve([]));
     await render;
     assert.equal(engraved.length, 1);
-    assert.match(engraved[0], /%%pagewidth 1396px\n/);
+    assert.match(engraved[0], /%%pagewidth 1364px\n/);
 });
 
 test('responsive ABC trades container width for note size as the zoom rises', async t => {
@@ -361,7 +361,7 @@ test('responsive ABC trades container width for note size as the zoom rises', as
 
     loads.forEach(load => load.resolve([]));
     await render;
-    assert.match(engraved[0], /%%pagewidth 698px\n/);
+    assert.match(engraved[0], /%%pagewidth 682px\n/);
 });
 
 /*

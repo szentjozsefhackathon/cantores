@@ -461,7 +461,7 @@ test('chord superscripts use normal digits at 70 percent and reserve their measu
         measure: (text, font) => text.length * (font.fontSize ?? 10) / 2,
     });
 
-    assert.match(rows[0].svg, /y="6.5"[^>]*font-size="7"[^>]*>13<\/text>/);
+    assert.match(rows[0].svg, /y="7.75"[^>]*font-size="7"[^>]*>13<\/text>/);
     assert.match(rows[0].svg, /x="17"[^>]*font-size="10"[^>]*>\/G<\/text>/);
     assert.match(rows[0].svg, /x="31"[^>]*>C<\/text>/);
     assert.doesNotMatch(rows[0].svg, /[¹³]/);
