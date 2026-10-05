@@ -265,7 +265,7 @@ export function buildAbcPreamble(settings, pageWidth, scope = '1') {
     const lyricFirstSkip = Number(settings.abcLyricFirstSkip ?? NaN);
     const lyricFirstSkipLine = Number.isFinite(lyricFirstSkip) && lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '';
 
-    return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 10px\n%%rightmargin 10px\n%%pagescale ${pageScale}\n${vocalfontLine}\n${abcChordFontLine(settings, fontName)}%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}${abcHideChordsLine(settings)}`;
+    return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 0px\n%%rightmargin 0px\n%%pagescale ${pageScale}\n${vocalfontLine}\n${abcChordFontLine(settings, fontName)}%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}${abcHideChordsLine(settings)}`;
 }
 
 /**

@@ -155,6 +155,8 @@ export function engraveAretinoSlide(source, settings, ratio, fixedHeight) {
         textFont: settings.aretinoTextFont,
         staffGap: Number(settings.aretinoStaffGap),
         hideRepeatClef: !!settings.aretinoHideRepeatClef,
+        leftMargin: 0,
+        rightMargin: 0,
     });
 }
 
@@ -210,9 +212,11 @@ function aretinoWholeSlide(pageSource, settings, canvas, ratio, contentHeight) {
         return { svg: emptySlide(canvas), overflows: false, autoSplit: false };
     }
 
+    const engravedWidth = viewBoxOf(svg).width;
+
     return {
-        svg: fitSlide(svg),
-        overflows: viewBoxOf(svg).width > canvas.width + SLIDE_FIT_TOLERANCE
+        svg: fitSlide(svg, canvas.margin ?? 0),
+        overflows: engravedWidth > canvas.width + SLIDE_FIT_TOLERANCE
             || contentHeight > canvas.height + SLIDE_FIT_TOLERANCE,
         autoSplit: false,
     };
@@ -341,6 +345,8 @@ export function aretinoMixin() {
                         textFont: this.aretinoTextFont,
                         staffGap: Number(this.aretinoStaffGap),
                         hideRepeatClef: !!this.aretinoHideRepeatClef,
+                        leftMargin: 0,
+                        rightMargin: 0,
                     });
                 } catch (e) {
                     console.error('[score-editor] aretino render error:', e);

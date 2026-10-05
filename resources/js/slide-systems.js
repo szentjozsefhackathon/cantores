@@ -147,7 +147,7 @@ export function systemsSlide(page, canvas) {
     });
 
     return {
-        svg: fitSlide(svg),
+        svg: fitSlide(svg, canvas.margin ?? 0),
         overflows: page.height * scale > canvas.height + SLIDE_FIT_TOLERANCE || width > canvas.width + SLIDE_FIT_TOLERANCE,
         autoSplit: page.autoSplit,
     };

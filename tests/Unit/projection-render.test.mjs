@@ -36,7 +36,7 @@ test('every format engraves every ratio onto a canvas of exactly that ratio', ()
 
             assert.ok(canvas, `${format} has no canvas for ${ratio}`);
             assert.equal(
-                canvas.width / canvas.height,
+                (canvas.width + 2 * canvas.margin) / (canvas.height + 2 * canvas.margin),
                 ASPECT[ratio],
                 `${format} at ${ratio} is ${canvas.width}x${canvas.height}`,
             );
@@ -59,12 +59,12 @@ test('only the three projector ratios are slides', () => {
 // rather than falling through to whichever table happens to be first.
 test('a format without a canvas of its own is given the slide box', () => {
     for (const format of ['chordpro', 'file', 'something-new']) {
-        assert.deepEqual(slideCanvas(format, '16/9'), { width: 1920, height: 1080 });
+        assert.deepEqual(slideCanvas(format, '16/9'), { width: 1834, height: 994, margin: 43 });
     }
 
-    assert.deepEqual(slideCanvas('aretino', '16/9'), { width: 1920, height: 1080 });
-    assert.deepEqual(slideCanvas('gabc', '4/3'), { width: 1440, height: 1080 });
-    assert.deepEqual(slideCanvas('abc', '4/3'), { width: 1440, height: 1080 });
+    assert.deepEqual(slideCanvas('aretino', '16/9'), { width: 1834, height: 994, margin: 43 });
+    assert.deepEqual(slideCanvas('gabc', '4/3'), { width: 1354, height: 994, margin: 43 });
+    assert.deepEqual(slideCanvas('abc', '4/3'), { width: 1354, height: 994, margin: 43 });
 });
 
 /*

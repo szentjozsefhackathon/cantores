@@ -766,6 +766,8 @@ function aretinoBlocks(content, resolved, layoutWidthPx) {
         lyricDistance: Number(resolved.aretinoLyricDistance),
         lyricMinStaffDistance: Number(resolved.aretinoLyricMinStaffDistance),
         hideRepeatClef: !!resolved.aretinoHideRepeatClef,
+        leftMargin: 0,
+        rightMargin: 0,
         sourceMap: false,
     });
 

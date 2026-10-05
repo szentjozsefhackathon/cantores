@@ -201,7 +201,7 @@ for (const [ratio, pt] of [['16/9', 80], ['4/3', 58.5], ['1/1', 52]]) {
             assert.deepEqual(slideCanvas(format, ratio), canvas, format);
         }
 
-        assert.equal(canvas.height, 1080);
+        assert.equal(canvas.height + 2 * canvas.margin, 1080);
     });
 }
 

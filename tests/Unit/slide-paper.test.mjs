@@ -13,6 +13,7 @@ function element(name, attributes = {}) {
         nodeName: name,
         attributes: { ...attributes },
         children: [],
+        style: {},
         getAttribute(key) { return this.attributes[key] ?? null; },
         setAttribute(key, value) { this.attributes[key] = value; },
         insertBefore(child, before) {
@@ -30,7 +31,7 @@ function element(name, attributes = {}) {
 
 globalThis.document = { createElementNS: (ns, name) => element(name) };
 
-const { onPaper } = await import('../../resources/js/slide-frame.js');
+const { frameSlide, onPaper, paintSlide, slideCanvas } = await import('../../resources/js/slide-frame.js');
 
 test('a score is laid on white the size of its own canvas', () => {
     const notes = element('path');
@@ -79,4 +80,31 @@ test('the deck itself is never written on', () => {
     onPaper(slide);
 
     assert.equal(slide.children.length, 0);
+});
+
+/*
+ * Screens crop and bezels hide, so a slide keeps a margin: the engraving gets
+ * the canvas inside it, and the frame puts the margin back around the drawing.
+ */
+test('a framed slide keeps its margin clear on every side, at the shape of the ratio', () => {
+    const canvas = slideCanvas('abc', '16/9');
+    const slide = frameSlide(element('svg', { viewBox: '0 0 1 1' }), canvas);
+
+    assert.equal(slide.getAttribute('viewBox'), '-43 -43 1920 1080');
+});
+
+test('a slide\'s ground covers the margin too', () => {
+    const slide = paintSlide(frameSlide(element('svg'), slideCanvas('abc', '4/3')), slideCanvas('abc', '4/3'), '#000');
+    const ground = slide.children[0];
+
+    assert.deepEqual(
+        ['x', 'y', 'width', 'height'].map((key) => ground.getAttribute(key)),
+        ['-43', '-43', '1440', '1080'],
+    );
+});
+
+test('a ground laid across a margined slide is recognised, so white is not laid over it', () => {
+    const slide = paintSlide(frameSlide(element('svg'), slideCanvas('abc', '1/1')), slideCanvas('abc', '1/1'), '#000');
+
+    assert.equal(onPaper(slide).children.length, 1);
 });

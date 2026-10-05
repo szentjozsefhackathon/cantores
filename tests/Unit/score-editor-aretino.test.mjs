@@ -25,12 +25,12 @@ test('returns an empty string when both inputs are blank', () => {
 
 const CHANT = 'c: f\nn: fg h g f g h\nw: Ky-ri-e e-lei-son\n';
 
-// On the 1920 x 1080 slide every engraved format shares, so a point is the
-// same height whichever engine drew it.
+// On the 1920 x 1080 slide every engraved format shares, less its margin, so a
+// point is the same height whichever engine drew it.
 for (const [ratio, width, textPx, staffPx] of [
-    ['16/9', 1920, 80 * 96 / 72, 26 * 96 / 25.4],
-    ['4/3', 1440, 58.5 * 96 / 72, 19 * 96 / 25.4],
-    ['1/1', 1080, 52 * 96 / 72, 17 * 96 / 25.4],
+    ['16/9', 1834, 80 * 96 / 72, 26 * 96 / 25.4],
+    ['4/3', 1354, 58.5 * 96 / 72, 19 * 96 / 25.4],
+    ['1/1', 994, 52 * 96 / 72, 17 * 96 / 25.4],
 ]) {
     test(`${ratio} Aretino factory rendering uses rounded screen sizes at 96 dpi`, () => {
         const defaults = formatDefaults('aretino', ratio).defaults;
@@ -46,7 +46,7 @@ for (const [ratio, width, textPx, staffPx] of [
         const fontSize = Number(svg.match(/<text[^>]*font-size="([^"]+)"/)[1]);
         const staffY = [...svg.matchAll(/<line[^>]*y1="([^"]+)"/g)].slice(0, 5).map(match => Number(match[1]));
 
-        assert.deepEqual(box, [0, 0, width, 1080]);
+        assert.deepEqual(box, [0, 0, width, 994]);
         assert.ok(svg.includes('font-family="\'Barlow Condensed\'"'));
         assert.ok(Math.abs(fontSize - textPx) < 0.001);
         assert.ok(Math.abs((Math.max(...staffY) - Math.min(...staffY)) - staffPx) < 0.001);
@@ -62,7 +62,7 @@ for (const [ratio, width, textPx, staffPx] of [
             textFont: defaults.aretinoTextFont,
         });
 
-        assert.equal(Number(svg.match(/viewBox="[^ ]+ [^ ]+ [^ ]+ ([^"]+)"/)[1]), 1080);
+        assert.equal(Number(svg.match(/viewBox="[^ ]+ [^ ]+ [^ ]+ ([^"]+)"/)[1]), 994);
     });
 }
 
@@ -82,14 +82,14 @@ test('a chant taller than the slide is measured as taller, though the slide hold
     const held = engraveAretinoSlide(tall, settings, '16/9', true);
     const free = engraveAretinoSlide(tall, settings, '16/9', false);
 
-    assert.equal(Number(held.match(/viewBox="[^ ]+ [^ ]+ [^ ]+ ([^"]+)"/)[1]), 1080, 'the slide is the canvas');
-    assert.ok(aretinoContentHeight(free) > 1080, `the chant is ${aretinoContentHeight(free)} tall`);
+    assert.equal(Number(held.match(/viewBox="[^ ]+ [^ ]+ [^ ]+ ([^"]+)"/)[1]), 994, 'the slide is the canvas');
+    assert.ok(aretinoContentHeight(free) > 994, `the chant is ${aretinoContentHeight(free)} tall`);
 });
 
 test('a chant that fits is measured as fitting', () => {
     const settings = formatDefaults('aretino', '16/9').defaults;
 
-    assert.ok(aretinoContentHeight(engraveAretinoSlide('c: f\n' + ROW, settings, '16/9', false)) < 1080);
+    assert.ok(aretinoContentHeight(engraveAretinoSlide('c: f\n' + ROW, settings, '16/9', false)) < 994);
 });
 
 test('a chant too tall for its slide comes apart into one system per staff row', () => {
@@ -101,7 +101,7 @@ test('a chant too tall for its slide comes apart into one system per staff row',
     rows.forEach((row) => {
         const height = Number(row.match(/viewBox="[^ ]+ [^ ]+ [^ ]+ ([^"]+)"/)[1]);
 
-        assert.ok(height > 0 && height < 1080, `a row ${height} tall fits a slide on its own`);
+        assert.ok(height > 0 && height < 994, `a row ${height} tall fits a slide on its own`);
     });
 });
 
@@ -125,4 +125,12 @@ test('a page cut between rows is engraved from settings that cannot be spread', 
 
     assert.ok(!/NaN/.test(markup), 'no coordinate is NaN');
     assert.equal(markup, engraveAretinoSlide('c: f\n' + ROW.repeat(8), settings, '16/9', false));
+});
+
+test('an Aretino slide leaves no side margin of the engine\'s own', () => {
+    const settings = formatDefaults('aretino', '16/9').defaults;
+    const svg = engraveAretinoSlide('c: f\n' + ROW, settings, '16/9', true);
+    const staffX = [...svg.matchAll(/<line[^>]*x1="([^"]+)"/g)].map((match) => Number(match[1]));
+
+    assert.equal(Math.min(...staffX), 0);
 });

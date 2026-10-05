@@ -242,3 +242,9 @@ test('a title document is told apart from a line of music', () => {
     assert.equal(abcMarkupHasStaff(documents[0]), false, 'the title');
     documents.slice(1).forEach((document, i) => assert.equal(abcMarkupHasStaff(document), true, `line ${i + 1}`));
 });
+
+test('the preamble leaves no side margin of ABC\'s own, as the booklet does not', () => {
+    const preamble = buildAbcPreamble(abcMixin(), 642.52);
+
+    assert.match(preamble, /%%leftmargin 0px\n%%rightmargin 0px\n/);
+});

@@ -403,6 +403,8 @@ function headingOf(entry) {
  * gains a heading loses a little size instead of losing its last staff.
  */
 function withHeading(music, canvas, heading) {
+    const margin = canvas.margin ?? 0;
+    const slide = { width: canvas.width + 2 * margin, height: canvas.height + 2 * margin };
     const headingHeight = canvas.height * HEADING_HEIGHT;
     const fontSize = headingHeight * 0.62;
 
@@ -416,20 +418,20 @@ function withHeading(music, canvas, heading) {
         fill: '#333333',
     });
 
-    const box = { width: canvas.width, height: canvas.height - headingHeight };
+    const box = { width: slide.width, height: slide.height - headingHeight - margin };
     const musicFragment = parseSvg(new XMLSerializer().serializeToString(music));
-    const musicBox = intrinsicBox(musicFragment, canvas);
+    const musicBox = intrinsicBox(musicFragment, slide);
     const scale = fitIntoBox(musicBox, box);
 
     const { svg } = stackSvgs([parseSvg(row.svg), musicFragment], {
         placements: [
-            { x: canvas.width * TEXT_MARGIN, y: headingHeight * 0.2, scale: 1 },
-            { x: (canvas.width - musicBox.width * scale) / 2, y: headingHeight, scale },
+            { x: margin + canvas.width * TEXT_MARGIN, y: margin + headingHeight * 0.2, scale: 1 },
+            { x: (slide.width - musicBox.width * scale) / 2, y: margin + headingHeight, scale },
         ],
-        viewBox: { x: 0, y: 0, w: canvas.width, h: canvas.height },
+        viewBox: { x: 0, y: 0, w: slide.width, h: slide.height },
     });
 
-    return frameSlide(svg, canvas);
+    return frameSlide(svg, slide);
 }
 
 /**

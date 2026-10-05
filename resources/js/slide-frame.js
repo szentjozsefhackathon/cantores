@@ -26,6 +26,14 @@ const SLIDE_CANVAS = {
 };
 
 /**
+ * The border kept clear on every side of a slide, in canvas units: 4% of its
+ * height. Screens crop, bezels hide and a badly aligned projector throws its
+ * edge onto the wall, and a margin also absorbs the last fraction of a unit in
+ * which two rendering engines would otherwise cut a deck at different places.
+ */
+export const SLIDE_MARGIN = 43;
+
+/**
  * The rounding slack allowed before an engraving counts as not having fitted.
  * Every engine reports its extent in fractional units; two of them is noise.
  */
@@ -42,7 +50,9 @@ export function slideRatios() {
 
 /**
  * The canvas one format engraves one ratio onto, or null where the ratio is not
- * a slide.
+ * a slide: the room inside the margin, which is all an engraving may use. The
+ * margin is carried with it as `margin`, for frameSlide and paintSlide to put
+ * back around whatever was drawn.
  *
  * @param {string} format gabc | abc | aretino | chordpro | file
  * @param {string} ratio
@@ -55,7 +65,9 @@ export function slideCanvas(format, ratio) {
     // ChordPro and an uploaded page are not engraved to a projector by any
     // editor, so they have no canvas of their own and are fitted into the
     // slide's own box.
-    return { ...SLIDE_CANVAS[ratio] };
+    const { width, height } = SLIDE_CANVAS[ratio];
+
+    return { width: width - 2 * SLIDE_MARGIN, height: height - 2 * SLIDE_MARGIN, margin: SLIDE_MARGIN };
 }
 
 /**
@@ -86,7 +98,9 @@ export function fitIntoBox(content, box) {
  * two consecutive slides of one hymn must not have their first staff in
  * different places.
  */
-export function fitSlide(svg) {
+export function fitSlide(svg, margin = 0) {
+    if (margin > 0) { addMargin(svg, margin); }
+
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', '100%');
     svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
@@ -108,7 +122,14 @@ export function fitSlide(svg) {
 export function frameSlide(svg, canvas) {
     svg.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
 
-    return fitSlide(svg);
+    return fitSlide(svg, canvas.margin ?? 0);
+}
+
+/** The viewBox grown by the margin on every side, so the drawing keeps clear of the edges. */
+function addMargin(svg, margin) {
+    const { x, y, width, height } = viewBoxOf(svg);
+
+    svg.setAttribute('viewBox', `${x - margin} ${y - margin} ${width + 2 * margin} ${height + 2 * margin}`);
 }
 
 /**
@@ -120,14 +141,20 @@ export function frameSlide(svg, canvas) {
  * there, so nothing has to be drawn in a particular order to survive it.
  */
 export function paintSlide(svg, canvas, background) {
+    const margin = canvas.margin ?? 0;
+
+    return paintBox(svg, { x: -margin, y: -margin, width: canvas.width + 2 * margin, height: canvas.height + 2 * margin }, background);
+}
+
+function paintBox(svg, box, background) {
     if (!background) { return svg; }
 
     const rect = document.createElementNS(SVG_NS, 'rect');
 
-    rect.setAttribute('x', '0');
-    rect.setAttribute('y', '0');
-    rect.setAttribute('width', String(canvas.width));
-    rect.setAttribute('height', String(canvas.height));
+    rect.setAttribute('x', String(box.x));
+    rect.setAttribute('y', String(box.y));
+    rect.setAttribute('width', String(box.width));
+    rect.setAttribute('height', String(box.height));
     rect.setAttribute('fill', background);
 
     svg.insertBefore(rect, svg.firstChild);
@@ -153,24 +180,24 @@ export function paintSlide(svg, canvas, background) {
  */
 export function onPaper(svg) {
     const slide = svg.cloneNode(true);
-    const { width, height } = viewBoxOf(slide);
+    const box = viewBoxOf(slide);
 
-    if (!(width > 0) || !(height > 0) || hasGround(slide, width, height)) { return slide; }
+    if (!(box.width > 0) || !(box.height > 0) || hasGround(slide, box)) { return slide; }
 
-    paintSlide(slide, { width, height }, 'white');
+    paintBox(slide, box, 'white');
     slide.firstChild.setAttribute('shape-rendering', 'crispEdges');
 
     return slide;
 }
 
 /** Whether a slide's first mark is a ground laid across the whole of it by paintSlide. */
-function hasGround(svg, width, height) {
+function hasGround(svg, { x, y, width, height }) {
     const first = svg.firstChild;
 
     return first?.nodeName?.toLowerCase() === 'rect'
         && first.getAttribute('fill') !== null
-        && Number(first.getAttribute('x')) === 0
-        && Number(first.getAttribute('y')) === 0
+        && Number(first.getAttribute('x')) === x
+        && Number(first.getAttribute('y')) === y
         && Number(first.getAttribute('width')) === width
         && Number(first.getAttribute('height')) === height;
 }
@@ -190,13 +217,13 @@ export function parseSvg(markup) {
     return new DOMParser().parseFromString(markup, 'image/svg+xml').querySelector('svg');
 }
 
-/** A viewBox as a box, or nulls where the element declares none. */
+/** A viewBox as a box, or zeros where the element declares none. */
 export function viewBoxOf(svg) {
-    const box = (svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
+    const box = (svg.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
 
     if (box.length !== 4 || !box.every(Number.isFinite)) {
-        return { width: 0, height: 0 };
+        return { x: 0, y: 0, width: 0, height: 0 };
     }
 
-    return { width: box[2], height: box[3] };
+    return { x: box[0], y: box[1], width: box[2], height: box[3] };
 }
