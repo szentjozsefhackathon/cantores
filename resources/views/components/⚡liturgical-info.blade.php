@@ -805,8 +805,8 @@ new class extends Component
 <div>
     <flux:card class="liturgical-info p-0 overflow-hidden border-0 shadow-xl dark:shadow-neutral-900/30">
         <!-- Header with gradient -->
-        <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-indigo-900 dark:to-fuchsia-950 p-6 text-gray-800 dark:text-white">
-            <div class="flex flex-col gap-4 md:flex-row md:items-start">
+        <div class="@container bg-gradient-to-r from-gray-100 to-gray-200 dark:from-indigo-900 dark:to-fuchsia-950 p-6 text-gray-800 dark:text-white">
+            <div class="flex flex-col gap-4 @2xl:flex-row @2xl:items-start">
                 <div class="flex flex-col gap-2">
                     <div class="flex items-center gap-2">
                         <flux:icon name="book-open-text" class="h-6 w-6 shrink-0" variant="outline" />
@@ -821,7 +821,7 @@ new class extends Component
                     @endif
                 </div>
 
-                <div class="flex flex-col items-center gap-2 md:items-start">
+                <div class="flex flex-col items-center gap-2 @2xl:items-start">
                     <div class="flex items-end gap-2">
                         <flux:button
                             wire:click="today"
@@ -840,7 +840,7 @@ new class extends Component
                                 min="{{ Carbon::now()->subYears(10)->format('Y-m-d') }}" />
                         </flux:field>
                     </div>
-                    <div class="flex flex-col items-center gap-2 md:items-start">
+                    <div class="flex flex-col items-center gap-2 @2xl:items-start">
                         <div class="flex items-center gap-2">
                             <div class="flex flex-wrap gap-2">
                                 <flux:button

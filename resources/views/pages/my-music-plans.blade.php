@@ -1,8 +1,8 @@
 <div class="py-8">
     <div class="mx-auto w-full lg:max-w-6xl sm:px-6 lg:px-8">
-        <flux:card class="p-2 lg:p-4">
+        <flux:card class="@container p-2 lg:p-4">
             <!-- Header -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div class="flex flex-col @2xl:flex-row justify-between items-start @2xl:items-center gap-4 mb-6">
                 <div class="flex items-center gap-4">
                     <flux:icon name="list-music" class="h-10 w-10 text-blue-600 dark:text-blue-400" variant="outline" />
                     <div>
@@ -25,7 +25,7 @@
 
             <!-- Search and filters -->
             <div class="mb-6">
-                <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex flex-col @2xl:flex-row gap-4">
                     <div class="flex-1">
                         <flux:field>
                             <flux:label>Keresés ünnepek között</flux:label>
@@ -61,7 +61,7 @@
                 <div class="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden">
                     <!-- Celebration header -->
                     <div class="bg-neutral-50 dark:bg-neutral-900 px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
-                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div class="flex flex-col @2xl:flex-row @2xl:items-center justify-between gap-3">
                             <div>
                                 <div class="flex items-center gap-3">
                                     <flux:icon name="calendar" class="h-5 w-5 text-blue-600 dark:text-blue-400" variant="outline" />
@@ -98,8 +98,8 @@
                     </div>
 
                     <!-- Music plans for this celebration -->
-                    <div class="p-1 md:p-4">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="p-1 @2xl:p-4">
+                        <div class="grid grid-cols-1 @4xl:grid-cols-2 gap-6">
                             @foreach($celebration->musicPlans as $plan)
                             <livewire:music-plan-card-extended lazy :musicPlan="$plan" :showBookletActions="true" :key="$plan->id" />
                             @endforeach
