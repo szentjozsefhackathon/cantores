@@ -2,8 +2,14 @@
 resources/js/score-editor.js
 @endpush
 
-<div class="py-8" x-data="scoreEditor({
-        scoreSettings: @js($settings ?: (object) []),
+{{-- The score's settings travel in a data attribute rather than in x-data.
+     Autosave rewrites $settings without re-rendering, so the next action that
+     does re-render would write a different x-data, and Alpine answers a changed
+     x-data by building the whole editor again from those settings. --}}
+<div class="py-8"
+    data-score-settings="{{ json_encode($settings ?: (object) []) }}"
+    x-data="scoreEditor({
+        scoreSettings: JSON.parse($el.dataset.scoreSettings),
         clippedWarningText: @js(__('Content does not fit on page')),
         autoSplitText: @js(__('The score did not fit on the previous slide, so it was split here automatically. Put a :marker line in the score where you want it to break.')),
         clipboardNotSupported: @js(__('Clipboard not supported in this browser')),
@@ -798,7 +804,7 @@ resources/js/score-editor.js
                             </flux:tooltip>
 
                             @if(!$isGuest)
-                            <flux:tooltip :content="__('Save as my default')">
+                            <flux:tooltip :content="__('Save as my default for this ratio')">
                                 <flux:button icon="bookmark" variant="ghost" x-on:click="saveAsDefault()" />
                             </flux:tooltip>
                             @endif

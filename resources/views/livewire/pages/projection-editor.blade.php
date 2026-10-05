@@ -81,7 +81,7 @@ resources/js/projection-editor.js
                     <flux:icon name="palette" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
                 <flux:select size="sm" wire:model.live="styleId" :aria-label="__('Slide style')" class="w-52 text-xs">
-                    <flux:select.option value="">{{ __('Default style') }}</flux:select.option>
+                    <flux:select.option value="">{{ __('No style (factory settings)') }}</flux:select.option>
                     @foreach($this->styles as $style)
                         <flux:select.option :value="$style->id">{{ $style->label() }}</flux:select.option>
                     @endforeach
@@ -145,17 +145,17 @@ resources/js/projection-editor.js
                  stacked at. Deck wide, like the theme beside them; a row that
                  wants something else says so on its own panel. --}}
             <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Text size (×)')">
+                <flux:tooltip :content="__('Text slides: size (×)')">
                     <flux:icon name="document-text" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textSizeScale" :aria-label="__('Text size (×)')" min="0.3" max="4" step="0.05" class="w-16!" />
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textSizeScale" :aria-label="__('Text slides: size (×)')" min="0.3" max="4" step="0.05" class="w-16!" />
             </div>
 
             <div class="flex items-center gap-1">
-                <flux:tooltip :content="__('Text line spacing')">
+                <flux:tooltip :content="__('Text slides: line spacing')">
                     <flux:icon name="align-vertical-space-between" variant="micro" class="shrink-0 text-zinc-500 dark:text-zinc-400" />
                 </flux:tooltip>
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textLineHeight" :aria-label="__('Text line spacing')" min="0.8" max="3" step="0.05" class="w-16!" />
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textLineHeight" :aria-label="__('Text slides: line spacing')" min="0.8" max="3" step="0.05" class="w-16!" />
             </div>
             @endif
 
@@ -265,6 +265,7 @@ resources/js/projection-editor.js
                     data-projection-pane="slides"
                     x-on:mouseover="hoverPreview($event.target)"
                     x-on:mouseleave="hoverPreview(null)"
+                    x-on:click="revealSlideRow($event.target)"
                     class="lg:-mx-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:px-4"
                 >
                     {{-- Faded while the deck is being drawn again: a slide can be

@@ -41,6 +41,7 @@
     data-entry-row="{{ $entry->id }}"
     x-on:mouseenter="hoverEntry({{ $entry->id }})"
     x-on:mouseleave="hoverEntry(null)"
+    x-on:click="revealEntry({{ $entry->id }})"
     x-bind:class="{ 'projection-entry-hovered': hoveredEntryId === {{ $entry->id }} }"
     data-entry="{{ $entry->isText() ? 'text' : 'score' }}" class="border-s-2 border-green-500 ps-1.5">
     <div data-entry-card class="flex gap-1 rounded-md border border-zinc-200 py-1.5 ps-1 pe-2 dark:border-zinc-700">
@@ -256,14 +257,13 @@
 
                 {{-- Which layout the slide follows, said only where it matters:
                      where the score's own layout for this shape differs from the
-                     deck's style, or where the slide has been told to follow the
-                     style anyway. Amber is the score's own; changes made in this
-                     deck are blue, on the panel. --}}
+                     deck's style. Amber is the score's own; changes made in this
+                     deck are blue, on the panel. See offersLayoutChoice(). --}}
                 @if(in_array(ProjectionEditor::overrideFormat($entry), ProjectionSettingFields::STYLED_FORMATS, true))
                     <span
                         data-entry-layout
                         wire:ignore.self
-                        x-show="followsStyle({{ $entry->id }}) || scoreDiverging({{ $entry->id }}).length > 0"
+                        x-show="offersLayoutChoice({{ $entry->id }})"
                         x-cloak
                     >
                         <flux:tooltip :content="__('The score has its own layout for this screen shape. Click to switch between it and the deck style.')">

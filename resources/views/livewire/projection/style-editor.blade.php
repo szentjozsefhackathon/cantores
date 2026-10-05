@@ -47,9 +47,9 @@
 
                 <flux:input size="sm" type="number" wire:model.live.debounce.500ms="minPercent" :label="__('Shrink to save a slide (%)')" min="50" max="100" step="1" />
 
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textSizeScale" :label="__('Text size (×)')" min="0.3" max="4" step="0.05" />
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textSizeScale" :label="__('Text slides: size (×)')" min="0.3" max="4" step="0.05" />
 
-                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textLineHeight" :label="__('Text line spacing')" min="0.8" max="3" step="0.05" />
+                <flux:input size="sm" type="number" wire:model.live.debounce.500ms="textLineHeight" :label="__('Text slides: line spacing')" min="0.8" max="3" step="0.05" />
             </div>
 
             <flux:text class="text-xs text-zinc-500">

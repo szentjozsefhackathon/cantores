@@ -473,8 +473,12 @@ class ScoreEditor extends Component
     }
 
     /**
+     * Keep these settings as the starting point of every score created from now
+     * on. Scores that already exist keep their own.
+     *
      * @param  array<string, mixed>  $ratioSettings
      */
+    #[Renderless]
     public function saveAsDefault(array $ratioSettings, string $ratio, string $format): void
     {
         if (! ScoreFormat::tryFrom($format) instanceof ScoreFormat) {
@@ -493,7 +497,7 @@ class ScoreEditor extends Component
         $user->score_settings = $defaults;
         $user->save();
 
-        $this->dispatch('toast', message: __('Saved as your default for this ratio.'), type: 'success');
+        $this->dispatch('toast', message: __('Saved as your default for new scores at this ratio.'), type: 'success');
     }
 
     /**

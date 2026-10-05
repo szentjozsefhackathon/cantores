@@ -10,7 +10,7 @@ import './projection-style-editor.js';
 import './score-preview.js';
 
 /**
- * Panes mid-scroll, keyed by the pane itself, so a second hover landing before
+ * Panes mid-scroll, keyed by the pane itself, so a second click landing before
  * the first has settled cancels it rather than fighting it. The browser's own
  * `behavior: 'smooth'` has no such guard — two calls in a row visibly race —
  * and its duration is too short to read as a glide over the short hops this is
@@ -381,17 +381,19 @@ onAlpineInit(() => {
                 return (this.excluded[entryId] ?? []).filter((index) => index < this.slidesOf(entryId)).length;
             },
 
+            /**
+             * Pointing at a row or at a slide only lights its partner up on the
+             * other side; neither pane moves under the pointer. A pane that
+             * scrolled on hover pulled the list away from whoever was merely
+             * moving the mouse across it. Going there is a click — see
+             * revealEntry() and revealSlideRow().
+             */
             hoverEntry(entryId) {
                 this.hoveredEntryId = entryId;
-                this.highlight(true);
+                this.highlight();
             },
 
-            /**
-             * The other way round: a slide pointed at on the contact sheet
-             * brings its row into view in the plan. The gaps between slides
-             * keep whatever was last pointed at, so crossing one does not jolt
-             * the plan.
-             */
+            /** The gaps between slides keep whatever was last pointed at. */
             hoverPreview(target) {
                 let entryId = null;
 
@@ -405,12 +407,28 @@ onAlpineInit(() => {
 
                 this.hoveredEntryId = entryId;
                 this.highlight();
+            },
+
+            /** A row clicked in the plan brings its slides into view. */
+            revealEntry(entryId) {
+                this.hoveredEntryId = entryId;
+                this.highlight(true);
+            },
+
+            /** A slide clicked on the contact sheet brings its row into view in the plan. */
+            revealSlideRow(target) {
+                const figure = target?.closest?.('[data-projection-entry]');
+                if (!figure) { return; }
+
+                const entryId = Number(figure.dataset.projectionEntry);
+                this.hoveredEntryId = entryId;
+                this.highlight();
                 revealEntryRow(this.$root.querySelector('[data-projection-pane="plan"]'), entryId, scrollPaneTo);
             },
 
             /**
-             * Paint the hovered slide, and — only when the hover just moved
-             * there rather than this being a redraw's own housekeeping call —
+             * Paint the hovered slide, and — only when a click asked for it
+             * rather than this being a hover or a redraw's housekeeping call —
              * bring it into view. The plan panel can be scrolled far from
              * where the contact sheet has settled, and a highlight nobody can
              * see is not one that helps anybody find the slide they are
@@ -549,6 +567,18 @@ onAlpineInit(() => {
                 if (!entry || entry.kind !== 'score' || !keys) { return []; }
 
                 return divergingKeys(entry.format, entry.settings ?? {}, this.geometry.ratio, this.geometry.style ?? null, keys, movesSetting);
+            },
+
+            /**
+             * Whether the row has a choice of layout to offer at all: only a
+             * score whose own layout for this shape differs from the style.
+             * One without draws the same slide either way, so following the
+             * style is a switch that does nothing — and offering it, as the
+             * row once did for every score "follow the style everywhere" had
+             * touched, showed a badge that vanished the moment it was clicked.
+             */
+            offersLayoutChoice(entryId) {
+                return this.scoreDiverging(entryId).length > 0;
             },
 
             /** Whether a knob's value is the score's own, where it differs from the style. */

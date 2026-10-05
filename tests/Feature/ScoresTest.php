@@ -461,3 +461,31 @@ it('stores personal defaults on draft creation and preserves them when reopening
     expect($draft->fresh()->settings)->toBe($original);
     Livewire::test(ScoreEditor::class, ['score' => $draft])->assertSet('settings', $original);
 });
+
+it('keeps the editor x-data unchanged when an autosave moves the settings and a later action re-renders', function () {
+    $user = User::factory()->create();
+    $score = Score::factory()->create([
+        'user_id' => $user->id,
+        'format' => ScoreFormat::ChordPro->value,
+        'content' => '[C]Hello [G]world',
+        'settings' => null,
+    ]);
+    actingAs($user);
+
+    $xData = function (string $html): string {
+        preg_match('/x-data="(scoreEditor\([^"]*)"/', $html, $matches);
+
+        return $matches[1] ?? throw new RuntimeException('Score editor root not found');
+    };
+
+    $editor = Livewire::test(ScoreEditor::class, ['score' => $score]);
+    $before = $xData($editor->html());
+
+    $editor->call('autosave', ['paper' => ['chordproFontSize' => 31]])
+        ->call('saveAsDefault', ['chordproFontSize' => 31], 'paper', ScoreFormat::ChordPro->value)
+        ->call('save', ['paper' => ['chordproFontSize' => 31]]);
+
+    expect($xData($editor->html()))->toBe($before)
+        ->and($editor->html())->toContain('data-score-settings="{&quot;chordpro&quot;:{&quot;paper&quot;:{&quot;chordproFontSize&quot;:31}}}"')
+        ->and($user->fresh()->score_settings)->toBe(['chordpro' => ['paper' => ['chordproFontSize' => 31]]]);
+});
