@@ -343,7 +343,7 @@ select:focus[data-flux-control] {
 }
 
 /* Score preview page scrollbars — always visible on white background regardless of color-scheme */
-.score-preview-page { scrollbar-width: thin; scrollbar-color: rgb(113 113 122 / 0.6) transparent; }
+.score-preview-page { padding: 12px 16px; scrollbar-width: thin; scrollbar-color: rgb(113 113 122 / 0.6) transparent; }
 .score-preview-page::-webkit-scrollbar { width: 8px; height: 8px; }
 .score-preview-page::-webkit-scrollbar-track { background: transparent; }
 .score-preview-page::-webkit-scrollbar-thumb { background-color: rgb(113 113 122 / 0.6); border-radius: 4px; }

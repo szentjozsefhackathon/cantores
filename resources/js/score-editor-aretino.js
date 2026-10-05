@@ -335,7 +335,7 @@ export function aretinoMixin() {
                 try {
                     const renderOpts = isPaper
                         ? { widthMm: Number(this.aretinoStaffWidth) }
-                        : { width: container.clientWidth / zoom - 12 };
+                        : { width: (container.clientWidth - 32) / zoom - 12 };
 
                     pageEl.innerHTML = renderAretino(pageSource, {
                         ...renderOpts,

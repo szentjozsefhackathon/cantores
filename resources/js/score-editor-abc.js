@@ -721,7 +721,7 @@ export function abcMixin() {
             // half of a canvas twice as wide, which came to the same picture on
             // screen but hid what the numbers meant.
             const zoomedPaperWidth = Math.round(canvas.width * zoom);
-            const availableWidth = Math.max(200, Math.round((container.clientWidth || zoomedPaperWidth) - 4));
+            const availableWidth = Math.max(200, Math.round((container.clientWidth || zoomedPaperWidth) - 36));
             const paperPageWidth = normalizeAbcPageWidth(this.abcPageWidth);
             // Responsive lays the music out at whatever width the container
             // offers, wider than the paper page included; the zoom then only
