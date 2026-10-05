@@ -361,6 +361,14 @@ const PHYSICAL_KNOB = {
 };
 
 /**
+ * A size knob in the unit people name it in — points of type or millimetres of
+ * staff — with the way there and back; null for a knob that has none.
+ */
+export function physicalKnob(key) {
+    return PHYSICAL_KNOB[key] ?? null;
+}
+
+/**
  * One press of a booklet editor's size knob: half a millimetre of staff or half
  * a point of type, counted from the size the booklet computed for the score.
  *

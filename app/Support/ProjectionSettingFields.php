@@ -65,10 +65,12 @@ class ProjectionSettingFields
      */
     private const FIELDS = [
         'gabc' => [
-            // exsurge's own units. The screen default is 12, which is about four
-            // times what a booklet page asks for.
-            'lyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 80, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
-            'staffSize' => ['type' => 'number', 'control' => 'step', 'min' => 10, 'max' => 400, 'step' => 5, 'percent' => 10, 'label' => 'Staff size', 'icon' => 'list-chevrons-up-down'],
+            // Stored in exsurge's own units — the screen default is 12, about
+            // four times what a booklet page asks for — and labelled in the
+            // points and millimetres the style editor shows them in, as every
+            // size knob below is.
+            'lyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 80, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
+            'staffSize' => ['type' => 'number', 'control' => 'step', 'min' => 10, 'max' => 400, 'step' => 5, 'percent' => 10, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
             'dropCaps' => ['type' => 'boolean', 'label' => 'Drop caps', 'icon' => 'text-initial'],
             'spaceBetweenSystems' => ['type' => 'number', 'min' => -2, 'max' => 4, 'step' => 0.1, 'label' => 'Space between lines', 'icon' => 'between-horizontal-start'],
             'minSpaceBelowStaff' => ['type' => 'number', 'min' => -2, 'max' => 4, 'step' => 0.1, 'label' => 'Min. space below staff', 'icon' => 'align-vertical-space-around'],
@@ -78,8 +80,8 @@ class ProjectionSettingFields
             // 70 points of lyric at 16:9, so the ceiling has to be well past a
             // page's. The floor stays low enough to rescue a slide that has too
             // many verses on it.
-            'abcLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 120, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size', 'icon' => 'a-large-small'],
-            'abcPageScale' => ['type' => 'number', 'control' => 'step', 'min' => 0.2, 'max' => 12, 'step' => 0.05, 'percent' => 10, 'label' => 'Staff scale', 'icon' => 'list-chevrons-up-down'],
+            'abcLyricSize' => ['type' => 'number', 'control' => 'step', 'min' => 2, 'max' => 120, 'step' => 0.5, 'percent' => 10, 'label' => 'Lyric size (pt)', 'icon' => 'a-large-small'],
+            'abcPageScale' => ['type' => 'number', 'control' => 'step', 'min' => 0.2, 'max' => 12, 'step' => 0.05, 'percent' => 10, 'label' => 'Staff height (mm)', 'icon' => 'list-chevrons-up-down'],
             'abcLyricBold' => ['type' => 'boolean', 'label' => 'Bold lyrics', 'icon' => 'bold'],
             'abcNoteSpacing' => ['type' => 'number', 'min' => 1, 'max' => 3, 'step' => 0.1, 'label' => 'Note spacing', 'icon' => 'space'],
             'abcStaffSep' => ['type' => 'number', 'min' => 0, 'max' => 120, 'step' => 1, 'label' => 'Staff separation', 'icon' => 'between-horizontal-start'],
@@ -114,7 +116,7 @@ class ProjectionSettingFields
             'textLineHeight' => ['type' => 'number', 'min' => 0.8, 'max' => 3, 'step' => 0.05, 'label' => 'Line spacing', 'icon' => 'align-vertical-space-between'],
         ],
         'chordpro' => [
-            'chordproFontSize' => ['type' => 'number', 'control' => 'step', 'min' => 6, 'max' => 200, 'step' => 1, 'percent' => 10, 'label' => 'Font size', 'icon' => 'a-large-small'],
+            'chordproFontSize' => ['type' => 'number', 'control' => 'step', 'min' => 6, 'max' => 200, 'step' => 1, 'percent' => 10, 'label' => 'Font size (pt)', 'icon' => 'a-large-small'],
             // A second column on a projector is a second thing to find, but a
             // long hymn on a square screen can want one.
             'chordproColumns' => ['type' => 'number', 'min' => 1, 'max' => 2, 'step' => 1, 'label' => 'Columns', 'icon' => 'view-columns'],

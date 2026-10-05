@@ -112,11 +112,11 @@
                                                 type="number"
                                                 class="w-20 rounded-md border border-zinc-200 bg-white px-2 py-1 text-right text-xs dark:border-zinc-600 dark:bg-zinc-800"
                                                 aria-label="{{ $field['label'] }}"
-                                                min="{{ $field['min'] }}"
-                                                max="{{ $field['max'] }}"
+                                                x-bind:min="shownLimit({{ $knob }}, 'min')"
+                                                x-bind:max="shownLimit({{ $knob }}, 'max')"
                                                 step="any"
                                                 x-bind:value="shownValue('{{ $format }}', '{{ $field['key'] }}')"
-                                                x-on:change="set('{{ $format }}', '{{ $field['key'] }}', Number($event.target.value))"
+                                                x-on:change="type('{{ $format }}', '{{ $field['key'] }}', $event.target.value)"
                                             />
 
                                             @if(($field['control'] ?? null) === 'step')

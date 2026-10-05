@@ -1,5 +1,5 @@
 import { onAlpineInit } from './alpine-init.js';
-import { movesSetting, steppedValue } from './booklet-settings.js';
+import { movesSetting, physicalKnob, steppedValue } from './booklet-settings.js';
 import { styledDefaults } from './projection-settings.js';
 import { formatDefaults } from './score-editor-settings.js';
 
@@ -40,13 +40,40 @@ onAlpineInit(() => {
             },
 
             /**
-             * The same, as a number field shows it: engine units come out of a
-             * conversion as 31.1111111, and nobody reads past the second place.
+             * The same, as a number field shows it.
+             *
+             * A size is shown in the unit the score editor shows it in — points
+             * of type, millimetres of staff — and never in its engine's own: a
+             * ChordPro size is stored in px, so the 62 pt a score opens at on a
+             * 16:9 screen read 82.88 here, and 85 typed into the score editor
+             * was a different size from 85 typed here. Snapped to the half that
+             * a press moves it by. Anything else is an engine unit nobody reads
+             * past the second place of.
              */
             shownValue(format, key) {
                 const value = Number(this.knobValue(format, key));
+                if (!Number.isFinite(value)) { return ''; }
 
-                return Number.isFinite(value) ? Math.round(value * 100) / 100 : '';
+                const knob = physicalKnob(key);
+
+                return knob ? snap(knob.toPhysical(value), knob.step) : Math.round(value * 100) / 100;
+            },
+
+            /** A knob's limit in the unit shownValue() reads it in. */
+            shownLimit(field, limit) {
+                const knob = physicalKnob(field.key);
+
+                return knob ? snap(knob.toPhysical(Number(field[limit])), knob.step) : field[limit];
+            },
+
+            /** A number typed into a knob, taken in the unit it is shown in. */
+            type(format, key, value) {
+                const typed = Number(value);
+                if (!Number.isFinite(typed)) { return; }
+
+                const knob = physicalKnob(key);
+
+                this.set(format, key, knob ? Math.round(knob.fromPhysical(typed) * 1e4) / 1e4 : typed);
             },
 
             /** Whether the style says something other than the factory default here. */
@@ -65,14 +92,35 @@ onAlpineInit(() => {
                 timers[timer] = setTimeout(() => wire.saveSetting(format, key, value), SAVE_DEBOUNCE_MS);
             },
 
+            /**
+             * One press, counted in the unit the knob is shown in, so a size
+             * moves from 62 pt to 68 rather than from 82.88 px to whatever that
+             * makes in points.
+             */
             nudge(format, field, direction) {
-                this.set(format, field.key, steppedValue(this.knobValue(format, field.key), field, direction));
+                this.set(format, field.key, this.stepped(format, field, direction));
             },
 
             atLimit(format, field, direction) {
                 const current = Number(this.knobValue(format, field.key));
 
-                return Number.isFinite(current) && steppedValue(current, field, direction) === current;
+                return Number.isFinite(current) && this.stepped(format, field, direction) === current;
+            },
+
+            stepped(format, field, direction) {
+                const current = this.knobValue(format, field.key);
+                const knob = physicalKnob(field.key);
+                if (!knob) { return steppedValue(current, field, direction); }
+
+                const shown = knob.toPhysical(Number(current));
+                const physical = steppedValue(shown, {
+                    ...field,
+                    step: knob.step,
+                    min: knob.toPhysical(Number(field.min)),
+                    max: knob.toPhysical(Number(field.max)),
+                }, direction);
+
+                return physical === shown ? Number(current) : Math.round(knob.fromPhysical(physical) * 1e4) / 1e4;
             },
 
             /** Back to the factory default for this one knob. */
@@ -86,6 +134,10 @@ onAlpineInit(() => {
         };
     });
 });
+
+function snap(value, step) {
+    return Math.round(value / step) * step;
+}
 
 function plainSettings(settings) {
     const plain = {};
