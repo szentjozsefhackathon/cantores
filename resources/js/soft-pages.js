@@ -268,7 +268,10 @@ function fewer(a, b) {
  *
  * The first page begins where the source does. Any other begins either at a
  * break the author wrote — `%pagebreak`, or a `%pagebreak?` the packer spent —
- * which its first row carries, or at a cut the packer made on its own.
+ * which its first row carries, or at a cut the packer made on its own. A cut
+ * between two paragraphs of a chord sheet is one the author wrote too: the
+ * blank line between two verses is where a lead sheet says one ends, and a
+ * slide opening on a new verse needs no marker to be put right.
  *
  * @param {SoftPage} page
  * @param {number} index its place in the list
@@ -276,9 +279,9 @@ function fewer(a, b) {
 export function startsAtAutomaticCut(page, index) {
     if (index === 0) { return false; }
 
-    const first = page.rows?.[0]?.breakBefore;
+    const first = page.rows?.[0];
 
-    return first !== 'hard' && first !== 'soft';
+    return first?.breakBefore !== 'hard' && first?.breakBefore !== 'soft' && first?.startsParagraph !== true;
 }
 
 /**

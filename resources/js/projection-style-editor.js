@@ -35,8 +35,18 @@ onAlpineInit(() => {
             },
 
             /** What a knob reads: the style's value, or the factory default. */
-            valueOf(format, key) {
+            knobValue(format, key) {
                 return styledDefaults(format, this.ratio, { settings: this.settings })[key];
+            },
+
+            /**
+             * The same, as a number field shows it: engine units come out of a
+             * conversion as 31.1111111, and nobody reads past the second place.
+             */
+            shownValue(format, key) {
+                const value = Number(this.knobValue(format, key));
+
+                return Number.isFinite(value) ? Math.round(value * 100) / 100 : '';
             },
 
             /** Whether the style says something other than the factory default here. */
@@ -56,11 +66,11 @@ onAlpineInit(() => {
             },
 
             nudge(format, field, direction) {
-                this.set(format, field.key, steppedValue(this.valueOf(format, field.key), field, direction));
+                this.set(format, field.key, steppedValue(this.knobValue(format, field.key), field, direction));
             },
 
             atLimit(format, field, direction) {
-                const current = Number(this.valueOf(format, field.key));
+                const current = Number(this.knobValue(format, field.key));
 
                 return Number.isFinite(current) && steppedValue(current, field, direction) === current;
             },

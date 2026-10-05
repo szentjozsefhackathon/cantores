@@ -96,7 +96,7 @@
                                                 @foreach(ProjectionSettingFields::fontOptions() as $font)
                                                     <option
                                                         value="{{ $quote.$font.$quote }}"
-                                                        x-bind:selected="String(valueOf('{{ $format }}', '{{ $field['key'] }}') ?? '').replace(/['&quot;]/g, '') === @js($font)"
+                                                        x-bind:selected="String(knobValue('{{ $format }}', '{{ $field['key'] }}') ?? '').replace(/['&quot;]/g, '') === @js($font)"
                                                     >{{ $font }}</option>
                                                 @endforeach
                                             </select>
@@ -115,7 +115,7 @@
                                                 min="{{ $field['min'] }}"
                                                 max="{{ $field['max'] }}"
                                                 step="any"
-                                                x-bind:value="valueOf('{{ $format }}', '{{ $field['key'] }}')"
+                                                x-bind:value="shownValue('{{ $format }}', '{{ $field['key'] }}')"
                                                 x-on:change="set('{{ $format }}', '{{ $field['key'] }}', Number($event.target.value))"
                                             />
 
@@ -128,7 +128,7 @@
                                         @elseif($field['type'] === 'boolean')
                                             <flux:switch
                                                 :aria-label="$field['label']"
-                                                x-bind:checked="!!valueOf('{{ $format }}', '{{ $field['key'] }}')"
+                                                x-bind:checked="!!knobValue('{{ $format }}', '{{ $field['key'] }}')"
                                                 x-on:change="set('{{ $format }}', '{{ $field['key'] }}', $event.target.checked)"
                                             />
                                         @endif

@@ -654,17 +654,22 @@ test('a lit room gets the same sheet in ink', async () => {
 /*
  * The editors point at a slide the sheet was cut into on its own, so the author
  * can see where a `%pagebreak169` would have cut it better. A cut the author
- * suggested is theirs, and is not pointed at.
+ * suggested is theirs, and so is one between two verses — the blank line said
+ * so — and neither is pointed at. Only a verse cut in the middle is.
  */
-test('a cut at the author\'s suggestion is theirs, and a cut made anyway is automatic', async () => {
+test('a cut at a suggestion or between verses is the author\'s, and one inside a verse is automatic', async () => {
     const suggested = await slidePages('[C]Egy\n%pagebreak?\n[G]Kettő\n', ROW + 10);
-    const unasked = await slidePages('[C]Egy\n\n[G]Kettő\n', ROW + 10);
+    const verses = await slidePages('[C]Egy\n\n[G]Kettő\n', ROW + 10);
+    const inside = await slidePages('[C]Egy\n[G]Kettő\n', ROW + 10);
 
     assert.deepEqual(rowCounts(suggested), [1, 1]);
     assert.deepEqual(suggested.map(startsAtAutomaticCut), [false, false]);
 
-    assert.deepEqual(rowCounts(unasked), [1, 1]);
-    assert.deepEqual(unasked.map(startsAtAutomaticCut), [false, true]);
+    assert.deepEqual(rowCounts(verses), [1, 1]);
+    assert.deepEqual(verses.map(startsAtAutomaticCut), [false, false]);
+
+    assert.deepEqual(rowCounts(inside), [1, 1]);
+    assert.deepEqual(inside.map(startsAtAutomaticCut), [false, true]);
 });
 
 /*

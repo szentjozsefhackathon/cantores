@@ -59,7 +59,7 @@ szótagjával marad. Ha egyetlen leírt sor magasabb az egész diánál, az ink�
 kettétörik, mint hogy a vége lelógjon; figyelmeztetés csak akkor marad, ha már
 egyetlen tördelt sor sem fér ki — ott kisebb betűméret a megoldás.
 
-Ha a szerkesztő maga vágott (a 3. vagy a 4. lépésben), a dia fölött kék
+Ha a szerkesztő egy versszak közepén vágott (a 4. lépésben), a dia fölött kék
 tájékoztató jelzi, a vetítés szerkesztőjében pedig „Automatikus vágás” felirat a
 dia száma mellett. Egy kézzel beírt `%pagebreak169` (vagy a képarányhoz illő
 társa) oda teszi a törést, ahová szeretnéd.
