@@ -1,5 +1,8 @@
 <?php
 
+use App\Enums\ScoreLicense;
+use App\Models\Score;
+use App\Models\ScorePublication;
 use App\Services\SvgToPdfConverter;
 
 use function Pest\Laravel\postJson;
@@ -229,14 +232,14 @@ it('renders a 170 mm wide score as a 170 mm wide pdf page', function () {
 });
 
 it('stamps a published score’s credit into the exported pdf', function () {
-    $score = \App\Models\Score::factory()->create(['title' => 'Adoro Te']);
-    \App\Models\ScorePublication::factory()->of($score)->approved()->create([
-        'license' => \App\Enums\ScoreLicense::CcBySa,
+    $score = Score::factory()->create(['title' => 'Adoro Te']);
+    ScorePublication::factory()->of($score)->approved()->create([
+        'license' => ScoreLicense::CcBySa,
     ]);
 
     $captured = null;
 
-    $this->mock(\App\Services\SvgToPdfConverter::class, function ($mock) use (&$captured) {
+    $this->mock(SvgToPdfConverter::class, function ($mock) use (&$captured) {
         $mock->shouldReceive('convert')
             ->once()
             ->andReturnUsing(function (array $svgs, ?string $credit) use (&$captured) {
@@ -258,10 +261,10 @@ it('stamps a published score’s credit into the exported pdf', function () {
 });
 
 it('does not stamp a credit on an unpublished score', function () {
-    $score = \App\Models\Score::factory()->create();
+    $score = Score::factory()->create();
     $captured = 'unset';
 
-    $this->mock(\App\Services\SvgToPdfConverter::class, function ($mock) use (&$captured) {
+    $this->mock(SvgToPdfConverter::class, function ($mock) use (&$captured) {
         $mock->shouldReceive('convert')
             ->once()
             ->andReturnUsing(function (array $svgs, ?string $credit) use (&$captured) {
@@ -281,7 +284,7 @@ it('does not stamp a credit on an unpublished score', function () {
 });
 
 it('puts the credit text into the svg it stamps', function () {
-    $converter = app(\App\Services\SvgToPdfConverter::class);
+    $converter = app(SvgToPdfConverter::class);
 
     $stamped = $converter->stampCredit(
         '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><g/></svg>',
@@ -293,4 +296,17 @@ it('puts the credit text into the svg it stamps', function () {
         ->and($stamped)->toEndWith('</svg>');
 
     expect($converter->stampCredit('<svg></svg>', null))->toBe('<svg></svg>');
+});
+
+it('drops the editor hit boxes, which would print as black rectangles', function () {
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40">'
+        .'<rect class="abcsym" data-start="1" data-stop="2" x="5" y="6" width="10" height="20"/>'."\n"
+        .'<path d="M0 0h10"/>'
+        .'<rect class="keep" x="1" y="1" width="2" height="2"/></svg>';
+
+    $cleaned = SvgToPdfConverter::fromConfig()->removeHitBoxes($svg);
+
+    expect($cleaned)->not->toContain('abcsym')
+        ->and($cleaned)->toContain('<path d="M0 0h10"/>')
+        ->and($cleaned)->toContain('class="keep"');
 });

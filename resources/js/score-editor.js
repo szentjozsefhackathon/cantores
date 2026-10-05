@@ -1873,6 +1873,11 @@ onAlpineInit(() => {
         async buildMergedSvg(svgs) {
             const { svg } = stackSvgs(svgs, { intrinsicSize: true });
 
+            // The hit boxes are hidden by the editor's stylesheet, which a
+            // reader of the exported file never gets: left in, rsvg-convert
+            // paints each of them as a black rectangle.
+            removeEditorOnlySvgMarkup(svg);
+
             // The stroke widths live on the score rather than in the fragments,
             // so they are restated over the merged document — on the paths, not
             // as a rule, because a reused staff is a <use> a rule cannot reach.

@@ -4,7 +4,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
-import { editorDiagnostics, hitBoxesAtOffset, insertUnmapped, replaceMapped, softSegmentsMapped, splitPagesMapped, trackSource } from '../../resources/js/abc-source-map.js';
+import { abcHitBoxAnnotator, editorDiagnostics, hitBoxesAtOffset, insertUnmapped, replaceMapped, softSegmentsMapped, splitPagesMapped, trackSource } from '../../resources/js/abc-source-map.js';
 import { removeEditorOnlySvgMarkup } from '../../resources/js/score-editor-export.js';
 import { abcMarkupHasStaff, buildAbcPreamble, abcMixin, hungarianChordsToAbc, prepareAbcPreviewPages, renderAbcToSvgMarkup } from '../../resources/js/score-editor-abc.js';
 
@@ -247,4 +247,14 @@ test('the preamble leaves no side margin of ABC\'s own, as the booklet does not'
     const preamble = buildAbcPreamble(abcMixin(), 642.52);
 
     assert.match(preamble, /%%leftmargin 0px\n%%rightmargin 0px\n/);
+});
+
+test('a hit box is transparent without any stylesheet', () => {
+    const out = [];
+    const abc = { out_svg: (s) => out.push(s), out_sxsy: (x, s, y) => out.push(x, s, y), sh: (h) => h };
+    const mapped = trackSource('K:C\nC');
+
+    abcHitBoxAnnotator(() => abc, mapped)('note', 4, 5, 10, 20, 8, 12);
+
+    assert.match(out.join(''), /<rect class="abcsym"[^>]* fill-opacity="0"\/>/);
 });

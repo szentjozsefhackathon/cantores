@@ -53,7 +53,7 @@ class SvgToPdfConverter
             $inputFiles = [];
             foreach (array_values($svgs) as $index => $svg) {
                 $path = $workDir.DIRECTORY_SEPARATOR.'page-'.$index.'.svg';
-                $prepared = $this->normalizePhysicalSize($this->expandPositionedText($svg));
+                $prepared = $this->normalizePhysicalSize($this->expandPositionedText($this->removeHitBoxes($svg)));
                 $prepared = $this->stampCredit($prepared, $credit);
                 file_put_contents($path, $prepared);
                 $inputFiles[] = $path;
@@ -85,6 +85,22 @@ class SvgToPdfConverter
         } finally {
             $this->removeWorkDir($workDir);
         }
+    }
+
+    /**
+     * Drop the editor's invisible click targets from an SVG.
+     *
+     * The editor lays a `rect.abcsym` over every note and syllable and hides it
+     * with its own stylesheet. The exported file does not carry that sheet, so
+     * rsvg-convert would paint each box in the default black.
+     */
+    public function removeHitBoxes(string $svg): string
+    {
+        if (! str_contains($svg, 'abcsym')) {
+            return $svg;
+        }
+
+        return preg_replace('/<rect\b[^>]*\bclass="abcsym"[^>]*\/>\s*/', '', $svg) ?? $svg;
     }
 
     /**

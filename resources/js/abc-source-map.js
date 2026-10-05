@@ -209,7 +209,10 @@ const UNBOXED_SYMBOLS = new Set(['beam', 'slur', 'tuplet']);
  *
  * The box goes into the image being drawn, through the engraver's own output,
  * so it sits under the same transform as the symbol and follows it through any
- * scale, width or line break. Its `data-start`/`data-stop` are the editor's
+ * scale, width or line break. It is transparent by its own attribute, so a
+ * reader that never loads the editor's stylesheet — an exported file, a
+ * booklet, a canvas — does not draw it black; the stylesheet's hover and
+ * selection rules override the attribute. Its `data-start`/`data-stop` are the editor's
  * offsets, end exclusive.
  *
  * @param {() => object} engraver returns the abc2svg.Abc drawing the image
@@ -227,7 +230,7 @@ export function abcHitBoxAnnotator(engraver, mapped) {
         const abc = engraver();
         abc.out_svg(`<rect class="abcsym" data-start="${start}" data-stop="${last + 1}" x="`);
         abc.out_sxsy(x, '" y="', y);
-        abc.out_svg(`" width="${w.toFixed(2)}" height="${abc.sh(h).toFixed(2)}"/>\n`);
+        abc.out_svg(`" width="${w.toFixed(2)}" height="${abc.sh(h).toFixed(2)}" fill-opacity="0"/>\n`);
     };
 }
 
