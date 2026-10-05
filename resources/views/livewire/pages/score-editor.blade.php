@@ -1579,7 +1579,7 @@ resources/js/score-editor.js
                         <flux:text class="text-sm">{{ $nominationBlocker['message'] }}</flux:text>
                         @if($nominationBlocker['needsMusic'])
                         <div class="mt-2">
-                            <flux:button size="sm" variant="outline" icon="magnifying-glass" x-on:click="$flux.modal('score-music-search').show()">
+                            <flux:button size="sm" variant="outline" icon="magnifying-glass" data-nomination-attach-music x-on:click="$flux.modal('score-music-search').show()">
                                 {{ __('Attach a music') }}
                             </flux:button>
                         </div>
