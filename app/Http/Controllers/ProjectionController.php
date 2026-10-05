@@ -29,10 +29,15 @@ class ProjectionController extends Controller
             abort_unless(Gate::allows('view', $plan), 403);
         }
 
+        // Most cantors make most of their decks for the same church, so a new
+        // deck starts in the style their last styled deck was in.
+        $style = Projection::query()->mine()->whereNotNull('projection_style_id')->latest('updated_at')->first()?->style;
+
         $projection = Projection::create([
             'user_id' => Auth::id(),
             'music_plan_id' => $plan?->getKey(),
             'title' => Projection::titleFor($plan),
+            ...($style === null ? [] : ['projection_style_id' => $style->id, 'ratio' => $style->ratio]),
         ]);
 
         return redirect()->route('projections.edit', ['projection' => $projection->id]);

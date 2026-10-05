@@ -30,11 +30,13 @@ use App\Enums\ProjectionRatio;
  *   slide has no such slack — the canvas *is* the width, and a score laid out
  *   wider would simply be engraved smaller, which is what the size knobs already
  *   do more honestly.
- * - **The face is not here either.** A booklet imposes one face on every score
- *   it gathers, so it has to offer the choice; a projection imposes nothing and
- *   leaves each score the face its author chose against this very canvas. The
- *   screen defaults are already a condensed sans, which is what a beamer wants,
- *   and the knob was only ever a way to spoil that.
+ * - **The face is not here either, but it is in a style.** A slide's own panel
+ *   leaves each score the face its author chose against this very canvas; a
+ *   deck's style (App\Models\ProjectionStyle) is a whole screen's typography,
+ *   and states a face per format beside everything below — see styleFieldsFor().
+ *
+ * A slide's bucket may also carry `fromStyle`: the slide follows the deck's
+ * style rather than the layout the score's author saved for this ratio.
  *
  * Keys and units match `scores.settings` exactly, so an override is written in
  * the same vocabulary the score's own per-ratio settings use — which is what
@@ -129,6 +131,111 @@ class ProjectionSettingFields
     ];
 
     /**
+     * The key a slide's bucket carries when it follows the deck's style rather
+     * than the score's own layout. Kept only while true.
+     */
+    public const FROM_STYLE = 'fromStyle';
+
+    /** The formats a style and `fromStyle` speak to: the four engraved ones. */
+    public const STYLED_FORMATS = ['chordpro', 'abc', 'gabc', 'aretino'];
+
+    /**
+     * Knobs that belong to one piece rather than to a screen — what key it is
+     * sung in, whether its chords are shown, how they are spelled — and so are
+     * never a style's to set.
+     */
+    private const PIECE_KEYS = ['abcTranspose', 'abcHideChords', 'chordproTranspose', 'chordproGermanNotation', 'chordproHideChords'];
+
+    /**
+     * Where each engine keeps the face it sets lyrics in; the same table as
+     * FONT_KEY in resources/js/booklet-settings.js.
+     */
+    private const FONT_KEYS = ['gabc' => 'lyricFont', 'abc' => 'abcLyricFont', 'chordpro' => 'chordproFontFamily', 'aretino' => 'aretinoTextFont'];
+
+    /**
+     * What a style states for one format: a slide's knobs less the ones that
+     * belong to a piece, and the face first.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function styleFieldsFor(?string $format): array
+    {
+        if (! in_array($format, self::STYLED_FORMATS, true)) {
+            return [];
+        }
+
+        // ABC is the one engine that names its face unquoted: abc2svg writes it
+        // into a %%vocalfont directive, where quotes would be part of the name.
+        $fields = [self::FONT_KEYS[$format] => ['type' => 'font', 'quoted' => $format !== 'abc', 'label' => 'Font', 'icon' => 'type']];
+
+        foreach (self::FIELDS[$format] as $key => $field) {
+            if (! in_array($key, self::PIECE_KEYS, true)) {
+                $fields[$key] = $field;
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * The controls a style offers for a format, labels translated.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function stylePanelFor(?string $format): array
+    {
+        $panel = [];
+
+        foreach (self::styleFieldsFor($format) as $key => $field) {
+            $panel[] = array_merge(['key' => $key], $field, ['label' => __($field['label'])]);
+        }
+
+        return $panel;
+    }
+
+    /**
+     * The knobs a style holds, per format — what the browser compares a score's
+     * own layout against.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function styleKeys(): array
+    {
+        $keys = [];
+
+        foreach (self::STYLED_FORMATS as $format) {
+            $keys[$format] = array_keys(self::styleFieldsFor($format));
+        }
+
+        return $keys;
+    }
+
+    /**
+     * A style's whole settings column, each format kept to its own fields.
+     *
+     * @param  array<string, mixed>  $settings
+     * @return array<string, array<string, mixed>>
+     */
+    public static function sanitizeStyle(array $settings): array
+    {
+        $clean = [];
+
+        foreach (self::STYLED_FORMATS as $format) {
+            if (! is_array($settings[$format] ?? null)) {
+                continue;
+            }
+
+            $bucket = self::sanitizeFields(self::styleFieldsFor($format), $settings[$format]);
+
+            if ($bucket !== []) {
+                $clean[$format] = $bucket;
+            }
+        }
+
+        return $clean;
+    }
+
+    /**
      * The faces that survive an export — what a stored value is validated
      * against. Shared with the booklet deliberately: a face the exporter cannot
      * embed is a face that will not reach a PDF from either document.
@@ -152,10 +259,27 @@ class ProjectionSettingFields
      */
     public static function sanitize(?string $format, array $override): array
     {
-        $fields = self::FIELDS[$format] ?? [];
+        $clean = self::sanitizeFields(self::FIELDS[$format] ?? [], $override);
+
+        if (in_array($format, self::STYLED_FORMATS, true) && filter_var($override[self::FROM_STYLE] ?? false, FILTER_VALIDATE_BOOL)) {
+            $clean[self::FROM_STYLE] = true;
+        }
+
+        return $clean;
+    }
+
+    /**
+     * Keep only the keys a table of fields allows, clamped into range.
+     *
+     * @param  array<string, array<string, mixed>>  $fields
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    private static function sanitizeFields(array $fields, array $values): array
+    {
         $clean = [];
 
-        foreach ($override as $key => $value) {
+        foreach ($values as $key => $value) {
             $field = $fields[$key] ?? null;
 
             if ($field === null) {
@@ -182,8 +306,8 @@ class ProjectionSettingFields
                 $family = trim($value, " \t\n\r\0\x0B'\"");
 
                 if (in_array($family, self::fontOptions(), true)) {
-                    // Stored quoted, the way the score editor's selects emit it.
-                    $clean[$key] = "'".$family."'";
+                    // Stored the way the score editor's selects emit it.
+                    $clean[$key] = ($field['quoted'] ?? true) ? "'".$family."'" : $family;
                 }
             }
         }

@@ -73,7 +73,7 @@ export async function renderDeck(entries, geometry) {
     // right now, and bakes the answer into a drawing that is never measured
     // again — so a deck opened cold engraved its first score in the fallback
     // face, and kept it until the page was reloaded. See ensureFontsLoaded().
-    await ensureFontsLoaded(deckFonts(entries ?? [], ratio));
+    await ensureFontsLoaded(deckFonts(entries ?? [], ratio, geometry?.style ?? null));
 
     const slides = [];
     const palette = slidePalette(geometry);
@@ -99,16 +99,17 @@ export async function renderDeck(entries, geometry) {
 }
 
 /**
- * The faces a deck is about to be measured in: each score's own lyric face at
- * this ratio, and the one the headings and the screens of words are set in.
+ * The faces a deck is about to be measured in: each score's lyric face at this
+ * ratio — its author's, or the style's — and the one the headings and the
+ * screens of words are set in.
  */
-function deckFonts(entries, ratio) {
+function deckFonts(entries, ratio, style) {
     const fonts = new Set([HEADING_FONT]);
 
     for (const entry of entries) {
         if (entry?.kind === 'text' || entry?.kind === 'file') { continue; }
 
-        const settings = resolveSlideSettings(entry.format, entry.settings ?? {}, ratio, entry.override);
+        const settings = resolveSlideSettings(entry.format, entry.settings ?? {}, ratio, entry.override, style);
         const font = {
             abc: settings.abcLyricFont,
             gabc: settings.lyricFont,
@@ -221,12 +222,13 @@ async function slidesOf(entry, ratio, palette, geometry) {
     if (entry.kind === 'text') { return textSlides(entry, ratio, palette, geometry); }
     if (entry.kind === 'file') { return await fileSlides(entry, ratio); }
 
-    return await scoreSlides(entry, ratio, palette);
+    return await scoreSlides(entry, ratio, palette, geometry?.style ?? null);
 }
 
 /**
- * A score, cut where its author said to cut it — and wherever it has to be cut
- * besides: a chord sheet between its rows, an engraving between its staff
+ * A score, set as the deck's style and its author say — see
+ * projection-settings.js for which of them wins where — and cut where its author
+ * said to cut it, and wherever it has to be cut besides: a chord sheet between its rows, an engraving between its staff
  * systems. A slide that begins at one of those cuts says so with `autoSplit`,
  * which the editor shows beside it.
  *
@@ -238,8 +240,8 @@ async function slidesOf(entry, ratio, palette, geometry) {
  * is one hymn, and repeating its name on every screen would say three times what
  * the congregation read once.
  */
-async function scoreSlides(entry, ratio, palette) {
-    const settings = resolveSlideSettings(entry.format, entry.settings ?? {}, ratio, entry.override);
+async function scoreSlides(entry, ratio, palette, style) {
+    const settings = resolveSlideSettings(entry.format, entry.settings ?? {}, ratio, entry.override, style);
     const pages = await renderRatioPages(entry.format, entry.content ?? '', settings, ratio, palette, entry.sections ?? null);
     const canvas = slideCanvas(entry.format, ratio);
     const heading = headingOf(entry);
