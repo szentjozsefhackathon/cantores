@@ -37,6 +37,7 @@ test('turns a settings bucket into abc2svg directives', () => {
     assert.match(preamble, /^%%fullsvg 1\n%%pagewidth 1920px\n/);
     assert.match(preamble, /%%pagescale 3\.1\n/);
     assert.match(preamble, /%%vocalfont "Barlow Condensed" bold 30\n/);
+    assert.match(preamble, /%%wordsfont "Barlow Condensed" bold 30\n/);
     assert.match(preamble, /%%staffsep 15\n/);
     assert.match(preamble, /%%gchordfont "Barlow Condensed","Chord Accidentals" bold 30 class=abc-chord\n/);
     assert.match(preamble, /%%transpose -2\n$/);
@@ -69,6 +70,7 @@ test('falls back to a safe font and scale for unusable settings', () => {
     const preamble = buildAbcPreamble({ abcLyricFont: 'Comic Sans; }', abcLyricSize: 0, abcPageScale: 0 }, 1700);
 
     assert.match(preamble, /%%vocalfont Alegreya 36\n/);
+    assert.match(preamble, /%%wordsfont Alegreya 36\n/);
     assert.match(preamble, /%%pagescale 1\n/);
     assert.doesNotMatch(preamble, /%%transpose/);
 });

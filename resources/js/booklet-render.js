@@ -10,7 +10,7 @@ import { withAbcMeasuring } from './measuring-room.js';
 import { fileSettings, layoutWidthFor, resolveSettings, textSettings } from './booklet-settings.js';
 import { textRowSvg } from './booklet-text.js';
 import { enginesReady } from './music-engines.js';
-import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcChordFontLine, abcHideChordsLine, abcMixin, hungarianChordsToAbc } from './score-editor-abc.js';
+import { ABC_LYRIC_FIRST_SKIP_MIN, ABC_LYRIC_SKIP_MIN, abcChordFontLine, abcHideChordsLine, abcLyricFontLines, abcMixin, hungarianChordsToAbc } from './score-editor-abc.js';
 import { aretinoMixin } from './score-editor-aretino.js';
 import { chordproMixin, parseChordproSong } from './score-editor-chordpro.js';
 import { gabcMixin } from './score-editor-gabc.js';
@@ -814,10 +814,7 @@ function abcBlocks(content, resolved, layoutWidthPx) {
     source = hungarianChordsToAbc(source);
 
     const pageScale = Number(resolved.abcPageScale) > 0 ? Number(resolved.abcPageScale) : 1;
-    const lyricSize = Number(resolved.abcLyricSize) > 0 ? Number(resolved.abcLyricSize) : 12;
     const font = safeAbcFont(resolved.abcLyricFont);
-    const vocalfont = ['%%vocalfont', font, resolved.abcLyricBold ? 'bold' : null,
-        Number((lyricSize / pageScale * 3).toFixed(3))].filter(Boolean).join(' ');
     const transpose = Number(resolved.abcTranspose) || 0;
     const lyricSkip = Number(resolved.abcLyricSkip) || 0;
     const lyricFirstSkip = Number(resolved.abcLyricFirstSkip ?? NaN);
@@ -825,7 +822,8 @@ function abcBlocks(content, resolved, layoutWidthPx) {
     const preamble = `%%fullsvg a${++abcSerial}\n`
         + `%%pagewidth ${Math.round(layoutWidthPx)}px\n`
         + '%%leftmargin 0px\n%%rightmargin 0px\n%%hyphencont 0\n'
-        + `%%pagescale ${pageScale}\n${vocalfont}\n`
+        + `%%pagescale ${pageScale}\n`
+        + abcLyricFontLines(resolved, font)
         + abcChordFontLine(resolved, font)
         + `%%notespacingfactor ${resolved.abcNoteSpacing}\n`
         + '%%musicspace 0\n%%topspace 0\n'

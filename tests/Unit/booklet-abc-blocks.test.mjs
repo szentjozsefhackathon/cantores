@@ -90,6 +90,20 @@ test('a score at another staff scale draws its own staff lines', async () => {
     assert.ok(staffWidth(small) > staffWidth(plain) * 1.9, 'a halved scale should double the staff length in the score’s own units');
 });
 
+// abc2svg draws W: verses with %%wordsfont, which defaults to a plain serif:
+// the verses after a hymn came out in another face than the ones under it.
+test('a booklet sets the W: verses in the lyric face and size', async () => {
+    const { blocks } = await buildScoreBlocks(entry({ content: `${HYMN}W: second verse\n`, override: { abcLyricBold: true } }), geometry, null);
+    const svg = blocks.map((block) => block.svg).join('');
+    const fontOf = (pattern) => {
+        const fontClass = svg.match(pattern)[1];
+
+        return svg.match(new RegExp(`\\.${fontClass}\\{font:([^}]*)\\}`))[1];
+    };
+
+    assert.equal(fontOf(/<text class="(f\d+a\d+)"[^>]*>second verse</), fontOf(/<text class="(f\d+a\d+)"[^>]*>la</));
+});
+
 // A booklet builds its own preamble, so it has to ask for the chord face too:
 // the lyrics' family, bold, at the lyric size times the score's chord size.
 test('a booklet sets the chord symbols in the lyric face, bold, sized from the lyrics', async () => {

@@ -255,9 +255,8 @@ function ensureChordAccidentalsLoaded() {
  * learned this first.
  */
 export function buildAbcPreamble(settings, pageWidth, scope = '1') {
-    const { family, size: lyricSize, pageScale } = abcVocalFont(settings);
+    const { family, pageScale } = abcVocalFont(settings);
     const fontName = /[ .\-'&]/.test(family) ? `"${family}"` : family;
-    const vocalfontLine = ['%%vocalfont', fontName, settings.abcLyricBold ? 'bold' : null, lyricSize].filter(Boolean).join(' ');
     const transposeSemitones = Number(settings.abcTranspose) || 0;
     const transposeLine = transposeSemitones !== 0 ? `%%transpose ${transposeSemitones}\n` : '';
     const lyricSkip = Number(settings.abcLyricSkip) || 0;
@@ -265,7 +264,26 @@ export function buildAbcPreamble(settings, pageWidth, scope = '1') {
     const lyricFirstSkip = Number(settings.abcLyricFirstSkip ?? NaN);
     const lyricFirstSkipLine = Number.isFinite(lyricFirstSkip) && lyricFirstSkip >= ABC_LYRIC_FIRST_SKIP_MIN ? `%%lyricfirstskipfac ${lyricFirstSkip}\n` : '';
 
-    return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 0px\n%%rightmargin 0px\n%%hyphencont 0\n%%pagescale ${pageScale}\n${vocalfontLine}\n${abcChordFontLine(settings, fontName)}%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}${abcHideChordsLine(settings)}`;
+    return `%%fullsvg ${scope}\n%%pagewidth ${pageWidth}px\n%%leftmargin 0px\n%%rightmargin 0px\n%%hyphencont 0\n%%pagescale ${pageScale}\n${abcLyricFontLines(settings, fontName)}${abcChordFontLine(settings, fontName)}%%notespacingfactor ${settings.abcNoteSpacing}\n%%musicspace 0\n%%topspace 0\n%%staffsep ${settings.abcStaffSep}\n%%vocalspace 0\n${lyricFirstSkipLine}${lyricSkipLine}${transposeLine}${abcHideChordsLine(settings)}`;
+}
+
+/**
+ * The lyric face, for the words under the notes and the `W:` verses after them.
+ *
+ * abc2svg draws `W:` text with `%%wordsfont`, not `%%vocalfont`, and left to
+ * itself sets it in a plain serif: the verses printed after a hymn came out in
+ * another face and size than the one sung under its staff. Both sit inside the
+ * same `%%pagescale` group, so the one size serves the two.
+ *
+ * @param {object} settings
+ * @param {string} fontName the lyric family, already quoted for a directive
+ */
+export function abcLyricFontLines(settings, fontName) {
+    const pageScale = Number(settings.abcPageScale) > 0 ? Number(settings.abcPageScale) : 1;
+    const lyricSize = Number(settings.abcLyricSize) > 0 ? Number(settings.abcLyricSize) : 12;
+    const face = [fontName, settings.abcLyricBold ? 'bold' : null, Number((lyricSize / pageScale * 3).toFixed(3))].filter(Boolean).join(' ');
+
+    return `%%vocalfont ${face}\n%%wordsfont ${face}\n`;
 }
 
 /**
