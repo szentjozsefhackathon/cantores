@@ -249,3 +249,28 @@ it('opens the offered preview without taking a column of the split', function ()
         ->and($xpath->query('//*[contains(@class, "booklet-split")]//*[@data-offer-preview-modal]')->length)->toBe(0)
         ->and($xpath->query('//*[contains(@class, "booklet-split")]/*')->length)->toBe(3);
 });
+
+it('lets the music name switch take an added music\'s title off the page', function () {
+    $user = User::factory()->create();
+    $booklet = Booklet::factory()->create(['user_id' => $user->id]);
+    $music = Music::factory()->create(['user_id' => $user->id, 'title' => 'Boldog születésnapot']);
+    $added = BookletMusic::factory()->create(['booklet_id' => $booklet->id, 'music_id' => $music->id]);
+    $entry = BookletScore::factory()->create([
+        'booklet_id' => $booklet->id,
+        'score_id' => Score::factory()->abc()->create(['user_id' => $user->id, 'music_id' => $music->id])->id,
+        'added_music_id' => $added->id,
+        'show_slot' => true,
+        'show_music_title' => true,
+    ]);
+
+    actingAs($user);
+
+    $payloads = app(BookletRenderPayload::class);
+    $headingOf = fn () => $payloads->headingsFor($payloads->entriesOf($booklet->fresh()), $user)[$entry->id]['slot'];
+
+    expect($headingOf())->toBe('Boldog születésnapot');
+
+    Livewire::test(BookletEditor::class, ['booklet' => $booklet])->call('toggleMusicName', $entry->id);
+
+    expect($headingOf())->toBeNull();
+});

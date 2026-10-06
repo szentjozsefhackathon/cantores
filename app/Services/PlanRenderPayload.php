@@ -173,8 +173,9 @@ abstract class PlanRenderPayload
 
         if ($slotKey === null) {
             // Between slots: the music is the heading, as a score outside the
-            // plan is, and it answers to the slot's switch.
-            $slotLine = $namesMusic && $entry->show_slot ? $title : null;
+            // plan is, and it answers to the switch beside the music's name, the
+            // only one the plan shows for it.
+            $slotLine = $namesMusic && $entry->show_music_title ? $title : null;
         } else {
             $slotLine = $entry->show_slot && $slotKey !== $lastSlotKey
                 ? $added->slotPlan?->musicPlanSlot?->name

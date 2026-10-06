@@ -333,7 +333,7 @@ it('names an added music between slots by its title, once, and honours the switc
     expect($headings[$first->id])->toMatchArray(['slot' => 'Boldog születésnapot', 'music' => null, 'reference' => null, 'variation' => null])
         ->and($headings[$second->id])->toMatchArray(['slot' => null, 'music' => null, 'variation' => 'Kánon']);
 
-    $first->update(['show_slot' => false]);
+    $first->update(['show_music_title' => false]);
 
     $headings = $payloads->headingsFor($payloads->entriesOf($deck->projection), $deck->user);
 
