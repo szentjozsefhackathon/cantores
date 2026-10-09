@@ -63,8 +63,9 @@ it('lists every plan of the viewer\'s own, built or not, and leaves out other pe
         ->assertDontSee('Idegen vetítés');
 });
 
-it('shows documents started without a plan in their own group', function () {
+it('keeps documents started without a plan on their own tab', function () {
     $user = User::factory()->create();
+    $plan = planWithCelebration($user, 'Húsvétvasárnap');
 
     Booklet::factory()->create(['user_id' => $user->id, 'title' => 'Terv nélküli füzet']);
     Projection::factory()->create(['user_id' => $user->id, 'title' => 'Terv nélküli vetítés']);
@@ -72,9 +73,15 @@ it('shows documents started without a plan in their own group', function () {
     actingAs($user);
 
     Livewire::test(PlanDocuments::class)
+        ->assertSet('tab', PlanDocuments::TAB_CELEBRATIONS)
         ->assertSee(__('Without a plan'))
+        ->assertSee('plan-group-'.$plan->id, escape: false)
+        ->assertDontSee('Terv nélküli füzet')
+        ->assertDontSee('Terv nélküli vetítés')
+        ->call('selectTab', PlanDocuments::TAB_PLANLESS)
         ->assertSee('Terv nélküli füzet')
-        ->assertSee('Terv nélküli vetítés');
+        ->assertSee('Terv nélküli vetítés')
+        ->assertDontSee('plan-group-'.$plan->id, escape: false);
 });
 
 it('starts whichever of the two the picker was opened for', function () {
@@ -109,6 +116,22 @@ it('offers a create button inside each empty column, addressed to that plan', fu
         ->assertSeeHtml('action="'.route('booklets.store').'"')
         ->assertSeeHtml('action="'.route('projections.store').'"')
         ->assertSeeHtml('value="'.$plan->id.'"');
+});
+
+it('only spells out a document title that differs from the celebration it is filed under, and still offers another', function () {
+    $user = User::factory()->create();
+    $plan = planWithCelebration($user, 'Évközi 27. vasárnap');
+
+    Booklet::factory()->forPlan($plan)->create(['title' => 'Szent Ferenc atyánk ünnepe']);
+    Projection::factory()->forPlan($plan)->create(['title' => Projection::titleFor($plan)]);
+
+    actingAs($user);
+
+    Livewire::test(PlanDocuments::class)
+        ->assertSeeHtml('<span class="truncate font-medium">Szent Ferenc atyánk ünnepe</span>')
+        ->assertDontSeeHtml('<span class="truncate font-medium">'.e(Projection::titleFor($plan)).'</span>')
+        ->assertSeeHtml('action="'.route('booklets.store').'"')
+        ->assertSeeHtml('action="'.route('projections.store').'"');
 });
 
 it('disables the projection screen and remote until something is actually live', function () {

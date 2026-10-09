@@ -134,81 +134,88 @@
                 </flux:field>
             </div>
 
-            @if($plans->isEmpty() && $this->planless['booklets']->isEmpty() && $this->planless['projections']->isEmpty())
+            @php($planlessCount = $this->planless['booklets']->count() + $this->planless['projections']->count())
+
+            @if($plans->isEmpty() && $planlessCount === 0 && trim($search) === '')
                 <flux:callout variant="secondary" icon="book-open" class="border-dashed">
                     <flux:callout.heading>{{ __('Nothing built yet') }}</flux:callout.heading>
                     <flux:callout.text>{{ __('Open a music plan and press Booklet or Projection to build one from its scores.') }}</flux:callout.text>
                 </flux:callout>
             @else
-                <div class="space-y-4">
-                    @foreach($plans as $plan)
-                        <div wire:key="plan-group-{{ $plan->id }}" class="rounded-lg border border-zinc-200 dark:border-zinc-700">
-                            <div class="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
-                                <a href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}" wire:navigate class="block truncate font-medium hover:underline">
-                                    {{ $plan->celebration_name ?: __('Untitled plan') }}
-                                </a>
-                                @if($plan->actual_date)
-                                    <span class="text-xs text-zinc-500">{{ $plan->actual_date->translatedFormat('Y. F j.') }}</span>
-                                @endif
-                            </div>
-
-                            {{-- The point of the whole screen: this service's
-                                 pages and this service's slides, side by side,
-                                 so nobody has to guess which deck was cut from
-                                 which booklet. Each column carries its own
-                                 create button, because a column with nothing
-                                 in it yet is exactly where that button
-                                 belongs. --}}
-                            <div class="grid gap-px bg-zinc-200 sm:grid-cols-2 dark:bg-zinc-700">
-                                <x-plan-document-column
-                                    :documents="$plan->booklets"
-                                    type="booklet"
-                                    :heading="__('Booklets')"
-                                    icon="book-open"
-                                    :empty="__('No booklet for this service.')"
-                                    :plan="$plan"
-                                />
-                                <x-plan-document-column
-                                    :documents="$plan->projections"
-                                    type="projection"
-                                    :heading="__('Projections')"
-                                    icon="presentation"
-                                    :empty="__('No projection for this service.')"
-                                    :plan="$plan"
-                                />
-                            </div>
-                        </div>
+                <div class="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 pb-3 dark:border-zinc-700">
+                    @foreach([
+                        \App\Livewire\Pages\PlanDocuments::TAB_CELEBRATIONS => [__('Celebrations'), $plans->total()],
+                        \App\Livewire\Pages\PlanDocuments::TAB_PLANLESS => [__('Without a plan'), $planlessCount],
+                    ] as $tabKey => [$tabLabel, $tabCount])
+                        <flux:button
+                            size="sm"
+                            :variant="$tab === $tabKey ? 'primary' : 'ghost'"
+                            wire:click="selectTab('{{ $tabKey }}')"
+                            wire:key="plan-documents-tab-{{ $tabKey }}">
+                            {{ $tabLabel }}
+                            <span class="ms-1.5 inline-flex items-center rounded-md px-2 py-1 text-xs font-medium {{ $tab === $tabKey ? 'bg-accent-foreground/20 text-accent-foreground' : 'bg-zinc-400/15 text-zinc-700 dark:bg-zinc-400/40 dark:text-zinc-200' }}">{{ $tabCount }}</span>
+                        </flux:button>
                     @endforeach
                 </div>
 
-                @if($plans->hasPages())
-                    <div class="mt-4">
-                        {{ $plans->links() }}
-                    </div>
-                @endif
-
-                @if($this->planless['booklets']->isNotEmpty() || $this->planless['projections']->isNotEmpty())
-                    <div class="mt-6 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700">
-                        <div class="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
-                            <span class="font-medium">{{ __('Without a plan') }}</span>
-                        </div>
-                        <div class="grid gap-px bg-zinc-200 sm:grid-cols-2 dark:bg-zinc-700">
+                @if($tab === \App\Livewire\Pages\PlanDocuments::TAB_PLANLESS)
+                    @if($planlessCount === 0)
+                        <flux:text class="text-sm text-zinc-500">{{ __('No documents without a plan.') }}</flux:text>
+                    @else
+                        <div class="grid gap-px overflow-hidden rounded-lg border border-zinc-200 bg-zinc-200 sm:grid-cols-2 dark:border-zinc-700 dark:bg-zinc-700">
                             <x-plan-document-column
                                 :documents="$this->planless['booklets']"
                                 type="booklet"
                                 :heading="__('Booklets')"
                                 icon="book-open"
-                                :empty="__('No booklet for this service.')"
+                                :empty="__('No booklet without a plan.')"
                             />
                             <x-plan-document-column
                                 :documents="$this->planless['projections']"
                                 type="projection"
                                 :heading="__('Projections')"
                                 icon="presentation"
-                                :empty="__('No projection for this service.')"
+                                :empty="__('No projection without a plan.')"
                             />
                         </div>
+                    @endif
+                @else
+                    {{-- One line per service: the celebration, then its
+                         booklet, then its deck, so which deck goes with which
+                         booklet is a matter of reading across — and a season's
+                         worth of Sundays fits on one screen, because a service
+                         nearly always has one of each. --}}
+                    <div class="divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
+                        <div class="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.5fr)] gap-4 px-4 py-2 text-xs font-medium uppercase tracking-wide text-zinc-500 md:grid dark:text-zinc-400">
+                            <span>{{ __('Celebrations') }}</span>
+                            <span>{{ __('Booklets') }}</span>
+                            <span>{{ __('Projections') }}</span>
+                        </div>
+
+                        @forelse($plans as $plan)
+                            <div wire:key="plan-group-{{ $plan->id }}" class="grid gap-2 px-4 py-2.5 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,1.5fr)] md:items-center md:gap-4">
+                                <div class="min-w-0">
+                                    <a href="{{ route('music-plan-view', ['musicPlan' => $plan->id]) }}" wire:navigate class="block truncate text-sm font-medium hover:underline">
+                                        {{ $plan->celebration_name ?: __('Untitled plan') }}
+                                    </a>
+                                    @if($plan->actual_date)
+                                        <span class="text-xs text-zinc-500">{{ $plan->actual_date->translatedFormat('Y. F j.') }}</span>
+                                    @endif
+                                </div>
+
+                                <x-plan-document-cell :documents="$plan->booklets" type="booklet" :plan="$plan" />
+                                <x-plan-document-cell :documents="$plan->projections" type="projection" :plan="$plan" />
+                            </div>
+                        @empty
+                            <flux:text class="px-4 py-3 text-sm text-zinc-500">{{ __('No music plans found.') }}</flux:text>
+                        @endforelse
                     </div>
+
+                    @if($plans->hasPages())
+                        <div class="mt-4">
+                            {{ $plans->links() }}
+                        </div>
+                    @endif
                 @endif
             @endif
         </flux:card>

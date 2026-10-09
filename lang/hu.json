@@ -1655,5 +1655,9 @@
     "Factory default": "Gyári alapértelmezett",
     "Reset to my default": "Visszaállítás a saját alapértelmezettre",
     "Reset to factory default": "Visszaállítás a gyári alapértelmezettre",
-    "Which defaults this layout is on": "Melyik alapértelmezett beállítás szerint áll ez az elrendezés"
+    "Which defaults this layout is on": "Melyik alapértelmezett beállítás szerint áll ez az elrendezés",
+    "Celebrations": "Ünnepek",
+    "No documents without a plan.": "Nincs terv nélküli dokumentum.",
+    "No booklet without a plan.": "Nincs terv nélküli füzet.",
+    "No projection without a plan.": "Nincs terv nélküli vetítés."
 }

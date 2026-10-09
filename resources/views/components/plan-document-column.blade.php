@@ -1,7 +1,7 @@
-@props(['documents', 'type', 'heading', 'icon', 'empty', 'plan' => null])
+@props(['documents', 'type', 'heading', 'icon', 'empty'])
 
-{{-- One half of a service's row on the Booklets & Projections screen: either the
-     booklets made from that plan or the decks, whichever this column was handed.
+{{-- One half of the "without a plan" tab on the Booklets & Projections screen:
+     either the booklets or the decks, whichever this column was handed.
 
      The two are listed the same way on purpose — a booklet and a projection are
      the same service seen from opposite sides, and the only thing that differs
@@ -17,25 +17,6 @@
             <flux:icon :name="$icon" variant="micro" class="shrink-0" />
             {{ $heading }}
         </div>
-
-        {{-- The plan is already the row; this is the one thing an empty
-             column needs, put where the empty column is rather than in a
-             shared toolbar a search away from it. --}}
-        @if($plan)
-            <form method="POST" action="{{ route($isProjection ? 'projections.store' : 'booklets.store') }}">
-                @csrf
-                <input type="hidden" name="music_plan_id" value="{{ $plan->id }}">
-                <flux:tooltip :content="$isProjection ? __('New Projection') : __('New Booklet')">
-                    <flux:button
-                        type="submit"
-                        size="xs"
-                        variant="ghost"
-                        :icon="$isProjection ? 'presentation-plus' : 'book-plus'"
-                        :aria-label="$isProjection ? __('New Projection') : __('New Booklet')"
-                    />
-                </flux:tooltip>
-            </form>
-        @endif
     </div>
 
     @if($documents->isEmpty())

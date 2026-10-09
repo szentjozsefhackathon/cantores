@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View as IlluminateView;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -31,6 +32,13 @@ use Livewire\WithPagination;
 class PlanDocuments extends Component
 {
     use AuthorizesRequests, WithPagination;
+
+    public const TAB_CELEBRATIONS = 'celebrations';
+
+    public const TAB_PLANLESS = 'planless';
+
+    #[Url(as: 'tab', keep: false)]
+    public string $tab = self::TAB_CELEBRATIONS;
 
     public string $search = '';
 
@@ -75,8 +83,8 @@ class PlanDocuments extends Component
     /**
      * The documents started without a plan behind them.
      *
-     * Rare, and they have no service to be grouped under, so they are shown once
-     * beneath the grouped rows rather than paginated alongside them.
+     * Rare, and they have no service to be grouped under, so they get a tab of
+     * their own rather than being paginated alongside the grouped rows.
      *
      * @return array{booklets: Collection<int, Booklet>, projections: Collection<int, Projection>}
      */
@@ -122,6 +130,13 @@ class PlanDocuments extends Component
     public function recentProjections(): EloquentCollection
     {
         return Presentation::recentFor(Auth::user());
+    }
+
+    public function selectTab(string $tab): void
+    {
+        $this->tab = $tab === self::TAB_PLANLESS ? self::TAB_PLANLESS : self::TAB_CELEBRATIONS;
+
+        $this->resetPage();
     }
 
     public function setNewType(string $type): void

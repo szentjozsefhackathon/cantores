@@ -138,5 +138,9 @@
     "You already have a style with this name.": "You already have a style with this name.",
     ":name (copy)": ":name (copy)",
     ":name (copy :n)": ":name (copy :n)",
-    "Font": "Font"
+    "Font": "Font",
+    "Celebrations": "Celebrations",
+    "No documents without a plan.": "No documents without a plan.",
+    "No booklet without a plan.": "No booklet without a plan.",
+    "No projection without a plan.": "No projection without a plan."
 }
