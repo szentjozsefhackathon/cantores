@@ -114,14 +114,15 @@
                     placeholder="{{ __('Tags (all selected required)') }}"
                     wire:model.live="tagFilters"
                     :options="$this->tagOptions">
-                    @scope('item', $option)
+                    {{-- A scope is a closure: Flux components inside it need Blaze's runtime handed in. --}}
+                    @scope('item', $option, $__blaze)
                         <x-mary-list-item :item="$option">
                             <x-slot:avatar>
                                 <flux:icon :name="$option['icon'] ?? null" class="h-4 w-4" />
                             </x-slot:avatar>
                         </x-mary-list-item>
                     @endscope
-                    @scope('selection', $selectedTags)
+                    @scope('selection', $selectedTags, $__blaze)
                         @foreach ($selectedTags as $tagId)
                             @php $tag = $this->tagsById->get($tagId); @endphp
                             @if ($tag)
