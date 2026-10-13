@@ -693,12 +693,12 @@ test('a suggestion teaser is a plain link to the suggestions page', function () 
         ])));
 });
 
-/**
- * The card is one named tool, so it answers to the same name wherever it is
- * shown. Only its prominence changes: on the front page it sits among other
- * tools, on the dashboard it leads the page.
- */
-it('calls itself the same tool on the front page and on the dashboard', function (bool $welcome) {
-    Livewire::test('liturgical-info', ['welcome' => $welcome])
-        ->assertSee('Énekrendtervező');
-})->with([true, false]);
+it('offers the first time hint and the genre picker only on the front page', function () {
+    Livewire::test('liturgical-info', ['welcome' => true])
+        ->assertSee('Válassz egy napot, és másold át, ami tetszik.')
+        ->assertSeeLivewire('genre-selector');
+
+    Livewire::test('liturgical-info', ['welcome' => false])
+        ->assertDontSee('Válassz egy napot, és másold át, ami tetszik.')
+        ->assertDontSeeLivewire('genre-selector');
+});
