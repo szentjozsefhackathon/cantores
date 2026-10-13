@@ -2256,6 +2256,7 @@ it('lists only my own booklets', function () {
     actingAs($mine);
 
     Livewire::test(PlanDocuments::class)
+        ->call('selectTab', PlanDocuments::TAB_PLANLESS)
         ->assertSee('Adventi füzet')
         ->assertDontSee('Karácsonyi füzet');
 });

@@ -905,6 +905,7 @@ it('lists only the viewers own projections', function () {
     actingAs($mine);
 
     Livewire::test(PlanDocuments::class)
+        ->call('selectTab', PlanDocuments::TAB_PLANLESS)
         ->assertSee('Advent')
         ->assertDontSee('Karácsony');
 });
