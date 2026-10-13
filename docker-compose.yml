@@ -23,6 +23,14 @@ services:
     env_file:
       - path: ./.env.docker
         required: false
+    # Xdebug is off for everything run in this container with `docker exec` —
+    # loaded, it makes the test suite three times slower even when nothing
+    # triggers it. Only the web server gets it back, so a request can still be
+    # stepped through or profiled with the trigger. For a CLI command, prefix it
+    # with XDEBUG_MODE=debug (or profile).
+    environment:
+      - XDEBUG_MODE=off
+    command: ["env", "XDEBUG_MODE=debug,develop,profile", "frankenphp", "run", "--adapter", "caddyfile", "--config", "/var/www/html/docker/frankenphp/Caddyfile.dev"]
     volumes:
       - .:/var/www/html
       - .devcontainer/.bash_history:/home/laravel/.bash_history
@@ -79,7 +87,11 @@ services:
     # the default 64 — which is also roughly the number of tables this schema
     # has — runs the shared lock table out of memory as soon as the schema grows
     # past it. Raised rather than tracked: the number only ever goes up.
-    command: postgres -c max_locks_per_transaction=256
+    #
+    # Durability is off: nothing in this database outlives a test run, and each
+    # parallel process migrates the whole schema at start, which with fsync on
+    # waits on the disk for every one of those commits.
+    command: postgres -c max_locks_per_transaction=256 -c fsync=off -c synchronous_commit=off -c full_page_writes=off
     env_file:
       - ./.env.testing # for the database credentials
       - path: ./.env.docker
@@ -108,7 +120,8 @@ services:
       - path: ./.env.docker
         required: false
     environment:
-      - XDEBUG_CONFIG="mode=off"
+      - XDEBUG_MODE=off
+      - NODE_OPTIONS=--max-old-space-size=1024
     volumes:
       - .:/var/www/html
     depends_on:
@@ -118,14 +131,14 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1536M
   migrator:
     image: creshu-app-dev
     env_file:
       - path: ./.env.docker
         required: false
     environment:
-      - XDEBUG_CONFIG="mode=off"
+      - XDEBUG_MODE=off
     volumes:
       - .:/var/www/html
     command: php artisan migrate -n
@@ -146,7 +159,7 @@ services:
        - path: ./.env.docker
          required: false
      environment:
-       - XDEBUG_CONFIG="mode=off"
+       - XDEBUG_MODE=off
      volumes:
        - .:/var/www/html
      depends_on:
@@ -228,7 +241,7 @@ services:
       - path: ./.env.docker
         required: false
     environment:
-      - XDEBUG_CONFIG="mode=off"
+      - XDEBUG_MODE=off
     volumes:
       - .:/var/www/html
     depends_on:
@@ -253,7 +266,7 @@ services:
       - path: ./.env.docker
         required: false
     environment:
-      - XDEBUG_CONFIG="mode=off"
+      - XDEBUG_MODE=off
     volumes:
       - .:/var/www/html
     tmpfs:

@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
@@ -1164,16 +1165,26 @@ class ScoreEditor extends Component
         return $this->markdownDocToHtml('docs/gabc-cheatsheet.md');
     }
 
+    /**
+     * A cheatsheet, converted once per version of its file. The editor shows all
+     * four on every render, and converting them was a quarter of the render.
+     */
     private function markdownDocToHtml(string $relativePath): HtmlString
     {
         $path = base_path($relativePath);
-        $markdown = file_exists($path) ? (string) file_get_contents($path) : '';
+        $modifiedAt = file_exists($path) ? (int) filemtime($path) : 0;
 
-        $environment = new Environment(['html_input' => 'strip', 'allow_unsafe_links' => false]);
-        $environment->addExtension(new CommonMarkCoreExtension);
-        $environment->addExtension(new GithubFlavoredMarkdownExtension);
+        $html = Cache::rememberForever("docs.html.{$relativePath}.{$modifiedAt}", function () use ($path): string {
+            $markdown = file_exists($path) ? (string) file_get_contents($path) : '';
 
-        return new HtmlString((new MarkdownConverter($environment))->convert($markdown));
+            $environment = new Environment(['html_input' => 'strip', 'allow_unsafe_links' => false]);
+            $environment->addExtension(new CommonMarkCoreExtension);
+            $environment->addExtension(new GithubFlavoredMarkdownExtension);
+
+            return (string) (new MarkdownConverter($environment))->convert($markdown);
+        });
+
+        return new HtmlString($html);
     }
 
     #[Computed]
