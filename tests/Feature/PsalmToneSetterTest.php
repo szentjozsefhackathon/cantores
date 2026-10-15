@@ -64,9 +64,9 @@ it('sings the last note of an open neume on its last syllable', function () {
     $tone = PsalmTone::fromLine('I.g', '(Kb) f g | at g , at g- fo | at g f go-a g ||');
 
     expect(setPsalm($tone, 'nemzedékről nemzedékre.')['source'])
-        ->toContain('(Kb) at g f g g ga g ||')
+        ->toContain('(Kb) at g f g g ga g. ||')
         ->and(setPsalm($tone, 'Uram, te lettél menedékünk.')['source'])
-        ->toContain('(Kb) at g f ga g ||');
+        ->toContain('(Kb) at g f ga g. ||');
 });
 
 it('reads a tone line into its four formulas', function () {
@@ -111,28 +111,28 @@ it('weighs closed and long-voweled syllables as long', function () {
 
 it('sets the accents of the mediatio and the terminatio on stressed syllables', function () {
     expect(setPsalm(sketchedFirstTone(), 'Uram, te lettél menedékünk, * nemzedékről nemzedékre.')['source'])
-        ->toBe("(g2) at b a g a | at g f gf d ||\nw: Uram,~te~lettél me-ne-dé-künk, (*) nemzedékről nem-ze-dék-re.");
+        ->toBe("(g2) at b a g a. | at g f gf d. ||\nw: Uram,~te~lettél me-ne-dé-künk, (*) nemzedékről nem-ze-dék-re.");
 });
 
 it('sings the optional accent of the terminatio on a dactyl', function () {
     expect(setPsalm(sketchedFirstTone(), 'Adjatok hálát az Úrnak, * mert örökké tart irgalma.')['source'])
-        ->toBe("(g2) at b a a g a | at g f g gf d ||\nw: Adjatok há-lát az Úr-nak, (*) mert~örök-ké tart ir-gal-ma.");
+        ->toBe("(g2) at b a a g a. | at g f g gf d. ||\nw: Adjatok há-lát az Úr-nak, (*) mert~örök-ké tart ir-gal-ma.");
 });
 
 it('joins the notes after the accent onto a stressed last syllable', function () {
     expect(setPsalm(sketchedFirstTone(), 'Ezt mondja az Úr, * nemzedékről nemzedékre.')['source'])
-        ->toStartWith('(g2) at b a a ga |')
+        ->toStartWith('(g2) at b a a ga. |')
         ->toContain('w: Ezt mond-ja az Úr, (*)');
 });
 
 it('bends the notes left over onto the last syllable of a text too short for the formula', function () {
     expect(setPsalm(sketchedFirstTone(), 'Ámen.')['source'])
-        ->toBe("(g2) at gfgfd ||\nw: Á-men.");
+        ->toBe("(g2) at gfgfd. ||\nw: Á-men.");
 });
 
 it('sings the initium and the flexa', function () {
     expect(setPsalm(benedictineFirstTone(), 'Uram, te lettél menedékünk + nemzedékről nemzedékre, * mielőtt a hegyek születtek.')['source'])
-        ->toStartWith('(g2) (Kb) f g at g , at ')
+        ->toStartWith('(g2) (Kb) f g at g. , at ')
         ->toContain('w: U-ram, te~lettél~menedé-künk (+) ');
 });
 
@@ -158,7 +158,7 @@ it('bends the initium onto a verse that begins with a one-syllable word', functi
 
 it('sings a line without a mediatio to the terminatio', function () {
     expect(setPsalm(sketchedFirstTone(), 'nemzedékről nemzedékre.')['source'])
-        ->toBe("(g2) at g f gf d ||\nw: nemzedékről nem-ze-dék-re.");
+        ->toBe("(g2) at g f gf d. ||\nw: nemzedékről nem-ze-dék-re.");
 });
 
 it('reports the syllables no stressed syllable could be found for', function () {
@@ -169,8 +169,8 @@ it('reports the syllables no stressed syllable could be found for', function () 
 it('reads every shipped tone collection', function () {
     $collections = app(PsalmToneLibrary::class)->collections();
 
-    expect($collections)->toHaveKey('bences')
-        ->and($collections['bences']['name'])->toBe('Bencés')
+    expect(array_keys($collections))->toBe(['magyar', 'romai', 'bences'])
+        ->and($collections['bences']['name'])->toBe('03. bencés')
         ->and(array_keys($collections['bences']['tones']))->toContain('I.g', 'II.d', 'III.g', 'IV.e', 'V.a', 'VI.f', 'VII.a');
 });
 
@@ -204,7 +204,7 @@ it('stresses Szentlélek where its second part begins', function () {
     $tone = PsalmTone::fromLine('VI.f', '(Kb) f g | at g , at g a- fo | at f go- a g- fo ||');
 
     expect(setPsalm($tone, 'Dicsőség az Atyának és Fiúnak * és Szentlélek Istennek,')['source'])
-        ->toEndWith("| at f g a g f f ||\nw: Di-cső-ség~az~Atyának és Fi-ú-nak (*) és Szent-lé-lek Is-ten-nek,");
+        ->toEndWith("| at f g a g f f. ||\nw: Di-cső-ség~az~Atyának és Fi-ú-nak (*) és Szent-lé-lek Is-ten-nek,");
 });
 
 it('underlines only the first of two marked syllables next to each other', function () {
@@ -226,8 +226,16 @@ it('shares the syllables between two open notes rather than giving one of them t
     $tone = PsalmTone::fromLine('VII.d', '(K#) f g | at g , at C- bo a- bo | at b- ao g ao ||');
 
     expect(setPsalm($tone, 'Meglátogattad és megöntözted a földet, * elhalmoztad bőséges áldással')['source'])
-        ->toContain("| at b a a g a a ||\nw: ")
+        ->toContain("| at b a a g a a. ||\nw: ")
         ->toEndWith('(*) elhalmoztad bő-sé-ges ál-dás-sal');
+});
+
+it('gives an open note three syllables only when nothing else fits nearly as well', function () {
+    $tone = PsalmTone::fromLine('VII.a', '(K#) f g | at g , at C- bo a- bo | at b- ao go e ||');
+
+    expect(setPsalm($tone, 'Uralkodókat űzött el trónjukról, * és felmagasztalta az alázatosakat.')['source'])
+        ->toStartWith('(g2) (K#) f g at C b b a b b. |')
+        ->toContain('ű-zött el trón-juk-ról, (*)');
 });
 
 it('lets the accent fall on the first part of Szentlélek when the formula wants it', function () {
@@ -241,7 +249,7 @@ it('writes the accidental of an open note once', function () {
     $tone = PsalmTone::fromLine('V.a', '(K##) d f | at f , at b- ao | at b- (g#)go a- fo ||');
 
     expect(setPsalm($tone, 'Miképpen kezdetben, most és mindenkor * és mindörökkön örökké. Ámen.')['source'])
-        ->toContain('| at b (g#)g g a f ||');
+        ->toContain('| at b (g#)g g a f. ||');
 });
 
 it('writes the verses as HTML with the tenor left and the accents underlined', function () {
@@ -267,10 +275,12 @@ it('starts with the doxology in the verses', function () {
 });
 
 it('sets verses to a chosen tone on its own page, for guests too', function () {
-    $this->get(route('psalm-tones'))->assertOk()->assertSee('Bencés');
+    $this->get(route('psalm-tones'))->assertOk()->assertSee('03. bencés');
 
     Livewire::test(PsalmTones::class)
-        ->assertSet('collection', 'bences')
+        ->assertSet('collection', 'magyar')
+        ->assertSet('tone', 'I.ré')
+        ->set('collection', 'bences')
         ->assertSet('tone', 'I.g')
         ->set('tone', 'II.d')
         ->set('verses', 'Uram, te lettél menedékünk, * nemzedékről nemzedékre.')
@@ -285,37 +295,37 @@ it('sets verses to a custom formula and explains a malformed one', function () {
     Livewire::test(PsalmTones::class)
         ->set('verses', 'Uram, te lettél menedékünk, * nemzedékről nemzedékre.')
         ->set('customFormula', '| , at b- as a g- as a | at g f gs- gf d ||')
-        ->assertSee('at b a g a | at g f gf d ||')
+        ->assertSee('at b a g a. | at g f gf d. ||')
         ->set('customFormula', 'at b- a | at g ||')
         ->assertSee(__('Unexpected ":token" in the tone. Write it as: initium | flexa , mediatio | terminatio ||', ['token' => '||']));
 });
 
 it('takes † for the flexa as well as +', function () {
     expect(setPsalm(benedictineFirstTone(), 'Uram, te lettél menedékünk † nemzedékről nemzedékre, * mielőtt a hegyek születtek.')['source'])
-        ->toStartWith('(g2) (Kb) f g at g , at ')
+        ->toStartWith('(g2) (Kb) f g at g. , at ')
         ->toContain('menedé-künk (+) nemzedékről');
 });
 
 it('drops the flexa mark when the tone has no flexa', function () {
     expect(setPsalm(sketchedFirstTone(), 'Uram, te lettél + menedékünk, * nemzedékről nemzedékre.')['source'])
-        ->toBe("(g2) at b a g a | at g f gf d ||\nw: Uram,~te~lettél me-ne-dé-künk, (*) nemzedékről nem-ze-dék-re.");
+        ->toBe("(g2) at b a g a. | at g f gf d. ||\nw: Uram,~te~lettél me-ne-dé-künk, (*) nemzedékről nem-ze-dék-re.");
 });
 
 it('always gives the tenor a syllable when the text allows it', function () {
     $tone = PsalmTone::fromLine('VI.f', '(Kb) f g | at g , at g a- fs f | at f g- gs a g- fs f ||');
 
     expect(setPsalm($tone, "Dicsőség az Atyának és Fiúnak, * és Szent'lélek Istennek.")['source'])
-        ->toEndWith("| at f g a g f f ||\nw: Di-cső-ség~az~Atyának és Fi-ú-nak, (*) és Szent-lé-lek Is-ten-nek.");
+        ->toEndWith("| at f g a g f f. ||\nw: Di-cső-ség~az~Atyának és Fi-ú-nak, (*) és Szent-lé-lek Is-ten-nek.");
 });
 
 it('sings up to three syllables on an open note between the accents, a note for each', function () {
     expect(setPsalm(benedictineFirstTone(), "Dicsőség az 'Atyának és 'Fiúnak, * és Szent'léleknek.")['source'])
-        ->toStartWith('(g2) (Kb) f g at b a a a g a a |')
+        ->toStartWith('(g2) (Kb) f g at b a a a g a a. |')
         ->toContain('w: Di-cső-ség~az A-tyá-nak és Fi-ú-nak, (*)');
 });
 
 it('writes an open note sung on one syllable closed', function () {
     expect(setPsalm(benedictineFirstTone(), 'Uram, te lettél menedékünk, * nemzedékről nemzedékre.')['source'])
-        ->toStartWith('(g2) (Kb) f g at b a g a |')
+        ->toStartWith('(g2) (Kb) f g at b a g a. |')
         ->toContain('w: U-ram, te~lettél me-ne-dé-künk, (*)');
 });

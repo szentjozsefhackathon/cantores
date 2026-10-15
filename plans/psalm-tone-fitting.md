@@ -159,7 +159,7 @@ Costs (starting values, to be tuned against real psalters in the tests):
 | Empty tenor | 100 (the tenor is always sung; empty only when nothing else fits) |
 | Optional slot used | 0.1 (when costs are otherwise equal, leave it out) |
 | Each syllable an open note takes beyond its first | 0.5, plus the stress cost of that syllable |
-| The third syllable of an open note | +0.25 (two open notes share the syllables rather than one taking three) |
+| The third syllable of an open note | +0.75 (three syllables on one open note are rarely right; still cheaper than a merge) |
 | A primary stress inside an open note rather than at its start | 0.5 |
 
 The cheapest alignment wins. On a tie, the alignment that puts more syllables on
@@ -194,7 +194,8 @@ All in `app/Services`, which has no subfolders:
   ends, fits each part, and writes the Aretino melody and `w:` lines. The `*` in
   the text becomes a `|` bar in the melody and the `+` (or `†`) a `,`. In the
   `w:` line they are written as `(*)` and `(+)`, which the renderer sets under
-  the bar. A flexa mark is dropped when the tone has no flexa. Each verse is a block of its own, and every
+  the bar. The last note before each bar is dotted (`g.`). A flexa mark is
+  dropped when the tone has no flexa. Each verse is a block of its own, and every
   block after the first starts with `(Z)`. When syllables of one word share a
   note, a doubled digraph is spelt as in the word (`vissza`, not `viszsza`).
 

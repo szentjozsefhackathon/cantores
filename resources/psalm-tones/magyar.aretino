@@ -1,8 +1,47 @@
-%collection: magyar sorozat
-%I.g
-(Kb) f g | at g , at g- fo | at g f go-a g ||
+%collection: 01. magyar
+%I.ré
+(Kb) f g | at go , at g- fo | at g f go-a g ||
 w: ~ ~ ~ ~ (+) ~ ~ ~ (*) 
 
-%I.d
+%I.lá
 (Kb) f g | at g , at g- fo | at g f go-f d ||
 w: ~ ~ ~ ~ (+) ~ ~ ~ ~ ~ (*) 
+
+%II.
+(K###) e f | at fo , at b- fo | at e-f f ||
+w: ~ ~ ~ ~ (+) ~ ~ ~ (*) 
+
+%III.
+(K###) e f | at fo , at g-f a | at fa fo- e ||
+w: ~ ~ ~ ~ (+) ~ ~ ~ (*) 
+
+%IV.
+(K) e g | at go , at g a b- ao | at g a g- eo ||
+w: ~ ~ ~ ~ (+) ~ ~ ~(*) 
+
+%V.
+(K##) d f | at fo , at b- ao | at b- (g#)go a- fo ||
+w: ~ ~ ~ ~ (+) ~ ~ ~ (*) 
+
+%VI.
+(K) f g | at go , at g a- fo | at g f g- fo ||
+w: ~ ~ ~ ~ (+) ~ ~ ~ (*) 
+
+%VII.dó
+(K#) f g | at go , at g a b- go | at b a go-f g ||
+w: ~ ~ ~ ~ (+) ~ ~ ~ (*) 
+
+%VII.lá
+(K#) f g | at go , at g a b- go | at b a go-f e ||
+w: ~ ~ ~ ~ (+) ~ ~ ~ (*) 
+
+%VIII.szó
+(K###) e f | at fo , at g a b- ao | at g a f- eo ||
+w: ~ ~ ~ ~ (+) ~ ~ ~ (*) 
+
+%VIII.dó
+(K###) e f | at fo , at g a b- ao | at f a b ao ||
+w: ~ ~ ~ ~ (+) ~ ~ ~ (*) 
+
+%IX.t.p.
+(Kb) C | at go , at b- ao g- fo | gt a-o d fo-e d ||

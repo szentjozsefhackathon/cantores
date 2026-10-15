@@ -38,7 +38,7 @@ class PsalmFormulaFitter
     private const OPEN_EXTRA_SYLLABLE = 0.5;
 
     /** The third syllable of an open note, so that two open notes share the syllables rather than one taking them all. */
-    private const OPEN_THIRD_SYLLABLE = 0.25;
+    private const OPEN_THIRD_SYLLABLE = 0.75;
 
     /** A word stress inside an open note rather than where it begins. */
     private const OPEN_INNER_PRIMARY = 0.5;

@@ -129,6 +129,8 @@ class PsalmToneSetter
     }
 
     /**
+     * Writes the notes of the verse, the last note of every part dotted.
+     *
      * @param  list<array{0: list<array{notes: string, syllables: list<PsalmSyllable>, isTenor: bool, continuesOpen: bool, isAccent: bool, missesAccent: bool}>, 1: string, 2: string}>  $parts
      */
     private function melody(array $parts): string
@@ -136,8 +138,10 @@ class PsalmToneSetter
         $tokens = [];
 
         foreach ($parts as [$placements, , $bar]) {
-            foreach ($placements as $placement) {
-                $tokens[] = $placement['notes'];
+            $lastPlacement = array_key_last($placements);
+
+            foreach ($placements as $index => $placement) {
+                $tokens[] = $placement['notes'].($index === $lastPlacement ? '.' : '');
             }
 
             $tokens[] = $bar;

@@ -24,7 +24,7 @@ class PsalmToneLibrary
     public function __construct(private ?string $directory = null) {}
 
     /**
-     * The collections by file name, in file-name order.
+     * The collections by file name, in the order of their names.
      *
      * @return array<string, array{name: string, tones: array<string, PsalmTone>}>
      */
@@ -35,12 +35,13 @@ class PsalmToneLibrary
         }
 
         $paths = glob(($this->directory ?? resource_path('psalm-tones')).'/*.aretino') ?: [];
-        sort($paths);
         $collections = [];
 
         foreach ($paths as $path) {
             $collections[pathinfo($path, PATHINFO_FILENAME)] = self::parse((string) file_get_contents($path), basename($path));
         }
+
+        uasort($collections, fn (array $first, array $second): int => strnatcasecmp($first['name'], $second['name']));
 
         return $this->collections = $collections;
     }
