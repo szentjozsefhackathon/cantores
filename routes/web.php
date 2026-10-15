@@ -63,6 +63,7 @@ use App\Livewire\Pages\ProjectionEditor;
 use App\Livewire\Pages\ProjectionPresenter;
 use App\Livewire\Pages\ProjectionRemote;
 use App\Livewire\Pages\ProjectionRemoteDecks;
+use App\Livewire\Pages\PsalmTones;
 use App\Livewire\Pages\PublicScores;
 use App\Livewire\Pages\PublicScoreView;
 use App\Livewire\Pages\QrLogin;
@@ -99,6 +100,9 @@ Route::livewire('/aretino/guide', AretinoGuide::class)
 
 Route::livewire('/abc/guide', AbcGuide::class)
     ->name('abc.guide');
+
+Route::livewire('/psalm-tones', PsalmTones::class)
+    ->name('psalm-tones');
 
 // Music database landing page (public)
 Route::livewire('/music-database', 'pages::music-database')

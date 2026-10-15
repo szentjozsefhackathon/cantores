@@ -533,9 +533,19 @@ class ScoreEditor extends Component
         $content = is_string($data['content'] ?? null) ? $data['content'] : '';
         $settings = is_array($data['settings'] ?? null) ? $data['settings'] : [];
 
+        return self::shareUrl($title, $format ?? ScoreFormat::Abc, $content, $settings);
+    }
+
+    /**
+     * A link that opens the score editor on this score without saving it.
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    public static function shareUrl(string $title, ScoreFormat $format, string $content, array $settings = []): string
+    {
         $json = (string) json_encode([
             'title' => $title,
-            'format' => $format instanceof ScoreFormat ? $format->value : ScoreFormat::Abc->value,
+            'format' => $format->value,
             'content' => $content,
             'settings' => $settings,
         ]);

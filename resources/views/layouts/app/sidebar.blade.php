@@ -160,6 +160,10 @@
                 Aretino útmutató
             </flux:sidebar.item>
 
+            <flux:sidebar.item icon="queue-list" :href="route('psalm-tones')" :current="request()->routeIs('psalm-tones')" wire:navigate>
+                Zsoltártónusok
+            </flux:sidebar.item>
+
             <flux:sidebar.item icon="document-text" :href="route('abc.guide')" :current="request()->routeIs('abc.guide')" wire:navigate>
                 ABC útmutató
             </flux:sidebar.item>
