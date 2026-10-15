@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Enums\LyricLanguage;
 use App\Enums\ScoreFileRights;
 use App\Enums\ScoreFormat;
 use App\Enums\ScoreLicense;
@@ -15,6 +16,7 @@ use App\Models\ScoreUrl;
 use App\Models\User;
 use App\MusicUrlLabel;
 use App\Services\LoanAccessService;
+use App\Services\LyricHyphenator;
 use App\Services\ScoreDuplicator;
 use App\Services\ScoreFileUploader;
 use App\Services\ScorePublicationService;
@@ -53,6 +55,9 @@ class ScoreEditor extends Component
      * @var list<string>
      */
     private const UPLOAD_RULES = ['nullable', 'file', 'extensions:mscz,musicxml,mxl,mid,midi,pdf', 'max:25600'];
+
+    /** The most lyrics one press of the hyphenation button divides, in characters. */
+    private const HYPHENATION_MAX_LENGTH = 50000;
 
     public ?Score $score = null;
 
@@ -499,6 +504,22 @@ class ScoreEditor extends Component
         $user->save();
 
         $this->dispatch('toast', message: __('Saved as your default for new scores at this ratio.'), type: 'success');
+    }
+
+    /**
+     * The selected lyrics divided into syllables, in the notation being edited.
+     */
+    #[Renderless]
+    public function hyphenateLyrics(string $text, string $language, LyricHyphenator $hyphenator): string
+    {
+        $lyricLanguage = LyricLanguage::tryFrom($language);
+        $format = ScoreFormat::tryFrom($this->format);
+
+        if ($lyricLanguage === null || $format === null || mb_strlen($text) > self::HYPHENATION_MAX_LENGTH) {
+            return $text;
+        }
+
+        return $hyphenator->hyphenate($text, $lyricLanguage, $format);
     }
 
     /**

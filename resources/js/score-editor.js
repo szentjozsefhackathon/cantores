@@ -5,6 +5,7 @@ import { abcMixin, applyAbcStrokeWidths, applyAbcSvgStyle, buildAbcPreamble, ens
 import { ensureGabcFontsLoaded, gabcMixin, normalizeGabcLayoutWidth, renderGabcToSvgMarkup } from './score-editor-gabc.js';
 import { chordproMixin, renderChordproIncipitSvg } from './score-editor-chordpro.js';
 import { aretinoMixin } from './score-editor-aretino.js';
+import { hyphenationMixin } from './score-editor-hyphenation.js';
 import { formatDefaults, incipitSettings, layoutSource, resetFormatSettings } from './score-editor-settings.js';
 import { applyPhysicalSvgSize, removeEditorOnlySvgMarkup } from './score-editor-export.js';
 import { downloadTextFile, openTextFile, scoreSourceExtension, scoreSourceFilename } from './score-editor-file.js';
@@ -253,6 +254,7 @@ onAlpineInit(() => {
         ...gabcMixin(),
         ...chordproMixin(),
         ...aretinoMixin(),
+        ...hyphenationMixin(),
 
         /**
          * The ChordPro size as the toolbar states it: points, the unit a sheet

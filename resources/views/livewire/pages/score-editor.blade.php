@@ -338,6 +338,9 @@ resources/js/score-editor.js
                             <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('abc-cheatsheet').show()">
                                 {{ __('Cheatsheet') }}
                             </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="hyphenate" x-on:click="openHyphenation()">
+                                {{ __('Hyphenate lyrics') }}
+                            </flux:button>
                             <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveScoreFile()">
                                 {{ __('Save as .abc file') }}
                             </flux:button>
@@ -362,6 +365,40 @@ resources/js/score-editor.js
                                     </flux:button>
                                     <flux:button variant="primary" icon="arrow-right" x-on:click="convertDiatarToAbc()" x-bind:disabled="!diatarSource.trim()">
                                         {{ __('Convert') }}
+                                    </flux:button>
+                                </div>
+                            </div>
+                        </flux:modal>
+
+                        <flux:modal name="lyric-hyphenation" class="max-w-md">
+                            <div class="space-y-4">
+                                <flux:heading size="lg">{{ __('Hyphenate lyrics') }}</flux:heading>
+                                <template x-if="hyphenationSelection">
+                                    <div class="space-y-4">
+                                        <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">
+                                            {{ __('The selected lyrics are divided into syllables. In GABC every syllable gets its own note group.') }}
+                                        </flux:text>
+                                        <flux:radio.group x-model="lyricLanguage" :label="__('Language')">
+                                            @foreach (\App\Enums\LyricLanguage::cases() as $lyricLanguage)
+                                                <flux:radio value="{{ $lyricLanguage->value }}" :label="$lyricLanguage->label()" />
+                                            @endforeach
+                                        </flux:radio.group>
+                                        <flux:text x-show="hyphenationFailed" x-cloak class="text-sm text-red-600 dark:text-red-400">
+                                            {{ __('The lyrics could not be hyphenated. Select them again and retry.') }}
+                                        </flux:text>
+                                    </div>
+                                </template>
+                                <template x-if="!hyphenationSelection">
+                                    <flux:text class="text-sm text-zinc-500 dark:text-zinc-400">
+                                        {{ __('Select the lyrics to hyphenate in the editor first.') }}
+                                    </flux:text>
+                                </template>
+                                <div class="flex justify-end gap-2">
+                                    <flux:button variant="ghost" x-on:click="$flux.modal('lyric-hyphenation').close()">
+                                        {{ __('Cancel') }}
+                                    </flux:button>
+                                    <flux:button variant="primary" icon="hyphenate" x-on:click="hyphenateSelection()" x-bind:disabled="!hyphenationSelection || hyphenating">
+                                        {{ __('Hyphenate') }}
                                     </flux:button>
                                 </div>
                             </div>
@@ -437,6 +474,9 @@ resources/js/score-editor.js
                             <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('gabc-cheatsheet').show()">
                                 {{ __('Cheatsheet') }}
                             </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="hyphenate" x-on:click="openHyphenation()">
+                                {{ __('Hyphenate lyrics') }}
+                            </flux:button>
                             <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveScoreFile()">
                                 {{ __('Save as .gabc file') }}
                             </flux:button>
@@ -475,6 +515,9 @@ resources/js/score-editor.js
                             </flux:link>
                             <flux:button size="sm" variant="ghost" icon="table-cells" x-on:click="$flux.modal('aretino-cheatsheet').show()">
                                 {{ __('Cheatsheet') }}
+                            </flux:button>
+                            <flux:button size="sm" variant="ghost" icon="hyphenate" x-on:click="openHyphenation()">
+                                {{ __('Hyphenate lyrics') }}
                             </flux:button>
                             <flux:button size="sm" variant="ghost" icon="arrow-down-tray" x-on:click="saveScoreFile()">
                                 {{ __('Save as .aretino file') }}
