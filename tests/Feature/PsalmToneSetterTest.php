@@ -214,6 +214,14 @@ it('underlines only the first of two marked syllables next to each other', funct
         ->toBe('<p>Dicsőség az Atyának <u>és</u> Fiúnak * és <u>Szent</u>lélek <u>Is</u>tennek,</p>');
 });
 
+it('writes the underlined text as Aretino and ChordPro too, with the flexa crossed', function () {
+    $setting = setPsalm(benedictineFirstTone(), "Uram, te lettél menedékünk + nemzedékről nemzedékre, * mielőtt a hegyek születtek.\nÁmen.");
+
+    expect($setting['aretinoText'])->toBe("W: Uram, te lettél menedé[künk] + nemzedékről [nem]ze[dék]re, * mielőtt a [he]gyek [szü]lettek.\nW: Á[men].")
+        ->and($setting['chordProText'])->toBe("Uram, te lettél menedé<u>künk</u> † nemzedékről <u>nem</u>ze<u>dék</u>re, * mielőtt a <u>he</u>gyek <u>szü</u>lettek.\nÁ<u>men</u>.")
+        ->and($setting['html'])->toStartWith('<p>Uram, te lettél menedé<u>künk</u> † nemzedékről');
+});
+
 it('underlines where the melody leaves an open note sung on several syllables, but not on the last syllable', function () {
     $tone = PsalmTone::fromLine('VII.a', '(K#) f g | at g , at C- bo a- bo | at b- ao go e ||');
 
@@ -288,6 +296,8 @@ it('sets verses to a chosen tone on its own page, for guests too', function () {
         ->assertSee('w: ~ ~ ~ ~ (+) ~ ~ ~ (*)', escape: false)
         ->assertSee('/score/preview?d=', escape: false)
         ->assertSee('<p>Uram, te lettél', escape: false)->assertSee('<u>', escape: false)
+        ->assertSee('W: Uram, te lettél', escape: false)
+        ->assertSet('textFormat', 'html')
         ->assertSee('x-ref="preview" wire:ignore', escape: false);
 });
 

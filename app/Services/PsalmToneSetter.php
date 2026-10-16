@@ -11,8 +11,9 @@ namespace App\Services;
  * Every verse becomes a block of its own, a melody line and its `w:` line, and
  * the marks of the text are written into the lyrics as `(+)` and `(*)`, which
  * the renderer sets under the bar that closes the part. The verses are also
- * written as HTML, a paragraph each, with the syllable where the melody leaves
- * a recited note and the accented syllables underlined.
+ * written as running text, with the syllable where the melody leaves a
+ * recited note and the accented syllables underlined: as HTML, a paragraph
+ * each, as Aretino `W:` blocks and as ChordPro lines.
  */
 class PsalmToneSetter
 {
@@ -25,7 +26,7 @@ class PsalmToneSetter
     ) {}
 
     /**
-     * @return array{source: string, html: string, unsure: list<array{verse: int, syllable: string}>}
+     * @return array{source: string, html: string, aretinoText: string, chordProText: string, unsure: list<array{verse: int, syllable: string}>}
      */
     public function set(PsalmTone $tone, string $verses, bool $initiumEveryVerse = false): array
     {
@@ -49,7 +50,7 @@ class PsalmToneSetter
         }
 
         $blocks = [];
-        $paragraphs = [];
+        $texts = [];
         $unsure = [];
 
         foreach ($lines as $index => $line) {
@@ -69,10 +70,16 @@ class PsalmToneSetter
 
             $prefix = $index === 0 ? trim('(g2) '.$tone->keySignature) : '(Z)';
             $blocks[] = $prefix.' '.$this->melody($parts)."\nw: ".$this->lyrics($parts);
-            $paragraphs[] = '<p>'.$this->html($parts).'</p>';
+            $texts[] = $this->words($parts);
         }
 
-        return ['source' => implode("\n\n", $blocks), 'html' => implode("\n", $paragraphs), 'unsure' => $unsure];
+        return [
+            'source' => implode("\n\n", $blocks),
+            'html' => implode("\n", array_map(fn (array $words): string => '<p>'.self::underlined($words, self::htmlPiece(...)).'</p>', $texts)),
+            'aretinoText' => implode("\n", array_map(fn (array $words): string => 'W: '.self::underlined($words, self::aretinoPiece(...)), $texts)),
+            'chordProText' => implode("\n", array_map(fn (array $words): string => self::underlined($words, self::chordProPiece(...)), $texts)),
+            'unsure' => $unsure,
+        ];
     }
 
     /**
@@ -195,15 +202,16 @@ class PsalmToneSetter
     }
 
     /**
-     * Writes the verse as running text with the flexa and the mediant marked,
+     * Breaks the verse into running text with the flexa and the mediant marked,
      * and the syllable where the melody leaves the tenor, or an open note sung
      * on several syllables unless onto the last of the part, and the accented
      * syllables underlined, as the printed psalters have it. Of two such
      * syllables next to each other only the first is underlined.
      *
      * @param  list<array{0: list<array{notes: string, syllables: list<PsalmSyllable>, isTenor: bool, continuesOpen: bool, isAccent: bool, missesAccent: bool}>, 1: string, 2: string}>  $parts
+     * @return list<list<array{text: string, isUnderlined: bool, isMark?: bool}>>
      */
-    private function html(array $parts): string
+    private function words(array $parts): array
     {
         $words = [];
         $previous = null;
@@ -242,30 +250,77 @@ class PsalmToneSetter
             }
 
             if ($mark !== '') {
-                $words[] = [['text' => $mark === '+' ? '†' : $mark, 'isUnderlined' => false]];
+                $words[] = [['text' => $mark, 'isUnderlined' => false, 'isMark' => true]];
                 $previous = null;
                 $previousUnderlined = false;
             }
         }
 
+        return $words;
+    }
+
+    /**
+     * Writes the words of a verse, each piece in the markup of one format.
+     *
+     * @param  list<list<array{text: string, isUnderlined: bool, isMark?: bool}>>  $words
+     * @param  callable(array{text: string, isUnderlined: bool, isMark?: bool}): string  $piece
+     */
+    private static function underlined(array $words, callable $piece): string
+    {
         return implode(' ', array_map(
-            fn (array $word): string => implode('', array_map(self::htmlPiece(...), $word)),
+            fn (array $word): string => implode('', array_map($piece, $word)),
             $words,
         ));
     }
 
     /**
-     * @param  array{text: string, isUnderlined: bool}  $piece
+     * @param  array{text: string, isUnderlined: bool, isMark?: bool}  $piece
      */
     private static function htmlPiece(array $piece): string
     {
-        $html = e(str_replace('~', ' ', $piece['text']));
-
-        if (! $piece['isUnderlined']) {
-            return $html;
+        if ($piece['isMark'] ?? false) {
+            return $piece['text'] === '+' ? '†' : e($piece['text']);
         }
 
-        return (string) preg_replace('/^(\P{L}*)(.*\p{L})(\P{L}*)$/su', '$1<u>$2</u>$3', $html);
+        return self::underline(e(str_replace('~', ' ', $piece['text'])), $piece['isUnderlined'], '<u>', '</u>');
+    }
+
+    /**
+     * Aretino crosses a `+` itself and underlines between brackets.
+     *
+     * @param  array{text: string, isUnderlined: bool, isMark?: bool}  $piece
+     */
+    private static function aretinoPiece(array $piece): string
+    {
+        if ($piece['isMark'] ?? false) {
+            return $piece['text'];
+        }
+
+        return self::underline(str_replace(['~', '|'], [' ', '\\|'], $piece['text']), $piece['isUnderlined'], '[', ']');
+    }
+
+    /**
+     * @param  array{text: string, isUnderlined: bool, isMark?: bool}  $piece
+     */
+    private static function chordProPiece(array $piece): string
+    {
+        if ($piece['isMark'] ?? false) {
+            return $piece['text'] === '+' ? '†' : $piece['text'];
+        }
+
+        return self::underline(str_replace('~', ' ', $piece['text']), $piece['isUnderlined'], '<u>', '</u>');
+    }
+
+    /**
+     * Wraps the letters of a syllable, not the punctuation around them.
+     */
+    private static function underline(string $text, bool $isUnderlined, string $open, string $close): string
+    {
+        if (! $isUnderlined) {
+            return $text;
+        }
+
+        return (string) preg_replace('/^(\P{L}*)(.*\p{L})(\P{L}*)$/su', '$1'.$open.'$2'.$close.'$3', $text);
     }
 
     /**

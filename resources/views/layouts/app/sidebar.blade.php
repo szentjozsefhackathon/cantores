@@ -111,6 +111,9 @@
                 <flux:sidebar.item icon="folder" :href="route('folders')" :current="request()->routeIs('folders', 'folders.*')" wire:navigate>
                     {{ __('My Folders') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="queue-list" :href="route('psalm-tones')" :current="request()->routeIs('psalm-tones')" wire:navigate>
+                    Zsoltártónusok
+                </flux:sidebar.item>
             </flux:sidebar.group>
             @if(auth()->check() && auth()->user()->isEditor)
             <flux:sidebar.group heading="Szerkesztő">
@@ -158,10 +161,6 @@
 
             <flux:sidebar.item icon="musical-note" :href="route('aretino.guide')" :current="request()->routeIs('aretino.guide')" wire:navigate>
                 Aretino útmutató
-            </flux:sidebar.item>
-
-            <flux:sidebar.item icon="queue-list" :href="route('psalm-tones')" :current="request()->routeIs('psalm-tones')" wire:navigate>
-                Zsoltártónusok
             </flux:sidebar.item>
 
             <flux:sidebar.item icon="document-text" :href="route('abc.guide')" :current="request()->routeIs('abc.guide')" wire:navigate>

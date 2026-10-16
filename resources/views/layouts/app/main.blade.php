@@ -56,6 +56,9 @@
                                     Kottaszerkesztő
                                 </flux:menu.item>
                             @endguest
+                            <flux:menu.item href="{{ route('psalm-tones') }}" icon="queue-list">
+                                Zsoltártónusok
+                            </flux:menu.item>
                         </flux:menu>
                     </flux:dropdown>
                     {{-- Outside the @auth branches on purpose: these are the
@@ -153,6 +156,9 @@
                                     Kottaszerkesztő
                                 </flux:menu.item>
                             @endguest
+                            <flux:menu.item href="{{ route('psalm-tones') }}" icon="queue-list">
+                                Zsoltártónusok
+                            </flux:menu.item>
                         </flux:menu>
                     </flux:dropdown>
                     <flux:dropdown align="end">

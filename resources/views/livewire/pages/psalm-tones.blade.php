@@ -103,16 +103,40 @@ resources/js/aretino-mini-editor.js
 
                     <div x-data="{ copied: false }" class="space-y-2">
                         <flux:heading size="lg" level="2">{{ __('Text with the tenor departures and accents underlined') }}</flux:heading>
-                        <div x-ref="html" class="space-y-1 rounded-lg border border-zinc-200 bg-white p-4 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
-                            {!! $setting['html'] !!}
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <flux:button size="sm" icon="clipboard" x-on:click="navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([$refs.html.innerHTML], { type: 'text/html' }), 'text/plain': new Blob([$refs.html.innerText], { type: 'text/plain' }) })]); copied = true; setTimeout(() => copied = false, 1500)">
-                                <span x-show="!copied">{{ __('Copy') }}</span>
-                                <span x-show="copied" x-cloak>{{ __('Copied') }}</span>
-                            </flux:button>
-                        </div>
-                        <flux:textarea readonly rows="6" class="font-mono text-sm">{{ $setting['html'] }}</flux:textarea>
+                        <x-mary-tabs wire:model="textFormat">
+                            <x-mary-tab name="aretino" label="Aretino">
+                                <div class="space-y-2">
+                                    <flux:button size="sm" icon="clipboard" x-on:click="navigator.clipboard.writeText($refs.aretino.value); copied = true; setTimeout(() => copied = false, 1500)">
+                                        <span x-show="!copied">{{ __('Copy') }}</span>
+                                        <span x-show="copied" x-cloak>{{ __('Copied') }}</span>
+                                    </flux:button>
+                                    <flux:textarea x-ref="aretino" readonly rows="6" class="font-mono text-sm">{{ $setting['aretinoText'] }}</flux:textarea>
+                                </div>
+                            </x-mary-tab>
+
+                            <x-mary-tab name="chordpro" label="ChordPro">
+                                <div class="space-y-2">
+                                    <flux:button size="sm" icon="clipboard" x-on:click="navigator.clipboard.writeText($refs.chordpro.value); copied = true; setTimeout(() => copied = false, 1500)">
+                                        <span x-show="!copied">{{ __('Copy') }}</span>
+                                        <span x-show="copied" x-cloak>{{ __('Copied') }}</span>
+                                    </flux:button>
+                                    <flux:textarea x-ref="chordpro" readonly rows="6" class="font-mono text-sm">{{ $setting['chordProText'] }}</flux:textarea>
+                                </div>
+                            </x-mary-tab>
+
+                            <x-mary-tab name="html" label="HTML">
+                                <div class="space-y-2">
+                                    <div x-ref="html" class="space-y-1 rounded-lg border border-zinc-200 bg-white p-4 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+                                        {!! $setting['html'] !!}
+                                    </div>
+                                    <flux:button size="sm" icon="clipboard" x-on:click="navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([$refs.html.innerHTML], { type: 'text/html' }), 'text/plain': new Blob([$refs.html.innerText], { type: 'text/plain' }) })]); copied = true; setTimeout(() => copied = false, 1500)">
+                                        <span x-show="!copied">{{ __('Copy') }}</span>
+                                        <span x-show="copied" x-cloak>{{ __('Copied') }}</span>
+                                    </flux:button>
+                                    <flux:textarea readonly rows="6" class="font-mono text-sm">{{ $setting['html'] }}</flux:textarea>
+                                </div>
+                            </x-mary-tab>
+                        </x-mary-tabs>
                     </div>
                 @endif
             </div>

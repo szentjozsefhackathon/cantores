@@ -30,6 +30,9 @@ class PsalmTones extends Component
 
     public bool $initiumEveryVerse = false;
 
+    /** The format the underlined text is shown in: aretino, chordpro or html. */
+    public string $textFormat = 'html';
+
     public function mount(PsalmToneLibrary $library): void
     {
         $this->collection = (string) array_key_first($library->collections());
@@ -82,7 +85,7 @@ class PsalmTones extends Component
     }
 
     /**
-     * @return array{source: string, html: string, unsure: list<array{verse: int, syllable: string}>}
+     * @return array{source: string, html: string, aretinoText: string, chordProText: string, unsure: list<array{verse: int, syllable: string}>}
      */
     #[Computed]
     public function setting(): array
@@ -90,7 +93,7 @@ class PsalmTones extends Component
         $tone = $this->selectedTone()['tone'];
 
         if ($tone === null || trim($this->verses) === '' || mb_strlen($this->verses) > self::MAX_VERSES_LENGTH) {
-            return ['source' => '', 'html' => '', 'unsure' => []];
+            return ['source' => '', 'html' => '', 'aretinoText' => '', 'chordProText' => '', 'unsure' => []];
         }
 
         return app(PsalmToneSetter::class)->set($tone, $this->verses, $this->initiumEveryVerse);
