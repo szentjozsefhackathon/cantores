@@ -59,7 +59,11 @@ resources/js/aretino-mini-editor.js
                     placeholder="Uram, te lettél menedékünk * nemzedékről nemzedékre."
                 />
 
-                <flux:switch wire:model.live="initiumEveryVerse" :label="__('Initium on every verse')" />
+                <flux:select wire:model.live="initiumSetting" :label="__('Initium')">
+                    @foreach (\App\Enums\InitiumSetting::cases() as $option)
+                        <flux:select.option value="{{ $option->value }}">{{ $option->label() }}</flux:select.option>
+                    @endforeach
+                </flux:select>
             </div>
 
             <div class="space-y-4">

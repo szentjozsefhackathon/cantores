@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\InitiumSetting;
+
 /**
  * Sets Hungarian psalm verses to a psalm tone and writes them as Aretino.
  *
@@ -28,7 +30,7 @@ class PsalmToneSetter
     /**
      * @return array{source: string, html: string, aretinoText: string, chordProText: string, unsure: list<array{verse: int, syllable: string}>}
      */
-    public function set(PsalmTone $tone, string $verses, bool $initiumEveryVerse = false): array
+    public function set(PsalmTone $tone, string $verses, InitiumSetting $initiumSetting = InitiumSetting::FirstVerse): array
     {
         $lines = [];
         $continues = false;
@@ -54,7 +56,7 @@ class PsalmToneSetter
         $unsure = [];
 
         foreach ($lines as $index => $line) {
-            $initium = $index === 0 || $initiumEveryVerse ? $this->initium($tone->initium, $line) : [];
+            $initium = $initiumSetting->appliesTo($index) ? $this->initium($tone->initium, $line) : [];
             $parts = [];
 
             foreach ($this->parts($tone, $line, $initium) as [$slots, $text, $mark, $bar]) {
@@ -209,7 +211,7 @@ class PsalmToneSetter
      * syllables next to each other only the first is underlined.
      *
      * @param  list<array{0: list<array{notes: string, syllables: list<PsalmSyllable>, isTenor: bool, continuesOpen: bool, isAccent: bool, missesAccent: bool}>, 1: string, 2: string}>  $parts
-     * @return list<list<array{text: string, isUnderlined: bool, isMark?: bool}>>
+     * @return list<list<array{text: string, isUnderlined: bool, isItalic?: bool, isMark?: bool}>>
      */
     private function words(array $parts): array
     {
@@ -233,7 +235,11 @@ class PsalmToneSetter
 
                 foreach ($placement['syllables'] as $position => $syllable) {
                     $isMarked = $position === 0 && ($placement['isAccent'] || $isDeparture);
-                    $piece = ['text' => $syllable->text, 'isUnderlined' => $isMarked && ! $previousUnderlined];
+                    $piece = [
+                        'text' => $syllable->text,
+                        'isUnderlined' => $isMarked && ! $previousUnderlined,
+                        'isItalic' => $position === 0 && self::isMelisma($placement['notes']),
+                    ];
                     $previousUnderlined = $isMarked;
 
                     if ($previous !== null && $previous->word === $syllable->word && $words !== []) {
@@ -262,8 +268,8 @@ class PsalmToneSetter
     /**
      * Writes the words of a verse, each piece in the markup of one format.
      *
-     * @param  list<list<array{text: string, isUnderlined: bool, isMark?: bool}>>  $words
-     * @param  callable(array{text: string, isUnderlined: bool, isMark?: bool}): string  $piece
+     * @param  list<list<array{text: string, isUnderlined: bool, isItalic?: bool, isMark?: bool}>>  $words
+     * @param  callable(array{text: string, isUnderlined: bool, isItalic?: bool, isMark?: bool}): string  $piece
      */
     private static function underlined(array $words, callable $piece): string
     {
@@ -274,7 +280,7 @@ class PsalmToneSetter
     }
 
     /**
-     * @param  array{text: string, isUnderlined: bool, isMark?: bool}  $piece
+     * @param  array{text: string, isUnderlined: bool, isItalic?: bool, isMark?: bool}  $piece
      */
     private static function htmlPiece(array $piece): string
     {
@@ -282,13 +288,13 @@ class PsalmToneSetter
             return $piece['text'] === '+' ? '†' : e($piece['text']);
         }
 
-        return self::underline(e(str_replace('~', ' ', $piece['text'])), $piece['isUnderlined'], '<u>', '</u>');
+        return self::decorate(e(str_replace('~', ' ', $piece['text'])), $piece, '<u>', '</u>', '<i>', '</i>');
     }
 
     /**
      * Aretino crosses a `+` itself and underlines between brackets.
      *
-     * @param  array{text: string, isUnderlined: bool, isMark?: bool}  $piece
+     * @param  array{text: string, isUnderlined: bool, isItalic?: bool, isMark?: bool}  $piece
      */
     private static function aretinoPiece(array $piece): string
     {
@@ -296,11 +302,11 @@ class PsalmToneSetter
             return $piece['text'];
         }
 
-        return self::underline(str_replace(['~', '|'], [' ', '\\|'], $piece['text']), $piece['isUnderlined'], '[', ']');
+        return self::decorate(str_replace(['~', '|'], [' ', '\\|'], $piece['text']), $piece, '[', ']', '<', '>');
     }
 
     /**
-     * @param  array{text: string, isUnderlined: bool, isMark?: bool}  $piece
+     * @param  array{text: string, isUnderlined: bool, isItalic?: bool, isMark?: bool}  $piece
      */
     private static function chordProPiece(array $piece): string
     {
@@ -308,17 +314,33 @@ class PsalmToneSetter
             return $piece['text'] === '+' ? '†' : $piece['text'];
         }
 
-        return self::underline(str_replace('~', ' ', $piece['text']), $piece['isUnderlined'], '<u>', '</u>');
+        return self::decorate(str_replace('~', ' ', $piece['text']), $piece, '<u>', '</u>', '<i>', '</i>');
     }
 
     /**
-     * Wraps the letters of a syllable, not the punctuation around them.
+     * A syllable sung to more than one note, accidentals aside.
      */
-    private static function underline(string $text, bool $isUnderlined, string $open, string $close): string
+    private static function isMelisma(string $notes): bool
     {
-        if (! $isUnderlined) {
+        return preg_match_all('/[a-gA-G]/', (string) preg_replace('/\([^()]*\)/', '', $notes)) > 1;
+    }
+
+    /**
+     * Wraps the letters of a syllable, not the punctuation around them, in
+     * the markup for underlining and for the italic of a melisma.
+     *
+     * @param  array{isUnderlined: bool, isItalic?: bool}  $piece
+     */
+    private static function decorate(string $text, array $piece, string $underlineOpen, string $underlineClose, string $italicOpen, string $italicClose): string
+    {
+        $isItalic = $piece['isItalic'] ?? false;
+
+        if (! $piece['isUnderlined'] && ! $isItalic) {
             return $text;
         }
+
+        $open = ($piece['isUnderlined'] ? $underlineOpen : '').($isItalic ? $italicOpen : '');
+        $close = ($isItalic ? $italicClose : '').($piece['isUnderlined'] ? $underlineClose : '');
 
         return (string) preg_replace('/^(\P{L}*)(.*\p{L})(\P{L}*)$/su', '$1'.$open.'$2'.$close.'$3', $text);
     }

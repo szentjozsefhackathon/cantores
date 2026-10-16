@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Enums\InitiumSetting;
 use App\Enums\ScoreFormat;
 use App\Services\PsalmTone;
 use App\Services\PsalmToneLibrary;
@@ -28,7 +29,7 @@ class PsalmTones extends Component
 
     public string $verses = "Dicsőség az Atyának és Fiúnak * és Szentlélek Istennek,\nMiképpen kezdetben, most és mindenkor * és mindörökkön örökké. Ámen.";
 
-    public bool $initiumEveryVerse = false;
+    public InitiumSetting $initiumSetting = InitiumSetting::FirstVerse;
 
     /** The format the underlined text is shown in: aretino, chordpro or html. */
     public string $textFormat = 'html';
@@ -96,7 +97,7 @@ class PsalmTones extends Component
             return ['source' => '', 'html' => '', 'aretinoText' => '', 'chordProText' => '', 'unsure' => []];
         }
 
-        return app(PsalmToneSetter::class)->set($tone, $this->verses, $this->initiumEveryVerse);
+        return app(PsalmToneSetter::class)->set($tone, $this->verses, $this->initiumSetting);
     }
 
     #[Computed]

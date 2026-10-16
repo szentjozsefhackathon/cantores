@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\InitiumSetting;
 use App\Enums\SyllableStress;
 use App\Livewire\Pages\PsalmTones;
 use App\Services\HungarianStress;
@@ -26,9 +27,9 @@ function benedictineFirstTone(): PsalmTone
 /**
  * @return array{source: string, unsure: list<array{verse: int, syllable: string}>}
  */
-function setPsalm(PsalmTone $tone, string $verses, bool $initiumEveryVerse = false): array
+function setPsalm(PsalmTone $tone, string $verses, InitiumSetting $initiumSetting = InitiumSetting::FirstVerse): array
 {
-    return app(PsalmToneSetter::class)->set($tone, $verses, $initiumEveryVerse);
+    return app(PsalmToneSetter::class)->set($tone, $verses, $initiumSetting);
 }
 
 it('reads what every slot of a formula is for', function (string $token, string $notes, bool $isTenor, bool $isOpen, bool $isAccent, bool $isOptional, int $noteCount) {
@@ -125,6 +126,21 @@ it('joins the notes after the accent onto a stressed last syllable', function ()
         ->toContain('w: Ezt mond-ja az Úr, (*)');
 });
 
+it('sings the melisma of a half-verse on its accented syllable rather than its last', function () {
+    $tone = PsalmTone::fromLine('III', '(K###) e f | at fo , at b- ao g- f a | at f ao- g f ||');
+
+    expect(setPsalm($tone, 'mérhetetlen irgalmadban * töröld el gonoszságomat!')['source'])
+        ->toStartWith('(g2) (K###) e f at b a gf a. |')
+        ->toContain('w: mér-he-tetlen ir-gal-mad-ban (*)');
+});
+
+it('puts an accent on a syllable the text marks with an apostrophe, even one the tenor would take', function () {
+    $tone = PsalmTone::fromLine('VII.dó', '(K#) f g | at g , at g a b go | at b- ao go-f g. ||');
+
+    expect(setPsalm($tone, 'és szent Lelkedet ne vond meg tőlem.')['source'])->toContain('w: és~szent~Lelkedet~ne vond')
+        ->and(setPsalm($tone, "és szent Lelkedet 'ne vond meg tőlem.")['source'])->toContain('w: és~szent~Lelkedet ne vond');
+});
+
 it('bends the notes left over onto the last syllable of a text too short for the formula', function () {
     expect(setPsalm(sketchedFirstTone(), 'Ámen.')['source'])
         ->toBe("(g2) at gfgfd. ||\nw: Á-men.");
@@ -136,11 +152,20 @@ it('sings the initium and the flexa', function () {
         ->toContain('w: U-ram, te~lettél~menedé-künk (+) ');
 });
 
+it('sings the initium on the first verse by default, on every verse or on none', function () {
+    $verses = "Uram, te lettél menedékünk, * nemzedékről nemzedékre.\nMielőtt a hegyek születtek, * öröktől fogva te vagy.";
+
+    $none = explode("\n\n", setPsalm(benedictineFirstTone(), $verses, InitiumSetting::None)['source']);
+
+    expect($none[0])->toStartWith('(g2) (Kb) at ')
+        ->and($none[1])->toStartWith('(Z) at ');
+});
+
 it('sings the initium on the first verse only unless asked to', function () {
     $verses = "Uram, te lettél menedékünk, * nemzedékről nemzedékre.\nMielőtt a hegyek születtek, * öröktől fogva te vagy.";
 
     $blocks = explode("\n\n", setPsalm(benedictineFirstTone(), $verses)['source']);
-    $everyVerse = explode("\n\n", setPsalm(benedictineFirstTone(), $verses, initiumEveryVerse: true)['source']);
+    $everyVerse = explode("\n\n", setPsalm(benedictineFirstTone(), $verses, initiumSetting: InitiumSetting::EveryVerse)['source']);
 
     expect($blocks)->toHaveCount(2)
         ->and($blocks[0])->toStartWith('(g2) (Kb) f g at ')
@@ -217,8 +242,8 @@ it('underlines only the first of two marked syllables next to each other', funct
 it('writes the underlined text as Aretino and ChordPro too, with the flexa crossed', function () {
     $setting = setPsalm(benedictineFirstTone(), "Uram, te lettél menedékünk + nemzedékről nemzedékre, * mielőtt a hegyek születtek.\nÁmen.");
 
-    expect($setting['aretinoText'])->toBe("W: Uram, te lettél menedé[künk] + nemzedékről [nem]ze[dék]re, * mielőtt a [he]gyek [szü]lettek.\nW: Á[men].")
-        ->and($setting['chordProText'])->toBe("Uram, te lettél menedé<u>künk</u> † nemzedékről <u>nem</u>ze<u>dék</u>re, * mielőtt a <u>he</u>gyek <u>szü</u>lettek.\nÁ<u>men</u>.")
+    expect($setting['aretinoText'])->toBe("W: Uram, te lettél menedé[künk] + nemzedékről [nem]ze[dék]re, * mielőtt a [he]gyek [szü]lettek.\nW: Á[<men>].")
+        ->and($setting['chordProText'])->toBe("Uram, te lettél menedé<u>künk</u> † nemzedékről <u>nem</u>ze<u>dék</u>re, * mielőtt a <u>he</u>gyek <u>szü</u>lettek.\nÁ<u><i>men</i></u>.")
         ->and($setting['html'])->toStartWith('<p>Uram, te lettél menedé<u>künk</u> † nemzedékről');
 });
 
@@ -267,6 +292,14 @@ it('writes the verses as HTML with the tenor left and the accents underlined', f
         "<p>Mielőtt a hegyek szület<u>tek</u>, † és létrejött a <u>föld</u> és a <u>vi</u>lág, * öröktől fogva <u>te</u> vagy, <u>Is</u>ten.</p>\n"
         .'<p>visszatérít <u>min</u>ket <u>U</u>runk, * hosszú &lt;as<u>szo</u>nyok&gt; <u>vis</u>sza.</p>'
     );
+});
+
+it('sets the syllable of a melisma in italics', function () {
+    $tone = PsalmTone::fromLine('VII.dó', '(K#) f g | at g , at g a b go | at b- ao go-f g. ||');
+    $setting = setPsalm($tone, "és szent Lelkedet 'ne vond meg tőlem.");
+
+    expect($setting['html'])->toBe('<p>és szent Lelkedet <u>ne</u> vond <u>meg</u> <i>tő</i>lem.</p>')
+        ->and($setting['aretinoText'])->toBe('W: és szent Lelkedet [ne] vond [meg] <tő>lem.');
 });
 
 it('goes on with a verse in the next line when a line ends with a mark', function () {

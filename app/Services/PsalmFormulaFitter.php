@@ -12,7 +12,10 @@ use App\Enums\SyllableStress;
  * stress, two notes sit better on a long syllable than on a short one, and an
  * optional note is left out unless it helps. When the text runs out, a slot
  * may join the syllable before it, which is how a verse ending on a stressed
- * monosyllable still gets the notes after its accent. Among equally cheap
+ * monosyllable still gets the notes after its accent. The melisma lengthens
+ * the syllable as an accent does, so it goes on an accented syllable; an
+ * unaccented one takes it only when the text is too short for anything else.
+ * Among equally cheap
  * settings the one with more syllables on the tenor wins.
  */
 class PsalmFormulaFitter
@@ -23,11 +26,17 @@ class PsalmFormulaFitter
 
     private const PLAIN_ON_PRIMARY = 3.0;
 
+    /** A syllable the text marked for an accent, left without one. */
+    private const MARKED_ON_PLAIN = 50.0;
+
     private const JOIN_LONG = 5.0;
 
     private const JOIN_SHORT = 8.0;
 
     private const NEUME_ON_SHORT = 1.0;
+
+    /** A melisma on a syllable no accent of the formula falls on. */
+    private const JOIN_UNACCENTED = 20.0;
 
     /** A tenor is always sung; it goes without a syllable only when the text is too short for anything else. */
     private const EMPTY_TENOR = 100.0;
@@ -56,7 +65,9 @@ class PsalmFormulaFitter
 
     private const AFTER_TENOR = 1;
 
-    private const AFTER_SLOT = 2;
+    private const AFTER_PLAIN = 2;
+
+    private const AFTER_ACCENT = 3;
 
     /** @var list<PsalmToneSlot> */
     private array $slots = [];
@@ -111,8 +122,11 @@ class PsalmFormulaFitter
         if ($slot->isTenor) {
             $candidates[] = ['empty', 0, self::EMPTY_TENOR, $slotIndex + 1, $syllableIndex, false, $after];
 
+            $cost = 0.0;
+
             for ($length = 1; $syllableIndex + $length <= count($this->syllables); $length++) {
-                $candidates[] = ['tenor', $length, 0.0, $slotIndex + 1, $syllableIndex + $length, false, self::AFTER_TENOR];
+                $cost += $this->syllables[$syllableIndex + $length - 1]->isMarked ? self::MARKED_ON_PLAIN : 0.0;
+                $candidates[] = ['tenor', $length, $cost, $slotIndex + 1, $syllableIndex + $length, false, self::AFTER_TENOR];
             }
         } else {
             if ($syllableIndex < count($this->syllables)) {
@@ -120,7 +134,7 @@ class PsalmFormulaFitter
                 $cost = $this->stressCost($syllableIndex, $accented)
                     + ($slot->noteCount > 1 && ! $syllable->isLong ? self::NEUME_ON_SHORT : 0.0)
                     + ($slot->isOptional ? self::OPTIONAL_USED : 0.0);
-                $candidates[] = ['take', 1, $cost, $slotIndex + 1, $syllableIndex + 1, false, self::AFTER_SLOT];
+                $candidates[] = ['take', 1, $cost, $slotIndex + 1, $syllableIndex + 1, false, $accented ? self::AFTER_ACCENT : self::AFTER_PLAIN];
 
                 $maxLength = $slot->isOpen ? min(self::OPEN_MAX_SYLLABLES, count($this->syllables) - $syllableIndex) : 1;
 
@@ -137,10 +151,12 @@ class PsalmFormulaFitter
                 $candidates[] = ['skip', 0, 0.0, $slotIndex + 1, $syllableIndex, $accented, $after];
             }
 
-            if ($after === self::AFTER_SLOT) {
+            if ($after === self::AFTER_PLAIN || $after === self::AFTER_ACCENT) {
                 $previous = $this->syllables[$syllableIndex - 1];
-                $cost = $this->stressCost($syllableIndex - 1, $accented) + ($previous->isLong ? self::JOIN_LONG : self::JOIN_SHORT);
-                $candidates[] = ['join', 0, $cost, $slotIndex + 1, $syllableIndex, false, self::AFTER_SLOT];
+                $joinsAccent = $after === self::AFTER_ACCENT || $accented;
+                $cost = $this->stressCost($syllableIndex - 1, $accented) + ($previous->isLong ? self::JOIN_LONG : self::JOIN_SHORT)
+                    + ($joinsAccent ? 0.0 : self::JOIN_UNACCENTED);
+                $candidates[] = ['join', 0, $cost, $slotIndex + 1, $syllableIndex, false, $joinsAccent ? self::AFTER_ACCENT : self::AFTER_PLAIN];
             }
         }
 
@@ -176,6 +192,7 @@ class PsalmFormulaFitter
         return match (true) {
             $accented && $syllable->stress === SyllableStress::None => self::ACCENT_ON_UNSTRESSED,
             $accented && $syllable->stress === SyllableStress::Secondary => self::ACCENT_ON_SECONDARY,
+            ! $accented && $syllable->isMarked => self::MARKED_ON_PLAIN,
             ! $accented && $syllable->stress === SyllableStress::Primary => self::PLAIN_ON_PRIMARY,
             default => 0.0,
         };

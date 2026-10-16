@@ -49,7 +49,7 @@ class HungarianStress
                     $pendingPrefix .= $word.'~';
                 } else {
                     $last = array_pop($syllables);
-                    $syllables[] = new PsalmSyllable($last->text.'~'.$word, $last->word, $last->stress, $last->isLong);
+                    $syllables[] = new PsalmSyllable($last->text.'~'.$word, $last->word, $last->stress, $last->isLong, $last->isMarked);
                 }
 
                 continue;
@@ -65,9 +65,9 @@ class HungarianStress
             $prefix = str_replace(["'", '·'], '', $prefix);
             $suffix = str_replace(["'", '·'], '', $suffix);
             $first = $wordSyllables[0];
-            $wordSyllables[0] = new PsalmSyllable($pendingPrefix.$prefix.$first->text, $first->word, $first->stress, $first->isLong);
+            $wordSyllables[0] = new PsalmSyllable($pendingPrefix.$prefix.$first->text, $first->word, $first->stress, $first->isLong, $first->isMarked);
             $last = array_pop($wordSyllables);
-            $wordSyllables[] = new PsalmSyllable($last->text.$suffix, $last->word, $last->stress, $last->isLong);
+            $wordSyllables[] = new PsalmSyllable($last->text.$suffix, $last->word, $last->stress, $last->isLong, $last->isMarked);
             $pendingPrefix = '';
 
             array_push($syllables, ...$wordSyllables);
@@ -110,7 +110,7 @@ class HungarianStress
                     default => SyllableStress::None,
                 };
 
-                $syllables[] = new PsalmSyllable($text, $index, $stress, $this->isLong($text));
+                $syllables[] = new PsalmSyllable($text, $index, $stress, $this->isLong($text), $position === 0 && $mark === "'");
             }
 
             $mark = '';
