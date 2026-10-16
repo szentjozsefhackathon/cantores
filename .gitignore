@@ -44,3 +44,4 @@ mcp.json
 
 # Cloudflare Origin CA certificate and key for Traefik; they live on the server only.
 /certs
+.mcp.json
