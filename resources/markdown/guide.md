@@ -410,8 +410,9 @@ külön hálózatra: mindkét eszköz ugyanazzal a szerverrel beszél, ugyanazza
 
 A Távirányító ugyanúgy megnyitható a laptopon is, egy másik ablakban – ilyenkor a lista
 **Ez az eszköz** jelöléssel mutatja a saját vetítőablakodat is. A vezérlőablakban a
-billentyűzet is működik: `szóköz`, `→`, `PageDown` előre, `←`, `PageUp` vissza, `Home` és
-`End` a pakli két vége, `B` sötétítés, `L` az énekrend, `F` teljes képernyő.
+billentyűzet is működik: `szóköz`, `→`, `PageDown` előre, `←`, `PageUp` vissza (így a
+prezentációs távirányítók, „clickerek” is lapoznak), `Shift`+`PageDown` és `Shift`+`PageUp`
+a következő, illetve az előző énekre ugrik, `Home` és `End` a pakli két vége, `B` sötétítés, `L` az énekrend, `F` teljes képernyő.
 
 > **Miért így?** Ha a plébánia lecseréli a laptopot két szolgálat között, itt nem történik
 > semmi: a paklit, a kottákat és a kinézetet nem a gép tárolja, hanem a szerver. Az új

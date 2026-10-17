@@ -37,12 +37,12 @@ function presenter(total = 3) {
     return component;
 }
 
-test('page up and page down move the wall between musics, not slides', () => {
+test('shift with page up and page down moves the wall between musics, not slides', () => {
     const deck = presenter();
     deck.slides = [1, 1, 2, 2, 3, 4].map((entryId, index) => ({ entryId, index, svg: null }));
     deck.entries = [{ id: 1, assignmentId: 9 }, { id: 2 }, { id: 3, assignmentId: 5 }, { id: 4, assignmentId: 5 }];
     deck.total = 6;
-    const press = (key) => deck.onKey({ key, preventDefault() {} });
+    const press = (key) => deck.onKey({ key, shiftKey: true, preventDefault() {} });
 
     deck.index = 1;
     press('PageDown');
@@ -55,6 +55,20 @@ test('page up and page down move the wall between musics, not slides', () => {
     assert.equal(deck.index, 4, 'the two scores of one music are one stop');
 
     deck.index = 3;
+    press('PageUp');
+    assert.equal(deck.index, 0);
+});
+
+test('page up and page down alone turn a slide, as a clicker sends them', () => {
+    const deck = presenter();
+    deck.slides = [1, 1, 2].map((entryId, index) => ({ entryId, index, svg: null }));
+    deck.entries = [{ id: 1 }, { id: 2 }];
+    const press = (key) => deck.onKey({ key, preventDefault() {} });
+
+    deck.index = 0;
+    press('PageDown');
+    assert.equal(deck.index, 1);
+
     press('PageUp');
     assert.equal(deck.index, 0);
 });

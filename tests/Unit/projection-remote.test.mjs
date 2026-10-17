@@ -39,21 +39,21 @@ function remote(total = 5) {
 }
 
 /** A key as the window hands it over, remembering whether it was swallowed. */
-function press(key) {
-    return { key, target: null, prevented: false, preventDefault() { this.prevented = true; } };
+function press(key, { shiftKey = false } = {}) {
+    return { key, shiftKey, target: null, prevented: false, preventDefault() { this.prevented = true; } };
 }
 
 test('the keys every display program taught the person at the laptop', () => {
     const deck = remote();
 
-    for (const key of [' ', 'ArrowRight', 'ArrowDown', 'Enter']) {
+    for (const key of [' ', 'ArrowRight', 'ArrowDown', 'PageDown', 'Enter']) {
         deck.index = 0;
         deck.onKey(press(key));
 
         assert.equal(deck.index, 1, `${key} did not advance the service`);
     }
 
-    for (const key of ['ArrowLeft', 'ArrowUp', 'Backspace']) {
+    for (const key of ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace']) {
         deck.index = 2;
         deck.onKey(press(key));
 
@@ -67,40 +67,41 @@ test('the keys every display program taught the person at the laptop', () => {
     assert.equal(deck.index, 0);
 });
 
-/* Page Up and Page Down move a music at a time: the start of the next one, or of
-   the one before this, wherever in this one the service has got to. */
-test('page up and page down move between musics, not slides', () => {
+/* Shift with Page Up or Page Down moves a music at a time: the start of the next
+   one, or of the one before this, wherever in this one the service has got to.
+   Without Shift they are a clicker's forward and back, and turn a slide. */
+test('shift with page up and page down moves between musics, not slides', () => {
     const deck = remote();
     deck.slides = [1, 1, 2, 2, 2, 3].map((entryId, index) => ({ entryId, index, svg: null }));
     deck.entries = [{ id: 1 }, { id: 2 }, { id: 3 }];
     deck.total = 6;
 
     deck.index = 0;
-    deck.onKey(press('PageDown'));
+    deck.onKey(press('PageDown', { shiftKey: true }));
     assert.equal(deck.index, 2);
 
-    deck.onKey(press('PageDown'));
+    deck.onKey(press('PageDown', { shiftKey: true }));
     assert.equal(deck.index, 5);
 
-    deck.onKey(press('PageDown'));
+    deck.onKey(press('PageDown', { shiftKey: true }));
     assert.equal(deck.index, 5, 'the last music has none after it');
 
     deck.index = 4;
-    deck.onKey(press('PageUp'));
+    deck.onKey(press('PageUp', { shiftKey: true }));
     assert.equal(deck.index, 0);
 
     deck.index = 5;
-    deck.onKey(press('PageUp'));
+    deck.onKey(press('PageUp', { shiftKey: true }));
     assert.equal(deck.index, 2);
 
     deck.index = 1;
-    deck.onKey(press('PageUp'));
+    deck.onKey(press('PageUp', { shiftKey: true }));
     assert.equal(deck.index, 0, 'the first music holds at its start');
 });
 
-/* A music sung from two scores is two rows, and Page Down walks
+/* A music sung from two scores is two rows, and Shift+Page Down walks
    past both of them rather than stopping at the second score. */
-test('page down treats the scores of one music as one', () => {
+test('shift page down treats the scores of one music as one', () => {
     const deck = remote();
     deck.slides = [10, 11, 11, 12, 13].map((entryId, index) => ({ entryId, index, svg: null }));
     deck.entries = [
@@ -112,14 +113,14 @@ test('page down treats the scores of one music as one', () => {
     deck.total = 5;
 
     deck.index = 0;
-    deck.onKey(press('PageDown'));
+    deck.onKey(press('PageDown', { shiftKey: true }));
     assert.equal(deck.index, 3);
 
-    deck.onKey(press('PageDown'));
+    deck.onKey(press('PageDown', { shiftKey: true }));
     assert.equal(deck.index, 4);
 
     deck.index = 3;
-    deck.onKey(press('PageUp'));
+    deck.onKey(press('PageUp', { shiftKey: true }));
     assert.equal(deck.index, 0);
 });
 

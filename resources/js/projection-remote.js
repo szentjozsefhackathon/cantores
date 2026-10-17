@@ -1279,12 +1279,14 @@ onAlpineInit(() => {
             const keys = {
                 ArrowRight: () => this.moved('next', this.index + 1),
                 ArrowDown: () => this.moved('next', this.index + 1),
-                PageDown: () => this.moved('next', musicStartAt(this.slides, this.entries, this.index, 'next')),
+                // A clicker's forward and back are Page Down and Page Up, so on
+                // their own they turn a slide; with Shift they skip a music.
+                PageDown: () => this.moved('next', event.shiftKey ? musicStartAt(this.slides, this.entries, this.index, 'next') : this.index + 1),
                 ' ': () => this.moved('next', this.index + 1),
                 Enter: () => this.moved('next', this.index + 1),
                 ArrowLeft: () => this.moved('previous', this.index - 1),
                 ArrowUp: () => this.moved('previous', this.index - 1),
-                PageUp: () => this.moved('previous', musicStartAt(this.slides, this.entries, this.index, 'previous')),
+                PageUp: () => this.moved('previous', event.shiftKey ? musicStartAt(this.slides, this.entries, this.index, 'previous') : this.index - 1),
                 Backspace: () => this.moved('previous', this.index - 1),
                 Home: () => this.moved('previous', 0),
                 End: () => this.moved('next', this.total - 1),
