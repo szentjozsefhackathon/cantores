@@ -1691,5 +1691,8 @@
     "The tone needs a mediatio and a terminatio.": "A tónusnak kell mediatio és terminatio.",
     "A formula of the tone has more than one tenor.": "A tónus egyik formulájában több tenor is van.",
     "The formula has no tone name before it.": "A formula előtt nincs tónusnév.",
-    "Copy": "Másolás"
+    "Copy": "Másolás",
+    "The formula can be at most :max characters long.": "A formula legfeljebb :max karakter hosszú lehet.",
+    "The verses can be at most :max characters long.": "A versek legfeljebb :max karakter hosszúak lehetnek.",
+    "Verse :verse is too long: a part of a verse can have at most :max syllables. Divide the halves with *.": ":verse. vers túl hosszú: egy versrész legfeljebb :max szótagos lehet. A feleket *-gal válaszd el."
 }

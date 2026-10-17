@@ -67,7 +67,9 @@ resources/js/aretino-mini-editor.js
             </div>
 
             <div class="space-y-4">
-                @if ($setting['source'] === '')
+                @if ($setting['error'])
+                    <flux:text class="text-sm text-red-600 dark:text-red-400">{{ $setting['error'] }}</flux:text>
+                @elseif ($setting['source'] === '')
                     <flux:text>{{ __('The verses set to the tone appear here.') }}</flux:text>
                 @else
                     <div

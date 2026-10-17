@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\InitiumSetting;
+use InvalidArgumentException;
 
 /**
  * Sets Hungarian psalm verses to a psalm tone and writes them as Aretino.
@@ -22,6 +23,13 @@ class PsalmToneSetter
     /** Hungarian consonants written with two letters, which double by their first letter. */
     private const DIGRAPHS = ['cs', 'dz', 'gy', 'ly', 'ny', 'sz', 'ty', 'zs'];
 
+    /**
+     * The most syllables one part of a verse is set with. A psalm half-verse
+     * has far fewer, and the cost of fitting a part grows with the square of
+     * its syllables.
+     */
+    public const MAX_PART_SYLLABLES = 100;
+
     public function __construct(
         private HungarianStress $stress,
         private PsalmFormulaFitter $fitter,
@@ -29,6 +37,8 @@ class PsalmToneSetter
 
     /**
      * @return array{source: string, html: string, aretinoText: string, chordProText: string, unsure: list<array{verse: int, syllable: string}>}
+     *
+     * @throws InvalidArgumentException when a part of a verse has more than MAX_PART_SYLLABLES syllables
      */
     public function set(PsalmTone $tone, string $verses, InitiumSetting $initiumSetting = InitiumSetting::FirstVerse): array
     {
@@ -60,7 +70,13 @@ class PsalmToneSetter
             $parts = [];
 
             foreach ($this->parts($tone, $line, $initium) as [$slots, $text, $mark, $bar]) {
-                $fit = $this->fitter->fit($slots, $this->stress->syllables($text));
+                $syllables = $this->stress->syllables($text);
+
+                if (count($syllables) > self::MAX_PART_SYLLABLES) {
+                    throw new InvalidArgumentException(__('Verse :verse is too long: a part of a verse can have at most :max syllables. Divide the halves with *.', ['verse' => $index + 1, 'max' => self::MAX_PART_SYLLABLES]));
+                }
+
+                $fit = $this->fitter->fit($slots, $syllables);
                 $parts[] = [$fit['placements'], $mark, $bar];
 
                 foreach ($fit['placements'] as $placement) {

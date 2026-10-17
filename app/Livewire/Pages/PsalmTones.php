@@ -21,6 +21,13 @@ class PsalmTones extends Component
     /** The most verse text one setting takes, in characters. */
     private const MAX_VERSES_LENGTH = 20000;
 
+    /**
+     * The longest custom formula, in characters. The fitter weighs every slot
+     * against every syllable, so a formula far longer than any tone would let
+     * one request take the memory of a worker.
+     */
+    private const MAX_FORMULA_LENGTH = 120;
+
     public string $collection = '';
 
     public string $tone = '';
@@ -64,6 +71,10 @@ class PsalmTones extends Component
     public function selectedTone(): array
     {
         if (trim($this->customFormula) !== '') {
+            if (mb_strlen($this->customFormula) > self::MAX_FORMULA_LENGTH) {
+                return ['tone' => null, 'error' => __('The formula can be at most :max characters long.', ['max' => self::MAX_FORMULA_LENGTH])];
+            }
+
             try {
                 return ['tone' => PsalmTone::fromLine(__('Custom formula'), $this->customFormula), 'error' => null];
             } catch (InvalidArgumentException $exception) {
@@ -86,18 +97,29 @@ class PsalmTones extends Component
     }
 
     /**
-     * @return array{source: string, html: string, aretinoText: string, chordProText: string, unsure: list<array{verse: int, syllable: string}>}
+     * The verses set to the tone, and what is wrong with them when they cannot be.
+     *
+     * @return array{source: string, html: string, aretinoText: string, chordProText: string, unsure: list<array{verse: int, syllable: string}>, error: string|null}
      */
     #[Computed]
     public function setting(): array
     {
         $tone = $this->selectedTone()['tone'];
+        $empty = ['source' => '', 'html' => '', 'aretinoText' => '', 'chordProText' => '', 'unsure' => [], 'error' => null];
 
-        if ($tone === null || trim($this->verses) === '' || mb_strlen($this->verses) > self::MAX_VERSES_LENGTH) {
-            return ['source' => '', 'html' => '', 'aretinoText' => '', 'chordProText' => '', 'unsure' => []];
+        if ($tone === null || trim($this->verses) === '') {
+            return $empty;
         }
 
-        return app(PsalmToneSetter::class)->set($tone, $this->verses, $this->initiumSetting);
+        if (mb_strlen($this->verses) > self::MAX_VERSES_LENGTH) {
+            return [...$empty, 'error' => __('The verses can be at most :max characters long.', ['max' => self::MAX_VERSES_LENGTH])];
+        }
+
+        try {
+            return [...app(PsalmToneSetter::class)->set($tone, $this->verses, $this->initiumSetting), 'error' => null];
+        } catch (InvalidArgumentException $exception) {
+            return [...$empty, 'error' => $exception->getMessage()];
+        }
     }
 
     #[Computed]

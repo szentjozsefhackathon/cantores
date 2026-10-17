@@ -343,6 +343,24 @@ it('sets verses to a custom formula and explains a malformed one', function () {
         ->assertSee(__('Unexpected ":token" in the tone. Write it as: initium | flexa , mediatio | terminatio ||', ['token' => '||']));
 });
 
+it('refuses a custom formula longer than any tone, which would take a worker\'s memory to fit', function () {
+    Livewire::test(PsalmTones::class)
+        ->set('customFormula', '| , at '.str_repeat('gso- ', 40).'| at g f gs- gf d ||')
+        ->assertSee(__('The formula can be at most :max characters long.', ['max' => 120]))
+        ->assertDontSee('/score/preview?d=', escape: false);
+});
+
+it('refuses a part of a verse with more syllables than a half-verse could have', function () {
+    $verses = "Uram, te lettél menedékünk, * nemzedékről nemzedékre.\n".str_repeat('menedék ', 51).'* nemzedékre.';
+
+    expect(fn () => setPsalm(benedictineFirstTone(), $verses))
+        ->toThrow(InvalidArgumentException::class, __('Verse :verse is too long: a part of a verse can have at most :max syllables. Divide the halves with *.', ['verse' => 2, 'max' => PsalmToneSetter::MAX_PART_SYLLABLES]));
+
+    Livewire::test(PsalmTones::class)
+        ->set('verses', $verses)
+        ->assertSee(__('Verse :verse is too long: a part of a verse can have at most :max syllables. Divide the halves with *.', ['verse' => 2, 'max' => PsalmToneSetter::MAX_PART_SYLLABLES]));
+});
+
 it('takes † for the flexa as well as +', function () {
     expect(setPsalm(benedictineFirstTone(), 'Uram, te lettél menedékünk † nemzedékről nemzedékre, * mielőtt a hegyek születtek.')['source'])
         ->toStartWith('(g2) (Kb) f g at g. , at ')
