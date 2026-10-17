@@ -5,6 +5,7 @@ use App\Http\Middleware\EnforcePairedDeviceSession;
 use App\Http\Middleware\EnsureVisitorIsHuman;
 use App\Http\Middleware\NotModifiedWhenUnchanged;
 use App\Services\ShowStream;
+use App\Support\CloudflareNetwork;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '*');
+        $middleware->trustProxies(at: CloudflareNetwork::trustedProxies());
 
         $middleware->alias([
             'admin' => AdminMiddleware::class,
