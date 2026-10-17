@@ -458,6 +458,19 @@ onAlpineInit(() => {
         },
 
         /**
+         * The shape of the wall the preview is drawn as: the one the fit panel
+         * lines up, as its own window last said it was.
+         *
+         * The deck's shape until a wall has said, which is the preview this
+         * page always drew — a picture with no black around it.
+         */
+        get wallRatio() {
+            const shape = Number(this.fitTarget?.shape);
+
+            return shape > 0 ? String(shape) : this.aspectRatio;
+        },
+
+        /**
          * The fit as CSS, for this phone's own preview.
          *
          * The preview is the whole of how this is used: the cantor is at the

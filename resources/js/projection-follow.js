@@ -832,6 +832,9 @@ export function showClient(config) {
          */
         adjust: (screen, fit) => http.post(screen.fitUrl, { fit }),
 
+        /** Say what shape this wall's window is, so the phone can draw it. */
+        shape: (url, shape) => http.post(url, { shape }),
+
         /** Ask every device to confirm the unchanged authoritative state now. */
         resync: (url) => http.post(url, {}),
 

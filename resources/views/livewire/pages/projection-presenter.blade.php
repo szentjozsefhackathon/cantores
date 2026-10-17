@@ -46,6 +46,10 @@ resources/js/projection-presenter.js
         // these screens is the one I am — is answered here.
         'deviceId' => \App\Support\DeviceId::current(),
         'ackUrl' => route('screens.ack', ['screen' => $screen->id]),
+        // Where this wall says what shape its window is, and what it last said,
+        // so that opening the page again does not write the same shape again.
+        'shapeUrl' => route('screens.shape', ['screen' => $screen->id]),
+        'shape' => $screen->shape,
         'presentationId' => $presentation?->id,
         // How far into its opening the service is. Baked in so the card is the
         // first thing painted rather than something that arrives a second
@@ -66,7 +70,8 @@ resources/js/projection-presenter.js
     x-on:projection-updated.window="applyUpdate($event.detail)"
     x-on:keydown.window="onKey($event)"
     x-on:mousemove.window="wake()"
-    x-on:fullscreenchange.window="syncFullscreen()"
+    x-on:fullscreenchange.window="syncFullscreen(); reportShapeSoon()"
+    x-on:resize.window="reportShapeSoon()"
 >
     {{-- The two engines that draw two of the four formats are globals rather
          than bundled modules, and must be loaded before anything asks for them. --}}

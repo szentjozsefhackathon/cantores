@@ -45,6 +45,7 @@ use Illuminate\Support\Facades\DB;
  * @property float $fit_scale
  * @property float $fit_x
  * @property float $fit_y
+ * @property float|null $shape
  * @property int|null $applied_presentation_id
  * @property int $applied_version
  * @property string|null $drawn_revision
@@ -140,6 +141,16 @@ class Screen extends Model
     public const FIT_MAX_OFFSET = 1.0;
 
     /**
+     * The narrowest and widest a wall may say it is, as width over height.
+     *
+     * Far past any projector, and there only so that a window dragged down to
+     * a sliver cannot hand the phone a frame it has no room to draw.
+     */
+    public const SHAPE_MIN = 0.2;
+
+    public const SHAPE_MAX = 5.0;
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
@@ -151,6 +162,7 @@ class Screen extends Model
         'fit_scale',
         'fit_x',
         'fit_y',
+        'shape',
         'applied_presentation_id',
         'applied_version',
         'drawn_revision',
@@ -170,6 +182,7 @@ class Screen extends Model
             'fit_scale' => 'float',
             'fit_x' => 'float',
             'fit_y' => 'float',
+            'shape' => 'float',
         ];
     }
 
@@ -316,6 +329,25 @@ class Screen extends Model
             'fit_x' => self::clamp($fit['x'] ?? $this->fit_x, -self::FIT_MAX_OFFSET, self::FIT_MAX_OFFSET),
             'fit_y' => self::clamp($fit['y'] ?? $this->fit_y, -self::FIT_MAX_OFFSET, self::FIT_MAX_OFFSET),
         ])->save();
+    }
+
+    /**
+     * Note the shape of the window this wall draws into.
+     *
+     * Written only when it has really changed, because a window being dragged
+     * to size says so many times on the way: a few thousandths either side is
+     * the same wall to anybody looking at the phone, and not worth sending
+     * every device back to the server for.
+     */
+    public function reportShape(float $shape): void
+    {
+        $shape = round(self::clamp($shape, self::SHAPE_MIN, self::SHAPE_MAX), 4);
+
+        if ($this->shape !== null && abs($this->shape - $shape) < 0.002) {
+            return;
+        }
+
+        $this->forceFill(['shape' => $shape])->save();
     }
 
     private static function clamp(float|int|string|null $value, float $low, float $high): float

@@ -33,6 +33,7 @@ use App\Http\Controllers\ScorePdfExportController;
 use App\Http\Controllers\ScorePublicIncipitController;
 use App\Http\Controllers\ScreenAcknowledgementController;
 use App\Http\Controllers\ScreenFitController;
+use App\Http\Controllers\ScreenShapeController;
 use App\Http\Controllers\ShowStateController;
 use App\Http\Controllers\ShowStreamController;
 use App\Http\Controllers\SitemapController;
@@ -507,6 +508,11 @@ Route::post('/screens/{screen}/fit', ScreenFitController::class)
 Route::post('/screens/{screen}/ack', ScreenAcknowledgementController::class)
     ->middleware(['auth', 'verified', 'throttle:projection-poll'])
     ->name('screens.ack');
+
+// The shape of the window the wall draws into, so the phone can draw the wall.
+Route::post('/screens/{screen}/shape', ScreenShapeController::class)
+    ->middleware(['auth', 'verified', 'throttle:projection-poll'])
+    ->name('screens.shape');
 
 // Where a running deck has got to, as the two devices driving it agree on it.
 //

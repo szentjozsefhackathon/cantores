@@ -175,6 +175,11 @@ onAlpineInit(() => {
         fit: fitFrom(config.fit),
 
         _idleTimer: null,
+        _shapeTimer: null,
+
+        /** The shape the server last heard from this wall, width over height. */
+        _reportedShape: config.shape == null ? null : Number(config.shape),
+
         _poll: null,
         _stream: null,
         _heartbeat: null,
@@ -303,6 +308,7 @@ onAlpineInit(() => {
 
         destroy() {
             clearTimeout(this._idleTimer);
+            clearTimeout(this._shapeTimer);
             this._poll?.stop();
             this._stream?.stop();
             this._heartbeat?.stop();
@@ -573,7 +579,12 @@ onAlpineInit(() => {
             // nothing to say. What it is is the retry behind a report that
             // failed to land: the screen's drawn state is reported when it
             // changes, and this is what notices that the report never arrived.
-            this._heartbeat = poller(() => this.acknowledgeRendered(), {
+            // A shape that failed to land is said again on the same beat.
+            this._heartbeat = poller(async () => {
+                await this.reportShape();
+
+                return this.acknowledgeRendered();
+            }, {
                 interval: HEARTBEAT_MS,
                 maxInterval: HEARTBEAT_MS * 3,
             });
@@ -581,6 +592,43 @@ onAlpineInit(() => {
             this._poll.start();
             this._stream.start();
             this._heartbeat.start();
+            this.reportShape();
+        },
+
+        /**
+         * Tell the phone the shape of this window once it has stopped moving.
+         *
+         * A window being dragged to size or going full screen passes through
+         * every shape on the way, and only the one it settles on is the wall.
+         */
+        reportShapeSoon() {
+            clearTimeout(this._shapeTimer);
+            this._shapeTimer = setTimeout(() => this.reportShape(), 400);
+        },
+
+        /**
+         * Say what shape this wall is, unless the server already knows.
+         *
+         * The phone draws the wall in this shape and the picture inside it, so
+         * that what it crops is what the room has lost and nothing else.
+         */
+        async reportShape() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            if (!config.shapeUrl || !(width > 0) || !(height > 0)) { return; }
+
+            // Kept within what the server keeps, or a sliver of a window would
+            // be said again on every beat. @see Screen::SHAPE_MIN
+            const shape = Math.min(5, Math.max(0.2, width / height));
+
+            if (this._reportedShape !== null && Math.abs(this._reportedShape - shape) < 0.002) { return; }
+
+            const answer = await this._show.shape(config.shapeUrl, shape);
+
+            if (answer !== null) {
+                this._reportedShape = Number(answer.shape);
+            }
         },
 
         /**

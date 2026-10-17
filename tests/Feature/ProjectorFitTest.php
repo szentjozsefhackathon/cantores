@@ -186,3 +186,79 @@ it('will not let one cantor line up another one\'s screen', function () {
 
     expect($screen->refresh()->fit_scale)->toBe(1.0);
 });
+
+/*
+ * The phone draws the wall in the shape of the wall's own window, and lines the
+ * picture up inside it, so that what looks cut off in the hand is what the room
+ * has really lost.
+ */
+it('gives the phone the shape the wall says its window is', function () {
+    $user = User::factory()->create();
+    $wall = Screen::factory()->create(['user_id' => $user->id, 'device_id' => DeviceId::current()]);
+
+    actingAs($user);
+
+    postJson(route('screens.shape', ['screen' => $wall]), ['shape' => 1920 / 1080])
+        ->assertOk()
+        ->assertJsonPath('shape', 1.7778);
+
+    expect(screenInShow($wall)['shape'])->toBe(1.7778);
+});
+
+it('lets only the wall itself say what shape it is', function () {
+    $user = User::factory()->create();
+    $wall = Screen::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user);
+
+    postJson(route('screens.shape', ['screen' => $wall]), ['shape' => 1.5])->assertNotFound();
+
+    expect($wall->refresh()->shape)->toBeNull();
+});
+
+it('hides a wall belonging to somebody else', function () {
+    $wall = Screen::factory()->create(['device_id' => DeviceId::current()]);
+
+    actingAs(User::factory()->create());
+
+    postJson(route('screens.shape', ['screen' => $wall]), ['shape' => 1.5])->assertNotFound();
+
+    expect($wall->refresh()->shape)->toBeNull();
+});
+
+it('refuses a shape that is not a shape', function () {
+    $user = User::factory()->create();
+    $wall = Screen::factory()->create(['user_id' => $user->id, 'device_id' => DeviceId::current()]);
+
+    actingAs($user);
+
+    postJson(route('screens.shape', ['screen' => $wall]), ['shape' => 0])->assertJsonValidationErrors('shape');
+});
+
+it('keeps a window dragged down to a sliver within a frame the phone can draw', function () {
+    $user = User::factory()->create();
+    $wall = Screen::factory()->create(['user_id' => $user->id, 'device_id' => DeviceId::current()]);
+
+    actingAs($user);
+
+    postJson(route('screens.shape', ['screen' => $wall]), ['shape' => 40])
+        ->assertOk()
+        ->assertJsonPath('shape', (int) Screen::SHAPE_MAX);
+});
+
+/*
+ * A window being dragged to size says so on the way, and every write would
+ * send every device back to the server.
+ */
+it('leaves a shape alone that has barely moved', function () {
+    $user = User::factory()->create();
+    $wall = Screen::factory()->create(['user_id' => $user->id, 'device_id' => DeviceId::current(), 'shape' => 1.7778]);
+
+    actingAs($user);
+
+    postJson(route('screens.shape', ['screen' => $wall]), ['shape' => 1.7781])
+        ->assertOk()
+        ->assertJsonPath('shape', 1.7778);
+
+    expect($wall->refresh()->shape)->toBe(1.7778);
+});

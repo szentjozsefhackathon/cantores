@@ -393,42 +393,60 @@ resources/js/projection-remote.js
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
 
         {{-- What the room is reading. --}}
-        <div class="relative order-1 flex h-1/2 shrink-0 items-center justify-center overflow-hidden bg-zinc-300 lg:h-auto lg:min-h-0 lg:flex-[2] lg:shrink dark:bg-zinc-900">
+        <div class="relative order-1 flex h-1/2 shrink-0 items-center justify-center overflow-hidden bg-zinc-300 lg:h-auto lg:min-h-0 lg:flex-[2] lg:shrink dark:bg-zinc-900" style="container-type: size">
+            {{-- The wall, in the shape its window really is, on the black the wall
+                 draws around the picture. The picture is fitted into it and moved
+                 exactly as the presenter fits and moves it, so what is cut off
+                 here is what the room has lost and nothing else — and a slide
+                 that looks clipped on the phone is clipped on the wall. --}}
             <div
-                x-ref="currentBox"
-                class="w-full max-h-full max-w-full overflow-hidden bg-white lg:h-full lg:w-auto"
-                {{-- Moved exactly as the wall moves it, so that lining the
-                     projector up is watched twice over: once across the room
-                     and once under the thumb. --}}
-                {{-- Bound as an object and never as a string. Alpine writes a string
-                     binding with setAttribute('style', …), which throws away the
-                     `display: none` x-show had just put on the same element — and the
-                     fit is re-read from the screen every second, so a box hidden by
-                     x-show came back a beat later and the room's slide was drawn
-                     beside the card that had replaced it. The object form sets the
-                     properties one by one and leaves the rest of the style alone. --}}
-                x-bind:style="{ aspectRatio: aspectRatio, transform: fitTransform, transformOrigin: 'center' }"
-                x-bind:class="blanked || openingDark ? 'opacity-25' : ''"
-                x-show="!waiting && !showingSplash"
-                wire:ignore
-            ></div>
-
-            {{-- The title card, as the room is reading it.
-
-                 Drawn here and not merely announced, because the card is what
-                 the projector is lined up against and the person doing the
-                 lining up is holding this: the fit panel moves both pictures at
-                 once, and it is guesswork unless they are the same picture. --}}
-            <div
-                class="w-full max-h-full max-w-full overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-4 lg:h-full lg:w-auto"
-                x-bind:style="{ aspectRatio: aspectRatio, transform: fitTransform, transformOrigin: 'center' }"
-                x-show="showingSplash"
-                x-cloak
+                class="relative flex items-center justify-center overflow-hidden bg-black"
+                x-bind:style="{ aspectRatio: wallRatio, width: `min(100cqw - 12px, (100cqh - 12px) * (${wallRatio}))`, containerType: 'size' }"
+                x-show="!waiting"
             >
-                <x-projection-splash-card
-                    title-class="text-2xl font-semibold leading-tight tracking-tight text-white/90"
-                    caption-class="text-xs text-white/60"
-                />
+                <div
+                    x-ref="currentBox"
+                    class="shrink-0 overflow-hidden bg-white"
+                    {{-- Moved exactly as the wall moves it, so that lining the
+                         projector up is watched twice over: once across the room
+                         and once under the thumb. --}}
+                    {{-- Bound as an object and never as a string. Alpine writes a string
+                         binding with setAttribute('style', …), which throws away the
+                         `display: none` x-show had just put on the same element — and the
+                         fit is re-read from the screen every second, so a box hidden by
+                         x-show came back a beat later and the room's slide was drawn
+                         beside the card that had replaced it. The object form sets the
+                         properties one by one and leaves the rest of the style alone. --}}
+                    x-bind:style="{ aspectRatio: aspectRatio, width: `min(100cqw, 100cqh * (${aspectRatio}))`, transform: fitTransform, transformOrigin: 'center' }"
+                    x-bind:class="blanked || openingDark ? 'opacity-25' : ''"
+                    x-show="!waiting && !showingSplash"
+                    wire:ignore
+                ></div>
+
+                {{-- The title card, as the room is reading it.
+
+                     Drawn here and not merely announced, because the card is what
+                     the projector is lined up against and the person doing the
+                     lining up is holding this: the fit panel moves both pictures at
+                     once, and it is guesswork unless they are the same picture. --}}
+                <div
+                    class="shrink-0 overflow-hidden bg-gradient-to-br from-zinc-800 via-zinc-900 to-black px-4"
+                    x-bind:style="{ aspectRatio: aspectRatio, width: `min(100cqw, 100cqh * (${aspectRatio}))`, transform: fitTransform, transformOrigin: 'center' }"
+                    x-show="showingSplash"
+                    x-cloak
+                >
+                    <x-projection-splash-card
+                        title-class="text-2xl font-semibold leading-tight tracking-tight text-white/90"
+                        caption-class="text-xs text-white/60"
+                    />
+                </div>
+
+                {{-- The edge of the wall, drawn over the picture. The black is
+                     what the room sees, and it is also what a dark slide and a
+                     dark remote are made of: without a line, the end of the wall
+                     is lost in both, and a phone glanced at cannot say whether
+                     the text runs off the wall or merely into the dark. --}}
+                <div class="pointer-events-none absolute inset-0 z-10 ring-1 ring-inset ring-zinc-400"></div>
             </div>
 
             {{-- The thin bar over the letterbox. Everything that is not driving the

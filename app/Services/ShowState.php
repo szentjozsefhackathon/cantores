@@ -198,6 +198,7 @@ class ShowState
                 'label' => $screen->label(),
                 'fit' => $screen->fit(),
                 'fitUrl' => route('screens.fit', ['screen' => $screen->id]),
+                'shape' => $screen->shape,
                 'offered' => $screen->isOffered(),
                 'presenting' => $screen->isPresenting(),
                 'responding' => $screen->isResponding(),
