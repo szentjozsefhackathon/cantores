@@ -1694,5 +1694,7 @@
     "Copy": "Másolás",
     "The formula can be at most :max characters long.": "A formula legfeljebb :max karakter hosszú lehet.",
     "The verses can be at most :max characters long.": "A versek legfeljebb :max karakter hosszúak lehetnek.",
-    "Verse :verse is too long: a part of a verse can have at most :max syllables. Divide the halves with *.": ":verse. vers túl hosszú: egy versrész legfeljebb :max szótagos lehet. A feleket *-gal válaszd el."
+    "Verse :verse is too long: a part of a verse can have at most :max syllables. Divide the halves with *.": ":verse. vers túl hosszú: egy versrész legfeljebb :max szótagos lehet. A feleket *-gal válaszd el.",
+    "Play": "Lejátszás",
+    "Stop": "Leállítás"
 }

@@ -46,9 +46,13 @@ resources/js/aretino-mini-editor.js
                     <div
                         wire:key="formula-{{ md5($this->formulaSource) }}"
                         x-data="aretinoMiniEditor({{ Js::from($this->formulaSource) }})"
-                        class="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700"
+                        class="space-y-2"
                     >
-                        <div x-ref="preview" wire:ignore class="min-h-10"></div>
+                        <flux:button size="sm" x-on:click="togglePlayback()">
+                            <span x-show="!playing" class="flex items-center gap-1"><flux:icon.play variant="micro" />{{ __('Play') }}</span>
+                            <span x-show="playing" x-cloak class="flex items-center gap-1"><flux:icon.stop variant="micro" />{{ __('Stop') }}</span>
+                        </flux:button>
+                        <div x-ref="preview" wire:ignore class="min-h-10 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700"></div>
                     </div>
                 @endif
 
@@ -75,9 +79,13 @@ resources/js/aretino-mini-editor.js
                     <div
                         wire:key="setting-{{ md5($setting['source']) }}"
                         x-data="aretinoMiniEditor({{ Js::from($setting['source']) }})"
-                        class="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700"
+                        class="space-y-2"
                     >
-                        <div x-ref="preview" wire:ignore class="min-h-10"></div>
+                        <flux:button size="sm" x-on:click="togglePlayback()">
+                            <span x-show="!playing" class="flex items-center gap-1"><flux:icon.play variant="micro" />{{ __('Play') }}</span>
+                            <span x-show="playing" x-cloak class="flex items-center gap-1"><flux:icon.stop variant="micro" />{{ __('Stop') }}</span>
+                        </flux:button>
+                        <div x-ref="preview" wire:ignore class="min-h-10 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700"></div>
                     </div>
 
                     @if ($setting['unsure'] !== [])
