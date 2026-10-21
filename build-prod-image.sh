@@ -114,14 +114,16 @@ else
 fi
 echo
 
-# Upload to remote server
+# Upload to remote server. The trailing slash is added here rather than trusted
+# to .env.deploy: without it scp treats the path as a file name and the tarball
+# lands beside the directory deploy-prod.sh looks in, glued onto its name.
 echo "Uploading to $DEPLOY_SERVER:$DEPLOY_PORT..."
 echo "Remote path: $DEPLOY_REMOTE_PATH"
 
 if [ -f "$SSH_KEY_PATH" ]; then
-    SCP_CMD="scp -P $DEPLOY_PORT -i $SSH_KEY_PATH $FILE_PATH $DEPLOY_USER@$DEPLOY_SERVER:$DEPLOY_REMOTE_PATH"
+    SCP_CMD="scp -P $DEPLOY_PORT -i $SSH_KEY_PATH $FILE_PATH $DEPLOY_USER@$DEPLOY_SERVER:${DEPLOY_REMOTE_PATH%/}/"
 else
-    SCP_CMD="scp -P $DEPLOY_PORT $FILE_PATH $DEPLOY_USER@$DEPLOY_SERVER:$DEPLOY_REMOTE_PATH"
+    SCP_CMD="scp -P $DEPLOY_PORT $FILE_PATH $DEPLOY_USER@$DEPLOY_SERVER:${DEPLOY_REMOTE_PATH%/}/"
 fi
 
 echo "Executing: $SCP_CMD"
@@ -129,7 +131,7 @@ $SCP_CMD
 
 if [ $? -eq 0 ]; then
     echo "✅ Upload successful!"
-    echo "File uploaded to: $DEPLOY_SERVER:$DEPLOY_REMOTE_PATH$(basename $FILE_PATH)"
+    echo "File uploaded to: $DEPLOY_SERVER:${DEPLOY_REMOTE_PATH%/}/$(basename $FILE_PATH)"
 else
     echo "❌ Upload failed with exit code: $?"
     exit 1
