@@ -63,6 +63,7 @@
 		# fresh checkout pushes without being configured.
 		mercure {
 			transport local
+			protocol_version_compatibility 8
 			publisher_jwt {$MERCURE_PUBLISHER_JWT_KEY:dev-only-mercure-publisher-key-change-me} HS256
 			subscriber_jwt {$MERCURE_SUBSCRIBER_JWT_KEY:dev-only-mercure-subscriber-key-change-me} HS256
 			heartbeat 30s

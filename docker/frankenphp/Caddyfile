@@ -97,8 +97,14 @@
 		#
 		# The heartbeat is well inside the 100 seconds Cloudflare lets an idle
 		# proxied connection live.
+		#
+		# protocol_version_compatibility 8 keeps the validation every version up
+		# to FrankenPHP 1.12 did. 1.13's hub refuses bare publisher_jwt and
+		# subscriber_jwt without it, and its stricter mode wants issuer-bound
+		# tokens, which ShowStream::jwt() does not mint yet.
 		mercure {
 			transport local
+			protocol_version_compatibility 8
 			publisher_jwt {$MERCURE_PUBLISHER_JWT_KEY} HS256
 			subscriber_jwt {$MERCURE_SUBSCRIBER_JWT_KEY} HS256
 			heartbeat 30s
