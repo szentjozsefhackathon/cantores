@@ -185,6 +185,13 @@ RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.
 # source instead of stripped off each response on the way out.
 RUN echo "expose_php=Off" >> /usr/local/etc/php/conf.d/zz-cantores.ini
 
+# Upload progress is ext/session's RFC 1867 hook, and it runs on any multipart
+# POST carrying a PHP_SESSION_UPLOAD_PROGRESS field whether or not the app ever
+# calls session_start() — Laravel never does, so nothing here uses it. It is on
+# by default, and it is where CVE-2026-109618 (pre-auth RCE, fixed in 8.4.27)
+# lives. Off, a future bug in that code is not reachable from an anonymous POST.
+RUN echo "session.upload_progress.enabled=0" >> /usr/local/etc/php/conf.d/zz-cantores.ini
+
 # The server. Shell form so the worker and recycle counts can come from the
 # environment: .env.prod sets them against this container's memory limit rather
 # than letting FrankenPHP guess from the host's CPU count, which on a shared box

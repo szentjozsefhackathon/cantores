@@ -48,10 +48,15 @@ else
     # Build with git hash as build argument. GITHUB_TOKEN (set in .env.deploy)
     # lets Composer fetch signed GitHub zipballs instead of the unauthenticated
     # codeload legacy.zip redirect, which intermittently returns HTTP 400.
-    APP_DOMAIN=cantores.hu GIT_COMMIT_HASH=$GIT_FULL_HASH GITHUB_TOKEN="${GITHUB_TOKEN:-}" docker compose -f docker-compose.prod.yml build app
+    #
+    # --pull because the base tags are floating (dunglas/frankenphp:1-php8.4):
+    # without it Docker reuses whatever copy of the tag this machine pulled
+    # last, and a PHP security release never reaches the image.
+    APP_DOMAIN=cantores.hu GIT_COMMIT_HASH=$GIT_FULL_HASH GITHUB_TOKEN="${GITHUB_TOKEN:-}" docker compose -f docker-compose.prod.yml build --pull app
 
     # The renderer image derives from the app image just built, so it has to
-    # follow it rather than build in parallel.
+    # follow it rather than build in parallel. No --pull here: its base is that
+    # local image, which no registry has, and --pull would try to fetch it.
     echo "🔄 Building MuseScore renderer image..."
     docker build -f Dockerfile.musescore -t creshu-musescore-prod:latest .
 

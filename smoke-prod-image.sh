@@ -80,7 +80,7 @@ if [ "$BUILD" -eq 1 ]; then
     if APP_DOMAIN=cantores.hu \
        GIT_COMMIT_HASH="$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
        GITHUB_TOKEN="${GITHUB_TOKEN:-}" \
-       docker compose -f docker-compose.prod.yml build app; then
+       docker compose -f docker-compose.prod.yml build --pull app; then
         pass "image builds"
     else
         fail "image builds"
