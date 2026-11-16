@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Pages\ProjectionEditor;
 use App\Livewire\Pages\ProjectionRemote;
 use App\Models\Music;
 use App\Models\MusicPlan;
@@ -211,4 +212,34 @@ it('refuses to add a score the viewer cannot read through the remote', function 
     ])->assertOk();
 
     expect($projection->entries()->where('score_id', $theirs->id)->exists())->toBeFalse();
+});
+
+// A service may sing the same music in two slots: taking its score under the
+// second must add a second row, not take back the one under the first.
+it('takes the same score under a second slot without removing it from the first', function () {
+    $user = User::factory()->create();
+    [$projection, $assignment, $first] = projectionWithAnUnchosenScore($user);
+
+    $otherSlotPlan = MusicPlanSlotPlan::factory()->create([
+        'music_plan_id' => $projection->music_plan_id,
+        'music_plan_slot_id' => MusicPlanSlot::factory()->create(['name' => 'Recessional'])->id,
+    ]);
+    $secondAssignment = MusicPlanSlotAssignment::factory()->create([
+        'music_plan_slot_plan_id' => $otherSlotPlan->id,
+        'music_id' => $assignment->music_id,
+    ]);
+
+    actingAs($user);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('toggleScore', $first->id, $secondAssignment->id);
+
+    expect($projection->entries()->where('score_id', $first->id)->pluck('music_plan_slot_assignment_id')->sort()->values()->all())
+        ->toBe([$assignment->id, $secondAssignment->id]);
+
+    Livewire::test(ProjectionEditor::class, ['projection' => $projection])
+        ->call('toggleScore', $first->id, $secondAssignment->id);
+
+    expect($projection->entries()->where('score_id', $first->id)->pluck('music_plan_slot_assignment_id')->all())
+        ->toBe([$assignment->id]);
 });

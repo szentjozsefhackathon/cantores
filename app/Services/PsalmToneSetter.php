@@ -13,7 +13,11 @@ use InvalidArgumentException;
  * and a line that ends with a mark goes on in the next one.
  * Every verse becomes a block of its own, a melody line and its `w:` line, and
  * the marks of the text are written into the lyrics as `(+)` and `(*)`, which
- * the renderer sets under the bar that closes the part. The verses are also
+ * the renderer sets under the bar that closes the part. A verse may begin
+ * with a marker joined to it by `~~` (`1.~~`, `R.~~`), which hangs in the
+ * margin, and end with the antiphon or response to be repeated (`(ANT.)`,
+ * `(R.)`, `(V.)`), which stands under the closing bar; neither takes a
+ * syllable. The verses are also
  * written as running text, with the syllable where the melody leaves a
  * recited note and the accented syllables underlined: as HTML, a paragraph
  * each, as Aretino `W:` blocks and as ChordPro lines.
@@ -29,6 +33,12 @@ class PsalmToneSetter
      * its syllables.
      */
     public const MAX_PART_SYLLABLES = 100;
+
+    /** The marker a verse begins with: its number or its role, joined to the text by `~~`. */
+    private const MARKER_PATTERN = '/^(\S+?)~~\s*/u';
+
+    /** The response or antiphon to be repeated after a verse, which is not sung to the tone. */
+    private const END_MARK_PATTERN = '/\s*\(((?:R|V|ANT)\.)\)$/iu';
 
     public function __construct(
         private HungarianStress $stress,
@@ -66,10 +76,19 @@ class PsalmToneSetter
         $unsure = [];
 
         foreach ($lines as $index => $line) {
+            $marker = preg_match(self::MARKER_PATTERN, $line, $match) ? $match[1] : '';
+            $line = (string) preg_replace(self::MARKER_PATTERN, '', $line);
+            $endMark = preg_match(self::END_MARK_PATTERN, $line, $match) ? $match[1] : '';
+            $line = (string) preg_replace(self::END_MARK_PATTERN, '', $line);
+
+            if (trim($line) === '') {
+                continue;
+            }
+
             $initium = $initiumSetting->appliesTo($index) ? $this->initium($tone->initium, $line) : [];
             $parts = [];
 
-            foreach ($this->parts($tone, $line, $initium) as [$slots, $text, $mark, $bar]) {
+            foreach ($this->parts($tone, $line, $initium, $endMark) as [$slots, $text, $mark, $bar]) {
                 $syllables = $this->stress->syllables($text);
 
                 if (count($syllables) > self::MAX_PART_SYLLABLES) {
@@ -86,16 +105,16 @@ class PsalmToneSetter
                 }
             }
 
-            $prefix = $index === 0 ? trim('(g2) '.$tone->keySignature) : '(Z)';
-            $blocks[] = $prefix.' '.$this->melody($parts)."\nw: ".$this->lyrics($parts);
-            $texts[] = $this->words($parts);
+            $prefix = $blocks === [] ? trim('(g2) '.$tone->keySignature) : '(Z)';
+            $blocks[] = $prefix.' '.$this->melody($parts)."\nw: ".($marker === '' ? '' : $marker.'~~').$this->lyrics($parts);
+            $texts[] = ['marker' => $marker, 'words' => $this->words($parts)];
         }
 
         return [
             'source' => implode("\n\n", $blocks),
-            'html' => implode("\n", array_map(fn (array $words): string => '<p>'.self::underlined($words, self::htmlPiece(...)).'</p>', $texts)),
-            'aretinoText' => implode("\n", array_map(fn (array $words): string => 'W: '.self::underlined($words, self::aretinoPiece(...)), $texts)),
-            'chordProText' => implode("\n", array_map(fn (array $words): string => self::underlined($words, self::chordProPiece(...)), $texts)),
+            'html' => implode("\n", array_map(fn (array $text): string => '<p>'.($text['marker'] === '' ? '' : e(str_replace('~', ' ', $text['marker'])).' ').self::underlined($text['words'], self::htmlPiece(...)).'</p>', $texts)),
+            'aretinoText' => implode("\n", array_map(fn (array $text): string => 'W: '.($text['marker'] === '' ? '' : $text['marker'].'~~').self::underlined($text['words'], self::aretinoPiece(...)), $texts)),
+            'chordProText' => implode("\n", array_map(fn (array $text): string => ($text['marker'] === '' ? '' : str_replace('~', ' ', $text['marker']).' ').self::underlined($text['words'], self::chordProPiece(...)), $texts)),
             'unsure' => $unsure,
         ];
     }
@@ -123,15 +142,16 @@ class PsalmToneSetter
 
     /**
      * The parts of a verse with the slots each is sung to, the mark that ends
-     * it in the text and the bar that ends it in the melody.
+     * it in the text and the bar that ends it in the melody. The last part
+     * ends with the response to be repeated, if the verse has one.
      *
      * @param  list<PsalmToneSlot>  $initium
      * @return list<array{0: list<PsalmToneSlot>, 1: string, 2: string, 3: string}>
      */
-    private function parts(PsalmTone $tone, string $line, array $initium): array
+    private function parts(PsalmTone $tone, string $line, array $initium, string $endMark = ''): array
     {
         if (! str_contains($line, '*')) {
-            return [[$tone->terminatio, $line, '', '||']];
+            return [[$tone->terminatio, $line, $endMark, '||']];
         }
 
         [$firstHalf, $secondHalf] = array_map('trim', explode('*', $line, 2));
@@ -148,7 +168,7 @@ class PsalmToneSetter
         }
 
         $parts[] = [[...$initium, ...$tone->mediatio], $firstHalf, '*', '|'];
-        $parts[] = [$tone->terminatio, $secondHalf, '', '||'];
+        $parts[] = [$tone->terminatio, $secondHalf, $endMark, '||'];
 
         return $parts;
     }
@@ -272,7 +292,7 @@ class PsalmToneSetter
             }
 
             if ($mark !== '') {
-                $words[] = [['text' => $mark, 'isUnderlined' => false, 'isMark' => true]];
+                $words[] = [['text' => in_array($mark, ['+', '*'], true) ? $mark : '('.$mark.')', 'isUnderlined' => false, 'isMark' => true]];
                 $previous = null;
                 $previousUnderlined = false;
             }

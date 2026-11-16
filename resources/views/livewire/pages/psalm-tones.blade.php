@@ -11,19 +11,19 @@ resources/js/aretino-mini-editor.js
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <flux:heading size="xl" level="1">{{ __('Psalm tones') }}</flux:heading>
         <flux:text class="mt-2 max-w-3xl">
-            {{ __('Choose a tone and type the verses, one to a line, with * between the halves and + or † at the flexa. A \' before a syllable stresses it.') }}
+            {{ __('Choose a tone and type the verses, one to a line, with * between the halves and + or † at the flexa. A / before a syllable stresses it.') }}
         </flux:text>
 
         <div class="mt-6 grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
             <div class="space-y-5">
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <flux:select wire:model.live="collection" :label="__('Collection')" :disabled="trim($customFormula) !== ''">
+                    <flux:select wire:model.live="collection" :label="__('Collection')">
                         @foreach ($this->collections as $key => $option)
                             <flux:select.option value="{{ $key }}">{{ $option['name'] }}</flux:select.option>
                         @endforeach
                     </flux:select>
 
-                    <flux:select wire:model.live="tone" :label="__('Tone')" :disabled="trim($customFormula) !== ''">
+                    <flux:select wire:model.live="tone" :label="__('Tone')">
                         @foreach (array_keys($this->collections[$this->collection]['tones'] ?? []) as $name)
                             <flux:select.option value="{{ $name }}">{{ $name }}</flux:select.option>
                         @endforeach
@@ -33,7 +33,7 @@ resources/js/aretino-mini-editor.js
                 <flux:input
                     wire:model.live.debounce.400ms="customFormula"
                     :label="__('Custom formula')"
-                    :description="__('Overrides the tone above. Written as: initium | flexa , mediatio | terminatio ||')"
+                    :description="__('Filled in by the tone above; change it to try another. Written as: initium | flexa , mediatio | terminatio ||')"
                     placeholder="(Kb) f g | at g , at b- a as g- as a | at g f a- gs g ||"
                     class="font-mono"
                 />
@@ -56,12 +56,20 @@ resources/js/aretino-mini-editor.js
                     </div>
                 @endif
 
-                <flux:textarea
-                    wire:model.live.debounce.500ms="verses"
-                    :label="__('Verses')"
-                    rows="12"
-                    placeholder="Uram, te lettél menedékünk * nemzedékről nemzedékre."
-                />
+                <div class="space-y-2">
+                    <flux:textarea
+                        wire:model.live.debounce.500ms="verses"
+                        :label="__('Verses')"
+                        rows="12"
+                        placeholder="Uram, te lettél menedékünk * nemzedékről nemzedékre."
+                    />
+                    <flux:button size="sm" icon="sparkles" wire:click="cleanSources">
+                        {{ __('Clean sources') }}
+                    </flux:button>
+                    <flux:text class="text-sm">
+                        {{ __('Tidies text pasted from a source: (1) becomes 1.~~, R., V. and ANT. become markers at the start and (R.) at the end, and the / stress marks are dropped.') }}
+                    </flux:text>
+                </div>
 
                 <flux:select wire:model.live="initiumSetting" :label="__('Initium')">
                     @foreach (\App\Enums\InitiumSetting::cases() as $option)
@@ -97,7 +105,7 @@ resources/js/aretino-mini-editor.js
                                         <li>{{ __('Verse :verse: „:syllable”', $unsure) }}</li>
                                     @endforeach
                                 </ul>
-                                {{ __('Mark the syllable to stress with \' in the text if the setting is wrong.') }}
+                                {{ __('Mark the syllable to stress with / in the text if the setting is wrong.') }}
                             </flux:callout.text>
                         </flux:callout>
                     @endif

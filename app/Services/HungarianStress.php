@@ -14,7 +14,7 @@ use App\Enums\SyllableStress;
  *
  * The rules miss where a compound joins. The compounds of the liturgy are
  * known, and their second part gets a secondary stress; for the rest the text
- * may say it: a `'` before a syllable stresses it (`szent'lélek`), a `·` gives
+ * may say it: a `/` before a syllable stresses it (`szent/lélek`), a `·` gives
  * it a secondary stress (`szent·lélek`), and a word divided by hand
  * (`Is-te-nünk`) keeps the division it was given.
  */
@@ -57,13 +57,13 @@ class HungarianStress
 
             [, $prefix, $core, $suffix] = $parts;
 
-            if (! preg_match("/['·-]/u", $core)) {
+            if (! preg_match('#[/·-]#u', $core)) {
                 $core = (string) preg_replace(array_keys(self::COMPOUNDS), array_values(self::COMPOUNDS), $core);
             }
 
-            $wordSyllables = $this->wordSyllables(str_contains($prefix, "'") ? "'".$core : $core, $index);
-            $prefix = str_replace(["'", '·'], '', $prefix);
-            $suffix = str_replace(["'", '·'], '', $suffix);
+            $wordSyllables = $this->wordSyllables(str_contains($prefix, '/') ? '/'.$core : $core, $index);
+            $prefix = str_replace(['/', '·'], '', $prefix);
+            $suffix = str_replace(['/', '·'], '', $suffix);
             $first = $wordSyllables[0];
             $wordSyllables[0] = new PsalmSyllable($pendingPrefix.$prefix.$first->text, $first->word, $first->stress, $first->isLong, $first->isMarked);
             $last = array_pop($wordSyllables);
@@ -81,13 +81,13 @@ class HungarianStress
      */
     private function wordSyllables(string $word, int $index): array
     {
-        $pieces = preg_split("/(['·])/u", $word, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$word];
+        $pieces = preg_split('#([/·])#u', $word, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$word];
         $isUnstressedWord = count($pieces) === 1 && in_array(mb_strtolower($word), self::UNSTRESSED_WORDS, true);
         $syllables = [];
         $mark = '';
 
         foreach ($pieces as $pieceIndex => $piece) {
-            if ($piece === "'" || $piece === '·') {
+            if ($piece === '/' || $piece === '·') {
                 $mark = $piece;
 
                 continue;
@@ -103,14 +103,14 @@ class HungarianStress
 
             foreach ($texts as $position => $text) {
                 $stress = match (true) {
-                    $position === 0 && $mark === "'" => SyllableStress::Primary,
+                    $position === 0 && $mark === '/' => SyllableStress::Primary,
                     $position === 0 && $mark === '·' => SyllableStress::Secondary,
                     $position === 0 && $pieceIndex === 0 => $isUnstressedWord ? SyllableStress::None : SyllableStress::Primary,
                     $position % 2 === 0 && $position < count($texts) - 1 => SyllableStress::Secondary,
                     default => SyllableStress::None,
                 };
 
-                $syllables[] = new PsalmSyllable($text, $index, $stress, $this->isLong($text), $position === 0 && $mark === "'");
+                $syllables[] = new PsalmSyllable($text, $index, $stress, $this->isLong($text), $position === 0 && $mark === '/');
             }
 
             $mark = '';

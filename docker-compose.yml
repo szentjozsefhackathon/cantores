@@ -169,7 +169,7 @@ services:
          condition: service_completed_successfully
      networks:
        - creshu-network
-     command: php artisan migrate:refresh --seed --seeder="Database\\Seeders\\DatabaseSeeder" --env=testing
+     command: php artisan migrate:fresh --seed --seeder="Database\\Seeders\\DatabaseSeeder" --env=testing
      deploy:
        resources:
          limits:

@@ -372,7 +372,7 @@ resources/js/projection-remote.js
                                         type="button"
                                         class="shrink-0 rounded p-1 text-zinc-400 hover:text-red-500"
                                         x-show="block.row.scoreId"
-                                        x-on:click="toggleScore(block.row.scoreId, block.row.assignmentId, block.row.fileId)"
+                                        x-on:click="toggleScore(block.row.scoreId, block.row.assignmentId, block.row.fileId, block.row.addedMusicId)"
                                         x-bind:aria-label="removeScoreText"
                                         :title="removeScoreText"
                                     >

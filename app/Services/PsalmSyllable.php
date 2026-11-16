@@ -10,7 +10,7 @@ use App\Enums\SyllableStress;
  * The text carries the punctuation around the word on its first and last
  * syllables, and `word` numbers the words of the half-verse, so the syllables
  * of one word can be joined again when they are written out. A syllable the
- * text marked with a `'` is `isMarked`: the setter is to put an accent on it.
+ * text marked with a `/` is `isMarked`: the setter is to put an accent on it.
  */
 final readonly class PsalmSyllable
 {

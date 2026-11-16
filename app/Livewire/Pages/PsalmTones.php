@@ -4,6 +4,7 @@ namespace App\Livewire\Pages;
 
 use App\Enums\InitiumSetting;
 use App\Enums\ScoreFormat;
+use App\Services\PsalmSourceCleaner;
 use App\Services\PsalmTone;
 use App\Services\PsalmToneLibrary;
 use App\Services\PsalmToneSetter;
@@ -14,7 +15,8 @@ use Livewire\Component;
 
 /**
  * Sets psalm verses to a tone from one of the shipped collections, or to a
- * formula typed in, and shows the result as Aretino.
+ * formula typed in, and shows the result as Aretino. Choosing a tone writes
+ * its formula into the formula field, where it can be changed and played.
  */
 class PsalmTones extends Component
 {
@@ -45,11 +47,32 @@ class PsalmTones extends Component
     {
         $this->collection = (string) array_key_first($library->collections());
         $this->tone = (string) array_key_first($library->collections()[$this->collection]['tones'] ?? []);
+        $this->fillFormulaFromTone();
     }
 
     public function updatedCollection(): void
     {
         $this->tone = (string) array_key_first($this->collections()[$this->collection]['tones'] ?? []);
+        $this->fillFormulaFromTone();
+    }
+
+    public function updatedTone(): void
+    {
+        $this->fillFormulaFromTone();
+    }
+
+    /**
+     * Tidies verses pasted from a source: verse numbers and responses become
+     * markers, and the stress marks of the source are dropped.
+     */
+    public function cleanSources(PsalmSourceCleaner $cleaner): void
+    {
+        $this->verses = $cleaner->clean($this->verses);
+    }
+
+    private function fillFormulaFromTone(): void
+    {
+        $this->customFormula = app(PsalmToneLibrary::class)->tone($this->collection, $this->tone)?->line ?? '';
     }
 
     /**
@@ -63,14 +86,17 @@ class PsalmTones extends Component
 
     /**
      * The tone the verses are set to, and what is wrong with the custom
-     * formula when it is not a tone.
+     * formula when it is not a tone. The chosen tone itself is used while the
+     * formula is still the one it filled in, so its preview keeps its lyrics.
      *
      * @return array{tone: PsalmTone|null, error: string|null}
      */
     #[Computed]
     public function selectedTone(): array
     {
-        if (trim($this->customFormula) !== '') {
+        $libraryTone = app(PsalmToneLibrary::class)->tone($this->collection, $this->tone);
+
+        if (trim($this->customFormula) !== '' && trim($this->customFormula) !== $libraryTone?->line) {
             if (mb_strlen($this->customFormula) > self::MAX_FORMULA_LENGTH) {
                 return ['tone' => null, 'error' => __('The formula can be at most :max characters long.', ['max' => self::MAX_FORMULA_LENGTH])];
             }
@@ -82,16 +108,21 @@ class PsalmTones extends Component
             }
         }
 
-        return ['tone' => app(PsalmToneLibrary::class)->tone($this->collection, $this->tone), 'error' => null];
+        return ['tone' => $libraryTone, 'error' => null];
     }
 
     /**
-     * The tone's formula drawn as a score of its own.
+     * The tone's formula drawn as a score of its own, or the formula as it is
+     * typed while it is not yet a tone, so that it can be seen and played.
      */
     #[Computed]
     public function formulaSource(): string
     {
         $tone = $this->selectedTone()['tone'];
+
+        if ($tone === null && trim($this->customFormula) !== '') {
+            return '(g2) '.trim($this->customFormula);
+        }
 
         return $tone?->preview() ?? '';
     }

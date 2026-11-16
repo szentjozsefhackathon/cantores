@@ -38,11 +38,21 @@ class PlanScoreToggle
         $source = $this->scores->sourcesFor([$scoreId], $viewer)->get($scoreId);
         $entries = $document->entries()->get();
 
+        $addedMusic = $this->addedMusicOf($document, $addedMusicId);
+        $assignment = $addedMusic === null ? $this->assignmentInPlan($document, $assignmentId) : null;
+        $slotPlanId = $addedMusic?->music_plan_slot_plan_id ?? $assignment?->music_plan_slot_plan_id;
+
+        // Only this music's own rows: the same score taken under another slot,
+        // or by another music sung twice, is a different place on the screen
+        // and is neither the row to remove nor a reason not to add.
+        $ofThisMusic = $entries->filter(fn (PlanEntry $entry): bool => $entry->music_plan_slot_assignment_id === $assignment?->id
+            && $entry->added_music_id === $addedMusic?->id);
+
         if ($source === null) {
             // Unreadable now — a recalled loan, an unpublished score. It cannot
             // be added, but one already standing in the document must still be
             // removable.
-            $stale = $entries->firstWhere('score_id', $scoreId);
+            $stale = $ofThisMusic->firstWhere('score_id', $scoreId);
 
             if ($stale instanceof PlanEntry) {
                 $this->order->remove($document, $this->outline->for($document, $entries), [$stale->id]);
@@ -55,7 +65,7 @@ class PlanScoreToggle
             return;
         }
 
-        $existing = $entries
+        $existing = $ofThisMusic
             ->where('score_id', $scoreId)
             ->first(fn (PlanEntry $entry): bool => $payloads->fileOf($entry, $source)['file_id'] === ($fileId ?? $source['file_id']));
 
@@ -64,10 +74,6 @@ class PlanScoreToggle
 
             return;
         }
-
-        $addedMusic = $this->addedMusicOf($document, $addedMusicId);
-        $assignment = $addedMusic === null ? $this->assignmentInPlan($document, $assignmentId) : null;
-        $slotPlanId = $addedMusic?->music_plan_slot_plan_id ?? $assignment?->music_plan_slot_plan_id;
 
         $tree = $this->outline->for($document, $entries);
         $at = $this->outline->appendIndex($tree, $slotPlanId, $assignment?->id, $addedMusic?->id);
