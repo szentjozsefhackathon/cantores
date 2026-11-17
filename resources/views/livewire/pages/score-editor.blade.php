@@ -156,6 +156,7 @@ resources/js/score-editor.js
                             {{ __('Browse') }}
                         </flux:button>
                         @if($musicId)
+                        <flux:button icon="arrow-top-right-on-square" variant="ghost" :href="route('music-view', $musicId)" target="_blank" :title="__('Open the music\'s page')" data-attached-music-link />
                         <flux:button icon="x-mark" variant="ghost" wire:click="clearMusic" :title="__('Remove')" />
                         @endif
                     </div>

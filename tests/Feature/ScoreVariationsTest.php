@@ -234,3 +234,16 @@ it('variations panel is not rendered for a guest on the preview page', function 
     Livewire::test(ScoreEditor::class)
         ->assertDontSee(__('Variations'));
 });
+
+it('links the editor to the attached music page', function () {
+    $user = User::factory()->create();
+    $music = Music::factory()->create();
+    $score = Score::factory()->create(['user_id' => $user->id, 'music_id' => $music->id]);
+
+    actingAs($user);
+
+    Livewire::test(ScoreEditor::class, ['score' => $score])
+        ->assertSeeHtml('href="'.route('music-view', $music).'"')
+        ->call('clearMusic')
+        ->assertDontSeeHtml('data-attached-music-link');
+});
