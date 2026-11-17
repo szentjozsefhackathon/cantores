@@ -86,6 +86,9 @@
                 <flux:sidebar.item icon="book-open" :href="route('plan-documents')" :current="request()->routeIs('plan-documents', 'booklets.*', 'projections.*', 'projection-screen', 'projection-remote', 'projection-remote.*')" wire:navigate>
                     {{ __('Booklets & Projections') }}
                 </flux:sidebar.item>
+                <flux:sidebar.item icon="calendar-days" :href="route('seasons')" :current="request()->routeIs('seasons', 'seasons.*')" wire:navigate>
+                    {{ __('Season planner') }}
+                </flux:sidebar.item>
             </flux:sidebar.group>
             <flux:sidebar.group heading="Énektár">
                 <flux:sidebar.item icon="music" :href="route('musics')" :current="request()->routeIs('musics')" wire:navigate>

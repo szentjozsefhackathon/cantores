@@ -165,10 +165,13 @@ class Loan extends Model
     /**
      * Whether this loan opens a container — a folder or plan whose contents can be
      * excluded one by one — as opposed to a single score.
+     *
+     * A season is neither: it reaches no score itself, and what its dates point
+     * to is lent through loans of their own.
      */
     public function isContainer(): bool
     {
-        return ! $this->lendable instanceof Score;
+        return ! $this->lendable instanceof Score && ! $this->lendable instanceof Season;
     }
 
     /**
@@ -180,6 +183,7 @@ class Loan extends Model
             $this->lendable instanceof Folder => route('folder.loan', ['token' => $this->token]),
             $this->lendable instanceof MusicPlan => route('music-plan.loan', ['token' => $this->token]),
             $this->lendable instanceof Booklet => route('booklet.loan', ['token' => $this->token]),
+            $this->lendable instanceof Season => route('season.loan', ['token' => $this->token]),
             default => route('score.loan', ['token' => $this->token]),
         };
     }

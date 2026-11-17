@@ -9,6 +9,7 @@ use App\Models\MusicPlan;
 use App\Models\ReceivedLoan;
 use App\Models\Score;
 use App\Models\ScorePublication;
+use App\Models\Season;
 use App\Services\LoanAccessService;
 use App\Services\LoanKeepingService;
 use App\Services\NotificationService;
@@ -320,6 +321,13 @@ class Loans extends Component
                 'url' => route('booklet.loan', ['token' => $token]),
                 'changed_at' => $lendable->updated_at,
             ],
+            $lendable instanceof Season => [
+                'type' => __('Choir season'),
+                'title' => $lendable->name,
+                'owner' => $loan->user?->displayName ?? '',
+                'url' => route('season.loan', ['token' => $token]),
+                'changed_at' => $lendable->updated_at,
+            ],
             default => [
                 'type' => __('Unknown'),
                 'title' => __('Deleted'),
@@ -359,6 +367,11 @@ class Loans extends Component
                 'type' => __('Booklet'),
                 'title' => $lendable->title,
                 'url' => route('booklets.edit', ['booklet' => $lendable->id]),
+            ],
+            $lendable instanceof Season => [
+                'type' => __('Choir season'),
+                'title' => $lendable->name,
+                'url' => route('seasons.edit', ['season' => $lendable->id]),
             ],
             default => ['type' => __('Unknown'), 'title' => __('Deleted'), 'url' => null],
         };

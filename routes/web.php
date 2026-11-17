@@ -72,6 +72,9 @@ use App\Livewire\Pages\QrLoginApproval;
 use App\Livewire\Pages\ScoreEditor;
 use App\Livewire\Pages\Scores;
 use App\Livewire\Pages\ScoreView;
+use App\Livewire\Pages\SeasonEditor;
+use App\Livewire\Pages\SeasonLoanView;
+use App\Livewire\Pages\Seasons;
 use App\Models\City;
 use App\Models\DirektoriumEdition;
 use App\Models\FirstName;
@@ -270,6 +273,11 @@ Route::middleware('human')->group(function (): void {
     Route::get('/b/{token}/score-page/{scoreFile}/{page}', BookletLoanScorePageController::class)
         ->whereNumber('page')
         ->name('booklet.loan.score-page');
+
+    // Season link — the choir's dates, and each member saying which they are
+    // coming to. The only lending link that writes: an answer, under a name.
+    Route::livewire('/e/{token}', SeasonLoanView::class)
+        ->name('season.loan');
 });
 
 // The human check itself: guests only, rate limited because it is the one page a
@@ -393,6 +401,15 @@ Route::livewire('/folders/create', FolderEditor::class)
 Route::livewire('/folders/{folder}/edit', FolderEditor::class)
     ->middleware(['auth', 'verified'])
     ->name('folders.edit');
+
+// A choir's season: the dates it sings at, what each needs, and who is coming.
+Route::livewire('/evadok', Seasons::class)
+    ->middleware(['auth', 'verified'])
+    ->name('seasons');
+
+Route::livewire('/evadok/{season}', SeasonEditor::class)
+    ->middleware(['auth', 'verified'])
+    ->name('seasons.edit');
 
 // Everything a plan has been made into, booklets and projections together, one
 // service to a row: the two used to have a list each, and nothing then said

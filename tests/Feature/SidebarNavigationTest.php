@@ -11,6 +11,7 @@ test('the sidebar groups the nav into énekrendek, énektár and kottatár', fun
             'Énekrendek',
             'Közzétett énekrendek',
             'Saját énekrendek',
+            'Évadtervező',
             'Énektár',
             'Énekek keresése',
             'Gyűjtemények',

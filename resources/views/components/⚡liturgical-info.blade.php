@@ -221,26 +221,7 @@ new class extends Component
 
         $celebrationData = $this->celebrations[$celebrationIndex];
 
-        // Update or create Celebration (ensure data matches liturgical info)
-        $celebration = Celebration::updateOrCreate(
-            [
-                'actual_date' => $celebrationData['dateISO'] ?? $this->date,
-                'celebration_key' => $celebrationData['celebrationKey'] ?? 0,
-                'is_custom' => false, // Ensure these celebrations are marked as non-custom
-            ],
-            [
-                'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? 'Unknown',
-                'season' => (int) ($celebrationData['season'] ?? 0),
-                'season_text' => $celebrationData['seasonText'] ?? null,
-                'color_id' => $celebrationData['colorId'] ?? null,
-                'color_text' => $celebrationData['colorText'] ?? null,
-                'week' => (int) ($celebrationData['week'] ?? 0),
-                'day' => (int) ($celebrationData['dayofWeek'] ?? 0),
-                'readings_code' => $celebrationData['readingsId'] ?? null,
-                'year_letter' => $celebrationData['yearLetter'] ?? null,
-                'year_parity' => $celebrationData['yearParity'] ?? null,
-            ]
-        );
+        $celebration = Celebration::fromLiturgicalPayload($celebrationData, $this->date);
 
         // Create MusicPlan without celebration fields
         $musicPlan = MusicPlan::create([
@@ -265,26 +246,7 @@ new class extends Component
 
         $celebrationData = $this->celebrations[$celebrationIndex];
 
-        // Update or create Celebration (ensure data matches liturgical info)
-        $celebration = Celebration::updateOrCreate(
-            [
-                'actual_date' => $celebrationData['dateISO'] ?? $this->date,
-                'celebration_key' => $celebrationData['celebrationKey'] ?? 0,
-                'is_custom' => false, // Ensure these celebrations are marked as non-custom
-            ],
-            [
-                'name' => $celebrationData['name'] ?? $celebrationData['title'] ?? 'Unknown',
-                'season' => (int) ($celebrationData['season'] ?? 0),
-                'season_text' => $celebrationData['seasonText'] ?? null,
-                'color_id' => $celebrationData['colorId'] ?? null,
-                'color_text' => $celebrationData['colorText'] ?? null,
-                'week' => (int) ($celebrationData['week'] ?? 0),
-                'day' => (int) ($celebrationData['dayofWeek'] ?? 0),
-                'readings_code' => $celebrationData['readingsId'] ?? null,
-                'year_letter' => $celebrationData['yearLetter'] ?? null,
-                'year_parity' => $celebrationData['yearParity'] ?? null,
-            ]
-        );
+        $celebration = Celebration::fromLiturgicalPayload($celebrationData, $this->date);
 
         // Emit event with celebration ID for parent component to handle
         $this->dispatch('celebration-selected', celebrationId: $celebration->id);

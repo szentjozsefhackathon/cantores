@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property int $id
  * @property int $celebration_key
- * @property \Carbon\CarbonImmutable $actual_date
+ * @property CarbonImmutable $actual_date
  * @property string $name
  * @property int|null $season
  * @property string|null $season_text
@@ -21,14 +23,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $readings_code
  * @property string|null $year_letter
  * @property string|null $year_parity
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property int|null $user_id
  * @property bool $is_custom
  * @property-read string $day_name
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MusicPlan> $musicPlans
+ * @property-read Collection<int, MusicPlan> $musicPlans
  * @property-read int|null $music_plans_count
- * @property-read \App\Models\User|null $user
+ * @property-read User|null $user
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Celebration custom()
  * @method static \Database\Factories\CelebrationFactory factory($count = null, $state = [])
@@ -201,6 +203,35 @@ class Celebration extends Model
             7 => 'piros',
             default => null,
         };
+    }
+
+    /**
+     * The stored row for one celebration of the liturgical calendar API's
+     * answer for a date, written or refreshed from that answer.
+     *
+     * @param  array<string, mixed>  $payload  One entry of LiturgicalInfoService::getCelebrations()
+     */
+    public static function fromLiturgicalPayload(array $payload, string $date): self
+    {
+        return self::updateOrCreate(
+            [
+                'actual_date' => $payload['dateISO'] ?? $date,
+                'celebration_key' => $payload['celebrationKey'] ?? 0,
+                'is_custom' => false,
+            ],
+            [
+                'name' => $payload['name'] ?? $payload['title'] ?? 'Unknown',
+                'season' => (int) ($payload['season'] ?? 0),
+                'season_text' => $payload['seasonText'] ?? null,
+                'color_id' => $payload['colorId'] ?? null,
+                'color_text' => $payload['colorText'] ?? null,
+                'week' => (int) ($payload['week'] ?? 0),
+                'day' => (int) ($payload['dayofWeek'] ?? 0),
+                'readings_code' => $payload['readingsId'] ?? null,
+                'year_letter' => $payload['yearLetter'] ?? null,
+                'year_parity' => $payload['yearParity'] ?? null,
+            ]
+        );
     }
 
     /**

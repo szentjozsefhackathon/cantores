@@ -11,6 +11,7 @@ use App\Models\DevicePairing;
 use App\Models\ExternalLink;
 use App\Models\FirstName;
 use App\Models\Genre;
+use App\Models\Loan;
 use App\Models\Music;
 use App\Models\Presentation;
 use App\Models\Projection;
@@ -25,6 +26,7 @@ use App\Observers\CollectionObserver;
 use App\Observers\ExternalLinkObserver;
 use App\Observers\FirstNameObserver;
 use App\Observers\GenreObserver;
+use App\Observers\LoanObserver;
 use App\Observers\MusicObserver;
 use App\Observers\ProjectionRevisionObserver;
 use App\Observers\ProjectionStyleObserver;
@@ -99,6 +101,7 @@ class AppServiceProvider extends ServiceProvider
         ProjectionSlide::observe(ProjectionRevisionObserver::class);
         ProjectionMusic::observe(ProjectionRevisionObserver::class);
         ProjectionStyle::observe(ProjectionStyleObserver::class);
+        Loan::observe(LoanObserver::class);
 
         foreach ([Presentation::class, Screen::class, DeviceName::class, DevicePairing::class, Projection::class, ProjectionSlide::class, ProjectionMusic::class] as $model) {
             $model::observe(ShowStreamObserver::class);
