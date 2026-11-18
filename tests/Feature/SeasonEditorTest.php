@@ -248,3 +248,30 @@ it('does not touch another season\'s members', function () {
 
     expect(SeasonAttendance::query()->count())->toBe(0);
 });
+
+it('offers each date\'s own link on the season\'s open link', function () {
+    $owner = User::factory()->create();
+    $season = Season::factory()->for($owner)->create();
+    $event = SeasonEvent::factory()->create(['season_id' => $season->id, 'date' => today()->addWeek()]);
+    $restricted = Loan::factory()->of($season)->restrictedTo([User::factory()->create()])->create();
+    $open = Loan::factory()->of($season)->create();
+
+    actingAs($owner);
+
+    Livewire::test(SeasonEditor::class, ['season' => $season])
+        ->assertSee(route('season.loan.event', ['token' => $open->token, 'event' => $event->id]), false)
+        ->assertDontSee(route('season.loan.event', ['token' => $restricted->token, 'event' => $event->id]), false);
+});
+
+it('offers no date link while the season is not shared', function () {
+    $owner = User::factory()->create();
+    $season = Season::factory()->for($owner)->create();
+    $event = SeasonEvent::factory()->create(['season_id' => $season->id, 'date' => today()->addWeek()]);
+    $recalled = Loan::factory()->of($season)->create();
+    $recalled->revoke();
+
+    actingAs($owner);
+
+    Livewire::test(SeasonEditor::class, ['season' => $season])
+        ->assertDontSee(route('season.loan.event', ['token' => $recalled->token, 'event' => $event->id]), false);
+});

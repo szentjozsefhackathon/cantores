@@ -34,6 +34,10 @@ use Livewire\Component;
  *
  * Every action resolves the token again before it touches anything, so a
  * recalled link stops taking answers at the moment it stops showing the page.
+ *
+ * With an event in the URL it is that one occasion's landing page: the same
+ * link, the same remembered name, only the one date — and a way back to the
+ * whole season.
  */
 class SeasonLoanView extends Component
 {
@@ -59,7 +63,11 @@ class SeasonLoanView extends Component
 
     public bool $showPast = false;
 
-    public function mount(string $token): void
+    /** The one occasion this page is about, or null for the whole season. */
+    #[Locked]
+    public ?int $eventId = null;
+
+    public function mount(string $token, ?int $event = null): void
     {
         $loan = app(LoanAccessService::class)->resolveOfType($token, Season::class);
 
@@ -77,6 +85,12 @@ class SeasonLoanView extends Component
         $this->seasonName = $season->name;
         $this->ownerName = $season->user?->displayName ?? '';
         $this->memberId = $this->rememberedMember($season)?->id;
+
+        if ($event !== null) {
+            abort_unless($season->events()->whereKey($event)->exists(), 404);
+
+            $this->eventId = $event;
+        }
     }
 
     /**
@@ -100,7 +114,8 @@ class SeasonLoanView extends Component
     public function events(): Collection
     {
         return $this->season->events()
-            ->when(! $this->showPast, fn (Builder $query) => $query->whereDate('date', '>=', today()))
+            ->when($this->eventId !== null, fn (Builder $query) => $query->whereKey($this->eventId))
+            ->when($this->eventId === null && ! $this->showPast, fn (Builder $query) => $query->whereDate('date', '>=', today()))
             ->with([
                 'celebration',
                 'attachments' => fn ($query) => $query->with('loan')->with(['lendable' => fn (MorphTo $morph) => $morph->morphWith([
@@ -114,6 +129,10 @@ class SeasonLoanView extends Component
     #[Computed]
     public function pastCount(): int
     {
+        if ($this->eventId !== null) {
+            return 0;
+        }
+
         return $this->season->events()->whereDate('date', '<', today())->count();
     }
 
@@ -271,7 +290,9 @@ class SeasonLoanView extends Component
     public function rendering(IlluminateView $view): void
     {
         $view->layout('layouts::shell', [
-            'title' => $this->seasonName,
+            'title' => $this->eventId !== null
+                ? $this->events->first()?->name.' – '.$this->seasonName
+                : $this->seasonName,
             'noindex' => true,
         ]);
     }

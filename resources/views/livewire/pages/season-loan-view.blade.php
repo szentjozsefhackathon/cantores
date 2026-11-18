@@ -8,8 +8,26 @@
             @if($ownerName)
                 <flux:text class="text-sm">{{ __('Shared by :name', ['name' => $ownerName]) }}</flux:text>
             @endif
-            @if($this->season->description)
+            @if($this->season->description && $eventId === null)
                 <flux:text class="whitespace-pre-line">{{ $this->season->description }}</flux:text>
+            @endif
+            @if($eventId !== null)
+                <div class="flex flex-wrap gap-2 pt-1">
+                    <flux:button size="sm" icon="arrow-left" :href="route('season.loan', ['token' => $loanToken])" wire:navigate>
+                        {{ __('Whole season') }}
+                    </flux:button>
+                    <div x-data="{ copied: false }">
+                        <flux:button
+                            size="sm"
+                            variant="ghost"
+                            icon="clipboard-copy"
+                            x-on:click="navigator.clipboard.writeText(window.location.href).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
+                        >
+                            <span x-show="! copied">{{ __('Copy link to this date') }}</span>
+                            <span x-show="copied" x-cloak>{{ __('Copied') }}</span>
+                        </flux:button>
+                    </div>
+                </div>
             @endif
         </flux:card>
 
@@ -72,7 +90,13 @@
                             · {{ $event->timeLabel() }}
                         @endif
                     </div>
-                    <flux:heading size="lg">{{ $event->name }}</flux:heading>
+                    <flux:heading size="lg">
+                        @if($eventId === null)
+                            <a href="{{ route('season.loan.event', ['token' => $loanToken, 'event' => $event->id]) }}" wire:navigate class="hover:underline">{{ $event->name }}</a>
+                        @else
+                            {{ $event->name }}
+                        @endif
+                    </flux:heading>
                     @if($event->celebration && $event->celebration->name !== $event->name)
                         <flux:text class="text-sm">{{ $event->celebration->name }}</flux:text>
                     @endif

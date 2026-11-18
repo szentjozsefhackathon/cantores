@@ -116,6 +116,20 @@
                                             <flux:badge size="sm" color="amber" icon="question-mark-circle">{{ $counts['maybe'] }}</flux:badge>
                                             <flux:badge size="sm" color="red" icon="x-mark">{{ $counts['no'] }}</flux:badge>
 
+                                            @if($this->shareToken)
+                                                <div x-data="{ copied: false }" wire:key="copy-event-link-{{ $event->id }}" data-url="{{ route('season.loan.event', ['token' => $this->shareToken, 'event' => $event->id]) }}">
+                                                    <flux:tooltip :content="__('Copy link to this date')">
+                                                        <flux:button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            icon="link"
+                                                            :aria-label="__('Copy link to this date')"
+                                                            x-on:click="navigator.clipboard.writeText($root.dataset.url).then(() => { copied = true; $dispatch('toast', { message: @js(__('Link copied')) }); setTimeout(() => copied = false, 2000) })"
+                                                            x-bind:class="copied && 'text-green-600!'"
+                                                        />
+                                                    </flux:tooltip>
+                                                </div>
+                                            @endif
                                             <flux:button size="sm" variant="ghost" icon="paper-clip" wire:click="openAttach({{ $event->id }})" :aria-label="__('Attach')" />
                                             <flux:button size="sm" variant="ghost" icon="pencil" wire:click="editEvent({{ $event->id }})" :aria-label="__('Edit')" />
                                             <flux:button

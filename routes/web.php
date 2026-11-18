@@ -278,6 +278,11 @@ Route::middleware('human')->group(function (): void {
     // coming to. The only lending link that writes: an answer, under a name.
     Route::livewire('/e/{token}', SeasonLoanView::class)
         ->name('season.loan');
+
+    // One occasion of the season, on its own page — the same link, one date.
+    Route::livewire('/e/{token}/{event}', SeasonLoanView::class)
+        ->whereNumber('event')
+        ->name('season.loan.event');
 });
 
 // The human check itself: guests only, rate limited because it is the one page a

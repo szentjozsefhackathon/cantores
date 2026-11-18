@@ -177,3 +177,44 @@ it('links an attached booklet through the loan the season keeps for it', functio
         ->assertSee('Karácsonyi füzet')
         ->assertSee($attachment->loan->url(), false);
 });
+
+it('opens one occasion of the season on its own page', function () {
+    [$season, $loan, $event] = sharedSeasonWithEvent();
+    SeasonEvent::factory()->create(['season_id' => $season->id, 'name' => 'Húsvéti vigília']);
+
+    get(route('season.loan.event', ['token' => $loan->token, 'event' => $event->id]))
+        ->assertOk()
+        ->assertSee('Éjféli mise')
+        ->assertDontSee('Húsvéti vigília')
+        ->assertSee(route('season.loan', ['token' => $loan->token]), false);
+});
+
+it('answers 404 for an occasion of another season or behind a recalled link', function () {
+    [, $loan, $event] = sharedSeasonWithEvent();
+    $otherEvent = SeasonEvent::factory()->create();
+
+    get(route('season.loan.event', ['token' => $loan->token, 'event' => $otherEvent->id]))->assertNotFound();
+
+    $loan->revoke();
+
+    get(route('season.loan.event', ['token' => $loan->token, 'event' => $event->id]))->assertNotFound();
+});
+
+it('links each date of the season to its own page', function () {
+    [, $loan, $event] = sharedSeasonWithEvent();
+
+    get($loan->url())
+        ->assertSee(route('season.loan.event', ['token' => $loan->token, 'event' => $event->id]), false);
+});
+
+it('takes answers on an occasion page', function () {
+    [$season, $loan, $event] = sharedSeasonWithEvent();
+    $member = SeasonMember::factory()->create(['season_id' => $season->id]);
+
+    Livewire::test(SeasonLoanView::class, ['token' => $loan->token, 'event' => $event->id])
+        ->call('identify', $member->id)
+        ->call('respond', $event->id, AttendanceStatus::Yes->value);
+
+    expect(SeasonAttendance::query()->where('season_event_id', $event->id)->value('status'))
+        ->toBe(AttendanceStatus::Yes);
+});

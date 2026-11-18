@@ -179,13 +179,28 @@ class SeasonEditor extends Component
     }
 
     /**
+     * The season link each date's own link is built on: the oldest live one
+     * open to anyone holding it — the one most likely already sent round —
+     * or, failing that, a link for named people.
+     */
+    #[Computed]
+    public function shareToken(): ?string
+    {
+        /** @var string|null */
+        return $this->season->liveLoans()
+            ->orderBy('restricted')
+            ->oldest('id')
+            ->value('token');
+    }
+
+    /**
      * A season link handed out or recalled below: the attachments' own links
      * came or went with it (LoanObserver), so the rows are read again.
      */
     #[On('loans-changed')]
     public function refreshSharing(): void
     {
-        unset($this->isShared, $this->events);
+        unset($this->isShared, $this->events, $this->shareToken);
     }
 
     /**
